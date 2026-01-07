@@ -1,0 +1,52 @@
+openapi: 3.1.0
+info:
+  title: Webhook API
+  version: 1.0.0
+webhooks:
+  payment.updated:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payment_id:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                  enum: [pending, completed, failed]
+                amount:
+                  type: number
+                  minimum: 0
+              required:
+                - payment_id
+                - status
+                - amount
+      responses:
+        '200':
+          description: OK
+  subscription.renewed:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subscription_id:
+                  type: string
+                user_id:
+                  type: integer
+                renewed_at:
+                  type: string
+                  format: date-time
+              required:
+                - subscription_id
+                - user_id
+      responses:
+        '200':
+          description: OK

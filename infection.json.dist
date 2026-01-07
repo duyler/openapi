@@ -1,0 +1,20 @@
+{
+    "$schema": "vendor/infection/infection/resources/schema.json",
+    "source": {
+        "directories": [
+            "src"
+        ]
+    },
+    "tests": {
+        "directories": [
+            "tests"
+        ]
+    },
+    "mutationThreshold": 80,
+    "mutators": {
+        "@default": true
+    },
+    "日志": {
+        "text": "infection.log"
+    }
+}

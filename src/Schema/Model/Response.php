@@ -1,0 +1,42 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Duyler\OpenApi\Schema\Model;
+
+use JsonSerializable;
+use Override;
+
+final readonly class Response implements JsonSerializable
+{
+    public function __construct(
+        public ?string $description = null,
+        public ?Headers $headers = null,
+        public ?Content $content = null,
+        public ?Links $links = null,
+    ) {}
+
+    #[Override]
+    public function jsonSerialize(): array
+    {
+        $data = [];
+
+        if ($this->description !== null) {
+            $data['description'] = $this->description;
+        }
+
+        if ($this->headers !== null) {
+            $data['headers'] = $this->headers;
+        }
+
+        if ($this->content !== null) {
+            $data['content'] = $this->content;
+        }
+
+        if ($this->links !== null) {
+            $data['links'] = $this->links;
+        }
+
+        return $data;
+    }
+}

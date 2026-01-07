@@ -1,0 +1,46 @@
+{
+    "name": "duyler/openapi",
+    "type": "library",
+    "description": "Duyler openapi validator",
+    "license": "MIT",
+    "keywords": [
+        "openapi",
+        "swagger"
+    ],
+    "authors": [
+        {
+            "name": "Mikhail Ilinsky",
+            "email": "mail@milinsky.ru"
+        }
+    ],
+    "support": {
+        "docs": "https://duyler.org/en/docs/openapi/"
+    },
+    "require": {
+        "php": "^8.4",
+        "psr/cache": "^3.0",
+        "psr/event-dispatcher": "^1.0",
+        "psr/http-message": "^2.0",
+        "psr/http-server-middleware": "^1.0",
+        "symfony/yaml": "^8.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0",
+        "friendsofphp/php-cs-fixer": "^3.80",
+        "vimeo/psalm": "^6.10",
+        "rector/rector": "^2.0",
+        "infection/infection": "^0.27.0"
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "Duyler\\OpenApi\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Duyler\\OpenApi\\Test\\": ["tests/"]
+        }
+    }
+}
