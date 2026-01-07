@@ -4,14 +4,22 @@ OpenAPI 3.1 validator for PHP 8.4+
 
 ## Features
 
-- Full OpenAPI 3.1 specification support
-- PSR-7 HTTP message integration
-- Request and response validation
-- Schema validation with JSON Schema draft 2020-12
-- Built-in format validators (email, UUID, date-time, etc.)
-- Webhooks support
-- PSR-6 caching support
-- PSR-14 event system
+- **Full OpenAPI 3.1 Support** - Complete implementation of OpenAPI 3.1 specification
+- **JSON Schema Validation** - Full JSON Schema draft 2020-12 validation with 25+ validators
+- **PSR-7 Integration** - Works with any PSR-7 HTTP message implementation
+- **Request Validation** - Validate path parameters, query parameters, headers, cookies, and request body
+- **Response Validation** - Validate status codes, headers, and response bodies
+- **Multiple Content Types** - Support for JSON, form-data, multipart, text, and XML
+- **Built-in Format Validators** - 12+ built-in validators (email, UUID, date-time, URI, IPv4/IPv6, etc.)
+- **Custom Format Validators** - Easily register custom format validators
+- **Discriminator Support** - Full support for polymorphic schemas with discriminators
+- **Type Coercion** - Optional automatic type conversion
+- **PSR-6 Caching** - Cache parsed OpenAPI documents for better performance
+- **PSR-14 Events** - Subscribe to validation lifecycle events
+- **Error Formatting** - Multiple error formatters (simple, detailed, JSON)
+- **Webhooks Support** - Validate incoming webhook requests
+- **Schema Registry** - Manage multiple schema versions
+- **Validator Compilation** - Generate optimized validator code
 
 ## Installation
 
@@ -159,24 +167,340 @@ $schema = $registry->get('api');
 $versions = $registry->getVersions('api');
 ```
 
-## Configuration Options
+## Advanced Usage
+
+### Custom Format Validators
+
+Register custom format validators for domain-specific validation:
 
 ```php
-use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 
+// Create a custom validator
+class PhoneNumberValidator implements FormatValidatorInterface
+{
+    public function validate(mixed $data): void
+    {
+        if (!is_string($data) || !preg_match('/^\+?[1-9]\d{1,14}$/', $data)) {
+            throw new InvalidFormatException(
+                'phone',
+                $data,
+                'Value must be a valid E.164 phone number'
+            );
+        }
+    }
+}
+
+// Register with the builder
 $validator = OpenApiValidatorBuilder::create()
     ->fromYamlFile('openapi.yaml')
-    ->withValidatorPool($customPool)
-    ->withCache($schemaCache)
-    ->withLogger($psr3Logger)
-    ->withErrorFormatter($customFormatter)
-    ->withFormat('string', 'custom-format', $customValidator)
-    ->enableCoercion()
-    ->enableNullableAsType()
+    ->withFormat('string', 'phone', new PhoneNumberValidator())
     ->build();
 ```
 
+### Type Coercion
+
+Enable automatic type conversion for query parameters and request body:
+
+```php
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->enableCoercion()  // Convert string "123" to integer 123
+    ->build();
+```
+
+### Error Formatters
+
+Choose from built-in error formatters or create your own:
+
+```php
+use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
+use Duyler\OpenApi\Validator\Error\Formatter\JsonFormatter;
+
+// Detailed formatter with suggestions
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withErrorFormatter(new DetailedFormatter())
+    ->build();
+
+// JSON formatter for API responses
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withErrorFormatter(new JsonFormatter())
+    ->build();
+
+try {
+    $validator->validateRequest($request, '/users', 'POST');
+} catch (ValidationException $e) {
+    // Get formatted errors
+    $formatted = $validator->getFormattedErrors($e);
+    echo $formatted;
+}
+```
+
+### Discriminator Validation
+
+Validate polymorphic schemas with discriminators:
+
+```php
+$yaml = <<<YAML
+openapi: 3.1.0
+info:
+  title: Pet Store API
+  version: 1.0.0
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - petType
+      discriminator:
+        propertyName: petType
+        mapping:
+          cat: '#/components/schemas/Cat'
+          dog: '#/components/schemas/Dog'
+      oneOf:
+        - $ref: '#/components/schemas/Cat'
+        - $ref: '#/components/schemas/Dog'
+    Cat:
+      type: object
+      required:
+        - petType
+        - name
+      properties:
+        petType:
+          type: string
+          enum: [cat]
+        name:
+          type: string
+    Dog:
+      type: object
+      required:
+        - petType
+        - name
+        - breed
+      properties:
+        petType:
+          type: string
+          enum: [dog]
+        name:
+          type: string
+        breed:
+          type: string
+YAML;
+
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlString($yaml)
+    ->build();
+
+// Validates against Cat schema
+$data = ['petType' => 'cat', 'name' => 'Fluffy'];
+$validator->validateSchema($data, '#/components/schemas/Pet');
+```
+
+### Event-Driven Validation
+
+Subscribe to validation lifecycle events:
+
+```php
+use Duyler\OpenApi\Event\ValidationStartedEvent;
+use Duyler\OpenApi\Event\ValidationFinishedEvent;
+use Duyler\OpenApi\Event\ValidationErrorEvent;
+use Duyler\OpenApi\Event\ArrayDispatcher;
+
+$dispatcher = new ArrayDispatcher([
+    ValidationStartedEvent::class => [
+        function (ValidationStartedEvent $event) {
+            error_log(sprintf(
+                "Validation started: %s %s",
+                $event->method,
+                $event->path
+            ));
+        },
+    ],
+    ValidationFinishedEvent::class => [
+        function (ValidationFinishedEvent $event) {
+            if ($event->success) {
+                error_log(sprintf(
+                    "Validation completed in %.3f seconds",
+                    $event->duration
+                ));
+            }
+        },
+    ],
+    ValidationErrorEvent::class => [
+        function (ValidationErrorEvent $event) {
+            error_log(sprintf(
+                "Validation failed for %s %s: %s",
+                $event->method,
+                $event->path,
+                $event->exception->getMessage()
+            ));
+        },
+    ],
+]);
+
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withEventDispatcher($dispatcher)
+    ->build();
+```
+
+### Schema Registry
+
+Manage multiple API versions:
+
+```php
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Registry\SchemaRegistry;
+
+// Load multiple versions
+$documentV1 = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('api-v1.yaml')
+    ->build()
+    ->document;
+
+$documentV2 = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('api-v2.yaml')
+    ->build()
+    ->document;
+
+// Register schemas
+$registry = new SchemaRegistry();
+$registry = $registry
+    ->register('api', '1.0.0', $documentV1)
+    ->register('api', '2.0.0', $documentV2);
+
+// Get specific version
+$schema = $registry->get('api', '1.0.0');
+
+// Get latest version
+$schema = $registry->get('api');
+
+// List all versions
+$versions = $registry->getVersions('api');
+// ['1.0.0', '2.0.0']
+```
+
+### Validator Compilation
+
+Generate optimized validator code:
+
+```php
+use Duyler\OpenApi\Compiler\ValidatorCompiler;
+use Duyler\OpenApi\Schema\Model\Schema;
+
+$schema = new Schema(
+    type: 'object',
+    properties: [
+        'name' => new Schema(type: 'string'),
+        'age' => new Schema(type: 'integer'),
+    ],
+    required: ['name', 'age'],
+);
+
+$compiler = new ValidatorCompiler();
+$code = $compiler->compile($schema, 'UserValidator');
+
+// Save generated validator
+file_put_contents('UserValidator.php', $code);
+
+// Use generated validator
+require_once 'UserValidator.php';
+$validator = new UserValidator();
+$validator->validate(['name' => 'John', 'age' => 30]);
+```
+
+## Configuration Options
+
+### Builder Methods
+
+| Method | Description | Default |
+|--------|-------------|---------|
+| `fromYamlFile(string $path)` | Load spec from YAML file | - |
+| `fromJsonFile(string $path)` | Load spec from JSON file | - |
+| `fromYamlString(string $content)` | Load spec from YAML string | - |
+| `fromJsonString(string $content)` | Load spec from JSON string | - |
+| `withCache(SchemaCache $cache)` | Enable PSR-6 caching | `null` |
+| `withEventDispatcher(EventDispatcherInterface $dispatcher)` | Set PSR-14 event dispatcher | `null` |
+| `withErrorFormatter(ErrorFormatterInterface $formatter)` | Set error formatter | `SimpleFormatter` |
+| `withFormat(string $type, string $format, FormatValidatorInterface $validator)` | Register custom format | - |
+| `withValidatorPool(ValidatorPool $pool)` | Set custom validator pool | `new ValidatorPool()` |
+| `withLogger(object $logger)` | Set PSR-3 logger | `null` |
+| `enableCoercion()` | Enable type coercion | `false` |
+| `enableNullableAsType()` | Enable nullable as type | `false` |
+
+### Example Configuration
+
+```php
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Duyler\OpenApi\Cache\SchemaCache;
+use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
+
+$cachePool = new FilesystemAdapter();
+$schemaCache = new SchemaCache($cachePool, 3600);
+
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withCache($schemaCache)           // Cache parsed specs
+    ->withErrorFormatter(new DetailedFormatter())  // Detailed errors
+    ->enableCoercion()                  // Auto type conversion
+    ->build();
+```
+
+## Supported JSON Schema Keywords
+
+The validator supports the following JSON Schema draft 2020-12 keywords:
+
+### Type Validation
+- `type` - String, number, integer, boolean, array, object, null
+- `enum` - Enumerated values
+- `const` - Constant value
+
+### String Validation
+- `minLength` / `maxLength` - String length constraints
+- `pattern` - Regular expression pattern
+- `format` - Format validation (email, uri, uuid, date-time, etc.)
+
+### Numeric Validation
+- `minimum` / `maximum` - Range constraints
+- `exclusiveMinimum` / `exclusiveMaximum` - Exclusive ranges
+- `multipleOf` - Numeric division
+
+### Array Validation
+- `items` / `prefixItems` - Array item validation
+- `minItems` / `maxItems` - Array length constraints
+- `uniqueItems` - Unique item requirement
+- `contains` / `minContains` / `maxContains` - Item presence validation
+
+### Object Validation
+- `properties` - Property definitions
+- `required` - Required properties
+- `additionalProperties` - Additional property rules
+- `minProperties` / `maxProperties` - Property count constraints
+- `patternProperties` - Pattern-based property validation
+- `propertyNames` - Property name validation
+- `dependentSchemas` - Conditional schema application
+
+### Composition Keywords
+- `allOf` - Must match all schemas
+- `anyOf` - Must match at least one schema
+- `oneOf` - Must match exactly one schema
+- `not` - Must not match schema
+- `if` / `then` / `else` - Conditional validation
+
+### Advanced Keywords
+- `$ref` - Schema references
+- `discriminator` - Polymorphic schemas
+- `unevaluatedProperties` / `unevaluatedItems` - Dynamic evaluation
+
 ## Error Handling
+
+### Validation Exceptions
+
+All validation errors throw `ValidationException` which contains detailed error information:
 
 ```php
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -184,21 +508,251 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 try {
     $validator->validateRequest($request, '/users', 'POST');
 } catch (ValidationException $e) {
+    // Get array of validation errors
     $errors = $e->getErrors();
-    $formatted = $validator->getFormattedErrors($e);
 
     foreach ($errors as $error) {
-        printf("Validation error: %s\n", $error->message);
+        printf(
+            "Path: %s\nMessage: %s\nType: %s\n\n",
+            $error->dataPath(),
+            $error->getMessage(),
+            $error->getType()
+        );
     }
+
+    // Get formatted errors
+    $formatted = $validator->getFormattedErrors($e);
+    echo $formatted;
 }
+```
+
+### Common Validation Errors
+
+| Error Type | Description |
+|------------|-------------|
+| `TypeMismatchError` | Data type doesn't match schema type |
+| `RequiredError` | Required property is missing |
+| `MinLengthError` / `MaxLengthError` | String length constraint violation |
+| `MinimumError` / `MaximumError` | Numeric range constraint violation |
+| `PatternMismatchError` | Regular expression pattern violation |
+| `InvalidFormatException` | Format validation failed (email, URI, etc.) |
+| `OneOfError` / `AnyOfError` | Composition constraint violation |
+| `EnumError` | Value not in allowed enum |
+| `MissingParameterException` | Required parameter is missing |
+| `UnsupportedMediaTypeException` | Content-Type not supported |
+
+### Error Formatters
+
+Choose the appropriate error formatter for your use case:
+
+```php
+// Simple formatter (default)
+use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
+
+// Detailed formatter with suggestions
+use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
+
+// JSON formatter for API responses
+use Duyler\OpenApi\Validator\Error\Formatter\JsonFormatter;
+```
+
+## Performance
+
+### Caching
+
+Enable PSR-6 caching to avoid reparsing OpenAPI specifications:
+
+```php
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Duyler\OpenApi\Cache\SchemaCache;
+
+$cachePool = new FilesystemAdapter();
+$schemaCache = new SchemaCache($cachePool, 3600); // 1 hour TTL
+
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withCache($schemaCache)
+    ->build();
+```
+
+### Validator Pool
+
+The validator pool uses WeakMap to reuse validator instances:
+
+```php
+use Duyler\OpenApi\Validator\ValidatorPool;
+
+$pool = new ValidatorPool();
+
+// Validators are automatically reused
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withValidatorPool($pool)
+    ->build();
+```
+
+### Compilation
+
+For maximum performance, compile validators to generated code:
+
+```php
+use Duyler\OpenApi\Compiler\ValidatorCompiler;
+use Duyler\OpenApi\Compiler\CompilationCache;
+
+$compiler = new ValidatorCompiler();
+$cache = new CompilationCache($cachePool);
+
+$code = $compiler->compileWithCache(
+    $schema,
+    'UserValidator',
+    $cache
+);
+```
+
+## Built-in Format Validators
+
+The following format validators are included:
+
+### String Formats
+
+| Format | Description | Example |
+|--------|-------------|---------|
+| `date-time` | ISO 8601 date-time | `2024-01-15T10:30:00Z` |
+| `date` | ISO 8601 date | `2024-01-15` |
+| `time` | ISO 8601 time | `10:30:00Z` |
+| `email` | Email address | `user@example.com` |
+| `uri` | URI | `https://example.com` |
+| `uuid` | UUID | `550e8400-e29b-41d4-a716-446655440000` |
+| `hostname` | Hostname | `example.com` |
+| `ipv4` | IPv4 address | `192.168.1.1` |
+| `ipv6` | IPv6 address | `2001:db8::1` |
+| `byte` | Base64-encoded data | `SGVsbG8gd29ybGQ=` |
+| `duration` | ISO 8601 duration | `P3Y6M4DT12H30M5S` |
+| `json-pointer` | JSON Pointer | `/path/to/value` |
+| `relative-json-pointer` | Relative JSON Pointer | `1/property` |
+
+### Numeric Formats
+
+| Format | Description | Example |
+|--------|-------------|---------|
+| `float` | Floating-point number | `3.14` |
+| `double` | Double-precision number | `3.14159265359` |
+
+### Overriding Built-in Validators
+
+Replace built-in validators with custom implementations:
+
+```php
+$customEmailValidator = new class implements FormatValidatorInterface {
+    public function validate(mixed $data): void
+    {
+        // Custom email validation logic
+        if (!filter_var($data, FILTER_VALIDATE_EMAIL)) {
+            throw new InvalidFormatException('email', $data, 'Invalid email');
+        }
+    }
+};
+
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withFormat('string', 'email', $customEmailValidator)
+    ->build();
 ```
 
 ## Requirements
 
-- PHP 8.4 or higher
-- PSR-7 HTTP message implementation
-- PSR-6 cache implementation (optional, for caching)
-- PSR-14 event dispatcher (optional, for events)
+- **PHP 8.4 or higher** - Uses modern PHP features (readonly classes, match expressions, etc.)
+- **PSR-7 HTTP message** - `psr/http-message ^2.0` (e.g., `nyholm/psr7`, `guzzlehttp/psr7`)
+- **PSR-6 cache** (optional) - `psr/cache ^3.0` (e.g., `symfony/cache`, `cache/cache`)
+- **PSR-14 events** (optional) - `psr/event-dispatcher ^1.0` (e.g., `symfony/event-dispatcher`)
+- **PSR-18 HTTP client** (optional) - For remote schema fetching
+
+### Suggested Packages
+
+```bash
+# PSR-7 implementation
+composer require nyholm/psr7
+
+# PSR-6 cache implementation
+composer require symfony/cache
+
+# PSR-14 event dispatcher
+composer require symfony/event-dispatcher
+```
+
+## Best Practices
+
+### 1. Use Caching in Production
+
+Always enable caching in production environments:
+
+```php
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withCache($schemaCache)
+    ->build();
+```
+
+### 2. Handle Exceptions Gracefully
+
+Provide meaningful error messages to API consumers:
+
+```php
+try {
+    $validator->validateRequest($request, $path, $method);
+} catch (ValidationException $e) {
+    $errors = array_map(
+        fn($error) => [
+            'field' => $error->dataPath(),
+            'message' => $error->getMessage(),
+        ],
+        $e->getErrors()
+    );
+
+    return new JsonResponse(
+        ['errors' => $errors],
+        422
+    );
+}
+```
+
+### 3. Enable Type Coercion for Query Parameters
+
+Query parameters are always strings; enable coercion for automatic type conversion:
+
+```php
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->enableCoercion()
+    ->build();
+```
+
+### 4. Use Events for Monitoring
+
+Subscribe to validation events for monitoring and debugging:
+
+```php
+$dispatcher->listen(ValidationFinishedEvent::class, function ($event) {
+    if (!$event->success) {
+        // Log failed validations
+        error_log(sprintf(
+            "Validation failed: %s %s",
+            $event->method,
+            $event->path
+        ));
+    }
+});
+```
+
+### 5. Validate Against Specific Schemas
+
+For complex validations, validate against specific schema references:
+
+```php
+// Validate data against a specific schema
+$userData = ['name' => 'John', 'email' => 'john@example.com'];
+$validator->validateSchema($userData, '#/components/schemas/User');
+```
 
 ## Testing
 
@@ -217,24 +771,80 @@ For documentation, see: https://duyler.org/en/docs/openapi/
 
 ## Migration from league/openapi-psr7-validator
 
-This library provides a similar API to league/openapi-psr7-validator with key differences:
+### Key Differences
 
-1. PHP 8.4+ required
-2. OpenAPI 3.1 (3.0 support)
-3. Different builder pattern approach
+| Feature | league/openapi-psr7-validator | duyler/openapi |
+|---------|------------------------------|----------------|
+| PHP Version | PHP 7.4+ | PHP 8.4+ |
+| OpenAPI Version | 3.0 | 3.1 |
+| JSON Schema | Draft 7 | Draft 2020-12 |
+| Builder Pattern | Fluent builder | Fluent builder (immutable) |
+| Type Coercion | Enabled by default | Opt-in |
+| Error Formatting | Basic | Multiple formatters |
 
-Basic migration:
+### Migration Examples
+
+#### Before (league/openapi-psr7-validator)
 
 ```php
-// Before (league/openapi-psr7-validator)
-$psr7Validator = new \League\OpenAPIValidation\PSR7\ValidatorBuilder();
-$psr7Validator->fromYamlFile('openapi.yaml');
-$requestValidator = $psr7Validator->getRequestValidator();
+use League\OpenAPIValidation\PSR7\ValidatorBuilder;
+
+$builder = new ValidatorBuilder();
+$builder->fromYamlFile('openapi.yaml');
+$requestValidator = $builder->getRequestValidator();
+$responseValidator = $builder->getResponseValidator();
+
+// Request validation
 $requestValidator->validate($request);
 
-// After (duyler/openapi-validator)
+// Response validation
+$responseValidator->validate($response);
+```
+
+#### After (duyler/openapi)
+
+```php
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+
 $validator = OpenApiValidatorBuilder::create()
     ->fromYamlFile('openapi.yaml')
+    ->enableCoercion()
     ->build();
+
+// Request validation
 $validator->validateRequest($request, '/users', 'POST');
+
+// Response validation
+$validator->validateResponse($response, '/users', 'POST');
+
+// Schema validation
+$validator->validateSchema($data, '#/components/schemas/User');
+```
+
+### Breaking Changes
+
+1. **Path and Method Required**: Unlike league/openapi-psr7-validator which extracts path/method from the request, duyler/openapi requires explicit path and method:
+
+```php
+// Before
+$requestValidator->validate($request);
+
+// After
+$validator->validateRequest($request, '/users/{id}', 'GET');
+```
+
+2. **Immutable Builder**: The builder is immutable; each method returns a new instance:
+
+```php
+// This won't work
+$builder = OpenApiValidatorBuilder::create();
+$builder->fromYamlFile('openapi.yaml');
+$builder->enableCoercion();
+$validator = $builder->build();
+
+// Correct way
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->enableCoercion()
+    ->build();
 ```
