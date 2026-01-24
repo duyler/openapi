@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use stdClass;
 
 class AnyOfValidatorTest extends TestCase
 {
@@ -111,5 +112,62 @@ class AnyOfValidatorTest extends TestCase
         $this->expectException(ValidationException::class);
 
         $this->validator->validate('any value', $schema);
+    }
+
+    #[Test]
+    public function validate_any_of_with_second_schema_matching(): void
+    {
+        $schema1 = new Schema(type: 'string', minLength: 10);
+        $schema2 = new Schema(type: 'string', maxLength: 10);
+        $schema = new Schema(
+            anyOf: [$schema1, $schema2],
+        );
+
+        $this->validator->validate('hello', $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_any_of_single_schema(): void
+    {
+        $schema1 = new Schema(type: 'string', minLength: 3);
+        $schema = new Schema(
+            anyOf: [$schema1],
+        );
+
+        $this->validator->validate('hello', $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_any_of_throws_exception_for_invalid_data(): void
+    {
+        $schema1 = new Schema(type: 'string');
+        $schema2 = new Schema(type: 'number');
+        $schema = new Schema(
+            anyOf: [$schema1, $schema2],
+        );
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate(new stdClass(), $schema);
+    }
+
+    #[Test]
+    public function validate_any_of_with_nested_schemas(): void
+    {
+        $nestedSchema1 = new Schema(type: 'object', properties: ['name' => new Schema(type: 'string')]);
+        $nestedSchema2 = new Schema(type: 'object', properties: ['age' => new Schema(type: 'integer')]);
+        $schema1 = new Schema(type: 'object', properties: ['address' => $nestedSchema1]);
+        $schema2 = new Schema(type: 'object', properties: ['contact' => $nestedSchema2]);
+        $schema = new Schema(
+            anyOf: [$schema1, $schema2],
+        );
+
+        $this->validator->validate(['address' => ['name' => 'John']], $schema);
+
+        $this->expectNotToPerformAssertions();
     }
 }

@@ -114,4 +114,43 @@ class OneOfValidatorTest extends TestCase
 
         $this->validator->validate('any value', $schema);
     }
+
+    #[Test]
+    public function validate_one_of_single_schema(): void
+    {
+        $schema1 = new Schema(type: 'string', minLength: 3);
+        $schema = new Schema(
+            oneOf: [$schema1],
+        );
+
+        $this->validator->validate('hello', $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_one_of_with_nested_schemas(): void
+    {
+        $schema1 = new Schema(
+            type: 'object',
+            properties: [
+                'type' => new Schema(type: 'string', enum: ['person']),
+                'name' => new Schema(type: 'string'),
+            ],
+        );
+        $schema2 = new Schema(
+            type: 'object',
+            properties: [
+                'type' => new Schema(type: 'string', enum: ['company']),
+                'companyName' => new Schema(type: 'string'),
+            ],
+        );
+        $schema = new Schema(
+            oneOf: [$schema1, $schema2],
+        );
+
+        $this->validator->validate(['type' => 'person', 'name' => 'John'], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
 }

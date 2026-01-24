@@ -6,9 +6,11 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use stdClass;
 
 class PrefixItemsValidatorTest extends TestCase
 {
@@ -175,5 +177,84 @@ class PrefixItemsValidatorTest extends TestCase
         $this->validator->validate(['hello', 42, true, 'extra'], $schema);
 
         $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function throw_error_for_invalid_remaining_item(): void
+    {
+        $prefixSchema1 = new Schema(type: 'string');
+        $itemsSchema = new Schema(type: 'integer');
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$prefixSchema1],
+            items: $itemsSchema,
+        );
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate(['hello', 'not integer'], $schema);
+    }
+
+    #[Test]
+    public function throw_error_for_remaining_item_type_exception(): void
+    {
+        $prefixSchema1 = new Schema(type: 'string');
+        $itemsSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$prefixSchema1],
+            items: $itemsSchema,
+        );
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate(['hello', new stdClass()], $schema);
+    }
+
+    #[Test]
+    public function validate_prefix_items_with_middle_schema_failing(): void
+    {
+        $schema1 = new Schema(type: 'string');
+        $schema2 = new Schema(type: 'integer');
+        $schema3 = new Schema(type: 'boolean');
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$schema1, $schema2, $schema3],
+        );
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate(['hello', 'not integer', true], $schema);
+    }
+
+    #[Test]
+    public function validate_prefix_items_with_last_schema_failing(): void
+    {
+        $schema1 = new Schema(type: 'string');
+        $schema2 = new Schema(type: 'integer');
+        $schema3 = new Schema(type: 'boolean');
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$schema1, $schema2, $schema3],
+        );
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate(['hello', 42, 'not boolean'], $schema);
+    }
+
+    #[Test]
+    public function validate_prefix_items_throws_exception_for_invalid_item(): void
+    {
+        $schema1 = new Schema(type: 'string');
+        $schema2 = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$schema1, $schema2],
+        );
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate(['hello', new stdClass()], $schema);
     }
 }

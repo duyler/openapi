@@ -7,9 +7,11 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\MaximumError;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use stdClass;
 
 class ItemsValidatorTest extends TestCase
 {
@@ -151,5 +153,19 @@ class ItemsValidatorTest extends TestCase
         ], $schema);
 
         $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_items_throws_exception_for_invalid_element(): void
+    {
+        $itemSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'array',
+            items: $itemSchema,
+        );
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate([new stdClass()], $schema);
     }
 }

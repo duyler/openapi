@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use stdClass;
 
 class AllOfValidatorTest extends TestCase
 {
@@ -110,6 +111,80 @@ class AllOfValidatorTest extends TestCase
         );
 
         $this->validator->validate('any value', $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_all_of_with_first_schema_failing(): void
+    {
+        $schema1 = new Schema(type: 'string', minLength: 10);
+        $schema2 = new Schema(type: 'string');
+        $schema = new Schema(
+            allOf: [$schema1, $schema2],
+        );
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate('hello', $schema);
+    }
+
+    #[Test]
+    public function validate_all_of_with_second_schema_failing(): void
+    {
+        $schema1 = new Schema(type: 'string');
+        $schema2 = new Schema(type: 'string', maxLength: 3);
+        $schema = new Schema(
+            allOf: [$schema1, $schema2],
+        );
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate('hello', $schema);
+    }
+
+    #[Test]
+    public function validate_all_of_single_schema(): void
+    {
+        $schema1 = new Schema(type: 'string', minLength: 3);
+        $schema = new Schema(
+            allOf: [$schema1],
+        );
+
+        $this->validator->validate('hello', $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_all_of_throws_exception_for_invalid_data(): void
+    {
+        $schema1 = new Schema(type: 'string');
+        $schema2 = new Schema(type: 'string');
+        $schema = new Schema(
+            allOf: [$schema1, $schema2],
+        );
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate(new stdClass(), $schema);
+    }
+
+    #[Test]
+    public function validate_all_of_with_nested_schemas(): void
+    {
+        $nestedSchema1 = new Schema(type: 'object', properties: ['name' => new Schema(type: 'string')]);
+        $nestedSchema2 = new Schema(type: 'object', properties: ['age' => new Schema(type: 'integer')]);
+        $schema1 = new Schema(type: 'object', properties: ['address' => $nestedSchema1]);
+        $schema2 = new Schema(type: 'object', properties: ['contact' => $nestedSchema2]);
+        $schema = new Schema(
+            allOf: [$schema1, $schema2],
+        );
+
+        $this->validator->validate([
+            'address' => ['name' => 'John'],
+            'contact' => ['age' => 30],
+        ], $schema);
 
         $this->expectNotToPerformAssertions();
     }

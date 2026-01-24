@@ -195,4 +195,38 @@ class PropertiesValidatorTest extends TestCase
 
         $this->validator->validate(['test' => new stdClass()], $schema);
     }
+
+    #[Test]
+    public function validate_properties_with_additional_property(): void
+    {
+        $nameSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => $nameSchema,
+            ],
+        );
+
+        $this->validator->validate(['name' => 'John', 'extra' => 'any data'], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_properties_empty_object(): void
+    {
+        $nameSchema = new Schema(type: 'string');
+        $ageSchema = new Schema(type: 'integer');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => $nameSchema,
+                'age' => $ageSchema,
+            ],
+        );
+
+        $this->validator->validate([], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
 }

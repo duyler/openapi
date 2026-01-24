@@ -148,4 +148,21 @@ class UnevaluatedItemsValidatorTest extends TestCase
 
         $this->expectNotToPerformAssertions();
     }
+
+    #[Test]
+    public function validate_unevaluated_items_no_additional(): void
+    {
+        $prefixSchema1 = new Schema(type: 'string');
+        $prefixSchema2 = new Schema(type: 'integer');
+        $unevaluatedSchema = new Schema(type: 'string', minLength: 2);
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$prefixSchema1, $prefixSchema2],
+            unevaluatedItems: $unevaluatedSchema,
+        );
+
+        $this->validator->validate(['hello', 42], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
 }
