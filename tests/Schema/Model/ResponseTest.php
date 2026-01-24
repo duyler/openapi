@@ -8,6 +8,8 @@ use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\Response;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\MediaType;
+use Duyler\OpenApi\Schema\Model\Schema;
 
 /**
  * @covers \Duyler\OpenApi\Schema\Model\Response
@@ -17,13 +19,13 @@ final class ResponseTest extends TestCase
     #[Test]
     public function can_create_response_with_all_fields(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'object',
             properties: null,
         );
 
         $content = new Content(
-            mediaTypes: ['application/json' => new \Duyler\OpenApi\Schema\Model\MediaType(
+            mediaTypes: ['application/json' => new MediaType(
                 schema: $schema,
                 example: null,
             )],

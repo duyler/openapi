@@ -7,6 +7,10 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 use Duyler\OpenApi\Schema\Model\PathItem;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\Callbacks;
+use Duyler\OpenApi\Schema\Model\Operation;
+use Duyler\OpenApi\Schema\Model\Response;
+use Duyler\OpenApi\Schema\Model\Responses;
 
 /**
  * @covers \Duyler\OpenApi\Schema\Model\Callbacks
@@ -17,9 +21,9 @@ final class CallbacksTest extends TestCase
     public function can_create_callbacks(): void
     {
         $pathItem = new PathItem(
-            get: new \Duyler\OpenApi\Schema\Model\Operation(
-                responses: new \Duyler\OpenApi\Schema\Model\Responses(
-                    responses: ['200' => new \Duyler\OpenApi\Schema\Model\Response(
+            get: new Operation(
+                responses: new Responses(
+                    responses: ['200' => new Response(
                         description: 'Success',
                         headers: null,
                         content: null,
@@ -35,7 +39,7 @@ final class CallbacksTest extends TestCase
             trace: null,
         );
 
-        $callbacks = new \Duyler\OpenApi\Schema\Model\Callbacks(
+        $callbacks = new Callbacks(
             callbacks: ['myCallback' => ['{$request.query#/url}' => $pathItem]],
         );
 
@@ -46,7 +50,7 @@ final class CallbacksTest extends TestCase
     #[Test]
     public function can_create_empty_callbacks(): void
     {
-        $callbacks = new \Duyler\OpenApi\Schema\Model\Callbacks(
+        $callbacks = new Callbacks(
             callbacks: [],
         );
 
@@ -58,9 +62,9 @@ final class CallbacksTest extends TestCase
     {
         $pathItem = new PathItem(
             get: null,
-            post: new \Duyler\OpenApi\Schema\Model\Operation(
-                responses: new \Duyler\OpenApi\Schema\Model\Responses(
-                    responses: ['200' => new \Duyler\OpenApi\Schema\Model\Response(
+            post: new Operation(
+                responses: new Responses(
+                    responses: ['200' => new Response(
                         description: 'Success',
                         headers: null,
                         content: null,
@@ -75,7 +79,7 @@ final class CallbacksTest extends TestCase
             trace: null,
         );
 
-        $callbacks = new \Duyler\OpenApi\Schema\Model\Callbacks(
+        $callbacks = new Callbacks(
             callbacks: ['myCallback' => ['{$request.query#/url}' => $pathItem]],
         );
 

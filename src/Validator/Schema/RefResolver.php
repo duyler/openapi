@@ -10,6 +10,10 @@ use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
 use Override;
 use WeakMap;
 
+use function array_key_exists;
+use function is_array;
+use function is_object;
+
 class RefResolver implements RefResolverInterface
 {
     private WeakMap $cache;

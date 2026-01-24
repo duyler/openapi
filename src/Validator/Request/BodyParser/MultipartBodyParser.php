@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
+use function count;
+
 final readonly class MultipartBodyParser
 {
     /**

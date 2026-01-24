@@ -39,6 +39,9 @@ use Duyler\OpenApi\Validator\Webhook\WebhookValidator;
 use Exception;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\StreamInterface;
+use Psr\Http\Message\UriInterface;
 
 /** @internal */
 final class WebhookValidatorTest extends TestCase
@@ -368,13 +371,13 @@ final class WebhookValidatorTest extends TestCase
         array $cookies = [],
         string $body = '',
         string $contentType = 'application/json',
-    ): \Psr\Http\Message\ServerRequestInterface {
-        $request = $this->createMock(\Psr\Http\Message\ServerRequestInterface::class);
+    ): ServerRequestInterface {
+        $request = $this->createMock(ServerRequestInterface::class);
 
         $request->method('getMethod')->willReturn($method);
 
         // For webhooks, the URI should match the webhook name (used as path template)
-        $uriMock = $this->createMock(\Psr\Http\Message\UriInterface::class);
+        $uriMock = $this->createMock(UriInterface::class);
         $uriMock->method('getPath')->willReturn($uri);
         $uriMock->method('getQuery')->willReturn(http_build_query($queryParams));
 
@@ -387,7 +390,7 @@ final class WebhookValidatorTest extends TestCase
         ]);
         $request->method('getCookieParams')->willReturn($cookies);
 
-        $bodyMock = $this->createMock(\Psr\Http\Message\StreamInterface::class);
+        $bodyMock = $this->createMock(StreamInterface::class);
         $bodyMock->method('__toString')->willReturn($body);
         $request->method('getBody')->willReturn($bodyMock);
 
@@ -402,15 +405,15 @@ final class WebhookValidatorTest extends TestCase
         string $body = '',
         string $contentType = 'application/json',
         string $webhookName = '',
-    ): \Psr\Http\Message\ServerRequestInterface {
-        $request = $this->createMock(\Psr\Http\Message\ServerRequestInterface::class);
+    ): ServerRequestInterface {
+        $request = $this->createMock(ServerRequestInterface::class);
 
         $request->method('getMethod')->willReturn($method);
 
         // Use webhook name as path to match the template passed to RequestValidator
         // WebhookValidator passes webhook name (with dots) as path template
         $path = '' !== $webhookName ? $webhookName : 'webhook';
-        $uriMock = $this->createMock(\Psr\Http\Message\UriInterface::class);
+        $uriMock = $this->createMock(UriInterface::class);
         $uriMock->method('getPath')->willReturn($path);
         $uriMock->method('getQuery')->willReturn(http_build_query($queryParams));
 
@@ -423,7 +426,7 @@ final class WebhookValidatorTest extends TestCase
         ]);
         $request->method('getCookieParams')->willReturn($cookies);
 
-        $bodyMock = $this->createMock(\Psr\Http\Message\StreamInterface::class);
+        $bodyMock = $this->createMock(StreamInterface::class);
         $bodyMock->method('__toString')->willReturn($body);
         $request->method('getBody')->willReturn($bodyMock);
 

@@ -12,6 +12,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Throwable;
+use Duyler\OpenApi\Schema\Model\InfoObject;
 
 final class RefValidationTest extends TestCase
 {
@@ -33,7 +34,7 @@ final class RefValidationTest extends TestCase
 
         $document = new OpenApiDocument(
             openapi: '3.1.0',
-            info: new \Duyler\OpenApi\Schema\Model\InfoObject(
+            info: new InfoObject(
                 title: 'Test',
                 version: '1.0.0',
             ),
@@ -71,7 +72,7 @@ final class RefValidationTest extends TestCase
 
         $document = new OpenApiDocument(
             openapi: '3.1.0',
-            info: new \Duyler\OpenApi\Schema\Model\InfoObject(
+            info: new InfoObject(
                 title: 'Test',
                 version: '1.0.0',
             ),
@@ -98,7 +99,7 @@ final class RefValidationTest extends TestCase
         $components = new Components(schemas: []);
         $document = new OpenApiDocument(
             openapi: '3.1.0',
-            info: new \Duyler\OpenApi\Schema\Model\InfoObject(
+            info: new InfoObject(
                 title: 'Test',
                 version: '1.0.0',
             ),
@@ -126,7 +127,7 @@ final class RefValidationTest extends TestCase
         $components = new Components(schemas: []);
         $document = new OpenApiDocument(
             openapi: '3.1.0',
-            info: new \Duyler\OpenApi\Schema\Model\InfoObject(
+            info: new InfoObject(
                 title: 'Test',
                 version: '1.0.0',
             ),
@@ -166,7 +167,7 @@ final class RefValidationTest extends TestCase
 
         $document = new OpenApiDocument(
             openapi: '3.1.0',
-            info: new \Duyler\OpenApi\Schema\Model\InfoObject(
+            info: new InfoObject(
                 title: 'Test',
                 version: '1.0.0',
             ),

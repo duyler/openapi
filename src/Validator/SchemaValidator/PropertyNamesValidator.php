@@ -9,11 +9,14 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
+use function is_array;
+
 final readonly class PropertyNamesValidator implements SchemaValidatorInterface
 {
     public function __construct(
         private readonly ValidatorPool $pool,
     ) {}
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

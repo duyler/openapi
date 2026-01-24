@@ -6,6 +6,8 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\Components;
+use Duyler\OpenApi\Schema\Model\Schema;
 
 /**
  * @covers \Duyler\OpenApi\Schema\Model\Components
@@ -15,7 +17,7 @@ final class ComponentsTest extends TestCase
     #[Test]
     public function can_create_components(): void
     {
-        $components = new \Duyler\OpenApi\Schema\Model\Components(
+        $components = new Components(
             schemas: null,
             responses: null,
             parameters: null,
@@ -28,18 +30,18 @@ final class ComponentsTest extends TestCase
             pathItems: null,
         );
 
-        self::assertInstanceOf(\Duyler\OpenApi\Schema\Model\Components::class, $components);
+        self::assertInstanceOf(Components::class, $components);
     }
 
     #[Test]
     public function can_create_components_with_schemas(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'object',
             properties: null,
         );
 
-        $components = new \Duyler\OpenApi\Schema\Model\Components(
+        $components = new Components(
             schemas: ['User' => $schema],
             responses: null,
             parameters: null,
@@ -53,13 +55,13 @@ final class ComponentsTest extends TestCase
         );
 
         self::assertArrayHasKey('User', $components->schemas);
-        self::assertInstanceOf(\Duyler\OpenApi\Schema\Model\Schema::class, $components->schemas['User']);
+        self::assertInstanceOf(Schema::class, $components->schemas['User']);
     }
 
     #[Test]
     public function json_serialize_excludes_null_fields(): void
     {
-        $components = new \Duyler\OpenApi\Schema\Model\Components(
+        $components = new Components(
             schemas: null,
             responses: null,
             parameters: null,
@@ -82,12 +84,12 @@ final class ComponentsTest extends TestCase
     #[Test]
     public function json_serialize_includes_schemas(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'object',
             properties: null,
         );
 
-        $components = new \Duyler\OpenApi\Schema\Model\Components(
+        $components = new Components(
             schemas: ['User' => $schema],
             responses: null,
             parameters: null,

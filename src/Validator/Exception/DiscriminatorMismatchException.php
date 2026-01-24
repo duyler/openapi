@@ -6,6 +6,8 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use Override;
 
+use function sprintf;
+
 class DiscriminatorMismatchException extends AbstractValidationError
 {
     public function __construct(

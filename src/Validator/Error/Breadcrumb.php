@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Error;
 
+use function count;
+
 /**
  * Immutable breadcrumb for tracking validation error paths
  *

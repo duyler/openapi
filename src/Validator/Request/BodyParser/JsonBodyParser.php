@@ -7,6 +7,8 @@ namespace Duyler\OpenApi\Validator\Request\BodyParser;
 use Duyler\OpenApi\Validator\Exception\EmptyBodyException;
 use JsonException;
 
+use const JSON_THROW_ON_ERROR;
+
 final readonly class JsonBodyParser
 {
     /**

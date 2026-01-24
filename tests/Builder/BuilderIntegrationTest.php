@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 
 final class BuilderIntegrationTest extends TestCase
 {
@@ -154,7 +155,7 @@ YAML;
         $pool = new ValidatorPool();
         $formatter = new DetailedFormatter();
 
-        $customValidator = new class implements \Duyler\OpenApi\Validator\Format\FormatValidatorInterface {
+        $customValidator = new class implements FormatValidatorInterface {
             public function validate(mixed $data): void
             {
                 // Custom validation logic

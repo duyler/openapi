@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\MediaType;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\Schema;
 
 /**
  * @covers \Duyler\OpenApi\Schema\Model\Content
@@ -17,7 +18,7 @@ final class ContentTest extends TestCase
     #[Test]
     public function can_create_content(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'object',
             properties: null,
         );
@@ -48,7 +49,7 @@ final class ContentTest extends TestCase
     #[Test]
     public function json_serialize_includes_content(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'object',
             properties: null,
         );

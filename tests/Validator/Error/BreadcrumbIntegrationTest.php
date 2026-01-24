@@ -14,6 +14,7 @@ use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\InfoObject;
 
 class BreadcrumbIntegrationTest extends TestCase
 {
@@ -26,7 +27,7 @@ class BreadcrumbIntegrationTest extends TestCase
         $this->pool = new ValidatorPool();
         $this->document = new OpenApiDocument(
             openapi: '3.0.0',
-            info: new \Duyler\OpenApi\Schema\Model\InfoObject(
+            info: new InfoObject(
                 title: 'Test',
                 version: '1.0.0',
             ),

@@ -7,6 +7,9 @@ namespace Duyler\OpenApi\Validator\Exception;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Override;
 
+use function count;
+use function sprintf;
+
 class UnknownDiscriminatorValueException extends AbstractValidationError
 {
     public function __construct(

@@ -8,6 +8,10 @@ use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\StreamInterface;
+use Psr\Http\Message\UriInterface;
 
 /** @internal */
 final class RealOpenApiSpecTest extends TestCase
@@ -133,12 +137,12 @@ final class RealOpenApiSpecTest extends TestCase
         string $uri,
         array $headers = [],
         string $body = '',
-    ): \Psr\Http\Message\ServerRequestInterface {
-        $request = $this->createMock(\Psr\Http\Message\ServerRequestInterface::class);
+    ): ServerRequestInterface {
+        $request = $this->createMock(ServerRequestInterface::class);
 
         $request->method('getMethod')->willReturn($method);
 
-        $uriMock = $this->createMock(\Psr\Http\Message\UriInterface::class);
+        $uriMock = $this->createMock(UriInterface::class);
         $uriMock->method('getPath')->willReturn($uri);
         $uriMock->method('getQuery')->willReturn('');
 
@@ -148,7 +152,7 @@ final class RealOpenApiSpecTest extends TestCase
             fn($headerName) => $headers[$headerName] ?? '',
         );
 
-        $bodyMock = $this->createMock(\Psr\Http\Message\StreamInterface::class);
+        $bodyMock = $this->createMock(StreamInterface::class);
         $bodyMock->method('__toString')->willReturn($body);
         $request->method('getBody')->willReturn($bodyMock);
 
@@ -159,14 +163,14 @@ final class RealOpenApiSpecTest extends TestCase
         int $statusCode,
         array $headers = [],
         string $body = '',
-    ): \Psr\Http\Message\ResponseInterface {
-        $response = $this->createMock(\Psr\Http\Message\ResponseInterface::class);
+    ): ResponseInterface {
+        $response = $this->createMock(ResponseInterface::class);
 
         $response->method('getStatusCode')->willReturn($statusCode);
         $response->method('getHeaders')->willReturn($headers);
         $response->method('getHeaderLine')->willReturn('application/json');
 
-        $bodyMock = $this->createMock(\Psr\Http\Message\StreamInterface::class);
+        $bodyMock = $this->createMock(StreamInterface::class);
         $bodyMock->method('__toString')->willReturn($body);
         $response->method('getBody')->willReturn($bodyMock);
 

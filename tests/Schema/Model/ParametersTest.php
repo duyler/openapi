@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Parameters;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\Schema;
 
 /**
  * @covers \Duyler\OpenApi\Schema\Model\Parameters
@@ -17,7 +18,7 @@ final class ParametersTest extends TestCase
     #[Test]
     public function can_create_parameters(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'integer',
             properties: null,
         );
@@ -50,7 +51,7 @@ final class ParametersTest extends TestCase
     #[Test]
     public function json_serialize_includes_parameters(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'integer',
             properties: null,
         );

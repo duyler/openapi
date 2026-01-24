@@ -8,6 +8,11 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use RuntimeException;
 
+use function count;
+use function in_array;
+use function is_array;
+use function sprintf;
+
 readonly class ValidatorCompiler
 {
     public function compile(Schema $schema, string $className): string

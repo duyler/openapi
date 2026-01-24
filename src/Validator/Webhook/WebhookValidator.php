@@ -10,6 +10,8 @@ use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Webhook\Exception\UnknownWebhookException;
 use Psr\Http\Message\ServerRequestInterface;
 
+use function sprintf;
+
 readonly class WebhookValidator
 {
     public function __construct(

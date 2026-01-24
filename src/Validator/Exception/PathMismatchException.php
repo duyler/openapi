@@ -7,6 +7,8 @@ namespace Duyler\OpenApi\Validator\Exception;
 use RuntimeException;
 use Throwable;
 
+use function sprintf;
+
 class PathMismatchException extends RuntimeException
 {
     public function __construct(

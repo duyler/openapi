@@ -8,6 +8,8 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 
+use function count;
+
 final readonly class CookieValidator
 {
     public function __construct(

@@ -15,6 +15,9 @@ use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
+use function count;
+use function sprintf;
+
 final readonly class ItemsValidatorWithContext
 {
     public function __construct(

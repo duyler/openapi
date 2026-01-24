@@ -8,6 +8,10 @@ use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Override;
 
+use function is_string;
+
+use const FILTER_VALIDATE_URL;
+
 final readonly class UriValidator implements FormatValidatorInterface
 {
     #[Override]

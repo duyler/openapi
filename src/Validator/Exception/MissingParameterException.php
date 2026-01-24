@@ -7,6 +7,8 @@ namespace Duyler\OpenApi\Validator\Exception;
 use RuntimeException;
 use Throwable;
 
+use function sprintf;
+
 class MissingParameterException extends RuntimeException
 {
     public function __construct(

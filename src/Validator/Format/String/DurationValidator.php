@@ -8,6 +8,8 @@ use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Override;
 
+use function is_string;
+
 final readonly class DurationValidator implements FormatValidatorInterface
 {
     private const string DURATION_PATTERN = '/^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/';

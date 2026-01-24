@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\Schema;
 
 /**
  * @covers \Duyler\OpenApi\Schema\Model\Schema
@@ -15,7 +16,7 @@ final class SchemaTest extends TestCase
     #[Test]
     public function can_create_schema_with_type(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'object',
             properties: ['id' => ['type' => 'integer']],
         );
@@ -27,7 +28,7 @@ final class SchemaTest extends TestCase
     #[Test]
     public function can_create_schema_with_all_fields(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'object',
             properties: ['id' => ['type' => 'integer']],
             required: ['id'],
@@ -43,7 +44,7 @@ final class SchemaTest extends TestCase
     #[Test]
     public function can_create_schema_with_null_fields(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'string',
             properties: null,
             required: null,
@@ -59,7 +60,7 @@ final class SchemaTest extends TestCase
     #[Test]
     public function json_serialize_includes_all_fields(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'object',
             properties: ['id' => ['type' => 'integer']],
             required: ['id'],
@@ -79,7 +80,7 @@ final class SchemaTest extends TestCase
     #[Test]
     public function json_serialize_excludes_null_fields(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'string',
             properties: null,
             required: null,

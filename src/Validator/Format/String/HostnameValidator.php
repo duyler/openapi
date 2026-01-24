@@ -8,6 +8,9 @@ use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Override;
 
+use function is_string;
+use function strlen;
+
 final readonly class HostnameValidator implements FormatValidatorInterface
 {
     private const string HOSTNAME_PATTERN = '/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/';

@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\Link;
 
 /**
  * @covers \Duyler\OpenApi\Schema\Model\Link
@@ -15,7 +16,7 @@ final class LinkTest extends TestCase
     #[Test]
     public function can_create_link_with_all_fields(): void
     {
-        $link = new \Duyler\OpenApi\Schema\Model\Link(
+        $link = new Link(
             operationRef: 'operationId',
             operationId: null,
             parameters: ['id' => '$request.path.id'],
@@ -31,7 +32,7 @@ final class LinkTest extends TestCase
     #[Test]
     public function can_create_link_with_null_fields(): void
     {
-        $link = new \Duyler\OpenApi\Schema\Model\Link(
+        $link = new Link(
             operationRef: null,
             operationId: 'getPetById',
             parameters: null,
@@ -47,7 +48,7 @@ final class LinkTest extends TestCase
     #[Test]
     public function json_serialize_includes_all_fields(): void
     {
-        $link = new \Duyler\OpenApi\Schema\Model\Link(
+        $link = new Link(
             operationRef: 'operationId',
             operationId: null,
             parameters: ['id' => '$request.path.id'],
@@ -66,7 +67,7 @@ final class LinkTest extends TestCase
     #[Test]
     public function json_serialize_excludes_null_fields(): void
     {
-        $link = new \Duyler\OpenApi\Schema\Model\Link(
+        $link = new Link(
             operationRef: null,
             operationId: null,
             parameters: null,

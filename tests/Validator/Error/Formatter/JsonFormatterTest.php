@@ -9,6 +9,8 @@ use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use const JSON_ERROR_NONE;
+
 class JsonFormatterTest extends TestCase
 {
     private JsonFormatter $formatter;

@@ -8,6 +8,13 @@ use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Override;
 use ValueError;
 
+use function count;
+use function is_array;
+
+use const JSON_PRETTY_PRINT;
+use const JSON_UNESCAPED_SLASHES;
+use const JSON_UNESCAPED_UNICODE;
+
 /**
  * JSON error formatter for structured output
  *
@@ -38,14 +45,6 @@ readonly class JsonFormatter implements ErrorFormatterInterface
         return $result;
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function getDetails(AbstractValidationError $error): array
-    {
-        return $error->params();
-    }
-
     #[Override]
     public function formatMultiple(array $errors): string
     {
@@ -70,5 +69,13 @@ readonly class JsonFormatter implements ErrorFormatterInterface
         }
 
         return $result;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function getDetails(AbstractValidationError $error): array
+    {
+        return $error->params();
     }
 }

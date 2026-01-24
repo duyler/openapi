@@ -8,6 +8,8 @@ use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Override;
 
+use function is_float;
+
 final readonly class DoubleValidator implements FormatValidatorInterface
 {
     #[Override]

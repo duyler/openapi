@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Exception;
 
+use function is_scalar;
+use function sprintf;
+
 class EnumError extends AbstractValidationError
 {
     public function __construct(

@@ -40,6 +40,11 @@ use Duyler\OpenApi\Schema\SchemaParserInterface;
 use Override;
 use Throwable;
 
+use function is_array;
+use function is_string;
+
+use const JSON_THROW_ON_ERROR;
+
 final readonly class JsonParser implements SchemaParserInterface
 {
     #[Override]

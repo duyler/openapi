@@ -12,11 +12,16 @@ use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
+use function array_key_exists;
+use function is_array;
+use function sprintf;
+
 final readonly class DependentSchemasValidator implements SchemaValidatorInterface
 {
     public function __construct(
         private readonly ValidatorPool $pool,
     ) {}
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

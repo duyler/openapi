@@ -6,6 +6,8 @@ namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Validator\Exception\PathMismatchException;
 
+use function is_string;
+
 final readonly class PathParser
 {
     /**

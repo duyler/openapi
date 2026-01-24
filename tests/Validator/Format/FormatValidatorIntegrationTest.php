@@ -12,6 +12,9 @@ use Duyler\OpenApi\Validator\SchemaValidator\FormatValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
+
+use function is_string;
 
 final class FormatValidatorIntegrationTest extends TestCase
 {
@@ -53,7 +56,7 @@ final class FormatValidatorIntegrationTest extends TestCase
     #[Test]
     public function validate_custom_format(): void
     {
-        $customValidator = new class implements \Duyler\OpenApi\Validator\Format\FormatValidatorInterface {
+        $customValidator = new class implements FormatValidatorInterface {
             public function validate(mixed $data): void
             {
                 if (false === is_string($data) || !str_starts_with($data, 'custom-')) {
@@ -89,7 +92,7 @@ final class FormatValidatorIntegrationTest extends TestCase
     #[Test]
     public function override_builtin_format(): void
     {
-        $customValidator = new class implements \Duyler\OpenApi\Validator\Format\FormatValidatorInterface {
+        $customValidator = new class implements FormatValidatorInterface {
             public function validate(mixed $data): void
             {
                 if ($data !== 'custom-email@example.com') {

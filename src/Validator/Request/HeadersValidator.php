@@ -8,6 +8,9 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 
+use function is_array;
+use function is_string;
+
 final readonly class HeadersValidator
 {
     public function __construct(

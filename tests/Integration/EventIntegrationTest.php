@@ -12,6 +12,9 @@ use Duyler\OpenApi\Event\ValidationStartedEvent;
 use Exception;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\StreamInterface;
+use Psr\Http\Message\UriInterface;
 
 final class EventIntegrationTest extends TestCase
 {
@@ -159,13 +162,13 @@ final class EventIntegrationTest extends TestCase
         array $headers = [],
         string $body = '',
     ): object {
-        $request = $this->createMock(\Psr\Http\Message\ServerRequestInterface::class);
+        $request = $this->createMock(ServerRequestInterface::class);
 
         $request
             ->method('getMethod')
             ->willReturn($method);
 
-        $uriMock = $this->createMock(\Psr\Http\Message\UriInterface::class);
+        $uriMock = $this->createMock(UriInterface::class);
         $uriMock
             ->method('getPath')
             ->willReturn($uri);
@@ -195,7 +198,7 @@ final class EventIntegrationTest extends TestCase
                 return '';
             });
 
-        $stream = $this->createMock(\Psr\Http\Message\StreamInterface::class);
+        $stream = $this->createMock(StreamInterface::class);
         $stream
             ->method('__toString')
             ->willReturn($body);

@@ -6,6 +6,9 @@ namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Operation;
 use Psr\Http\Message\ServerRequestInterface;
+use Duyler\OpenApi\Schema\Model\Parameter;
+
+use function is_array;
 
 final readonly class RequestValidator
 {
@@ -28,7 +31,7 @@ final readonly class RequestValidator
         $parameters = $operation->parameters?->parameters ?? [];
 
         // Filter actual Parameter objects (exclude refs)
-        $parameterSchemas = array_filter($parameters, fn($param) => $param instanceof \Duyler\OpenApi\Schema\Model\Parameter);
+        $parameterSchemas = array_filter($parameters, fn($param) => $param instanceof Parameter);
 
         // Validate path parameters
         $pathParams = $this->pathParser->matchPath(

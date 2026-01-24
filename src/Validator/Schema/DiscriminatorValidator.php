@@ -13,6 +13,10 @@ use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
+use function array_key_exists;
+use function is_array;
+use function is_string;
+
 final readonly class DiscriminatorValidator
 {
     public function __construct(

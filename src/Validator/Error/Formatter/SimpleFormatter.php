@@ -7,6 +7,8 @@ namespace Duyler\OpenApi\Validator\Error\Formatter;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Override;
 
+use function sprintf;
+
 /**
  * Simple error formatter with concise messages
  *

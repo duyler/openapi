@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Exception;
 
+use function sprintf;
+
 class RequiredError extends AbstractValidationError
 {
     public function __construct(

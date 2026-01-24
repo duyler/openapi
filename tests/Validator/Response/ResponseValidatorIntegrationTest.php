@@ -26,6 +26,8 @@ use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\StreamInterface;
 
 /** @internal */
 final class ResponseValidatorIntegrationTest extends TestCase
@@ -173,8 +175,8 @@ final class ResponseValidatorIntegrationTest extends TestCase
         array $headers,
         string $body,
         string $contentType,
-    ): \Psr\Http\Message\ResponseInterface {
-        $response = $this->createMock(\Psr\Http\Message\ResponseInterface::class);
+    ): ResponseInterface {
+        $response = $this->createMock(ResponseInterface::class);
 
         $response->method('getStatusCode')->willReturn($statusCode);
         $response->method('getHeaders')->willReturn($headers);
@@ -182,7 +184,7 @@ final class ResponseValidatorIntegrationTest extends TestCase
             ['Content-Type', $contentType],
         ]);
 
-        $bodyMock = $this->createMock(\Psr\Http\Message\StreamInterface::class);
+        $bodyMock = $this->createMock(StreamInterface::class);
         $bodyMock->method('__toString')->willReturn($body);
         $response->method('getBody')->willReturn($bodyMock);
 

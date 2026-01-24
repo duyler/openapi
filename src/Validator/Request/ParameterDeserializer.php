@@ -7,6 +7,9 @@ namespace Duyler\OpenApi\Validator\Request;
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 
+use function is_array;
+use function strlen;
+
 final readonly class ParameterDeserializer
 {
     /**

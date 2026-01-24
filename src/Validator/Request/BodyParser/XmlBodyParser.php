@@ -6,6 +6,8 @@ namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
 use ValueError;
 
+use function is_array;
+
 final readonly class XmlBodyParser
 {
     /**

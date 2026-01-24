@@ -9,12 +9,15 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
+use function is_array;
+
 final readonly class FormatValidator
 {
     public function __construct(
         private readonly ValidatorPool $pool,
         private readonly FormatRegistry $formatRegistry,
     ) {}
+
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
         if (null === $schema->format || null === $schema->type) {

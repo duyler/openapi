@@ -7,6 +7,9 @@ namespace Duyler\OpenApi\Validator\Error\Formatter;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Override;
 
+use function is_scalar;
+use function sprintf;
+
 /**
  * Detailed error formatter with comprehensive information
  *
@@ -39,6 +42,17 @@ readonly class DetailedFormatter implements ErrorFormatterInterface
         return rtrim($output);
     }
 
+    #[Override]
+    public function formatMultiple(array $errors): string
+    {
+        $formattedErrors = array_map(
+            $this->format(...),
+            $errors,
+        );
+
+        return implode("\n\n", $formattedErrors);
+    }
+
     /**
      * @return array<string, string>
      */
@@ -54,16 +68,5 @@ readonly class DetailedFormatter implements ErrorFormatterInterface
         }
 
         return $details;
-    }
-
-    #[Override]
-    public function formatMultiple(array $errors): string
-    {
-        $formattedErrors = array_map(
-            $this->format(...),
-            $errors,
-        );
-
-        return implode("\n\n", $formattedErrors);
     }
 }

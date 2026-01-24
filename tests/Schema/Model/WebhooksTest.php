@@ -8,6 +8,9 @@ use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\Model\Webhooks;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\Operation;
+use Duyler\OpenApi\Schema\Model\Response;
+use Duyler\OpenApi\Schema\Model\Responses;
 
 /**
  * @covers \Duyler\OpenApi\Schema\Model\Webhooks
@@ -19,9 +22,9 @@ final class WebhooksTest extends TestCase
     {
         $pathItem = new PathItem(
             get: null,
-            post: new \Duyler\OpenApi\Schema\Model\Operation(
-                responses: new \Duyler\OpenApi\Schema\Model\Responses(
-                    responses: ['200' => new \Duyler\OpenApi\Schema\Model\Response(
+            post: new Operation(
+                responses: new Responses(
+                    responses: ['200' => new Response(
                         description: 'Success',
                         headers: null,
                         content: null,
@@ -59,9 +62,9 @@ final class WebhooksTest extends TestCase
     {
         $pathItem = new PathItem(
             get: null,
-            post: new \Duyler\OpenApi\Schema\Model\Operation(
-                responses: new \Duyler\OpenApi\Schema\Model\Responses(
-                    responses: ['200' => new \Duyler\OpenApi\Schema\Model\Response(
+            post: new Operation(
+                responses: new Responses(
+                    responses: ['200' => new Response(
                         description: 'Success',
                         headers: null,
                         content: null,

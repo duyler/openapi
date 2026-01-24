@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 use Duyler\OpenApi\Schema\Model\Header;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\Schema;
 
 /**
  * @covers \Duyler\OpenApi\Schema\Model\Header
@@ -16,12 +17,12 @@ final class HeaderTest extends TestCase
     #[Test]
     public function can_create_header_with_all_fields(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'string',
             properties: null,
         );
 
-        $header = new \Duyler\OpenApi\Schema\Model\Header(
+        $header = new Header(
             description: 'Custom header',
             required: false,
             deprecated: false,
@@ -36,7 +37,7 @@ final class HeaderTest extends TestCase
     #[Test]
     public function can_create_header_with_null_fields(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'string',
             properties: null,
         );
@@ -56,7 +57,7 @@ final class HeaderTest extends TestCase
     #[Test]
     public function json_serialize_includes_all_fields(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'string',
             properties: null,
         );
@@ -80,7 +81,7 @@ final class HeaderTest extends TestCase
     #[Test]
     public function json_serialize_excludes_null_fields(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'string',
             properties: null,
         );

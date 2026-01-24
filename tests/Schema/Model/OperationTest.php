@@ -6,6 +6,9 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\Operation;
+use Duyler\OpenApi\Schema\Model\Response;
+use Duyler\OpenApi\Schema\Model\Responses;
 
 /**
  * @covers \Duyler\OpenApi\Schema\Model\Operation
@@ -15,15 +18,15 @@ final class OperationTest extends TestCase
     #[Test]
     public function can_create_operation_with_all_fields(): void
     {
-        $responses = new \Duyler\OpenApi\Schema\Model\Responses(
-            responses: ['200' => new \Duyler\OpenApi\Schema\Model\Response(
+        $responses = new Responses(
+            responses: ['200' => new Response(
                 description: 'Success',
                 headers: null,
                 content: null,
             )],
         );
 
-        $operation = new \Duyler\OpenApi\Schema\Model\Operation(
+        $operation = new Operation(
             responses: $responses,
             summary: 'List users',
             description: 'Get all users',
@@ -31,7 +34,7 @@ final class OperationTest extends TestCase
             deprecated: false,
         );
 
-        self::assertInstanceOf(\Duyler\OpenApi\Schema\Model\Responses::class, $operation->responses);
+        self::assertInstanceOf(Responses::class, $operation->responses);
         self::assertSame('List users', $operation->summary);
         self::assertSame('Get all users', $operation->description);
         self::assertSame('listUsers', $operation->operationId);
@@ -41,15 +44,15 @@ final class OperationTest extends TestCase
     #[Test]
     public function can_create_operation_with_null_fields(): void
     {
-        $responses = new \Duyler\OpenApi\Schema\Model\Responses(
-            responses: ['200' => new \Duyler\OpenApi\Schema\Model\Response(
+        $responses = new Responses(
+            responses: ['200' => new Response(
                 description: 'Success',
                 headers: null,
                 content: null,
             )],
         );
 
-        $operation = new \Duyler\OpenApi\Schema\Model\Operation(
+        $operation = new Operation(
             responses: $responses,
             summary: null,
             description: null,
@@ -66,15 +69,15 @@ final class OperationTest extends TestCase
     #[Test]
     public function json_serialize_includes_all_fields(): void
     {
-        $responses = new \Duyler\OpenApi\Schema\Model\Responses(
-            responses: ['200' => new \Duyler\OpenApi\Schema\Model\Response(
+        $responses = new Responses(
+            responses: ['200' => new Response(
                 description: 'Success',
                 headers: null,
                 content: null,
             )],
         );
 
-        $operation = new \Duyler\OpenApi\Schema\Model\Operation(
+        $operation = new Operation(
             responses: $responses,
             summary: 'List users',
             description: 'Get all users',
@@ -94,15 +97,15 @@ final class OperationTest extends TestCase
     #[Test]
     public function json_serialize_excludes_null_fields(): void
     {
-        $responses = new \Duyler\OpenApi\Schema\Model\Responses(
-            responses: ['200' => new \Duyler\OpenApi\Schema\Model\Response(
+        $responses = new Responses(
+            responses: ['200' => new Response(
                 description: 'Success',
                 headers: null,
                 content: null,
             )],
         );
 
-        $operation = new \Duyler\OpenApi\Schema\Model\Operation(
+        $operation = new Operation(
             responses: $responses,
             summary: null,
             description: null,

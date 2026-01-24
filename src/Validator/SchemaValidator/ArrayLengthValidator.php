@@ -11,11 +11,17 @@ use Duyler\OpenApi\Validator\Exception\MinItemsError;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
+use function count;
+use function is_array;
+
+use const SORT_REGULAR;
+
 final readonly class ArrayLengthValidator implements SchemaValidatorInterface
 {
     public function __construct(
         private readonly ValidatorPool $pool,
     ) {}
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

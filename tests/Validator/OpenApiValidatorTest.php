@@ -10,6 +10,12 @@ use Duyler\OpenApi\Validator\OpenApiValidator;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Throwable;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\StreamInterface;
+use Psr\Http\Message\UriInterface;
+
+use const PHP_URL_PATH;
+use const PHP_URL_QUERY;
 
 final class OpenApiValidatorTest extends TestCase
 {
@@ -150,7 +156,7 @@ YAML;
      */
     private function createMockServerRequest(string $method, string $uri)
     {
-        $request = $this->createMock(\Psr\Http\Message\ServerRequestInterface::class);
+        $request = $this->createMock(ServerRequestInterface::class);
 
         $request->method('getMethod')->willReturn($method);
         $request->method('getUri')->willReturn($this->createMockUri($uri));
@@ -163,7 +169,7 @@ YAML;
 
     private function createMockUri(string $uri)
     {
-        $uriMock = $this->createMock(\Psr\Http\Message\UriInterface::class);
+        $uriMock = $this->createMock(UriInterface::class);
         $uriMock->method('getPath')->willReturn(parse_url($uri, PHP_URL_PATH) ?? $uri);
         $uriMock->method('getQuery')->willReturn(parse_url($uri, PHP_URL_QUERY) ?? '');
 
@@ -172,7 +178,7 @@ YAML;
 
     private function createMockStream(string $content)
     {
-        $stream = $this->createMock(\Psr\Http\Message\StreamInterface::class);
+        $stream = $this->createMock(StreamInterface::class);
         $stream->method('__toString')->willReturn($content);
 
         return $stream;

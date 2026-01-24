@@ -8,6 +8,8 @@ use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\Model\Response;
 use Psr\Http\Message\ResponseInterface;
 
+use function is_array;
+
 final readonly class ResponseValidator
 {
     public function __construct(

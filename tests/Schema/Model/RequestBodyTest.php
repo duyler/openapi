@@ -6,6 +6,10 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\Content;
+use Duyler\OpenApi\Schema\Model\MediaType;
+use Duyler\OpenApi\Schema\Model\RequestBody;
+use Duyler\OpenApi\Schema\Model\Schema;
 
 /**
  * @covers \Duyler\OpenApi\Schema\Model\RequestBody
@@ -15,19 +19,19 @@ final class RequestBodyTest extends TestCase
     #[Test]
     public function can_create_request_body_with_all_fields(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'object',
             properties: null,
         );
 
-        $content = new \Duyler\OpenApi\Schema\Model\Content(
-            mediaTypes: ['application/json' => new \Duyler\OpenApi\Schema\Model\MediaType(
+        $content = new Content(
+            mediaTypes: ['application/json' => new MediaType(
                 schema: $schema,
                 example: null,
             )],
         );
 
-        $requestBody = new \Duyler\OpenApi\Schema\Model\RequestBody(
+        $requestBody = new RequestBody(
             description: 'User to create',
             required: true,
             content: $content,
@@ -35,13 +39,13 @@ final class RequestBodyTest extends TestCase
 
         self::assertSame('User to create', $requestBody->description);
         self::assertTrue($requestBody->required);
-        self::assertInstanceOf(\Duyler\OpenApi\Schema\Model\Content::class, $requestBody->content);
+        self::assertInstanceOf(Content::class, $requestBody->content);
     }
 
     #[Test]
     public function can_create_request_body_with_null_fields(): void
     {
-        $requestBody = new \Duyler\OpenApi\Schema\Model\RequestBody(
+        $requestBody = new RequestBody(
             description: null,
             required: false,
             content: null,
@@ -55,19 +59,19 @@ final class RequestBodyTest extends TestCase
     #[Test]
     public function json_serialize_includes_all_fields(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'object',
             properties: null,
         );
 
-        $content = new \Duyler\OpenApi\Schema\Model\Content(
-            mediaTypes: ['application/json' => new \Duyler\OpenApi\Schema\Model\MediaType(
+        $content = new Content(
+            mediaTypes: ['application/json' => new MediaType(
                 schema: $schema,
                 example: null,
             )],
         );
 
-        $requestBody = new \Duyler\OpenApi\Schema\Model\RequestBody(
+        $requestBody = new RequestBody(
             description: 'User to create',
             required: true,
             content: $content,
@@ -85,7 +89,7 @@ final class RequestBodyTest extends TestCase
     #[Test]
     public function json_serialize_excludes_null_fields(): void
     {
-        $requestBody = new \Duyler\OpenApi\Schema\Model\RequestBody(
+        $requestBody = new RequestBody(
             description: null,
             required: false,
             content: null,

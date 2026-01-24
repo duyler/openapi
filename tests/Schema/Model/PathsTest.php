@@ -9,6 +9,8 @@ use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\Model\Paths;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\Response;
+use Duyler\OpenApi\Schema\Model\Responses;
 
 /**
  * @covers \Duyler\OpenApi\Schema\Model\Paths
@@ -19,8 +21,8 @@ final class PathsTest extends TestCase
     public function can_create_paths(): void
     {
         $operation = new Operation(
-            responses: new \Duyler\OpenApi\Schema\Model\Responses(
-                responses: ['200' => new \Duyler\OpenApi\Schema\Model\Response(
+            responses: new Responses(
+                responses: ['200' => new Response(
                     description: 'Success',
                     headers: null,
                     content: null,
@@ -61,8 +63,8 @@ final class PathsTest extends TestCase
     public function json_serialize_includes_paths(): void
     {
         $operation = new Operation(
-            responses: new \Duyler\OpenApi\Schema\Model\Responses(
-                responses: ['200' => new \Duyler\OpenApi\Schema\Model\Response(
+            responses: new Responses(
+                responses: ['200' => new Response(
                     description: 'Success',
                     headers: null,
                     content: null,

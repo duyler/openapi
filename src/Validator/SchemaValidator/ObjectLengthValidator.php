@@ -11,11 +11,15 @@ use Duyler\OpenApi\Validator\Exception\MinPropertiesError;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
+use function count;
+use function is_array;
+
 final readonly class ObjectLengthValidator implements SchemaValidatorInterface
 {
     public function __construct(
         private readonly ValidatorPool $pool,
     ) {}
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

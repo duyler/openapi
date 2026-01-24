@@ -19,6 +19,8 @@ use Duyler\OpenApi\Validator\ValidatorPool;
 use Exception;
 use Psr\EventDispatcher\EventDispatcherInterface;
 
+use function sprintf;
+
 /**
  * Fluent builder for creating OpenApiValidator instances.
  *

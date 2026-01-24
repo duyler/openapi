@@ -43,6 +43,8 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
+use function sprintf;
+
 /**
  * OpenAPI validator for HTTP requests and responses.
  *

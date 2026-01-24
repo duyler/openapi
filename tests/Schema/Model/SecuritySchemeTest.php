@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\SecurityScheme;
 
 /**
  * @covers \Duyler\OpenApi\Schema\Model\SecurityScheme
@@ -15,7 +16,7 @@ final class SecuritySchemeTest extends TestCase
     #[Test]
     public function can_create_security_scheme(): void
     {
-        $scheme = new \Duyler\OpenApi\Schema\Model\SecurityScheme(
+        $scheme = new SecurityScheme(
             type: 'http',
             scheme: 'bearer',
             bearerFormat: null,
@@ -31,7 +32,7 @@ final class SecuritySchemeTest extends TestCase
     #[Test]
     public function can_create_api_key_scheme(): void
     {
-        $scheme = new \Duyler\OpenApi\Schema\Model\SecurityScheme(
+        $scheme = new SecurityScheme(
             type: 'apiKey',
             scheme: null,
             bearerFormat: null,
@@ -45,7 +46,7 @@ final class SecuritySchemeTest extends TestCase
     #[Test]
     public function json_serialize_includes_all_fields(): void
     {
-        $scheme = new \Duyler\OpenApi\Schema\Model\SecurityScheme(
+        $scheme = new SecurityScheme(
             type: 'http',
             scheme: 'bearer',
             bearerFormat: 'JWT',
@@ -64,7 +65,7 @@ final class SecuritySchemeTest extends TestCase
     #[Test]
     public function json_serialize_excludes_null_fields(): void
     {
-        $scheme = new \Duyler\OpenApi\Schema\Model\SecurityScheme(
+        $scheme = new SecurityScheme(
             type: 'apiKey',
             scheme: null,
             bearerFormat: null,

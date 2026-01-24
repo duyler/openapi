@@ -8,6 +8,8 @@ use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Override;
 
+use function is_string;
+
 final readonly class ByteValidator implements FormatValidatorInterface
 {
     #[Override]

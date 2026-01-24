@@ -30,6 +30,9 @@ use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\StreamInterface;
+use Psr\Http\Message\UriInterface;
 
 /** @internal */
 final class RequestValidatorIntegrationTest extends TestCase
@@ -176,10 +179,10 @@ final class RequestValidatorIntegrationTest extends TestCase
         array $cookies,
         string $body,
         string $contentType,
-    ): \Psr\Http\Message\ServerRequestInterface {
-        $request = $this->createMock(\Psr\Http\Message\ServerRequestInterface::class);
+    ): ServerRequestInterface {
+        $request = $this->createMock(ServerRequestInterface::class);
 
-        $uriMock = $this->createMock(\Psr\Http\Message\UriInterface::class);
+        $uriMock = $this->createMock(UriInterface::class);
         $uriMock->method('getPath')->willReturn($uri);
         $uriMock->method('getQuery')->willReturn(http_build_query($queryParams));
 
@@ -192,7 +195,7 @@ final class RequestValidatorIntegrationTest extends TestCase
         ]);
         $request->method('getCookieParams')->willReturn($cookies);
 
-        $bodyMock = $this->createMock(\Psr\Http\Message\StreamInterface::class);
+        $bodyMock = $this->createMock(StreamInterface::class);
         $bodyMock->method('__toString')->willReturn($body);
         $request->method('getBody')->willReturn($bodyMock);
 

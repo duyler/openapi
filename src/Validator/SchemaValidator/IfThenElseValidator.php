@@ -18,6 +18,7 @@ final readonly class IfThenElseValidator implements SchemaValidatorInterface
     public function __construct(
         private readonly ValidatorPool $pool,
     ) {}
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

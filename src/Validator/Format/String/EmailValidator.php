@@ -8,6 +8,10 @@ use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Override;
 
+use function is_string;
+
+use const FILTER_VALIDATE_EMAIL;
+
 final readonly class EmailValidator implements FormatValidatorInterface
 {
     #[Override]

@@ -6,6 +6,8 @@ namespace Duyler\OpenApi\Registry;
 
 use Duyler\OpenApi\Schema\OpenApiDocument;
 
+use function count;
+
 final readonly class SchemaRegistry
 {
     /**

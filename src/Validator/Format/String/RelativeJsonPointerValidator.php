@@ -8,6 +8,8 @@ use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Override;
 
+use function is_string;
+
 final readonly class RelativeJsonPointerValidator implements FormatValidatorInterface
 {
     private const string RELATIVE_POINTER_PATTERN = '/^(0|[1-9]\d*)(#|\/(\/(?:[^~\/]|~0|~1)*)*)?$/';

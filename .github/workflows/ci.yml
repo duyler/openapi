@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  - pull_request
+  - push
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    container:
+      image: duyler/php-zts:8.5
+      options: --user root
+
+    strategy:
+      matrix:
+        php-image: ['duyler/php-zts:8.5']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine composer cache directory
+        run: echo "COMPOSER_CACHE_DIR=$(composer config cache-dir)" >> $GITHUB_ENV
+
+      - name: Cache dependencies installed with composer
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.COMPOSER_CACHE_DIR }}
+          key: php${{ matrix.php }}-composer-${{ hashFiles('**/composer.json') }}
+          restore-keys: |
+            php${{ matrix.php }}-composer-
+      - name: Update composer
+        run: composer self-update
+
+      - name: Install dependencies with composer php 8.5
+        run: composer update --ignore-platform-reqs --prefer-dist --no-interaction --no-progress --optimize-autoloader --ansi
+
+      - name: Run tests
+        run: php -d pcov.enabled=1 vendor/bin/phpunit --coverage-clover=coverage.xml --colors=always
+
+      - name: Run PHP CS Fixer
+        run: vendor/bin/php-cs-fixer check --diff -v
+
+      - name: Run Psalm
+        run: vendor/bin/psalm --shepherd
+
+      - name: Run Infection
+        run: vendor/bin/infection --test-framework-options="--testsuite=main" --show-mutations
+        env:
+          STRIPE_API_KEY: ${{ secrets.STRIPE_API_KEY }}
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

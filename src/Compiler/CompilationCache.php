@@ -7,6 +7,8 @@ namespace Duyler\OpenApi\Compiler;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Psr\Cache\CacheItemPoolInterface;
 
+use function is_string;
+
 readonly class CompilationCache
 {
     public function __construct(

@@ -12,11 +12,15 @@ use Duyler\OpenApi\Validator\Exception\MultipleOfKeywordError;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
+use function is_float;
+use function is_int;
+
 final readonly class NumericRangeValidator implements SchemaValidatorInterface
 {
     public function __construct(
         private readonly ValidatorPool $pool,
     ) {}
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

@@ -1,5 +1,11 @@
 # Duyler OpenAPI Validator
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=duyler_openapi&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=duyler_openapi)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=duyler_openapi&metric=coverage)](https://sonarcloud.io/summary/new_code?id=duyler_openapi)
+[![type-coverage](https://shepherd.dev/github/duyler/openapi/coverage.svg)](https://shepherd.dev/github/duyler/openapi)
+[![psalm-level](https://shepherd.dev/github/duyler/openapi/level.svg)](https://shepherd.dev/github/duyler/openapi)
+![PHP Version](https://img.shields.io/packagist/dependency-v/duyler/openapi/php?version=dev-main)
+
 OpenAPI 3.1 validator for PHP 8.4+
 
 ## Features

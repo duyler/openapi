@@ -41,6 +41,9 @@ use Override;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
+use function is_array;
+use function is_string;
+
 final readonly class YamlParser implements SchemaParserInterface
 {
     #[Override]

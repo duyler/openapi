@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Header;
 use Duyler\OpenApi\Schema\Model\Headers;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\Schema;
 
 /**
  * @covers \Duyler\OpenApi\Schema\Model\Headers
@@ -17,7 +18,7 @@ final class HeadersTest extends TestCase
     #[Test]
     public function can_create_headers(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'string',
             properties: null,
         );
@@ -50,7 +51,7 @@ final class HeadersTest extends TestCase
     #[Test]
     public function json_serialize_includes_headers(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'string',
             properties: null,
         );

@@ -8,6 +8,7 @@ use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 
 final readonly class TestValidator implements FormatValidatorInterface
 {
@@ -63,7 +64,7 @@ final class FormatRegistryTest extends TestCase
     #[Test]
     public function include_builtin_formats(): void
     {
-        $registry = \Duyler\OpenApi\Validator\Format\BuiltinFormats::create();
+        $registry = BuiltinFormats::create();
 
         $this->assertNotNull($registry->getValidator('string', 'email'));
         $this->assertNotNull($registry->getValidator('string', 'uri'));

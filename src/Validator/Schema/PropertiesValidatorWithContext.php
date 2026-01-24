@@ -15,6 +15,10 @@ use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
+use function array_key_exists;
+use function count;
+use function sprintf;
+
 final readonly class PropertiesValidatorWithContext
 {
     public function __construct(

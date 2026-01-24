@@ -1,19 +1,40 @@
 <?php
 
-$finder = (new PhpCsFixer\Finder())
-    ->in(__DIR__)
-;
+declare(strict_types=1);
 
-return (new PhpCsFixer\Config())
+use PhpCsFixer\Config;
+use PhpCsFixer\Finder;
+use PhpCsFixer\Runner\Parallel\ParallelConfigFactory;
+
+$finder = (new Finder())->in([
+    __DIR__ . '/src',
+    __DIR__ . '/tests',
+]);
+
+return (new Config())
+    ->setRiskyAllowed(true)
+    ->setParallelConfig(ParallelConfigFactory::detect())
     ->setRules([
-        '@PER-CS' => true,
+        '@PER-CS3.0' => true,
         'no_unused_imports' => true,
-        'ordered_imports' => [
-            'imports_order' => ['class', 'function', 'const'],
-            'sort_algorithm' => 'alpha',
+        'ordered_class_elements' => true,
+        'class_attributes_separation' => ['elements' => ['method' => 'one']],
+        'declare_strict_types' => true,
+        'native_function_invocation' => true,
+        'native_constant_invocation' => true,
+        'fully_qualified_strict_types' => [
+            'import_symbols' => true,
         ],
-        'type_declaration_spaces' => true,
-        'array_syntax' => ['syntax' => 'short'],
-        'global_namespace_import' => true,
+        'no_extra_blank_lines' => [
+            'tokens' => [
+                'curly_brace_block',
+                'extra',
+            ],
+        ],
+        'global_namespace_import' => [
+            'import_classes' => true,
+            'import_constants' => true,
+            'import_functions' => true,
+        ],
     ])
     ->setFinder($finder);

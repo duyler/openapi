@@ -4,5 +4,5 @@ vendor/
 composer.lock
 /.php-cs-fixer.cache
 /coverage.xml
-/docs/
+.duyler/
 .DS_Store

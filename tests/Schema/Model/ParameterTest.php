@@ -6,6 +6,8 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Schema\Model\Schema;
 
 /**
  * @covers \Duyler\OpenApi\Schema\Model\Parameter
@@ -15,12 +17,12 @@ final class ParameterTest extends TestCase
     #[Test]
     public function can_create_parameter_with_all_fields(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'integer',
             properties: null,
         );
 
-        $parameter = new \Duyler\OpenApi\Schema\Model\Parameter(
+        $parameter = new Parameter(
             name: 'id',
             in: 'path',
             description: 'User ID',
@@ -39,12 +41,12 @@ final class ParameterTest extends TestCase
     #[Test]
     public function can_create_parameter_with_null_fields(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'integer',
             properties: null,
         );
 
-        $parameter = new \Duyler\OpenApi\Schema\Model\Parameter(
+        $parameter = new Parameter(
             name: 'page',
             in: 'query',
             description: null,
@@ -63,12 +65,12 @@ final class ParameterTest extends TestCase
     #[Test]
     public function json_serialize_includes_all_fields(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'integer',
             properties: null,
         );
 
-        $parameter = new \Duyler\OpenApi\Schema\Model\Parameter(
+        $parameter = new Parameter(
             name: 'id',
             in: 'path',
             description: 'User ID',
@@ -90,12 +92,12 @@ final class ParameterTest extends TestCase
     #[Test]
     public function json_serialize_excludes_null_fields(): void
     {
-        $schema = new \Duyler\OpenApi\Schema\Model\Schema(
+        $schema = new Schema(
             type: 'integer',
             properties: null,
         );
 
-        $parameter = new \Duyler\OpenApi\Schema\Model\Parameter(
+        $parameter = new Parameter(
             name: 'page',
             in: 'query',
             description: null,
