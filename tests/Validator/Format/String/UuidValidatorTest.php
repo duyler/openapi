@@ -60,4 +60,43 @@ final class UuidValidatorTest extends TestCase
         $this->expectNotToPerformAssertions();
         $this->validator->validate('123e4567-e89b-12d3-a456-426614174000');
     }
+
+    #[Test]
+    public function validate_mixed_case_uuid(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('123e4567-E89b-12d3-A456-426614174000');
+    }
+
+    #[Test]
+    public function throw_error_for_invalid_length(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid UUID format');
+        $this->validator->validate('123e4567-e89b-12d3-a456');
+    }
+
+    #[Test]
+    public function throw_error_for_invalid_version(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid UUID format');
+        $this->validator->validate('123e4567-e89b-62d3-a456-426614174000');
+    }
+
+    #[Test]
+    public function throw_error_for_invalid_variant(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid UUID format');
+        $this->validator->validate('123e4567-e89b-12d3-c456-426614174000');
+    }
+
+    #[Test]
+    public function throw_error_for_non_string(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Value must be a string');
+        $this->validator->validate(123);
+    }
 }

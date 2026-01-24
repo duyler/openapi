@@ -57,4 +57,33 @@ final class HostnameValidatorTest extends TestCase
         $this->expectException(InvalidFormatException::class);
         $this->validator->validate($longLabel);
     }
+
+    #[Test]
+    public function valid_hostname_with_www(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('www.example.com');
+    }
+
+    #[Test]
+    public function valid_hostname_with_numbers(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('server123.example.com');
+    }
+
+    #[Test]
+    public function valid_hostname_with_hyphens(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('my-server.example.com');
+    }
+
+    #[Test]
+    public function throw_error_for_non_string(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Value must be a string');
+        $this->validator->validate(123);
+    }
 }

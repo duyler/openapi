@@ -64,4 +64,27 @@ final class DateTimeValidatorTest extends TestCase
         $this->expectException(InvalidFormatException::class);
         $this->validator->validate('2024-01-15T10:30:00');
     }
+
+    #[Test]
+    public function throw_error_for_invalid_time(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->validator->validate('2024-01-15T25:30:00Z');
+    }
+
+    #[Test]
+    public function throw_error_for_invalid_value(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid date-time value');
+        $this->validator->validate('2024-13-01T10:30:00Z');
+    }
+
+    #[Test]
+    public function throw_error_for_non_string(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Value must be a string');
+        $this->validator->validate(123456);
+    }
 }

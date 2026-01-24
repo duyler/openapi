@@ -58,4 +58,35 @@ final class DurationValidatorTest extends TestCase
         $this->expectExceptionMessage('Invalid duration format');
         $this->validator->validate('P1');
     }
+
+    #[Test]
+    public function throw_error_for_missing_designator_with_t(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Duration must have at least one component');
+        $this->validator->validate('PT');
+    }
+
+    #[Test]
+    public function throw_error_for_empty_duration(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Duration must have at least one component');
+        $this->validator->validate('P');
+    }
+
+    #[Test]
+    public function throw_error_for_non_string(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Value must be a string');
+        $this->validator->validate(123);
+    }
+
+    #[Test]
+    public function validate_full_duration(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('P1Y2M3DT4H5M6S');
+    }
 }

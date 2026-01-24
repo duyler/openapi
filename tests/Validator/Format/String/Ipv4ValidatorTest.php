@@ -57,4 +57,43 @@ final class Ipv4ValidatorTest extends TestCase
         $this->expectExceptionMessage('Invalid IPv4 address format');
         $this->validator->validate('192.168.1');
     }
+
+    #[Test]
+    public function valid_all_octets_zero(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('0.0.0.0');
+    }
+
+    #[Test]
+    public function valid_all_octets_max(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('255.255.255.255');
+    }
+
+    #[Test]
+    public function valid_private_range(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('192.168.0.1');
+        $this->validator->validate('10.0.0.1');
+        $this->validator->validate('172.16.0.1');
+    }
+
+    #[Test]
+    public function throw_error_for_negative_octet(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid IPv4 address format');
+        $this->validator->validate('192.-1.1.1');
+    }
+
+    #[Test]
+    public function throw_error_for_non_string(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Value must be a string');
+        $this->validator->validate(123);
+    }
 }

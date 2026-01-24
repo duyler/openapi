@@ -60,4 +60,33 @@ final class EmailValidatorTest extends TestCase
         $this->expectException(InvalidFormatException::class);
         $this->validator->validate('test@');
     }
+
+    #[Test]
+    public function valid_email_with_dots(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('first.last@example.com');
+    }
+
+    #[Test]
+    public function valid_email_with_underscores(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('user_name@example.com');
+    }
+
+    #[Test]
+    public function valid_email_with_hyphens(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('user-name@example.com');
+    }
+
+    #[Test]
+    public function throw_error_for_non_string(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Value must be a string');
+        $this->validator->validate(123);
+    }
 }
