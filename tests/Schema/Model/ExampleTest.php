@@ -81,4 +81,35 @@ final class ExampleTest extends TestCase
         self::assertArrayNotHasKey('description', $serialized);
         self::assertArrayNotHasKey('value', $serialized);
     }
+
+    #[Test]
+    public function json_serialize_includes_all_optional_fields(): void
+    {
+        $example = new Example(
+            summary: 'Example',
+            description: 'Description',
+            value: ['test' => 'value'],
+            externalValue: null,
+        );
+
+        $serialized = $example->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertArrayHasKey('summary', $serialized);
+        self::assertArrayHasKey('description', $serialized);
+        self::assertArrayHasKey('value', $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_includes_externalValue(): void
+    {
+        $example = new Example(
+            externalValue: 'https://example.com/example',
+        );
+
+        $serialized = $example->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertArrayHasKey('externalValue', $serialized);
+    }
 }
