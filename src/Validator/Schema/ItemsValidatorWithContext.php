@@ -37,7 +37,6 @@ final readonly class ItemsValidatorWithContext
 
         foreach ($data as $index => $item) {
             try {
-                // Create new context with array index
                 /** @var int $index */
                 $itemContext = $context->withBreadcrumbIndex($index);
 

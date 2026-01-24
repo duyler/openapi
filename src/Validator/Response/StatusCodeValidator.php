@@ -14,18 +14,15 @@ final readonly class StatusCodeValidator
      */
     public function validate(int $statusCode, array $responses): void
     {
-        // Check exact match
         if (isset($responses[(string) $statusCode])) {
             return;
         }
 
-        // Check range (2XX, 3XX, etc.)
         $range = $this->getRange($statusCode);
         if (isset($responses[$range])) {
             return;
         }
 
-        // Check default
         if (isset($responses['default'])) {
             return;
         }

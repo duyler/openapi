@@ -46,7 +46,6 @@ final readonly class HeadersValidator
      */
     private function findHeader(array $headers, string $name): ?string
     {
-        // Case-insensitive search
         foreach ($headers as $key => $value) {
             if (false === is_string($key)) {
                 continue;

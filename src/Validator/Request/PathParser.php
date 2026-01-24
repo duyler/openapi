@@ -29,7 +29,6 @@ final readonly class PathParser
      */
     public function matchPath(string $requestPath, string $template): array
     {
-        // Convert template to regex
         $regex = $this->templateToRegex($template);
 
         if ('' === $regex) {
@@ -43,7 +42,6 @@ final readonly class PathParser
             throw new PathMismatchException($template, $requestPath);
         }
 
-        // Extract named parameters
         $params = [];
         foreach ($matches as $key => $value) {
             if (is_string($key)) {
@@ -56,11 +54,9 @@ final readonly class PathParser
 
     private function templateToRegex(string $template): string
     {
-        // Replace {param} with named capture groups
         $pattern = preg_replace('/\{([^}]+)\}/', '(?P<$1>[^/]+)', $template);
 
         if (null === $pattern) {
-            // Fallback if preg_replace fails
             return '#^' . preg_quote($template, '#') . '$#';
         }
 

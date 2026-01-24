@@ -89,19 +89,19 @@ final readonly class YamlParser implements SchemaParserInterface
 
     private function validateVersion(array $data): void
     {
-        if (!isset($data['openapi'])) {
+        if (false === isset($data['openapi'])) {
             throw new InvalidSchemaException('OpenAPI version is required');
         }
 
         $version = $data['openapi'];
-        if (false === is_string($version) || !preg_match('/^3\.[01]\.[0-9]+$/', $version)) {
+        if (false === is_string($version) || 1 !== preg_match('/^3\.[01]\.[0-9]+$/', $version)) {
             throw new InvalidSchemaException('Unsupported OpenAPI version: ' . (string) $version . '. Only 3.0.x and 3.1.x are supported.');
         }
     }
 
     private function buildInfo(array $data): InfoObject
     {
-        if (!isset($data['title']) || !isset($data['version'])) {
+        if (false === isset($data['title']) || false === isset($data['version'])) {
             throw new InvalidSchemaException('Info object must have title and version');
         }
 
@@ -209,7 +209,7 @@ final readonly class YamlParser implements SchemaParserInterface
      */
     private function buildParameter(array $data): Parameter
     {
-        if (!isset($data['name']) || !isset($data['in'])) {
+        if (false === isset($data['name']) || false === isset($data['in'])) {
             throw new InvalidSchemaException('Parameter must have name and in fields');
         }
 
@@ -317,7 +317,7 @@ final readonly class YamlParser implements SchemaParserInterface
      */
     private function buildDiscriminator(array $data): Discriminator
     {
-        if (!isset($data['propertyName'])) {
+        if (false === isset($data['propertyName'])) {
             throw new InvalidSchemaException('Discriminator must have propertyName');
         }
 
@@ -505,7 +505,7 @@ final readonly class YamlParser implements SchemaParserInterface
      */
     private function buildExternalDocs(array $data): ExternalDocs
     {
-        if (!isset($data['url'])) {
+        if (false === isset($data['url'])) {
             throw new InvalidSchemaException('External documentation must have url');
         }
 
@@ -717,7 +717,7 @@ final readonly class YamlParser implements SchemaParserInterface
      */
     private function buildSecurityScheme(array $data): SecurityScheme
     {
-        if (!isset($data['type'])) {
+        if (false === isset($data['type'])) {
             throw new InvalidSchemaException('Security scheme must have type');
         }
 

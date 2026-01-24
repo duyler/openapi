@@ -29,7 +29,6 @@ final readonly class QueryParametersValidator
             $name = $param->name;
             $value = $queryParams[$name] ?? null;
 
-            // Check if missing but required
             if (null === $value) {
                 if ($param->required && false === $param->allowEmptyValue) {
                     throw new MissingParameterException('query', $name);
@@ -39,7 +38,6 @@ final readonly class QueryParametersValidator
 
             $value = $this->deserializer->deserialize($value, $param);
 
-            // Validate against schema
             if (null !== $param->schema) {
                 $this->schemaValidator->validate($value, $param->schema);
             }

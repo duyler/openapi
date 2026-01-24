@@ -21,7 +21,7 @@ final readonly class DurationValidator implements FormatValidatorInterface
             throw new InvalidFormatException('duration', $data, 'Value must be a string');
         }
 
-        if (!str_starts_with($data, 'P')) {
+        if (false === str_starts_with($data, 'P')) {
             throw new InvalidFormatException('duration', $data, 'Duration must start with P');
         }
 
@@ -32,11 +32,11 @@ final readonly class DurationValidator implements FormatValidatorInterface
         $hasDateComponent = isset($matches[1]) || isset($matches[2]) || isset($matches[3]);
         $hasTimeComponent = isset($matches[4]) || isset($matches[5]) || isset($matches[6]);
 
-        if ($hasTimeComponent && !str_contains($data, 'T')) {
+        if ($hasTimeComponent && false === str_contains($data, 'T')) {
             throw new InvalidFormatException('duration', $data, 'Time components must be preceded by T');
         }
 
-        if (!$hasDateComponent && !$hasTimeComponent) {
+        if (false === $hasDateComponent && false === $hasTimeComponent) {
             throw new InvalidFormatException('duration', $data, 'Duration must have at least one component');
         }
     }

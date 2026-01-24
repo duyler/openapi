@@ -41,10 +41,8 @@ final readonly class ResponseBodyValidator
             return;
         }
 
-        // Parse body
         $parsedBody = $this->parseBody($body, $mediaType);
 
-        // Validate against schema
         if (null !== $mediaTypeSchema->schema) {
             $this->schemaValidator->validate($parsedBody, $mediaTypeSchema->schema);
         }

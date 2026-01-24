@@ -43,7 +43,6 @@ final readonly class PropertiesValidatorWithContext
             try {
                 $value = SchemaValueNormalizer::normalize($data[$name]);
 
-                // Create new context with property name
                 $propertyContext = $context->withBreadcrumb($name);
 
                 $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);

@@ -27,27 +27,21 @@ final readonly class RequestValidator
         Operation $operation,
         string $pathTemplate,
     ): void {
-        // Get parameters from operation
         $parameters = $operation->parameters?->parameters ?? [];
 
-        // Filter actual Parameter objects (exclude refs)
         $parameterSchemas = array_filter($parameters, fn($param) => $param instanceof Parameter);
 
-        // Validate path parameters
         $pathParams = $this->pathParser->matchPath(
             $request->getUri()->getPath(),
             $pathTemplate,
         );
         $this->pathParamsValidator->validate($pathParams, $parameterSchemas);
 
-        // Validate query parameters
         $queryString = $request->getUri()->getQuery();
         $queryParams = $this->queryParser->parse($queryString);
         $this->queryParamsValidator->validate($queryParams, $parameterSchemas);
 
-        // Validate headers
         $headers = $request->getHeaders();
-        // Normalize headers to string values
         $normalizedHeaders = [];
         foreach ($headers as $key => $value) {
             /** @var array<array-key, string>|string $value */
@@ -56,12 +50,10 @@ final readonly class RequestValidator
         /** @var array<array-key, string> $normalizedHeaders */
         $this->headersValidator->validate($normalizedHeaders, $parameterSchemas);
 
-        // Validate cookies
         $cookieHeader = $request->getHeaderLine('Cookie');
         $cookies = $this->cookieValidator->parseCookies($cookieHeader);
         $this->cookieValidator->validate($cookies, $parameterSchemas);
 
-        // Validate body
         $contentType = $request->getHeaderLine('Content-Type');
         $body = (string) $request->getBody();
         $this->bodyValidator->validate($body, $contentType, $operation->requestBody);

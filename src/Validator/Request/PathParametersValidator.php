@@ -38,7 +38,6 @@ final readonly class PathParametersValidator
 
             $value = $this->deserializer->deserialize($value, $param);
 
-            // Validate against schema
             if (null !== $param->schema) {
                 $this->schemaValidator->validate($value, $param->schema);
             }
