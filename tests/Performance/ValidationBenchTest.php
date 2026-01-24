@@ -61,7 +61,7 @@ YAML;
                 '{"name": "John Doe", "email": "john@example.com"}',
             );
 
-            $validator->validateRequest($request, '/users', 'POST');
+            $validator->validateRequest($request);
         }
 
         $duration = (microtime(true) - $start) * 1000;
