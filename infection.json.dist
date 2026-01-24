@@ -5,16 +5,11 @@
             "src"
         ]
     },
-    "tests": {
-        "directories": [
-            "tests"
-        ]
-    },
-    "mutationThreshold": 80,
+    "minMsi": 80,
     "mutators": {
         "@default": true
     },
-    "日志": {
+    "logs": {
         "text": "infection.log"
     }
 }
