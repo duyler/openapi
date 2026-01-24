@@ -6,13 +6,12 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 
 use Duyler\OpenApi\Schema\Model\Example;
 use Duyler\OpenApi\Schema\Model\MediaType;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Schema\Model\Schema;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\MediaType
- */
+#[CoversClass(MediaType::class)]
 final class MediaTypeTest extends TestCase
 {
     #[Test]

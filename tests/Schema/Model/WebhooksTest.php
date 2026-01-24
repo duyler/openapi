@@ -6,15 +6,14 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 
 use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\Model\Webhooks;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Responses;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\Webhooks
- */
+#[CoversClass(Webhooks::class)]
 final class WebhooksTest extends TestCase
 {
     #[Test]

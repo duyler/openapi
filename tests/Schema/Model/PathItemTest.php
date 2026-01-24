@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Schema\Model;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Schema\Model\Operation;
@@ -13,9 +14,7 @@ use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Responses;
 use Duyler\OpenApi\Schema\Model\Servers;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\PathItem
- */
+#[CoversClass(PathItem::class)]
 final class PathItemTest extends TestCase
 {
     #[Test]

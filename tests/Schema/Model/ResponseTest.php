@@ -10,12 +10,11 @@ use Duyler\OpenApi\Schema\Model\Links;
 use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\Response
- */
+#[CoversClass(Response::class)]
 final class ResponseTest extends TestCase
 {
     #[Test]

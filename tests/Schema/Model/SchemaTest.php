@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Schema\Model;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\Schema;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\Schema
- */
+#[CoversClass(Schema::class)]
 final class SchemaTest extends TestCase
 {
     #[Test]

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Schema\Model;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Schema\Model\Content;
@@ -12,9 +13,7 @@ use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Schema;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\Parameter
- */
+#[CoversClass(Parameter::class)]
 final class ParameterTest extends TestCase
 {
     #[Test]

@@ -381,7 +381,7 @@ JSON;
     public function build_throws_exception_for_nonexistent_file(): void
     {
         $this->expectException(BuilderException::class);
-        $this->expectExceptionMessage('Failed to read spec file');
+        $this->expectExceptionMessage('Spec file does not exist');
 
         OpenApiValidatorBuilder::create()
             ->fromYamlFile('/nonexistent/file.yaml')
@@ -638,7 +638,7 @@ JSON;
     public function build_with_nonexistent_file_generates_cache_key(): void
     {
         $this->expectException(BuilderException::class);
-        $this->expectExceptionMessage('Failed to read spec file');
+        $this->expectExceptionMessage('Spec file does not exist');
 
         OpenApiValidatorBuilder::create()
             ->fromYamlFile('/nonexistent/path/file.yaml')

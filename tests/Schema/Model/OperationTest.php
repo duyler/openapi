@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Schema\Model;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Schema\Model\Callbacks;
@@ -18,9 +19,7 @@ use Duyler\OpenApi\Schema\Model\Responses;
 use Duyler\OpenApi\Schema\Model\SecurityRequirement;
 use Duyler\OpenApi\Schema\Model\Servers;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\Operation
- */
+#[CoversClass(Operation::class)]
 final class OperationTest extends TestCase
 {
     #[Test]

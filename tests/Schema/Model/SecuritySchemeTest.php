@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Schema\Model;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Schema\Model\SecurityScheme;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\SecurityScheme
- */
+#[CoversClass(SecurityScheme::class)]
 final class SecuritySchemeTest extends TestCase
 {
     #[Test]

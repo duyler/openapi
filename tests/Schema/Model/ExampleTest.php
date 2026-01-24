@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Schema\Model;
 
 use Duyler\OpenApi\Schema\Model\Example;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\Example
- */
+#[CoversClass(Example::class)]
 final class ExampleTest extends TestCase
 {
     #[Test]

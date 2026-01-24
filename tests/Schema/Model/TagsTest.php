@@ -6,12 +6,11 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 
 use Duyler\OpenApi\Schema\Model\Tag;
 use Duyler\OpenApi\Schema\Model\Tags;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\Tags
- */
+#[CoversClass(Tags::class)]
 final class TagsTest extends TestCase
 {
     #[Test]

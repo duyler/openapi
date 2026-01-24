@@ -7,13 +7,12 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\Header;
 use Duyler\OpenApi\Schema\Model\MediaType;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Schema\Model\Schema;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\Header
- */
+#[CoversClass(Header::class)]
 final class HeaderTest extends TestCase
 {
     #[Test]

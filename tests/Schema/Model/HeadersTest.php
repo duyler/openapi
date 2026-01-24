@@ -6,13 +6,12 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 
 use Duyler\OpenApi\Schema\Model\Header;
 use Duyler\OpenApi\Schema\Model\Headers;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Schema\Model\Schema;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\Headers
- */
+#[CoversClass(Headers::class)]
 final class HeadersTest extends TestCase
 {
     #[Test]
