@@ -181,6 +181,22 @@ final class SchemaRegistryTest extends TestCase
         self::assertFalse($result);
     }
 
+    #[Test]
+    public function get_without_version_returns_null_for_nonexistent_schema(): void
+    {
+        $registry = new SchemaRegistry();
+        $doc = $this->createDocument();
+
+        $registry = $registry->register('test', '1.0.0', $doc);
+
+        $versions = $registry->getVersions('test');
+        self::assertNotEmpty($versions);
+
+        $retrieved = $registry->get('nonexistent');
+
+        self::assertNull($retrieved);
+    }
+
     private function createDocument(): OpenApiDocument
     {
         return new OpenApiDocument(

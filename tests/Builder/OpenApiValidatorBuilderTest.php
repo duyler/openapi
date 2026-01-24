@@ -18,7 +18,6 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\OpenApiDocument;
-use ReflectionClass;
 
 final class OpenApiValidatorBuilderTest extends TestCase
 {
