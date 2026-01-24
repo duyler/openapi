@@ -20,11 +20,19 @@ final class SchemaCacheTest extends TestCase
         $pool = $this->createMockCachePool();
         $document = $this->createDocument();
 
+        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem
+            ->method('isHit')
+            ->willReturn(true);
+        $cacheItem
+            ->method('get')
+            ->willReturn($document);
+
         $pool
             ->expects($this->once())
             ->method('getItem')
             ->with('test_key')
-            ->willReturn($this->createCacheItem($document, true));
+            ->willReturn($cacheItem);
 
         $cache = new SchemaCache($pool);
         $result = $cache->get('test_key');
@@ -78,6 +86,18 @@ final class SchemaCacheTest extends TestCase
             ->method('getItem')
             ->with('test_key')
             ->willReturn($cacheItem);
+
+        $cacheItem
+            ->expects($this->once())
+            ->method('set')
+            ->with($document)
+            ->willReturnSelf();
+
+        $cacheItem
+            ->expects($this->once())
+            ->method('expiresAfter')
+            ->with(3600)
+            ->willReturnSelf();
 
         $pool
             ->expects($this->once())
@@ -147,6 +167,84 @@ final class SchemaCacheTest extends TestCase
         $result = $cache->has('test_key');
 
         self::assertFalse($result);
+    }
+
+    #[Test]
+    public function set_uses_custom_ttl_when_provided(): void
+    {
+        $pool = $this->createMockCachePool();
+        $document = $this->createDocument();
+
+        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem
+            ->method('get')
+            ->willReturn(null);
+        $cacheItem
+            ->method('isHit')
+            ->willReturn(false);
+
+        $cacheItem
+            ->expects($this->once())
+            ->method('set')
+            ->with($document)
+            ->willReturn($cacheItem);
+
+        $cacheItem
+            ->expects($this->once())
+            ->method('expiresAfter')
+            ->with(7200)
+            ->willReturn($cacheItem);
+
+        $pool
+            ->method('getItem')
+            ->willReturn($cacheItem);
+
+        $pool
+            ->expects($this->once())
+            ->method('save')
+            ->with($cacheItem);
+
+        $cache = new SchemaCache($pool, 7200);
+        $cache->set('test_key', $document);
+    }
+
+    #[Test]
+    public function set_uses_default_ttl_when_not_provided(): void
+    {
+        $pool = $this->createMockCachePool();
+        $document = $this->createDocument();
+
+        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem
+            ->method('get')
+            ->willReturn(null);
+        $cacheItem
+            ->method('isHit')
+            ->willReturn(false);
+
+        $cacheItem
+            ->expects($this->once())
+            ->method('set')
+            ->with($document)
+            ->willReturn($cacheItem);
+
+        $cacheItem
+            ->expects($this->once())
+            ->method('expiresAfter')
+            ->with(3600)
+            ->willReturn($cacheItem);
+
+        $pool
+            ->method('getItem')
+            ->willReturn($cacheItem);
+
+        $pool
+            ->expects($this->once())
+            ->method('save')
+            ->with($cacheItem);
+
+        $cache = new SchemaCache($pool);
+        $cache->set('test_key', $document);
     }
 
     private function createMockCachePool(): CacheItemPoolInterface
