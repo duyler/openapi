@@ -54,6 +54,8 @@ init:
 	@echo "Package name (kebab-case): $(NAME)"
 	@echo "Namespace (PascalCase):  $(PASCAL_NAME)"
 
+.PHONY: build
+build:
 	docker-compose build
 	docker-compose run --rm php composer install
 

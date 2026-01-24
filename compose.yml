@@ -1,6 +1,6 @@
 services:
   php:
-    image: duyler/php-zts:8.4
+    image: duyler/php-zts:8.5
     volumes:
       - .:/app
     working_dir: /app
