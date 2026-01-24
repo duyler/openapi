@@ -129,4 +129,42 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
 
         $this->expectNotToPerformAssertions();
     }
+
+    #[Test]
+    public function validate_unevaluated_properties_no_additional(): void
+    {
+        $nameSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => $nameSchema,
+            ],
+            unevaluatedProperties: false,
+        );
+
+        $this->validator->validate(['name' => 'John'], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_unevaluated_properties_with_pattern_properties(): void
+    {
+        $nameSchema = new Schema(type: 'string');
+        $patternSchema = new Schema(type: 'integer');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => $nameSchema,
+            ],
+            patternProperties: [
+                '/^num_/' => $patternSchema,
+            ],
+            unevaluatedProperties: false,
+        );
+
+        $this->validator->validate(['name' => 'John', 'num_1' => 42], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
 }

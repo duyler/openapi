@@ -160,4 +160,34 @@ class TypeValidatorTest extends TestCase
 
         $this->validator->validate(null, $schema);
     }
+
+    #[Test]
+    public function validate_type_multiple_types(): void
+    {
+        $schema = new Schema(type: ['string', 'number']);
+
+        $this->validator->validate('hello', $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_type_multiple_types_with_number(): void
+    {
+        $schema = new Schema(type: ['string', 'number']);
+
+        $this->validator->validate(42, $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function throw_type_mismatch_for_multiple_types(): void
+    {
+        $schema = new Schema(type: ['string', 'number']);
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate(true, $schema);
+    }
 }

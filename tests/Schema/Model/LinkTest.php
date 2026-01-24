@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Schema\Model;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\Link;
+use Duyler\OpenApi\Schema\Model\MediaType;
+use Duyler\OpenApi\Schema\Model\RequestBody;
+use Duyler\OpenApi\Schema\Model\Server;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\Link
- */
+#[CoversClass(Link::class)]
 final class LinkTest extends TestCase
 {
     #[Test]
@@ -80,5 +83,85 @@ final class LinkTest extends TestCase
         self::assertIsArray($serialized);
         self::assertArrayNotHasKey('operationRef', $serialized);
         self::assertArrayNotHasKey('parameters', $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_includes_all_optional_fields(): void
+    {
+        $link = new Link(
+            operationRef: 'operationId',
+            ref: null,
+            description: 'Link to user',
+            operationId: null,
+            parameters: ['id' => '$request.path.id'],
+            requestBody: null,
+            server: null,
+        );
+
+        $serialized = $link->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertArrayHasKey('operationRef', $serialized);
+        self::assertArrayHasKey('description', $serialized);
+        self::assertArrayHasKey('parameters', $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_includes_ref(): void
+    {
+        $link = new Link(
+            ref: '#/components/links/UserLink',
+        );
+
+        $serialized = $link->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertArrayHasKey('$ref', $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_includes_operationId(): void
+    {
+        $link = new Link(
+            operationId: 'getUserById',
+        );
+
+        $serialized = $link->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertArrayHasKey('operationId', $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_includes_requestBody(): void
+    {
+        $link = new Link(
+            requestBody: new RequestBody(
+                description: 'Request body',
+                content: new Content(
+                    mediaTypes: ['application/json' => new MediaType()],
+                ),
+            ),
+        );
+
+        $serialized = $link->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertArrayHasKey('requestBody', $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_includes_server(): void
+    {
+        $link = new Link(
+            server: new Server(
+                url: 'https://api.example.com',
+            ),
+        );
+
+        $serialized = $link->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertArrayHasKey('server', $serialized);
     }
 }

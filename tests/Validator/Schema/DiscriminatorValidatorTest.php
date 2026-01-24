@@ -306,4 +306,367 @@ final class DiscriminatorValidatorTest extends TestCase
 
         $this->assertTrue(true);
     }
+
+    #[Test]
+    public function validate_with_one_of(): void
+    {
+        $catSchema = new Schema(
+            title: 'Cat',
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $dogSchema = new Schema(
+            title: 'Dog',
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+                'bark' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            oneOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+                new Schema(ref: '#/components/schemas/Dog'),
+            ],
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                    'Dog' => $dogSchema,
+                ],
+            ),
+        );
+
+        $catData = [
+            'name' => 'Fluffy',
+            'petType' => 'Cat',
+        ];
+
+        $this->validator->validate($catData, $petSchema, $document);
+
+        $dogData = [
+            'name' => 'Rex',
+            'petType' => 'Dog',
+            'bark' => 'loud',
+        ];
+
+        $this->validator->validate($dogData, $petSchema, $document);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_with_any_of(): void
+    {
+        $catSchema = new Schema(
+            title: 'cat',
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $dogSchema = new Schema(
+            title: 'dog',
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+                'bark' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            anyOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+                new Schema(ref: '#/components/schemas/Dog'),
+            ],
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                    'Dog' => $dogSchema,
+                ],
+            ),
+        );
+
+        $catData = [
+            'name' => 'Fluffy',
+            'petType' => 'cat',
+        ];
+
+        $this->validator->validate($catData, $petSchema, $document);
+
+        $dogData = [
+            'name' => 'Rex',
+            'petType' => 'dog',
+            'bark' => 'loud',
+        ];
+
+        $this->validator->validate($dogData, $petSchema, $document);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_with_nested_discriminator(): void
+    {
+        $catSchema = new Schema(
+            title: 'Cat',
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $ownerSchema = new Schema(
+            title: 'Owner',
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'pet' => $catSchema,
+            ],
+        );
+
+        $dataSchema = new Schema(
+            type: 'object',
+            properties: [
+                'owner' => $ownerSchema,
+            ],
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+        );
+
+        $data = [
+            'owner' => [
+                'name' => 'John',
+                'pet' => [
+                    'name' => 'Fluffy',
+                    'petType' => 'Cat',
+                ],
+            ],
+        ];
+
+        $this->validator->validate($data, $dataSchema, $document);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_with_custom_data_path(): void
+    {
+        $catSchema = new Schema(
+            title: 'Cat',
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            oneOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+            ],
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                ],
+            ),
+        );
+
+        $catData = [
+            'name' => 'Fluffy',
+            'petType' => 'Cat',
+        ];
+
+        $this->validator->validate($catData, $petSchema, $document, '/custom/path');
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_with_empty_mapping(): void
+    {
+        $catSchema = new Schema(
+            title: 'Cat',
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            oneOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+            ],
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+                mapping: [],
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                ],
+            ),
+        );
+
+        $catData = [
+            'name' => 'Fluffy',
+            'petType' => 'Cat',
+        ];
+
+        $this->validator->validate($catData, $petSchema, $document);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_with_schema_without_title(): void
+    {
+        $catSchema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            anyOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+            ],
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+                mapping: [
+                    'cat' => '#/components/schemas/Cat',
+                ],
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                ],
+            ),
+        );
+
+        $catData = [
+            'name' => 'Fluffy',
+            'petType' => 'cat',
+        ];
+
+        $this->validator->validate($catData, $petSchema, $document);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_finds_schema_by_title(): void
+    {
+        $catSchema = new Schema(
+            title: 'Cat',
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $dogSchema = new Schema(
+            title: 'Dog',
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+                'bark' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            oneOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+                new Schema(ref: '#/components/schemas/Dog'),
+            ],
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                    'Dog' => $dogSchema,
+                ],
+            ),
+        );
+
+        $catData = [
+            'name' => 'Fluffy',
+            'petType' => 'Cat',
+        ];
+
+        $this->validator->validate($catData, $petSchema, $document);
+
+        $dogData = [
+            'name' => 'Rex',
+            'petType' => 'Dog',
+            'bark' => 'loud',
+        ];
+
+        $this->validator->validate($dogData, $petSchema, $document);
+
+        $this->assertTrue(true);
+    }
 }

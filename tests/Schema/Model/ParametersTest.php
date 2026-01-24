@@ -6,13 +6,12 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Parameters;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Schema\Model\Schema;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\Parameters
- */
+#[CoversClass(Parameters::class)]
 final class ParametersTest extends TestCase
 {
     #[Test]

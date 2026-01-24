@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Schema\Model;
 
 use Duyler\OpenApi\Schema\Model\License;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\License
- */
+#[CoversClass(License::class)]
 final class LicenseTest extends TestCase
 {
     #[Test]

@@ -69,4 +69,20 @@ final class UriValidatorTest extends TestCase
         $this->expectNotToPerformAssertions();
         $this->validator->validate('http://example.com#section');
     }
+
+    #[Test]
+    public function validate_with_port(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('http://example.com:8080');
+        $this->validator->validate('https://example.com:8443/path');
+    }
+
+    #[Test]
+    public function throw_error_for_non_string(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Value must be a string');
+        $this->validator->validate(123);
+    }
 }

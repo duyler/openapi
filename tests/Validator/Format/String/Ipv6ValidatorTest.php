@@ -56,4 +56,27 @@ final class Ipv6ValidatorTest extends TestCase
         $this->expectNotToPerformAssertions();
         $this->validator->validate('::ffff:192.168.1.1');
     }
+
+    #[Test]
+    public function valid_localhost(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('::1');
+    }
+
+    #[Test]
+    public function throw_error_for_non_string(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Value must be a string');
+        $this->validator->validate(123);
+    }
+
+    #[Test]
+    public function throw_error_for_too_long(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid IPv6 address format');
+        $this->validator->validate('2001:0db8:85a3:0000:0000:8a2e:0370:7334:1234');
+    }
 }

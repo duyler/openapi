@@ -48,4 +48,28 @@ final class DateValidatorTest extends TestCase
         $this->expectNotToPerformAssertions();
         $this->validator->validate('2024-02-29');
     }
+
+    #[Test]
+    public function throw_error_for_invalid_month(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid date value');
+        $this->validator->validate('2024-13-01');
+    }
+
+    #[Test]
+    public function throw_error_for_invalid_day(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid date value');
+        $this->validator->validate('2024-01-32');
+    }
+
+    #[Test]
+    public function throw_error_for_non_string(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Value must be a string');
+        $this->validator->validate(20240115);
+    }
 }

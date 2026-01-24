@@ -393,6 +393,10 @@ readonly class OpenApiValidatorBuilder
             }
         }
 
+        if (false === is_file($this->specPath)) {
+            throw new BuilderException(sprintf('Spec file does not exist: %s', $this->specPath));
+        }
+
         $content = file_get_contents($this->specPath);
 
         if (false === $content) {

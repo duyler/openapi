@@ -6,18 +6,19 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Duyler\OpenApi\Schema\Model\Components;
-use Duyler\OpenApi\Schema\Model\Schema;
-use Duyler\OpenApi\Schema\Model\Parameter;
-use Duyler\OpenApi\Schema\Model\Example;
-use Duyler\OpenApi\Schema\Model\RequestBody;
-use Duyler\OpenApi\Schema\Model\MediaType;
-use Duyler\OpenApi\Schema\Model\Content;
-use Duyler\OpenApi\Schema\Model\Header;
-use Duyler\OpenApi\Schema\Model\SecurityScheme;
-use Duyler\OpenApi\Schema\Model\Link;
-use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\Model\Callbacks;
+use Duyler\OpenApi\Schema\Model\Components;
+use Duyler\OpenApi\Schema\Model\Content;
+use Duyler\OpenApi\Schema\Model\Example;
+use Duyler\OpenApi\Schema\Model\Header;
+use Duyler\OpenApi\Schema\Model\Link;
+use Duyler\OpenApi\Schema\Model\MediaType;
+use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Schema\Model\PathItem;
+use Duyler\OpenApi\Schema\Model\RequestBody;
+use Duyler\OpenApi\Schema\Model\Response;
+use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Schema\Model\SecurityScheme;
 
 final class ComponentsTest extends TestCase
 {
@@ -410,5 +411,86 @@ final class ComponentsTest extends TestCase
         self::assertArrayHasKey('callbacks', $serialized);
         self::assertArrayNotHasKey('pathItems', $serialized);
         self::assertSame(['testCallbacks' => $callbacks], $serialized['callbacks']);
+    }
+
+    #[Test]
+    public function json_serialize_includes_all_optional_fields(): void
+    {
+        $schema = new Schema(type: 'object');
+        $parameter = new Parameter(
+            name: 'test',
+            in: 'query',
+            required: true,
+            schema: new Schema(type: 'string'),
+        );
+        $example = new Example(summary: 'Test', value: ['data' => 'test']);
+        $content = new Content(
+            mediaTypes: ['application/json' => new MediaType(schema: new Schema(type: 'object'))],
+        );
+        $requestBody = new RequestBody(
+            description: 'Test',
+            content: $content,
+        );
+        $header = new Header(
+            description: 'Test',
+            schema: new Schema(type: 'string'),
+        );
+        $securityScheme = new SecurityScheme(type: 'http', scheme: 'bearer');
+        $link = new Link(operationRef: 'test');
+        $callbacks = new Callbacks(callbacks: []);
+        $pathItem = new PathItem();
+
+        $components = new Components(
+            schemas: ['User' => $schema],
+            responses: null,
+            parameters: ['test' => $parameter],
+            examples: ['test' => $example],
+            requestBodies: ['test' => $requestBody],
+            headers: ['test' => $header],
+            securitySchemes: ['test' => $securityScheme],
+            links: ['test' => $link],
+            callbacks: ['test' => $callbacks],
+            pathItems: ['test' => $pathItem],
+        );
+
+        $serialized = $components->jsonSerialize();
+
+        self::assertArrayHasKey('schemas', $serialized);
+        self::assertArrayHasKey('parameters', $serialized);
+        self::assertArrayHasKey('examples', $serialized);
+        self::assertArrayHasKey('requestBodies', $serialized);
+        self::assertArrayHasKey('headers', $serialized);
+        self::assertArrayHasKey('securitySchemes', $serialized);
+        self::assertArrayHasKey('links', $serialized);
+        self::assertArrayHasKey('callbacks', $serialized);
+        self::assertArrayHasKey('pathItems', $serialized);
+        self::assertArrayNotHasKey('responses', $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_includes_responses_when_not_null(): void
+    {
+        $response = new Response(
+            description: 'Test response',
+        );
+
+        $components = new Components(
+            schemas: null,
+            responses: ['TestResponse' => $response],
+            parameters: null,
+            examples: null,
+            requestBodies: null,
+            headers: null,
+            securitySchemes: null,
+            links: null,
+            callbacks: null,
+            pathItems: null,
+        );
+
+        $serialized = $components->jsonSerialize();
+
+        self::assertArrayHasKey('responses', $serialized);
+        self::assertArrayNotHasKey('schemas', $serialized);
+        self::assertSame(['TestResponse' => $response], $serialized['responses']);
     }
 }
