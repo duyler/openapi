@@ -63,10 +63,9 @@ $middleware = (new ValidationMiddlewareBuilder())
     ->fromYamlFile('openapi.yaml')
     ->buildMiddleware();
 
+// Your PSR-15 support application
 $app->add($middleware);
 
-// Validation happens transparently
-// Operation is available in controllers via: $request->getAttribute(Operation::class)
 ```
 
 With custom error handlers:
@@ -658,21 +657,21 @@ The following format validators are included:
 
 ### String Formats
 
-| Format | Description | Example |
-|--------|-------------|---------|
-| `date-time` | ISO 8601 date-time | `2024-01-15T10:30:00Z` |
-| `date` | ISO 8601 date | `2024-01-15` |
-| `time` | ISO 8601 time | `10:30:00Z` |
-| `email` | Email address | `user@example.com` |
-| `uri` | URI | `https://example.com` |
+| Format | Description | Example                                |
+|--------|-------------|----------------------------------------|
+| `date-time` | ISO 8601 date-time | `2026-01-15T10:30:00Z`                 |
+| `date` | ISO 8601 date | `2026-01-15`                           |
+| `time` | ISO 8601 time | `10:30:00Z`                            |
+| `email` | Email address | `user@example.com`                     |
+| `uri` | URI | `https://example.com`                  |
 | `uuid` | UUID | `550e8400-e29b-41d4-a716-446655440000` |
-| `hostname` | Hostname | `example.com` |
-| `ipv4` | IPv4 address | `192.168.1.1` |
-| `ipv6` | IPv6 address | `2001:db8::1` |
-| `byte` | Base64-encoded data | `SGVsbG8gd29ybGQ=` |
-| `duration` | ISO 8601 duration | `P3Y6M4DT12H30M5S` |
-| `json-pointer` | JSON Pointer | `/path/to/value` |
-| `relative-json-pointer` | Relative JSON Pointer | `1/property` |
+| `hostname` | Hostname | `example.com`                          |
+| `ipv4` | IPv4 address | `192.168.1.1`                          |
+| `ipv6` | IPv6 address | `2001:db8::1`                          |
+| `byte` | Base64-encoded data | `SGVsbG8gd29ybGQ=`                     |
+| `duration` | ISO 8601 duration | `P3Y6M4DT12H30M5S`                     |
+| `json-pointer` | JSON Pointer | `/path/to/value`                       |
+| `relative-json-pointer` | Relative JSON Pointer | `1/property`                           |
 
 ### Numeric Formats
 
@@ -700,27 +699,6 @@ $validator = OpenApiValidatorBuilder::create()
     ->fromYamlFile('openapi.yaml')
     ->withFormat('string', 'email', $customEmailValidator)
     ->build();
-```
-
-## Requirements
-
-- **PHP 8.4 or higher** - Uses modern PHP features (readonly classes, match expressions, etc.)
-- **PSR-7 HTTP message** - `psr/http-message ^2.0` (e.g., `nyholm/psr7`, `guzzlehttp/psr7`)
-- **PSR-6 cache** (optional) - `psr/cache ^3.0` (e.g., `symfony/cache`, `cache/cache`)
-- **PSR-14 events** (optional) - `psr/event-dispatcher ^1.0` (e.g., `symfony/event-dispatcher`)
-- **PSR-18 HTTP client** (optional) - For remote schema fetching
-
-### Suggested Packages
-
-```bash
-# PSR-7 implementation
-composer require nyholm/psr7
-
-# PSR-6 cache implementation
-composer require symfony/cache
-
-# PSR-14 event dispatcher
-composer require symfony/event-dispatcher
 ```
 
 ## Best Practices
@@ -797,30 +775,6 @@ $userData = ['name' => 'John', 'email' => 'john@example.com'];
 $validator->validateSchema($userData, '#/components/schemas/User');
 ```
 
-## Testing
-
-```bash
-# Run tests
-make tests
-
-# Run with coverage
-make coverage
-
-# Run static analysis
-make psalm
-
-# Fix code style
-make cs-fix
-```
-
-## License
-
-MIT
-
-## Support
-
-For documentation, see: https://duyler.org/en/docs/openapi/
-
 ## Migration from league/openapi-psr7-validator
 
 ### Key Differences
@@ -850,7 +804,7 @@ $responseValidator = $builder->getResponseValidator();
 $requestValidator->validate($request);
 
 // Response validation
-$responseValidator->validate($response);
+$responseValidator->validate($operationAddress, $response);
 ```
 
 #### After (duyler/openapi)
@@ -872,3 +826,30 @@ $validator->validateResponse($response, $operation);
 // Schema validation
 $validator->validateSchema($data, '#/components/schemas/User');
 ```
+
+## Requirements
+
+- **PHP 8.4 or higher** - Uses modern PHP features (readonly classes, match expressions, etc.)
+- **PSR-7 HTTP message** - `psr/http-message ^2.0` (e.g., `nyholm/psr7`)
+- **PSR-6 cache** - `psr/cache ^3.0` (e.g., `symfony/cache`, `cache/cache`)
+- **PSR-14 events** - `psr/event-dispatcher ^1.0` (e.g., `symfony/event-dispatcher`)
+
+## Testing
+
+```bash
+# Run tests
+make tests
+
+# Run with coverage
+make coverage
+
+# Run static analysis
+make psalm
+
+# Fix code style
+make cs-fix
+```
+
+## License
+
+MIT
