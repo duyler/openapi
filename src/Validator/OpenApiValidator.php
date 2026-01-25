@@ -9,7 +9,9 @@ use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Event\ValidationErrorEvent;
 use Duyler\OpenApi\Event\ValidationFinishedEvent;
 use Duyler\OpenApi\Event\ValidationStartedEvent;
-use Duyler\OpenApi\Schema\Model\Operation;
+use Duyler\OpenApi\Psr15\Operation;
+use Duyler\OpenApi\Schema\Model\PathItem;
+use Duyler\OpenApi\Schema\Model\Operation as OperationModel;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Error\BreadcrumbManager;
@@ -58,6 +60,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
         public readonly ValidatorPool $pool,
         public readonly FormatRegistry $formatRegistry,
         public readonly ErrorFormatterInterface $errorFormatter,
+        private readonly PathFinder $pathFinder,
         public readonly ?object $cache = null,
         public readonly ?object $logger = null,
         public readonly bool $coercion = false,
@@ -66,65 +69,80 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
     ) {}
 
     /**
-     * Validate HTTP request against OpenAPI specification.
+     * Validate HTTP request against OpenAPI specification and return matched operation.
      *
      * @param ServerRequestInterface $request PSR-7 HTTP request
-     * @param string $path Request path (e.g., '/users/{id}')
-     * @param string $method HTTP method (e.g., 'GET', 'POST')
-     * @return void
+     * @return Operation Matched operation from OpenAPI specification
      * @throws ValidationException If validation fails
      *
      * @example
-     * $validator->validateRequest($request, '/users/{id}', 'GET');
+     * $operation = $validator->validateRequest($request);
      */
     #[Override]
     public function validateRequest(
         ServerRequestInterface $request,
-        string $path,
-        string $method,
-    ): void {
+    ): Operation {
         $startTime = microtime(true);
+
+        $requestPath = $request->getUri()->getPath();
+        $method = $request->getMethod();
 
         if (null !== $this->eventDispatcher) {
             $this->eventDispatcher->dispatch(
-                new ValidationStartedEvent($request, $path, $method),
+                new ValidationStartedEvent($request, $requestPath, $method),
             );
         }
 
         try {
-            $operation = $this->findOperation($path, $method);
-            $requestValidator = $this->createRequestValidator();
+            $operation = $this->pathFinder->findOperation($requestPath, $method);
 
-            $requestValidator->validate($request, $operation, $path);
+            $pathItem = $this->document->paths?->paths[$operation->path] ?? null;
+            if (null === $pathItem) {
+                throw new BuilderException(sprintf('Path not found: %s', $operation->path));
+            }
+
+            $op = $this->getOperationFromPathItem($pathItem, $method);
+            if (null === $op) {
+                throw new BuilderException(
+                    sprintf('Method not found: %s %s', $method, $operation->path),
+                );
+            }
+
+            $requestValidator = $this->createRequestValidator();
+            $requestValidator->validate($request, $op, $operation->path);
 
             if (null !== $this->eventDispatcher) {
                 $duration = microtime(true) - $startTime;
                 $this->eventDispatcher->dispatch(
                     new ValidationFinishedEvent(
                         $request,
-                        $path,
-                        $method,
+                        $operation->path,
+                        $operation->method,
                         true,
                         $duration,
                     ),
                 );
             }
-        } catch (ValidationException $e) {
+
+            return $operation;
+        } catch (BuilderException|ValidationException $e) {
             if (null !== $this->eventDispatcher) {
                 $duration = microtime(true) - $startTime;
                 $this->eventDispatcher->dispatch(
                     new ValidationFinishedEvent(
                         $request,
-                        $path,
+                        $requestPath,
                         $method,
                         false,
                         $duration,
                     ),
                 );
 
-                $this->eventDispatcher->dispatch(
-                    new ValidationErrorEvent($request, $path, $method, $e),
-                );
+                if ($e instanceof ValidationException) {
+                    $this->eventDispatcher->dispatch(
+                        new ValidationErrorEvent($request, $requestPath, $method, $e),
+                    );
+                }
             }
 
             throw $e;
@@ -135,24 +153,32 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
      * Validate HTTP response against OpenAPI specification.
      *
      * @param ResponseInterface $response PSR-7 HTTP response
-     * @param string $path Request path (e.g., '/users/{id}')
-     * @param string $method HTTP method (e.g., 'GET', 'POST')
+     * @param Operation $operation Operation to validate against
      * @return void
      * @throws ValidationException If validation fails
      *
      * @example
-     * $validator->validateResponse($response, '/users/{id}', 'GET');
+     * $validator->validateResponse($response, $operation);
      */
     #[Override]
     public function validateResponse(
         ResponseInterface $response,
-        string $path,
-        string $method,
+        Operation $operation,
     ): void {
-        $operation = $this->findOperation($path, $method);
-        $responseValidator = $this->createResponseValidator();
+        $pathItem = $this->document->paths?->paths[$operation->path] ?? null;
+        if (null === $pathItem) {
+            throw new BuilderException(sprintf('Path not found: %s', $operation->path));
+        }
 
-        $responseValidator->validate($response, $operation);
+        $op = $this->getOperationFromPathItem($pathItem, $operation->method);
+        if (null === $op) {
+            throw new BuilderException(
+                sprintf('Method not found: %s %s', $operation->method, $operation->path),
+            );
+        }
+
+        $responseValidator = $this->createResponseValidator();
+        $responseValidator->validate($response, $op);
     }
 
     #[Override]
@@ -173,22 +199,9 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
         return $this->errorFormatter->formatMultiple($e->getErrors());
     }
 
-    /**
-     * Find operation by path and method
-     *
-     * @throws BuilderException
-     */
-    private function findOperation(string $path, string $method): Operation
+    private function getOperationFromPathItem(PathItem $pathItem, string $method): ?OperationModel
     {
-        $paths = $this->document->paths?->paths ?? [];
-
-        if (false === isset($paths[$path])) {
-            throw new BuilderException(sprintf('Path not found: %s', $path));
-        }
-
-        $pathItem = $paths[$path];
-
-        $operation = match (strtolower($method)) {
+        return match (strtolower($method)) {
             'get' => $pathItem->get,
             'post' => $pathItem->post,
             'put' => $pathItem->put,
@@ -199,12 +212,6 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
             'trace' => $pathItem->trace,
             default => null,
         };
-
-        if (null === $operation) {
-            throw new BuilderException(sprintf('Method %s not found for path: %s', $method, $path));
-        }
-
-        return $operation;
     }
 
     private function createRequestValidator(): RequestValidator

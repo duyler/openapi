@@ -22,6 +22,7 @@ OpenAPI 3.1 validator for PHP 8.4+
 - **Type Coercion** - Optional automatic type conversion
 - **PSR-6 Caching** - Cache parsed OpenAPI documents for better performance
 - **PSR-14 Events** - Subscribe to validation lifecycle events
+- **PSR-15 Middleware** - Ready-to-use middleware for automatic validation
 - **Error Formatting** - Multiple error formatters (simple, detailed, JSON)
 - **Webhooks Support** - Validate incoming webhook requests
 - **Schema Registry** - Manage multiple schema versions
@@ -35,6 +36,8 @@ composer require duyler/openapi
 
 ## Quick Start
 
+### Basic Usage
+
 ```php
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 
@@ -43,13 +46,46 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 
 // Validate request
-$validator->validateRequest($request, '/users', 'POST');
+$operation = $validator->validateRequest($request);
 
 // Validate response
-$validator->validateResponse($response, '/users', 'POST');
+$validator->validateResponse($response, $operation);
+```
 
-// Validate schema
-$validator->validateSchema($data, '#/components/schemas/User');
+### PSR-15 Middleware
+
+Automatic validation of requests and responses using PSR-15 middleware:
+
+```php
+use Duyler\OpenApi\Psr15\ValidationMiddlewareBuilder;
+
+$middleware = (new ValidationMiddlewareBuilder())
+    ->fromYamlFile('openapi.yaml')
+    ->buildMiddleware();
+
+$app->add($middleware);
+
+// Validation happens transparently
+// Operation is available in controllers via: $request->getAttribute(Operation::class)
+```
+
+With custom error handlers:
+
+```php
+$middleware = (new ValidationMiddlewareBuilder())
+    ->fromYamlFile('openapi.yaml')
+    ->onRequestError(function ($e, $request) {
+        return new JsonResponse([
+            'code' => 1001,
+            'errors' => $e->getErrors(),
+        ], 422);
+    })
+    ->onResponseError(function ($e, $request, $response) {
+        return new JsonResponse([
+            'code' => 2001,
+        ], 500);
+    })
+    ->buildMiddleware();
 ```
 
 ## Usage
@@ -99,7 +135,8 @@ $validator = OpenApiValidatorBuilder::create()
     ->fromYamlFile('openapi.yaml')
     ->build();
 
-$validator->validateRequest($request, '/users', 'POST');
+$operation = $validator->validateRequest($request);
+// $operation contains the matched path and method
 ```
 
 ### Caching
@@ -237,7 +274,7 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 
 try {
-    $validator->validateRequest($request, '/users', 'POST');
+    $operation = $validator->validateRequest($request);
 } catch (ValidationException $e) {
     // Get formatted errors
     $formatted = $validator->getFormattedErrors($e);
@@ -512,7 +549,7 @@ All validation errors throw `ValidationException` which contains detailed error 
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 
 try {
-    $validator->validateRequest($request, '/users', 'POST');
+    $operation = $validator->validateRequest($request);
 } catch (ValidationException $e) {
     // Get array of validation errors
     $errors = $e->getErrors();
@@ -705,7 +742,7 @@ Provide meaningful error messages to API consumers:
 
 ```php
 try {
-    $validator->validateRequest($request, $path, $method);
+    $operation = $validator->validateRequest($request);
 } catch (ValidationException $e) {
     $errors = array_map(
         fn($error) => [
@@ -764,7 +801,16 @@ $validator->validateSchema($userData, '#/components/schemas/User');
 
 ```bash
 # Run tests
-make test
+make tests
+
+# Run with coverage
+make coverage
+
+# Run static analysis
+make psalm
+
+# Fix code style
+make cs-fix
 ```
 
 ## License
@@ -817,40 +863,12 @@ $validator = OpenApiValidatorBuilder::create()
     ->enableCoercion()
     ->build();
 
-// Request validation
-$validator->validateRequest($request, '/users', 'POST');
+// Request validation - path and method are automatically detected
+$operation = $validator->validateRequest($request);
 
 // Response validation
-$validator->validateResponse($response, '/users', 'POST');
+$validator->validateResponse($response, $operation);
 
 // Schema validation
 $validator->validateSchema($data, '#/components/schemas/User');
-```
-
-### Breaking Changes
-
-1. **Path and Method Required**: Unlike league/openapi-psr7-validator which extracts path/method from the request, duyler/openapi requires explicit path and method:
-
-```php
-// Before
-$requestValidator->validate($request);
-
-// After
-$validator->validateRequest($request, '/users/{id}', 'GET');
-```
-
-2. **Immutable Builder**: The builder is immutable; each method returns a new instance:
-
-```php
-// This won't work
-$builder = OpenApiValidatorBuilder::create();
-$builder->fromYamlFile('openapi.yaml');
-$builder->enableCoercion();
-$validator = $builder->build();
-
-// Correct way
-$validator = OpenApiValidatorBuilder::create()
-    ->fromYamlFile('openapi.yaml')
-    ->enableCoercion()
-    ->build();
 ```

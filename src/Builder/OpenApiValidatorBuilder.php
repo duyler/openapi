@@ -15,6 +15,7 @@ use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Duyler\OpenApi\Validator\OpenApiValidator;
+use Duyler\OpenApi\Validator\PathFinder;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Exception;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -27,20 +28,20 @@ use function sprintf;
  * Provides a convenient interface for configuring and building validators
  * with support for caching, custom formats, error formatting, and event dispatching.
  */
-readonly class OpenApiValidatorBuilder
+class OpenApiValidatorBuilder
 {
-    private function __construct(
-        private readonly ?string $specPath = null,
-        private readonly ?string $specContent = null,
-        private readonly ?string $specType = null,
-        private readonly ?ValidatorPool $pool = null,
-        private readonly ?SchemaCache $cache = null,
-        private readonly ?object $logger = null,
-        private readonly ?FormatRegistry $formatRegistry = null,
-        private readonly bool $coercion = false,
-        private readonly bool $nullableAsType = false,
-        private readonly ?ErrorFormatterInterface $errorFormatter = null,
-        private readonly ?EventDispatcherInterface $eventDispatcher = null,
+    protected function __construct(
+        protected readonly ?string $specPath = null,
+        protected readonly ?string $specContent = null,
+        protected readonly ?string $specType = null,
+        protected readonly ?ValidatorPool $pool = null,
+        protected readonly ?SchemaCache $cache = null,
+        protected readonly ?object $logger = null,
+        protected readonly ?FormatRegistry $formatRegistry = null,
+        protected readonly bool $coercion = false,
+        protected readonly bool $nullableAsType = false,
+        protected readonly ?ErrorFormatterInterface $errorFormatter = null,
+        protected readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {}
 
     /**
@@ -343,6 +344,7 @@ readonly class OpenApiValidatorBuilder
         $pool = $this->pool ?? new ValidatorPool();
         $formatRegistry = $this->formatRegistry ?? BuiltinFormats::create();
         $errorFormatter = $this->errorFormatter ?? new SimpleFormatter();
+        $pathFinder = new PathFinder($document);
 
         return new OpenApiValidator(
             document: $document,
@@ -354,6 +356,7 @@ readonly class OpenApiValidatorBuilder
             coercion: $this->coercion,
             nullableAsType: $this->nullableAsType,
             eventDispatcher: $this->eventDispatcher,
+            pathFinder: $pathFinder,
         );
     }
 
