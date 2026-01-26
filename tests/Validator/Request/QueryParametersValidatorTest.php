@@ -9,6 +9,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\Request\ParameterDeserializer;
 use Duyler\OpenApi\Validator\Request\QueryParametersValidator;
+use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
@@ -24,8 +25,9 @@ final class QueryParametersValidatorTest extends TestCase
         $pool = new ValidatorPool();
         $schemaValidator = new SchemaValidator($pool);
         $deserializer = new ParameterDeserializer();
+        $coercer = new TypeCoercer();
 
-        $this->validator = new QueryParametersValidator($schemaValidator, $deserializer);
+        $this->validator = new QueryParametersValidator($schemaValidator, $deserializer, $coercer);
     }
 
     #[Test]

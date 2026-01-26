@@ -33,6 +33,7 @@ use Duyler\OpenApi\Validator\Request\QueryParametersValidator;
 use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Request\RequestBodyValidator;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
+use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\Response\ResponseBodyValidator;
 use Duyler\OpenApi\Validator\Response\ResponseHeadersValidator;
 use Duyler\OpenApi\Validator\Response\ResponseValidator;
@@ -207,24 +208,33 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
     private function createRequestValidator(): RequestValidator
     {
         $deserializer = new ParameterDeserializer();
+        $coercer = new TypeCoercer();
 
         return new RequestValidator(
             pathParser: new PathParser(),
             pathParamsValidator: new PathParametersValidator(
                 schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
                 deserializer: $deserializer,
+                coercer: $coercer,
+                coercion: $this->coercion,
             ),
             queryParser: new QueryParser(),
             queryParamsValidator: new QueryParametersValidator(
                 schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
                 deserializer: $deserializer,
+                coercer: $coercer,
+                coercion: $this->coercion,
             ),
             headersValidator: new HeadersValidator(
                 schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
+                coercer: $coercer,
+                coercion: $this->coercion,
             ),
             cookieValidator: new CookieValidator(
                 schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
                 deserializer: $deserializer,
+                coercer: $coercer,
+                coercion: $this->coercion,
             ),
             bodyValidator: new RequestBodyValidator(
                 schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),

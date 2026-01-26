@@ -26,6 +26,7 @@ use Duyler\OpenApi\Validator\Request\QueryParametersValidator;
 use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Request\RequestBodyValidator;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
+use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
@@ -44,13 +45,14 @@ final class RequestValidatorIntegrationTest extends TestCase
         $pool = new ValidatorPool();
         $schemaValidator = new SchemaValidator($pool);
         $deserializer = new ParameterDeserializer();
+        $coercer = new TypeCoercer();
 
         $pathParser = new PathParser();
-        $pathParamsValidator = new PathParametersValidator($schemaValidator, $deserializer);
+        $pathParamsValidator = new PathParametersValidator($schemaValidator, $deserializer, $coercer);
         $queryParser = new QueryParser();
-        $queryParamsValidator = new QueryParametersValidator($schemaValidator, $deserializer);
-        $headersValidator = new HeadersValidator($schemaValidator);
-        $cookieValidator = new CookieValidator($schemaValidator, $deserializer);
+        $queryParamsValidator = new QueryParametersValidator($schemaValidator, $deserializer, $coercer);
+        $headersValidator = new HeadersValidator($schemaValidator, $coercer);
+        $cookieValidator = new CookieValidator($schemaValidator, $deserializer, $coercer);
         $negotiator = new ContentTypeNegotiator();
         $jsonParser = new JsonBodyParser();
         $formParser = new FormBodyParser();

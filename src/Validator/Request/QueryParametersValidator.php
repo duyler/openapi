@@ -13,6 +13,8 @@ final readonly class QueryParametersValidator
     public function __construct(
         private readonly SchemaValidatorInterface $schemaValidator,
         private readonly ParameterDeserializer $deserializer,
+        private readonly TypeCoercer $coercer,
+        private readonly bool $coercion = false,
     ) {}
 
     /**
@@ -37,6 +39,7 @@ final readonly class QueryParametersValidator
             }
 
             $value = $this->deserializer->deserialize($value, $param);
+            $value = $this->coercer->coerce($value, $param, $this->coercion);
 
             if (null !== $param->schema) {
                 $this->schemaValidator->validate($value, $param->schema);
