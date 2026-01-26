@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Duyler\OpenApi\Psr15;
+namespace Duyler\OpenApi\Validator;
 
 use Override;
 use Stringable;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Validator;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Psr15\Operation;
+use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -13,7 +13,7 @@ use Nyholm\Psr7\Factory\Psr17Factory;
 
 final class OpenApiValidatorDirectTest extends TestCase
 {
-    private const SIMPLE_YAML = <<<YAML
+    private const string SIMPLE_YAML = <<<YAML
 openapi: 3.1.0
 info:
   title: Test API
@@ -52,10 +52,10 @@ YAML;
             ->build();
 
         $operation = new Operation('/users/{id}', 'GET');
-        $response = (new Psr17Factory())
+        $response = new Psr17Factory()
             ->createResponse(200)
             ->withHeader('Content-Type', 'application/json')
-            ->withBody((new Psr17Factory())->createStream(json_encode(['invalid' => 'data'])));
+            ->withBody(new Psr17Factory()->createStream(json_encode(['invalid' => 'data'])));
 
         $this->expectException(ValidationException::class);
         $validator->validateResponse($response, $operation);
@@ -69,10 +69,10 @@ YAML;
             ->build();
 
         $operation = new Operation('/users/{id}', 'GET');
-        $response = (new Psr17Factory())
+        $response = new Psr17Factory()
             ->createResponse(200)
             ->withHeader('Content-Type', 'application/json')
-            ->withBody((new Psr17Factory())->createStream(json_encode(['id' => '123', 'name' => 'John'])));
+            ->withBody(new Psr17Factory()->createStream(json_encode(['id' => '123', 'name' => 'John'])));
 
         $validator->validateResponse($response, $operation);
         $this->expectNotToPerformAssertions();
@@ -86,10 +86,10 @@ YAML;
             ->build();
 
         $operation = new Operation('/users/{id}', 'GET');
-        $response = (new Psr17Factory())
+        $response = new Psr17Factory()
             ->createResponse(200)
             ->withHeader('Content-Type', 'application/json')
-            ->withBody((new Psr17Factory())->createStream(json_encode(['invalid' => 'data'])));
+            ->withBody(new Psr17Factory()->createStream(json_encode(['invalid' => 'data'])));
 
         try {
             $validator->validateResponse($response, $operation);

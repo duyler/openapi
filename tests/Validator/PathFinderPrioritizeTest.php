@@ -42,7 +42,7 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $request = (new Psr17Factory())
+        $request = new Psr17Factory()
             ->createServerRequest('GET', '/users/me');
 
         $operation = $validator->validateRequest($request);

@@ -19,11 +19,10 @@ OpenAPI 3.1 validator for PHP 8.4+
 - **Built-in Format Validators** - 12+ built-in validators (email, UUID, date-time, URI, IPv4/IPv6, etc.)
 - **Custom Format Validators** - Easily register custom format validators
 - **Discriminator Support** - Full support for polymorphic schemas with discriminators
-- **Type Coercion** - Optional automatic type conversion
-- **PSR-6 Caching** - Cache parsed OpenAPI documents for better performance
-- **PSR-14 Events** - Subscribe to validation lifecycle events
-- **PSR-15 Middleware** - Ready-to-use middleware for automatic validation
-- **Error Formatting** - Multiple error formatters (simple, detailed, JSON)
+ - **Type Coercion** - Optional automatic type conversion
+ - **PSR-6 Caching** - Cache parsed OpenAPI documents for better performance
+ - **PSR-14 Events** - Subscribe to validation lifecycle events
+ - **Error Formatting** - Multiple error formatters (simple, detailed, JSON)
 - **Webhooks Support** - Validate incoming webhook requests
 - **Schema Registry** - Manage multiple schema versions
 - **Validator Compilation** - Generate optimized validator code
@@ -50,41 +49,6 @@ $operation = $validator->validateRequest($request);
 
 // Validate response
 $validator->validateResponse($response, $operation);
-```
-
-### PSR-15 Middleware
-
-Automatic validation of requests and responses using PSR-15 middleware:
-
-```php
-use Duyler\OpenApi\Psr15\ValidationMiddlewareBuilder;
-
-$middleware = (new ValidationMiddlewareBuilder())
-    ->fromYamlFile('openapi.yaml')
-    ->buildMiddleware();
-
-// Your PSR-15 support application
-$app->add($middleware);
-
-```
-
-With custom error handlers:
-
-```php
-$middleware = (new ValidationMiddlewareBuilder())
-    ->fromYamlFile('openapi.yaml')
-    ->onRequestError(function ($e, $request) {
-        return new JsonResponse([
-            'code' => 1001,
-            'errors' => $e->getErrors(),
-        ], 422);
-    })
-    ->onResponseError(function ($e, $request, $response) {
-        return new JsonResponse([
-            'code' => 2001,
-        ], 500);
-    })
-    ->buildMiddleware();
 ```
 
 ## Usage
@@ -185,28 +149,6 @@ use Duyler\OpenApi\Validator\Request\RequestValidator;
 
 $webhookValidator = new WebhookValidator($requestValidator);
 $webhookValidator->validate($request, 'payment.webhook', $document);
-```
-
-### Schema Registry
-
-Manage multiple schema versions:
-
-```php
-use Duyler\OpenApi\Registry\SchemaRegistry;
-
-$registry = new SchemaRegistry();
-$registry = $registry
-    ->register('api', '1.0.0', $documentV1)
-    ->register('api', '2.0.0', $documentV2);
-
-// Get specific version
-$schema = $registry->get('api', '1.0.0');
-
-// Get latest version
-$schema = $registry->get('api');
-
-// List all versions
-$versions = $registry->getVersions('api');
 ```
 
 ## Advanced Usage

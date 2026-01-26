@@ -9,7 +9,6 @@ use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Event\ValidationErrorEvent;
 use Duyler\OpenApi\Event\ValidationFinishedEvent;
 use Duyler\OpenApi\Event\ValidationStartedEvent;
-use Duyler\OpenApi\Psr15\Operation;
 use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\Model\Operation as OperationModel;
 use Duyler\OpenApi\Schema\Model\Schema;

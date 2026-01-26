@@ -11,7 +11,7 @@ use Exception;
 
 final class OpenApiValidatorSchemaTest extends TestCase
 {
-    private const SCHEMA_YAML = <<<YAML
+    private const string SCHEMA_YAML = <<<YAML
 openapi: 3.1.0
 info:
   title: Test API

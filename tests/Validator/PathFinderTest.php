@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Test\Validator;
 
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Psr15\Operation;
+use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\PathFinder;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;

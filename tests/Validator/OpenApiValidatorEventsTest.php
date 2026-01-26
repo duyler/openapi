@@ -34,12 +34,12 @@ YAML;
         $events = [];
         $dispatcher = new ArrayDispatcher([
             ValidationStartedEvent::class => [
-                function ($event) use (&$events) {
+                function ($event) use (&$events): void {
                     $events['started'] = $event;
                 },
             ],
             ValidationFinishedEvent::class => [
-                function ($event) use (&$events) {
+                function ($event) use (&$events): void {
                     $events['finished'] = $event;
                 },
             ],
@@ -50,7 +50,7 @@ YAML;
             ->withEventDispatcher($dispatcher)
             ->build();
 
-        $request = (new Psr17Factory())
+        $request = new Psr17Factory()
             ->createServerRequest('GET', '/users');
 
         $operation = $validator->validateRequest($request);
@@ -92,12 +92,12 @@ YAML;
         $events = [];
         $dispatcher = new ArrayDispatcher([
             ValidationStartedEvent::class => [
-                function ($event) use (&$events) {
+                function ($event) use (&$events): void {
                     $events['started'] = $event;
                 },
             ],
             ValidationFinishedEvent::class => [
-                function ($event) use (&$events) {
+                function ($event) use (&$events): void {
                     $events['finished'] = $event;
                 },
             ],
@@ -108,15 +108,15 @@ YAML;
             ->withEventDispatcher($dispatcher)
             ->build();
 
-        $request = (new Psr17Factory())
+        $request = new Psr17Factory()
             ->createServerRequest('POST', '/users')
             ->withHeader('Content-Type', 'application/json')
-            ->withBody((new Psr17Factory())->createStream('{"missing": "field"}'));
+            ->withBody(new Psr17Factory()->createStream('{"missing": "field"}'));
 
         try {
             $validator->validateRequest($request);
             $this->fail('Expected validation exception to be thrown');
-        } catch (Exception $e) {
+        } catch (Exception) {
             $this->assertArrayHasKey('started', $events);
             $this->assertArrayHasKey('finished', $events);
             $this->assertFalse($events['finished']->success);
