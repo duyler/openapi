@@ -72,7 +72,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
      *
      * @param ServerRequestInterface $request PSR-7 HTTP request
      * @return Operation Matched operation from OpenAPI specification
-     * @throws ValidationException If validation fails
+     * @throws ValidationException|BuilderException If validation fails
      *
      * @example
      * $operation = $validator->validateRequest($request);
@@ -86,11 +86,9 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
         $requestPath = $request->getUri()->getPath();
         $method = $request->getMethod();
 
-        if (null !== $this->eventDispatcher) {
-            $this->eventDispatcher->dispatch(
-                new ValidationStartedEvent($request, $requestPath, $method),
-            );
-        }
+        $this->eventDispatcher?->dispatch(
+            new ValidationStartedEvent($request, $requestPath, $method),
+        );
 
         try {
             $operation = $this->pathFinder->findOperation($requestPath, $method);
@@ -110,40 +108,33 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
             $requestValidator = $this->createRequestValidator();
             $requestValidator->validate($request, $op, $operation->path);
 
-            if (null !== $this->eventDispatcher) {
-                $duration = microtime(true) - $startTime;
-                $this->eventDispatcher->dispatch(
-                    new ValidationFinishedEvent(
-                        $request,
-                        $operation->path,
-                        $operation->method,
-                        true,
-                        $duration,
-                    ),
-                );
-            }
+            $this->eventDispatcher?->dispatch(
+                new ValidationFinishedEvent(
+                    $request,
+                    $operation->path,
+                    $operation->method,
+                    true,
+                    microtime(true) - $startTime,
+                ),
+            );
 
             return $operation;
         } catch (BuilderException|ValidationException $e) {
-            if (null !== $this->eventDispatcher) {
-                $duration = microtime(true) - $startTime;
-                $this->eventDispatcher->dispatch(
-                    new ValidationFinishedEvent(
-                        $request,
-                        $requestPath,
-                        $method,
-                        false,
-                        $duration,
-                    ),
+            $this->eventDispatcher?->dispatch(
+                new ValidationFinishedEvent(
+                    $request,
+                    $requestPath,
+                    $method,
+                    false,
+                    microtime(true) - $startTime,
+                ),
+            );
+
+            if ($e instanceof ValidationException) {
+                $this->eventDispatcher?->dispatch(
+                    new ValidationErrorEvent($request, $requestPath, $method, $e),
                 );
-
-                if ($e instanceof ValidationException) {
-                    $this->eventDispatcher->dispatch(
-                        new ValidationErrorEvent($request, $requestPath, $method, $e),
-                    );
-                }
             }
-
             throw $e;
         }
     }
