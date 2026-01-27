@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
+use Override;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
@@ -13,7 +14,7 @@ use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 
-final readonly class RequestBodyValidator
+final readonly class RequestBodyValidator implements RequestBodyValidatorInterface
 {
     public function __construct(
         private readonly SchemaValidatorInterface $schemaValidator,
@@ -25,6 +26,7 @@ final readonly class RequestBodyValidator
         private readonly XmlBodyParser $xmlParser,
     ) {}
 
+    #[Override]
     public function validate(
         string $body,
         string $contentType,
@@ -54,7 +56,7 @@ final readonly class RequestBodyValidator
         }
     }
 
-    private function parseBody(string $body, string $mediaType): array|int|string|float|bool
+    private function parseBody(string $body, string $mediaType): array|int|string|float|bool|null
     {
         return match ($mediaType) {
             'application/json' => $this->jsonParser->parse($body),

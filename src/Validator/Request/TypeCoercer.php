@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 
 use function is_bool;
 use function is_float;
 use function is_int;
+use function is_numeric;
 use function is_string;
 use function is_array;
 use function is_object;
@@ -19,7 +21,7 @@ final readonly class TypeCoercer
     /**
      * @return array<array-key, mixed>|int|string|float|bool
      */
-    public function coerce(mixed $value, Parameter $param, bool $enabled): array|int|string|float|bool
+    public function coerce(mixed $value, Parameter $param, bool $enabled, bool $strict = false): array|int|string|float|bool
     {
         if (null === $value) {
             $value = '';
@@ -36,24 +38,24 @@ final readonly class TypeCoercer
         }
 
         if (is_array($schema->type)) {
-            return $this->coerceUnionType($value, $schema->type);
+            return $this->coerceUnionType($value, $schema->type, $strict);
         }
 
-        return $this->coerceToType($value, $schema->type);
+        return $this->coerceToType($value, $schema->type, $strict);
     }
 
     /**
      * @param array<int, string> $types
      * @return array<array-key, mixed>|int|string|float|bool
      */
-    private function coerceUnionType(mixed $value, array $types): array|int|string|float|bool
+    private function coerceUnionType(mixed $value, array $types, bool $strict): array|int|string|float|bool
     {
         foreach ($types as $type) {
             if ('null' === $type) {
                 continue;
             }
 
-            $coerced = $this->coerceToType($value, $type);
+            $coerced = $this->coerceToType($value, $type, $strict);
 
             if ($this->isValidType($coerced, $type)) {
                 return $coerced;
@@ -66,12 +68,12 @@ final readonly class TypeCoercer
     /**
      * @return array<array-key, mixed>|int|string|float|bool
      */
-    private function coerceToType(mixed $value, string $type): array|int|string|float|bool
+    private function coerceToType(mixed $value, string $type, bool $strict): array|int|string|float|bool
     {
         if (is_string($value)) {
             return match ($type) {
-                'integer' => $this->coerceToInteger($value),
-                'number' => $this->coerceToNumber($value),
+                'integer' => $this->coerceToInteger($value, $strict),
+                'number' => $this->coerceToNumber($value, $strict),
                 'boolean' => $this->coerceToBoolean($value),
                 default => $value,
             };
@@ -100,8 +102,17 @@ final readonly class TypeCoercer
         return (string) $value;
     }
 
-    private function coerceToInteger(string $value): int
+    private function coerceToInteger(string $value, bool $strict): int
     {
+        if ($strict && (!is_numeric($value) || (string) (int) $value !== $value)) {
+            throw new TypeMismatchError(
+                expected: 'integer',
+                actual: $value,
+                dataPath: '',
+                schemaPath: '/type',
+            );
+        }
+
         $coerced = (int) $value;
 
         if ((string) $coerced !== $value) {
@@ -111,8 +122,17 @@ final readonly class TypeCoercer
         return $coerced;
     }
 
-    private function coerceToNumber(string $value): float
+    private function coerceToNumber(string $value, bool $strict): float
     {
+        if ($strict && !is_numeric($value)) {
+            throw new TypeMismatchError(
+                expected: 'number',
+                actual: $value,
+                dataPath: '',
+                schemaPath: '/type',
+            );
+        }
+
         return (float) $value;
     }
 

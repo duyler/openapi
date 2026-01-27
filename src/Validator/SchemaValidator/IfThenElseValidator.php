@@ -26,7 +26,9 @@ final readonly class IfThenElseValidator implements SchemaValidatorInterface
             return;
         }
 
-        $normalizedData = SchemaValueNormalizer::normalize($data);
+        $nullableAsType = $context?->nullableAsType ?? true;
+        $allowNull = $schema->if->nullable && $nullableAsType;
+        $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
         $ifValid = true;
         try {
             $validator = new SchemaValidator($this->pool);

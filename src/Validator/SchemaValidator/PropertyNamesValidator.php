@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
@@ -26,6 +27,13 @@ final readonly class PropertyNamesValidator implements SchemaValidatorInterface
 
         if (false === is_array($data)) {
             return;
+        }
+
+        if (null !== $schema->propertyNames->pattern && '' !== $schema->propertyNames->pattern) {
+            RegexValidator::validate(
+                RegexValidator::normalize($schema->propertyNames->pattern),
+                'propertyNames pattern',
+            );
         }
 
         foreach (array_keys($data) as $propertyName) {

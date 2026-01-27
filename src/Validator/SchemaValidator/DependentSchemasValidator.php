@@ -33,10 +33,13 @@ final readonly class DependentSchemasValidator implements SchemaValidatorInterfa
             return;
         }
 
+        $nullableAsType = $context?->nullableAsType ?? true;
+
         foreach ($schema->dependentSchemas as $propertyName => $dependentSchema) {
             if (array_key_exists($propertyName, $data)) {
                 try {
-                    $normalizedData = SchemaValueNormalizer::normalize($data);
+                    $allowNull = $dependentSchema->nullable && $nullableAsType;
+                    $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
                     $validator = new SchemaValidator($this->pool);
                     $validator->validate($normalizedData, $dependentSchema, $context);
                 } catch (InvalidDataTypeException $e) {

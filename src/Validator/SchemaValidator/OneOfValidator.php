@@ -29,13 +29,23 @@ final readonly class OneOfValidator implements SchemaValidatorInterface
             return;
         }
 
+        $nullableAsType = $context?->nullableAsType ?? true;
+
+        if (null === $data && $nullableAsType) {
+            $hasNullableSchema = array_any($schema->oneOf, fn($subSchema) => $subSchema->nullable);
+            if ($hasNullableSchema) {
+                return;
+            }
+        }
+
         $validCount = 0;
         $errors = [];
         $abstractErrors = [];
 
         foreach ($schema->oneOf as $subSchema) {
             try {
-                $normalizedData = SchemaValueNormalizer::normalize($data);
+                $allowNull = $subSchema->nullable && $nullableAsType;
+                $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
                 $validator = new SchemaValidator($this->pool);
                 $validator->validate($normalizedData, $subSchema, $context);
                 ++$validCount;

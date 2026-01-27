@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 
+use function assert;
 use function count;
 
 final readonly class CookieValidator
@@ -55,6 +56,7 @@ final readonly class CookieValidator
             }
 
             $name = $param->name;
+            assert(null !== $name);
             $value = $cookies[$name] ?? null;
 
             if (null === $value) {
@@ -65,7 +67,7 @@ final readonly class CookieValidator
             }
 
             $value = $this->deserializer->deserialize($value, $param);
-            $value = $this->coercer->coerce($value, $param, $this->coercion);
+            $value = $this->coercer->coerce($value, $param, $this->coercion, $this->coercion);
 
             if (null !== $param->schema) {
                 $this->schemaValidator->validate($value, $param->schema);

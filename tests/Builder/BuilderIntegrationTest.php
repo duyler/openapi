@@ -194,8 +194,8 @@ YAML;
         $this->assertTrue($validator2->coercion);
         $this->assertTrue($validator3->coercion);
 
-        $this->assertFalse($validator1->nullableAsType);
-        $this->assertFalse($validator2->nullableAsType);
+        $this->assertTrue($validator1->nullableAsType);
+        $this->assertTrue($validator2->nullableAsType);
         $this->assertTrue($validator3->nullableAsType);
     }
 

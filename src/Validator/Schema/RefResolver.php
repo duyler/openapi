@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Schema;
 
+use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
@@ -26,8 +28,52 @@ class RefResolver implements RefResolverInterface
     #[Override]
     public function resolve(string $ref, OpenApiDocument $document): Schema
     {
+        $result = $this->resolveRef($ref, $document);
+
+        if (false === $result instanceof Schema) {
+            throw new UnresolvableRefException(
+                $ref,
+                'Expected Schema but got ' . $result::class,
+            );
+        }
+
+        return $result;
+    }
+
+    #[Override]
+    public function resolveParameter(string $ref, OpenApiDocument $document): Parameter
+    {
+        $result = $this->resolveRef($ref, $document);
+
+        if (false === $result instanceof Parameter) {
+            throw new UnresolvableRefException(
+                $ref,
+                'Expected Parameter but got ' . $result::class,
+            );
+        }
+
+        return $result;
+    }
+
+    #[Override]
+    public function resolveResponse(string $ref, OpenApiDocument $document): Response
+    {
+        $result = $this->resolveRef($ref, $document);
+
+        if (false === $result instanceof Response) {
+            throw new UnresolvableRefException(
+                $ref,
+                'Expected Response but got ' . $result::class,
+            );
+        }
+
+        return $result;
+    }
+
+    private function resolveRef(string $ref, OpenApiDocument $document): Schema|Parameter|Response
+    {
         if (isset($this->cache[$document])) {
-            /** @var array<string, Schema> */
+            /** @var array<string, Schema|Parameter|Response> */
             $cacheEntry = $this->cache[$document];
             if (isset($cacheEntry[$ref])) {
                 return $cacheEntry[$ref];
@@ -42,35 +88,35 @@ class RefResolver implements RefResolverInterface
         $parts = explode('/', $path);
 
         try {
-            $schema = $this->navigate($document, $parts);
+            $result = $this->navigate($document, $parts);
         } catch (UnresolvableRefException $e) {
             throw new UnresolvableRefException($ref, $e->reason, previous: $e);
         }
 
-        /** @var array<string, Schema> */
+        /** @var array<string, Schema|Parameter|Response> */
         $cacheArray = $this->cache[$document] ?? [];
-        $cacheArray[$ref] = $schema;
+        $cacheArray[$ref] = $result;
         $this->cache[$document] = $cacheArray;
 
-        return $schema;
+        return $result;
     }
 
     /**
      * @param array<int, string> $parts
      */
-    private function navigate(object|array $current, array $parts): Schema
+    private function navigate(object|array $current, array $parts): Schema|Parameter|Response
     {
         $part = array_shift($parts);
 
         if (null === $part) {
-            if (false === $current instanceof Schema) {
-                throw new UnresolvableRefException(
-                    '',
-                    'Target is not a Schema',
-                );
+            if ($current instanceof Schema || $current instanceof Parameter || $current instanceof Response) {
+                return $current;
             }
 
-            return $current;
+            throw new UnresolvableRefException(
+                '',
+                'Target is not a Schema, Parameter, or Response',
+            );
         }
 
         $next = $this->getProperty($current, $part);

@@ -29,12 +29,14 @@ final readonly class AllOfValidator implements SchemaValidatorInterface
             return;
         }
 
+        $nullableAsType = $context?->nullableAsType ?? true;
         $errors = [];
         $abstractErrors = [];
 
         foreach ($schema->allOf as $subSchema) {
             try {
-                $normalizedData = SchemaValueNormalizer::normalize($data);
+                $allowNull = $subSchema->nullable && $nullableAsType;
+                $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
                 $validator = new SchemaValidator($this->pool);
                 $validator->validate($normalizedData, $subSchema, $context);
             } catch (InvalidDataTypeException $e) {

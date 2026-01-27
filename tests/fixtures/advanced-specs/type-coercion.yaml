@@ -1,0 +1,201 @@
+openapi: 3.1.0
+info:
+  title: Type Coercion API
+  version: 1.0.0
+paths:
+  /request/coercion:
+    get:
+      parameters:
+        - name: age
+          in: query
+          schema:
+            type: integer
+        - name: price
+          in: query
+          schema:
+            type: number
+        - name: active
+          in: query
+          schema:
+            type: boolean
+        - name: name
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoercionResponse'
+  /request/nested:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NestedCoercion'
+      responses:
+        '200':
+          description: Success
+  /request/array:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArrayCoercion'
+      responses:
+        '200':
+          description: Success
+  /request/nullable:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NullableCoercion'
+      responses:
+        '200':
+          description: Success
+  /request/mixed:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MixedCoercion'
+      responses:
+        '200':
+          description: Success
+  /request/number-operations:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NumberOperations'
+      responses:
+        '200':
+          description: Success
+components:
+  schemas:
+    CoercionResponse:
+      type: object
+      required:
+        - age
+        - price
+        - active
+        - name
+      properties:
+        age:
+          type: integer
+        price:
+          type: number
+        active:
+          type: boolean
+        name:
+          type: string
+    NestedCoercion:
+      type: object
+      required:
+        - user
+        - items
+      properties:
+        user:
+          type: object
+          required:
+            - age
+            - active
+          properties:
+            age:
+              type: integer
+            active:
+              type: boolean
+            name:
+              type: string
+        items:
+          type: array
+          items:
+            type: integer
+    ArrayCoercion:
+      type: object
+      required:
+        - numbers
+        - booleans
+        - nested
+      properties:
+        numbers:
+          type: array
+          items:
+            type: integer
+        booleans:
+          type: array
+          items:
+            type: boolean
+        nested:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - value
+            properties:
+              id:
+                type: string
+              value:
+                type: number
+    NullableCoercion:
+      type: object
+      required:
+        - nullableInt
+        - nullableString
+        - nullableBool
+      properties:
+        nullableInt:
+          type: integer
+          nullable: true
+        nullableString:
+          type: string
+          nullable: true
+        nullableBool:
+          type: boolean
+          nullable: true
+    MixedCoercion:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - id
+            - count
+            - active
+            - tags
+          properties:
+            id:
+              type: string
+            count:
+              type: integer
+            active:
+              type: boolean
+            tags:
+              type: array
+              items:
+                type: string
+    NumberOperations:
+      type: object
+      required:
+        - floatValue
+        - intValue
+      properties:
+        floatValue:
+          type: number
+          minimum: 0.0
+          maximum: 100.0
+        intValue:
+          type: integer
+          minimum: 0
+          maximum: 100

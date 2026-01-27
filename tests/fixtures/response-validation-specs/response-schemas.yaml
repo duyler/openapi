@@ -1,0 +1,261 @@
+openapi: 3.1.0
+info:
+  title: Response Schemas API
+  version: 1.0.0
+paths:
+  /primitive:
+    get:
+      summary: Get primitive types
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stringField:
+                    type: string
+                  numberField:
+                    type: number
+                  integerField:
+                    type: integer
+                  booleanField:
+                    type: boolean
+  /formats:
+    get:
+      summary: Get format validation
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email:
+                    type: string
+                    format: email
+                  uuid:
+                    type: string
+                    format: uuid
+                  dateTime:
+                    type: string
+                    format: date-time
+                  uri:
+                    type: string
+                    format: uri
+  /nullable:
+    get:
+      summary: Get nullable fields
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requiredField:
+                    type: string
+                  nullableField:
+                    type: string
+                    nullable: true
+                  nullableRequiredField:
+                    type: string
+                    nullable: true
+                required:
+                  - requiredField
+                  - nullableRequiredField
+  /nested:
+    get:
+      summary: Get nested objects
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      email:
+                        type: string
+                      address:
+                        type: object
+                        properties:
+                          street:
+                            type: string
+                          city:
+                            type: string
+  /arrays:
+    get:
+      summary: Get array types
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                    minItems: 1
+                    maxItems: 5
+                  numbers:
+                    type: array
+                    items:
+                      type: number
+                  objects:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+  /required:
+    get:
+      summary: Get required fields
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - name
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+  /additional-properties:
+    get:
+      summary: Get additional properties
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: string
+                additionalProperties: true
+  /no-additional-properties:
+    get:
+      summary: Get no additional properties
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: string
+                additionalProperties: false
+  /allof:
+    get:
+      summary: Get allOf composition
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - id
+                    properties:
+                      id:
+                        type: string
+                  - type: object
+                    required:
+                      - name
+                    properties:
+                      name:
+                        type: string
+  /anyof:
+    get:
+      summary: Get anyOf composition
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value:
+                    anyOf:
+                      - type: string
+                      - type: integer
+  /oneof:
+    get:
+      summary: Get oneOf composition
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [dog, cat]
+                  pet:
+                    oneOf:
+                      - $ref: '#/components/schemas/Dog'
+                      - $ref: '#/components/schemas/Cat'
+  /not:
+    get:
+      summary: Get not schema
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  field:
+                    not:
+                      type: null
+components:
+  schemas:
+    Dog:
+      type: object
+      required:
+        - bark
+      properties:
+        bark:
+          type: boolean
+    Cat:
+      type: object
+      required:
+        - meow
+      properties:
+        meow:
+          type: boolean

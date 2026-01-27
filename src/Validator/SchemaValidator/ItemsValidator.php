@@ -37,8 +37,10 @@ final readonly class ItemsValidator implements SchemaValidatorInterface
         foreach ($data as $index => $item) {
             /** @var int $index */
             try {
-                $normalizedItem = SchemaValueNormalizer::normalize($item);
-                $itemContext = $context?->withBreadcrumbIndex($index) ?? ValidationContext::create($this->pool);
+                $nullableAsType = $context?->nullableAsType ?? true;
+                $allowNull = $schema->items->nullable && $nullableAsType;
+                $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
+                $itemContext = $context?->withBreadcrumbIndex($index) ?? ValidationContext::create($this->pool, $nullableAsType);
                 $validator->validate($normalizedItem, $schema->items, $itemContext);
             } catch (InvalidDataTypeException $e) {
                 throw new ValidationException(

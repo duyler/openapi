@@ -1,0 +1,123 @@
+openapi: 3.1.0
+info:
+  title: Response Other Content Types API
+  version: 1.0.0
+paths:
+  /form:
+    post:
+      summary: Form data response
+      responses:
+        '200':
+          description: Success
+          content:
+            application/x-www-form-urlencoded:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  email:
+                    type: string
+                  age:
+                    type: string
+                    pattern: '^[0-9]+$'
+  /form-array:
+    post:
+      summary: Form data with arrays
+      responses:
+        '200':
+          description: Success
+          content:
+            application/x-www-form-urlencoded:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: string
+                  scores:
+                    type: string
+  /xml/simple:
+    get:
+      summary: Simple XML response
+      responses:
+        '200':
+          description: Success
+          content:
+            application/xml:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      email:
+                        type: string
+  /xml/nested:
+    get:
+      summary: Nested XML response
+      responses:
+        '200':
+          description: Success
+          content:
+            application/xml:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: object
+                    properties:
+                      user:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+  /text/plain:
+    get:
+      summary: Plain text response
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain:
+              schema:
+                type: string
+                minLength: 1
+                maxLength: 1000
+  /text/html:
+    get:
+      summary: HTML response
+      responses:
+        '200':
+          description: Success
+          content:
+            text/html:
+              schema:
+                type: string
+  /binary/octet:
+    get:
+      summary: Binary response
+      responses:
+        '200':
+          description: Success
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+  /binary/image:
+    get:
+      summary: Image response
+      responses:
+        '200':
+          description: Success
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary

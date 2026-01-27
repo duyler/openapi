@@ -1,0 +1,30 @@
+openapi: 3.1.0
+info:
+  title: Multipart Data API
+  version: 1.0.0
+paths:
+  /upload:
+    post:
+      summary: Upload files with metadata
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                name:
+                  type: string
+                description:
+                  type: string
+                category:
+                  type: string
+                  enum: [image, document, other]
+      responses:
+        '201':
+          description: File uploaded

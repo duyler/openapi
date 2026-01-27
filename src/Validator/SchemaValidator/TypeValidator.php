@@ -31,6 +31,12 @@ final readonly class TypeValidator implements SchemaValidatorInterface
 
         $dataPath = null !== $context ? $context->breadcrumbs->currentPath() : '/';
 
+        $nullableAsType = $context?->nullableAsType ?? true;
+
+        if (null === $data && $schema->nullable && $nullableAsType) {
+            return;
+        }
+
         if (is_array($schema->type)) {
             if (false === $this->isValidUnionType($data, $schema->type)) {
                 throw new TypeMismatchError(
@@ -62,8 +68,8 @@ final readonly class TypeValidator implements SchemaValidatorInterface
             'integer' => is_int($data),
             'boolean' => is_bool($data),
             'null' => null === $data,
-            'array' => is_array($data) && array_is_list($data),
-            'object' => is_array($data) && false === array_is_list($data),
+            'array' => is_array($data) && ([] === $data || array_is_list($data)),
+            'object' => is_array($data) && ([] === $data || false === array_is_list($data)),
             default => true,
         };
     }

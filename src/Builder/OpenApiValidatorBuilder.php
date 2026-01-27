@@ -39,7 +39,7 @@ class OpenApiValidatorBuilder
         protected readonly ?object $logger = null,
         protected readonly ?FormatRegistry $formatRegistry = null,
         protected readonly bool $coercion = false,
-        protected readonly bool $nullableAsType = false,
+        protected readonly bool $nullableAsType = true,
         protected readonly ?ErrorFormatterInterface $errorFormatter = null,
         protected readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {}
@@ -275,7 +275,7 @@ class OpenApiValidatorBuilder
     }
 
     /**
-     * Enable nullable as type
+     * Enable nullable validation
      */
     public function enableNullableAsType(): self
     {
@@ -289,6 +289,26 @@ class OpenApiValidatorBuilder
             formatRegistry: $this->formatRegistry,
             coercion: $this->coercion,
             nullableAsType: true,
+            errorFormatter: $this->errorFormatter,
+            eventDispatcher: $this->eventDispatcher,
+        );
+    }
+
+    /**
+     * Disable nullable validation
+     */
+    public function disableNullableAsType(): self
+    {
+        return new self(
+            specPath: $this->specPath,
+            specContent: $this->specContent,
+            specType: $this->specType,
+            pool: $this->pool,
+            cache: $this->cache,
+            logger: $this->logger,
+            formatRegistry: $this->formatRegistry,
+            coercion: $this->coercion,
+            nullableAsType: false,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
         );

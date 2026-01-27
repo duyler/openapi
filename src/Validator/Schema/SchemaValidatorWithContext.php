@@ -26,7 +26,6 @@ use Duyler\OpenApi\Validator\SchemaValidator\IfThenElseValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\NotValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\NumericRangeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ObjectLengthValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\OneOfValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\PatternPropertiesValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\PatternValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\PrefixItemsValidator;
@@ -46,22 +45,29 @@ final readonly class SchemaValidatorWithContext
         private readonly ValidatorPool $pool,
         private readonly RefResolverInterface $refResolver,
         private readonly OpenApiDocument $document,
+        private readonly bool $nullableAsType = true,
     ) {}
 
     /**
      * Validate data with ValidationContext for breadcrumb tracking
      */
-    public function validate(array|int|string|float|bool $data, Schema $schema, bool $useDiscriminator = true): void
+    public function validate(array|int|string|float|bool|null $data, Schema $schema, bool $useDiscriminator = true): void
     {
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create($this->pool, $this->nullableAsType);
 
-        if ($useDiscriminator && null !== $schema->discriminator) {
-            $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool);
-            $discriminatorValidator->validate($data, $schema, $this->document);
+        if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
+            $oneOfValidator = new OneOfValidatorWithContext($this->pool, $this->refResolver, $this->document);
+            $oneOfValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
             return;
         }
 
         $this->validateInternal($data, $schema, $context);
+
+        if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
+            $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool);
+            $discriminatorValidator->validate($data, $schema, $this->document);
+            return;
+        }
 
         if (null !== $schema->properties && [] !== $schema->properties && is_array($data)) {
             $propertiesValidator = new PropertiesValidatorWithContext($this->pool, $this->refResolver, $this->document);
@@ -77,9 +83,15 @@ final readonly class SchemaValidatorWithContext
     /**
      * Validate data with existing ValidationContext for breadcrumb tracking
      */
-    public function validateWithContext(array|int|string|float|bool $data, Schema $schema, ValidationContext $context): void
+    public function validateWithContext(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context): void
     {
-        if (null !== $schema->discriminator) {
+        if (null !== $schema->discriminator && null !== $schema->oneOf) {
+            $oneOfValidator = new OneOfValidatorWithContext($this->pool, $this->refResolver, $this->document);
+            $oneOfValidator->validateWithContext($data, $schema, $context, useDiscriminator: true);
+            return;
+        }
+
+        if (null !== $schema->discriminator && null !== $data) {
             $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool);
             $discriminatorValidator->validate($data, $schema, $this->document);
             return;
@@ -98,7 +110,7 @@ final readonly class SchemaValidatorWithContext
         }
     }
 
-    private function validateInternal(array|int|string|float|bool $data, Schema $schema, ?ValidationContext $context = null): void
+    private function validateInternal(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
     {
         $errors = [];
 
@@ -131,7 +143,6 @@ final readonly class SchemaValidatorWithContext
             new PatternValidator($this->pool),
             new AllOfValidator($this->pool),
             new AnyOfValidator($this->pool),
-            new OneOfValidator($this->pool),
             new NotValidator($this->pool),
             new IfThenElseValidator($this->pool),
             new RequiredValidator($this->pool),

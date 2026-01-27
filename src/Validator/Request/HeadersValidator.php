@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 
+use function assert;
 use function is_array;
 use function is_string;
 
@@ -31,6 +32,7 @@ final readonly class HeadersValidator
             }
 
             $name = $param->name;
+            assert(null !== $name);
             $value = $this->findHeader($headers, $name);
 
             if (null === $value && $param->required) {
@@ -38,7 +40,7 @@ final readonly class HeadersValidator
             }
 
             if (null !== $value && null !== $param->schema) {
-                $value = $this->coercer->coerce($value, $param, $this->coercion);
+                $value = $this->coercer->coerce($value, $param, $this->coercion, $this->coercion);
                 $this->schemaValidator->validate($value, $param->schema);
             }
         }

@@ -1,0 +1,59 @@
+openapi: 3.1.0
+info:
+  title: Simple Parameters API
+  version: 1.0.0
+paths:
+  /users/{userId}:
+    get:
+      summary: Get user by ID
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: includeProfile
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: User found
+  /products/{productId}:
+    get:
+      summary: Get product by ID
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, xml, yaml]
+      responses:
+        '200':
+          description: Product found
+  /orders/{orderId}:
+    get:
+      summary: Get order by ID
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^ORD-[0-9]{6}$'
+        - name: details
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Order found

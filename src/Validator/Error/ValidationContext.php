@@ -20,14 +20,16 @@ readonly class ValidationContext
         public readonly BreadcrumbManager $breadcrumbs,
         public readonly ValidatorPool $pool,
         public readonly ErrorFormatterInterface $errorFormatter = new SimpleFormatter(),
+        public readonly bool $nullableAsType = true,
     ) {}
 
-    public static function create(ValidatorPool $pool): self
+    public static function create(ValidatorPool $pool, bool $nullableAsType = true): self
     {
         return new self(
             breadcrumbs: BreadcrumbManager::create(),
             pool: $pool,
             errorFormatter: new SimpleFormatter(),
+            nullableAsType: $nullableAsType,
         );
     }
 
@@ -37,6 +39,7 @@ readonly class ValidationContext
             breadcrumbs: $this->breadcrumbs->push($segment),
             pool: $this->pool,
             errorFormatter: $this->errorFormatter,
+            nullableAsType: $this->nullableAsType,
         );
     }
 
@@ -46,6 +49,7 @@ readonly class ValidationContext
             breadcrumbs: $this->breadcrumbs->pushIndex($index),
             pool: $this->pool,
             errorFormatter: $this->errorFormatter,
+            nullableAsType: $this->nullableAsType,
         );
     }
 
@@ -55,6 +59,7 @@ readonly class ValidationContext
             breadcrumbs: $this->breadcrumbs->pop(),
             pool: $this->pool,
             errorFormatter: $this->errorFormatter,
+            nullableAsType: $this->nullableAsType,
         );
     }
 }

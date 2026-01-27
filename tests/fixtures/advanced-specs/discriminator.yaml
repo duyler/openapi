@@ -1,0 +1,303 @@
+openapi: 3.1.0
+info:
+  title: Advanced Discriminator API
+  version: 1.0.0
+paths:
+  /pet/simple:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimplePet'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimplePet'
+  /pet/allof:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AllOfPet'
+      responses:
+        '200':
+          description: Success
+  /pet/allof/inline:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pet:
+                  allOf:
+                    - $ref: '#/components/schemas/BasePet'
+                    - type: object
+                      discriminator:
+                        propertyName: petType
+                      oneOf:
+                        - $ref: '#/components/schemas/Cat'
+                        - $ref: '#/components/schemas/Dog'
+      responses:
+        '200':
+          description: Success
+  /pet/array:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PetArray'
+      responses:
+        '200':
+          description: Success
+  /pet/nested:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NestedPet'
+      responses:
+        '200':
+          description: Success
+  /pet/multi-level:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MultiLevelPet'
+      responses:
+        '200':
+          description: Success
+  /pet/mapping:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MappingPet'
+      responses:
+        '200':
+          description: Success
+  /pet/anyof:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnyOfPet'
+      responses:
+        '200':
+          description: Success
+  /pet/explicit-mapping:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExplicitMappingPet'
+      responses:
+        '200':
+          description: Success
+  /pet/implicit-mapping:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImplicitMappingPet'
+      responses:
+        '200':
+          description: Success
+  /pet/mixed-mapping:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MixedMappingPet'
+      responses:
+        '200':
+          description: Success
+  /pet/inheritance:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InheritancePet'
+      responses:
+        '200':
+          description: Success
+components:
+  schemas:
+    SimplePet:
+      discriminator:
+        propertyName: petType
+      oneOf:
+        - $ref: '#/components/schemas/Cat'
+        - $ref: '#/components/schemas/Dog'
+    Cat:
+      type: object
+      title: cat
+      required:
+        - petType
+        - meow
+      properties:
+        petType:
+          type: string
+        meow:
+          type: boolean
+    Dog:
+      type: object
+      title: dog
+      required:
+        - petType
+        - bark
+      properties:
+        petType:
+          type: string
+        bark:
+          type: boolean
+    BasePet:
+      type: object
+      required:
+        - name
+        - age
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+    AllOfPet:
+      allOf:
+        - $ref: '#/components/schemas/BasePet'
+        - $ref: '#/components/schemas/SimplePet'
+    PetArray:
+      type: object
+      required:
+        - pets
+      properties:
+        pets:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimplePet'
+    NestedPet:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - pet
+          properties:
+            pet:
+              $ref: '#/components/schemas/SimplePet'
+    Bird:
+      type: object
+      required:
+        - petType
+        - fly
+      properties:
+        petType:
+          type: string
+        fly:
+          type: boolean
+    MultiLevelPet:
+      discriminator:
+        propertyName: petType
+      oneOf:
+        - $ref: '#/components/schemas/Cat'
+        - $ref: '#/components/schemas/Dog'
+        - $ref: '#/components/schemas/Bird'
+    MappingPet:
+      discriminator:
+        propertyName: type
+        mapping:
+          canine: '#/components/schemas/Dog'
+          feline: '#/components/schemas/Cat'
+      oneOf:
+        - $ref: '#/components/schemas/Dog'
+        - $ref: '#/components/schemas/Cat'
+    AnyOfPet:
+      discriminator:
+        propertyName: petType
+      anyOf:
+        - $ref: '#/components/schemas/Cat'
+        - $ref: '#/components/schemas/Dog'
+    ExplicitMappingPet:
+      discriminator:
+        propertyName: type
+        mapping:
+          cat: '#/components/schemas/Cat'
+          dog: '#/components/schemas/Dog'
+      oneOf:
+        - $ref: '#/components/schemas/Cat'
+        - $ref: '#/components/schemas/Dog'
+    ImplicitMappingPet:
+      discriminator:
+        propertyName: type
+      oneOf:
+        - $ref: '#/components/schemas/Cat'
+        - $ref: '#/components/schemas/Dog'
+    MixedMappingPet:
+      discriminator:
+        propertyName: type
+        mapping:
+          cat: '#/components/schemas/Cat'
+      oneOf:
+        - $ref: '#/components/schemas/Cat'
+        - $ref: '#/components/schemas/Dog'
+    Kitten:
+      allOf:
+        - $ref: '#/components/schemas/Cat'
+        - type: object
+          required:
+            - cute
+          properties:
+            cute:
+              type: boolean
+    BaseAnimal:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+    CatExtended:
+      type: object
+      title: cat
+      allOf:
+        - $ref: '#/components/schemas/BaseAnimal'
+        - type: object
+          required:
+            - meow
+          properties:
+            meow:
+              type: boolean
+    KittenExtended:
+      type: object
+      title: kitten
+      allOf:
+        - $ref: '#/components/schemas/CatExtended'
+        - type: object
+          required:
+            - cute
+          properties:
+            cute:
+              type: boolean
+    InheritancePet:
+      discriminator:
+        propertyName: type
+      oneOf:
+        - $ref: '#/components/schemas/CatExtended'
+        - $ref: '#/components/schemas/KittenExtended'

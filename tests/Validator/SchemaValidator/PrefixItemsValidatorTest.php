@@ -12,6 +12,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
+use Duyler\OpenApi\Validator\Error\ValidationContext;
+
 class PrefixItemsValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -256,5 +258,125 @@ class PrefixItemsValidatorTest extends TestCase
         $this->expectException(ValidationException::class);
 
         $this->validator->validate(['hello', new stdClass()], $schema);
+    }
+
+    #[Test]
+    public function validate_prefix_items_exceeds_count_with_items_schema(): void
+    {
+        $schema1 = new Schema(type: 'string');
+        $schema2 = new Schema(type: 'integer');
+        $schema3 = new Schema(type: 'boolean');
+        $itemsSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$schema1, $schema2],
+            items: $itemsSchema,
+        );
+
+        $this->validator->validate(['a', 1, 'extra1', 'extra2'], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_prefix_items_with_nullable_prefix_item(): void
+    {
+        $schema1 = new Schema(type: 'string', nullable: true);
+        $schema2 = new Schema(type: 'integer');
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$schema1, $schema2],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate([null, 42], $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_prefix_items_with_nullable_items(): void
+    {
+        $schema1 = new Schema(type: 'string');
+        $itemsSchema = new Schema(type: 'string', nullable: true);
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$schema1],
+            items: $itemsSchema,
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate(['hello', null, 'world'], $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_prefix_items_with_context(): void
+    {
+        $schema1 = new Schema(type: 'string');
+        $schema2 = new Schema(type: 'integer');
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$schema1, $schema2],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate(['hello', 42], $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_prefix_items_nested_schemas(): void
+    {
+        $nestedSchema = new Schema(type: 'object', properties: ['value' => new Schema(type: 'string')]);
+        $schema1 = new Schema(type: 'string');
+        $schema2 = $nestedSchema;
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$schema1, $schema2],
+        );
+
+        $this->validator->validate(['hello', ['value' => 'test']], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function throw_validation_exception_for_remaining_item_validation_failed(): void
+    {
+        $schema1 = new Schema(type: 'string');
+        $itemsSchema = new Schema(
+            not: new Schema(type: 'string'),
+        );
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$schema1],
+            items: $itemsSchema,
+        );
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Remaining item validation failed');
+
+        $this->validator->validate(['hello', 'another_string'], $schema);
+    }
+
+    #[Test]
+    public function throw_validation_exception_for_prefix_item_validation_failed(): void
+    {
+        $prefixSchema1 = new Schema(
+            not: new Schema(type: 'string'),
+        );
+        $schema2 = new Schema(type: 'integer');
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$prefixSchema1, $schema2],
+        );
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Item at index 0 validation failed');
+
+        $this->validator->validate(['string_value', 42], $schema);
     }
 }

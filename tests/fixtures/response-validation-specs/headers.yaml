@@ -1,0 +1,129 @@
+openapi: 3.1.0
+info:
+  title: Response Headers API
+  version: 1.0.0
+paths:
+  /headers/simple:
+    get:
+      summary: Simple headers
+      responses:
+        '200':
+          description: Success
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+            X-Rate-Limit:
+              schema:
+                type: integer
+                minimum: 0
+                maximum: 10000
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+  /headers/array:
+    get:
+      summary: Array headers
+      responses:
+        '200':
+          description: Success
+          headers:
+            Content-Encoding:
+              schema:
+                type: array
+                items:
+                  type: string
+            Allow:
+              schema:
+                type: array
+                items:
+                  type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+  /headers/content-type:
+    get:
+      summary: Content-Type validation
+      responses:
+        '200':
+          description: Success
+          headers:
+            Content-Type:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+  /headers/content-length:
+    get:
+      summary: Content-Length validation
+      responses:
+        '200':
+          description: Success
+          headers:
+            Content-Length:
+              schema:
+                type: integer
+                minimum: 0
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+  /headers/custom-format:
+    get:
+      summary: Custom headers with format
+      responses:
+        '200':
+          description: Success
+          headers:
+            X-Request-Date:
+              schema:
+                type: string
+                format: date-time
+            X-API-Version:
+              schema:
+                type: string
+                pattern: '^\d+\.\d+\.\d+$'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+  /headers/optional-required:
+    get:
+      summary: Optional and required headers
+      responses:
+        '200':
+          description: Success
+          headers:
+            X-Required-Header:
+              required: true
+              schema:
+                type: string
+            X-Optional-Header:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string

@@ -11,6 +11,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
+use Duyler\OpenApi\Validator\Error\ValidationContext;
+
 class AnyOfValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -167,6 +169,51 @@ class AnyOfValidatorTest extends TestCase
         );
 
         $this->validator->validate(['address' => ['name' => 'John']], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_any_of_with_null_value_and_nullable_schema(): void
+    {
+        $schema1 = new Schema(type: 'string');
+        $schema2 = new Schema(type: 'string', nullable: true);
+        $schema = new Schema(
+            anyOf: [$schema1, $schema2],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate(null, $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function throw_error_for_null_without_nullable_schema(): void
+    {
+        $schema1 = new Schema(type: 'string');
+        $schema2 = new Schema(type: 'string');
+        $schema = new Schema(
+            anyOf: [$schema1, $schema2],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate(null, $schema, $context);
+    }
+
+    #[Test]
+    public function validate_any_of_with_context(): void
+    {
+        $schema1 = new Schema(type: 'string', minLength: 5);
+        $schema2 = new Schema(type: 'string', maxLength: 10);
+        $schema = new Schema(
+            anyOf: [$schema1, $schema2],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate('hello', $schema, $context);
 
         $this->expectNotToPerformAssertions();
     }

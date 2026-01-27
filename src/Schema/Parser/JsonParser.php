@@ -240,6 +240,7 @@ final readonly class JsonParser implements SchemaParserInterface
             default: $data['default'] ?? null,
             deprecated: (bool) ($data['deprecated'] ?? false),
             type: TypeHelper::asStringOrNull($data['type'] ?? null),
+            nullable: (bool) ($data['nullable'] ?? false),
             const: $data['const'] ?? null,
             multipleOf: TypeHelper::asFloatOrNull($data['multipleOf'] ?? null),
             maximum: TypeHelper::asFloatOrNull($data['maximum'] ?? null),

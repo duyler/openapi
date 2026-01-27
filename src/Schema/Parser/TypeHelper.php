@@ -69,6 +69,39 @@ final readonly class TypeHelper
 
     /**
      * @param mixed $value
+     * @return string|array<int, string|null>|null
+     * @throws TypeError
+     */
+    public static function asTypeOrNull(mixed $value): string|array|null
+    {
+        if (null === $value) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            return $value;
+        }
+
+        if (is_array($value)) {
+            $result = [];
+            foreach ($value as $item) {
+                if (null === $item) {
+                    $result[] = null;
+                } elseif (is_string($item)) {
+                    $result[] = $item;
+                } else {
+                    throw new TypeError('Expected string or null in type array, got ' . get_debug_type($item));
+                }
+            }
+
+            return $result;
+        }
+
+        throw new TypeError('Expected string or array for type, got ' . get_debug_type($value));
+    }
+
+    /**
+     * @param mixed $value
      * @return array<array-key, mixed>
      * @throws TypeError
      */
