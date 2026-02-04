@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Schema\Model\Components;
+use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
@@ -306,5 +307,178 @@ final class RefResolverTest extends TestCase
         $this->expectExceptionMessage('Cannot resolve $ref "#/components/schemas/User/properties/tags/0": Value is not an object or array');
 
         $this->resolver->resolve('#/components/schemas/User/properties/tags/0', $document);
+    }
+
+    #[Test]
+    public function schema_has_discriminator_returns_true(): void
+    {
+        $schema = new Schema(discriminator: new Discriminator(propertyName: 'type'));
+        $document = new OpenApiDocument('3.1.0', new InfoObject('Test API', '1.0.0'));
+
+        $this->assertTrue($this->resolver->schemaHasDiscriminator($schema, $document));
+    }
+
+    #[Test]
+    public function schema_without_discriminator_returns_false(): void
+    {
+        $schema = new Schema();
+        $document = new OpenApiDocument('3.1.0', new InfoObject('Test API', '1.0.0'));
+
+        $this->assertFalse($this->resolver->schemaHasDiscriminator($schema, $document));
+    }
+
+    #[Test]
+    public function schema_with_ref_to_schema_with_discriminator_returns_true(): void
+    {
+        $discriminatorSchema = new Schema(discriminator: new Discriminator(propertyName: 'type'));
+        $refSchema = new Schema(ref: '#/components/schemas/Discriminated');
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Test API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Discriminated' => $discriminatorSchema,
+                ],
+            ),
+        );
+
+        $this->assertTrue($this->resolver->schemaHasDiscriminator($refSchema, $document));
+    }
+
+    #[Test]
+    public function schema_with_ref_to_schema_without_discriminator_returns_false(): void
+    {
+        $simpleSchema = new Schema();
+        $refSchema = new Schema(ref: '#/components/schemas/Simple');
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Test API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Simple' => $simpleSchema,
+                ],
+            ),
+        );
+
+        $this->assertFalse($this->resolver->schemaHasDiscriminator($refSchema, $document));
+    }
+
+    #[Test]
+    public function schema_with_property_containing_discriminator_returns_true(): void
+    {
+        $propertySchema = new Schema(discriminator: new Discriminator(propertyName: 'type'));
+        $parentSchema = new Schema(properties: ['nested' => $propertySchema]);
+        $document = new OpenApiDocument('3.1.0', new InfoObject('Test API', '1.0.0'));
+
+        $this->assertTrue($this->resolver->schemaHasDiscriminator($parentSchema, $document));
+    }
+
+    #[Test]
+    public function schema_with_property_without_discriminator_returns_false(): void
+    {
+        $propertySchema = new Schema();
+        $parentSchema = new Schema(properties: ['nested' => $propertySchema]);
+        $document = new OpenApiDocument('3.1.0', new InfoObject('Test API', '1.0.0'));
+
+        $this->assertFalse($this->resolver->schemaHasDiscriminator($parentSchema, $document));
+    }
+
+    #[Test]
+    public function schema_with_items_containing_discriminator_returns_true(): void
+    {
+        $itemsSchema = new Schema(discriminator: new Discriminator(propertyName: 'type'));
+        $arraySchema = new Schema(items: $itemsSchema);
+        $document = new OpenApiDocument('3.1.0', new InfoObject('Test API', '1.0.0'));
+
+        $this->assertTrue($this->resolver->schemaHasDiscriminator($arraySchema, $document));
+    }
+
+    #[Test]
+    public function schema_with_items_without_discriminator_returns_false(): void
+    {
+        $itemsSchema = new Schema();
+        $arraySchema = new Schema(items: $itemsSchema);
+        $document = new OpenApiDocument('3.1.0', new InfoObject('Test API', '1.0.0'));
+
+        $this->assertFalse($this->resolver->schemaHasDiscriminator($arraySchema, $document));
+    }
+
+    #[Test]
+    public function schema_with_oneof_containing_discriminator_returns_true(): void
+    {
+        $discriminatorSchema = new Schema(discriminator: new Discriminator(propertyName: 'type'));
+        $oneofSchema = new Schema(oneOf: [$discriminatorSchema]);
+        $document = new OpenApiDocument('3.1.0', new InfoObject('Test API', '1.0.0'));
+
+        $this->assertTrue($this->resolver->schemaHasDiscriminator($oneofSchema, $document));
+    }
+
+    #[Test]
+    public function schema_with_oneof_without_discriminator_returns_false(): void
+    {
+        $simpleSchema = new Schema();
+        $oneofSchema = new Schema(oneOf: [$simpleSchema]);
+        $document = new OpenApiDocument('3.1.0', new InfoObject('Test API', '1.0.0'));
+
+        $this->assertFalse($this->resolver->schemaHasDiscriminator($oneofSchema, $document));
+    }
+
+    #[Test]
+    public function schema_with_anyof_containing_discriminator_returns_true(): void
+    {
+        $discriminatorSchema = new Schema(discriminator: new Discriminator(propertyName: 'type'));
+        $anyofSchema = new Schema(anyOf: [$discriminatorSchema]);
+        $document = new OpenApiDocument('3.1.0', new InfoObject('Test API', '1.0.0'));
+
+        $this->assertTrue($this->resolver->schemaHasDiscriminator($anyofSchema, $document));
+    }
+
+    #[Test]
+    public function schema_with_anyof_without_discriminator_returns_false(): void
+    {
+        $simpleSchema = new Schema();
+        $anyofSchema = new Schema(anyOf: [$simpleSchema]);
+        $document = new OpenApiDocument('3.1.0', new InfoObject('Test API', '1.0.0'));
+
+        $this->assertFalse($this->resolver->schemaHasDiscriminator($anyofSchema, $document));
+    }
+
+    #[Test]
+    public function cyclic_ref_returns_false(): void
+    {
+        $schema = new Schema(ref: '#/components/schemas/Cyclic');
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Test API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Cyclic' => $schema,
+                ],
+            ),
+        );
+
+        $this->assertFalse($this->resolver->schemaHasDiscriminator($schema, $document));
+    }
+
+    #[Test]
+    public function unresolvable_ref_returns_false(): void
+    {
+        $schema = new Schema(ref: '#/components/schemas/NonExistent');
+        $document = new OpenApiDocument('3.1.0', new InfoObject('Test API', '1.0.0'));
+
+        $this->assertFalse($this->resolver->schemaHasDiscriminator($schema, $document));
+    }
+
+    #[Test]
+    public function nested_property_discriminator_returns_true(): void
+    {
+        $deepSchema = new Schema(discriminator: new Discriminator(propertyName: 'type'));
+        $midSchema = new Schema(properties: ['deep' => $deepSchema]);
+        $topSchema = new Schema(properties: ['mid' => $midSchema]);
+        $document = new OpenApiDocument('3.1.0', new InfoObject('Test API', '1.0.0'));
+
+        $this->assertTrue($this->resolver->schemaHasDiscriminator($topSchema, $document));
     }
 }

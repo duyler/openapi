@@ -61,7 +61,7 @@ final class WebhookValidatorTest extends TestCase
         $pathParamsValidator = new PathParametersValidator($schemaValidator, $deserializer, $coercer);
         $queryParser = new QueryParser();
         $queryParamsValidator = new QueryParametersValidator($schemaValidator, $deserializer, $coercer);
-        $headersValidator = new HeadersValidator($schemaValidator, $coercer);
+        $headersValidator = new HeadersValidator($schemaValidator, $deserializer, $coercer);
         $cookieValidator = new CookieValidator($schemaValidator, $deserializer, $coercer);
         $negotiator = new ContentTypeNegotiator();
         $jsonParser = new JsonBodyParser();

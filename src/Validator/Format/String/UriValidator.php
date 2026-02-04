@@ -5,22 +5,21 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
-use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Override;
-
-use function is_string;
 
 use const FILTER_VALIDATE_URL;
 
-final readonly class UriValidator implements FormatValidatorInterface
+final readonly class UriValidator extends AbstractStringFormatValidator
 {
     #[Override]
-    public function validate(mixed $data): void
+    protected function getFormatName(): string
     {
-        if (false === is_string($data)) {
-            throw new InvalidFormatException('uri', $data, 'Value must be a string');
-        }
+        return 'uri';
+    }
 
+    #[Override]
+    protected function validateString(string $data): void
+    {
         $filtered = filter_var($data, FILTER_VALIDATE_URL);
 
         if (false === $filtered) {

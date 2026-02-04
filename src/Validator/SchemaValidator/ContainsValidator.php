@@ -9,17 +9,12 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\ContainsMatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
 use function is_array;
 
-final readonly class ContainsValidator implements SchemaValidatorInterface
+final readonly class ContainsValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -48,7 +43,7 @@ final readonly class ContainsValidator implements SchemaValidatorInterface
         }
 
         if (false === $hasMatch) {
-            $dataPath = null !== $context ? $context->breadcrumbs->currentPath() : '/';
+            $dataPath = $this->getDataPath($context);
             throw new ContainsMatchError(
                 dataPath: $dataPath,
                 schemaPath: '/contains',

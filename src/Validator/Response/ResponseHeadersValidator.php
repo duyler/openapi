@@ -8,23 +8,22 @@ use Duyler\OpenApi\Schema\Model\Headers;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Request\HeaderFinder;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 
 use function array_filter;
 use function array_map;
 use function floatval;
-use function implode;
 use function in_array;
 use function intval;
-use function is_array;
 use function is_numeric;
-use function is_string;
 use function strtolower;
 
 final readonly class ResponseHeadersValidator
 {
     public function __construct(
         private readonly SchemaValidatorInterface $schemaValidator,
+        private readonly HeaderFinder $headerFinder = new HeaderFinder(),
     ) {}
 
     /**
@@ -37,7 +36,7 @@ final readonly class ResponseHeadersValidator
         }
 
         foreach ($headerSchemas->headers as $name => $header) {
-            $value = $this->findHeader($headers, $name);
+            $value = $this->headerFinder->find($headers, $name);
 
             if (null === $value && $header->required) {
                 throw new MissingParameterException('header', $name);
@@ -48,26 +47,6 @@ final readonly class ResponseHeadersValidator
                 $this->schemaValidator->validate($coercedValue, $header->schema);
             }
         }
-    }
-
-    /**
-     * @param array<array-key, string|array<array-key, string>> $headers
-     */
-    private function findHeader(array $headers, string $name): ?string
-    {
-        foreach ($headers as $key => $value) {
-            if (false === is_string($key)) {
-                continue;
-            }
-            if (is_array($value)) {
-                $value = implode(', ', $value);
-            }
-            if (strtolower($key) === strtolower($name)) {
-                return $value;
-            }
-        }
-
-        return null;
     }
 
     private function coerceValue(string $value, Schema $schema, string $headerName): array|int|string|float|bool

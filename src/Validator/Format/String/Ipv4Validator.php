@@ -5,23 +5,22 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
-use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Override;
-
-use function is_string;
 
 use const FILTER_FLAG_IPV4;
 use const FILTER_VALIDATE_IP;
 
-final readonly class Ipv4Validator implements FormatValidatorInterface
+final readonly class Ipv4Validator extends AbstractStringFormatValidator
 {
     #[Override]
-    public function validate(mixed $data): void
+    protected function getFormatName(): string
     {
-        if (false === is_string($data)) {
-            throw new InvalidFormatException('ipv4', $data, 'Value must be a string');
-        }
+        return 'ipv4';
+    }
 
+    #[Override]
+    protected function validateString(string $data): void
+    {
         $filtered = filter_var($data, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4);
 
         if (false === $filtered) {

@@ -6,6 +6,12 @@ namespace Duyler\OpenApi\Validator\Response;
 
 use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
+use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
+use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
+use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
+use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
+use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
@@ -59,7 +65,15 @@ final readonly class ResponseValidatorWithContext
         $contentType = $response->getHeaderLine('Content-Type');
         $body = (string) $response->getBody();
 
-        $bodyValidator = new ResponseBodyValidatorWithContext($this->pool, $this->document, coercion: $this->coercion, nullableAsType: $this->nullableAsType);
+        $bodyParser = new BodyParser(
+            jsonParser: new JsonBodyParser(),
+            formParser: new FormBodyParser(),
+            multipartParser: new MultipartBodyParser(),
+            textParser: new TextBodyParser(),
+            xmlParser: new XmlBodyParser(),
+        );
+
+        $bodyValidator = new ResponseBodyValidatorWithContext($this->pool, $this->document, $bodyParser, coercion: $this->coercion, nullableAsType: $this->nullableAsType);
         $bodyValidator->validate($body, $contentType, $responseDefinition->content ?? null);
     }
 

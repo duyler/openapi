@@ -18,6 +18,7 @@ use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
@@ -207,6 +208,13 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
     {
         $deserializer = new ParameterDeserializer();
         $coercer = new TypeCoercer();
+        $bodyParser = new BodyParser(
+            jsonParser: new JsonBodyParser(),
+            formParser: new FormBodyParser(),
+            multipartParser: new MultipartBodyParser(),
+            textParser: new TextBodyParser(),
+            xmlParser: new XmlBodyParser(),
+        );
 
         return new RequestValidator(
             pathParser: new PathParser(),
@@ -225,6 +233,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
             ),
             headersValidator: new HeadersValidator(
                 schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
+                deserializer: $deserializer,
                 coercer: $coercer,
                 coercion: $this->coercion,
             ),
@@ -238,11 +247,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
                 pool: $this->pool,
                 document: $this->document,
                 negotiator: new ContentTypeNegotiator(),
-                jsonParser: new JsonBodyParser(),
-                formParser: new FormBodyParser(),
-                multipartParser: new MultipartBodyParser(),
-                textParser: new TextBodyParser(),
-                xmlParser: new XmlBodyParser(),
+                bodyParser: $bodyParser,
                 nullableAsType: $this->nullableAsType,
                 coercion: $this->coercion,
             ),

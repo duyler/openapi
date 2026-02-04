@@ -70,6 +70,61 @@ class RefResolver implements RefResolverInterface
         return $result;
     }
 
+    #[Override]
+    public function schemaHasDiscriminator(Schema $schema, OpenApiDocument $document, array &$visited = []): bool
+    {
+        $schemaId = spl_object_id($schema);
+
+        if (isset($visited[$schemaId])) {
+            return false;
+        }
+
+        $visited[$schemaId] = true;
+
+        if (null !== $schema->ref) {
+            try {
+                $resolvedSchema = $this->resolve($schema->ref, $document);
+                return $this->schemaHasDiscriminator($resolvedSchema, $document, $visited);
+            } catch (UnresolvableRefException) {
+                return false;
+            }
+        }
+
+        if (null !== $schema->discriminator) {
+            return true;
+        }
+
+        if (null !== $schema->properties) {
+            foreach ($schema->properties as $property) {
+                if ($this->schemaHasDiscriminator($property, $document, $visited)) {
+                    return true;
+                }
+            }
+        }
+
+        if (null !== $schema->items) {
+            return $this->schemaHasDiscriminator($schema->items, $document, $visited);
+        }
+
+        if (null !== $schema->oneOf) {
+            foreach ($schema->oneOf as $subSchema) {
+                if ($this->schemaHasDiscriminator($subSchema, $document, $visited)) {
+                    return true;
+                }
+            }
+        }
+
+        if (null !== $schema->anyOf) {
+            foreach ($schema->anyOf as $subSchema) {
+                if ($this->schemaHasDiscriminator($subSchema, $document, $visited)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     private function resolveRef(string $ref, OpenApiDocument $document): Schema|Parameter|Response
     {
         if (isset($this->cache[$document])) {

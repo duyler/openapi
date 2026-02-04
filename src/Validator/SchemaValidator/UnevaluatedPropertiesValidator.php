@@ -7,19 +7,14 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
 use function array_filter;
 use function is_array;
 use function is_string;
 
-final readonly class UnevaluatedPropertiesValidator implements SchemaValidatorInterface
+final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -41,7 +36,7 @@ final readonly class UnevaluatedPropertiesValidator implements SchemaValidatorIn
         }
 
         if ([] !== $stringUnevaluatedProperties) {
-            $dataPath = null !== $context ? $context->breadcrumbs->currentPath() : '/';
+            $dataPath = $this->getDataPath($context);
             $propertyName = array_values($stringUnevaluatedProperties)[0];
             throw new UnevaluatedPropertyError(
                 dataPath: $dataPath,

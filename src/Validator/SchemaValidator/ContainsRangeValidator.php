@@ -8,18 +8,13 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MaxContainsError;
 use Duyler\OpenApi\Validator\Exception\MinContainsError;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Exception;
 use Override;
 
 use function is_array;
 
-final readonly class ContainsRangeValidator implements SchemaValidatorInterface
+final readonly class ContainsRangeValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -36,7 +31,7 @@ final readonly class ContainsRangeValidator implements SchemaValidatorInterface
         }
 
         $nullableAsType = $context?->nullableAsType ?? true;
-        $dataPath = null !== $context ? $context->breadcrumbs->currentPath() : '/';
+        $dataPath = $this->getDataPath($context);
         $matchCount = 0;
 
         foreach ($data as $item) {

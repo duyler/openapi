@@ -6,20 +6,19 @@ namespace Duyler\OpenApi\Validator\Format\String;
 
 use DateTime;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
-use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Override;
 
-use function is_string;
-
-final readonly class DateTimeValidator implements FormatValidatorInterface
+final readonly class DateTimeValidator extends AbstractStringFormatValidator
 {
     #[Override]
-    public function validate(mixed $data): void
+    protected function getFormatName(): string
     {
-        if (false === is_string($data)) {
-            throw new InvalidFormatException('date-time', $data, 'Value must be a string');
-        }
+        return 'date-time';
+    }
 
+    #[Override]
+    protected function validateString(string $data): void
+    {
         $dateTime = DateTime::createFromFormat(DateTime::RFC3339_EXTENDED, $data);
 
         if (false === $dateTime) {

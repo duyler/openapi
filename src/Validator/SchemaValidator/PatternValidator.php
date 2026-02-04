@@ -8,18 +8,13 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\PatternMismatchError;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
 use function assert;
 use function is_string;
 
-final readonly class PatternValidator implements SchemaValidatorInterface
+final readonly class PatternValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -39,7 +34,7 @@ final readonly class PatternValidator implements SchemaValidatorInterface
         }
 
         if (0 === $result) {
-            $dataPath = null !== $context ? $context->breadcrumbs->currentPath() : '/';
+            $dataPath = $this->getDataPath($context);
             throw new PatternMismatchError(
                 pattern: $schema->pattern,
                 dataPath: $dataPath,
