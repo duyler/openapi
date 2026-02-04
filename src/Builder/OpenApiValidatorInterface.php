@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Builder;
 
 use Duyler\OpenApi\Builder\Exception\BuilderException;
-use Duyler\OpenApi\Psr15\Operation;
+use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;

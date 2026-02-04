@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator;
 
 use Duyler\OpenApi\Builder\Exception\BuilderException;
-use Duyler\OpenApi\Psr15\Operation;
 use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Exception\PathMismatchException;

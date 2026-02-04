@@ -15,6 +15,8 @@ final readonly class HeadersValidator
 {
     public function __construct(
         private readonly SchemaValidatorInterface $schemaValidator,
+        private readonly TypeCoercer $coercer,
+        private readonly bool $coercion = false,
     ) {}
 
     /**
@@ -36,6 +38,7 @@ final readonly class HeadersValidator
             }
 
             if (null !== $value && null !== $param->schema) {
+                $value = $this->coercer->coerce($value, $param, $this->coercion);
                 $this->schemaValidator->validate($value, $param->schema);
             }
         }

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Duyler\OpenApi\Test\Psr15;
+namespace Duyler\OpenApi\Test\Validator;
 
-use Duyler\OpenApi\Psr15\Operation;
+use Duyler\OpenApi\Validator\Operation;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;

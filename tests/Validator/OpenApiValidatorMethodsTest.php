@@ -7,12 +7,12 @@ namespace Duyler\OpenApi\Test\Validator;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Duyler\OpenApi\Psr15\Operation;
+use Duyler\OpenApi\Validator\Operation;
 use Nyholm\Psr7\Factory\Psr17Factory;
 
 final class OpenApiValidatorMethodsTest extends TestCase
 {
-    private const ALL_METHODS_YAML = <<<YAML
+    private const string ALL_METHODS_YAML = <<<YAML
 openapi: 3.1.0
 info:
   title: Test API
@@ -78,10 +78,10 @@ YAML;
             ->fromYamlString(self::ALL_METHODS_YAML)
             ->build();
 
-        $request = (new Psr17Factory())
+        $request = new Psr17Factory()
             ->createServerRequest('POST', '/test')
             ->withHeader('Content-Type', 'application/json')
-            ->withBody((new Psr17Factory())->createStream('{"data":"test"}'));
+            ->withBody(new Psr17Factory()->createStream('{"data":"test"}'));
 
         $operation = $validator->validateRequest($request);
         $this->assertSame('POST', $operation->method);
@@ -94,10 +94,10 @@ YAML;
             ->fromYamlString(self::ALL_METHODS_YAML)
             ->build();
 
-        $request = (new Psr17Factory())
+        $request = new Psr17Factory()
             ->createServerRequest('PUT', '/test')
             ->withHeader('Content-Type', 'application/json')
-            ->withBody((new Psr17Factory())->createStream('{"data":"test"}'));
+            ->withBody(new Psr17Factory()->createStream('{"data":"test"}'));
 
         $operation = $validator->validateRequest($request);
         $this->assertSame('PUT', $operation->method);
@@ -110,10 +110,10 @@ YAML;
             ->fromYamlString(self::ALL_METHODS_YAML)
             ->build();
 
-        $request = (new Psr17Factory())
+        $request = new Psr17Factory()
             ->createServerRequest('PATCH', '/test')
             ->withHeader('Content-Type', 'application/json')
-            ->withBody((new Psr17Factory())->createStream('{"data":"test"}'));
+            ->withBody(new Psr17Factory()->createStream('{"data":"test"}'));
 
         $operation = $validator->validateRequest($request);
         $this->assertSame('PATCH', $operation->method);
@@ -126,7 +126,7 @@ YAML;
             ->fromYamlString(self::ALL_METHODS_YAML)
             ->build();
 
-        $request = (new Psr17Factory())
+        $request = new Psr17Factory()
             ->createServerRequest('DELETE', '/test');
 
         $operation = $validator->validateRequest($request);
@@ -140,7 +140,7 @@ YAML;
             ->fromYamlString(self::ALL_METHODS_YAML)
             ->build();
 
-        $request = (new Psr17Factory())
+        $request = new Psr17Factory()
             ->createServerRequest('OPTIONS', '/test');
 
         $operation = $validator->validateRequest($request);
@@ -154,7 +154,7 @@ YAML;
             ->fromYamlString(self::ALL_METHODS_YAML)
             ->build();
 
-        $request = (new Psr17Factory())
+        $request = new Psr17Factory()
             ->createServerRequest('HEAD', '/test');
 
         $operation = $validator->validateRequest($request);
@@ -168,7 +168,7 @@ YAML;
             ->fromYamlString(self::ALL_METHODS_YAML)
             ->build();
 
-        $request = (new Psr17Factory())
+        $request = new Psr17Factory()
             ->createServerRequest('TRACE', '/test');
 
         $operation = $validator->validateRequest($request);
@@ -183,10 +183,10 @@ YAML;
             ->build();
 
         $operation = new Operation('/test', 'POST');
-        $response = (new Psr17Factory())
+        $response = new Psr17Factory()
             ->createResponse(201)
             ->withHeader('Content-Type', 'application/json')
-            ->withBody((new Psr17Factory())->createStream('{"success":true}'));
+            ->withBody(new Psr17Factory()->createStream('{"success":true}'));
 
         $validator->validateResponse($response, $operation);
         $this->expectNotToPerformAssertions();
@@ -200,10 +200,10 @@ YAML;
             ->build();
 
         $operation = new Operation('/test', 'PUT');
-        $response = (new Psr17Factory())
+        $response = new Psr17Factory()
             ->createResponse(200)
             ->withHeader('Content-Type', 'application/json')
-            ->withBody((new Psr17Factory())->createStream('{"success":true}'));
+            ->withBody(new Psr17Factory()->createStream('{"success":true}'));
 
         $validator->validateResponse($response, $operation);
         $this->expectNotToPerformAssertions();
@@ -217,10 +217,10 @@ YAML;
             ->build();
 
         $operation = new Operation('/test', 'PATCH');
-        $response = (new Psr17Factory())
+        $response = new Psr17Factory()
             ->createResponse(200)
             ->withHeader('Content-Type', 'application/json')
-            ->withBody((new Psr17Factory())->createStream('{"success":true}'));
+            ->withBody(new Psr17Factory()->createStream('{"success":true}'));
 
         $validator->validateResponse($response, $operation);
         $this->expectNotToPerformAssertions();
@@ -234,7 +234,7 @@ YAML;
             ->build();
 
         $operation = new Operation('/test', 'DELETE');
-        $response = (new Psr17Factory())
+        $response = new Psr17Factory()
             ->createResponse(204);
 
         $validator->validateResponse($response, $operation);
@@ -249,7 +249,7 @@ YAML;
             ->build();
 
         $operation = new Operation('/test', 'OPTIONS');
-        $response = (new Psr17Factory())
+        $response = new Psr17Factory()
             ->createResponse(200);
 
         $validator->validateResponse($response, $operation);
@@ -264,7 +264,7 @@ YAML;
             ->build();
 
         $operation = new Operation('/test', 'HEAD');
-        $response = (new Psr17Factory())
+        $response = new Psr17Factory()
             ->createResponse(200);
 
         $validator->validateResponse($response, $operation);
@@ -279,7 +279,7 @@ YAML;
             ->build();
 
         $operation = new Operation('/test', 'TRACE');
-        $response = (new Psr17Factory())
+        $response = new Psr17Factory()
             ->createResponse(200);
 
         $validator->validateResponse($response, $operation);

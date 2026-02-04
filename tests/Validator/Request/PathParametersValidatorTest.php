@@ -13,6 +13,7 @@ use Duyler\OpenApi\Validator\Exception\PatternMismatchError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Request\ParameterDeserializer;
 use Duyler\OpenApi\Validator\Request\PathParametersValidator;
+use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
@@ -28,8 +29,9 @@ final class PathParametersValidatorTest extends TestCase
         $pool = new ValidatorPool();
         $schemaValidator = new SchemaValidator($pool);
         $deserializer = new ParameterDeserializer();
+        $coercer = new TypeCoercer();
 
-        $this->validator = new PathParametersValidator($schemaValidator, $deserializer);
+        $this->validator = new PathParametersValidator($schemaValidator, $deserializer, $coercer);
     }
 
     #[Test]

@@ -9,7 +9,6 @@ use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Event\ValidationErrorEvent;
 use Duyler\OpenApi\Event\ValidationFinishedEvent;
 use Duyler\OpenApi\Event\ValidationStartedEvent;
-use Duyler\OpenApi\Psr15\Operation;
 use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\Model\Operation as OperationModel;
 use Duyler\OpenApi\Schema\Model\Schema;
@@ -34,6 +33,7 @@ use Duyler\OpenApi\Validator\Request\QueryParametersValidator;
 use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Request\RequestBodyValidator;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
+use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\Response\ResponseBodyValidator;
 use Duyler\OpenApi\Validator\Response\ResponseHeadersValidator;
 use Duyler\OpenApi\Validator\Response\ResponseValidator;
@@ -73,7 +73,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
      *
      * @param ServerRequestInterface $request PSR-7 HTTP request
      * @return Operation Matched operation from OpenAPI specification
-     * @throws ValidationException If validation fails
+     * @throws ValidationException|BuilderException If validation fails
      *
      * @example
      * $operation = $validator->validateRequest($request);
@@ -87,11 +87,9 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
         $requestPath = $request->getUri()->getPath();
         $method = $request->getMethod();
 
-        if (null !== $this->eventDispatcher) {
-            $this->eventDispatcher->dispatch(
-                new ValidationStartedEvent($request, $requestPath, $method),
-            );
-        }
+        $this->eventDispatcher?->dispatch(
+            new ValidationStartedEvent($request, $requestPath, $method),
+        );
 
         try {
             $operation = $this->pathFinder->findOperation($requestPath, $method);
@@ -111,40 +109,33 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
             $requestValidator = $this->createRequestValidator();
             $requestValidator->validate($request, $op, $operation->path);
 
-            if (null !== $this->eventDispatcher) {
-                $duration = microtime(true) - $startTime;
-                $this->eventDispatcher->dispatch(
-                    new ValidationFinishedEvent(
-                        $request,
-                        $operation->path,
-                        $operation->method,
-                        true,
-                        $duration,
-                    ),
-                );
-            }
+            $this->eventDispatcher?->dispatch(
+                new ValidationFinishedEvent(
+                    $request,
+                    $operation->path,
+                    $operation->method,
+                    true,
+                    microtime(true) - $startTime,
+                ),
+            );
 
             return $operation;
         } catch (BuilderException|ValidationException $e) {
-            if (null !== $this->eventDispatcher) {
-                $duration = microtime(true) - $startTime;
-                $this->eventDispatcher->dispatch(
-                    new ValidationFinishedEvent(
-                        $request,
-                        $requestPath,
-                        $method,
-                        false,
-                        $duration,
-                    ),
+            $this->eventDispatcher?->dispatch(
+                new ValidationFinishedEvent(
+                    $request,
+                    $requestPath,
+                    $method,
+                    false,
+                    microtime(true) - $startTime,
+                ),
+            );
+
+            if ($e instanceof ValidationException) {
+                $this->eventDispatcher?->dispatch(
+                    new ValidationErrorEvent($request, $requestPath, $method, $e),
                 );
-
-                if ($e instanceof ValidationException) {
-                    $this->eventDispatcher->dispatch(
-                        new ValidationErrorEvent($request, $requestPath, $method, $e),
-                    );
-                }
             }
-
             throw $e;
         }
     }
@@ -217,24 +208,33 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
     private function createRequestValidator(): RequestValidator
     {
         $deserializer = new ParameterDeserializer();
+        $coercer = new TypeCoercer();
 
         return new RequestValidator(
             pathParser: new PathParser(),
             pathParamsValidator: new PathParametersValidator(
                 schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
                 deserializer: $deserializer,
+                coercer: $coercer,
+                coercion: $this->coercion,
             ),
             queryParser: new QueryParser(),
             queryParamsValidator: new QueryParametersValidator(
                 schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
                 deserializer: $deserializer,
+                coercer: $coercer,
+                coercion: $this->coercion,
             ),
             headersValidator: new HeadersValidator(
                 schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
+                coercer: $coercer,
+                coercion: $this->coercion,
             ),
             cookieValidator: new CookieValidator(
                 schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
                 deserializer: $deserializer,
+                coercer: $coercer,
+                coercion: $this->coercion,
             ),
             bodyValidator: new RequestBodyValidator(
                 schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),

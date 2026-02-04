@@ -15,6 +15,8 @@ final readonly class CookieValidator
     public function __construct(
         private readonly SchemaValidatorInterface $schemaValidator,
         private readonly ParameterDeserializer $deserializer,
+        private readonly TypeCoercer $coercer,
+        private readonly bool $coercion = false,
     ) {}
 
     /**
@@ -62,10 +64,9 @@ final readonly class CookieValidator
                 continue;
             }
 
-            // Deserialize if needed
             $value = $this->deserializer->deserialize($value, $param);
+            $value = $this->coercer->coerce($value, $param, $this->coercion);
 
-            // Validate against schema
             if (null !== $param->schema) {
                 $this->schemaValidator->validate($value, $param->schema);
             }
