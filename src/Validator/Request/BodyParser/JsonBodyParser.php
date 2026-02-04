@@ -15,7 +15,7 @@ final readonly class JsonBodyParser
      * @throws JsonException
      * @throws EmptyBodyException
      */
-    public function parse(string $body): array|int|string|float|bool
+    public function parse(string $body): array|int|string|float|bool|null
     {
         if ('' === trim($body)) {
             throw new EmptyBodyException('Request body cannot be empty');
@@ -23,7 +23,7 @@ final readonly class JsonBodyParser
 
         $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
 
-        /** @var array|int|string|float|bool */
+        /** @var array|int|string|float|bool|null */
         return $decoded;
     }
 }

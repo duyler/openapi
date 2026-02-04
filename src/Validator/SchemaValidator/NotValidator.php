@@ -26,10 +26,12 @@ final readonly class NotValidator implements SchemaValidatorInterface
             return;
         }
 
+        $nullableAsType = $context?->nullableAsType ?? true;
         $validator = new SchemaValidator($this->pool);
 
         try {
-            $normalizedData = SchemaValueNormalizer::normalize($data);
+            $allowNull = $schema->not->nullable && $nullableAsType;
+            $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
             $validator->validate($normalizedData, $schema->not, $context);
         } catch (InvalidDataTypeException|ValidationException|AbstractValidationError) {
             return;

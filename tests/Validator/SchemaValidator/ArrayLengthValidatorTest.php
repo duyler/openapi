@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Exception\DuplicateItemsError;
 use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MinItemsError;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -97,7 +98,7 @@ class ArrayLengthValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'array', uniqueItems: true);
 
-        $this->expectException(MaxItemsError::class);
+        $this->expectException(DuplicateItemsError::class);
 
         $this->validator->validate([1, 2, 2, 3], $schema);
     }
@@ -147,7 +148,7 @@ class ArrayLengthValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'array', uniqueItems: true);
 
-        $this->expectException(MaxItemsError::class);
+        $this->expectException(DuplicateItemsError::class);
 
         $this->validator->validate(['a', 'b', 'a'], $schema);
     }

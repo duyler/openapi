@@ -1,0 +1,69 @@
+openapi: 3.1.0
+info:
+  title: Complex Schemas API
+  version: 1.0.0
+paths:
+  /items/{itemId}:
+    get:
+      summary: Get item with complex query
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tags
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: filters
+          in: query
+          style: deepObject
+          explode: true
+          schema:
+            type: object
+            properties:
+              category:
+                type: string
+              minPrice:
+                type: string
+              maxPrice:
+                type: string
+        - name: ids
+          in: query
+          style: pipeDelimited
+          schema:
+            type: array
+            items:
+              type: integer
+      responses:
+        '200':
+          description: Item found
+  /articles/{articleId}/comments/{commentId}:
+    get:
+      summary: Get specific comment
+      parameters:
+        - name: articleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: expand
+          in: query
+          schema:
+            type: string
+            enum: [author, replies, all]
+      responses:
+        '200':
+          description: Comment found

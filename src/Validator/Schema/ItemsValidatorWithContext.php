@@ -40,7 +40,8 @@ final readonly class ItemsValidatorWithContext
                 /** @var int $index */
                 $itemContext = $context->withBreadcrumbIndex($index);
 
-                $normalizedItem = SchemaValueNormalizer::normalize($item);
+                $allowNull = $itemSchema->nullable && $context->nullableAsType;
+                $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
                 $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
                 $validator->validateWithContext($normalizedItem, $itemSchema, $itemContext);
             } catch (DiscriminatorMismatchException|

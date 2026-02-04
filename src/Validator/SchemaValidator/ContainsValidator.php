@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Exception\ContainsMatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
@@ -30,13 +31,15 @@ final readonly class ContainsValidator implements SchemaValidatorInterface
             return;
         }
 
+        $nullableAsType = $context?->nullableAsType ?? true;
         $validator = new SchemaValidator($this->pool);
+        $containsContext = $context ?? ValidationContext::create($this->pool, $nullableAsType);
         $hasMatch = false;
 
         foreach ($data as $item) {
             try {
                 /** @var array-key|array<array-key, mixed> $item */
-                $validator->validate($item, $schema->contains, $context);
+                $validator->validate($item, $schema->contains, $containsContext);
                 $hasMatch = true;
                 break;
             } catch (ValidationException|AbstractValidationError) {
@@ -45,8 +48,10 @@ final readonly class ContainsValidator implements SchemaValidatorInterface
         }
 
         if (false === $hasMatch) {
-            throw new ValidationException(
-                'Array does not contain an item matching the contains schema',
+            $dataPath = null !== $context ? $context->breadcrumbs->currentPath() : '/';
+            throw new ContainsMatchError(
+                dataPath: $dataPath,
+                schemaPath: '/contains',
             );
         }
     }

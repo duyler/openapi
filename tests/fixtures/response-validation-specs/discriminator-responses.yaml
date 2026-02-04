@@ -1,0 +1,46 @@
+openapi: 3.1.0
+info:
+  title: Discriminator Responses API
+  version: 1.0.0
+paths:
+  /pet:
+    get:
+      summary: Get pet with discriminator
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pet:
+                    discriminator:
+                      propertyName: petType
+                    oneOf:
+                      - $ref: '#/components/schemas/Dog'
+                      - $ref: '#/components/schemas/Cat'
+components:
+  schemas:
+    Dog:
+      title: dog
+      type: object
+      properties:
+        petType:
+          type: string
+        bark:
+          type: boolean
+      required:
+        - petType
+        - bark
+    Cat:
+      title: cat
+      type: object
+      properties:
+        petType:
+          type: string
+        meow:
+          type: boolean
+      required:
+        - petType
+        - meow

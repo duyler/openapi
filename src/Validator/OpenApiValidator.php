@@ -31,12 +31,10 @@ use Duyler\OpenApi\Validator\Request\PathParametersValidator;
 use Duyler\OpenApi\Validator\Request\PathParser;
 use Duyler\OpenApi\Validator\Request\QueryParametersValidator;
 use Duyler\OpenApi\Validator\Request\QueryParser;
-use Duyler\OpenApi\Validator\Request\RequestBodyValidator;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
+use Duyler\OpenApi\Validator\Request\RequestBodyValidatorWithContext;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
-use Duyler\OpenApi\Validator\Response\ResponseBodyValidator;
-use Duyler\OpenApi\Validator\Response\ResponseHeadersValidator;
-use Duyler\OpenApi\Validator\Response\ResponseValidator;
+use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
 use Duyler\OpenApi\Validator\Response\StatusCodeValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
@@ -64,7 +62,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
         public readonly ?object $cache = null,
         public readonly ?object $logger = null,
         public readonly bool $coercion = false,
-        public readonly bool $nullableAsType = false,
+        public readonly bool $nullableAsType = true,
         public readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {}
 
@@ -236,34 +234,29 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
                 coercer: $coercer,
                 coercion: $this->coercion,
             ),
-            bodyValidator: new RequestBodyValidator(
-                schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
+            bodyValidator: new RequestBodyValidatorWithContext(
+                pool: $this->pool,
+                document: $this->document,
                 negotiator: new ContentTypeNegotiator(),
                 jsonParser: new JsonBodyParser(),
                 formParser: new FormBodyParser(),
                 multipartParser: new MultipartBodyParser(),
                 textParser: new TextBodyParser(),
                 xmlParser: new XmlBodyParser(),
+                nullableAsType: $this->nullableAsType,
+                coercion: $this->coercion,
             ),
         );
     }
 
-    private function createResponseValidator(): ResponseValidator
+    private function createResponseValidator(): ResponseValidatorWithContext
     {
-        return new ResponseValidator(
+        return new ResponseValidatorWithContext(
+            pool: $this->pool,
+            document: $this->document,
+            coercion: $this->coercion,
             statusCodeValidator: new StatusCodeValidator(),
-            headersValidator: new ResponseHeadersValidator(
-                schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
-            ),
-            bodyValidator: new ResponseBodyValidator(
-                schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
-                negotiator: new ContentTypeNegotiator(),
-                jsonParser: new JsonBodyParser(),
-                formParser: new FormBodyParser(),
-                multipartParser: new MultipartBodyParser(),
-                textParser: new TextBodyParser(),
-                xmlParser: new XmlBodyParser(),
-            ),
+            nullableAsType: $this->nullableAsType,
         );
     }
 

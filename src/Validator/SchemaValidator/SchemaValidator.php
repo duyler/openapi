@@ -23,7 +23,7 @@ final readonly class SchemaValidator implements SchemaValidatorInterface
     }
 
     #[Override]
-    public function validate(array|int|string|float|bool $data, Schema $schema, ?ValidationContext $context = null): void
+    public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
     {
         $validators = [
             new TypeValidator($this->pool),

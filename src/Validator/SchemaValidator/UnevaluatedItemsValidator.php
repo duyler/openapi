@@ -38,7 +38,9 @@ final readonly class UnevaluatedItemsValidator implements SchemaValidatorInterfa
         foreach ($unevaluatedItems as $item) {
             /** @var array-key|array<array-key, mixed> $item */
             $validator = new SchemaValidator($this->pool);
-            $validator->validate($item, $schema->unevaluatedItems, $context);
+            $nullableAsType = $context?->nullableAsType ?? true;
+            $itemContext = $context ?? ValidationContext::create($this->pool, $nullableAsType);
+            $validator->validate($item, $schema->unevaluatedItems, $itemContext);
         }
     }
 

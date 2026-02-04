@@ -209,6 +209,12 @@ final readonly class YamlParser implements SchemaParserInterface
      */
     private function buildParameter(array $data): Parameter
     {
+        if (isset($data['$ref'])) {
+            return new Parameter(
+                ref: TypeHelper::asString($data['$ref']),
+            );
+        }
+
         if (false === isset($data['name']) || false === isset($data['in'])) {
             throw new InvalidSchemaException('Parameter must have name and in fields');
         }
@@ -244,6 +250,7 @@ final readonly class YamlParser implements SchemaParserInterface
             default: $data['default'] ?? null,
             deprecated: (bool) ($data['deprecated'] ?? false),
             type: TypeHelper::asStringOrNull($data['type'] ?? null),
+            nullable: (bool) ($data['nullable'] ?? false),
             const: $data['const'] ?? null,
             multipleOf: TypeHelper::asFloatOrNull($data['multipleOf'] ?? null),
             maximum: TypeHelper::asFloatOrNull($data['maximum'] ?? null),
@@ -414,6 +421,12 @@ final readonly class YamlParser implements SchemaParserInterface
      */
     private function buildResponse(array $data): Response
     {
+        if (isset($data['$ref'])) {
+            return new Response(
+                ref: TypeHelper::asString($data['$ref']),
+            );
+        }
+
         return new Response(
             description: TypeHelper::asStringOrNull($data['description'] ?? null),
             headers: isset($data['headers']) && is_array($data['headers'])

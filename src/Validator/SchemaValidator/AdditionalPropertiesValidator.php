@@ -48,12 +48,13 @@ final readonly class AdditionalPropertiesValidator implements SchemaValidatorInt
             return;
         }
 
+        $nullableAsType = $context?->nullableAsType ?? true;
         $validator = new SchemaValidator($this->pool);
 
         foreach ($additionalKeys as $key) {
             /** @var array-key|array<array-key, mixed> $value */
             $value = $data[$key];
-            $keyContext = $context?->withBreadcrumb((string) $key) ?? ValidationContext::create($this->pool);
+            $keyContext = $context?->withBreadcrumb((string) $key) ?? ValidationContext::create($this->pool, $nullableAsType);
             $validator->validate($value, $schema->additionalProperties, $keyContext);
         }
     }

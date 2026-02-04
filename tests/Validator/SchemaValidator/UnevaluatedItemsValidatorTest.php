@@ -10,6 +10,8 @@ use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use Duyler\OpenApi\Validator\Error\ValidationContext;
+
 class UnevaluatedItemsValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -162,6 +164,53 @@ class UnevaluatedItemsValidatorTest extends TestCase
         );
 
         $this->validator->validate(['hello', 42], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_unevaluated_items_without_prefix_items_or_items(): void
+    {
+        $unevaluatedSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'array',
+            unevaluatedItems: $unevaluatedSchema,
+        );
+
+        $this->validator->validate(['a', 'b', 'c'], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_unevaluated_items_with_context(): void
+    {
+        $prefixSchema1 = new Schema(type: 'string');
+        $unevaluatedSchema = new Schema(type: 'integer');
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$prefixSchema1],
+            unevaluatedItems: $unevaluatedSchema,
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate(['hello', 42, 43], $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_unevaluated_items_all_evaluated(): void
+    {
+        $itemsSchema = new Schema(type: 'string');
+        $unevaluatedSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'array',
+            items: $itemsSchema,
+            unevaluatedItems: $unevaluatedSchema,
+        );
+
+        $this->validator->validate(['a', 'b', 'c'], $schema);
 
         $this->expectNotToPerformAssertions();
     }

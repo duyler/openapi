@@ -16,6 +16,7 @@ use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
 use Duyler\OpenApi\Validator\Response\ResponseBodyValidator;
+use Duyler\OpenApi\Validator\Response\ResponseTypeCoercer;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
@@ -36,6 +37,7 @@ final class ResponseBodyValidatorTest extends TestCase
         $multipartParser = new MultipartBodyParser();
         $textParser = new TextBodyParser();
         $xmlParser = new XmlBodyParser();
+        $typeCoercer = new ResponseTypeCoercer();
 
         $this->validator = new ResponseBodyValidator(
             $schemaValidator,
@@ -45,6 +47,7 @@ final class ResponseBodyValidatorTest extends TestCase
             $multipartParser,
             $textParser,
             $xmlParser,
+            $typeCoercer,
         );
     }
 

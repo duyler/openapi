@@ -11,6 +11,8 @@ use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use Duyler\OpenApi\Validator\Error\ValidationContext;
+
 class OneOfValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -152,5 +154,81 @@ class OneOfValidatorTest extends TestCase
         $this->validator->validate(['type' => 'person', 'name' => 'John'], $schema);
 
         $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_one_of_with_null_value_and_nullable_schema(): void
+    {
+        $schema1 = new Schema(type: 'string');
+        $schema2 = new Schema(type: 'string', nullable: true);
+        $schema = new Schema(
+            oneOf: [$schema1, $schema2],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate(null, $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function throw_error_for_null_without_nullable_schema_in_one_of(): void
+    {
+        $schema1 = new Schema(type: 'string');
+        $schema2 = new Schema(type: 'string');
+        $schema = new Schema(
+            oneOf: [$schema1, $schema2],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate(null, $schema, $context);
+    }
+
+    #[Test]
+    public function throw_one_of_error_for_multiple_schemas_matching_with_context(): void
+    {
+        $schema1 = new Schema(type: 'string', minLength: 3);
+        $schema2 = new Schema(type: 'string', maxLength: 10);
+        $schema = new Schema(
+            oneOf: [$schema1, $schema2],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->expectException(OneOfError::class);
+
+        $this->validator->validate('hello', $schema, $context);
+    }
+
+    #[Test]
+    public function validate_one_of_with_context(): void
+    {
+        $schema1 = new Schema(type: 'string', minLength: 10);
+        $schema2 = new Schema(type: 'integer');
+        $schema = new Schema(
+            oneOf: [$schema1, $schema2],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate(42, $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function throw_validation_exception_for_invalid_data_type_in_subschema_with_nullable_false(): void
+    {
+        $schema1 = new Schema(type: 'string', nullable: false);
+        $schema2 = new Schema(type: 'integer');
+        $schema = new Schema(
+            oneOf: [$schema1, $schema2],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: false);
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Exactly one of the schemas must match, but none did');
+
+        $this->validator->validate(null, $schema, $context);
     }
 }

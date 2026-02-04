@@ -1,0 +1,132 @@
+openapi: 3.0.0
+info:
+  title: Large Payloads API
+  version: 1.0.0
+
+components:
+  schemas:
+
+    # Large JSON payload
+    LargeObject:
+      type: object
+      properties:
+        field1:
+          type: string
+        field2:
+          type: string
+        field3:
+          type: string
+        field4:
+          type: string
+        field5:
+          type: string
+        field6:
+          type: string
+        field7:
+          type: string
+        field8:
+          type: string
+        field9:
+          type: string
+        field10:
+          type: string
+        field11:
+          type: string
+        field12:
+          type: string
+        field13:
+          type: string
+        field14:
+          type: string
+        field15:
+          type: string
+        field16:
+          type: string
+        field17:
+          type: string
+        field18:
+          type: string
+        field19:
+          type: string
+        field20:
+          type: string
+
+    # Very large array (1000+ elements)
+    LargeArray:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+          name:
+            type: string
+          value:
+            type: string
+
+    # Array with maximum items constraint
+    LargeArrayMax:
+      type: array
+      maxItems: 100
+      items:
+        type: integer
+
+    # String with special characters
+    SpecialString:
+      type: object
+      properties:
+        html_entities:
+          type: string
+        sql_injection:
+          type: string
+        xss_attempt:
+          type: string
+        json_escaping:
+          type: string
+        newline_chars:
+          type: string
+
+    # Null vs missing field handling
+    NullHandling:
+      type: object
+      properties:
+        nullable_field:
+          type: string
+          nullable: true
+        required_field:
+          type: string
+        optional_field:
+          type: string
+        empty_string_field:
+          type: string
+      required:
+        - required_field
+
+    # Empty vs null comparison
+    EmptyNullComparison:
+      type: object
+      properties:
+        empty_string:
+          type: string
+        nullable_string:
+          type: string
+          nullable: true
+        default_null:
+          type: string
+          nullable: true
+        empty_array:
+          type: array
+          items:
+            type: string
+
+paths:
+  /test/large:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LargeObject'
+      responses:
+        '200':
+          description: OK

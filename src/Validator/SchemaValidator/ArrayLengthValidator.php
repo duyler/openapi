@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\DuplicateItemsError;
 use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MinItemsError;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -54,8 +55,8 @@ final readonly class ArrayLengthValidator implements SchemaValidatorInterface
             $unique = array_unique($data, SORT_REGULAR);
 
             if (count($unique) !== $count) {
-                throw new MaxItemsError(
-                    maxItems: $count,
+                throw new DuplicateItemsError(
+                    expectedCount: $count,
                     actualCount: count($unique),
                     dataPath: $dataPath,
                     schemaPath: '/uniqueItems',

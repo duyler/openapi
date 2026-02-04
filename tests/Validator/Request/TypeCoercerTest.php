@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -754,5 +755,105 @@ final class TypeCoercerTest extends TestCase
         $result = $this->coercer->coerce('test', $param, true);
 
         $this->assertSame('test', $result);
+    }
+
+    #[Test]
+    public function throw_type_mismatch_error_for_invalid_string_to_number_with_strict_mode(): void
+    {
+        $param = new Parameter(
+            name: 'test',
+            in: 'path',
+            schema: new Schema(type: 'number'),
+        );
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->coercer->coerce('not-a-number', $param, true, true);
+    }
+
+    #[Test]
+    public function throw_type_mismatch_error_for_invalid_string_to_integer_with_strict_mode(): void
+    {
+        $param = new Parameter(
+            name: 'test',
+            in: 'path',
+            schema: new Schema(type: 'integer'),
+        );
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->coercer->coerce('not-a-number', $param, true, true);
+    }
+
+    #[Test]
+    public function throw_type_mismatch_error_for_float_string_with_strict_integer_mode(): void
+    {
+        $param = new Parameter(
+            name: 'test',
+            in: 'path',
+            schema: new Schema(type: 'integer'),
+        );
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->coercer->coerce('123.45', $param, true, true);
+    }
+
+    #[Test]
+    public function coerce_valid_string_to_number_with_strict_mode(): void
+    {
+        $param = new Parameter(
+            name: 'test',
+            in: 'path',
+            schema: new Schema(type: 'number'),
+        );
+
+        $result = $this->coercer->coerce('19.99', $param, true, true);
+
+        $this->assertSame(19.99, $result);
+        $this->assertIsFloat($result);
+    }
+
+    #[Test]
+    public function coerce_valid_string_to_integer_with_strict_mode(): void
+    {
+        $param = new Parameter(
+            name: 'test',
+            in: 'path',
+            schema: new Schema(type: 'integer'),
+        );
+
+        $result = $this->coercer->coerce('123', $param, true, true);
+
+        $this->assertSame(123, $result);
+        $this->assertIsInt($result);
+    }
+
+    #[Test]
+    public function coerce_non_strict_mode_returns_zero_for_invalid_number(): void
+    {
+        $param = new Parameter(
+            name: 'test',
+            in: 'path',
+            schema: new Schema(type: 'number'),
+        );
+
+        $result = $this->coercer->coerce('not-a-number', $param, true, false);
+
+        $this->assertSame(0.0, $result);
+    }
+
+    #[Test]
+    public function coerce_non_strict_mode_returns_zero_for_invalid_integer(): void
+    {
+        $param = new Parameter(
+            name: 'test',
+            in: 'path',
+            schema: new Schema(type: 'integer'),
+        );
+
+        $result = $this->coercer->coerce('not-a-number', $param, true, false);
+
+        $this->assertSame(0, $result);
     }
 }

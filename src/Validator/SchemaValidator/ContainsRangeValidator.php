@@ -35,6 +35,7 @@ final readonly class ContainsRangeValidator implements SchemaValidatorInterface
             return;
         }
 
+        $nullableAsType = $context?->nullableAsType ?? true;
         $dataPath = null !== $context ? $context->breadcrumbs->currentPath() : '/';
         $matchCount = 0;
 
@@ -42,7 +43,8 @@ final readonly class ContainsRangeValidator implements SchemaValidatorInterface
             try {
                 /** @var array-key|array<array-key, mixed> $item */
                 $validator = new SchemaValidator($this->pool);
-                $validator->validate($item, $schema->contains, $context);
+                $itemContext = $context ?? ValidationContext::create($this->pool, $nullableAsType);
+                $validator->validate($item, $schema->contains, $itemContext);
                 ++$matchCount;
             } catch (Exception) {
             }

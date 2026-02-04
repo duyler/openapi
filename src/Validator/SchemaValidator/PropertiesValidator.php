@@ -41,8 +41,10 @@ final readonly class PropertiesValidator implements SchemaValidatorInterface
             }
 
             try {
-                $value = SchemaValueNormalizer::normalize($data[$name]);
-                $propertyContext = $context?->withBreadcrumb($name) ?? ValidationContext::create($this->pool);
+                $nullableAsType = $context?->nullableAsType ?? true;
+                $allowNull = $propertySchema->nullable && $nullableAsType;
+                $value = SchemaValueNormalizer::normalize($data[$name], $allowNull);
+                $propertyContext = $context?->withBreadcrumb($name) ?? ValidationContext::create($this->pool, $nullableAsType);
                 $validator->validate($value, $propertySchema, $propertyContext);
             } catch (InvalidDataTypeException $e) {
                 throw new ValidationException(

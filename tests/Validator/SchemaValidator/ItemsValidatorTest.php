@@ -13,6 +13,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
+use Duyler\OpenApi\Validator\Error\ValidationContext;
+
 class ItemsValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -167,5 +169,67 @@ class ItemsValidatorTest extends TestCase
         $this->expectException(ValidationException::class);
 
         $this->validator->validate([new stdClass()], $schema);
+    }
+
+    #[Test]
+    public function validate_items_with_nullable_and_context(): void
+    {
+        $itemSchema = new Schema(type: 'string', nullable: true);
+        $schema = new Schema(
+            type: 'array',
+            items: $itemSchema,
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate(['a', null, 'b'], $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_items_with_nullable_context(): void
+    {
+        $itemSchema = new Schema(type: 'string', nullable: true);
+        $schema = new Schema(
+            type: 'array',
+            items: $itemSchema,
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate(['hello', 'world'], $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function throw_validation_exception_for_item_validation_failed(): void
+    {
+        $itemSchema = new Schema(
+            not: new Schema(type: 'string'),
+        );
+        $schema = new Schema(
+            type: 'array',
+            items: $itemSchema,
+        );
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Item at index 0 validation failed');
+
+        $this->validator->validate(['string_value'], $schema);
+    }
+
+    #[Test]
+    public function validate_items_with_context(): void
+    {
+        $itemSchema = new Schema(type: 'integer');
+        $schema = new Schema(
+            type: 'array',
+            items: $itemSchema,
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate([1, 2, 3], $schema, $context);
+
+        $this->expectNotToPerformAssertions();
     }
 }

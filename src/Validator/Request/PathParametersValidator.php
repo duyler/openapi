@@ -8,6 +8,8 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 
+use function assert;
+
 final readonly class PathParametersValidator
 {
     public function __construct(
@@ -29,6 +31,7 @@ final readonly class PathParametersValidator
             }
 
             $name = $param->name;
+            assert(null !== $name);
             $value = $params[$name] ?? null;
 
             if (null === $value) {
@@ -39,7 +42,7 @@ final readonly class PathParametersValidator
             }
 
             $value = $this->deserializer->deserialize($value, $param);
-            $value = $this->coercer->coerce($value, $param, $this->coercion);
+            $value = $this->coercer->coerce($value, $param, $this->coercion, $this->coercion);
 
             if (null !== $param->schema) {
                 $this->schemaValidator->validate($value, $param->schema);

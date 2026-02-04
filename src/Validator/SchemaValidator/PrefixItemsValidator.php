@@ -34,14 +34,16 @@ final readonly class PrefixItemsValidator implements SchemaValidatorInterface
             return;
         }
 
+        $nullableAsType = $context?->nullableAsType ?? true;
         $validator = new SchemaValidator($this->pool);
 
         $count = min(count($data), count($schema->prefixItems));
 
         for ($i = 0; $i < $count; ++$i) {
             try {
-                $value = SchemaValueNormalizer::normalize($data[$i]);
-                $indexContext = $context?->withBreadcrumbIndex($i) ?? ValidationContext::create($this->pool);
+                $allowNull = $schema->prefixItems[$i]->nullable && $nullableAsType;
+                $value = SchemaValueNormalizer::normalize($data[$i], $allowNull);
+                $indexContext = $context?->withBreadcrumbIndex($i) ?? ValidationContext::create($this->pool, $nullableAsType);
                 $validator->validate($value, $schema->prefixItems[$i], $indexContext);
             } catch (InvalidDataTypeException $e) {
                 throw new ValidationException(
@@ -61,8 +63,10 @@ final readonly class PrefixItemsValidator implements SchemaValidatorInterface
         if ([] !== $remainingItems && null !== $schema->items) {
             foreach ($remainingItems as $item) {
                 try {
-                    $normalizedItem = SchemaValueNormalizer::normalize($item);
-                    $validator->validate($normalizedItem, $schema->items, $context);
+                    $allowNull = $schema->items->nullable && $nullableAsType;
+                    $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
+                    $remainingContext = $context ?? ValidationContext::create($this->pool, $nullableAsType);
+                    $validator->validate($normalizedItem, $schema->items, $remainingContext);
                 } catch (InvalidDataTypeException $e) {
                     throw new ValidationException(
                         sprintf('Remaining item has invalid data type: %s', $e->getMessage()),

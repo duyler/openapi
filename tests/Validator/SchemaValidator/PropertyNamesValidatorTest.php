@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
 use Duyler\OpenApi\Validator\Exception\MaxLengthError;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
 use Duyler\OpenApi\Validator\Exception\PatternMismatchError;
@@ -143,5 +144,20 @@ class PropertyNamesValidatorTest extends TestCase
         $this->expectException(MaxLengthError::class);
 
         $this->validator->validate(['veryLongName' => 'value'], $schema);
+    }
+
+    #[Test]
+    public function throw_error_for_invalid_regex_pattern_in_property_names(): void
+    {
+        $nameSchema = new Schema(type: 'string', pattern: '[invalid');
+        $schema = new Schema(
+            type: 'object',
+            propertyNames: $nameSchema,
+        );
+
+        $this->expectException(InvalidPatternException::class);
+        $this->expectExceptionMessage('Invalid regex pattern "/[invalid/":');
+
+        $this->validator->validate(['name' => 'value'], $schema);
     }
 }

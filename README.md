@@ -27,6 +27,10 @@ OpenAPI 3.1 validator for PHP 8.4+
 - **Schema Registry** - Manage multiple schema versions
 - **Validator Compilation** - Generate optimized validator code
 
+## Documentation
+
+- [Validation Guide](docs/validation-guide.md) - Learn about validation, nullable support, and best practices
+
 ## Installation
 
 ```bash
@@ -413,7 +417,8 @@ $validator->validate(['name' => 'John', 'age' => 30]);
 | `withValidatorPool(ValidatorPool $pool)` | Set custom validator pool | `new ValidatorPool()` |
 | `withLogger(object $logger)` | Set PSR-3 logger | `null` |
 | `enableCoercion()` | Enable type coercion | `false` |
-| `enableNullableAsType()` | Enable nullable as type | `false` |
+| `enableNullableAsType()` | Enable nullable validation (default: true) | `true` |
+| `disableNullableAsType()` | Disable nullable validation | `false` |
 
 ### Example Configuration
 
@@ -442,11 +447,68 @@ The validator supports the following JSON Schema draft 2020-12 keywords:
 - `type` - String, number, integer, boolean, array, object, null
 - `enum` - Enumerated values
 - `const` - Constant value
+- `nullable` - Allows null values (default: enabled)
+
+### Nullable Validation
+
+By default, the `nullable: true` schema keyword allows null values for a property:
+
+```yaml
+properties:
+  username:
+    type: string
+    nullable: true  # Allows null values
+```
+
+This behavior is enabled by default. To disable nullable validation and treat `nullable: true` as not allowing null values:
+
+```php
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->disableNullableAsType()  // Optional: disable nullable validation
+    ->build();
+```
+
+For detailed information about nullable validation, including best practices and advanced usage, see the [Validation Guide](docs/validation-guide.md).
 
 ### String Validation
 - `minLength` / `maxLength` - String length constraints
 - `pattern` - Regular expression pattern
 - `format` - Format validation (email, uri, uuid, date-time, etc.)
+
+### Pattern Validation
+
+All regular expressions in schemas are validated during schema parsing. If a pattern is invalid, an `InvalidPatternException` is thrown.
+
+#### Supported Pattern Fields
+
+- `pattern` - Regular expression for string validation
+- `patternProperties` - Object with patterns for property keys
+- `propertyNames` - Pattern for property name validation
+
+#### Pattern Delimiters
+
+The library automatically adds delimiters (`/`) to patterns without them. You can specify patterns with or without delimiters:
+
+```php
+// Without delimiters (recommended)
+new Schema(pattern: '^test$')
+
+// With delimiters
+new Schema(pattern: '/^test$/')
+```
+
+Both variants work identically.
+
+#### Pattern Validation Errors
+
+Invalid patterns are detected early and throw descriptive errors:
+
+```php
+// This will throw InvalidPatternException:
+// Invalid regex pattern "/[invalid/": preg_match(): No ending matching delimiter ']' found
+new Schema(pattern: '[invalid')
+```
 
 ### Numeric Validation
 - `minimum` / `maximum` - Range constraints

@@ -226,7 +226,6 @@ JSON;
             ->withErrorFormatter($formatter)
             ->withFormat('string', 'custom', $customValidator)
             ->enableCoercion()
-            ->enableNullableAsType()
             ->build();
 
         $this->assertSame('Test', $validator->document->info->title);
@@ -239,7 +238,7 @@ JSON;
 
         $builder1 = OpenApiValidatorBuilder::create()->fromYamlString($yaml);
         $builder2 = $builder1->enableCoercion();
-        $builder3 = $builder2->enableNullableAsType();
+        $builder3 = $builder2->withLogger(new class {});
 
         $this->assertNotSame($builder1, $builder2);
         $this->assertNotSame($builder2, $builder3);
