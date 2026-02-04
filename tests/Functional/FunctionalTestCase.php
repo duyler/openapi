@@ -145,8 +145,8 @@ abstract class FunctionalTestCase extends TestCase
                 $messages[] = $error->message();
             }
             $this->fail(
-                'Expected validation to pass, but got errors: ' .
-                implode('; ', $messages),
+                'Expected validation to pass, but got errors: '
+                . implode('; ', $messages),
             );
         }
     }
@@ -167,13 +167,7 @@ abstract class FunctionalTestCase extends TestCase
             $this->assertCount($expectedCount, $errors, "Expected {$expectedCount} errors");
 
             if ($expectedMessagePattern !== null) {
-                $found = false;
-                foreach ($errors as $error) {
-                    if (str_contains($error->message(), $expectedMessagePattern)) {
-                        $found = true;
-                        break;
-                    }
-                }
+                $found = array_any($errors, fn($error) => str_contains((string) $error->message(), $expectedMessagePattern));
                 $this->assertTrue($found, "Expected error message pattern '{$expectedMessagePattern}' not found");
             }
         }
@@ -206,18 +200,11 @@ abstract class FunctionalTestCase extends TestCase
      */
     protected function assertBreadcrumb(string $expectedPath, ValidationException $e): void
     {
-        $found = false;
-        foreach ($e->getErrors() as $error) {
-            if ($error->dataPath() === $expectedPath) {
-                $found = true;
-                break;
-            }
-        }
-
+        $found = array_any($e->getErrors(), fn($error) => $error->dataPath() === $expectedPath);
         $this->assertTrue(
             $found,
-            "Expected breadcrumb path '{$expectedPath}' not found in errors: " .
-            $this->getErrorPathsSummary($e),
+            "Expected breadcrumb path '{$expectedPath}' not found in errors: "
+            . $this->getErrorPathsSummary($e),
         );
     }
 

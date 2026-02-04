@@ -19,6 +19,7 @@ use Duyler\OpenApi\Validator\Exception\RequiredError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 
 use function json_decode;
 
@@ -52,7 +53,7 @@ final class ErrorFormattingTest extends FunctionalTestCase
             $error = $errors[0];
             $this->assertInstanceOf(TypeMismatchError::class, $error);
 
-            $formatted = (new DetailedFormatter())->format($error);
+            $formatted = new DetailedFormatter()->format($error);
             $this->assertStringContainsString('type', $formatted);
             $this->assertStringContainsString('string', $formatted);
         }
@@ -73,7 +74,7 @@ final class ErrorFormattingTest extends FunctionalTestCase
             $error = $errors[0];
             $this->assertInstanceOf(TypeMismatchError::class, $error);
 
-            $formatted = (new JsonFormatter())->format($error);
+            $formatted = new JsonFormatter()->format($error);
             $decoded = json_decode($formatted, true);
 
             $this->assertIsArray($decoded);
@@ -211,7 +212,7 @@ final class ErrorFormattingTest extends FunctionalTestCase
 
         // This should throw InvalidFormatException, which is not caught by our validation
         // So we test for that instead
-        $this->expectException(\Duyler\OpenApi\Validator\Exception\InvalidFormatException::class);
+        $this->expectException(InvalidFormatException::class);
         $this->createValidator()->validateWithContext('not_an_email', $schema, $context);
     }
 

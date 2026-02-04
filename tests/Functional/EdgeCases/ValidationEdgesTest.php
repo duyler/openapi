@@ -7,7 +7,6 @@ namespace Duyler\OpenApi\Test\Functional\EdgeCases;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Test\Functional\FunctionalTestCase;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
-use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
 
 final class ValidationEdgesTest extends FunctionalTestCase

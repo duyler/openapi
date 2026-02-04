@@ -7,8 +7,14 @@ namespace Duyler\OpenApi\Test\Functional\RealWorld;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Test\Functional\FunctionalTestCase;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
-use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+use Duyler\OpenApi\Validator\Exception\EnumError;
+use Duyler\OpenApi\Validator\Exception\MaxItemsError;
+use Duyler\OpenApi\Validator\Exception\MaximumError;
+use Duyler\OpenApi\Validator\Exception\MinLengthError;
+use Duyler\OpenApi\Validator\Exception\MinimumError;
+use Duyler\OpenApi\Validator\Exception\RequiredError;
 
 final class RealWorldScenariosTest extends FunctionalTestCase
 {
@@ -66,7 +72,7 @@ final class RealWorldScenariosTest extends FunctionalTestCase
                 $schema,
                 $context,
             ),
-            'Duyler\OpenApi\Validator\Exception\MinimumError',
+            MinimumError::class,
         );
     }
 
@@ -87,7 +93,7 @@ final class RealWorldScenariosTest extends FunctionalTestCase
                 $schema,
                 $context,
             ),
-            'Duyler\OpenApi\Validator\Exception\MaximumError',
+            MaximumError::class,
         );
     }
 
@@ -136,7 +142,7 @@ final class RealWorldScenariosTest extends FunctionalTestCase
                 $schema,
                 $context,
             ),
-            'Duyler\OpenApi\Validator\Exception\EnumError',
+            EnumError::class,
         );
     }
 
@@ -243,7 +249,7 @@ final class RealWorldScenariosTest extends FunctionalTestCase
                 $schema,
                 $context,
             ),
-            'Duyler\OpenApi\Validator\Exception\MinLengthError',
+            MinLengthError::class,
         );
     }
 
@@ -302,7 +308,7 @@ final class RealWorldScenariosTest extends FunctionalTestCase
                 $schema,
                 $context,
             ),
-            'Duyler\OpenApi\Validator\Exception\RequiredError',
+            RequiredError::class,
         );
     }
 
@@ -319,7 +325,7 @@ final class RealWorldScenariosTest extends FunctionalTestCase
         $context = $this->createContext(new SimpleFormatter());
 
         // Email validation throws InvalidFormatException directly, not caught by validation
-        $this->expectException(\Duyler\OpenApi\Validator\Exception\InvalidFormatException::class);
+        $this->expectException(InvalidFormatException::class);
         $this->createValidator()->validateWithContext(
             ['email' => 'not-an-email'],
             $schema,
@@ -398,7 +404,7 @@ final class RealWorldScenariosTest extends FunctionalTestCase
                 $schema,
                 $context,
             ),
-            'Duyler\OpenApi\Validator\Exception\MaxItemsError',
+            MaxItemsError::class,
         );
     }
 }
