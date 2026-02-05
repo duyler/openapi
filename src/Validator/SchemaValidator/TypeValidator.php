@@ -7,7 +7,6 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
 use function is_array;
@@ -16,12 +15,8 @@ use function is_float;
 use function is_int;
 use function is_string;
 
-final readonly class TypeValidator implements SchemaValidatorInterface
+final readonly class TypeValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -29,7 +24,7 @@ final readonly class TypeValidator implements SchemaValidatorInterface
             return;
         }
 
-        $dataPath = null !== $context ? $context->breadcrumbs->currentPath() : '/';
+        $dataPath = $this->getDataPath($context);
 
         $nullableAsType = $context?->nullableAsType ?? true;
 

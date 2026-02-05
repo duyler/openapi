@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Format;
 
-use Duyler\OpenApi\Validator\Format\Numeric\DoubleValidator;
-use Duyler\OpenApi\Validator\Format\Numeric\FloatValidator;
+use Duyler\OpenApi\Validator\Format\Numeric\FloatDoubleValidator;
 use Duyler\OpenApi\Validator\Format\String\ByteValidator;
 use Duyler\OpenApi\Validator\Format\String\DateTimeValidator;
 use Duyler\OpenApi\Validator\Format\String\DateValidator;
@@ -37,8 +36,8 @@ final readonly class BuiltinFormats
         $registry = $registry->registerFormat('string', 'ipv6', new Ipv6Validator());
         $registry = $registry->registerFormat('string', 'byte', new ByteValidator());
 
-        $registry = $registry->registerFormat('number', 'float', new FloatValidator());
-        $registry = $registry->registerFormat('number', 'double', new DoubleValidator());
+        $registry = $registry->registerFormat('number', 'float', new FloatDoubleValidator('float'));
+        $registry = $registry->registerFormat('number', 'double', new FloatDoubleValidator('double'));
 
         $registry = $registry->registerFormat('string', 'duration', new DurationValidator());
         $registry = $registry->registerFormat('string', 'json-pointer', new JsonPointerValidator());

@@ -4,27 +4,12 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request;
 
-use Duyler\OpenApi\Schema\Model\Parameter;
-use Duyler\OpenApi\Validator\Exception\MissingParameterException;
-use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
+use Override;
 
-use function assert;
 use function count;
 
-final readonly class CookieValidator
+final readonly class CookieValidator extends AbstractParameterValidator
 {
-    public function __construct(
-        private readonly SchemaValidatorInterface $schemaValidator,
-        private readonly ParameterDeserializer $deserializer,
-        private readonly TypeCoercer $coercer,
-        private readonly bool $coercion = false,
-    ) {}
-
-    /**
-     * Parse Cookie header into array
-     *
-     * @return array<string, string>
-     */
     public function parseCookies(string $cookieHeader): array
     {
         if ('' === trim($cookieHeader)) {
@@ -44,34 +29,15 @@ final readonly class CookieValidator
         return $cookies;
     }
 
-    /**
-     * @param array<string, string> $cookies
-     * @param array<int, Parameter> $parameterSchemas
-     */
-    public function validate(array $cookies, array $parameterSchemas): void
+    #[Override]
+    protected function getLocation(): string
     {
-        foreach ($parameterSchemas as $param) {
-            if ('cookie' !== $param->in) {
-                continue;
-            }
+        return 'cookie';
+    }
 
-            $name = $param->name;
-            assert(null !== $name);
-            $value = $cookies[$name] ?? null;
-
-            if (null === $value) {
-                if ($param->required) {
-                    throw new MissingParameterException('cookie', $name);
-                }
-                continue;
-            }
-
-            $value = $this->deserializer->deserialize($value, $param);
-            $value = $this->coercer->coerce($value, $param, $this->coercion, $this->coercion);
-
-            if (null !== $param->schema) {
-                $this->schemaValidator->validate($value, $param->schema);
-            }
-        }
+    #[Override]
+    protected function findParameter(array $data, string $name): mixed
+    {
+        return $data[$name] ?? null;
     }
 }

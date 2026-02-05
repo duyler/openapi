@@ -8,17 +8,12 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MaxLengthError;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
 use function is_string;
 
-final readonly class StringLengthValidator implements SchemaValidatorInterface
+final readonly class StringLengthValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -26,7 +21,7 @@ final readonly class StringLengthValidator implements SchemaValidatorInterface
             return;
         }
 
-        $dataPath = null !== $context ? $context->breadcrumbs->currentPath() : '/';
+        $dataPath = $this->getDataPath($context);
         $length = mb_strlen($data);
 
         if (null !== $schema->minLength && $length < $schema->minLength) {

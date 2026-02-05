@@ -9,6 +9,7 @@ use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
@@ -38,15 +39,12 @@ final class ResponseBodyValidatorTest extends TestCase
         $textParser = new TextBodyParser();
         $xmlParser = new XmlBodyParser();
         $typeCoercer = new ResponseTypeCoercer();
+        $bodyParser = new BodyParser($jsonParser, $formParser, $multipartParser, $textParser, $xmlParser);
 
         $this->validator = new ResponseBodyValidator(
             $schemaValidator,
+            $bodyParser,
             $negotiator,
-            $jsonParser,
-            $formParser,
-            $multipartParser,
-            $textParser,
-            $xmlParser,
             $typeCoercer,
         );
     }

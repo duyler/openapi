@@ -12,6 +12,7 @@ use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Responses;
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
@@ -46,17 +47,14 @@ final class ResponseValidatorIntegrationTest extends TestCase
         $textParser = new TextBodyParser();
         $xmlParser = new XmlBodyParser();
         $typeCoercer = new ResponseTypeCoercer();
+        $bodyParser = new BodyParser($jsonParser, $formParser, $multipartParser, $textParser, $xmlParser);
 
         $statusCodeValidator = new StatusCodeValidator();
         $headersValidator = new ResponseHeadersValidator($schemaValidator);
         $bodyValidator = new ResponseBodyValidator(
             $schemaValidator,
+            $bodyParser,
             $negotiator,
-            $jsonParser,
-            $formParser,
-            $multipartParser,
-            $textParser,
-            $xmlParser,
             $typeCoercer,
         );
 

@@ -5,48 +5,25 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
-use Duyler\OpenApi\Validator\Exception\MissingParameterException;
-use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
+use Override;
 
-use function assert;
-
-final readonly class QueryParametersValidator
+final readonly class QueryParametersValidator extends AbstractParameterValidator
 {
-    public function __construct(
-        private readonly SchemaValidatorInterface $schemaValidator,
-        private readonly ParameterDeserializer $deserializer,
-        private readonly TypeCoercer $coercer,
-        private readonly bool $coercion = false,
-    ) {}
-
-    /**
-     * @param array<array-key, mixed> $queryParams
-     * @param array<int, Parameter> $parameterSchemas
-     */
-    public function validate(array $queryParams, array $parameterSchemas): void
+    #[Override]
+    protected function getLocation(): string
     {
-        foreach ($parameterSchemas as $param) {
-            if ('query' !== $param->in) {
-                continue;
-            }
+        return 'query';
+    }
 
-            $name = $param->name;
-            assert(null !== $name);
-            $value = $queryParams[$name] ?? null;
+    #[Override]
+    protected function findParameter(array $data, string $name): mixed
+    {
+        return $data[$name] ?? null;
+    }
 
-            if (null === $value) {
-                if ($param->required && false === $param->allowEmptyValue) {
-                    throw new MissingParameterException('query', $name);
-                }
-                continue;
-            }
-
-            $value = $this->deserializer->deserialize($value, $param);
-            $value = $this->coercer->coerce($value, $param, $this->coercion, $this->coercion);
-
-            if (null !== $param->schema) {
-                $this->schemaValidator->validate($value, $param->schema);
-            }
-        }
+    #[Override]
+    protected function isRequired(Parameter $param, mixed $value): bool
+    {
+        return $param->required && false === $param->allowEmptyValue;
     }
 }

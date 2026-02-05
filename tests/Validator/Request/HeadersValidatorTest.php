@@ -12,6 +12,7 @@ use Duyler\OpenApi\Validator\Exception\MaxLengthError;
 use Duyler\OpenApi\Validator\Exception\PatternMismatchError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Request\HeadersValidator;
+use Duyler\OpenApi\Validator\Request\ParameterDeserializer;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -27,9 +28,10 @@ final class HeadersValidatorTest extends TestCase
     {
         $pool = new ValidatorPool();
         $schemaValidator = new SchemaValidator($pool);
+        $deserializer = new ParameterDeserializer();
         $coercer = new TypeCoercer();
 
-        $this->validator = new HeadersValidator($schemaValidator, $coercer);
+        $this->validator = new HeadersValidator($schemaValidator, $deserializer, $coercer);
     }
 
     #[Test]

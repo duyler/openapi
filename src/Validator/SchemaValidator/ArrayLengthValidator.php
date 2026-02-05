@@ -9,7 +9,6 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\DuplicateItemsError;
 use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MinItemsError;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
 use function count;
@@ -17,12 +16,8 @@ use function is_array;
 
 use const SORT_REGULAR;
 
-final readonly class ArrayLengthValidator implements SchemaValidatorInterface
+final readonly class ArrayLengthValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -30,7 +25,7 @@ final readonly class ArrayLengthValidator implements SchemaValidatorInterface
             return;
         }
 
-        $dataPath = null !== $context ? $context->breadcrumbs->currentPath() : '/';
+        $dataPath = $this->getDataPath($context);
         $count = count($data);
 
         if (null !== $schema->minItems && $count < $schema->minItems) {

@@ -11,17 +11,12 @@ use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\OneOfError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
 use function sprintf;
 
-final readonly class OneOfValidator implements SchemaValidatorInterface
+final readonly class OneOfValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -70,7 +65,7 @@ final readonly class OneOfValidator implements SchemaValidatorInterface
         }
 
         if ($validCount > 1) {
-            $dataPath = null !== $context ? $context->breadcrumbs->currentPath() : '/';
+            $dataPath = $this->getDataPath($context);
             throw new OneOfError(
                 dataPath: $dataPath,
                 schemaPath: '/oneOf',

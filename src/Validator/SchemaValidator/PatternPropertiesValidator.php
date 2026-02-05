@@ -7,19 +7,14 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
 use function assert;
 use function is_array;
 use function is_string;
 
-final readonly class PatternPropertiesValidator implements SchemaValidatorInterface
+final readonly class PatternPropertiesValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

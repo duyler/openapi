@@ -5,64 +5,34 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
-use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
+use Override;
 
-use function assert;
-use function is_array;
-use function is_string;
-
-final readonly class HeadersValidator
+final readonly class HeadersValidator extends AbstractParameterValidator
 {
     public function __construct(
-        private readonly SchemaValidatorInterface $schemaValidator,
-        private readonly TypeCoercer $coercer,
-        private readonly bool $coercion = false,
+        protected readonly SchemaValidatorInterface $schemaValidator,
+        protected readonly ParameterDeserializer $deserializer,
+        protected readonly TypeCoercer $coercer,
+        protected readonly bool $coercion = false,
+        private readonly HeaderFinder $headerFinder = new HeaderFinder(),
     ) {}
 
-    /**
-     * @param array<array-key, string|array<array-key, string>> $headers
-     * @param array<int, Parameter> $headerSchemas
-     */
-    public function validate(array $headers, array $headerSchemas): void
+    #[Override]
+    protected function getLocation(): string
     {
-        foreach ($headerSchemas as $param) {
-            if ('header' !== $param->in) {
-                continue;
-            }
-
-            $name = $param->name;
-            assert(null !== $name);
-            $value = $this->findHeader($headers, $name);
-
-            if (null === $value && $param->required) {
-                throw new MissingParameterException('header', $name);
-            }
-
-            if (null !== $value && null !== $param->schema) {
-                $value = $this->coercer->coerce($value, $param, $this->coercion, $this->coercion);
-                $this->schemaValidator->validate($value, $param->schema);
-            }
-        }
+        return 'header';
     }
 
-    /**
-     * @param array<array-key, string|array<array-key, string>> $headers
-     */
-    private function findHeader(array $headers, string $name): ?string
+    #[Override]
+    protected function findParameter(array $data, string $name): mixed
     {
-        foreach ($headers as $key => $value) {
-            if (false === is_string($key)) {
-                continue;
-            }
-            if (strtolower($key) === strtolower($name)) {
-                if (is_array($value)) {
-                    return implode(', ', $value);
-                }
-                return $value;
-            }
-        }
+        return $this->headerFinder->find($data, $name);
+    }
 
-        return null;
+    #[Override]
+    protected function isRequired(Parameter $param, mixed $value): bool
+    {
+        return $param->required;
     }
 }

@@ -40,4 +40,14 @@ interface RefResolverInterface
      * @throws Exception\UnresolvableRefException
      */
     public function resolveResponse(string $ref, OpenApiDocument $document): Response;
+
+    /**
+     * Check if schema contains discriminator (including nested references)
+     *
+     * @param Schema $schema Schema to check
+     * @param OpenApiDocument $document Root document for resolving refs
+     * @param array<int, bool> $visited Internal tracking to prevent infinite recursion
+     * @return bool True if discriminator found, false otherwise
+     */
+    public function schemaHasDiscriminator(Schema $schema, OpenApiDocument $document, array &$visited = []): bool;
 }
