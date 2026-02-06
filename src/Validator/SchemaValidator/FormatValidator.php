@@ -8,16 +8,18 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Override;
 
 use function is_array;
 
-final readonly class FormatValidator
+final readonly class FormatValidator implements SchemaValidatorInterface
 {
     public function __construct(
         private readonly ValidatorPool $pool,
         private readonly FormatRegistry $formatRegistry,
     ) {}
 
+    #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
         if (null === $schema->format || null === $schema->type) {

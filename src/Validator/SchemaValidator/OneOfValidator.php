@@ -6,16 +6,11 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
-use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
-use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\OneOfError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
-use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Override;
 
-use function sprintf;
-
-final readonly class OneOfValidator extends AbstractSchemaValidator
+final readonly class OneOfValidator extends AbstractCompositionalValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -33,38 +28,16 @@ final readonly class OneOfValidator extends AbstractSchemaValidator
             }
         }
 
-        $validCount = 0;
-        $errors = [];
-        $abstractErrors = [];
+        $result = $this->validateSchemas($schema->oneOf, $data, $context, 'oneOf');
 
-        foreach ($schema->oneOf as $subSchema) {
-            try {
-                $allowNull = $subSchema->nullable && $nullableAsType;
-                $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
-                $validator = new SchemaValidator($this->pool);
-                $validator->validate($normalizedData, $subSchema, $context);
-                ++$validCount;
-            } catch (InvalidDataTypeException $e) {
-                $errors[] = new ValidationException(
-                    sprintf('Invalid data type for oneOf schema: %s', $e->getMessage()),
-                    previous: $e,
-                );
-            } catch (ValidationException $e) {
-                $errors[] = $e;
-                $abstractErrors = [...$abstractErrors, ...$e->getErrors()];
-            } catch (AbstractValidationError $e) {
-                $abstractErrors[] = $e;
-            }
-        }
-
-        if (0 === $validCount) {
+        if (0 === $result->validCount) {
             throw new ValidationException(
                 'Exactly one of the schemas must match, but none did',
-                errors: $abstractErrors,
+                errors: $result->abstractErrors,
             );
         }
 
-        if ($validCount > 1) {
+        if ($result->validCount > 1) {
             $dataPath = $this->getDataPath($context);
             throw new OneOfError(
                 dataPath: $dataPath,
