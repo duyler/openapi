@@ -8,7 +8,7 @@ infection:
 
 .PHONY: psalm
 psalm:
-	docker-compose run --rm php vendor/bin/psalm  --no-cache
+	docker-compose run --rm php vendor/bin/psalm  --no-cache --threads=1
 
 .PHONY: cs-fix
 cs-fix:

@@ -6,16 +6,12 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
-use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
-use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
-use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Override;
 
 use function count;
-use function sprintf;
 
-final readonly class AllOfValidator extends AbstractSchemaValidator
+final readonly class AllOfValidator extends AbstractCompositionalValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -24,33 +20,12 @@ final readonly class AllOfValidator extends AbstractSchemaValidator
             return;
         }
 
-        $nullableAsType = $context?->nullableAsType ?? true;
-        $errors = [];
-        $abstractErrors = [];
+        $result = $this->validateSchemas($schema->allOf, $data, $context, 'allOf');
 
-        foreach ($schema->allOf as $subSchema) {
-            try {
-                $allowNull = $subSchema->nullable && $nullableAsType;
-                $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
-                $validator = new SchemaValidator($this->pool);
-                $validator->validate($normalizedData, $subSchema, $context);
-            } catch (InvalidDataTypeException $e) {
-                $errors[] = new ValidationException(
-                    sprintf('Invalid data type for allOf schema: %s', $e->getMessage()),
-                    previous: $e,
-                );
-            } catch (ValidationException $e) {
-                $errors[] = $e;
-                $abstractErrors = [...$abstractErrors, ...$e->getErrors()];
-            } catch (AbstractValidationError $e) {
-                $abstractErrors[] = $e;
-            }
-        }
-
-        if ([] !== $errors || [] !== $abstractErrors) {
+        if ([] !== $result->errors || [] !== $result->abstractErrors) {
             throw new ValidationException(
-                'All of the schemas must match, but ' . count($errors) . ' failed',
-                errors: $abstractErrors,
+                'All of the schemas must match, but ' . count($result->errors) . ' failed',
+                errors: $result->abstractErrors,
             );
         }
     }

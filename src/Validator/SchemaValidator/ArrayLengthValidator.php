@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\DuplicateItemsError;
 use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MinItemsError;
+use Duyler\OpenApi\Validator\SchemaValidator\Trait\LengthValidationTrait;
 use Override;
 
 use function count;
@@ -18,6 +19,8 @@ use const SORT_REGULAR;
 
 final readonly class ArrayLengthValidator extends AbstractSchemaValidator
 {
+    use LengthValidationTrait;
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -28,23 +31,13 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator
         $dataPath = $this->getDataPath($context);
         $count = count($data);
 
-        if (null !== $schema->minItems && $count < $schema->minItems) {
-            throw new MinItemsError(
-                minItems: $schema->minItems,
-                actualCount: $count,
-                dataPath: $dataPath,
-                schemaPath: '/minItems',
-            );
-        }
-
-        if (null !== $schema->maxItems && $count > $schema->maxItems) {
-            throw new MaxItemsError(
-                maxItems: $schema->maxItems,
-                actualCount: $count,
-                dataPath: $dataPath,
-                schemaPath: '/maxItems',
-            );
-        }
+        $this->validateLength(
+            actual: $count,
+            min: $schema->minItems,
+            max: $schema->maxItems,
+            minErrorFactory: static fn(int $min, int $actual) => new MinItemsError($min, $actual, $dataPath, '/minItems'),
+            maxErrorFactory: static fn(int $max, int $actual) => new MaxItemsError($max, $actual, $dataPath, '/maxItems'),
+        );
 
         if (true === $schema->uniqueItems) {
             $unique = array_unique($data, SORT_REGULAR);
