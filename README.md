@@ -27,10 +27,6 @@ OpenAPI 3.1 validator for PHP 8.4+
 - **Schema Registry** - Manage multiple schema versions
 - **Validator Compilation** - Generate optimized validator code
 
-## Documentation
-
-- [Validation Guide](docs/validation-guide.md) - Learn about validation, nullable support, and best practices
-
 ## Installation
 
 ```bash
@@ -371,6 +367,22 @@ $versions = $registry->getVersions('api');
 // ['1.0.0', '2.0.0']
 ```
 
+### Validator Pool
+
+The validator pool uses WeakMap to reuse validator instances:
+
+```php
+use Duyler\OpenApi\Validator\ValidatorPool;
+
+$pool = new ValidatorPool();
+
+// Validators are automatically reused
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withValidatorPool($pool)
+    ->build();
+```
+
 ### Validator Compilation
 
 Generate optimized validator code:
@@ -602,59 +614,6 @@ use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
 use Duyler\OpenApi\Validator\Error\Formatter\JsonFormatter;
 ```
 
-## Performance
-
-### Caching
-
-Enable PSR-6 caching to avoid reparsing OpenAPI specifications:
-
-```php
-use Symfony\Component\Cache\Adapter\FilesystemAdapter;
-use Duyler\OpenApi\Cache\SchemaCache;
-
-$cachePool = new FilesystemAdapter();
-$schemaCache = new SchemaCache($cachePool, 3600); // 1 hour TTL
-
-$validator = OpenApiValidatorBuilder::create()
-    ->fromYamlFile('openapi.yaml')
-    ->withCache($schemaCache)
-    ->build();
-```
-
-### Validator Pool
-
-The validator pool uses WeakMap to reuse validator instances:
-
-```php
-use Duyler\OpenApi\Validator\ValidatorPool;
-
-$pool = new ValidatorPool();
-
-// Validators are automatically reused
-$validator = OpenApiValidatorBuilder::create()
-    ->fromYamlFile('openapi.yaml')
-    ->withValidatorPool($pool)
-    ->build();
-```
-
-### Compilation
-
-For maximum performance, compile validators to generated code:
-
-```php
-use Duyler\OpenApi\Compiler\ValidatorCompiler;
-use Duyler\OpenApi\Compiler\CompilationCache;
-
-$compiler = new ValidatorCompiler();
-$cache = new CompilationCache($cachePool);
-
-$code = $compiler->compileWithCache(
-    $schema,
-    'UserValidator',
-    $cache
-);
-```
-
 ## Built-in Format Validators
 
 The following format validators are included:
@@ -703,80 +662,6 @@ $validator = OpenApiValidatorBuilder::create()
     ->fromYamlFile('openapi.yaml')
     ->withFormat('string', 'email', $customEmailValidator)
     ->build();
-```
-
-## Best Practices
-
-### 1. Use Caching in Production
-
-Always enable caching in production environments:
-
-```php
-$validator = OpenApiValidatorBuilder::create()
-    ->fromYamlFile('openapi.yaml')
-    ->withCache($schemaCache)
-    ->build();
-```
-
-### 2. Handle Exceptions Gracefully
-
-Provide meaningful error messages to API consumers:
-
-```php
-try {
-    $operation = $validator->validateRequest($request);
-} catch (ValidationException $e) {
-    $errors = array_map(
-        fn($error) => [
-            'field' => $error->dataPath(),
-            'message' => $error->getMessage(),
-        ],
-        $e->getErrors()
-    );
-
-    return new JsonResponse(
-        ['errors' => $errors],
-        422
-    );
-}
-```
-
-### 3. Enable Type Coercion for Query Parameters
-
-Query parameters are always strings; enable coercion for automatic type conversion:
-
-```php
-$validator = OpenApiValidatorBuilder::create()
-    ->fromYamlFile('openapi.yaml')
-    ->enableCoercion()
-    ->build();
-```
-
-### 4. Use Events for Monitoring
-
-Subscribe to validation events for monitoring and debugging:
-
-```php
-$dispatcher->listen(ValidationFinishedEvent::class, function ($event) {
-    if (!$event->success) {
-        // Log failed validations
-        error_log(sprintf(
-            "Validation failed: %s %s",
-            $event->method,
-            $event->path
-        ));
-    }
-});
-```
-
-### 5. Validate Against Specific Schemas
-
-For complex validations, validate against specific schema references:
-
-```php
-// Validate data against a specific schema
-$userData = ['name' => 'John', 'email' => 'john@example.com'];
-$validator->validateSchema($userData, '#/components/schemas/User');
 ```
 
 ## Migration from league/openapi-psr7-validator
