@@ -481,8 +481,6 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
-For detailed information about nullable validation, including best practices and advanced usage, see the [Validation Guide](docs/validation-guide.md).
-
 ### String Validation
 - `minLength` / `maxLength` - String length constraints
 - `pattern` - Regular expression pattern
