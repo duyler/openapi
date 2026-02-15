@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request;
 
-final readonly class ContentTypeNegotiator
+readonly class ContentTypeNegotiator
 {
     public function getMediaType(string $contentType): string
     {

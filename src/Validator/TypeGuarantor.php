@@ -10,7 +10,7 @@ use function is_float;
 use function is_int;
 use function is_string;
 
-final readonly class TypeGuarantor
+readonly class TypeGuarantor
 {
     public static function ensureValidType(mixed $value, bool $nullableAsType = true): array|int|string|float|bool|null
     {

@@ -16,7 +16,7 @@ use function array_key_exists;
 use function is_array;
 use function is_object;
 
-class RefResolver implements RefResolverInterface
+final class RefResolver implements RefResolverInterface
 {
     private WeakMap $cache;
 
@@ -28,7 +28,9 @@ class RefResolver implements RefResolverInterface
     #[Override]
     public function resolve(string $ref, OpenApiDocument $document): Schema
     {
-        $result = $this->resolveRef($ref, $document);
+        /** @var array<string, bool> $visited */
+        $visited = [];
+        $result = $this->resolveRef($ref, $document, $visited);
 
         if (false === $result instanceof Schema) {
             throw new UnresolvableRefException(
@@ -43,7 +45,9 @@ class RefResolver implements RefResolverInterface
     #[Override]
     public function resolveParameter(string $ref, OpenApiDocument $document): Parameter
     {
-        $result = $this->resolveRef($ref, $document);
+        /** @var array<string, bool> $visited */
+        $visited = [];
+        $result = $this->resolveRef($ref, $document, $visited);
 
         if (false === $result instanceof Parameter) {
             throw new UnresolvableRefException(
@@ -58,7 +62,9 @@ class RefResolver implements RefResolverInterface
     #[Override]
     public function resolveResponse(string $ref, OpenApiDocument $document): Response
     {
-        $result = $this->resolveRef($ref, $document);
+        /** @var array<string, bool> $visited */
+        $visited = [];
+        $result = $this->resolveRef($ref, $document, $visited);
 
         if (false === $result instanceof Response) {
             throw new UnresolvableRefException(
@@ -125,8 +131,20 @@ class RefResolver implements RefResolverInterface
         return false;
     }
 
-    private function resolveRef(string $ref, OpenApiDocument $document): Schema|Parameter|Response
+    /**
+     * @param array<string, bool> $visited
+     */
+    private function resolveRef(string $ref, OpenApiDocument $document, array &$visited): Schema|Parameter|Response
     {
+        if (isset($visited[$ref])) {
+            throw new UnresolvableRefException(
+                $ref,
+                'Circular reference detected: ' . $this->formatCircularPath($visited, $ref),
+            );
+        }
+
+        $visited[$ref] = true;
+
         if (isset($this->cache[$document])) {
             /** @var array<string, Schema|Parameter|Response> */
             $cacheEntry = $this->cache[$document];
@@ -146,6 +164,10 @@ class RefResolver implements RefResolverInterface
             $result = $this->navigate($document, $parts);
         } catch (UnresolvableRefException $e) {
             throw new UnresolvableRefException($ref, $e->reason, previous: $e);
+        }
+
+        if (null !== $result->ref) {
+            return $this->resolveRef($result->ref, $document, $visited);
         }
 
         /** @var array<string, Schema|Parameter|Response> */
@@ -216,5 +238,15 @@ class RefResolver implements RefResolverInterface
         }
 
         return $value;
+    }
+
+    /**
+     * @param array<string, bool> $visited
+     */
+    private function formatCircularPath(array $visited, string $circularRef): string
+    {
+        $path = array_keys($visited);
+        $path[] = $circularRef;
+        return implode(' -> ', $path);
     }
 }

@@ -4,16 +4,11 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Error;
 
+use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
-/**
- * Immutable context object passed through validation chain
- *
- * Contains breadcrumb manager for tracking path, validator pool
- * for caching validator instances, and error formatter for displaying errors.
- */
 readonly class ValidationContext
 {
     public function __construct(
@@ -21,15 +16,20 @@ readonly class ValidationContext
         public readonly ValidatorPool $pool,
         public readonly ErrorFormatterInterface $errorFormatter = new SimpleFormatter(),
         public readonly bool $nullableAsType = true,
+        public readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
     ) {}
 
-    public static function create(ValidatorPool $pool, bool $nullableAsType = true): self
-    {
+    public static function create(
+        ValidatorPool $pool,
+        bool $nullableAsType = true,
+        EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
+    ): self {
         return new self(
             breadcrumbs: BreadcrumbManager::create(),
             pool: $pool,
             errorFormatter: new SimpleFormatter(),
             nullableAsType: $nullableAsType,
+            emptyArrayStrategy: $emptyArrayStrategy,
         );
     }
 
@@ -40,6 +40,7 @@ readonly class ValidationContext
             pool: $this->pool,
             errorFormatter: $this->errorFormatter,
             nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
         );
     }
 
@@ -50,6 +51,7 @@ readonly class ValidationContext
             pool: $this->pool,
             errorFormatter: $this->errorFormatter,
             nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
         );
     }
 
@@ -60,6 +62,7 @@ readonly class ValidationContext
             pool: $this->pool,
             errorFormatter: $this->errorFormatter,
             nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
         );
     }
 }

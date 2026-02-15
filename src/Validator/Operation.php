@@ -13,7 +13,7 @@ use function str_contains;
 use function count;
 use function is_string;
 
-final readonly class Operation implements Stringable
+readonly class Operation implements Stringable
 {
     public function __construct(
         public readonly string $path,

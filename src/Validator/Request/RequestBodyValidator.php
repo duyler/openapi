@@ -14,7 +14,7 @@ use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 
-final readonly class RequestBodyValidator implements RequestBodyValidatorInterface
+readonly class RequestBodyValidator implements RequestBodyValidatorInterface
 {
     public function __construct(
         private readonly SchemaValidatorInterface $schemaValidator,

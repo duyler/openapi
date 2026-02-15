@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-final readonly class Discriminator implements JsonSerializable
+readonly class Discriminator implements JsonSerializable
 {
     /**
      * @param array<string, string> $mapping

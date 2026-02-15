@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
 use function count;
 
-final readonly class MultipartBodyParser
+readonly class MultipartBodyParser
 {
     /**
      * @return list<array<array-key, mixed>>

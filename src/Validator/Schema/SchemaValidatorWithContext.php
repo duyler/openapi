@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -39,13 +40,14 @@ use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedPropertiesValidator;
 use function count;
 use function is_array;
 
-final readonly class SchemaValidatorWithContext
+readonly class SchemaValidatorWithContext
 {
     public function __construct(
         private readonly ValidatorPool $pool,
         private readonly RefResolverInterface $refResolver,
         private readonly OpenApiDocument $document,
         private readonly bool $nullableAsType = true,
+        private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
     ) {}
 
     /**
@@ -53,7 +55,7 @@ final readonly class SchemaValidatorWithContext
      */
     public function validate(array|int|string|float|bool|null $data, Schema $schema, bool $useDiscriminator = true): void
     {
-        $context = ValidationContext::create($this->pool, $this->nullableAsType);
+        $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy);
 
         if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
             $oneOfValidator = new OneOfValidatorWithContext($this->pool, $this->refResolver, $this->document);

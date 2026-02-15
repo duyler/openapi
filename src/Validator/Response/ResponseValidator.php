@@ -9,7 +9,7 @@ use Psr\Http\Message\ResponseInterface;
 
 use function is_array;
 
-final readonly class ResponseValidator
+readonly class ResponseValidator
 {
     public function __construct(
         private readonly StatusCodeValidator $statusCodeValidator,

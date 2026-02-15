@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Response;
 
 use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
@@ -22,7 +23,7 @@ use Duyler\OpenApi\Schema\Model\Response;
 use function is_array;
 use function assert;
 
-final readonly class ResponseValidatorWithContext
+readonly class ResponseValidatorWithContext
 {
     public function __construct(
         private readonly ValidatorPool $pool,
@@ -30,6 +31,7 @@ final readonly class ResponseValidatorWithContext
         private readonly bool $coercion = false,
         private readonly StatusCodeValidator $statusCodeValidator = new StatusCodeValidator(),
         private readonly bool $nullableAsType = true,
+        private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         private readonly ?RefResolverInterface $refResolver = null,
     ) {}
 
@@ -73,7 +75,7 @@ final readonly class ResponseValidatorWithContext
             xmlParser: new XmlBodyParser(),
         );
 
-        $bodyValidator = new ResponseBodyValidatorWithContext($this->pool, $this->document, $bodyParser, coercion: $this->coercion, nullableAsType: $this->nullableAsType);
+        $bodyValidator = new ResponseBodyValidatorWithContext($this->pool, $this->document, $bodyParser, coercion: $this->coercion, nullableAsType: $this->nullableAsType, emptyArrayStrategy: $this->emptyArrayStrategy);
         $bodyValidator->validate($body, $contentType, $responseDefinition->content ?? null);
     }
 

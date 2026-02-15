@@ -1,0 +1,111 @@
+Note: Pass `--log-verbosity=all` to log information about killed and errored mutants.
+Note: Pass `--debug` to log test-framework output.
+
+Escaped mutants:
+================
+
+1) /app/src/Validator/Request/BodyParser/XmlBodyParser.php:22    [M] FunctionCallRemoval [ID] 4496607e11f60767e5da8d170dc17d8d
+
+@@ @@
+             return '';
+         }
+
+-        libxml_set_external_entity_loader(null);
++
+         libxml_use_internal_errors(true);
+
+         try {
+
+
+2) /app/src/Validator/Request/BodyParser/XmlBodyParser.php:23    [M] FunctionCallRemoval [ID] 9a161dc7643e664ae4cc051c8d80fd3d
+
+@@ @@
+         }
+
+         libxml_set_external_entity_loader(null);
+-        libxml_use_internal_errors(true);
++
+
+         try {
+             $xml = simplexml_load_string($body);
+
+
+3) /app/src/Validator/Request/BodyParser/XmlBodyParser.php:25    [M] UnwrapFinally [ID] 1b6b30c40d097a34decbe297c4f22e59
+
+@@ @@
+
+         libxml_set_external_entity_loader(null);
+         libxml_use_internal_errors(true);
+-
+         try {
+             $xml = simplexml_load_string($body);
+-
+             if (false === $xml) {
+                 return $body;
+             }
+-
+             $encoded = json_encode($xml);
+             if (false === $encoded) {
+                 return $body;
+             }
+-
+             $decoded = json_decode($encoded, true);
+             if (false === is_array($decoded)) {
+                 return $body;
+             }
+-
+             return $decoded;
+         } catch (ValueError) {
+             return $body;
+-        } finally {
+-            libxml_clear_errors();
+         }
++        libxml_clear_errors();
+     }
+ }
+
+
+4) /app/src/Validator/Request/BodyParser/XmlBodyParser.php:29    [M] ReturnRemoval [ID] 040d60e037e033a9b595f9ed9c7efbf0
+
+@@ @@
+             $xml = simplexml_load_string($body);
+
+             if (false === $xml) {
+-                return $body;
++
+             }
+
+             $encoded = json_encode($xml);
+
+
+5) /app/src/Validator/Request/BodyParser/XmlBodyParser.php:45    [M] Finally_ [ID] d4933893a94af46f25a423d898882a1c
+
+@@ @@
+             return $decoded;
+         } catch (ValueError) {
+             return $body;
+-        } finally {
+-            libxml_clear_errors();
+         }
+     }
+ }
+
+
+6) /app/src/Validator/Request/BodyParser/XmlBodyParser.php:46    [M] FunctionCallRemoval [ID] 2ee18910bd1cb84b30c81cc02c9306ce
+
+@@ @@
+         } catch (ValueError) {
+             return $body;
+         } finally {
+-            libxml_clear_errors();
++
+         }
+     }
+ }
+
+
+Timed Out mutants:
+==================
+
+Skipped mutants:
+================

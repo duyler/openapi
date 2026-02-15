@@ -1,0 +1,803 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Psalm Baseline Documentation
+
+ClassMustBeFinal suppressions for readonly classes:
+  PHP 8.2+ readonly classes are implicitly final and cannot be extended.
+  Psalm's ClassMustBeFinal rule does not account for this language feature.
+  These suppressions are necessary until Psalm is updated.
+
+MixedAssignment suppressions:
+  - Schema.php ($default, $const, $example): These represent JSON Schema values
+    which can be any valid JSON type including nested objects. Using `mixed` is
+    correct; union types would be incomplete.
+  - OpenApiBuilder.php: Parser iterates over decoded JSON/YAML which is mixed
+    by nature before type narrowing via assertions.
+  - Coercion/Validator classes: Dynamic type coercion requires mixed handling.
+-->
+<files psalm-version="6.14.3@d0b040a91f280f071c1abcb1b77ce3822058725a">
+  <file src="src/Cache/SchemaCache.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[SchemaCache]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Cache/TypedCacheDecorator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[TypedCacheDecorator]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$value]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Cache/ValidatorCache.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ValidatorCache]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Compiler/CompilationCache.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[CompilationCache]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Compiler/ValidatorCompiler.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ValidatorCompiler]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$propertyName]]></code>
+      <code><![CDATA[$t]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Event/ArrayDispatcher.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ArrayDispatcher]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Event/SchemaLoadedEvent.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[SchemaLoadedEvent]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Event/ValidationErrorEvent.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ValidationErrorEvent]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Event/ValidationFinishedEvent.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ValidationFinishedEvent]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Event/ValidationStartedEvent.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ValidationStartedEvent]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Registry/SchemaRegistry.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[SchemaRegistry]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Callbacks.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Callbacks]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Components.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Components]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Contact.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Contact]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Content.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Content]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Discriminator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Discriminator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Example.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Example]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$data['value']]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Schema/Model/ExternalDocs.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ExternalDocs]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Header.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Header]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$data['example']]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Schema/Model/Headers.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Headers]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/InfoObject.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[InfoObject]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/License.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[License]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Link.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Link]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Links.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Links]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/MediaType.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[MediaType]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Operation.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Operation]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Parameter.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Parameter]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Parameters.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Parameters]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/PathItem.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[PathItem]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Paths.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Paths]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/RequestBody.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[RequestBody]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Response.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Response]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Responses.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Responses]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Schema.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Schema]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$data['const']]]></code>
+      <code><![CDATA[$data['default']]]></code>
+      <code><![CDATA[$data['example']]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Schema/Model/SecurityRequirement.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[SecurityRequirement]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/SecurityScheme.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[SecurityScheme]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Server.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Server]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Servers.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Servers]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Tag.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Tag]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Tags.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Tags]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Model/Webhooks.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Webhooks]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/OpenApiDocument.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[OpenApiDocument]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Parser/JsonParser.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[JsonParser]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Schema/Parser/OpenApiBuilder.php">
+    <MixedAssignment>
+      <code><![CDATA[$callback]]></code>
+      <code><![CDATA[$callback]]></code>
+      <code><![CDATA[$content]]></code>
+      <code><![CDATA[$example]]></code>
+      <code><![CDATA[$header]]></code>
+      <code><![CDATA[$header]]></code>
+      <code><![CDATA[$link]]></code>
+      <code><![CDATA[$link]]></code>
+      <code><![CDATA[$parameter]]></code>
+      <code><![CDATA[$pathItem]]></code>
+      <code><![CDATA[$pathItem]]></code>
+      <code><![CDATA[$pathItem]]></code>
+      <code><![CDATA[$requestBody]]></code>
+      <code><![CDATA[$response]]></code>
+      <code><![CDATA[$response]]></code>
+      <code><![CDATA[$schema]]></code>
+      <code><![CDATA[$schema]]></code>
+      <code><![CDATA[$scheme]]></code>
+      <code><![CDATA[$webhook]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Schema/Parser/TypeHelper.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[TypeHelper]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$item]]></code>
+      <code><![CDATA[$val]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Schema/Parser/YamlParser.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[YamlParser]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Error/Breadcrumb.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Breadcrumb]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Error/BreadcrumbManager.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[BreadcrumbManager]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Error/Formatter/DetailedFormatter.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[DetailedFormatter]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$value]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/Error/Formatter/JsonFormatter.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[JsonFormatter]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Error/Formatter/SimpleFormatter.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[SimpleFormatter]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Error/ValidationContext.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ValidationContext]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Format/BuiltinFormats.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[BuiltinFormats]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Format/FormatRegistry.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[FormatRegistry]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Format/Numeric/FloatDoubleValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[FloatDoubleValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Format/String/ByteValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ByteValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Format/String/DateTimeValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[DateTimeValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Format/String/DateValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[DateValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Format/String/DurationValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[DurationValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Format/String/EmailValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[EmailValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Format/String/HostnameValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[HostnameValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Format/String/Ipv4Validator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Ipv4Validator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Format/String/Ipv6Validator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Ipv6Validator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Format/String/JsonPointerValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[JsonPointerValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Format/String/RelativeJsonPointerValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[RelativeJsonPointerValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Format/String/TimeValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[TimeValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Format/String/UriValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[UriValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Format/String/UuidValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[UuidValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/OpenApiValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[OpenApiValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Operation.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[Operation]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/PathFinder.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[PathFinder]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Registry/DefaultValidatorRegistry.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[DefaultValidatorRegistry]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Request/AbstractParameterValidator.php">
+    <MixedAssignment>
+      <code><![CDATA[$value]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/Request/BodyParser/BodyParser.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[BodyParser]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Request/BodyParser/FormBodyParser.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[FormBodyParser]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Request/BodyParser/JsonBodyParser.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[JsonBodyParser]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$decoded]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/Request/BodyParser/MultipartBodyParser.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[MultipartBodyParser]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Request/BodyParser/TextBodyParser.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[TextBodyParser]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Request/BodyParser/XmlBodyParser.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[XmlBodyParser]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Request/ContentTypeNegotiator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ContentTypeNegotiator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Request/CookieValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[CookieValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Request/HeaderFinder.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[HeaderFinder]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$value]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/Request/HeadersValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[HeadersValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Request/ParameterDeserializer.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ParameterDeserializer]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Request/PathParametersValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[PathParametersValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Request/PathParser.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[PathParser]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Request/QueryParametersValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[QueryParametersValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Request/QueryParser.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[QueryParser]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Request/RequestBodyCoercer.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[RequestBodyCoercer]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$coerced]]></code>
+      <code><![CDATA[$coerced[$name]]]></code>
+      <code><![CDATA[$coerced[]]]></code>
+      <code><![CDATA[$item]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/Request/RequestBodyValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[RequestBodyValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Request/RequestBodyValidatorWithContext.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[RequestBodyValidatorWithContext]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$parsedBody]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/Request/RequestValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[RequestValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Request/TypeCoercer.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[TypeCoercer]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Response/ResponseBodyValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ResponseBodyValidator]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$parsedBody]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/Response/ResponseBodyValidatorWithContext.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ResponseBodyValidatorWithContext]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$parsedBody]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/Response/ResponseHeadersValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ResponseHeadersValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Response/ResponseTypeCoercer.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ResponseTypeCoercer]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$coerced]]></code>
+      <code><![CDATA[$coerced[$name]]]></code>
+      <code><![CDATA[$coerced[]]]></code>
+      <code><![CDATA[$item]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/Response/ResponseValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ResponseValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Response/ResponseValidatorWithContext.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ResponseValidatorWithContext]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Response/StatusCodeValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[StatusCodeValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Schema/DiscriminatorValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[DiscriminatorValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Schema/ItemsValidatorWithContext.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ItemsValidatorWithContext]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$item]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/Schema/OneOfValidatorWithContext.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[OneOfValidatorWithContext]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Schema/PropertiesValidatorWithContext.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[PropertiesValidatorWithContext]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Schema/RefResolver.php">
+    <MixedAssignment>
+      <code><![CDATA[$value]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/Schema/SchemaValidatorWithContext.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[SchemaValidatorWithContext]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$validator]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/Schema/SchemaValueNormalizer.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[SchemaValueNormalizer]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/AdditionalPropertiesValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[AdditionalPropertiesValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/AllOfValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[AllOfValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/AnyOfValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[AnyOfValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/ArrayLengthValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ArrayLengthValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/ConstValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ConstValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/ContainsRangeValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ContainsRangeValidator]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$item]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/SchemaValidator/ContainsValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ContainsValidator]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$item]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/SchemaValidator/DependentSchemasValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[DependentSchemasValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/EnumValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[EnumValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/FormatValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[FormatValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/IfThenElseValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[IfThenElseValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/ItemsValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ItemsValidator]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$item]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/SchemaValidator/NotValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[NotValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/NumericRangeValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[NumericRangeValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/ObjectLengthValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ObjectLengthValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/OneOfValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[OneOfValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/PatternPropertiesValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[PatternPropertiesValidator]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$propertyValue]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/SchemaValidator/PatternValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[PatternValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/PrefixItemsValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[PrefixItemsValidator]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$item]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/SchemaValidator/PropertiesValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[PropertiesValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/PropertyNamesValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[PropertyNamesValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/RequiredValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[RequiredValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/SchemaValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[SchemaValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/StringLengthValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[StringLengthValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/TypeValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[TypeValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/UnevaluatedItemsValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[UnevaluatedItemsValidator]]></code>
+    </ClassMustBeFinal>
+    <MixedAssignment>
+      <code><![CDATA[$item]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/SchemaValidator/UnevaluatedPropertiesValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[UnevaluatedPropertiesValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/SchemaValidator/ValidationResult.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ValidationResult]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/TypeGuarantor.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[TypeGuarantor]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/ValidatorPool.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[ValidatorPool]]></code>
+    </ClassMustBeFinal>
+  </file>
+  <file src="src/Validator/Webhook/WebhookValidator.php">
+    <ClassMustBeFinal>
+      <code><![CDATA[WebhookValidator]]></code>
+    </ClassMustBeFinal>
+  </file>
+</files>

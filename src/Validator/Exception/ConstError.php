@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
-class ConstError extends AbstractValidationError
+final class ConstError extends AbstractValidationError
 {
     public function __construct(
         mixed $expected,

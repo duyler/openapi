@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-final readonly class Tag implements JsonSerializable
+readonly class Tag implements JsonSerializable
 {
     public function __construct(
         public string $name,

@@ -428,6 +428,7 @@ $validator->validate(['name' => 'John', 'age' => 30]);
 | `withFormat(string $type, string $format, FormatValidatorInterface $validator)` | Register custom format | - |
 | `withValidatorPool(ValidatorPool $pool)` | Set custom validator pool | `new ValidatorPool()` |
 | `withLogger(object $logger)` | Set PSR-3 logger | `null` |
+| `withEmptyArrayStrategy(EmptyArrayStrategy $strategy)` | Set empty array validation strategy | `AllowBoth` |
 | `enableCoercion()` | Enable type coercion | `false` |
 | `enableNullableAsType()` | Enable nullable validation (default: true) | `true` |
 | `disableNullableAsType()` | Disable nullable validation | `false` |
@@ -736,6 +737,76 @@ make psalm
 # Fix code style
 make cs-fix
 ```
+
+## Empty Array Strategy
+
+By default, empty arrays `[]` are valid for both `array` and `object` types. You can configure this behavior:
+
+```php
+use Duyler\OpenApi\Validator\EmptyArrayStrategy;
+
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withEmptyArrayStrategy(EmptyArrayStrategy::PreferObject)
+    ->build();
+```
+
+Available strategies:
+
+| Strategy | Empty array valid for array | Empty array valid for object |
+|----------|----------------------------|------------------------------|
+| `AllowBoth` (default) | Yes | Yes |
+| `PreferArray` | Yes | No |
+| `PreferObject` | No | Yes |
+| `Reject` | No | No |
+
+## Security Considerations
+
+### XML External Entity (XXE) Protection
+
+This library includes built-in protection against XML External Entity (XXE) attacks when parsing XML request bodies. The `XmlBodyParser` automatically disables external entity loading to prevent:
+
+- **File disclosure attacks** - Prevents reading local files via `SYSTEM "file:///etc/passwd"`
+- **SSRF attacks** - Blocks Server-Side Request Forgery via external entity references
+- **Billion laughs attacks** - Mitigates denial of service through entity expansion
+
+The protection is implemented by:
+
+1. Disabling external entity loader via `libxml_set_external_entity_loader(null)`
+2. Using internal error handling with `libxml_use_internal_errors(true)`
+3. Clearing libxml errors after parsing
+
+### Circular Reference Protection
+
+The `RefResolver` detects and prevents circular references in OpenAPI specifications to avoid stack overflow attacks.
+
+### PHP Configuration Recommendations
+
+For enhanced security, ensure the following PHP settings are configured:
+
+```ini
+; Disable allow_url_fopen to prevent SSRF via XXE
+allow_url_fopen = Off
+
+; Disable allow_url_include for additional protection
+allow_url_include = Off
+```
+
+### Content-Type Validation
+
+The validator strictly validates Content-Type headers to ensure request bodies match the expected format. Unexpected content types are rejected with `UnsupportedMediaTypeException`.
+
+### Input Validation
+
+All input validation follows the OpenAPI 3.1 specification constraints. Schema validation prevents:
+
+- Type confusion attacks
+- Buffer overflow via length constraints
+- Injection attacks via pattern validation
+
+### Reporting Security Issues
+
+Please report security vulnerabilities to security@duyler.org
 
 ## License
 

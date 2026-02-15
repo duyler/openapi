@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
-class MinPropertiesError extends AbstractValidationError
+final class MinPropertiesError extends AbstractValidationError
 {
     public function __construct(
         int $minProperties,

@@ -9,7 +9,7 @@ use Override;
 
 use const FILTER_VALIDATE_EMAIL;
 
-final readonly class EmailValidator extends AbstractStringFormatValidator
+readonly class EmailValidator extends AbstractStringFormatValidator
 {
     #[Override]
     protected function getFormatName(): string

@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-final readonly class PathItem implements JsonSerializable
+readonly class PathItem implements JsonSerializable
 {
     public function __construct(
         public ?string $ref = null,

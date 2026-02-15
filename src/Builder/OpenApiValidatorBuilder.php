@@ -9,6 +9,7 @@ use Duyler\OpenApi\Cache\SchemaCache;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\Parser\JsonParser;
 use Duyler\OpenApi\Schema\Parser\YamlParser;
+use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
@@ -22,49 +23,28 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 
 use function sprintf;
 
-/**
- * Fluent builder for creating OpenApiValidator instances.
- *
- * Provides a convenient interface for configuring and building validators
- * with support for caching, custom formats, error formatting, and event dispatching.
- */
-class OpenApiValidatorBuilder
+final readonly class OpenApiValidatorBuilder
 {
     protected function __construct(
-        protected readonly ?string $specPath = null,
-        protected readonly ?string $specContent = null,
-        protected readonly ?string $specType = null,
-        protected readonly ?ValidatorPool $pool = null,
-        protected readonly ?SchemaCache $cache = null,
-        protected readonly ?object $logger = null,
-        protected readonly ?FormatRegistry $formatRegistry = null,
-        protected readonly bool $coercion = false,
-        protected readonly bool $nullableAsType = true,
-        protected readonly ?ErrorFormatterInterface $errorFormatter = null,
-        protected readonly ?EventDispatcherInterface $eventDispatcher = null,
+        protected ?string $specPath = null,
+        protected ?string $specContent = null,
+        protected ?string $specType = null,
+        protected ?ValidatorPool $pool = null,
+        protected ?SchemaCache $cache = null,
+        protected ?object $logger = null,
+        protected ?FormatRegistry $formatRegistry = null,
+        protected bool $coercion = false,
+        protected bool $nullableAsType = true,
+        protected EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
+        protected ?ErrorFormatterInterface $errorFormatter = null,
+        protected ?EventDispatcherInterface $eventDispatcher = null,
     ) {}
 
-    /**
-     * Create a new builder instance.
-     *
-     * @return self
-     */
     public static function create(): self
     {
         return new self();
     }
 
-    /**
-     * Load OpenAPI spec from YAML file.
-     *
-     * @param string $path Path to the YAML file
-     * @return self
-     *
-     * @example
-     * $validator = OpenApiValidatorBuilder::create()
-     *     ->fromYamlFile('openapi.yaml')
-     *     ->build();
-     */
     public function fromYamlFile(string $path): self
     {
         return new self(
@@ -76,14 +56,12 @@ class OpenApiValidatorBuilder
             formatRegistry: $this->formatRegistry,
             coercion: $this->coercion,
             nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
         );
     }
 
-    /**
-     * Load OpenAPI spec from JSON file
-     */
     public function fromJsonFile(string $path): self
     {
         return new self(
@@ -95,14 +73,12 @@ class OpenApiValidatorBuilder
             formatRegistry: $this->formatRegistry,
             coercion: $this->coercion,
             nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
         );
     }
 
-    /**
-     * Load OpenAPI spec from YAML string
-     */
     public function fromYamlString(string $content): self
     {
         return new self(
@@ -114,14 +90,12 @@ class OpenApiValidatorBuilder
             formatRegistry: $this->formatRegistry,
             coercion: $this->coercion,
             nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
         );
     }
 
-    /**
-     * Load OpenAPI spec from JSON string
-     */
     public function fromJsonString(string $content): self
     {
         return new self(
@@ -133,14 +107,12 @@ class OpenApiValidatorBuilder
             formatRegistry: $this->formatRegistry,
             coercion: $this->coercion,
             nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
         );
     }
 
-    /**
-     * Set custom validator pool
-     */
     public function withValidatorPool(ValidatorPool $pool): self
     {
         return new self(
@@ -153,24 +125,12 @@ class OpenApiValidatorBuilder
             formatRegistry: $this->formatRegistry,
             coercion: $this->coercion,
             nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
         );
     }
 
-    /**
-     * Enable PSR-6 caching for OpenAPI documents.
-     *
-     * @param SchemaCache $cache PSR-6 cache implementation
-     * @return self
-     *
-     * @example
-     * $cache = new SchemaCache($symfonyCacheAdapter);
-     * $validator = OpenApiValidatorBuilder::create()
-     *     ->fromYamlFile('openapi.yaml')
-     *     ->withCache($cache)
-     *     ->build();
-     */
     public function withCache(SchemaCache $cache): self
     {
         return new self(
@@ -183,14 +143,12 @@ class OpenApiValidatorBuilder
             formatRegistry: $this->formatRegistry,
             coercion: $this->coercion,
             nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
         );
     }
 
-    /**
-     * Set PSR-3 logger
-     */
     public function withLogger(object $logger): self
     {
         return new self(
@@ -203,14 +161,12 @@ class OpenApiValidatorBuilder
             formatRegistry: $this->formatRegistry,
             coercion: $this->coercion,
             nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
         );
     }
 
-    /**
-     * Set error formatter
-     */
     public function withErrorFormatter(ErrorFormatterInterface $formatter): self
     {
         return new self(
@@ -223,14 +179,12 @@ class OpenApiValidatorBuilder
             formatRegistry: $this->formatRegistry,
             coercion: $this->coercion,
             nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $formatter,
             eventDispatcher: $this->eventDispatcher,
         );
     }
 
-    /**
-     * Register custom format validator
-     */
     public function withFormat(
         string $type,
         string $format,
@@ -249,14 +203,12 @@ class OpenApiValidatorBuilder
             formatRegistry: $registry,
             coercion: $this->coercion,
             nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
         );
     }
 
-    /**
-     * Enable type coercion
-     */
     public function enableCoercion(): self
     {
         return new self(
@@ -269,14 +221,12 @@ class OpenApiValidatorBuilder
             formatRegistry: $this->formatRegistry,
             coercion: true,
             nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
         );
     }
 
-    /**
-     * Enable nullable validation
-     */
     public function enableNullableAsType(): self
     {
         return new self(
@@ -289,14 +239,12 @@ class OpenApiValidatorBuilder
             formatRegistry: $this->formatRegistry,
             coercion: $this->coercion,
             nullableAsType: true,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
         );
     }
 
-    /**
-     * Disable nullable validation
-     */
     public function disableNullableAsType(): self
     {
         return new self(
@@ -309,23 +257,30 @@ class OpenApiValidatorBuilder
             formatRegistry: $this->formatRegistry,
             coercion: $this->coercion,
             nullableAsType: false,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
         );
     }
 
-    /**
-     * Set PSR-14 event dispatcher.
-     *
-     * @param EventDispatcherInterface $dispatcher PSR-14 event dispatcher
-     * @return self
-     *
-     * @example
-     * $validator = OpenApiValidatorBuilder::create()
-     *     ->fromYamlFile('openapi.yaml')
-     *     ->withEventDispatcher($symfonyEventDispatcher)
-     *     ->build();
-     */
+    public function withEmptyArrayStrategy(EmptyArrayStrategy $strategy): self
+    {
+        return new self(
+            specPath: $this->specPath,
+            specContent: $this->specContent,
+            specType: $this->specType,
+            pool: $this->pool,
+            cache: $this->cache,
+            logger: $this->logger,
+            formatRegistry: $this->formatRegistry,
+            coercion: $this->coercion,
+            nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $strategy,
+            errorFormatter: $this->errorFormatter,
+            eventDispatcher: $this->eventDispatcher,
+        );
+    }
+
     public function withEventDispatcher(EventDispatcherInterface $dispatcher): self
     {
         return new self(
@@ -338,25 +293,12 @@ class OpenApiValidatorBuilder
             formatRegistry: $this->formatRegistry,
             coercion: $this->coercion,
             nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $dispatcher,
         );
     }
 
-    /**
-     * Build the validator instance.
-     *
-     * @return OpenApiValidator Configured validator instance
-     * @throws BuilderException If spec is not loaded
-     *
-     * @example
-     * $validator = OpenApiValidatorBuilder::create()
-     *     ->fromYamlFile('openapi.yaml')
-     *     ->withCache($cache)
-     *     ->withEventDispatcher($dispatcher)
-     *     ->enableCoercion()
-     *     ->build();
-     */
     public function build(): OpenApiValidator
     {
         $document = $this->loadSpec();
@@ -375,6 +317,7 @@ class OpenApiValidatorBuilder
             logger: $this->logger,
             coercion: $this->coercion,
             nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
             eventDispatcher: $this->eventDispatcher,
             pathFinder: $pathFinder,
         );

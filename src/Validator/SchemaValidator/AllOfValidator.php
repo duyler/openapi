@@ -11,7 +11,7 @@ use Override;
 
 use function count;
 
-final readonly class AllOfValidator extends AbstractCompositionalValidator
+readonly class AllOfValidator extends AbstractCompositionalValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

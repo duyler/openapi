@@ -8,7 +8,7 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Override;
 
-final readonly class HeadersValidator extends AbstractParameterValidator
+readonly class HeadersValidator extends AbstractParameterValidator
 {
     public function __construct(
         protected readonly SchemaValidatorInterface $schemaValidator,

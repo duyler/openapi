@@ -8,7 +8,7 @@ use Override;
 
 use function count;
 
-final readonly class CookieValidator extends AbstractParameterValidator
+readonly class CookieValidator extends AbstractParameterValidator
 {
     public function parseCookies(string $cookieHeader): array
     {

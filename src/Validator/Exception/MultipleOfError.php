@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
-class MultipleOfError extends AbstractValidationError
+final class MultipleOfError extends AbstractValidationError
 {
     public function __construct(
         int $validCount,

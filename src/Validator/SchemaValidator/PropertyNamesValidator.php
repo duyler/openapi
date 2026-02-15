@@ -11,7 +11,7 @@ use Override;
 
 use function is_array;
 
-final readonly class PropertyNamesValidator extends AbstractSchemaValidator
+readonly class PropertyNamesValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

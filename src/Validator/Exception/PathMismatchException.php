@@ -9,7 +9,7 @@ use Throwable;
 
 use function sprintf;
 
-class PathMismatchException extends RuntimeException
+final class PathMismatchException extends RuntimeException
 {
     public function __construct(
         public readonly string $template,

@@ -13,7 +13,7 @@ use function array_filter;
 use function is_array;
 use function is_string;
 
-final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValidator
+readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

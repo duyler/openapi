@@ -41,7 +41,7 @@ use function array_key_exists;
 
 use function assert;
 
-final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterface
+readonly class DefaultValidatorRegistry implements ValidatorRegistryInterface
 {
     public readonly FormatRegistry $formatRegistry;
 
