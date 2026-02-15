@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Format;
 
-final readonly class FormatRegistry
+readonly class FormatRegistry
 {
     /**
      * @param array<string, array<string, FormatValidatorInterface>> $validators

@@ -18,7 +18,7 @@ use Duyler\OpenApi\Validator\ValidatorPool;
 use function count;
 use function sprintf;
 
-final readonly class ItemsValidatorWithContext
+readonly class ItemsValidatorWithContext
 {
     public function __construct(
         private readonly ValidatorPool $pool,
@@ -40,7 +40,8 @@ final readonly class ItemsValidatorWithContext
                 /** @var int $index */
                 $itemContext = $context->withBreadcrumbIndex($index);
 
-                $normalizedItem = SchemaValueNormalizer::normalize($item);
+                $allowNull = $itemSchema->nullable && $context->nullableAsType;
+                $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
                 $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
                 $validator->validateWithContext($normalizedItem, $itemSchema, $itemContext);
             } catch (DiscriminatorMismatchException|

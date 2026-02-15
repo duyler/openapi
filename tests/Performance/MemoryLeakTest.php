@@ -26,7 +26,7 @@ final class MemoryLeakTest extends TestCase
         for ($i = 0; $i < 100; $i++) {
             $request = $this->createPsr7Request('/pets', 'GET');
             try {
-                $validator->validateRequest($request, '/pets', 'GET');
+                $validator->validateRequest($request);
             } catch (Exception) {
             }
         }
@@ -68,7 +68,7 @@ final class MemoryLeakTest extends TestCase
         for ($i = 0; $i < 100; $i++) {
             $request = $this->createPsr7Request('/pets', 'GET');
             try {
-                $validator->validateRequest($request, '/pets', 'GET');
+                $validator->validateRequest($request);
             } catch (Exception) {
             }
 

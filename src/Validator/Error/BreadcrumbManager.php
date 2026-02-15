@@ -10,7 +10,7 @@ namespace Duyler\OpenApi\Validator\Error;
  * Maintains a stack of path segments and provides methods to push/pop segments.
  * Each operation returns a new instance to maintain immutability.
  */
-final readonly class BreadcrumbManager
+readonly class BreadcrumbManager
 {
     /**
      * @param array<int, string> $stack

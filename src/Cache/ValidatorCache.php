@@ -7,51 +7,50 @@ namespace Duyler\OpenApi\Cache;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Psr\Cache\CacheItemPoolInterface;
 
+use function assert;
+
 readonly class ValidatorCache
 {
+    private TypedCacheDecorator $decorator;
+
     public function __construct(
         private readonly CacheItemPoolInterface $pool,
         private readonly int $ttl = 3600,
-    ) {}
+    ) {
+        $this->decorator = new TypedCacheDecorator($pool, $ttl);
+    }
 
     public function get(string $key): ?Schema
     {
-        $item = $this->pool->getItem($key);
+        $value = $this->decorator->get($key, Schema::class);
 
-        if (false === $item->isHit()) {
+        if (null === $value) {
             return null;
         }
 
-        $schema = $item->get();
-
-        if (false === $schema instanceof Schema) {
-            return null;
-        }
+        $schema = $value;
+        assert($schema instanceof Schema);
 
         return $schema;
     }
 
     public function set(string $key, Schema $schema): void
     {
-        $item = $this->pool->getItem($key);
-        $item->set($schema);
-        $item->expiresAfter($this->ttl);
-
-        $this->pool->save($item);
+        $this->decorator->set($key, $schema);
     }
 
     public function delete(string $key): void
     {
-        $this->pool->deleteItem($key);
+        $this->decorator->delete($key);
     }
 
     public function clear(): void
     {
-        $this->pool->clear();
+        $this->decorator->clear();
     }
 
     public function has(string $key): bool
     {
-        return $this->pool->hasItem($key);
+        return $this->decorator->has($key);
     }
 }

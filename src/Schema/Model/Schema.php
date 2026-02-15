@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-final readonly class Schema implements JsonSerializable
+readonly class Schema implements JsonSerializable
 {
     /**
      * @param string|list<string>|null $type
@@ -33,6 +33,7 @@ final readonly class Schema implements JsonSerializable
         public mixed $default = null,
         public bool $deprecated = false,
         public string|array|null $type = null,
+        public bool $nullable = false,
         public mixed $const = null,
         public ?float $multipleOf = null,
         public ?float $maximum = null,
@@ -104,6 +105,10 @@ final readonly class Schema implements JsonSerializable
 
         if ($this->type !== null) {
             $data['type'] = $this->type;
+        }
+
+        if ($this->nullable) {
+            $data['nullable'] = $this->nullable;
         }
 
         if ($this->const !== null) {

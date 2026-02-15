@@ -5,22 +5,25 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
-use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Override;
 
-use function is_string;
+use function preg_match;
+use function str_contains;
+use function str_starts_with;
 
-final readonly class DurationValidator implements FormatValidatorInterface
+readonly class DurationValidator extends AbstractStringFormatValidator
 {
     private const string DURATION_PATTERN = '/^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/';
 
     #[Override]
-    public function validate(mixed $data): void
+    protected function getFormatName(): string
     {
-        if (false === is_string($data)) {
-            throw new InvalidFormatException('duration', $data, 'Value must be a string');
-        }
+        return 'duration';
+    }
 
+    #[Override]
+    protected function validateString(string $data): void
+    {
         if (false === str_starts_with($data, 'P')) {
             throw new InvalidFormatException('duration', $data, 'Duration must start with P');
         }

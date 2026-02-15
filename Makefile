@@ -8,7 +8,7 @@ infection:
 
 .PHONY: psalm
 psalm:
-	docker-compose run --rm php vendor/bin/psalm
+	docker-compose run --rm php vendor/bin/psalm  --no-cache --threads=1
 
 .PHONY: cs-fix
 cs-fix:
@@ -54,6 +54,8 @@ init:
 	@echo "Package name (kebab-case): $(NAME)"
 	@echo "Namespace (PascalCase):  $(PASCAL_NAME)"
 
+.PHONY: build
+build:
 	docker-compose build
 	docker-compose run --rm php composer install
 

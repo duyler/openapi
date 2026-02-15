@@ -6,7 +6,6 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
 use function array_slice;
@@ -15,12 +14,8 @@ use function is_array;
 
 use const PHP_INT_MAX;
 
-final readonly class UnevaluatedItemsValidator implements SchemaValidatorInterface
+readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -38,7 +33,9 @@ final readonly class UnevaluatedItemsValidator implements SchemaValidatorInterfa
         foreach ($unevaluatedItems as $item) {
             /** @var array-key|array<array-key, mixed> $item */
             $validator = new SchemaValidator($this->pool);
-            $validator->validate($item, $schema->unevaluatedItems, $context);
+            $nullableAsType = $context?->nullableAsType ?? true;
+            $itemContext = $context ?? ValidationContext::create($this->pool, $nullableAsType);
+            $validator->validate($item, $schema->unevaluatedItems, $itemContext);
         }
     }
 

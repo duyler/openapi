@@ -7,6 +7,8 @@ namespace Duyler\OpenApi\Cache;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Psr\Cache\CacheItemPoolInterface;
 
+use function assert;
+
 /**
  * PSR-6 cache wrapper for OpenAPI documents.
  *
@@ -15,6 +17,8 @@ use Psr\Cache\CacheItemPoolInterface;
  */
 readonly class SchemaCache
 {
+    private TypedCacheDecorator $decorator;
+
     /**
      * Create a new schema cache.
      *
@@ -27,7 +31,9 @@ readonly class SchemaCache
     public function __construct(
         private readonly CacheItemPoolInterface $pool,
         private readonly int $ttl = 3600,
-    ) {}
+    ) {
+        $this->decorator = new TypedCacheDecorator($pool, $ttl);
+    }
 
     /**
      * Retrieve cached OpenAPI document.
@@ -37,42 +43,35 @@ readonly class SchemaCache
      */
     public function get(string $key): ?OpenApiDocument
     {
-        $item = $this->pool->getItem($key);
+        $value = $this->decorator->get($key, OpenApiDocument::class);
 
-        if (false === $item->isHit()) {
+        if (null === $value) {
             return null;
         }
 
-        $document = $item->get();
-
-        if (false === $document instanceof OpenApiDocument) {
-            return null;
-        }
+        $document = $value;
+        assert($document instanceof OpenApiDocument);
 
         return $document;
     }
 
     public function set(string $key, OpenApiDocument $document): void
     {
-        $item = $this->pool->getItem($key);
-        $item->set($document);
-        $item->expiresAfter($this->ttl);
-
-        $this->pool->save($item);
+        $this->decorator->set($key, $document);
     }
 
     public function delete(string $key): void
     {
-        $this->pool->deleteItem($key);
+        $this->decorator->delete($key);
     }
 
     public function clear(): void
     {
-        $this->pool->clear();
+        $this->decorator->clear();
     }
 
     public function has(string $key): bool
     {
-        return $this->pool->hasItem($key);
+        return $this->decorator->has($key);
     }
 }

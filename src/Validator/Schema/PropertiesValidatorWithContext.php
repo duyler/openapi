@@ -19,7 +19,7 @@ use function array_key_exists;
 use function count;
 use function sprintf;
 
-final readonly class PropertiesValidatorWithContext
+readonly class PropertiesValidatorWithContext
 {
     public function __construct(
         private readonly ValidatorPool $pool,
@@ -41,7 +41,8 @@ final readonly class PropertiesValidatorWithContext
             }
 
             try {
-                $value = SchemaValueNormalizer::normalize($data[$name]);
+                $allowNull = $propertySchema->nullable && $context->nullableAsType;
+                $value = SchemaValueNormalizer::normalize($data[$name], $allowNull);
 
                 $propertyContext = $context->withBreadcrumb($name);
 

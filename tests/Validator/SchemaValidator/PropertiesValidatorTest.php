@@ -14,6 +14,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
+use Duyler\OpenApi\Validator\Error\ValidationContext;
+
 class PropertiesValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -194,5 +196,111 @@ class PropertiesValidatorTest extends TestCase
         );
 
         $this->validator->validate(['test' => new stdClass()], $schema);
+    }
+
+    #[Test]
+    public function validate_properties_with_additional_property(): void
+    {
+        $nameSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => $nameSchema,
+            ],
+        );
+
+        $this->validator->validate(['name' => 'John', 'extra' => 'any data'], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_properties_empty_object(): void
+    {
+        $nameSchema = new Schema(type: 'string');
+        $ageSchema = new Schema(type: 'integer');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => $nameSchema,
+                'age' => $ageSchema,
+            ],
+        );
+
+        $this->validator->validate([], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_properties_with_nullable_and_context(): void
+    {
+        $nameSchema = new Schema(type: 'string', nullable: true);
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => $nameSchema,
+            ],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate(['name' => null], $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_properties_with_nullable_value(): void
+    {
+        $nameSchema = new Schema(type: 'string', nullable: true);
+        $ageSchema = new Schema(type: 'integer');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => $nameSchema,
+                'age' => $ageSchema,
+            ],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate(['name' => null, 'age' => 30], $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_properties_with_context(): void
+    {
+        $nameSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => $nameSchema,
+            ],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate(['name' => 'John'], $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_properties_with_multiple_nullable(): void
+    {
+        $nameSchema = new Schema(type: 'string', nullable: true);
+        $ageSchema = new Schema(type: 'integer', nullable: true);
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => $nameSchema,
+                'age' => $ageSchema,
+            ],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate(['name' => null, 'age' => null], $schema, $context);
+
+        $this->expectNotToPerformAssertions();
     }
 }

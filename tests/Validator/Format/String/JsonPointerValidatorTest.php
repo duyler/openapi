@@ -48,4 +48,42 @@ final class JsonPointerValidatorTest extends TestCase
         $this->expectExceptionMessage('Invalid JSON Pointer format');
         $this->validator->validate('path');
     }
+
+    #[Test]
+    public function valid_root_pointer(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('/');
+    }
+
+    #[Test]
+    public function valid_empty_pointer(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('');
+    }
+
+    #[Test]
+    public function valid_with_numbers(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('/0');
+        $this->validator->validate('/1/2/3');
+    }
+
+    #[Test]
+    public function throw_error_for_invalid_escape(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid JSON Pointer format');
+        $this->validator->validate('/path~2');
+    }
+
+    #[Test]
+    public function throw_error_for_non_string(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Value must be a string');
+        $this->validator->validate(123);
+    }
 }

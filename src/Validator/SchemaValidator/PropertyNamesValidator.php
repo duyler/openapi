@@ -6,17 +6,13 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
-use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Override;
 
 use function is_array;
 
-final readonly class PropertyNamesValidator implements SchemaValidatorInterface
+readonly class PropertyNamesValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -26,6 +22,13 @@ final readonly class PropertyNamesValidator implements SchemaValidatorInterface
 
         if (false === is_array($data)) {
             return;
+        }
+
+        if (null !== $schema->propertyNames->pattern && '' !== $schema->propertyNames->pattern) {
+            RegexValidator::validate(
+                RegexValidator::normalize($schema->propertyNames->pattern),
+                'propertyNames pattern',
+            );
         }
 
         foreach (array_keys($data) as $propertyName) {

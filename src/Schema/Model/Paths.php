@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-final readonly class Paths implements JsonSerializable
+readonly class Paths implements JsonSerializable
 {
     /**
      * @param array<string, PathItem> $paths

@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Schema\Model;
 
 use Duyler\OpenApi\Schema\Model\Contact;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\Contact
- */
+#[CoversClass(Contact::class)]
 final class ContactTest extends TestCase
 {
     #[Test]

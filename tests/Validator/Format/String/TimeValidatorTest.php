@@ -56,4 +56,29 @@ final class TimeValidatorTest extends TestCase
         $this->expectException(InvalidFormatException::class);
         $this->validator->validate('10:30:60');
     }
+
+    #[Test]
+    public function validate_with_milliseconds(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('10:30:00.123');
+        $this->validator->validate('10:30:00.123Z');
+        $this->validator->validate('10:30:00.123+03:00');
+    }
+
+    #[Test]
+    public function throw_error_for_invalid_format(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid time format');
+        $this->validator->validate('invalid-time');
+    }
+
+    #[Test]
+    public function throw_error_for_non_string(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Value must be a string');
+        $this->validator->validate(123);
+    }
 }

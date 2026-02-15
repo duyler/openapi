@@ -10,7 +10,7 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 
 use function is_array;
 
-final readonly class RequestValidator
+readonly class RequestValidator
 {
     public function __construct(
         private readonly PathParser $pathParser,
@@ -19,7 +19,7 @@ final readonly class RequestValidator
         private readonly QueryParametersValidator $queryParamsValidator,
         private readonly HeadersValidator $headersValidator,
         private readonly CookieValidator $cookieValidator,
-        private readonly RequestBodyValidator $bodyValidator,
+        private readonly RequestBodyValidatorInterface $bodyValidator,
     ) {}
 
     public function validate(
@@ -29,6 +29,7 @@ final readonly class RequestValidator
     ): void {
         $parameters = $operation->parameters?->parameters ?? [];
 
+        /** @var list<Parameter> $parameterSchemas */
         $parameterSchemas = array_filter($parameters, fn($param) => $param instanceof Parameter);
 
         $pathParams = $this->pathParser->matchPath(
@@ -50,8 +51,12 @@ final readonly class RequestValidator
         /** @var array<array-key, string> $normalizedHeaders */
         $this->headersValidator->validate($normalizedHeaders, $parameterSchemas);
 
-        $cookieHeader = $request->getHeaderLine('Cookie');
-        $cookies = $this->cookieValidator->parseCookies($cookieHeader);
+        $cookies = $request->getCookieParams();
+        if ([] === $cookies) {
+            $cookieHeader = $request->getHeaderLine('Cookie');
+            $cookies = $this->cookieValidator->parseCookies($cookieHeader);
+        }
+        /** @var array<string, string> $cookies */
         $this->cookieValidator->validate($cookies, $parameterSchemas);
 
         $contentType = $request->getHeaderLine('Content-Type');

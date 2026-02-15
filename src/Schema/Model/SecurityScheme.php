@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-final readonly class SecurityScheme implements JsonSerializable
+readonly class SecurityScheme implements JsonSerializable
 {
     public function __construct(
         public string $type,

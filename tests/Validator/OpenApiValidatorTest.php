@@ -6,10 +6,12 @@ namespace Duyler\OpenApi\Test\Validator;
 
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\OpenApiValidator;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Throwable;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UriInterface;
@@ -105,12 +107,10 @@ YAML;
     public function throw_error_for_unknown_path(): void
     {
         $this->expectException(BuilderException::class);
-        $this->expectExceptionMessage('Path not found: /unknown');
+        $this->expectExceptionMessage('Operation not found: GET /unknown');
 
         $this->validator->validateRequest(
             $this->createMockServerRequest('GET', '/unknown'),
-            '/unknown',
-            'GET',
         );
     }
 
@@ -118,12 +118,10 @@ YAML;
     public function throw_error_for_unknown_method(): void
     {
         $this->expectException(BuilderException::class);
-        $this->expectExceptionMessage('Method DELETE not found for path: /users');
+        $this->expectExceptionMessage('Operation not found: DELETE /users');
 
         $this->validator->validateRequest(
             $this->createMockServerRequest('DELETE', '/users'),
-            '/users',
-            'DELETE',
         );
     }
 
@@ -133,10 +131,9 @@ YAML;
         $request = $this->createMockServerRequest('GET', '/users?limit=invalid');
 
         try {
-            $this->validator->validateRequest($request, '/users', 'GET');
+            $this->validator->validateRequest($request);
             $this->fail('Expected exception to be thrown');
         } catch (Throwable $e) {
-            // TypeMismatchError or similar validation error is expected
             $this->assertStringContainsString('Expected type', $e->getMessage());
         }
     }
@@ -146,9 +143,46 @@ YAML;
     {
         $request = $this->createMockServerRequest('GET', '/users');
 
+        $operation = $this->validator->validateRequest($request);
+
+        $this->assertSame('/users', $operation->path);
+        $this->assertSame('GET', $operation->method);
+    }
+
+    #[Test]
+    public function validate_request_auto_finds_operation(): void
+    {
+        $request = $this->createMockServerRequest('GET', '/users');
+        $validator = $this->createValidator();
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('/users', $operation->path);
+        $this->assertSame('GET', $operation->method);
+    }
+
+    #[Test]
+    public function validate_request_auto_throws_exception_for_unknown_path(): void
+    {
+        $request = $this->createMockServerRequest('GET', '/unknown/path');
+        $validator = $this->createValidator();
+
+        $this->expectException(BuilderException::class);
+        $this->expectExceptionMessage('Operation not found: GET /unknown/path');
+
+        $validator->validateRequest($request);
+    }
+
+    #[Test]
+    public function validate_response_with_operation(): void
+    {
+        $response = $this->createMockResponse();
+        $validator = $this->createValidator();
+        $operation = new Operation('/users/{id}', 'GET');
+
         $this->expectNotToPerformAssertions();
 
-        $this->validator->validateRequest($request, '/users', 'GET');
+        $validator->validateResponse($response, $operation);
     }
 
     /**
@@ -182,5 +216,23 @@ YAML;
         $stream->method('__toString')->willReturn($content);
 
         return $stream;
+    }
+
+    private function createValidator(): OpenApiValidator
+    {
+        return OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::SIMPLE_YAML)
+            ->build();
+    }
+
+    private function createMockResponse()
+    {
+        $response = $this->createMock(ResponseInterface::class);
+        $response->method('getStatusCode')->willReturn(200);
+        $response->method('getHeaders')->willReturn([]);
+        $response->method('getHeaderLine')->willReturn('application/json');
+        $response->method('getBody')->willReturn($this->createMockStream('{"id": 1, "name": "John"}'));
+
+        return $response;
     }
 }

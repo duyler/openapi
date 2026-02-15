@@ -5,22 +5,23 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
-use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Override;
 
-use function is_string;
+use function preg_match;
 
-final readonly class JsonPointerValidator implements FormatValidatorInterface
+readonly class JsonPointerValidator extends AbstractStringFormatValidator
 {
     private const string POINTER_PATTERN = '/^(?:\/(?:[^~\/]|~0|~1)*)*$/';
 
     #[Override]
-    public function validate(mixed $data): void
+    protected function getFormatName(): string
     {
-        if (false === is_string($data)) {
-            throw new InvalidFormatException('json-pointer', $data, 'Value must be a string');
-        }
+        return 'json-pointer';
+    }
 
+    #[Override]
+    protected function validateString(string $data): void
+    {
         if ($data === '' || $data === '/') {
             return;
         }

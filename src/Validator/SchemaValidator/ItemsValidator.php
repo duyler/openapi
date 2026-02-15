@@ -9,18 +9,13 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
 use function is_array;
 use function sprintf;
 
-final readonly class ItemsValidator implements SchemaValidatorInterface
+readonly class ItemsValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -37,8 +32,10 @@ final readonly class ItemsValidator implements SchemaValidatorInterface
         foreach ($data as $index => $item) {
             /** @var int $index */
             try {
-                $normalizedItem = SchemaValueNormalizer::normalize($item);
-                $itemContext = $context?->withBreadcrumbIndex($index) ?? ValidationContext::create($this->pool);
+                $nullableAsType = $context?->nullableAsType ?? true;
+                $allowNull = $schema->items->nullable && $nullableAsType;
+                $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
+                $itemContext = $context?->withBreadcrumbIndex($index) ?? ValidationContext::create($this->pool, $nullableAsType);
                 $validator->validate($normalizedItem, $schema->items, $itemContext);
             } catch (InvalidDataTypeException $e) {
                 throw new ValidationException(

@@ -39,7 +39,7 @@ final class EventIntegrationTest extends TestCase
 
         $request = $this->createPsr7Request('/pets', 'GET');
         try {
-            $validator->validateRequest($request, '/pets', 'GET');
+            $validator->validateRequest($request);
         } catch (Exception) {
         }
 
@@ -65,7 +65,7 @@ final class EventIntegrationTest extends TestCase
 
         $request = $this->createPsr7Request('/pets', 'GET');
         try {
-            $validator->validateRequest($request, '/pets', 'GET');
+            $validator->validateRequest($request);
         } catch (Exception) {
         }
 
@@ -94,7 +94,7 @@ final class EventIntegrationTest extends TestCase
         $request = $this->createPsr7Request('/pets', 'POST', [], '{}');
 
         $this->expectException(Exception::class);
-        $validator->validateRequest($request, '/pets', 'POST');
+        $validator->validateRequest($request);
 
         self::assertTrue($dispatched);
     }
@@ -123,7 +123,7 @@ final class EventIntegrationTest extends TestCase
 
         $request = $this->createPsr7Request('/pets', 'GET');
         try {
-            $validator->validateRequest($request, '/pets', 'GET');
+            $validator->validateRequest($request);
         } catch (Exception) {
         }
 
@@ -149,7 +149,7 @@ final class EventIntegrationTest extends TestCase
 
         $request = $this->createPsr7Request('/pets', 'GET');
         try {
-            $validator->validateRequest($request, '/pets', 'GET');
+            $validator->validateRequest($request);
         } catch (Exception) {
         }
 

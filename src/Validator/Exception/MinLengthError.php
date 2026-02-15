@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
-class MinLengthError extends AbstractValidationError
+final class MinLengthError extends AbstractValidationError
 {
     public function __construct(
         int $minLength,

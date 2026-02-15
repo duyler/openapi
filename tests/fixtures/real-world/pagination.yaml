@@ -1,0 +1,120 @@
+openapi: 3.0.0
+info:
+  title: Pagination API
+  version: 1.0.0
+
+components:
+  schemas:
+
+    PaginationRequest:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+
+    PaginationResponse:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+        pagination:
+          type: object
+          required:
+            - page
+            - limit
+            - total
+            - totalPages
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+              minimum: 0
+            totalPages:
+              type: integer
+              minimum: 0
+
+    CursorPaginationRequest:
+      type: object
+      properties:
+        cursor:
+          type: string
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+
+    CursorPaginationResponse:
+      type: object
+      required:
+        - data
+        - cursor
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+        cursor:
+          type: object
+          properties:
+            next:
+              type: string
+            prev:
+              type: string
+            hasMore:
+              type: boolean
+
+paths:
+  /api/users:
+    get:
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Paginated users list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginationResponse'

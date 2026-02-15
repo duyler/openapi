@@ -10,15 +10,10 @@ use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
-final readonly class IfThenElseValidator implements SchemaValidatorInterface
+readonly class IfThenElseValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -26,7 +21,9 @@ final readonly class IfThenElseValidator implements SchemaValidatorInterface
             return;
         }
 
-        $normalizedData = SchemaValueNormalizer::normalize($data);
+        $nullableAsType = $context?->nullableAsType ?? true;
+        $allowNull = $schema->if->nullable && $nullableAsType;
+        $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
         $ifValid = true;
         try {
             $validator = new SchemaValidator($this->pool);

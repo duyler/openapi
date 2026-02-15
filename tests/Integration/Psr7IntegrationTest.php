@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Integration;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\Operation;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
@@ -52,7 +53,7 @@ YAML;
             '{"name": "John Doe"}',
         );
 
-        $validator->validateRequest($request, '/users', 'POST');
+        $validator->validateRequest($request);
 
         $this->expectNotToPerformAssertions();
     }
@@ -94,7 +95,9 @@ YAML;
             '[{"id": 1, "name": "John"}]',
         );
 
-        $validator->validateResponse($response, '/users', 'GET');
+        $operation = new Operation('/users', 'GET');
+
+        $validator->validateResponse($response, $operation);
 
         $this->expectNotToPerformAssertions();
     }

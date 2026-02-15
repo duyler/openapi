@@ -9,8 +9,9 @@ use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 
 use function is_array;
 use function strlen;
+use function assert;
 
-final readonly class ParameterDeserializer
+readonly class ParameterDeserializer
 {
     /**
      * Deserialize parameter value based on style
@@ -18,6 +19,8 @@ final readonly class ParameterDeserializer
     public function deserialize(mixed $value, Parameter $param): array|int|string|float|bool
     {
         $normalized = SchemaValueNormalizer::normalize($value);
+
+        assert(null !== $param->in && null !== $param->name, 'Parameter in and name must not be null when deserialize is called');
 
         $style = $param->style ?? $this->getDefaultStyle($param->in);
 
@@ -34,6 +37,8 @@ final readonly class ParameterDeserializer
             'label' => $this->deserializeLabel($normalized),
             'simple' => $this->deserializeSimple($normalized),
             'form' => $this->deserializeForm($normalized, $param->explode),
+            'pipeDelimited' => $this->deserializePipeDelimited($normalized),
+            'spaceDelimited' => $this->deserializeSpaceDelimited($normalized),
             default => $normalized,
         };
     }
@@ -87,6 +92,20 @@ final readonly class ParameterDeserializer
             return implode(',', $value);
         }
 
+        if (false === $explode && str_contains($value, ',')) {
+            return explode(',', $value);
+        }
+
         return $value;
+    }
+
+    private function deserializePipeDelimited(string $value): array
+    {
+        return explode('|', $value);
+    }
+
+    private function deserializeSpaceDelimited(string $value): array
+    {
+        return explode(' ', $value);
     }
 }

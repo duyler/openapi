@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
-class MaxPropertiesError extends AbstractValidationError
+final class MaxPropertiesError extends AbstractValidationError
 {
     public function __construct(
         int $maxProperties,

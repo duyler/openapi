@@ -59,6 +59,30 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
+    public function get_returns_null_when_cache_hit_but_not_string(): void
+    {
+        $pool = $this->createMock(CacheItemPoolInterface::class);
+
+        $cacheItem = $this->createCacheItem();
+        $cacheItem
+            ->method('isHit')
+            ->willReturn(true);
+        $cacheItem
+            ->method('get')
+            ->willReturn(['not', 'a', 'string']);
+
+        $pool
+            ->method('getItem')
+            ->willReturn($cacheItem);
+
+        $cache = new CompilationCache($pool);
+
+        $result = $cache->get('test_hash');
+
+        self::assertNull($result);
+    }
+
+    #[Test]
     public function set_stores_compiled_code(): void
     {
         $pool = $this->createMock(CacheItemPoolInterface::class);
@@ -129,6 +153,123 @@ final class CompilationCacheTest extends TestCase
         $key2 = $cache->generateKey($schema2);
 
         self::assertNotSame($key1, $key2);
+    }
+
+    #[Test]
+    public function generateKey_includes_namespace(): void
+    {
+        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(type: 'string');
+
+        $key = $cache->generateKey($schema);
+
+        self::assertStringContainsString('validator_compilation.', $key);
+    }
+
+    #[Test]
+    public function generateKey_with_custom_namespace(): void
+    {
+        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool, 'custom_namespace');
+
+        $schema = new Schema(type: 'string');
+
+        $key = $cache->generateKey($schema);
+
+        self::assertStringContainsString('custom_namespace.', $key);
+    }
+
+    #[Test]
+    public function generateKey_hashes_all_schema_properties(): void
+    {
+        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema1 = new Schema(
+            type: 'string',
+            minLength: 1,
+            maxLength: 100,
+            pattern: '^[a-z]+$',
+            enum: ['a', 'b'],
+        );
+
+        $schema2 = new Schema(
+            type: 'string',
+            minLength: 1,
+            maxLength: 100,
+            pattern: '^[a-z]+$',
+            enum: ['a', 'b'],
+        );
+
+        $key1 = $cache->generateKey($schema1);
+        $key2 = $cache->generateKey($schema2);
+
+        self::assertSame($key1, $key2);
+    }
+
+    #[Test]
+    public function generateKey_different_for_nested_schemas(): void
+    {
+        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema1 = new Schema(
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+            ],
+        );
+
+        $schema2 = new Schema(
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'integer'),
+            ],
+        );
+
+        $key1 = $cache->generateKey($schema1);
+        $key2 = $cache->generateKey($schema2);
+
+        self::assertNotSame($key1, $key2);
+    }
+
+    #[Test]
+    public function generateKey_different_for_array_schemas(): void
+    {
+        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema1 = new Schema(
+            type: 'array',
+            items: new Schema(type: 'string'),
+        );
+
+        $schema2 = new Schema(
+            type: 'array',
+            items: new Schema(type: 'integer'),
+        );
+
+        $key1 = $cache->generateKey($schema1);
+        $key2 = $cache->generateKey($schema2);
+
+        self::assertNotSame($key1, $key2);
+    }
+
+    #[Test]
+    public function generateKey_handles_null_properties(): void
+    {
+        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema1 = new Schema(type: 'string', minLength: null);
+        $schema2 = new Schema(type: 'string');
+
+        $key1 = $cache->generateKey($schema1);
+        $key2 = $cache->generateKey($schema2);
+
+        self::assertSame($key1, $key2);
     }
 
     private function createCacheItem(): CacheItemInterface

@@ -1,0 +1,199 @@
+openapi: 3.1.0
+info:
+  title: Format Validation API
+  version: 1.0.0
+paths:
+  /formats/query:
+    get:
+      parameters:
+        - name: email
+          in: query
+          schema:
+            type: string
+            format: email
+        - name: uuid
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: uri
+          in: query
+          schema:
+            type: string
+            format: uri
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: time
+          in: query
+          schema:
+            type: string
+            format: time
+        - name: hostname
+          in: query
+          schema:
+            type: string
+            format: hostname
+        - name: ipv4
+          in: query
+          schema:
+            type: string
+            format: ipv4
+        - name: ipv6
+          in: query
+          schema:
+            type: string
+            format: ipv6
+      responses:
+        '200':
+          description: Success
+  /formats/header:
+    get:
+      parameters:
+        - name: X-Request-ID
+          in: header
+          schema:
+            type: string
+            format: uuid
+        - name: X-Email
+          in: header
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: Success
+  /formats/body:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FormatResponse'
+      responses:
+        '200':
+          description: Success
+  /formats/numeric:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NumericFormatResponse'
+      responses:
+        '200':
+          description: Success
+  /formats/mixed:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MixedFormatResponse'
+      responses:
+        '200':
+          description: Success
+components:
+  schemas:
+    FormatResponse:
+      type: object
+      required:
+        - email
+        - uuid
+        - dateTime
+        - date
+        - time
+        - uri
+        - hostname
+        - ipv4
+        - ipv6
+        - byte
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        uuid:
+          type: string
+          format: uuid
+        dateTime:
+          type: string
+          format: date-time
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+          format: time
+        uri:
+          type: string
+          format: uri
+        hostname:
+          type: string
+          format: hostname
+        ipv4:
+          type: string
+          format: ipv4
+        ipv6:
+          type: string
+          format: ipv6
+        byte:
+          type: string
+          format: byte
+        password:
+          type: string
+          format: password
+    NumericFormatResponse:
+      type: object
+      required:
+        - int32Value
+        - int64Value
+        - floatValue
+        - doubleValue
+      properties:
+        int32Value:
+          type: integer
+          format: int32
+        int64Value:
+          type: integer
+          format: int64
+        floatValue:
+          type: number
+          format: float
+        doubleValue:
+          type: number
+          format: double
+    MixedFormatResponse:
+      type: object
+      required:
+        - user
+        - items
+      properties:
+        user:
+          type: object
+          required:
+            - email
+            - website
+          properties:
+            email:
+              type: string
+              format: email
+            website:
+              type: string
+              format: uri
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - created
+            properties:
+              id:
+                type: string
+                format: uuid
+              created:
+                type: string
+                format: date-time

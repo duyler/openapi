@@ -7,9 +7,10 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-final readonly class Response implements JsonSerializable
+readonly class Response implements JsonSerializable
 {
     public function __construct(
+        public ?string $ref = null,
         public ?string $description = null,
         public ?Headers $headers = null,
         public ?Content $content = null,
@@ -20,6 +21,10 @@ final readonly class Response implements JsonSerializable
     public function jsonSerialize(): array
     {
         $data = [];
+
+        if ($this->ref !== null) {
+            $data['$ref'] = $this->ref;
+        }
 
         if ($this->description !== null) {
             $data['description'] = $this->description;

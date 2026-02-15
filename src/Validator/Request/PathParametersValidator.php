@@ -4,43 +4,19 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request;
 
-use Duyler\OpenApi\Schema\Model\Parameter;
-use Duyler\OpenApi\Validator\Exception\MissingParameterException;
-use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
+use Override;
 
-final readonly class PathParametersValidator
+readonly class PathParametersValidator extends AbstractParameterValidator
 {
-    public function __construct(
-        private readonly SchemaValidatorInterface $schemaValidator,
-        private readonly ParameterDeserializer $deserializer,
-    ) {}
-
-    /**
-     * @param array<string, mixed> $params Parameter values from path
-     * @param array<int, Parameter> $parameterSchemas OpenAPI parameter definitions
-     */
-    public function validate(array $params, array $parameterSchemas): void
+    #[Override]
+    protected function getLocation(): string
     {
-        foreach ($parameterSchemas as $param) {
-            if ('path' !== $param->in) {
-                continue;
-            }
+        return 'path';
+    }
 
-            $name = $param->name;
-            $value = $params[$name] ?? null;
-
-            if (null === $value) {
-                if ($param->required) {
-                    throw new MissingParameterException('path', $name);
-                }
-                continue;
-            }
-
-            $value = $this->deserializer->deserialize($value, $param);
-
-            if (null !== $param->schema) {
-                $this->schemaValidator->validate($value, $param->schema);
-            }
-        }
+    #[Override]
+    protected function findParameter(array $data, string $name): mixed
+    {
+        return $data[$name] ?? null;
     }
 }

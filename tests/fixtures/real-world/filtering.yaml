@@ -1,0 +1,147 @@
+openapi: 3.0.0
+info:
+  title: Filtering API
+  version: 1.0.0
+
+components:
+  schemas:
+
+    FilterRequest:
+      type: object
+      properties:
+        filters:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [active, inactive, pending]
+            category:
+              type: string
+            dateFrom:
+              type: string
+              format: date
+            dateTo:
+              type: string
+              format: date
+            minPrice:
+              type: number
+              minimum: 0
+            maxPrice:
+              type: number
+              minimum: 0
+            tags:
+              type: array
+              items:
+                type: string
+            search:
+              type: string
+              minLength: 2
+
+    SortRequest:
+      type: object
+      properties:
+        sort:
+          type: string
+          enum: [name, date, price, rating]
+        order:
+          type: string
+          enum: [asc, desc]
+          default: asc
+
+    SearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          minLength: 2
+          maxLength: 100
+        filters:
+          type: object
+        sort:
+          type: string
+          enum: [relevance, date, rating]
+        page:
+          type: integer
+          minimum: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+
+    ComplexFilter:
+      type: object
+      properties:
+        # Range filters
+        priceRange:
+          type: object
+          properties:
+            min:
+              type: number
+              minimum: 0
+            max:
+              type: number
+              minimum: 0
+        # Multiple choice filters
+        categories:
+          type: array
+          items:
+            type: string
+            enum: [electronics, books, clothing, food, sports]
+          maxItems: 5
+        # Boolean filters
+        inStock:
+          type: boolean
+        onSale:
+          type: boolean
+        # Text filters
+        nameContains:
+          type: string
+        descriptionContains:
+          type: string
+
+paths:
+  /api/products:
+    get:
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, pending]
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: minPrice
+          in: query
+          schema:
+            type: number
+            minimum: 0
+        - name: maxPrice
+          in: query
+          schema:
+            type: number
+            minimum: 0
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [name, price, date]
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: search
+          in: query
+          schema:
+            type: string
+            minLength: 2
+      responses:
+        '200':
+          description: Filtered results
+        '400':
+          description: Invalid filter parameters

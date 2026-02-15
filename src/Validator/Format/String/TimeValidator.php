@@ -6,22 +6,24 @@ namespace Duyler\OpenApi\Validator\Format\String;
 
 use DateTime;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
-use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Override;
 
-use function is_string;
+use function preg_match;
+use function substr;
 
-final readonly class TimeValidator implements FormatValidatorInterface
+readonly class TimeValidator extends AbstractStringFormatValidator
 {
     private const string TIME_FORMAT = 'H:i:s';
 
     #[Override]
-    public function validate(mixed $data): void
+    protected function getFormatName(): string
     {
-        if (false === is_string($data)) {
-            throw new InvalidFormatException('time', $data, 'Value must be a string');
-        }
+        return 'time';
+    }
 
+    #[Override]
+    protected function validateString(string $data): void
+    {
         $time = DateTime::createFromFormat(self::TIME_FORMAT, substr($data, 0, 8));
 
         if (false === $time) {

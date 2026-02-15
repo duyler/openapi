@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-final readonly class Responses implements JsonSerializable
+readonly class Responses implements JsonSerializable
 {
     /**
      * @param array<string, Response> $responses

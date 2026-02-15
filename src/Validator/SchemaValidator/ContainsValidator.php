@@ -7,18 +7,14 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Exception\ContainsMatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
 use function is_array;
 
-final readonly class ContainsValidator implements SchemaValidatorInterface
+readonly class ContainsValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -30,13 +26,15 @@ final readonly class ContainsValidator implements SchemaValidatorInterface
             return;
         }
 
+        $nullableAsType = $context?->nullableAsType ?? true;
         $validator = new SchemaValidator($this->pool);
+        $containsContext = $context ?? ValidationContext::create($this->pool, $nullableAsType);
         $hasMatch = false;
 
         foreach ($data as $item) {
             try {
                 /** @var array-key|array<array-key, mixed> $item */
-                $validator->validate($item, $schema->contains, $context);
+                $validator->validate($item, $schema->contains, $containsContext);
                 $hasMatch = true;
                 break;
             } catch (ValidationException|AbstractValidationError) {
@@ -45,8 +43,10 @@ final readonly class ContainsValidator implements SchemaValidatorInterface
         }
 
         if (false === $hasMatch) {
-            throw new ValidationException(
-                'Array does not contain an item matching the contains schema',
+            $dataPath = $this->getDataPath($context);
+            throw new ContainsMatchError(
+                dataPath: $dataPath,
+                schemaPath: '/contains',
             );
         }
     }

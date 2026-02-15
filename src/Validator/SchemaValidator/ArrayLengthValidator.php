@@ -6,9 +6,10 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\DuplicateItemsError;
 use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MinItemsError;
-use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\SchemaValidator\Trait\LengthValidationTrait;
 use Override;
 
 use function count;
@@ -16,11 +17,9 @@ use function is_array;
 
 use const SORT_REGULAR;
 
-final readonly class ArrayLengthValidator implements SchemaValidatorInterface
+readonly class ArrayLengthValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
+    use LengthValidationTrait;
 
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -29,33 +28,23 @@ final readonly class ArrayLengthValidator implements SchemaValidatorInterface
             return;
         }
 
-        $dataPath = null !== $context ? $context->breadcrumbs->currentPath() : '/';
+        $dataPath = $this->getDataPath($context);
         $count = count($data);
 
-        if (null !== $schema->minItems && $count < $schema->minItems) {
-            throw new MinItemsError(
-                minItems: $schema->minItems,
-                actualCount: $count,
-                dataPath: $dataPath,
-                schemaPath: '/minItems',
-            );
-        }
-
-        if (null !== $schema->maxItems && $count > $schema->maxItems) {
-            throw new MaxItemsError(
-                maxItems: $schema->maxItems,
-                actualCount: $count,
-                dataPath: $dataPath,
-                schemaPath: '/maxItems',
-            );
-        }
+        $this->validateLength(
+            actual: $count,
+            min: $schema->minItems,
+            max: $schema->maxItems,
+            minErrorFactory: static fn(int $min, int $actual) => new MinItemsError($min, $actual, $dataPath, '/minItems'),
+            maxErrorFactory: static fn(int $max, int $actual) => new MaxItemsError($max, $actual, $dataPath, '/maxItems'),
+        );
 
         if (true === $schema->uniqueItems) {
             $unique = array_unique($data, SORT_REGULAR);
 
             if (count($unique) !== $count) {
-                throw new MaxItemsError(
-                    maxItems: $count,
+                throw new DuplicateItemsError(
+                    expectedCount: $count,
                     actualCount: count($unique),
                     dataPath: $dataPath,
                     schemaPath: '/uniqueItems',

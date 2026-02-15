@@ -8,16 +8,14 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MaxLengthError;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
-use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\SchemaValidator\Trait\LengthValidationTrait;
 use Override;
 
 use function is_string;
 
-final readonly class StringLengthValidator implements SchemaValidatorInterface
+readonly class StringLengthValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
+    use LengthValidationTrait;
 
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -26,25 +24,15 @@ final readonly class StringLengthValidator implements SchemaValidatorInterface
             return;
         }
 
-        $dataPath = null !== $context ? $context->breadcrumbs->currentPath() : '/';
+        $dataPath = $this->getDataPath($context);
         $length = mb_strlen($data);
 
-        if (null !== $schema->minLength && $length < $schema->minLength) {
-            throw new MinLengthError(
-                minLength: $schema->minLength,
-                actualLength: $length,
-                dataPath: $dataPath,
-                schemaPath: '/minLength',
-            );
-        }
-
-        if (null !== $schema->maxLength && $length > $schema->maxLength) {
-            throw new MaxLengthError(
-                maxLength: $schema->maxLength,
-                actualLength: $length,
-                dataPath: $dataPath,
-                schemaPath: '/maxLength',
-            );
-        }
+        $this->validateLength(
+            actual: $length,
+            min: $schema->minLength,
+            max: $schema->maxLength,
+            minErrorFactory: static fn(int $min, int $actual) => new MinLengthError($min, $actual, $dataPath, '/minLength'),
+            maxErrorFactory: static fn(int $max, int $actual) => new MaxLengthError($max, $actual, $dataPath, '/maxLength'),
+        );
     }
 }

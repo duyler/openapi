@@ -1,0 +1,373 @@
+openapi: 3.1.0
+info:
+  title: Complex References API
+  version: 1.0.0
+paths:
+  /schema-ref:
+    get:
+      parameters:
+        - name: id
+          in: query
+          schema:
+            type: string
+        - name: name
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseUser'
+  /parameter-ref:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  limit:
+                    type: integer
+  /response-ref:
+    get:
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessResponse'
+  /allof-ref:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/BaseUser'
+                - $ref: '#/components/schemas/UserExtensions'
+      responses:
+        '200':
+          description: Success
+  /items-ref:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - users
+              properties:
+                users:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/BaseUser'
+      responses:
+        '200':
+          description: Success
+  /prefixitems-ref:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  type: array
+                  prefixItems:
+                    - $ref: '#/components/schemas/StringType'
+                    - $ref: '#/components/schemas/NumberType'
+                    - $ref: '#/components/schemas/BooleanType'
+                  items: false
+      responses:
+        '200':
+          description: Success
+  /nested-ref:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - company
+              properties:
+                company:
+                  type: object
+                  required:
+                    - users
+                  properties:
+                    users:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ExtendedUser'
+      responses:
+        '200':
+          description: Success
+  /invalid-ref:
+    get:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NonExistentSchema'
+  /additional-props-ref:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/BaseUser'
+                - type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Success
+  /recursive-ref:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Category'
+      responses:
+        '200':
+          description: Success
+  /nested:
+    get:
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NestedSchema'
+  /user/extended:
+    get:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtendedUser'
+  /user/nested-array:
+    get:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NestedUserArray'
+  /schema/tuple:
+    get:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TupleSchema'
+  /schema/deep:
+    get:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeepRefSchema'
+components:
+  responses:
+    SuccessResponse:
+      description: Success
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+  schemas:
+    BaseUser:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    UserExtensions:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+    ExtendedUser:
+      allOf:
+        - $ref: '#/components/schemas/BaseUser'
+        - $ref: '#/components/schemas/UserExtensions'
+    StringType:
+      type: string
+    NumberType:
+      type: number
+    BooleanType:
+      type: boolean
+    Category:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        parent:
+          $ref: '#/components/schemas/Category'
+    Address:
+      type: object
+      required:
+        - street
+        - city
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+    UserWithAddress:
+      allOf:
+        - $ref: '#/components/schemas/ExtendedUser'
+        - type: object
+          properties:
+            address:
+              $ref: '#/components/schemas/Address'
+    NestedSchema:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExtendedUser'
+    NestedUserArray:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserWithAddress'
+    BasicItem:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+    ItemWithPrice:
+      allOf:
+        - $ref: '#/components/schemas/BasicItem'
+        - type: object
+          required:
+            - price
+          properties:
+            price:
+              type: number
+    ItemWithStock:
+      allOf:
+        - $ref: '#/components/schemas/ItemWithPrice'
+        - type: object
+          required:
+            - stock
+          properties:
+            stock:
+              type: integer
+    TupleSchema:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          prefixItems:
+            - $ref: '#/components/schemas/BasicItem'
+            - $ref: '#/components/schemas/ItemWithStock'
+          items: false
+    Level3:
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type: string
+    Level2:
+      type: object
+      required:
+        - level3
+      properties:
+        level3:
+          $ref: '#/components/schemas/Level3'
+    Level1:
+      type: object
+      required:
+        - level2
+      properties:
+        level2:
+          $ref: '#/components/schemas/Level2'
+    DeepRefSchema:
+      type: object
+      required:
+        - level1
+      properties:
+        level1:
+          $ref: '#/components/schemas/Level1'
+  parameters:
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+      description: Maximum number of items to return
+    OffsetParam:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+      description: Number of items to skip

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Integration;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -45,7 +46,7 @@ final class RealOpenApiSpecTest extends TestCase
     {
         $request = $this->createPsr7Request(method: 'GET', uri: '/pets');
 
-        $this->petstoreValidator->validateRequest($request, '/pets', 'GET');
+        $this->petstoreValidator->validateRequest($request);
 
         $this->expectNotToPerformAssertions();
     }
@@ -60,7 +61,7 @@ final class RealOpenApiSpecTest extends TestCase
             body: '{"name":"Fluffy","tag":"cat"}',
         );
 
-        $this->petstoreValidator->validateRequest($request, '/pets', 'POST');
+        $this->petstoreValidator->validateRequest($request);
 
         $this->expectNotToPerformAssertions();
     }
@@ -70,7 +71,7 @@ final class RealOpenApiSpecTest extends TestCase
     {
         $request = $this->createPsr7Request(method: 'GET', uri: '/pets/123');
 
-        $this->petstoreValidator->validateRequest($request, '/pets/{petId}', 'GET');
+        $this->petstoreValidator->validateRequest($request);
 
         $this->expectNotToPerformAssertions();
     }
@@ -84,7 +85,9 @@ final class RealOpenApiSpecTest extends TestCase
             body: '[{"id":1,"name":"Fluffy","tag":"cat"},{"id":2,"name":"Buddy","tag":"dog"}]',
         );
 
-        $this->petstoreValidator->validateResponse($response, '/pets', 'GET');
+        $operation = new Operation('/pets', 'GET');
+
+        $this->petstoreValidator->validateResponse($response, $operation);
 
         $this->expectNotToPerformAssertions();
     }
@@ -101,7 +104,7 @@ final class RealOpenApiSpecTest extends TestCase
 
         $this->expectException(ValidationException::class);
 
-        $this->petstoreValidator->validateRequest($request, '/pets', 'POST');
+        $this->petstoreValidator->validateRequest($request);
     }
 
     #[Test]
@@ -114,7 +117,7 @@ final class RealOpenApiSpecTest extends TestCase
             body: '{"customer_id":"123e4567-e89b-12d3-a456-426614174000","items":[{"product_id":"prod_123","quantity":2}]}',
         );
 
-        $this->ecommerceValidator->validateRequest($request, '/orders', 'POST');
+        $this->ecommerceValidator->validateRequest($request);
 
         $this->expectNotToPerformAssertions();
     }
@@ -127,7 +130,7 @@ final class RealOpenApiSpecTest extends TestCase
             uri: '/orders/123e4567-e89b-12d3-a456-426614174000',
         );
 
-        $this->ecommerceValidator->validateRequest($request, '/orders/{orderId}', 'GET');
+        $this->ecommerceValidator->validateRequest($request);
 
         $this->expectNotToPerformAssertions();
     }

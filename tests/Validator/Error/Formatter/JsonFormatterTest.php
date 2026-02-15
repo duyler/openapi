@@ -8,8 +8,13 @@ use Duyler\OpenApi\Validator\Exception\MinLengthError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+
+use ValueError;
 
 use const JSON_ERROR_NONE;
+use const INF;
+use const NAN;
 
 class JsonFormatterTest extends TestCase
 {
@@ -122,5 +127,58 @@ class JsonFormatterTest extends TestCase
 
         // TypeMismatchError should still have a default suggestion
         $this->assertArrayHasKey('suggestion', $decoded);
+    }
+
+    #[Test]
+    public function format_throws_value_error_for_encode_failure(): void
+    {
+        $error = new class ('/test', 'test') extends AbstractValidationError {
+            public function __construct(string $dataPath, string $schemaPath)
+            {
+                parent::__construct(
+                    message: 'Test error',
+                    keyword: 'test',
+                    dataPath: $dataPath,
+                    schemaPath: $schemaPath,
+                    params: ['key' => INF],
+                );
+            }
+
+            public function getType(): string
+            {
+                return 'test';
+            }
+        };
+
+        $this->expectException(ValueError::class);
+        $this->expectExceptionMessage('Failed to encode error data to JSON');
+
+        $this->formatter->format($error);
+    }
+
+    #[Test]
+    public function format_multiple_throws_value_error_for_encode_failure(): void
+    {
+        $error = new class ('/test', 'test') extends AbstractValidationError {
+            public function __construct(string $dataPath, string $schemaPath)
+            {
+                parent::__construct(
+                    message: 'Test error',
+                    keyword: 'test',
+                    dataPath: $dataPath,
+                    schemaPath: $schemaPath,
+                    params: ['key' => NAN],
+                );
+            }
+
+            public function getType(): string
+            {
+                return 'test';
+            }
+        };
+
+        $this->expectException(ValueError::class);
+
+        $this->formatter->formatMultiple([$error]);
     }
 }

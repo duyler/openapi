@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
-final readonly class FormBodyParser
+readonly class FormBodyParser
 {
     /**
      * @return array<array-key, mixed>

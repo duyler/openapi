@@ -6,18 +6,15 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
-use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Override;
 
+use function assert;
 use function is_array;
 use function is_string;
 
-final readonly class PatternPropertiesValidator implements SchemaValidatorInterface
+readonly class PatternPropertiesValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -27,6 +24,17 @@ final readonly class PatternPropertiesValidator implements SchemaValidatorInterf
 
         if (false === is_array($data)) {
             return;
+        }
+
+        foreach ($schema->patternProperties as $pattern => $propertySchema) {
+            if ('' === $pattern) {
+                continue;
+            }
+
+            RegexValidator::validate(
+                RegexValidator::normalize($pattern),
+                "pattern property '{$pattern}'",
+            );
         }
 
         foreach ($data as $propertyName => $propertyValue) {
@@ -39,10 +47,16 @@ final readonly class PatternPropertiesValidator implements SchemaValidatorInterf
                     continue;
                 }
 
-                if (preg_match($pattern, $propertyName)) {
+                $normalizedPattern = RegexValidator::normalize($pattern);
+                assert($normalizedPattern !== '');
+
+                $result = preg_match($normalizedPattern, $propertyName);
+
+                if (false !== $result && 1 === $result) {
                     /** @var array-key|array<array-key, mixed> $propertyValue */
                     $validator = new SchemaValidator($this->pool);
-                    $propertyContext = $context?->withBreadcrumb($propertyName) ?? ValidationContext::create($this->pool);
+                    $nullableAsType = $context?->nullableAsType ?? true;
+                    $propertyContext = $context?->withBreadcrumb($propertyName) ?? ValidationContext::create($this->pool, $nullableAsType);
                     $validator->validate($propertyValue, $propertySchema, $propertyContext);
                 }
             }

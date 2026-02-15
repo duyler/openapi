@@ -1,0 +1,64 @@
+openapi: 3.0.3
+info:
+  title: Nullable Response Validation API
+  version: 1.0.0
+paths:
+  /nullable:
+    get:
+      summary: Get nullable response
+      operationId: getNullable
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  nullableField:
+                    type: string
+                    nullable: true
+                  nullableRequiredField:
+                    type: string
+                    nullable: true
+                required:
+                  - id
+                  - nullableRequiredField
+  /nullable-nested:
+    get:
+      summary: Get nested nullable response
+      operationId: getNestedNullable
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      email:
+                        type: string
+                        nullable: true
+                required:
+                  - user
+  /nullable-array:
+    get:
+      summary: Get array with nullable items
+      operationId: getNullableArray
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  nullable: true

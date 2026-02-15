@@ -5,20 +5,22 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
-use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Override;
 
-use function is_string;
+use function base64_decode;
+use function base64_encode;
 
-final readonly class ByteValidator implements FormatValidatorInterface
+readonly class ByteValidator extends AbstractStringFormatValidator
 {
     #[Override]
-    public function validate(mixed $data): void
+    protected function getFormatName(): string
     {
-        if (false === is_string($data)) {
-            throw new InvalidFormatException('byte', $data, 'Value must be a string');
-        }
+        return 'byte';
+    }
 
+    #[Override]
+    protected function validateString(string $data): void
+    {
         $decoded = base64_decode($data, true);
 
         if (false === $decoded) {

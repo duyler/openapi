@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 use Exception;
 use Throwable;
 
-class ValidationException extends Exception
+final class ValidationException extends Exception
 {
     /**
      * @param array<int, AbstractValidationError> $errors

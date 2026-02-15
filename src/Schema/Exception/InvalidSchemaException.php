@@ -6,4 +6,4 @@ namespace Duyler\OpenApi\Schema\Exception;
 
 use RuntimeException;
 
-class InvalidSchemaException extends RuntimeException {}
+final class InvalidSchemaException extends RuntimeException {}

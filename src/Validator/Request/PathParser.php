@@ -7,8 +7,9 @@ namespace Duyler\OpenApi\Validator\Request;
 use Duyler\OpenApi\Validator\Exception\PathMismatchException;
 
 use function is_string;
+use function assert;
 
-final readonly class PathParser
+readonly class PathParser
 {
     /**
      * Extract parameter names from path template
@@ -31,9 +32,7 @@ final readonly class PathParser
     {
         $regex = $this->templateToRegex($template);
 
-        if ('' === $regex) {
-            throw new PathMismatchException($template, $requestPath);
-        }
+        assert('' !== $regex);
 
         $matches = [];
         $matchResult = preg_match($regex, $requestPath, $matches);
@@ -56,9 +55,7 @@ final readonly class PathParser
     {
         $pattern = preg_replace('/\{([^}]+)\}/', '(?P<$1>[^/]+)', $template);
 
-        if (null === $pattern) {
-            return '#^' . preg_quote($template, '#') . '$#';
-        }
+        assert(null !== $pattern);
 
         return '#^' . $pattern . '$#';
     }

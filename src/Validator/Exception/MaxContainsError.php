@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
-class MaxContainsError extends AbstractValidationError
+final class MaxContainsError extends AbstractValidationError
 {
     public function __construct(
         int $maxContains,

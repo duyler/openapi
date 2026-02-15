@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema;
 use JsonSerializable;
 use Override;
 
-final readonly class OpenApiDocument implements JsonSerializable
+readonly class OpenApiDocument implements JsonSerializable
 {
     public function __construct(
         public string $openapi,

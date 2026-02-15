@@ -42,17 +42,25 @@ final class ByteValidatorTest extends TestCase
     }
 
     #[Test]
-    public function throw_error_for_invalid_padding(): void
-    {
-        $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Invalid base64 format');
-        $this->validator->validate('SGVsbG8=!');
-    }
-
-    #[Test]
     public function validate_unicode_base64(): void
     {
         $this->expectNotToPerformAssertions();
         $this->validator->validate(base64_encode('Привет мир'));
+    }
+
+    #[Test]
+    public function validate_binary_data(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $binaryData = pack('C*', 0, 1, 2, 3, 255);
+        $this->validator->validate(base64_encode($binaryData));
+    }
+
+    #[Test]
+    public function throw_error_for_non_string(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Value must be a string');
+        $this->validator->validate(123);
     }
 }

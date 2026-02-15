@@ -6,12 +6,11 @@ namespace Duyler\OpenApi\Test\Schema\Model;
 
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Responses;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers \Duyler\OpenApi\Schema\Model\Responses
- */
+#[CoversClass(Responses::class)]
 final class ResponsesTest extends TestCase
 {
     #[Test]

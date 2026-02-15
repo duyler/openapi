@@ -9,18 +9,13 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MaximumError;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\MultipleOfKeywordError;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
 use function is_float;
 use function is_int;
 
-final readonly class NumericRangeValidator implements SchemaValidatorInterface
+readonly class NumericRangeValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -28,7 +23,7 @@ final readonly class NumericRangeValidator implements SchemaValidatorInterface
             return;
         }
 
-        $dataPath = null !== $context ? $context->breadcrumbs->currentPath() : '/';
+        $dataPath = $this->getDataPath($context);
 
         if (null !== $schema->minimum && $data < $schema->minimum) {
             throw new MinimumError(

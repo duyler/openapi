@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
-use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Exception\ContainsMatchError;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -44,7 +44,7 @@ class ContainsValidatorTest extends TestCase
             contains: $containsSchema,
         );
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(ContainsMatchError::class);
 
         $this->validator->validate([1, 2, 3, 4, 5], $schema);
     }
@@ -110,7 +110,7 @@ class ContainsValidatorTest extends TestCase
             contains: $containsSchema,
         );
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(ContainsMatchError::class);
 
         $this->validator->validate(['a', 'ab', 'abc'], $schema);
     }
@@ -138,7 +138,7 @@ class ContainsValidatorTest extends TestCase
             contains: $containsSchema,
         );
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(ContainsMatchError::class);
 
         $this->validator->validate([], $schema);
     }

@@ -32,6 +32,7 @@ use Duyler\OpenApi\Validator\Request\QueryParametersValidator;
 use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Request\RequestBodyValidator;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
+use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Webhook\Exception\UnknownWebhookException;
@@ -42,6 +43,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UriInterface;
+use stdClass;
 
 /** @internal */
 final class WebhookValidatorTest extends TestCase
@@ -53,13 +55,14 @@ final class WebhookValidatorTest extends TestCase
         $pool = new ValidatorPool();
         $schemaValidator = new SchemaValidator($pool);
         $deserializer = new ParameterDeserializer();
+        $coercer = new TypeCoercer();
 
         $pathParser = new PathParser();
-        $pathParamsValidator = new PathParametersValidator($schemaValidator, $deserializer);
+        $pathParamsValidator = new PathParametersValidator($schemaValidator, $deserializer, $coercer);
         $queryParser = new QueryParser();
-        $queryParamsValidator = new QueryParametersValidator($schemaValidator, $deserializer);
-        $headersValidator = new HeadersValidator($schemaValidator);
-        $cookieValidator = new CookieValidator($schemaValidator, $deserializer);
+        $queryParamsValidator = new QueryParametersValidator($schemaValidator, $deserializer, $coercer);
+        $headersValidator = new HeadersValidator($schemaValidator, $deserializer, $coercer);
+        $cookieValidator = new CookieValidator($schemaValidator, $deserializer, $coercer);
         $negotiator = new ContentTypeNegotiator();
         $jsonParser = new JsonBodyParser();
         $formParser = new FormBodyParser();
@@ -306,6 +309,207 @@ final class WebhookValidatorTest extends TestCase
         $this->webhookValidator->validate($request, 'payment.updated', $document);
 
         $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_with_put_method(): void
+    {
+        $request = $this->createPsr7RequestForWebhook(
+            method: 'PUT',
+            headers: ['Content-Type' => 'application/json'],
+            body: '{"payment_id":"123","status":"updated","amount":75}',
+            webhookName: 'payment.updated',
+        );
+
+        $operation = new Operation(
+            requestBody: new RequestBody(
+                required: true,
+                content: new Content([
+                    'application/json' => new MediaType(
+                        schema: new Schema(
+                            type: 'object',
+                            required: ['payment_id', 'status', 'amount'],
+                            properties: [
+                                'payment_id' => new Schema(type: 'string'),
+                                'status' => new Schema(type: 'string'),
+                                'amount' => new Schema(type: 'number'),
+                            ],
+                        ),
+                    ),
+                ]),
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            openapi: '3.1.0',
+            info: new InfoObject(title: 'Webhook API', version: '1.0.0'),
+            webhooks: new Webhooks([
+                'payment.updated' => new PathItem(put: $operation),
+            ]),
+        );
+
+        $this->webhookValidator->validate($request, 'payment.updated', $document);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_with_patch_method(): void
+    {
+        $request = $this->createPsr7RequestForWebhook(
+            method: 'PATCH',
+            headers: ['Content-Type' => 'application/json'],
+            body: '{"payment_id":"123","status":"partial"}',
+            webhookName: 'payment.updated',
+        );
+
+        $operation = new Operation(
+            requestBody: new RequestBody(
+                content: new Content([
+                    'application/json' => new MediaType(
+                        schema: new Schema(
+                            type: 'object',
+                            properties: [
+                                'payment_id' => new Schema(type: 'string'),
+                                'status' => new Schema(type: 'string'),
+                            ],
+                        ),
+                    ),
+                ]),
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            openapi: '3.1.0',
+            info: new InfoObject(title: 'Webhook API', version: '1.0.0'),
+            webhooks: new Webhooks([
+                'payment.updated' => new PathItem(patch: $operation),
+            ]),
+        );
+
+        $this->webhookValidator->validate($request, 'payment.updated', $document);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_with_delete_method(): void
+    {
+        $request = $this->createPsr7RequestForWebhook(
+            method: 'DELETE',
+            webhookName: 'payment.deleted',
+        );
+
+        $operation = new Operation();
+
+        $document = new OpenApiDocument(
+            openapi: '3.1.0',
+            info: new InfoObject(title: 'Webhook API', version: '1.0.0'),
+            webhooks: new Webhooks([
+                'payment.deleted' => new PathItem(delete: $operation),
+            ]),
+        );
+
+        $this->webhookValidator->validate($request, 'payment.deleted', $document);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_with_options_method(): void
+    {
+        $request = $this->createPsr7RequestForWebhook(
+            method: 'OPTIONS',
+            webhookName: 'payment.options',
+        );
+
+        $operation = new Operation();
+
+        $document = new OpenApiDocument(
+            openapi: '3.1.0',
+            info: new InfoObject(title: 'Webhook API', version: '1.0.0'),
+            webhooks: new Webhooks([
+                'payment.options' => new PathItem(options: $operation),
+            ]),
+        );
+
+        $this->webhookValidator->validate($request, 'payment.options', $document);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_with_head_method(): void
+    {
+        $request = $this->createPsr7RequestForWebhook(
+            method: 'HEAD',
+            webhookName: 'payment.head',
+        );
+
+        $operation = new Operation();
+
+        $document = new OpenApiDocument(
+            openapi: '3.1.0',
+            info: new InfoObject(title: 'Webhook API', version: '1.0.0'),
+            webhooks: new Webhooks([
+                'payment.head' => new PathItem(head: $operation),
+            ]),
+        );
+
+        $this->webhookValidator->validate($request, 'payment.head', $document);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_with_trace_method(): void
+    {
+        $request = $this->createPsr7RequestForWebhook(
+            method: 'TRACE',
+            webhookName: 'payment.trace',
+        );
+
+        $operation = new Operation();
+
+        $document = new OpenApiDocument(
+            openapi: '3.1.0',
+            info: new InfoObject(title: 'Webhook API', version: '1.0.0'),
+            webhooks: new Webhooks([
+                'payment.trace' => new PathItem(trace: $operation),
+            ]),
+        );
+
+        $this->webhookValidator->validate($request, 'payment.trace', $document);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_throws_for_invalid_operation_type(): void
+    {
+        $pathItem = new class {
+            public object $post;
+
+            public function __construct()
+            {
+                $this->post = new stdClass();
+            }
+        };
+
+        $document = new OpenApiDocument(
+            openapi: '3.1.0',
+            info: new InfoObject(title: 'Test API', version: '1.0.0'),
+            webhooks: new Webhooks([
+                'test.webhook' => $pathItem,
+            ]),
+        );
+
+        $request = $this->createPsr7RequestForWebhook(method: 'POST', webhookName: 'test.webhook');
+
+        $this->expectException(UnknownWebhookException::class);
+        $this->expectExceptionMessage('test.webhook (invalid operation)');
+
+        $this->webhookValidator->validate($request, 'test.webhook', $document);
     }
 
     private function createWebhookDocument(): OpenApiDocument

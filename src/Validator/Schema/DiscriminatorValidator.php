@@ -17,7 +17,7 @@ use function array_key_exists;
 use function is_array;
 use function is_string;
 
-final readonly class DiscriminatorValidator
+readonly class DiscriminatorValidator
 {
     public function __construct(
         private readonly RefResolverInterface $refResolver,

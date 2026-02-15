@@ -7,14 +7,15 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-final readonly class Parameter implements JsonSerializable
+readonly class Parameter implements JsonSerializable
 {
     /**
      * @param array<string, mixed> $examples
      */
     public function __construct(
-        public string $name,
-        public string $in,
+        public ?string $ref = null,
+        public ?string $name = null,
+        public ?string $in = null,
         public ?string $description = null,
         public bool $required = false,
         public bool $deprecated = false,
@@ -31,10 +32,19 @@ final readonly class Parameter implements JsonSerializable
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [
-            'name' => $this->name,
-            'in' => $this->in,
-        ];
+        $data = [];
+
+        if ($this->ref !== null) {
+            $data['$ref'] = $this->ref;
+        }
+
+        if ($this->name !== null) {
+            $data['name'] = $this->name;
+        }
+
+        if ($this->in !== null) {
+            $data['in'] = $this->in;
+        }
 
         if ($this->description !== null) {
             $data['description'] = $this->description;

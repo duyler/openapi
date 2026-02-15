@@ -7,15 +7,10 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ConstError;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
-final readonly class ConstValidator implements SchemaValidatorInterface
+readonly class ConstValidator extends AbstractSchemaValidator
 {
-    public function __construct(
-        private readonly ValidatorPool $pool,
-    ) {}
-
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -24,7 +19,7 @@ final readonly class ConstValidator implements SchemaValidatorInterface
         }
 
         if ($data !== $schema->const) {
-            $dataPath = null !== $context ? $context->breadcrumbs->currentPath() : '/';
+            $dataPath = $this->getDataPath($context);
             throw new ConstError(
                 expected: $schema->const,
                 actual: $data,

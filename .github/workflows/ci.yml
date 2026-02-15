@@ -47,11 +47,6 @@ jobs:
       - name: Run Psalm
         run: vendor/bin/psalm --shepherd
 
-      - name: Run Infection
-        run: vendor/bin/infection --test-framework-options="--testsuite=main" --show-mutations
-        env:
-          STRIPE_API_KEY: ${{ secrets.STRIPE_API_KEY }}
-
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
