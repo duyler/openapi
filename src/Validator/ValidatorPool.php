@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator;
 
 use WeakMap;
 
-final readonly class ValidatorPool
+readonly class ValidatorPool
 {
     /** @var WeakMap<object, mixed> */
     public WeakMap $pool;

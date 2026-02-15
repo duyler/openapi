@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator\Request;
 
 use Override;
 
-final readonly class PathParametersValidator extends AbstractParameterValidator
+readonly class PathParametersValidator extends AbstractParameterValidator
 {
     #[Override]
     protected function getLocation(): string

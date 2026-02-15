@@ -9,7 +9,7 @@ use JsonException;
 
 use const JSON_THROW_ON_ERROR;
 
-final readonly class JsonBodyParser
+readonly class JsonBodyParser
 {
     /**
      * @throws JsonException

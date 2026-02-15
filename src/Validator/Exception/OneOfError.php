@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
-class OneOfError extends AbstractValidationError
+final class OneOfError extends AbstractValidationError
 {
     public function __construct(
         string $dataPath,

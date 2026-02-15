@@ -14,7 +14,7 @@ use function is_array;
 
 use const PHP_INT_MAX;
 
-final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator
+readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

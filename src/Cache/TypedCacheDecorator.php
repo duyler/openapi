@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Cache;
 use Psr\Cache\CacheItemPoolInterface;
 use RuntimeException;
 
-final readonly class TypedCacheDecorator
+readonly class TypedCacheDecorator
 {
     public function __construct(
         private readonly CacheItemPoolInterface $pool,

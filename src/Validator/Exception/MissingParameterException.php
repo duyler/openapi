@@ -9,7 +9,7 @@ use Throwable;
 
 use function sprintf;
 
-class MissingParameterException extends RuntimeException
+final class MissingParameterException extends RuntimeException
 {
     public function __construct(
         public readonly string $location,

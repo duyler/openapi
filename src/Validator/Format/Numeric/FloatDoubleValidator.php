@@ -12,7 +12,7 @@ use InvalidArgumentException;
 
 use function is_float;
 
-final readonly class FloatDoubleValidator implements FormatValidatorInterface
+readonly class FloatDoubleValidator implements FormatValidatorInterface
 {
     private const string FLOAT = 'float';
     private const string DOUBLE = 'double';

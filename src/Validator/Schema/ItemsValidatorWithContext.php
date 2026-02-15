@@ -18,7 +18,7 @@ use Duyler\OpenApi\Validator\ValidatorPool;
 use function count;
 use function sprintf;
 
-final readonly class ItemsValidatorWithContext
+readonly class ItemsValidatorWithContext
 {
     public function __construct(
         private readonly ValidatorPool $pool,

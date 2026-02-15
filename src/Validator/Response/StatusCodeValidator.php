@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Validator\Response;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Validator\Exception\UndefinedResponseException;
 
-final readonly class StatusCodeValidator
+readonly class StatusCodeValidator
 {
     /**
      * @param array<string, Response> $responses

@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
-class MultipleOfKeywordError extends AbstractValidationError
+final class MultipleOfKeywordError extends AbstractValidationError
 {
     public function __construct(
         float $multipleOf,

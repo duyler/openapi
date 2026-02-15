@@ -46,12 +46,6 @@ use Psr\Http\Message\ServerRequestInterface;
 
 use function sprintf;
 
-/**
- * OpenAPI validator for HTTP requests and responses.
- *
- * Validates incoming requests and outgoing responses against OpenAPI specification.
- * Supports caching, custom format validators, error formatting, and event dispatching.
- */
 readonly class OpenApiValidator implements OpenApiValidatorInterface
 {
     public function __construct(
@@ -64,6 +58,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
         public readonly ?object $logger = null,
         public readonly bool $coercion = false,
         public readonly bool $nullableAsType = true,
+        public readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         public readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {}
 
@@ -249,6 +244,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
                 negotiator: new ContentTypeNegotiator(),
                 bodyParser: $bodyParser,
                 nullableAsType: $this->nullableAsType,
+                emptyArrayStrategy: $this->emptyArrayStrategy,
                 coercion: $this->coercion,
             ),
         );
@@ -262,6 +258,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
             coercion: $this->coercion,
             statusCodeValidator: new StatusCodeValidator(),
             nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
         );
     }
 
@@ -271,6 +268,8 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
             breadcrumbs: BreadcrumbManager::create(),
             pool: $this->pool,
             errorFormatter: $this->errorFormatter,
+            nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
         );
     }
 

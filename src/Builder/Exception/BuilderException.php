@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Builder\Exception;
 use Exception;
 use Throwable;
 
-class BuilderException extends Exception
+final class BuilderException extends Exception
 {
     public function __construct(
         string $message = '',

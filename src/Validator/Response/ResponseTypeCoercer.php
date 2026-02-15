@@ -12,7 +12,7 @@ use function is_float;
 use function is_int;
 use function is_string;
 
-final readonly class ResponseTypeCoercer
+readonly class ResponseTypeCoercer
 {
     public function coerce(mixed $value, ?Schema $schema, bool $enabled, bool $nullableAsType = true): mixed
     {

@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 use Override;
 use RuntimeException;
 
-class InvalidFormatException extends RuntimeException implements ValidationErrorInterface
+final class InvalidFormatException extends RuntimeException implements ValidationErrorInterface
 {
     public function __construct(
         public readonly string $format,

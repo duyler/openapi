@@ -10,7 +10,7 @@ use Override;
 use function count;
 use function sprintf;
 
-class UnknownDiscriminatorValueException extends AbstractValidationError
+final class UnknownDiscriminatorValueException extends AbstractValidationError
 {
     public function __construct(
         string $value,

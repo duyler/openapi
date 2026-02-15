@@ -13,7 +13,7 @@ use Override;
 use function assert;
 use function is_string;
 
-final readonly class PatternValidator extends AbstractSchemaValidator
+readonly class PatternValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

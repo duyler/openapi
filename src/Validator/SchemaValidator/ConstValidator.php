@@ -9,7 +9,7 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ConstError;
 use Override;
 
-final readonly class ConstValidator extends AbstractSchemaValidator
+readonly class ConstValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

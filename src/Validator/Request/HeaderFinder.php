@@ -10,7 +10,7 @@ use function is_array;
 use function is_string;
 use function strval;
 
-final readonly class HeaderFinder
+readonly class HeaderFinder
 {
     public function find(array $headers, string $name): ?string
     {

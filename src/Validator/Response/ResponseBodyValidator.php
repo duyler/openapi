@@ -10,7 +10,7 @@ use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\TypeGuarantor;
 
-final readonly class ResponseBodyValidator
+readonly class ResponseBodyValidator
 {
     public function __construct(
         private readonly SchemaValidatorInterface $schemaValidator,
