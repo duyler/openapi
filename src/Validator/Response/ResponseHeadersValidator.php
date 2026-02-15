@@ -19,7 +19,7 @@ use function intval;
 use function is_numeric;
 use function strtolower;
 
-final readonly class ResponseHeadersValidator
+readonly class ResponseHeadersValidator
 {
     public function __construct(
         private readonly SchemaValidatorInterface $schemaValidator,

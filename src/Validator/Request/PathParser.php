@@ -9,7 +9,7 @@ use Duyler\OpenApi\Validator\Exception\PathMismatchException;
 use function is_string;
 use function assert;
 
-final readonly class PathParser
+readonly class PathParser
 {
     /**
      * Extract parameter names from path template

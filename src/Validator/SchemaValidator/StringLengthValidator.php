@@ -13,7 +13,7 @@ use Override;
 
 use function is_string;
 
-final readonly class StringLengthValidator extends AbstractSchemaValidator
+readonly class StringLengthValidator extends AbstractSchemaValidator
 {
     use LengthValidationTrait;
 

@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 use function is_scalar;
 use function sprintf;
 
-class EnumError extends AbstractValidationError
+final class EnumError extends AbstractValidationError
 {
     public function __construct(
         array $allowedValues,

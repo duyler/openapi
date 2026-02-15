@@ -15,7 +15,7 @@ use Override;
 
 use function assert;
 
-final readonly class SchemaValidator implements SchemaValidatorInterface
+readonly class SchemaValidator implements SchemaValidatorInterface
 {
     public readonly FormatRegistry $formatRegistry;
 

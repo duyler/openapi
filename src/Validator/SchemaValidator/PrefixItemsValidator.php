@@ -16,7 +16,7 @@ use function count;
 use function is_array;
 use function sprintf;
 
-final readonly class PrefixItemsValidator extends AbstractSchemaValidator
+readonly class PrefixItemsValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

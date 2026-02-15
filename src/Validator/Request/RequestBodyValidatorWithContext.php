@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
@@ -18,7 +19,7 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Override;
 
-final readonly class RequestBodyValidatorWithContext implements RequestBodyValidatorInterface
+readonly class RequestBodyValidatorWithContext implements RequestBodyValidatorInterface
 {
     private SchemaValidator $regularSchemaValidator;
     private SchemaValidatorWithContext $contextSchemaValidator;
@@ -31,13 +32,14 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
         private readonly BodyParser $bodyParser,
         private readonly ContentTypeNegotiator $negotiator = new ContentTypeNegotiator(),
         private readonly bool $nullableAsType = true,
+        private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         private readonly bool $coercion = false,
     ) {
         $formatRegistry = BuiltinFormats::create();
         $this->regularSchemaValidator = new SchemaValidator($this->pool, $formatRegistry);
 
         $this->refResolver = new RefResolver();
-        $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->nullableAsType);
+        $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->nullableAsType, $this->emptyArrayStrategy);
         $this->coercer = new RequestBodyCoercer();
     }
 
@@ -87,7 +89,7 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
             if ($hasDiscriminator) {
                 $this->contextSchemaValidator->validate($parsedBody, $schema);
             } else {
-                $context = ValidationContext::create($this->pool, $this->nullableAsType);
+                $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy);
                 $this->regularSchemaValidator->validate($parsedBody, $schema, $context);
             }
         }

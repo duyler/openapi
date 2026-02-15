@@ -11,7 +11,7 @@ use function preg_match;
 use function str_contains;
 use function str_starts_with;
 
-final readonly class DurationValidator extends AbstractStringFormatValidator
+readonly class DurationValidator extends AbstractStringFormatValidator
 {
     private const string DURATION_PATTERN = '/^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/';
 

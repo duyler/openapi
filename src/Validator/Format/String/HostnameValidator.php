@@ -13,7 +13,7 @@ use function strlen;
 use function str_ends_with;
 use function str_starts_with;
 
-final readonly class HostnameValidator extends AbstractStringFormatValidator
+readonly class HostnameValidator extends AbstractStringFormatValidator
 {
     private const string HOSTNAME_PATTERN = '/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/';
     private const int MAX_HOSTNAME_LENGTH = 253;

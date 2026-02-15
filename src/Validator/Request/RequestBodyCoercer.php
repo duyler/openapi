@@ -14,7 +14,7 @@ use function is_int;
 use function is_numeric;
 use function is_string;
 
-final readonly class RequestBodyCoercer
+readonly class RequestBodyCoercer
 {
     public function coerce(mixed $value, ?Schema $schema, bool $enabled, bool $strict = false, bool $nullableAsType = true): mixed
     {

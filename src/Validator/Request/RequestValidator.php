@@ -10,7 +10,7 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 
 use function is_array;
 
-final readonly class RequestValidator
+readonly class RequestValidator
 {
     public function __construct(
         private readonly PathParser $pathParser,

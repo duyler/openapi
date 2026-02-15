@@ -9,7 +9,7 @@ use Throwable;
 
 use function sprintf;
 
-class UnsupportedMediaTypeException extends RuntimeException
+final class UnsupportedMediaTypeException extends RuntimeException
 {
     /**
      * @param list<string> $supportedTypes

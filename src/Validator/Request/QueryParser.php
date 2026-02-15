@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request;
 
-final readonly class QueryParser
+readonly class QueryParser
 {
     /**
      * Parse query string into parameters

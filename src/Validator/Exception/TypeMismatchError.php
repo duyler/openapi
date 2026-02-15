@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
-class TypeMismatchError extends AbstractValidationError
+final class TypeMismatchError extends AbstractValidationError
 {
     public function __construct(
         string $expected,

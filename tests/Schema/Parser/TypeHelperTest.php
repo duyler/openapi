@@ -317,4 +317,192 @@ final class TypeHelperTest extends TestCase
         $this->expectException(TypeError::class);
         TypeHelper::asSecurityListMapOrNull([['scheme1' => [123]]]);
     }
+
+    #[Test]
+    public function as_int_returns_int(): void
+    {
+        $result = TypeHelper::asInt(42);
+        $this->assertSame(42, $result);
+    }
+
+    #[Test]
+    public function as_int_throws_on_non_int(): void
+    {
+        $this->expectException(TypeError::class);
+        TypeHelper::asInt('42');
+    }
+
+    #[Test]
+    public function as_float_returns_float(): void
+    {
+        $result = TypeHelper::asFloat(3.14);
+        $this->assertSame(3.14, $result);
+    }
+
+    #[Test]
+    public function as_float_converts_int_to_float(): void
+    {
+        $result = TypeHelper::asFloat(42);
+        $this->assertSame(42.0, $result);
+    }
+
+    #[Test]
+    public function as_float_throws_on_non_float(): void
+    {
+        $this->expectException(TypeError::class);
+        TypeHelper::asFloat('3.14');
+    }
+
+    #[Test]
+    public function as_bool_returns_bool(): void
+    {
+        $result = TypeHelper::asBool(true);
+        $this->assertTrue($result);
+    }
+
+    #[Test]
+    public function as_bool_throws_on_non_bool(): void
+    {
+        $this->expectException(TypeError::class);
+        TypeHelper::asBool('true');
+    }
+
+    #[Test]
+    public function as_type_or_null_returns_null(): void
+    {
+        $result = TypeHelper::asTypeOrNull(null);
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function as_type_or_null_returns_string(): void
+    {
+        $result = TypeHelper::asTypeOrNull('string');
+        $this->assertSame('string', $result);
+    }
+
+    #[Test]
+    public function as_type_or_null_returns_array_of_strings(): void
+    {
+        $result = TypeHelper::asTypeOrNull(['string', 'number']);
+        $this->assertSame(['string', 'number'], $result);
+    }
+
+    #[Test]
+    public function as_type_or_null_returns_array_with_null(): void
+    {
+        $result = TypeHelper::asTypeOrNull(['string', null]);
+        $this->assertSame(['string', null], $result);
+    }
+
+    #[Test]
+    public function as_type_or_null_throws_on_invalid_type_in_array(): void
+    {
+        $this->expectException(TypeError::class);
+        TypeHelper::asTypeOrNull(['string', 123]);
+    }
+
+    #[Test]
+    public function as_type_or_null_throws_on_non_string_non_array(): void
+    {
+        $this->expectException(TypeError::class);
+        TypeHelper::asTypeOrNull(123);
+    }
+
+    #[Test]
+    public function as_enum_list_returns_list(): void
+    {
+        $result = TypeHelper::asEnumList(['value1', 'value2']);
+        $this->assertSame(['value1', 'value2'], $result);
+    }
+
+    #[Test]
+    public function as_enum_list_throws_on_non_array(): void
+    {
+        $this->expectException(TypeError::class);
+        TypeHelper::asEnumList('not an array');
+    }
+
+    #[Test]
+    public function as_enum_list_or_null_returns_list(): void
+    {
+        $result = TypeHelper::asEnumListOrNull(['value1', 'value2']);
+        $this->assertSame(['value1', 'value2'], $result);
+    }
+
+    #[Test]
+    public function as_enum_list_or_null_returns_null(): void
+    {
+        $result = TypeHelper::asEnumListOrNull(null);
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function as_string_mixed_map_or_null_returns_map(): void
+    {
+        $result = TypeHelper::asStringMixedMapOrNull(['key1' => 'value', 'key2' => 123]);
+        $this->assertSame(['key1' => 'value', 'key2' => 123], $result);
+    }
+
+    #[Test]
+    public function as_string_mixed_map_or_null_returns_null(): void
+    {
+        $result = TypeHelper::asStringMixedMapOrNull(null);
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function as_string_mixed_map_or_null_throws_on_non_array(): void
+    {
+        $this->expectException(TypeError::class);
+        TypeHelper::asStringMixedMapOrNull('not an array');
+    }
+
+    #[Test]
+    public function as_string_mixed_map_or_null_throws_on_non_string_keys(): void
+    {
+        $this->expectException(TypeError::class);
+        TypeHelper::asStringMixedMapOrNull([123 => 'value']);
+    }
+
+    #[Test]
+    public function as_security_list_map_returns_list(): void
+    {
+        $result = TypeHelper::asSecurityListMap([
+            ['scheme1' => ['scope1']],
+            ['scheme2' => ['scope2', 'scope3']],
+        ]);
+        $this->assertSame([
+            ['scheme1' => ['scope1']],
+            ['scheme2' => ['scope2', 'scope3']],
+        ], $result);
+    }
+
+    #[Test]
+    public function as_security_list_map_throws_on_non_array(): void
+    {
+        $this->expectException(TypeError::class);
+        TypeHelper::asSecurityListMap('not an array');
+    }
+
+    #[Test]
+    public function as_security_list_map_throws_on_non_array_item(): void
+    {
+        $this->expectException(TypeError::class);
+        TypeHelper::asSecurityListMap(['not an array']);
+    }
+
+    #[Test]
+    public function as_security_list_map_throws_on_non_string_key(): void
+    {
+        $this->expectException(TypeError::class);
+        TypeHelper::asSecurityListMap([[123 => ['scope']]]);
+    }
+
+    #[Test]
+    public function as_security_list_map_throws_on_non_array_value(): void
+    {
+        $this->expectException(TypeError::class);
+        TypeHelper::asSecurityListMap([['scheme' => 'not an array']]);
+    }
 }

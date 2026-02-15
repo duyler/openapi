@@ -15,7 +15,7 @@ use function array_key_exists;
 use function is_array;
 use function sprintf;
 
-final readonly class DependentSchemasValidator extends AbstractSchemaValidator
+readonly class DependentSchemasValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

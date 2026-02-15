@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Response;
 
 use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
@@ -16,7 +17,7 @@ use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 
-final readonly class ResponseBodyValidatorWithContext
+readonly class ResponseBodyValidatorWithContext
 {
     private SchemaValidator $regularSchemaValidator;
     private SchemaValidatorWithContext $contextSchemaValidator;
@@ -30,12 +31,13 @@ final readonly class ResponseBodyValidatorWithContext
         private readonly ResponseTypeCoercer $typeCoercer = new ResponseTypeCoercer(),
         private readonly bool $coercion = false,
         private readonly bool $nullableAsType = true,
+        private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
     ) {
         $formatRegistry = BuiltinFormats::create();
         $this->regularSchemaValidator = new SchemaValidator($this->pool, $formatRegistry);
 
         $this->refResolver = new RefResolver();
-        $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->nullableAsType);
+        $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->nullableAsType, $this->emptyArrayStrategy);
     }
 
     public function validate(
@@ -65,7 +67,7 @@ final readonly class ResponseBodyValidatorWithContext
             $schema = $mediaTypeSchema->schema;
             $hasDiscriminator = null !== $schema->discriminator || $this->refResolver->schemaHasDiscriminator($schema, $this->document);
 
-            $context = ValidationContext::create($this->pool, $this->nullableAsType);
+            $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy);
 
             if ($hasDiscriminator) {
                 $this->contextSchemaValidator->validate($parsedBody, $schema);

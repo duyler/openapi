@@ -16,7 +16,7 @@ use Exception;
 use function is_array;
 use function assert;
 
-final readonly class OneOfValidatorWithContext
+readonly class OneOfValidatorWithContext
 {
     public function __construct(
         private readonly ValidatorPool $pool,

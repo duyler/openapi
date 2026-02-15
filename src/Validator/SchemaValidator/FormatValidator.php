@@ -12,7 +12,7 @@ use Override;
 
 use function is_array;
 
-final readonly class FormatValidator implements SchemaValidatorInterface
+readonly class FormatValidator implements SchemaValidatorInterface
 {
     public function __construct(
         private readonly ValidatorPool $pool,

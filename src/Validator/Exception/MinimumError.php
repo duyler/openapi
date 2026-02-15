@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
-class MinimumError extends AbstractValidationError
+final class MinimumError extends AbstractValidationError
 {
     public function __construct(
         float $minimum,

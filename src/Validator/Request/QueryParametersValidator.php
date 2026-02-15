@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Validator\Request;
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Override;
 
-final readonly class QueryParametersValidator extends AbstractParameterValidator
+readonly class QueryParametersValidator extends AbstractParameterValidator
 {
     #[Override]
     protected function getLocation(): string

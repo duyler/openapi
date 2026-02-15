@@ -11,7 +11,7 @@ use Override;
 use function preg_match;
 use function substr;
 
-final readonly class TimeValidator extends AbstractStringFormatValidator
+readonly class TimeValidator extends AbstractStringFormatValidator
 {
     private const string TIME_FORMAT = 'H:i:s';
 

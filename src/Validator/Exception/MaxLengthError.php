@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
-class MaxLengthError extends AbstractValidationError
+final class MaxLengthError extends AbstractValidationError
 {
     public function __construct(
         int $maxLength,

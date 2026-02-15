@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-final readonly class Content implements JsonSerializable
+readonly class Content implements JsonSerializable
 {
     /**
      * @param array<string, MediaType> $mediaTypes

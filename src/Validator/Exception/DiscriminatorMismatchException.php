@@ -8,7 +8,7 @@ use Override;
 
 use function sprintf;
 
-class DiscriminatorMismatchException extends AbstractValidationError
+final class DiscriminatorMismatchException extends AbstractValidationError
 {
     public function __construct(
         string $expectedType,

@@ -8,7 +8,7 @@ use Override;
 
 use function sprintf;
 
-class MissingDiscriminatorPropertyException extends AbstractValidationError
+final class MissingDiscriminatorPropertyException extends AbstractValidationError
 {
     public function __construct(
         string $propertyName,

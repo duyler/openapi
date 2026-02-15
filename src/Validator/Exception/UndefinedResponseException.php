@@ -9,7 +9,7 @@ use Throwable;
 
 use function sprintf;
 
-class UndefinedResponseException extends RuntimeException
+final class UndefinedResponseException extends RuntimeException
 {
     /**
      * @param list<string> $definedResponses

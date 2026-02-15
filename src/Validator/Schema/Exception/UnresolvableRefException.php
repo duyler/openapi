@@ -10,7 +10,7 @@ use Throwable;
 
 use function sprintf;
 
-class UnresolvableRefException extends RuntimeException
+final class UnresolvableRefException extends RuntimeException
 {
     public function __construct(
         public readonly string $ref,
