@@ -1,0 +1,31 @@
+openapi: '3.2.0'
+info:
+  title: Streaming Events API
+  version: '1.0.0'
+paths:
+  /events:
+    get:
+      responses:
+        '200':
+          content:
+            text/event-stream:
+              itemSchema:
+                type: object
+                properties:
+                  event:
+                    type: string
+                  data:
+                    type: string
+  /logs:
+    get:
+      responses:
+        '200':
+          content:
+            application/jsonl:
+              itemSchema:
+                type: object
+                properties:
+                  level:
+                    type: string
+                  message:
+                    type: string

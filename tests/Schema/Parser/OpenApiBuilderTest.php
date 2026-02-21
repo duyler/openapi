@@ -26,9 +26,12 @@ use Duyler\OpenApi\Schema\Model\Server;
 use Duyler\OpenApi\Schema\Model\Servers;
 use Duyler\OpenApi\Schema\Model\Tags;
 use Duyler\OpenApi\Schema\Model\Webhooks;
+use Duyler\OpenApi\Schema\Parser\DeprecationLogger;
 use Duyler\OpenApi\Schema\Parser\JsonParser;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
+use Duyler\OpenApi\Schema\Model\MediaType;
 
 final class OpenApiBuilderTest extends TestCase
 {
@@ -637,35 +640,48 @@ final class OpenApiBuilderTest extends TestCase
             'paths' => [],
             'components' => [
                 'securitySchemes' => [
-                    'bearerAuth' => [
-                        'type' => 'http',
-                        'description' => 'Bearer authentication',
-                        'name' => 'Authorization',
-                        'in' => 'header',
-                        'scheme' => 'bearer',
-                        'bearerFormat' => 'JWT',
-                        'authorizationUrl' => 'https://example.com/auth',
-                        'tokenUrl' => 'https://example.com/token',
-                        'refreshUrl' => 'https://example.com/refresh',
-                        'scopes' => ['read' => 'Read access', 'write' => 'Write access'],
+                    'oauth2Auth' => [
+                        'type' => 'oauth2',
+                        'description' => 'OAuth 2.0 authentication',
+                        'flows' => [
+                            'authorizationCode' => [
+                                'authorizationUrl' => 'https://example.com/auth',
+                                'tokenUrl' => 'https://example.com/token',
+                                'refreshUrl' => 'https://example.com/refresh',
+                                'scopes' => ['read' => 'Read access', 'write' => 'Write access'],
+                            ],
+                            'deviceCode' => [
+                                'tokenUrl' => 'https://example.com/token',
+                                'deviceAuthorizationUrl' => 'https://example.com/device/code',
+                                'scopes' => ['read' => 'Read access'],
+                                'deprecated' => false,
+                            ],
+                        ],
+                        'oauth2MetadataUrl' => 'https://example.com/.well-known/oauth-authorization-server',
                     ],
                 ],
             ],
         ]);
 
         $document = $this->parser->parse($json);
-        $scheme = $document->components->securitySchemes['bearerAuth'];
+        $scheme = $document->components->securitySchemes['oauth2Auth'];
 
-        $this->assertSame('http', $scheme->type);
-        $this->assertSame('Bearer authentication', $scheme->description);
-        $this->assertSame('Authorization', $scheme->name);
-        $this->assertSame('header', $scheme->in);
-        $this->assertSame('bearer', $scheme->scheme);
-        $this->assertSame('JWT', $scheme->bearerFormat);
-        $this->assertSame('https://example.com/auth', $scheme->authorizationUrl);
-        $this->assertSame('https://example.com/token', $scheme->tokenUrl);
-        $this->assertSame('https://example.com/refresh', $scheme->refreshUrl);
-        $this->assertSame(['read' => 'Read access', 'write' => 'Write access'], $scheme->scopes);
+        $this->assertSame('oauth2', $scheme->type);
+        $this->assertSame('OAuth 2.0 authentication', $scheme->description);
+        $this->assertSame('https://example.com/.well-known/oauth-authorization-server', $scheme->oauth2MetadataUrl);
+
+        $this->assertNotNull($scheme->flows);
+        $this->assertNotNull($scheme->flows->authorizationCode);
+        $this->assertSame('https://example.com/auth', $scheme->flows->authorizationCode->authorizationUrl);
+        $this->assertSame('https://example.com/token', $scheme->flows->authorizationCode->tokenUrl);
+        $this->assertSame('https://example.com/refresh', $scheme->flows->authorizationCode->refreshUrl);
+        $this->assertSame(['read' => 'Read access', 'write' => 'Write access'], $scheme->flows->authorizationCode->scopes);
+
+        $this->assertNotNull($scheme->flows->deviceCode);
+        $this->assertSame('https://example.com/token', $scheme->flows->deviceCode->tokenUrl);
+        $this->assertSame('https://example.com/device/code', $scheme->flows->deviceCode->deviceAuthorizationUrl);
+        $this->assertSame(['read' => 'Read access'], $scheme->flows->deviceCode->scopes);
+        $this->assertFalse($scheme->flows->deviceCode->deprecated);
     }
 
     #[Test]
@@ -839,25 +855,32 @@ final class OpenApiBuilderTest extends TestCase
     }
 
     #[Test]
-    public function invalid_discriminator_throws_exception(): void
+    public function invalid_discriminator_is_now_valid(): void
     {
         $json = json_encode([
-            'openapi' => '3.1.0',
+            'openapi' => '3.2.0',
             'info' => ['title' => 'Test', 'version' => '1.0.0'],
             'paths' => [],
             'components' => [
                 'schemas' => [
                     'Pet' => [
                         'type' => 'object',
-                        'discriminator' => [],
+                        'discriminator' => [
+                            'defaultMapping' => '#/components/schemas/Fallback',
+                        ],
+                    ],
+                    'Fallback' => [
+                        'type' => 'object',
                     ],
                 ],
             ],
         ]);
 
-        $this->expectException(InvalidSchemaException::class);
-        $this->expectExceptionMessage('Discriminator must have propertyName');
-        $this->parser->parse($json);
+        $document = $this->parser->parse($json);
+        $discriminator = $document->components->schemas['Pet']->discriminator;
+
+        $this->assertNull($discriminator->propertyName);
+        $this->assertSame('#/components/schemas/Fallback', $discriminator->defaultMapping);
     }
 
     #[Test]
@@ -952,5 +975,1240 @@ final class OpenApiBuilderTest extends TestCase
 
         $this->assertInstanceOf(Example::class, $mediaType->example);
         $this->assertSame('{"id": 1}', $mediaType->example->value);
+    }
+
+    #[Test]
+    public function parses_openapi_3_2_version(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+        ]);
+
+        $document = $this->parser->parse($json);
+
+        $this->assertSame('3.2.0', $document->openapi);
+    }
+
+    #[Test]
+    public function parses_self_field(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            '$self' => 'https://api.example.com/openapi.json',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+        ]);
+
+        $document = $this->parser->parse($json);
+
+        $this->assertSame('https://api.example.com/openapi.json', $document->self);
+    }
+
+    #[Test]
+    public function parses_server_name(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'servers' => [
+                [
+                    'url' => 'https://api.example.com',
+                    'name' => 'production',
+                    'description' => 'Production server',
+                ],
+            ],
+            'paths' => [],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $server = $document->servers->servers[0];
+
+        $this->assertSame('production', $server->name);
+    }
+
+    #[Test]
+    public function parses_response_summary(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [
+                '/users' => [
+                    'get' => [
+                        'responses' => [
+                            '200' => [
+                                'summary' => 'Successful response',
+                                'description' => 'List of users',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $response = $document->paths->paths['/users']->get->responses->responses['200'];
+
+        $this->assertSame('Successful response', $response->summary);
+    }
+
+    #[Test]
+    public function parses_tag_v32_fields(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'tags' => [
+                [
+                    'name' => 'Users',
+                    'summary' => 'User management endpoints',
+                    'parent' => 'Administration',
+                    'kind' => 'nav',
+                ],
+            ],
+            'paths' => [],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $tag = $document->tags->tags[0];
+
+        $this->assertSame('Users', $tag->name);
+        $this->assertSame('User management endpoints', $tag->summary);
+        $this->assertSame('Administration', $tag->parent);
+        $this->assertSame('nav', $tag->kind);
+    }
+
+    #[Test]
+    public function parses_discriminator_default_mapping(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'Pet' => [
+                        'type' => 'object',
+                        'discriminator' => [
+                            'propertyName' => 'type',
+                            'mapping' => ['dog' => '#/components/schemas/Dog'],
+                            'defaultMapping' => '#/components/schemas/Pet',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $discriminator = $document->components->schemas['Pet']->discriminator;
+
+        $this->assertSame('type', $discriminator->propertyName);
+        $this->assertSame(['dog' => '#/components/schemas/Dog'], $discriminator->mapping);
+        $this->assertSame('#/components/schemas/Pet', $discriminator->defaultMapping);
+    }
+
+    #[Test]
+    public function rejects_invalid_version_4(): void
+    {
+        $json = json_encode([
+            'openapi' => '4.0.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+        ]);
+
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Unsupported OpenAPI version: 4.0.0. Only 3.0.x, 3.1.x and 3.2.x are supported.');
+        $this->parser->parse($json);
+    }
+
+    #[Test]
+    public function self_field_is_optional(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+        ]);
+
+        $document = $this->parser->parse($json);
+
+        $this->assertNull($document->self);
+    }
+
+    #[Test]
+    public function parses_query_operation(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [
+                '/search' => [
+                    'query' => [
+                        'summary' => 'Search with body',
+                        'requestBody' => [
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => ['type' => 'object'],
+                                ],
+                            ],
+                        ],
+                        'responses' => [
+                            '200' => ['description' => 'Search results'],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+
+        $this->assertNotNull($document->paths->paths['/search']->query);
+        $this->assertSame('Search with body', $document->paths->paths['/search']->query->summary);
+        $this->assertNotNull($document->paths->paths['/search']->query->requestBody);
+    }
+
+    #[Test]
+    public function parses_additional_operations(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [
+                '/resource' => [
+                    'additionalOperations' => [
+                        'COPY' => [
+                            'summary' => 'Copy resource',
+                            'responses' => ['201' => ['description' => 'Copied']],
+                        ],
+                        'MOVE' => [
+                            'summary' => 'Move resource',
+                            'responses' => ['201' => ['description' => 'Moved']],
+                        ],
+                        'PURGE' => [
+                            'summary' => 'Purge cache',
+                            'responses' => ['200' => ['description' => 'Purged']],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+
+        $this->assertNotNull($document->paths->paths['/resource']->additionalOperations);
+        $this->assertArrayHasKey('COPY', $document->paths->paths['/resource']->additionalOperations);
+        $this->assertArrayHasKey('MOVE', $document->paths->paths['/resource']->additionalOperations);
+        $this->assertArrayHasKey('PURGE', $document->paths->paths['/resource']->additionalOperations);
+        $this->assertSame('Copy resource', $document->paths->paths['/resource']->additionalOperations['COPY']->summary);
+        $this->assertSame('Move resource', $document->paths->paths['/resource']->additionalOperations['MOVE']->summary);
+        $this->assertSame('Purge cache', $document->paths->paths['/resource']->additionalOperations['PURGE']->summary);
+    }
+
+    #[Test]
+    public function parses_path_item_with_query_and_additional_operations(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [
+                '/resource' => [
+                    'get' => [
+                        'summary' => 'Get resource',
+                        'responses' => ['200' => ['description' => 'OK']],
+                    ],
+                    'query' => [
+                        'summary' => 'Query resource',
+                        'requestBody' => [
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => ['type' => 'object'],
+                                ],
+                            ],
+                        ],
+                        'responses' => ['200' => ['description' => 'OK']],
+                    ],
+                    'additionalOperations' => [
+                        'COPY' => [
+                            'summary' => 'Copy resource',
+                            'responses' => ['201' => ['description' => 'Copied']],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $pathItem = $document->paths->paths['/resource'];
+
+        $this->assertNotNull($pathItem->get);
+        $this->assertNotNull($pathItem->query);
+        $this->assertNotNull($pathItem->additionalOperations);
+        $this->assertSame('Get resource', $pathItem->get->summary);
+        $this->assertSame('Query resource', $pathItem->query->summary);
+        $this->assertSame('Copy resource', $pathItem->additionalOperations['COPY']->summary);
+    }
+
+    #[Test]
+    public function parses_media_type_with_item_schema(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [
+                '/logs' => [
+                    'get' => [
+                        'responses' => [
+                            '200' => [
+                                'description' => 'Log stream',
+                                'content' => [
+                                    'application/jsonl' => [
+                                        'itemSchema' => [
+                                            'type' => 'object',
+                                            'properties' => [
+                                                'timestamp' => ['type' => 'string'],
+                                                'message' => ['type' => 'string'],
+                                            ],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $mediaType = $document->paths->paths['/logs']->get->responses->responses['200']->content->mediaTypes['application/jsonl'];
+
+        $this->assertNotNull($mediaType->itemSchema);
+        $this->assertSame('object', $mediaType->itemSchema->type);
+        $this->assertArrayHasKey('timestamp', $mediaType->itemSchema->properties);
+    }
+
+    #[Test]
+    public function parses_media_type_with_encoding_map(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [
+                '/upload' => [
+                    'post' => [
+                        'requestBody' => [
+                            'content' => [
+                                'multipart/form-data' => [
+                                    'schema' => ['type' => 'object'],
+                                    'encoding' => [
+                                        'file' => [
+                                            'contentType' => 'application/octet-stream',
+                                            'headers' => [
+                                                'X-Custom' => ['description' => 'Custom header'],
+                                            ],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        'responses' => ['200' => ['description' => 'OK']],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $mediaType = $document->paths->paths['/upload']->post->requestBody->content->mediaTypes['multipart/form-data'];
+
+        $this->assertNotNull($mediaType->encoding);
+        $this->assertArrayHasKey('file', $mediaType->encoding);
+        $this->assertSame('application/octet-stream', $mediaType->encoding['file']->contentType);
+    }
+
+    #[Test]
+    public function parses_media_type_with_item_encoding(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [
+                '/stream' => [
+                    'get' => [
+                        'responses' => [
+                            '200' => [
+                                'description' => 'Stream',
+                                'content' => [
+                                    'application/jsonl' => [
+                                        'itemSchema' => ['type' => 'object'],
+                                        'itemEncoding' => [
+                                            'contentType' => 'application/json',
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $mediaType = $document->paths->paths['/stream']->get->responses->responses['200']->content->mediaTypes['application/jsonl'];
+
+        $this->assertNotNull($mediaType->itemEncoding);
+        $this->assertSame('application/json', $mediaType->itemEncoding->contentType);
+    }
+
+    #[Test]
+    public function parses_media_type_with_prefix_encoding(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [
+                '/stream' => [
+                    'get' => [
+                        'responses' => [
+                            '200' => [
+                                'description' => 'Stream',
+                                'content' => [
+                                    'multipart/mixed' => [
+                                        'schema' => ['type' => 'object'],
+                                        'prefixEncoding' => [
+                                            ['contentType' => 'application/json'],
+                                            ['contentType' => 'text/plain'],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $mediaType = $document->paths->paths['/stream']->get->responses->responses['200']->content->mediaTypes['multipart/mixed'];
+
+        $this->assertNotNull($mediaType->prefixEncoding);
+        $this->assertCount(2, $mediaType->prefixEncoding);
+        $this->assertSame('application/json', $mediaType->prefixEncoding[0]->contentType);
+        $this->assertSame('text/plain', $mediaType->prefixEncoding[1]->contentType);
+    }
+
+    #[Test]
+    public function parses_encoding_with_nested_encoding(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [
+                '/upload' => [
+                    'post' => [
+                        'requestBody' => [
+                            'content' => [
+                                'multipart/form-data' => [
+                                    'schema' => ['type' => 'object'],
+                                    'encoding' => [
+                                        'nested' => [
+                                            'contentType' => 'multipart/mixed',
+                                            'encoding' => [
+                                                'inner' => [
+                                                    'contentType' => 'application/json',
+                                                ],
+                                            ],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        'responses' => ['200' => ['description' => 'OK']],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $mediaType = $document->paths->paths['/upload']->post->requestBody->content->mediaTypes['multipart/form-data'];
+
+        $this->assertNotNull($mediaType->encoding);
+        $this->assertArrayHasKey('nested', $mediaType->encoding);
+        $this->assertSame('multipart/mixed', $mediaType->encoding['nested']->contentType);
+        $this->assertNotNull($mediaType->encoding['nested']->encoding);
+        $this->assertArrayHasKey('inner', $mediaType->encoding['nested']->encoding);
+        $this->assertSame('application/json', $mediaType->encoding['nested']->encoding['inner']->contentType);
+    }
+
+    #[Test]
+    public function parses_encoding_all_fields(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [
+                '/upload' => [
+                    'post' => [
+                        'requestBody' => [
+                            'content' => [
+                                'multipart/form-data' => [
+                                    'schema' => ['type' => 'object'],
+                                    'encoding' => [
+                                        'field1' => [
+                                            'contentType' => 'application/json',
+                                            'style' => 'form',
+                                            'explode' => true,
+                                            'allowReserved' => true,
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        'responses' => ['200' => ['description' => 'OK']],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $encoding = $document->paths->paths['/upload']->post->requestBody->content->mediaTypes['multipart/form-data']->encoding['field1'];
+
+        $this->assertSame('application/json', $encoding->contentType);
+        $this->assertSame('form', $encoding->style);
+        $this->assertTrue($encoding->explode);
+        $this->assertTrue($encoding->allowReserved);
+    }
+
+    #[Test]
+    public function media_type_with_both_schema_and_item_schema(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [
+                '/stream' => [
+                    'get' => [
+                        'responses' => [
+                            '200' => [
+                                'description' => 'Stream',
+                                'content' => [
+                                    'application/jsonl' => [
+                                        'schema' => ['type' => 'array'],
+                                        'itemSchema' => ['type' => 'object'],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $mediaType = $document->paths->paths['/stream']->get->responses->responses['200']->content->mediaTypes['application/jsonl'];
+
+        $this->assertNotNull($mediaType->schema);
+        $this->assertSame('array', $mediaType->schema->type);
+        $this->assertNotNull($mediaType->itemSchema);
+        $this->assertSame('object', $mediaType->itemSchema->type);
+    }
+
+    #[Test]
+    public function parses_example_with_data_value(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'examples' => [
+                    'decodedExample' => [
+                        'summary' => 'Decoded data',
+                        'dataValue' => ['name' => 'John', 'age' => 30],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $example = $document->components->examples['decodedExample'];
+
+        $this->assertSame('Decoded data', $example->summary);
+        $this->assertSame(['name' => 'John', 'age' => 30], $example->dataValue);
+    }
+
+    #[Test]
+    public function parses_example_with_serialized_value(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'examples' => [
+                    'binaryExample' => [
+                        'summary' => 'Binary example',
+                        'serializedValue' => 'SGVsbG8gV29ybGQ=',
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $example = $document->components->examples['binaryExample'];
+
+        $this->assertSame('Binary example', $example->summary);
+        $this->assertSame('SGVsbG8gV29ybGQ=', $example->serializedValue);
+    }
+
+    #[Test]
+    public function parses_example_with_serialized_example(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'examples' => [
+                    'externalSerialized' => [
+                        'summary' => 'External serialized',
+                        'serializedExample' => 'https://example.com/serialized.json',
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $example = $document->components->examples['externalSerialized'];
+
+        $this->assertSame('External serialized', $example->summary);
+        $this->assertSame('https://example.com/serialized.json', $example->serializedExample);
+    }
+
+    #[Test]
+    public function parses_example_with_all_v32_fields(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'examples' => [
+                    'fullExample' => [
+                        'summary' => 'Full example',
+                        'description' => 'Example with all fields',
+                        'value' => ['raw' => 'value'],
+                        'dataValue' => ['decoded' => 'data'],
+                        'serializedValue' => 'base64encoded',
+                        'externalValue' => 'https://example.com/value.json',
+                        'serializedExample' => 'https://example.com/serialized.json',
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $example = $document->components->examples['fullExample'];
+
+        $this->assertSame('Full example', $example->summary);
+        $this->assertSame('Example with all fields', $example->description);
+        $this->assertSame(['raw' => 'value'], $example->value);
+        $this->assertSame(['decoded' => 'data'], $example->dataValue);
+        $this->assertSame('base64encoded', $example->serializedValue);
+        $this->assertSame('https://example.com/value.json', $example->externalValue);
+        $this->assertSame('https://example.com/serialized.json', $example->serializedExample);
+    }
+
+    #[Test]
+    public function parses_media_types_components(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'mediaTypes' => [
+                    'ProblemJson' => [
+                        'schema' => ['type' => 'object'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+
+        $this->assertNotNull($document->components->mediaTypes);
+        $this->assertArrayHasKey('ProblemJson', $document->components->mediaTypes);
+    }
+
+    #[Test]
+    public function media_type_in_components_is_full_object(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'Problem' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'type' => ['type' => 'string'],
+                            'title' => ['type' => 'string'],
+                            'status' => ['type' => 'integer'],
+                        ],
+                    ],
+                ],
+                'mediaTypes' => [
+                    'ProblemJson' => [
+                        'schema' => ['$ref' => '#/components/schemas/Problem'],
+                    ],
+                    'CsvExport' => [
+                        'schema' => [
+                            'type' => 'array',
+                            'items' => ['type' => 'string'],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $problemJson = $document->components->mediaTypes['ProblemJson'];
+
+        $this->assertInstanceOf(MediaType::class, $problemJson);
+        $this->assertNotNull($problemJson->schema);
+
+        $csvExport = $document->components->mediaTypes['CsvExport'];
+        $this->assertInstanceOf(MediaType::class, $csvExport);
+        $this->assertNotNull($csvExport->schema);
+        $this->assertSame('array', $csvExport->schema->type);
+    }
+
+    #[Test]
+    public function parses_schema_with_xml(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'User' => [
+                        'type' => 'string',
+                        'xml' => [
+                            'name' => 'user',
+                            'namespace' => 'https://example.com/ns',
+                            'prefix' => 'ex',
+                            'attribute' => false,
+                            'wrapped' => true,
+                            'nodeType' => 'element',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['User'];
+
+        $this->assertNotNull($schema->xml);
+        $this->assertSame('user', $schema->xml->name);
+        $this->assertSame('https://example.com/ns', $schema->xml->namespace);
+        $this->assertSame('ex', $schema->xml->prefix);
+        $this->assertFalse($schema->xml->attribute);
+        $this->assertTrue($schema->xml->wrapped);
+        $this->assertSame('element', $schema->xml->nodeType);
+    }
+
+    #[Test]
+    public function parses_xml_with_node_type_attribute(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'Id' => [
+                        'type' => 'string',
+                        'xml' => [
+                            'name' => 'id',
+                            'nodeType' => 'attribute',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['Id'];
+
+        $this->assertNotNull($schema->xml);
+        $this->assertSame('id', $schema->xml->name);
+        $this->assertSame('attribute', $schema->xml->nodeType);
+    }
+
+    #[Test]
+    public function parses_xml_with_all_valid_node_types(): void
+    {
+        $validTypes = ['element', 'attribute', 'text', 'cdata', 'none'];
+
+        foreach ($validTypes as $type) {
+            $json = json_encode([
+                'openapi' => '3.2.0',
+                'info' => ['title' => 'Test', 'version' => '1.0.0'],
+                'paths' => [],
+                'components' => [
+                    'schemas' => [
+                        'Test' => [
+                            'type' => 'string',
+                            'xml' => [
+                                'nodeType' => $type,
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+
+            $document = $this->parser->parse($json);
+            $schema = $document->components->schemas['Test'];
+
+            $this->assertNotNull($schema->xml);
+            $this->assertSame($type, $schema->xml->nodeType);
+        }
+    }
+
+    #[Test]
+    public function invalid_xml_node_type_throws_exception(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'User' => [
+                        'type' => 'string',
+                        'xml' => [
+                            'nodeType' => 'invalid',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Invalid XML nodeType "invalid". Must be one of: element, attribute, text, cdata, none');
+        $this->parser->parse($json);
+    }
+
+    #[Test]
+    public function parses_xml_with_deprecated_attribute_field(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'User' => [
+                        'type' => 'string',
+                        'xml' => [
+                            'name' => 'id',
+                            'attribute' => true,
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['User'];
+
+        $this->assertNotNull($schema->xml);
+        $this->assertTrue($schema->xml->attribute);
+    }
+
+    #[Test]
+    public function warns_on_allow_empty_value_in_v3_2(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())
+            ->method('warning')
+            ->with($this->stringContains('allowEmptyValue'));
+
+        $deprecationLogger = new DeprecationLogger($logger, true);
+        $parser = new JsonParser($deprecationLogger);
+
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0'],
+            'paths' => [
+                '/test' => [
+                    'get' => [
+                        'parameters' => [
+                            [
+                                'name' => 'q',
+                                'in' => 'query',
+                                'allowEmptyValue' => true,
+                            ],
+                        ],
+                        'responses' => ['200' => ['description' => 'OK']],
+                    ],
+                ],
+            ],
+        ]);
+
+        $parser->parse($json);
+    }
+
+    #[Test]
+    public function no_warning_on_allow_empty_value_in_v3_1(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->never())->method('warning');
+
+        $deprecationLogger = new DeprecationLogger($logger, true);
+        $parser = new JsonParser($deprecationLogger);
+
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0'],
+            'paths' => [
+                '/test' => [
+                    'get' => [
+                        'parameters' => [
+                            [
+                                'name' => 'q',
+                                'in' => 'query',
+                                'allowEmptyValue' => true,
+                            ],
+                        ],
+                        'responses' => ['200' => ['description' => 'OK']],
+                    ],
+                ],
+            ],
+        ]);
+
+        $parser->parse($json);
+    }
+
+    #[Test]
+    public function no_warning_on_allow_empty_value_in_v3_0(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->never())->method('warning');
+
+        $deprecationLogger = new DeprecationLogger($logger, true);
+        $parser = new JsonParser($deprecationLogger);
+
+        $json = json_encode([
+            'openapi' => '3.0.0',
+            'info' => ['title' => 'Test', 'version' => '1.0'],
+            'paths' => [
+                '/test' => [
+                    'get' => [
+                        'parameters' => [
+                            [
+                                'name' => 'q',
+                                'in' => 'query',
+                                'allowEmptyValue' => true,
+                            ],
+                        ],
+                        'responses' => ['200' => ['description' => 'OK']],
+                    ],
+                ],
+            ],
+        ]);
+
+        $parser->parse($json);
+    }
+
+    #[Test]
+    public function warns_on_schema_example_in_v3_2(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())
+            ->method('warning')
+            ->with($this->stringContains('example'));
+
+        $deprecationLogger = new DeprecationLogger($logger, true);
+        $parser = new JsonParser($deprecationLogger);
+
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0'],
+            'components' => [
+                'schemas' => [
+                    'User' => [
+                        'type' => 'object',
+                        'example' => ['name' => 'John'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $parser->parse($json);
+    }
+
+    #[Test]
+    public function no_warning_on_schema_example_in_v3_1(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->never())->method('warning');
+
+        $deprecationLogger = new DeprecationLogger($logger, true);
+        $parser = new JsonParser($deprecationLogger);
+
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0'],
+            'components' => [
+                'schemas' => [
+                    'User' => [
+                        'type' => 'object',
+                        'example' => ['name' => 'John'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $parser->parse($json);
+    }
+
+    #[Test]
+    public function warns_on_xml_attribute_in_v3_2(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())
+            ->method('warning')
+            ->with($this->logicalAnd(
+                $this->stringContains('attribute'),
+                $this->stringContains('nodeType: "attribute"'),
+            ));
+
+        $deprecationLogger = new DeprecationLogger($logger, true);
+        $parser = new JsonParser($deprecationLogger);
+
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0'],
+            'components' => [
+                'schemas' => [
+                    'User' => [
+                        'type' => 'string',
+                        'xml' => [
+                            'attribute' => true,
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $parser->parse($json);
+    }
+
+    #[Test]
+    public function warns_on_xml_wrapped_in_v3_2(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())
+            ->method('warning')
+            ->with($this->stringContains('wrapped'));
+
+        $deprecationLogger = new DeprecationLogger($logger, true);
+        $parser = new JsonParser($deprecationLogger);
+
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0'],
+            'components' => [
+                'schemas' => [
+                    'User' => [
+                        'type' => 'string',
+                        'xml' => [
+                            'wrapped' => true,
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $parser->parse($json);
+    }
+
+    #[Test]
+    public function no_warning_on_xml_deprecated_fields_in_v3_1(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->never())->method('warning');
+
+        $deprecationLogger = new DeprecationLogger($logger, true);
+        $parser = new JsonParser($deprecationLogger);
+
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0'],
+            'components' => [
+                'schemas' => [
+                    'User' => [
+                        'type' => 'string',
+                        'xml' => [
+                            'attribute' => true,
+                            'wrapped' => true,
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $parser->parse($json);
+    }
+
+    #[Test]
+    public function no_warning_when_deprecation_logger_disabled(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->never())->method('warning');
+
+        $deprecationLogger = new DeprecationLogger($logger, false);
+        $parser = new JsonParser($deprecationLogger);
+
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0'],
+            'paths' => [
+                '/test' => [
+                    'get' => [
+                        'parameters' => [
+                            [
+                                'name' => 'q',
+                                'in' => 'query',
+                                'allowEmptyValue' => true,
+                            ],
+                        ],
+                        'responses' => ['200' => ['description' => 'OK']],
+                    ],
+                ],
+            ],
+            'components' => [
+                'schemas' => [
+                    'User' => [
+                        'type' => 'string',
+                        'example' => 'test',
+                        'xml' => [
+                            'attribute' => true,
+                            'wrapped' => true,
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $parser->parse($json);
+    }
+
+    #[Test]
+    public function multiple_deprecation_warnings_in_v3_2(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->exactly(4))->method('warning');
+
+        $deprecationLogger = new DeprecationLogger($logger, true);
+        $parser = new JsonParser($deprecationLogger);
+
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0'],
+            'paths' => [
+                '/test' => [
+                    'get' => [
+                        'parameters' => [
+                            [
+                                'name' => 'q',
+                                'in' => 'query',
+                                'allowEmptyValue' => true,
+                            ],
+                        ],
+                        'responses' => ['200' => ['description' => 'OK']],
+                    ],
+                ],
+            ],
+            'components' => [
+                'schemas' => [
+                    'User' => [
+                        'type' => 'string',
+                        'example' => 'test',
+                        'xml' => [
+                            'attribute' => true,
+                            'wrapped' => true,
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $parser->parse($json);
+    }
+
+    #[Test]
+    public function validates_self_uri(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            '$self' => 'not-a-valid-uri',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+        ]);
+
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Invalid $self URI: not-a-valid-uri');
+        $this->parser->parse($json);
+    }
+
+    #[Test]
+    public function accepts_valid_self_uri_http(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            '$self' => 'http://api.example.com/openapi.json',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+        ]);
+
+        $document = $this->parser->parse($json);
+
+        $this->assertSame('http://api.example.com/openapi.json', $document->self);
+    }
+
+    #[Test]
+    public function accepts_valid_self_uri_https(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            '$self' => 'https://api.example.com/schemas/main.json',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+        ]);
+
+        $document = $this->parser->parse($json);
+
+        $this->assertSame('https://api.example.com/schemas/main.json', $document->self);
+    }
+
+    #[Test]
+    public function accepts_valid_self_uri_file(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            '$self' => 'file:///path/to/openapi.json',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+        ]);
+
+        $document = $this->parser->parse($json);
+
+        $this->assertSame('file:///path/to/openapi.json', $document->self);
     }
 }

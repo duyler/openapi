@@ -17,9 +17,6 @@ readonly class MultipartBodyParser
             return [];
         }
 
-        // Note: Full multipart parsing is complex and typically handled by web frameworks
-        // This is a simplified version for basic cases
-        // In real-world scenarios, PSR-7 implementations provide parsed body
         $parts = [];
         $boundary = $this->extractBoundary($body);
 
@@ -27,11 +24,10 @@ readonly class MultipartBodyParser
             return $parts;
         }
 
-        // Split by boundary
         $sections = explode('--' . $boundary, $body);
 
         foreach ($sections as $section) {
-            if (empty(trim($section)) || '--' === trim($section)) {
+            if ('' === trim($section) || '--' === trim($section)) {
                 continue;
             }
 
@@ -46,8 +42,6 @@ readonly class MultipartBodyParser
 
     private function extractBoundary(string $body): ?string
     {
-        // Try to extract boundary from Content-Type header format
-        // This is a simplified extraction
         if (preg_match('/boundary="?([^"\s]+)"?/i', substr($body, 0, 500), $matches)) {
             return $matches[1];
         }
@@ -57,7 +51,6 @@ readonly class MultipartBodyParser
 
     private function parsePart(string $section): ?array
     {
-        // Split headers from body
         $parts = explode("\r\n\r\n", $section, 2);
 
         if (2 !== count($parts)) {

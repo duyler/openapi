@@ -35,7 +35,7 @@ readonly class TypeHelper
      */
     public static function asArrayOrNull(mixed $value): ?array
     {
-        if ($value === null) {
+        if (null === $value) {
             return null;
         }
         return self::asArray($value);
@@ -61,7 +61,7 @@ readonly class TypeHelper
      */
     public static function asStringOrNull(mixed $value): ?string
     {
-        if ($value === null) {
+        if (null === $value) {
             return null;
         }
         return self::asString($value);
@@ -121,7 +121,7 @@ readonly class TypeHelper
      */
     public static function asListOrNull(mixed $value): ?array
     {
-        if ($value === null) {
+        if (null === $value) {
             return null;
         }
         return self::asList($value);
@@ -157,7 +157,7 @@ readonly class TypeHelper
      */
     public static function asStringListOrNull(mixed $value): ?array
     {
-        if ($value === null) {
+        if (null === $value) {
             return null;
         }
         return self::asStringList($value);
@@ -194,7 +194,7 @@ readonly class TypeHelper
      */
     public static function asStringMapOrNull(mixed $value): ?array
     {
-        if ($value === null) {
+        if (null === $value) {
             return null;
         }
         return self::asStringMap($value);
@@ -207,7 +207,7 @@ readonly class TypeHelper
      */
     public static function asStringMixedMapOrNull(mixed $value): ?array
     {
-        if ($value === null) {
+        if (null === $value) {
             return null;
         }
         if (false === is_array($value)) {
@@ -244,7 +244,7 @@ readonly class TypeHelper
      */
     public static function asEnumListOrNull(mixed $value): ?array
     {
-        if ($value === null) {
+        if (null === $value) {
             return null;
         }
         return self::asEnumList($value);
@@ -270,7 +270,7 @@ readonly class TypeHelper
      */
     public static function asIntOrNull(mixed $value): ?int
     {
-        if ($value === null) {
+        if (null === $value) {
             return null;
         }
         return self::asInt($value);
@@ -296,7 +296,7 @@ readonly class TypeHelper
      */
     public static function asFloatOrNull(mixed $value): ?float
     {
-        if ($value === null) {
+        if (null === $value) {
             return null;
         }
         return self::asFloat($value);
@@ -322,7 +322,7 @@ readonly class TypeHelper
      */
     public static function asBoolOrNull(mixed $value): ?bool
     {
-        if ($value === null) {
+        if (null === $value) {
             return null;
         }
         return self::asBool($value);
@@ -369,7 +369,7 @@ readonly class TypeHelper
      */
     public static function asSecurityListMapOrNull(mixed $value): ?array
     {
-        if ($value === null) {
+        if (null === $value) {
             return null;
         }
         return self::asSecurityListMap($value);

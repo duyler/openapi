@@ -39,7 +39,7 @@ readonly class ArrayLengthValidator extends AbstractSchemaValidator
             maxErrorFactory: static fn(int $max, int $actual) => new MaxItemsError($max, $actual, $dataPath, '/maxItems'),
         );
 
-        if (true === $schema->uniqueItems) {
+        if ($schema->uniqueItems) {
             $unique = array_unique($data, SORT_REGULAR);
 
             if (count($unique) !== $count) {

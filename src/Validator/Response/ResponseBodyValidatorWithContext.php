@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Response;
 
 use Duyler\OpenApi\Schema\Model\Content;
+use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
@@ -29,6 +30,7 @@ readonly class ResponseBodyValidatorWithContext
         private readonly BodyParser $bodyParser,
         private readonly ContentTypeNegotiator $negotiator = new ContentTypeNegotiator(),
         private readonly ResponseTypeCoercer $typeCoercer = new ResponseTypeCoercer(),
+        private readonly StreamingContentParser $streamingParser = new StreamingContentParser(),
         private readonly bool $coercion = false,
         private readonly bool $nullableAsType = true,
         private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
@@ -56,6 +58,18 @@ readonly class ResponseBodyValidatorWithContext
             return;
         }
 
+        if (StreamingMediaTypeDetector::isStreaming($contentType)) {
+            $this->validateStreamingContent($body, $mediaTypeSchema, $contentType);
+        } else {
+            $this->validateRegularContent($body, $mediaTypeSchema, $mediaType);
+        }
+    }
+
+    private function validateRegularContent(
+        string $body,
+        MediaType $mediaTypeSchema,
+        string $mediaType,
+    ): void {
         $parsedBody = $this->bodyParser->parse($body, $mediaType);
 
         if ($this->coercion && null !== $mediaTypeSchema->schema) {
@@ -73,6 +87,34 @@ readonly class ResponseBodyValidatorWithContext
                 $this->contextSchemaValidator->validate($parsedBody, $schema);
             } else {
                 $this->regularSchemaValidator->validate($parsedBody, $schema, $context);
+            }
+        }
+    }
+
+    private function validateStreamingContent(
+        string $body,
+        MediaType $mediaType,
+        string $contentType,
+    ): void {
+        $schema = $mediaType->itemSchema ?? $mediaType->schema;
+
+        if (null === $schema) {
+            return;
+        }
+
+        $effectiveContentType = $mediaType->itemEncoding->contentType ?? $contentType;
+        $items = $this->streamingParser->parse($body, $effectiveContentType);
+
+        $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy);
+        $hasDiscriminator = null !== $schema->discriminator || $this->refResolver->schemaHasDiscriminator($schema, $this->document);
+
+        foreach ($items as $item) {
+            if (null !== $item) {
+                if ($hasDiscriminator) {
+                    $this->contextSchemaValidator->validate($item, $schema);
+                } else {
+                    $this->regularSchemaValidator->validate($item, $schema, $context);
+                }
             }
         }
     }

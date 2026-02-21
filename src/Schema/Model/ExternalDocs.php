@@ -21,7 +21,7 @@ readonly class ExternalDocs implements JsonSerializable
             'url' => $this->url,
         ];
 
-        if ($this->description !== null) {
+        if (null !== $this->description) {
             $data['description'] = $this->description;
         }
 

@@ -1,0 +1,182 @@
+openapi: '3.2.0'
+$self: 'https://api.example.com/openapi.json'
+info:
+  title: Full OpenAPI 3.2 API
+  version: '1.0.0'
+servers:
+  - url: https://api.example.com
+    name: production
+    description: Production server
+tags:
+  - name: Users
+    summary: User management
+    kind: nav
+  - name: Admin
+    summary: Administration
+    kind: nav
+  - name: Operations
+    parent: Admin
+    summary: Operational endpoints
+paths:
+  /users:
+    summary: User collection
+    get:
+      tags: [Users]
+      summary: List all users
+      responses:
+        '200':
+          summary: Successful response
+          description: List of users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserList'
+    query:
+      tags: [Users]
+      summary: Search users with complex query
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserQuery'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserList'
+  /search:
+    get:
+      parameters:
+        - name: filter
+          in: querystring
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchFilter'
+      responses:
+        '200':
+          description: Search results
+  /events:
+    get:
+      responses:
+        '200':
+          description: Event stream
+          content:
+            text/event-stream:
+              itemSchema:
+                $ref: '#/components/schemas/Event'
+  /logs:
+    get:
+      responses:
+        '200':
+          description: Log stream
+          content:
+            application/jsonl:
+              itemSchema:
+                $ref: '#/components/schemas/LogEntry'
+  /resource:
+    additionalOperations:
+      COPY:
+        summary: Copy resource
+        responses:
+          '201':
+            description: Resource copied
+      MOVE:
+        summary: Move resource
+        responses:
+          '201':
+            description: Resource moved
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+      discriminator:
+        propertyName: type
+        mapping:
+          admin: '#/components/schemas/AdminUser'
+        defaultMapping: '#/components/schemas/User'
+    AdminUser:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            permissions:
+              type: array
+              items:
+                type: string
+    UserList:
+      type: array
+      items:
+        $ref: '#/components/schemas/User'
+    UserQuery:
+      type: object
+      properties:
+        name:
+          type: string
+        active:
+          type: boolean
+    SearchFilter:
+      type: object
+      properties:
+        query:
+          type: string
+        limit:
+          type: integer
+    Event:
+      type: object
+      properties:
+        event:
+          type: string
+        data:
+          type: object
+        id:
+          type: string
+    LogEntry:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        level:
+          type: string
+          enum: [debug, info, warn, error]
+        message:
+          type: string
+      required:
+        - timestamp
+        - level
+        - message
+  mediaTypes:
+    ProblemJson:
+      schema:
+        $ref: '#/components/schemas/Problem'
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      oauth2MetadataUrl: https://auth.example.com/.well-known/oauth-authorization-server
+      flows:
+        deviceCode:
+          tokenUrl: https://auth.example.com/token
+          deviceAuthorizationUrl: https://auth.example.com/device/code
+          scopes:
+            read: Read access
+            write: Write access

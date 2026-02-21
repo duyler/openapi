@@ -59,4 +59,108 @@ final class TagTest extends TestCase
         self::assertArrayNotHasKey('description', $serialized);
         self::assertArrayNotHasKey('externalDocs', $serialized);
     }
+
+    #[Test]
+    public function tag_has_summary_field(): void
+    {
+        $tag = new Tag(
+            name: 'Users',
+            summary: 'User management',
+        );
+
+        self::assertSame('User management', $tag->summary);
+    }
+
+    #[Test]
+    public function tag_has_parent_field(): void
+    {
+        $tag = new Tag(
+            name: 'Users',
+            parent: 'Administration',
+        );
+
+        self::assertSame('Administration', $tag->parent);
+    }
+
+    #[Test]
+    public function tag_has_kind_field(): void
+    {
+        $tag = new Tag(
+            name: 'Users',
+            kind: 'nav',
+        );
+
+        self::assertSame('nav', $tag->kind);
+    }
+
+    #[Test]
+    public function tag_has_hierarchy_fields(): void
+    {
+        $tag = new Tag(
+            name: 'Users',
+            summary: 'User management',
+            parent: 'Administration',
+            kind: 'nav',
+        );
+
+        self::assertSame('User management', $tag->summary);
+        self::assertSame('Administration', $tag->parent);
+        self::assertSame('nav', $tag->kind);
+    }
+
+    #[Test]
+    public function json_serialize_includes_summary(): void
+    {
+        $tag = new Tag(
+            name: 'Users',
+            summary: 'User management',
+        );
+
+        $serialized = $tag->jsonSerialize();
+
+        self::assertArrayHasKey('summary', $serialized);
+        self::assertSame('User management', $serialized['summary']);
+    }
+
+    #[Test]
+    public function json_serialize_includes_parent(): void
+    {
+        $tag = new Tag(
+            name: 'Users',
+            parent: 'Administration',
+        );
+
+        $serialized = $tag->jsonSerialize();
+
+        self::assertArrayHasKey('parent', $serialized);
+        self::assertSame('Administration', $serialized['parent']);
+    }
+
+    #[Test]
+    public function json_serialize_includes_kind(): void
+    {
+        $tag = new Tag(
+            name: 'Users',
+            kind: 'nav',
+        );
+
+        $serialized = $tag->jsonSerialize();
+
+        self::assertArrayHasKey('kind', $serialized);
+        self::assertSame('nav', $serialized['kind']);
+    }
+
+    #[Test]
+    public function json_serialize_excludes_null_hierarchy_fields(): void
+    {
+        $tag = new Tag(
+            name: 'Users',
+        );
+
+        $serialized = $tag->jsonSerialize();
+
+        self::assertArrayNotHasKey('summary', $serialized);
+        self::assertArrayNotHasKey('parent', $serialized);
+        self::assertArrayNotHasKey('kind', $serialized);
+    }
 }

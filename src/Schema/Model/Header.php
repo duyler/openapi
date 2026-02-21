@@ -28,7 +28,7 @@ readonly class Header implements JsonSerializable
     {
         $data = [];
 
-        if ($this->description !== null) {
+        if (null !== $this->description) {
             $data['description'] = $this->description;
         }
 
@@ -44,19 +44,19 @@ readonly class Header implements JsonSerializable
             $data['allowEmptyValue'] = $this->allowEmptyValue;
         }
 
-        if ($this->schema !== null) {
+        if (null !== $this->schema) {
             $data['schema'] = $this->schema;
         }
 
-        if ($this->example !== null) {
+        if (null !== $this->example) {
             $data['example'] = $this->example;
         }
 
-        if ($this->examples !== null) {
+        if (null !== $this->examples) {
             $data['examples'] = $this->examples;
         }
 
-        if ($this->content !== null) {
+        if (null !== $this->content) {
             $data['content'] = $this->content;
         }
 

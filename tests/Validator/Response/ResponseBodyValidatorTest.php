@@ -429,4 +429,194 @@ final class ResponseBodyValidatorTest extends TestCase
 
         $this->expectNotToPerformAssertions();
     }
+
+    #[Test]
+    public function validate_jsonl_streaming_response(): void
+    {
+        $body = '{"id":1,"name":"Item1"}' . "\n" . '{"id":2,"name":"Item2"}';
+        $contentType = 'application/jsonl';
+        $content = new Content([
+            'application/jsonl' => new MediaType(
+                itemSchema: new Schema(
+                    type: 'object',
+                    properties: [
+                        'id' => new Schema(type: 'integer'),
+                        'name' => new Schema(type: 'string'),
+                    ],
+                    required: ['id', 'name'],
+                ),
+            ),
+        ]);
+
+        $this->validator->validate($body, $contentType, $content);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_ndjson_streaming_response(): void
+    {
+        $body = '{"count":1}' . "\n" . '{"count":2}';
+        $contentType = 'application/x-ndjson';
+        $content = new Content([
+            'application/x-ndjson' => new MediaType(
+                itemSchema: new Schema(
+                    type: 'object',
+                    properties: [
+                        'count' => new Schema(type: 'integer'),
+                    ],
+                    required: ['count'],
+                ),
+            ),
+        ]);
+
+        $this->validator->validate($body, $contentType, $content);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_json_seq_streaming_response(): void
+    {
+        $body = "\x1E" . '{"id":"1"}' . "\x1E" . '{"id":"2"}';
+        $contentType = 'application/json-seq';
+        $content = new Content([
+            'application/json-seq' => new MediaType(
+                itemSchema: new Schema(
+                    type: 'object',
+                    properties: [
+                        'id' => new Schema(type: 'string'),
+                    ],
+                    required: ['id'],
+                ),
+            ),
+        ]);
+
+        $this->validator->validate($body, $contentType, $content);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_sse_streaming_response(): void
+    {
+        $body = "event: message\n" . "data: {\"text\":\"hello\"}\n\n";
+        $contentType = 'text/event-stream';
+        $content = new Content([
+            'text/event-stream' => new MediaType(
+                itemSchema: new Schema(
+                    type: 'object',
+                    properties: [
+                        'event' => new Schema(type: 'string'),
+                        'data' => new Schema(type: 'object'),
+                    ],
+                ),
+            ),
+        ]);
+
+        $this->validator->validate($body, $contentType, $content);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_streaming_uses_schema_when_item_schema_not_defined(): void
+    {
+        $body = '{"fallback":true}';
+        $contentType = 'application/jsonl';
+        $content = new Content([
+            'application/jsonl' => new MediaType(
+                schema: new Schema(
+                    type: 'object',
+                    properties: [
+                        'fallback' => new Schema(type: 'boolean'),
+                    ],
+                    required: ['fallback'],
+                ),
+            ),
+        ]);
+
+        $this->validator->validate($body, $contentType, $content);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function skip_streaming_validation_when_no_schema(): void
+    {
+        $body = '{"data":"value"}';
+        $contentType = 'application/jsonl';
+        $content = new Content([
+            'application/jsonl' => new MediaType(),
+        ]);
+
+        $this->validator->validate($body, $contentType, $content);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function streaming_with_empty_lines(): void
+    {
+        $body = '{"id":1}' . "\n\n" . '{"id":2}';
+        $contentType = 'application/jsonl';
+        $content = new Content([
+            'application/jsonl' => new MediaType(
+                itemSchema: new Schema(
+                    type: 'object',
+                    properties: [
+                        'id' => new Schema(type: 'integer'),
+                    ],
+                    required: ['id'],
+                ),
+            ),
+        ]);
+
+        $this->validator->validate($body, $contentType, $content);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function streaming_with_invalid_json_line(): void
+    {
+        $body = '{"id":1}' . "\n" . 'invalid json' . "\n" . '{"id":2}';
+        $contentType = 'application/jsonl';
+        $content = new Content([
+            'application/jsonl' => new MediaType(
+                itemSchema: new Schema(
+                    type: 'object',
+                    properties: [
+                        'id' => new Schema(type: 'integer'),
+                    ],
+                ),
+            ),
+        ]);
+
+        $this->validator->validate($body, $contentType, $content);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function streaming_invalid_item_throws_error(): void
+    {
+        $body = '{"id":"not_an_integer"}';
+        $contentType = 'application/jsonl';
+        $content = new Content([
+            'application/jsonl' => new MediaType(
+                itemSchema: new Schema(
+                    type: 'object',
+                    properties: [
+                        'id' => new Schema(type: 'integer'),
+                    ],
+                    required: ['id'],
+                ),
+            ),
+        ]);
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate($body, $contentType, $content);
+    }
 }

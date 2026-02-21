@@ -32,6 +32,7 @@ use Duyler\OpenApi\Validator\Request\PathParametersValidator;
 use Duyler\OpenApi\Validator\Request\PathParser;
 use Duyler\OpenApi\Validator\Request\QueryParametersValidator;
 use Duyler\OpenApi\Validator\Request\QueryParser;
+use Duyler\OpenApi\Validator\Request\QueryStringValidator;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Request\RequestBodyValidatorWithContext;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
@@ -186,7 +187,9 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
 
     private function getOperationFromPathItem(PathItem $pathItem, string $method): ?OperationModel
     {
-        return match (strtolower($method)) {
+        $method = strtolower($method);
+
+        $standardOperation = match ($method) {
             'get' => $pathItem->get,
             'post' => $pathItem->post,
             'put' => $pathItem->put,
@@ -195,8 +198,23 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
             'options' => $pathItem->options,
             'head' => $pathItem->head,
             'trace' => $pathItem->trace,
+            'query' => $pathItem->query,
             default => null,
         };
+
+        if (null !== $standardOperation) {
+            return $standardOperation;
+        }
+
+        if (null !== $pathItem->additionalOperations) {
+            foreach ($pathItem->additionalOperations as $opMethod => $operation) {
+                if (strtolower($opMethod) === $method) {
+                    return $operation;
+                }
+            }
+        }
+
+        return null;
     }
 
     private function createRequestValidator(): RequestValidator
@@ -211,6 +229,8 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
             xmlParser: new XmlBodyParser(),
         );
 
+        $queryParser = new QueryParser();
+
         return new RequestValidator(
             pathParser: new PathParser(),
             pathParamsValidator: new PathParametersValidator(
@@ -219,12 +239,16 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
                 coercer: $coercer,
                 coercion: $this->coercion,
             ),
-            queryParser: new QueryParser(),
+            queryParser: $queryParser,
             queryParamsValidator: new QueryParametersValidator(
                 schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
                 deserializer: $deserializer,
                 coercer: $coercer,
                 coercion: $this->coercion,
+            ),
+            queryStringValidator: new QueryStringValidator(
+                queryParser: $queryParser,
+                schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
             ),
             headersValidator: new HeadersValidator(
                 schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),

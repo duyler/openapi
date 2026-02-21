@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Parser;
 use Override;
 use Symfony\Component\Yaml\Yaml;
 
-readonly class YamlParser extends OpenApiBuilder
+final class YamlParser extends OpenApiBuilder
 {
     #[Override]
     protected function parseContent(string $content): mixed

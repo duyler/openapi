@@ -669,4 +669,164 @@ final class DiscriminatorValidatorTest extends TestCase
 
         $this->assertTrue(true);
     }
+
+    #[Test]
+    public function validate_fallback_to_default_mapping(): void
+    {
+        $catSchema = new Schema(
+            title: 'Cat',
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $unknownPetSchema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+                mapping: [
+                    'cat' => '#/components/schemas/Cat',
+                ],
+                defaultMapping: '#/components/schemas/UnknownPet',
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                    'UnknownPet' => $unknownPetSchema,
+                ],
+            ),
+        );
+
+        $birdData = [
+            'name' => 'Tweety',
+            'petType' => 'bird',
+        ];
+
+        $this->validator->validate($birdData, $petSchema, $document);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_without_property_name_uses_default_mapping(): void
+    {
+        $fallbackSchema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+            ],
+        );
+
+        $schema = new Schema(
+            discriminator: new Discriminator(
+                defaultMapping: '#/components/schemas/Fallback',
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Test API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Test' => $schema,
+                    'Fallback' => $fallbackSchema,
+                ],
+            ),
+        );
+
+        $data = [
+            'name' => 'Something',
+        ];
+
+        $this->validator->validate($data, $schema, $document);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_without_property_name_and_without_default_mapping(): void
+    {
+        $schema = new Schema(
+            discriminator: new Discriminator(),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Test API', '1.0.0'),
+        );
+
+        $data = [
+            'name' => 'Something',
+        ];
+
+        $this->validator->validate($data, $schema, $document);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_with_mapping_fallback_to_default_mapping(): void
+    {
+        $catSchema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $unknownPetSchema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+                mapping: [
+                    'cat' => '#/components/schemas/Cat',
+                ],
+                defaultMapping: '#/components/schemas/UnknownPet',
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                    'UnknownPet' => $unknownPetSchema,
+                ],
+            ),
+        );
+
+        $dogData = [
+            'name' => 'Rex',
+            'petType' => 'dog',
+        ];
+
+        $this->validator->validate($dogData, $petSchema, $document);
+
+        $this->assertTrue(true);
+    }
 }

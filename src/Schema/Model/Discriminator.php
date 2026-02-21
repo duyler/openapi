@@ -13,19 +13,26 @@ readonly class Discriminator implements JsonSerializable
      * @param array<string, string> $mapping
      */
     public function __construct(
-        public string $propertyName,
+        public ?string $propertyName = null,
         public ?array $mapping = null,
+        public ?string $defaultMapping = null,
     ) {}
 
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [
-            'propertyName' => $this->propertyName,
-        ];
+        $data = [];
 
-        if ($this->mapping !== null) {
+        if (null !== $this->propertyName) {
+            $data['propertyName'] = $this->propertyName;
+        }
+
+        if (null !== $this->mapping) {
             $data['mapping'] = $this->mapping;
+        }
+
+        if (null !== $this->defaultMapping) {
+            $data['defaultMapping'] = $this->defaultMapping;
         }
 
         return $data;

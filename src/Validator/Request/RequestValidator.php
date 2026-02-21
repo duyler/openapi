@@ -17,6 +17,7 @@ readonly class RequestValidator
         private readonly PathParametersValidator $pathParamsValidator,
         private readonly QueryParser $queryParser,
         private readonly QueryParametersValidator $queryParamsValidator,
+        private readonly QueryStringValidator $queryStringValidator,
         private readonly HeadersValidator $headersValidator,
         private readonly CookieValidator $cookieValidator,
         private readonly RequestBodyValidatorInterface $bodyValidator,
@@ -42,6 +43,8 @@ readonly class RequestValidator
         $queryParams = $this->queryParser->parse($queryString);
         $this->queryParamsValidator->validate($queryParams, $parameterSchemas);
 
+        $this->queryStringValidator->validate($queryString, $parameterSchemas);
+
         $headers = $request->getHeaders();
         $normalizedHeaders = [];
         foreach ($headers as $key => $value) {
@@ -52,12 +55,12 @@ readonly class RequestValidator
         $this->headersValidator->validate($normalizedHeaders, $parameterSchemas);
 
         $cookies = $request->getCookieParams();
+        $cookieHeader = $request->getHeaderLine('Cookie');
         if ([] === $cookies) {
-            $cookieHeader = $request->getHeaderLine('Cookie');
             $cookies = $this->cookieValidator->parseCookies($cookieHeader);
         }
         /** @var array<string, string> $cookies */
-        $this->cookieValidator->validate($cookies, $parameterSchemas);
+        $this->cookieValidator->validateWithHeader($cookies, $cookieHeader, $parameterSchemas);
 
         $contentType = $request->getHeaderLine('Content-Type');
         $body = (string) $request->getBody();

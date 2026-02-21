@@ -20,6 +20,7 @@ readonly class Components implements JsonSerializable
      * @param array<string, Link>|null $links
      * @param array<string, Callbacks>|null $callbacks
      * @param array<string, PathItem>|null $pathItems
+     * @param array<string, MediaType>|null $mediaTypes
      */
     public function __construct(
         public ?array $schemas = null,
@@ -32,6 +33,7 @@ readonly class Components implements JsonSerializable
         public ?array $links = null,
         public ?array $callbacks = null,
         public ?array $pathItems = null,
+        public ?array $mediaTypes = null,
     ) {}
 
     #[Override]
@@ -39,44 +41,48 @@ readonly class Components implements JsonSerializable
     {
         $data = [];
 
-        if ($this->schemas !== null) {
+        if (null !== $this->schemas) {
             $data['schemas'] = $this->schemas;
         }
 
-        if ($this->responses !== null) {
+        if (null !== $this->responses) {
             $data['responses'] = $this->responses;
         }
 
-        if ($this->parameters !== null) {
+        if (null !== $this->parameters) {
             $data['parameters'] = $this->parameters;
         }
 
-        if ($this->examples !== null) {
+        if (null !== $this->examples) {
             $data['examples'] = $this->examples;
         }
 
-        if ($this->requestBodies !== null) {
+        if (null !== $this->requestBodies) {
             $data['requestBodies'] = $this->requestBodies;
         }
 
-        if ($this->headers !== null) {
+        if (null !== $this->headers) {
             $data['headers'] = $this->headers;
         }
 
-        if ($this->securitySchemes !== null) {
+        if (null !== $this->securitySchemes) {
             $data['securitySchemes'] = $this->securitySchemes;
         }
 
-        if ($this->links !== null) {
+        if (null !== $this->links) {
             $data['links'] = $this->links;
         }
 
-        if ($this->callbacks !== null) {
+        if (null !== $this->callbacks) {
             $data['callbacks'] = $this->callbacks;
         }
 
-        if ($this->pathItems !== null) {
+        if (null !== $this->pathItems) {
             $data['pathItems'] = $this->pathItems;
+        }
+
+        if (null !== $this->mediaTypes) {
+            $data['mediaTypes'] = $this->mediaTypes;
         }
 
         return $data;

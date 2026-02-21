@@ -47,10 +47,8 @@ readonly class RequestBodyValidator implements RequestBodyValidatorInterface
             throw new UnsupportedMediaTypeException($mediaType, array_keys($requestBody->content->mediaTypes));
         }
 
-        // Parse body
         $parsedBody = $this->parseBody($body, $mediaType);
 
-        // Validate against schema
         if (null !== $content->schema) {
             $this->schemaValidator->validate($parsedBody, $content->schema);
         }

@@ -16,6 +16,7 @@ readonly class Server implements JsonSerializable
         public string $url,
         public ?string $description = null,
         public ?array $variables = null,
+        public ?string $name = null,
     ) {}
 
     #[Override]
@@ -25,12 +26,16 @@ readonly class Server implements JsonSerializable
             'url' => $this->url,
         ];
 
-        if ($this->description !== null) {
+        if (null !== $this->description) {
             $data['description'] = $this->description;
         }
 
-        if ($this->variables !== null) {
+        if (null !== $this->variables) {
             $data['variables'] = $this->variables;
+        }
+
+        if (null !== $this->name) {
+            $data['name'] = $this->name;
         }
 
         return $data;

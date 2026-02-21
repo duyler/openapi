@@ -493,4 +493,56 @@ final class ComponentsTest extends TestCase
         self::assertArrayNotHasKey('schemas', $serialized);
         self::assertSame(['TestResponse' => $response], $serialized['responses']);
     }
+
+    #[Test]
+    public function components_has_media_types(): void
+    {
+        $components = new Components(
+            mediaTypes: [
+                'ProblemJson' => new MediaType(
+                    schema: new Schema(type: 'object'),
+                ),
+            ],
+        );
+
+        self::assertNotNull($components->mediaTypes);
+        self::assertArrayHasKey('ProblemJson', $components->mediaTypes);
+    }
+
+    #[Test]
+    public function json_serialize_includes_media_types(): void
+    {
+        $mediaType = new MediaType(
+            schema: new Schema(type: 'object'),
+        );
+
+        $components = new Components(
+            mediaTypes: ['ProblemJson' => $mediaType],
+        );
+
+        $serialized = $components->jsonSerialize();
+
+        self::assertArrayHasKey('mediaTypes', $serialized);
+        self::assertSame(['ProblemJson' => $mediaType], $serialized['mediaTypes']);
+    }
+
+    #[Test]
+    public function json_serialize_includes_media_types_with_all_fields(): void
+    {
+        $schema = new Schema(type: 'object');
+        $mediaType = new MediaType(
+            schema: $schema,
+            example: new Example(value: ['type' => 'about:blank']),
+        );
+
+        $components = new Components(
+            schemas: ['Problem' => $schema],
+            mediaTypes: ['ProblemJson' => $mediaType],
+        );
+
+        $serialized = $components->jsonSerialize();
+
+        self::assertArrayHasKey('schemas', $serialized);
+        self::assertArrayHasKey('mediaTypes', $serialized);
+    }
 }

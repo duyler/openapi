@@ -1,0 +1,35 @@
+openapi: '3.2.0'
+$self: 'https://api.example.com/openapi.json'
+info:
+  title: Test API
+  version: '1.0.0'
+servers:
+  - url: https://api.example.com
+    name: production
+    description: Production server
+tags:
+  - name: Users
+    summary: User management endpoints
+    parent: Administration
+    kind: nav
+paths:
+  /users:
+    get:
+      summary: List users
+      responses:
+        '200':
+          summary: Successful response
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+components:
+  schemas:
+    Pet:
+      type: object
+      discriminator:
+        propertyName: type
+        mapping:
+          dog: '#/components/schemas/Dog'
+        defaultMapping: '#/components/schemas/Pet'

@@ -20,15 +20,15 @@ readonly class Contact implements JsonSerializable
     {
         $data = [];
 
-        if ($this->name !== null) {
+        if (null !== $this->name) {
             $data['name'] = $this->name;
         }
 
-        if ($this->url !== null) {
+        if (null !== $this->url) {
             $data['url'] = $this->url;
         }
 
-        if ($this->email !== null) {
+        if (null !== $this->email) {
             $data['email'] = $this->email;
         }
 

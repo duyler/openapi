@@ -24,9 +24,12 @@ readonly class Schema implements JsonSerializable
      * @param Schema|bool|null $additionalProperties
      * @param list<mixed>|null $enum
      * @param array<string, mixed>|null $examples
+     * @param Xml|null $xml
      */
     public function __construct(
         public ?string $ref = null,
+        public ?string $refSummary = null,
+        public ?string $refDescription = null,
         public ?string $format = null,
         public ?string $title = null,
         public ?string $description = null,
@@ -76,26 +79,37 @@ readonly class Schema implements JsonSerializable
         public ?string $contentMediaType = null,
         public ?string $contentSchema = null,
         public ?string $jsonSchemaDialect = null,
+        public ?Xml $xml = null,
     ) {}
 
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [];
+        if (null !== $this->ref) {
+            $data = ['$ref' => $this->ref];
 
-        if ($this->ref !== null) {
-            $data['$ref'] = $this->ref;
+            if (null !== $this->refSummary) {
+                $data['summary'] = $this->refSummary;
+            }
+
+            if (null !== $this->refDescription) {
+                $data['description'] = $this->refDescription;
+            }
+
+            return $data;
         }
 
-        if ($this->title !== null) {
+        $data = [];
+
+        if (null !== $this->title) {
             $data['title'] = $this->title;
         }
 
-        if ($this->description !== null) {
+        if (null !== $this->description) {
             $data['description'] = $this->description;
         }
 
-        if ($this->default !== null) {
+        if (null !== $this->default) {
             $data['default'] = $this->default;
         }
 
@@ -103,7 +117,7 @@ readonly class Schema implements JsonSerializable
             $data['deprecated'] = $this->deprecated;
         }
 
-        if ($this->type !== null) {
+        if (null !== $this->type) {
             $data['type'] = $this->type;
         }
 
@@ -111,176 +125,180 @@ readonly class Schema implements JsonSerializable
             $data['nullable'] = $this->nullable;
         }
 
-        if ($this->const !== null) {
+        if (null !== $this->const) {
             $data['const'] = $this->const;
         }
 
-        if ($this->multipleOf !== null) {
+        if (null !== $this->multipleOf) {
             $data['multipleOf'] = $this->multipleOf;
         }
 
-        if ($this->maximum !== null) {
+        if (null !== $this->maximum) {
             $data['maximum'] = $this->maximum;
         }
 
-        if ($this->exclusiveMaximum !== null) {
+        if (null !== $this->exclusiveMaximum) {
             $data['exclusiveMaximum'] = $this->exclusiveMaximum;
         }
 
-        if ($this->minimum !== null) {
+        if (null !== $this->minimum) {
             $data['minimum'] = $this->minimum;
         }
 
-        if ($this->exclusiveMinimum !== null) {
+        if (null !== $this->exclusiveMinimum) {
             $data['exclusiveMinimum'] = $this->exclusiveMinimum;
         }
 
-        if ($this->maxLength !== null) {
+        if (null !== $this->maxLength) {
             $data['maxLength'] = $this->maxLength;
         }
 
-        if ($this->minLength !== null) {
+        if (null !== $this->minLength) {
             $data['minLength'] = $this->minLength;
         }
 
-        if ($this->pattern !== null) {
+        if (null !== $this->pattern) {
             $data['pattern'] = $this->pattern;
         }
 
-        if ($this->maxItems !== null) {
+        if (null !== $this->maxItems) {
             $data['maxItems'] = $this->maxItems;
         }
 
-        if ($this->minItems !== null) {
+        if (null !== $this->minItems) {
             $data['minItems'] = $this->minItems;
         }
 
-        if ($this->uniqueItems !== null) {
+        if (null !== $this->uniqueItems) {
             $data['uniqueItems'] = $this->uniqueItems;
         }
 
-        if ($this->maxProperties !== null) {
+        if (null !== $this->maxProperties) {
             $data['maxProperties'] = $this->maxProperties;
         }
 
-        if ($this->minProperties !== null) {
+        if (null !== $this->minProperties) {
             $data['minProperties'] = $this->minProperties;
         }
 
-        if ($this->required !== null) {
+        if (null !== $this->required) {
             $data['required'] = $this->required;
         }
 
-        if ($this->allOf !== null) {
+        if (null !== $this->allOf) {
             $data['allOf'] = $this->allOf;
         }
 
-        if ($this->anyOf !== null) {
+        if (null !== $this->anyOf) {
             $data['anyOf'] = $this->anyOf;
         }
 
-        if ($this->oneOf !== null) {
+        if (null !== $this->oneOf) {
             $data['oneOf'] = $this->oneOf;
         }
 
-        if ($this->not !== null) {
+        if (null !== $this->not) {
             $data['not'] = $this->not;
         }
 
-        if ($this->discriminator !== null) {
+        if (null !== $this->discriminator) {
             $data['discriminator'] = $this->discriminator;
         }
 
-        if ($this->properties !== null) {
+        if (null !== $this->properties) {
             $data['properties'] = $this->properties;
         }
 
-        if ($this->additionalProperties !== null) {
+        if (null !== $this->additionalProperties) {
             $data['additionalProperties'] = $this->additionalProperties;
         }
 
-        if ($this->unevaluatedProperties !== null) {
+        if (null !== $this->unevaluatedProperties) {
             $data['unevaluatedProperties'] = $this->unevaluatedProperties;
         }
 
-        if ($this->items !== null) {
+        if (null !== $this->items) {
             $data['items'] = $this->items;
         }
 
-        if ($this->prefixItems !== null) {
+        if (null !== $this->prefixItems) {
             $data['prefixItems'] = $this->prefixItems;
         }
 
-        if ($this->contains !== null) {
+        if (null !== $this->contains) {
             $data['contains'] = $this->contains;
         }
 
-        if ($this->minContains !== null) {
+        if (null !== $this->minContains) {
             $data['minContains'] = $this->minContains;
         }
 
-        if ($this->maxContains !== null) {
+        if (null !== $this->maxContains) {
             $data['maxContains'] = $this->maxContains;
         }
 
-        if ($this->patternProperties !== null) {
+        if (null !== $this->patternProperties) {
             $data['patternProperties'] = $this->patternProperties;
         }
 
-        if ($this->propertyNames !== null) {
+        if (null !== $this->propertyNames) {
             $data['propertyNames'] = $this->propertyNames;
         }
 
-        if ($this->dependentSchemas !== null) {
+        if (null !== $this->dependentSchemas) {
             $data['dependentSchemas'] = $this->dependentSchemas;
         }
 
-        if ($this->if !== null) {
+        if (null !== $this->if) {
             $data['if'] = $this->if;
         }
 
-        if ($this->then !== null) {
+        if (null !== $this->then) {
             $data['then'] = $this->then;
         }
 
-        if ($this->else !== null) {
+        if (null !== $this->else) {
             $data['else'] = $this->else;
         }
 
-        if ($this->unevaluatedItems !== null) {
+        if (null !== $this->unevaluatedItems) {
             $data['unevaluatedItems'] = $this->unevaluatedItems;
         }
 
-        if ($this->example !== null) {
+        if (null !== $this->example) {
             $data['example'] = $this->example;
         }
 
-        if ($this->examples !== null) {
+        if (null !== $this->examples) {
             $data['examples'] = $this->examples;
         }
 
-        if ($this->enum !== null) {
+        if (null !== $this->enum) {
             $data['enum'] = $this->enum;
         }
 
-        if ($this->format !== null) {
+        if (null !== $this->format) {
             $data['format'] = $this->format;
         }
 
-        if ($this->contentEncoding !== null) {
+        if (null !== $this->contentEncoding) {
             $data['contentEncoding'] = $this->contentEncoding;
         }
 
-        if ($this->contentMediaType !== null) {
+        if (null !== $this->contentMediaType) {
             $data['contentMediaType'] = $this->contentMediaType;
         }
 
-        if ($this->contentSchema !== null) {
+        if (null !== $this->contentSchema) {
             $data['contentSchema'] = $this->contentSchema;
         }
 
-        if ($this->jsonSchemaDialect !== null) {
+        if (null !== $this->jsonSchemaDialect) {
             $data['$schema'] = $this->jsonSchemaDialect;
+        }
+
+        if (null !== $this->xml) {
+            $data['xml'] = $this->xml;
         }
 
         return $data;

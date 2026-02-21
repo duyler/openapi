@@ -27,31 +27,31 @@ readonly class Link implements JsonSerializable
     {
         $data = [];
 
-        if ($this->operationRef !== null) {
+        if (null !== $this->operationRef) {
             $data['operationRef'] = $this->operationRef;
         }
 
-        if ($this->ref !== null) {
+        if (null !== $this->ref) {
             $data['$ref'] = $this->ref;
         }
 
-        if ($this->description !== null) {
+        if (null !== $this->description) {
             $data['description'] = $this->description;
         }
 
-        if ($this->operationId !== null) {
+        if (null !== $this->operationId) {
             $data['operationId'] = $this->operationId;
         }
 
-        if ($this->parameters !== null) {
+        if (null !== $this->parameters) {
             $data['parameters'] = $this->parameters;
         }
 
-        if ($this->requestBody !== null) {
+        if (null !== $this->requestBody) {
             $data['requestBody'] = $this->requestBody;
         }
 
-        if ($this->server !== null) {
+        if (null !== $this->server) {
             $data['server'] = $this->server;
         }
 

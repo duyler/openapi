@@ -30,6 +30,7 @@ use Duyler\OpenApi\Validator\Request\PathParametersValidator;
 use Duyler\OpenApi\Validator\Request\PathParser;
 use Duyler\OpenApi\Validator\Request\QueryParametersValidator;
 use Duyler\OpenApi\Validator\Request\QueryParser;
+use Duyler\OpenApi\Validator\Request\QueryStringValidator;
 use Duyler\OpenApi\Validator\Request\RequestBodyValidator;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
@@ -79,11 +80,14 @@ final class WebhookValidatorTest extends TestCase
             $xmlParser,
         );
 
+        $queryStringValidator = new QueryStringValidator($queryParser, $schemaValidator);
+
         $requestValidator = new RequestValidator(
             $pathParser,
             $pathParamsValidator,
             $queryParser,
             $queryParamsValidator,
+            $queryStringValidator,
             $headersValidator,
             $cookieValidator,
             $bodyValidator,

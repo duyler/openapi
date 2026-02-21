@@ -22,7 +22,7 @@ abstract readonly class AbstractParameterValidator
         $location = $this->getLocation();
 
         foreach ($parameterSchemas as $param) {
-            if (!$param instanceof Parameter) {
+            if (false === $param instanceof Parameter) {
                 continue;
             }
 

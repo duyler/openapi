@@ -152,4 +152,45 @@ final class OpenApiDocumentTest extends TestCase
         self::assertArrayHasKey('info', $serialized);
         self::assertArrayHasKey('tags', $serialized);
     }
+
+    #[Test]
+    public function openapi_document_has_self_field(): void
+    {
+        $document = new OpenApiDocument(
+            openapi: '3.2.0',
+            info: new InfoObject(title: 'Test API', version: '1.0.0'),
+            self: 'https://api.example.com/openapi.json',
+        );
+
+        self::assertSame('https://api.example.com/openapi.json', $document->self);
+    }
+
+    #[Test]
+    public function json_serialize_includes_self_field(): void
+    {
+        $document = new OpenApiDocument(
+            openapi: '3.2.0',
+            info: new InfoObject(title: 'Test API', version: '1.0.0'),
+            self: 'https://api.example.com/openapi.json',
+        );
+
+        $serialized = $document->jsonSerialize();
+
+        self::assertArrayHasKey('$self', $serialized);
+        self::assertSame('https://api.example.com/openapi.json', $serialized['$self']);
+    }
+
+    #[Test]
+    public function json_serialize_excludes_null_self_field(): void
+    {
+        $document = new OpenApiDocument(
+            openapi: '3.2.0',
+            info: new InfoObject(title: 'Test API', version: '1.0.0'),
+            self: null,
+        );
+
+        $serialized = $document->jsonSerialize();
+
+        self::assertArrayNotHasKey('$self', $serialized);
+    }
 }

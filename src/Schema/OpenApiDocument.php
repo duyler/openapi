@@ -20,6 +20,7 @@ readonly class OpenApiDocument implements JsonSerializable
         public ?Model\SecurityRequirement $security = null,
         public ?Model\Tags $tags = null,
         public ?Model\ExternalDocs $externalDocs = null,
+        public ?string $self = null,
     ) {}
 
     #[Override]
@@ -30,36 +31,40 @@ readonly class OpenApiDocument implements JsonSerializable
             'info' => $this->info,
         ];
 
-        if ($this->jsonSchemaDialect !== null) {
+        if (null !== $this->jsonSchemaDialect) {
             $data['jsonSchemaDialect'] = $this->jsonSchemaDialect;
         }
 
-        if ($this->servers !== null) {
+        if (null !== $this->servers) {
             $data['servers'] = $this->servers;
         }
 
-        if ($this->paths !== null) {
+        if (null !== $this->paths) {
             $data['paths'] = $this->paths;
         }
 
-        if ($this->webhooks !== null) {
+        if (null !== $this->webhooks) {
             $data['webhooks'] = $this->webhooks;
         }
 
-        if ($this->components !== null) {
+        if (null !== $this->components) {
             $data['components'] = $this->components;
         }
 
-        if ($this->security !== null) {
+        if (null !== $this->security) {
             $data['security'] = $this->security;
         }
 
-        if ($this->tags !== null) {
+        if (null !== $this->tags) {
             $data['tags'] = $this->tags;
         }
 
-        if ($this->externalDocs !== null) {
+        if (null !== $this->externalDocs) {
             $data['externalDocs'] = $this->externalDocs;
+        }
+
+        if (null !== $this->self) {
+            $data['$self'] = $this->self;
         }
 
         return $data;

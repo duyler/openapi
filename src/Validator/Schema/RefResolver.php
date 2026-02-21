@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Schema;
 
+use Duyler\OpenApi\Exception\RefResolutionException;
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
@@ -13,8 +14,10 @@ use Override;
 use WeakMap;
 
 use function array_key_exists;
+use function dirname;
 use function is_array;
 use function is_object;
+use function str_starts_with;
 
 final class RefResolver implements RefResolverInterface
 {
@@ -23,6 +26,34 @@ final class RefResolver implements RefResolverInterface
     public function __construct()
     {
         $this->cache = new WeakMap();
+    }
+
+    #[Override]
+    public function getBaseUri(OpenApiDocument $document): ?string
+    {
+        return $document->self;
+    }
+
+    #[Override]
+    public function resolveRelativeRef(string $ref, OpenApiDocument $document): string
+    {
+        $baseUri = $this->getBaseUri($document);
+
+        if (null === $baseUri) {
+            throw new RefResolutionException(
+                "Cannot resolve relative reference '{$ref}' without document \$self or base URI",
+            );
+        }
+
+        return $this->combineUris($baseUri, $ref);
+    }
+
+    #[Override]
+    public function combineUris(string $baseUri, string $relativeRef): string
+    {
+        $basePath = dirname($baseUri);
+
+        return $basePath . '/' . $relativeRef;
     }
 
     #[Override]
@@ -129,6 +160,147 @@ final class RefResolver implements RefResolverInterface
         }
 
         return false;
+    }
+
+    #[Override]
+    public function resolveSchemaWithOverride(Schema $schema, OpenApiDocument $document): Schema
+    {
+        if (null === $schema->ref) {
+            return $schema;
+        }
+
+        $resolved = $this->resolve($schema->ref, $document);
+
+        $description = $resolved->description;
+        if (null !== $schema->refDescription) {
+            $description = $schema->refDescription;
+        }
+
+        $title = $resolved->title;
+        if (null !== $schema->refSummary) {
+            $title = $schema->refSummary;
+        }
+
+        return new Schema(
+            ref: null,
+            refSummary: null,
+            refDescription: null,
+            format: $resolved->format,
+            title: $title,
+            description: $description,
+            default: $resolved->default,
+            deprecated: $resolved->deprecated,
+            type: $resolved->type,
+            nullable: $resolved->nullable,
+            const: $resolved->const,
+            multipleOf: $resolved->multipleOf,
+            maximum: $resolved->maximum,
+            exclusiveMaximum: $resolved->exclusiveMaximum,
+            minimum: $resolved->minimum,
+            exclusiveMinimum: $resolved->exclusiveMinimum,
+            maxLength: $resolved->maxLength,
+            minLength: $resolved->minLength,
+            pattern: $resolved->pattern,
+            maxItems: $resolved->maxItems,
+            minItems: $resolved->minItems,
+            uniqueItems: $resolved->uniqueItems,
+            maxProperties: $resolved->maxProperties,
+            minProperties: $resolved->minProperties,
+            required: $resolved->required,
+            allOf: $resolved->allOf,
+            anyOf: $resolved->anyOf,
+            oneOf: $resolved->oneOf,
+            not: $resolved->not,
+            discriminator: $resolved->discriminator,
+            properties: $resolved->properties,
+            additionalProperties: $resolved->additionalProperties,
+            unevaluatedProperties: $resolved->unevaluatedProperties,
+            items: $resolved->items,
+            prefixItems: $resolved->prefixItems,
+            contains: $resolved->contains,
+            minContains: $resolved->minContains,
+            maxContains: $resolved->maxContains,
+            patternProperties: $resolved->patternProperties,
+            propertyNames: $resolved->propertyNames,
+            dependentSchemas: $resolved->dependentSchemas,
+            if: $resolved->if,
+            then: $resolved->then,
+            else: $resolved->else,
+            unevaluatedItems: $resolved->unevaluatedItems,
+            example: $resolved->example,
+            examples: $resolved->examples,
+            enum: $resolved->enum,
+            contentEncoding: $resolved->contentEncoding,
+            contentMediaType: $resolved->contentMediaType,
+            contentSchema: $resolved->contentSchema,
+            jsonSchemaDialect: $resolved->jsonSchemaDialect,
+            xml: $resolved->xml,
+        );
+    }
+
+    #[Override]
+    public function resolveParameterWithOverride(Parameter $parameter, OpenApiDocument $document): Parameter
+    {
+        if (null === $parameter->ref) {
+            return $parameter;
+        }
+
+        $resolved = $this->resolveParameter($parameter->ref, $document);
+
+        $description = $resolved->description;
+        if (null !== $parameter->refDescription) {
+            $description = $parameter->refDescription;
+        }
+
+        return new Parameter(
+            ref: null,
+            refSummary: null,
+            refDescription: null,
+            name: $resolved->name,
+            in: $resolved->in,
+            description: $description,
+            required: $resolved->required,
+            deprecated: $resolved->deprecated,
+            allowEmptyValue: $resolved->allowEmptyValue,
+            style: $resolved->style,
+            explode: $resolved->explode,
+            allowReserved: $resolved->allowReserved,
+            schema: $resolved->schema,
+            examples: $resolved->examples,
+            example: $resolved->example,
+            content: $resolved->content,
+        );
+    }
+
+    #[Override]
+    public function resolveResponseWithOverride(Response $response, OpenApiDocument $document): Response
+    {
+        if (null === $response->ref) {
+            return $response;
+        }
+
+        $resolved = $this->resolveResponse($response->ref, $document);
+
+        $summary = $resolved->summary;
+        if (null !== $response->refSummary) {
+            $summary = $response->refSummary;
+        }
+
+        $description = $resolved->description;
+        if (null !== $response->refDescription) {
+            $description = $response->refDescription;
+        }
+
+        return new Response(
+            ref: null,
+            refSummary: null,
+            refDescription: null,
+            summary: $summary,
+            description: $description,
+            headers: $resolved->headers,
+            content: $resolved->content,
+            links: $resolved->links,
+        );
     }
 
     /**

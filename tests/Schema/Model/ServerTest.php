@@ -59,4 +59,42 @@ final class ServerTest extends TestCase
         self::assertArrayNotHasKey('description', $serialized);
         self::assertArrayNotHasKey('variables', $serialized);
     }
+
+    #[Test]
+    public function server_has_name_field(): void
+    {
+        $server = new Server(
+            url: 'https://api.example.com',
+            name: 'production',
+        );
+
+        self::assertSame('production', $server->name);
+    }
+
+    #[Test]
+    public function json_serialize_includes_name(): void
+    {
+        $server = new Server(
+            url: 'https://api.example.com',
+            description: 'Production API server',
+            name: 'production',
+        );
+
+        $serialized = $server->jsonSerialize();
+
+        self::assertArrayHasKey('name', $serialized);
+        self::assertSame('production', $serialized['name']);
+    }
+
+    #[Test]
+    public function json_serialize_excludes_null_name(): void
+    {
+        $server = new Server(
+            url: 'https://api.example.com',
+        );
+
+        $serialized = $server->jsonSerialize();
+
+        self::assertArrayNotHasKey('name', $serialized);
+    }
 }

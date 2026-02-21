@@ -14,6 +14,8 @@ readonly class Parameter implements JsonSerializable
      */
     public function __construct(
         public ?string $ref = null,
+        public ?string $refSummary = null,
+        public ?string $refDescription = null,
         public ?string $name = null,
         public ?string $in = null,
         public ?string $description = null,
@@ -32,21 +34,31 @@ readonly class Parameter implements JsonSerializable
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [];
+        if (null !== $this->ref) {
+            $data = ['$ref' => $this->ref];
 
-        if ($this->ref !== null) {
-            $data['$ref'] = $this->ref;
+            if (null !== $this->refSummary) {
+                $data['summary'] = $this->refSummary;
+            }
+
+            if (null !== $this->refDescription) {
+                $data['description'] = $this->refDescription;
+            }
+
+            return $data;
         }
 
-        if ($this->name !== null) {
+        $data = [];
+
+        if (null !== $this->name) {
             $data['name'] = $this->name;
         }
 
-        if ($this->in !== null) {
+        if (null !== $this->in) {
             $data['in'] = $this->in;
         }
 
-        if ($this->description !== null) {
+        if (null !== $this->description) {
             $data['description'] = $this->description;
         }
 
@@ -62,7 +74,7 @@ readonly class Parameter implements JsonSerializable
             $data['allowEmptyValue'] = $this->allowEmptyValue;
         }
 
-        if ($this->style !== null) {
+        if (null !== $this->style) {
             $data['style'] = $this->style;
         }
 
@@ -74,19 +86,19 @@ readonly class Parameter implements JsonSerializable
             $data['allowReserved'] = $this->allowReserved;
         }
 
-        if ($this->schema !== null) {
+        if (null !== $this->schema) {
             $data['schema'] = $this->schema;
         }
 
-        if ($this->example !== null) {
+        if (null !== $this->example) {
             $data['example'] = $this->example;
         }
 
-        if ($this->examples !== null) {
+        if (null !== $this->examples) {
             $data['examples'] = $this->examples;
         }
 
-        if ($this->content !== null) {
+        if (null !== $this->content) {
             $data['content'] = $this->content;
         }
 

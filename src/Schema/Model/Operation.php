@@ -35,39 +35,39 @@ readonly class Operation implements JsonSerializable
     {
         $data = [];
 
-        if ($this->tags !== null) {
+        if (null !== $this->tags) {
             $data['tags'] = $this->tags;
         }
 
-        if ($this->summary !== null) {
+        if (null !== $this->summary) {
             $data['summary'] = $this->summary;
         }
 
-        if ($this->description !== null) {
+        if (null !== $this->description) {
             $data['description'] = $this->description;
         }
 
-        if ($this->externalDocs !== null) {
+        if (null !== $this->externalDocs) {
             $data['externalDocs'] = $this->externalDocs;
         }
 
-        if ($this->operationId !== null) {
+        if (null !== $this->operationId) {
             $data['operationId'] = $this->operationId;
         }
 
-        if ($this->parameters !== null) {
+        if (null !== $this->parameters) {
             $data['parameters'] = $this->parameters;
         }
 
-        if ($this->requestBody !== null) {
+        if (null !== $this->requestBody) {
             $data['requestBody'] = $this->requestBody;
         }
 
-        if ($this->responses !== null) {
+        if (null !== $this->responses) {
             $data['responses'] = $this->responses;
         }
 
-        if ($this->callbacks !== null) {
+        if (null !== $this->callbacks) {
             $data['callbacks'] = $this->callbacks;
         }
 
@@ -75,11 +75,11 @@ readonly class Operation implements JsonSerializable
             $data['deprecated'] = $this->deprecated;
         }
 
-        if ($this->security !== null) {
+        if (null !== $this->security) {
             $data['security'] = $this->security;
         }
 
-        if ($this->servers !== null) {
+        if (null !== $this->servers) {
             $data['servers'] = $this->servers;
         }
 

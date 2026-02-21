@@ -1,0 +1,33 @@
+openapi: '3.2.0'
+info:
+  title: Query Method API
+  version: '1.0.0'
+paths:
+  /search:
+    query:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                filters:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string

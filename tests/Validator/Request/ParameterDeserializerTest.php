@@ -228,4 +228,13 @@ final class ParameterDeserializerTest extends TestCase
 
         $this->assertSame('value', $result);
     }
+
+    #[Test]
+    public function deserialize_with_cookie_style(): void
+    {
+        $param = new Parameter(name: 'session', in: 'cookie', style: 'cookie');
+        $result = $this->deserializer->deserialize('abc123', $param);
+
+        $this->assertSame('abc123', $result);
+    }
 }

@@ -22,11 +22,11 @@ readonly class License implements JsonSerializable
             'name' => $this->name,
         ];
 
-        if ($this->identifier !== null) {
+        if (null !== $this->identifier) {
             $data['identifier'] = $this->identifier;
         }
 
-        if ($this->url !== null) {
+        if (null !== $this->url) {
             $data['url'] = $this->url;
         }
 

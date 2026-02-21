@@ -10,6 +10,8 @@ use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
+use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
@@ -217,6 +219,9 @@ final class ItemsValidatorWithContextTest extends TestCase
             type: 'object',
             discriminator: new Discriminator(
                 propertyName: 'petType',
+                mapping: [
+                    'cat' => '#/components/schemas/Pet',
+                ],
             ),
         );
 
@@ -300,6 +305,9 @@ final class ItemsValidatorWithContextTest extends TestCase
             type: 'object',
             discriminator: new Discriminator(
                 propertyName: 'petType',
+                mapping: [
+                    'cat' => '#/components/schemas/Pet',
+                ],
             ),
         );
 
@@ -333,5 +341,158 @@ final class ItemsValidatorWithContextTest extends TestCase
         $validator->validateWithContext($data, $schema, $this->context);
 
         $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_items_throws_missing_discriminator_property(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $petSchema = new Schema(
+            type: 'object',
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+                mapping: [
+                    'cat' => '#/components/schemas/Pet',
+                ],
+            ),
+        );
+
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(
+                ref: '#/components/schemas/Pet',
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                ],
+            ),
+        );
+
+        $validator = new ItemsValidatorWithContext(
+            $this->pool,
+            $this->refResolver,
+            $document,
+        );
+
+        try {
+            $data = [
+                ['name' => 'Fluffy'],
+            ];
+            $validator->validateWithContext($data, $schema, $this->context);
+        } catch (MissingDiscriminatorPropertyException|ValidationException) {
+            return;
+        }
+    }
+
+    #[Test]
+    public function validate_items_throws_unknown_discriminator_value(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $catSchema = new Schema(
+            type: 'object',
+            title: 'Cat',
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $dogSchema = new Schema(
+            type: 'object',
+            title: 'Dog',
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            type: 'object',
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+                mapping: [
+                    'cat' => '#/components/schemas/Cat',
+                    'dog' => '#/components/schemas/Dog',
+                ],
+            ),
+            oneOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+                new Schema(ref: '#/components/schemas/Dog'),
+            ],
+        );
+
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(
+                ref: '#/components/schemas/Pet',
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                    'Dog' => $dogSchema,
+                ],
+            ),
+        );
+
+        $validator = new ItemsValidatorWithContext(
+            $this->pool,
+            $this->refResolver,
+            $document,
+        );
+
+        try {
+            $data = [
+                ['petType' => 'bird'],
+            ];
+            $validator->validateWithContext($data, $schema, $this->context);
+        } catch (UnknownDiscriminatorValueException|ValidationException) {
+            return;
+        }
+    }
+
+    #[Test]
+    public function validate_items_with_nullable_item_schema(): void
+    {
+        $itemSchema = new Schema(type: 'string', nullable: true);
+        $schema = new Schema(
+            type: 'array',
+            items: $itemSchema,
+        );
+
+        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $data = ['valid', null, 'also valid'];
+
+        $this->validator->validateWithContext($data, $schema, $nullableContext);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_items_with_mixed_valid_and_invalid(): void
+    {
+        $itemSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'array',
+            items: $itemSchema,
+        );
+
+        $data = ['valid', 123, null, 'also valid'];
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validateWithContext($data, $schema, $this->context);
     }
 }

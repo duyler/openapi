@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
 use Duyler\OpenApi\Validator\Exception\MaxLengthError;
@@ -477,5 +478,415 @@ final class CookieValidatorTest extends TestCase
         $result = $this->validator->parseCookies(';;;');
 
         $this->assertSame([], $result);
+    }
+
+    #[Test]
+    public function parse_cookie_style_simple_value(): void
+    {
+        $parameter = new Parameter(
+            name: 'session',
+            in: 'cookie',
+            style: 'cookie',
+        );
+
+        $result = $this->validator->parseCookieStyle('session=abc123', $parameter);
+
+        $this->assertSame('abc123', $result);
+    }
+
+    #[Test]
+    public function parse_cookie_style_with_explode_false(): void
+    {
+        $parameter = new Parameter(
+            name: 'ids',
+            in: 'cookie',
+            style: 'cookie',
+            explode: false,
+            schema: new Schema(type: 'array'),
+        );
+
+        $result = $this->validator->parseCookieStyle('ids=1,2,3', $parameter);
+
+        $this->assertSame(['1', '2', '3'], $result);
+    }
+
+    #[Test]
+    public function parse_cookie_style_with_explode_false_string_value(): void
+    {
+        $parameter = new Parameter(
+            name: 'message',
+            in: 'cookie',
+            style: 'cookie',
+            explode: false,
+            schema: new Schema(type: 'string'),
+        );
+
+        $result = $this->validator->parseCookieStyle('message=Hello, world!', $parameter);
+
+        $this->assertSame('Hello, world!', $result);
+    }
+
+    #[Test]
+    public function parse_cookie_style_with_explode_true(): void
+    {
+        $parameter = new Parameter(
+            name: 'tags',
+            in: 'cookie',
+            style: 'cookie',
+            explode: true,
+        );
+
+        $result = $this->validator->parseCookieStyle('tags=a;tags=b;tags=c', $parameter);
+
+        $this->assertSame(['a', 'b', 'c'], $result);
+    }
+
+    #[Test]
+    public function parse_cookie_style_url_encoded(): void
+    {
+        $parameter = new Parameter(
+            name: 'data',
+            in: 'cookie',
+            style: 'cookie',
+        );
+
+        $result = $this->validator->parseCookieStyle('data=hello%20world', $parameter);
+
+        $this->assertSame('hello world', $result);
+    }
+
+    #[Test]
+    public function parse_cookie_style_missing_parameter(): void
+    {
+        $parameter = new Parameter(
+            name: 'missing',
+            in: 'cookie',
+            style: 'cookie',
+        );
+
+        $result = $this->validator->parseCookieStyle('other=value', $parameter);
+
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function parse_cookie_style_multiple_cookies(): void
+    {
+        $parameter = new Parameter(
+            name: 'user',
+            in: 'cookie',
+            style: 'cookie',
+        );
+
+        $result = $this->validator->parseCookieStyle('session=abc;user=john;token=xyz', $parameter);
+
+        $this->assertSame('john', $result);
+    }
+
+    #[Test]
+    public function form_style_remains_backward_compatible(): void
+    {
+        $parameter = new Parameter(
+            name: 'session',
+            in: 'cookie',
+            style: 'form',
+        );
+
+        $result = $this->validator->parseCookieStyle('session=abc123', $parameter);
+
+        $this->assertSame('abc123', $result);
+    }
+
+    #[Test]
+    public function parse_cookie_style_empty_header(): void
+    {
+        $parameter = new Parameter(
+            name: 'session',
+            in: 'cookie',
+            style: 'cookie',
+        );
+
+        $result = $this->validator->parseCookieStyle('', $parameter);
+
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function parse_cookie_style_whitespace_only_header(): void
+    {
+        $parameter = new Parameter(
+            name: 'session',
+            in: 'cookie',
+            style: 'cookie',
+        );
+
+        $result = $this->validator->parseCookieStyle('   ', $parameter);
+
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function parse_cookie_style_default_is_form(): void
+    {
+        $parameter = new Parameter(
+            name: 'session',
+            in: 'cookie',
+        );
+
+        $result = $this->validator->parseCookieStyle('session=abc123', $parameter);
+
+        $this->assertSame('abc123', $result);
+    }
+
+    #[Test]
+    public function parse_cookie_style_explode_url_encoded(): void
+    {
+        $parameter = new Parameter(
+            name: 'tags',
+            in: 'cookie',
+            style: 'cookie',
+            explode: true,
+        );
+
+        $result = $this->validator->parseCookieStyle('tags=hello%20world;tags=foo%2Bbar', $parameter);
+
+        $this->assertSame(['hello world', 'foo+bar'], $result);
+    }
+
+    #[Test]
+    public function parse_cookie_style_explode_mixed_cookies(): void
+    {
+        $parameter = new Parameter(
+            name: 'tags',
+            in: 'cookie',
+            style: 'cookie',
+            explode: true,
+        );
+
+        $result = $this->validator->parseCookieStyle('session=abc;tags=x;user=john;tags=y', $parameter);
+
+        $this->assertSame(['x', 'y'], $result);
+    }
+
+    #[Test]
+    public function parse_cookie_style_invalid_style_throws_exception(): void
+    {
+        $parameter = new Parameter(
+            name: 'session',
+            in: 'cookie',
+            style: 'matrix',
+        );
+
+        $this->expectException(InvalidParameterException::class);
+
+        $this->validator->parseCookieStyle('session=abc123', $parameter);
+    }
+
+    #[Test]
+    public function parse_cookie_style_comma_separated_with_spaces(): void
+    {
+        $parameter = new Parameter(
+            name: 'tags',
+            in: 'cookie',
+            style: 'cookie',
+            explode: false,
+            schema: new Schema(type: 'array'),
+        );
+
+        $result = $this->validator->parseCookieStyle('tags=a, b, c', $parameter);
+
+        $this->assertSame(['a', ' b', ' c'], $result);
+    }
+
+    #[Test]
+    public function parse_cookie_style_explode_single_value(): void
+    {
+        $parameter = new Parameter(
+            name: 'tag',
+            in: 'cookie',
+            style: 'cookie',
+            explode: true,
+        );
+
+        $result = $this->validator->parseCookieStyle('tag=onlyone', $parameter);
+
+        $this->assertSame('onlyone', $result);
+    }
+
+    #[Test]
+    public function parse_cookie_style_special_characters(): void
+    {
+        $parameter = new Parameter(
+            name: 'data',
+            in: 'cookie',
+            style: 'cookie',
+        );
+
+        $result = $this->validator->parseCookieStyle('data=%7B%22key%22%3A%22value%22%7D', $parameter);
+
+        $this->assertSame('{"key":"value"}', $result);
+    }
+
+    #[Test]
+    public function validate_with_header_style_cookie(): void
+    {
+        $cookies = ['session' => 'abc123'];
+        $parameterSchemas = [
+            new Parameter(
+                name: 'session',
+                in: 'cookie',
+                style: 'cookie',
+                schema: new Schema(type: 'string'),
+            ),
+        ];
+
+        $this->validator->validateWithHeader($cookies, 'session=abc123', $parameterSchemas);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_with_header_explode_true(): void
+    {
+        $cookies = [];
+        $parameterSchemas = [
+            new Parameter(
+                name: 'tags',
+                in: 'cookie',
+                style: 'cookie',
+                explode: true,
+                schema: new Schema(type: 'array', items: new Schema(type: 'string')),
+            ),
+        ];
+
+        $this->validator->validateWithHeader($cookies, 'tags=a;tags=b;tags=c', $parameterSchemas);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_with_header_url_encoded(): void
+    {
+        $cookies = [];
+        $parameterSchemas = [
+            new Parameter(
+                name: 'data',
+                in: 'cookie',
+                style: 'cookie',
+                schema: new Schema(type: 'string'),
+            ),
+        ];
+
+        $this->validator->validateWithHeader($cookies, 'data=hello%20world', $parameterSchemas);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_with_header_missing_required(): void
+    {
+        $cookies = [];
+        $parameterSchemas = [
+            new Parameter(
+                name: 'session',
+                in: 'cookie',
+                style: 'cookie',
+                required: true,
+            ),
+        ];
+
+        $this->expectException(MissingParameterException::class);
+
+        $this->validator->validateWithHeader($cookies, '', $parameterSchemas);
+    }
+
+    #[Test]
+    public function validate_with_header_form_style_backward_compatible(): void
+    {
+        $cookies = ['session' => 'abc123'];
+        $parameterSchemas = [
+            new Parameter(
+                name: 'session',
+                in: 'cookie',
+                style: 'form',
+                schema: new Schema(type: 'string'),
+            ),
+        ];
+
+        $this->validator->validateWithHeader($cookies, 'session=abc123', $parameterSchemas);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_with_header_comma_separated_array(): void
+    {
+        $cookies = [];
+        $parameterSchemas = [
+            new Parameter(
+                name: 'ids',
+                in: 'cookie',
+                style: 'cookie',
+                schema: new Schema(type: 'array', items: new Schema(type: 'string')),
+            ),
+        ];
+
+        $this->validator->validateWithHeader($cookies, 'ids=1,2,3', $parameterSchemas);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_with_header_uses_parsed_cookies_for_form_style(): void
+    {
+        $cookies = ['session' => 'from_parsed'];
+        $parameterSchemas = [
+            new Parameter(
+                name: 'session',
+                in: 'cookie',
+                style: 'form',
+                schema: new Schema(type: 'string'),
+            ),
+        ];
+
+        $this->validator->validateWithHeader($cookies, 'session=from_header', $parameterSchemas);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_with_header_form_style_url_decoded(): void
+    {
+        $cookies = [];
+        $parameterSchemas = [
+            new Parameter(
+                name: 'data',
+                in: 'cookie',
+                style: 'form',
+                schema: new Schema(type: 'string'),
+            ),
+        ];
+
+        $this->validator->validateWithHeader($cookies, 'data=hello%20world', $parameterSchemas);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_with_header_fallback_url_decoded(): void
+    {
+        $cookies = ['data' => 'hello%20world'];
+        $parameterSchemas = [
+            new Parameter(
+                name: 'data',
+                in: 'cookie',
+                style: 'form',
+                schema: new Schema(type: 'string'),
+            ),
+        ];
+
+        $this->validator->validateWithHeader($cookies, '', $parameterSchemas);
+
+        $this->expectNotToPerformAssertions();
     }
 }
