@@ -285,4 +285,210 @@ YAML;
         $validator->validateResponse($response, $operation);
         $this->expectNotToPerformAssertions();
     }
+
+    #[Test]
+    public function validateRequest_with_query_method(): void
+    {
+        $yaml = <<<YAML
+openapi: 3.2.0
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /search:
+    query:
+      summary: Search with body
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Search results
+YAML;
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build();
+
+        $request = new Psr17Factory()
+            ->createServerRequest('QUERY', '/search')
+            ->withHeader('Content-Type', 'application/json')
+            ->withBody(new Psr17Factory()->createStream('{"query":"test"}'));
+
+        $operation = $validator->validateRequest($request);
+        $this->assertSame('QUERY', $operation->method);
+    }
+
+    #[Test]
+    public function validateRequest_with_additional_operation_copy(): void
+    {
+        $yaml = <<<YAML
+openapi: 3.2.0
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /resource:
+    additionalOperations:
+      COPY:
+        summary: Copy resource
+        responses:
+          '201':
+            description: Copied
+YAML;
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build();
+
+        $request = new Psr17Factory()
+            ->createServerRequest('COPY', '/resource');
+
+        $operation = $validator->validateRequest($request);
+        $this->assertSame('COPY', $operation->method);
+    }
+
+    #[Test]
+    public function validateRequest_with_additional_operation_case_insensitive(): void
+    {
+        $yaml = <<<YAML
+openapi: 3.2.0
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /resource:
+    additionalOperations:
+      COPY:
+        summary: Copy resource
+        responses:
+          '201':
+            description: Copied
+YAML;
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build();
+
+        $request = new Psr17Factory()
+            ->createServerRequest('copy', '/resource');
+
+        $operation = $validator->validateRequest($request);
+        $this->assertSame('copy', $operation->method);
+    }
+
+    #[Test]
+    public function validateRequest_with_multiple_additional_operations(): void
+    {
+        $yaml = <<<YAML
+openapi: 3.2.0
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /resource:
+    additionalOperations:
+      COPY:
+        summary: Copy resource
+        responses:
+          '201':
+            description: Copied
+      MOVE:
+        summary: Move resource
+        responses:
+          '201':
+            description: Moved
+      PURGE:
+        summary: Purge cache
+        responses:
+          '200':
+            description: Purged
+YAML;
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build();
+
+        $copyRequest = new Psr17Factory()->createServerRequest('COPY', '/resource');
+        $copyOperation = $validator->validateRequest($copyRequest);
+        $this->assertSame('COPY', $copyOperation->method);
+
+        $moveRequest = new Psr17Factory()->createServerRequest('MOVE', '/resource');
+        $moveOperation = $validator->validateRequest($moveRequest);
+        $this->assertSame('MOVE', $moveOperation->method);
+
+        $purgeRequest = new Psr17Factory()->createServerRequest('PURGE', '/resource');
+        $purgeOperation = $validator->validateRequest($purgeRequest);
+        $this->assertSame('PURGE', $purgeOperation->method);
+    }
+
+    #[Test]
+    public function validateResponse_with_query_method(): void
+    {
+        $yaml = <<<YAML
+openapi: 3.2.0
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /search:
+    query:
+      summary: Search with body
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Search results
+YAML;
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build();
+
+        $operation = new Operation('/search', 'QUERY');
+        $response = new Psr17Factory()
+            ->createResponse(200)
+            ->withHeader('Content-Type', 'application/json')
+            ->withBody(new Psr17Factory()->createStream('{"results":[]}'));
+
+        $validator->validateResponse($response, $operation);
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validateResponse_with_additional_operation(): void
+    {
+        $yaml = <<<YAML
+openapi: 3.2.0
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /resource:
+    additionalOperations:
+      COPY:
+        summary: Copy resource
+        responses:
+          '201':
+            description: Copied
+YAML;
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build();
+
+        $operation = new Operation('/resource', 'COPY');
+        $response = new Psr17Factory()
+            ->createResponse(201);
+
+        $validator->validateResponse($response, $operation);
+        $this->expectNotToPerformAssertions();
+    }
 }

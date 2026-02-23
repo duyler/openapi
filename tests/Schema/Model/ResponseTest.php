@@ -144,4 +144,41 @@ final class ResponseTest extends TestCase
         self::assertIsArray($serialized);
         self::assertArrayHasKey('links', $serialized);
     }
+
+    #[Test]
+    public function response_has_summary_field(): void
+    {
+        $response = new Response(
+            summary: 'Successful response',
+            description: 'Success',
+        );
+
+        self::assertSame('Successful response', $response->summary);
+    }
+
+    #[Test]
+    public function json_serialize_includes_summary(): void
+    {
+        $response = new Response(
+            summary: 'Successful response',
+            description: 'Success',
+        );
+
+        $serialized = $response->jsonSerialize();
+
+        self::assertArrayHasKey('summary', $serialized);
+        self::assertSame('Successful response', $serialized['summary']);
+    }
+
+    #[Test]
+    public function json_serialize_excludes_null_summary(): void
+    {
+        $response = new Response(
+            description: 'Success',
+        );
+
+        $serialized = $response->jsonSerialize();
+
+        self::assertArrayNotHasKey('summary', $serialized);
+    }
 }

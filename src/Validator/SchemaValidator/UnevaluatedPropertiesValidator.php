@@ -31,7 +31,7 @@ readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValidator
         /** @var array<array-key, string> $stringUnevaluatedProperties */
         $stringUnevaluatedProperties = array_filter($unevaluatedProperties, is_string(...));
 
-        if (true === $schema->unevaluatedProperties) {
+        if ($schema->unevaluatedProperties) {
             return;
         }
 

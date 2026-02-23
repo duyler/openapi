@@ -39,18 +39,16 @@ readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator
             );
         }
 
-        if (true === $schema->additionalProperties) {
-            return;
-        }
+        if ($schema->additionalProperties instanceof Schema) {
+            $nullableAsType = $context?->nullableAsType ?? true;
+            $validator = new SchemaValidator($this->pool);
 
-        $nullableAsType = $context?->nullableAsType ?? true;
-        $validator = new SchemaValidator($this->pool);
-
-        foreach ($additionalKeys as $key) {
-            /** @var array-key|array<array-key, mixed> $value */
-            $value = $data[$key];
-            $keyContext = $context?->withBreadcrumb((string) $key) ?? ValidationContext::create($this->pool, $nullableAsType);
-            $validator->validate($value, $schema->additionalProperties, $keyContext);
+            foreach ($additionalKeys as $key) {
+                /** @var array-key|array<array-key, mixed> $value */
+                $value = $data[$key];
+                $keyContext = $context?->withBreadcrumb((string) $key) ?? ValidationContext::create($this->pool, $nullableAsType);
+                $validator->validate($value, $schema->additionalProperties, $keyContext);
+            }
         }
     }
 }

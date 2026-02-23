@@ -6,11 +6,11 @@
 [![psalm-level](https://shepherd.dev/github/duyler/openapi/level.svg)](https://shepherd.dev/github/duyler/openapi)
 ![PHP Version](https://img.shields.io/packagist/dependency-v/duyler/openapi/php?version=dev-main)
 
-OpenAPI 3.1 validator for PHP 8.4+
+OpenAPI 3.2 validator for PHP 8.4+
 
 ## Features
 
-- **Full OpenAPI 3.1 Support** - Complete implementation of OpenAPI 3.1 specification
+- **Full OpenAPI 3.2 Support** - Complete implementation of OpenAPI 3.2 specification
 - **JSON Schema Validation** - Full JSON Schema draft 2020-12 validation with 25+ validators
 - **PSR-7 Integration** - Works with any PSR-7 HTTP message implementation
 - **Request Validation** - Validate path parameters, query parameters, headers, cookies, and request body
@@ -229,7 +229,7 @@ Validate polymorphic schemas with discriminators:
 
 ```php
 $yaml = <<<YAML
-openapi: 3.1.0
+openapi: 3.2.0
 info:
   title: Pet Store API
   version: 1.0.0
@@ -667,14 +667,14 @@ $validator = OpenApiValidatorBuilder::create()
 
 ### Key Differences
 
-| Feature | league/openapi-psr7-validator | duyler/openapi |
-|---------|------------------------------|----------------|
-| PHP Version | PHP 7.4+ | PHP 8.4+ |
-| OpenAPI Version | 3.0 | 3.1 |
-| JSON Schema | Draft 7 | Draft 2020-12 |
+| Feature | league/openapi-psr7-validator | duyler/openapi             |
+|---------|------------------------------|----------------------------|
+| PHP Version | PHP 7.4+ | PHP 8.4+                   |
+| OpenAPI Version | 3.0 | 3.0, 3.1, 3.2              |
+| JSON Schema | Draft 7 | Draft 2020-12              |
 | Builder Pattern | Fluent builder | Fluent builder (immutable) |
-| Type Coercion | Enabled by default | Opt-in |
-| Error Formatting | Basic | Multiple formatters |
+| Type Coercion | Enabled by default | Opt-in                     |
+| Error Formatting | Basic | Multiple formatters        |
 
 ### Migration Examples
 

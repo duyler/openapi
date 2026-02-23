@@ -1,20 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-Psalm Baseline Documentation
-
-ClassMustBeFinal suppressions for readonly classes:
-  PHP 8.2+ readonly classes are implicitly final and cannot be extended.
-  Psalm's ClassMustBeFinal rule does not account for this language feature.
-  These suppressions are necessary until Psalm is updated.
-
-MixedAssignment suppressions:
-  - Schema.php ($default, $const, $example): These represent JSON Schema values
-    which can be any valid JSON type including nested objects. Using `mixed` is
-    correct; union types would be incomplete.
-  - OpenApiBuilder.php: Parser iterates over decoded JSON/YAML which is mixed
-    by nature before type narrowing via assertions.
-  - Coercion/Validator classes: Dynamic type coercion requires mixed handling.
--->
 <files psalm-version="6.14.3@d0b040a91f280f071c1abcb1b77ce3822058725a">
   <file src="src/Cache/SchemaCache.php">
     <ClassMustBeFinal>
@@ -108,6 +92,8 @@ MixedAssignment suppressions:
       <code><![CDATA[Example]]></code>
     </ClassMustBeFinal>
     <MixedAssignment>
+      <code><![CDATA[$data['dataValue']]]></code>
+      <code><![CDATA[$data['serializedValue']]]></code>
       <code><![CDATA[$data['value']]]></code>
     </MixedAssignment>
   </file>
@@ -245,9 +231,6 @@ MixedAssignment suppressions:
     </ClassMustBeFinal>
   </file>
   <file src="src/Schema/Parser/JsonParser.php">
-    <ClassMustBeFinal>
-      <code><![CDATA[JsonParser]]></code>
-    </ClassMustBeFinal>
   </file>
   <file src="src/Schema/Parser/OpenApiBuilder.php">
     <MixedAssignment>
@@ -259,6 +242,8 @@ MixedAssignment suppressions:
       <code><![CDATA[$header]]></code>
       <code><![CDATA[$link]]></code>
       <code><![CDATA[$link]]></code>
+      <code><![CDATA[$mediaType]]></code>
+      <code><![CDATA[$operationData]]></code>
       <code><![CDATA[$parameter]]></code>
       <code><![CDATA[$pathItem]]></code>
       <code><![CDATA[$pathItem]]></code>
@@ -282,9 +267,6 @@ MixedAssignment suppressions:
     </MixedAssignment>
   </file>
   <file src="src/Schema/Parser/YamlParser.php">
-    <ClassMustBeFinal>
-      <code><![CDATA[YamlParser]]></code>
-    </ClassMustBeFinal>
   </file>
   <file src="src/Validator/Error/Breadcrumb.php">
     <ClassMustBeFinal>

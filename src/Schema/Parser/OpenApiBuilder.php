@@ -10,6 +10,7 @@ use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\Contact;
 use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\Discriminator;
+use Duyler\OpenApi\Schema\Model\Encoding;
 use Duyler\OpenApi\Schema\Model\Example;
 use Duyler\OpenApi\Schema\Model\ExternalDocs;
 use Duyler\OpenApi\Schema\Model\Header;
@@ -19,6 +20,8 @@ use Duyler\OpenApi\Schema\Model\License;
 use Duyler\OpenApi\Schema\Model\Link;
 use Duyler\OpenApi\Schema\Model\Links;
 use Duyler\OpenApi\Schema\Model\MediaType;
+use Duyler\OpenApi\Schema\Model\OAuthFlow;
+use Duyler\OpenApi\Schema\Model\OAuthFlows;
 use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Parameters;
@@ -35,6 +38,7 @@ use Duyler\OpenApi\Schema\Model\Servers;
 use Duyler\OpenApi\Schema\Model\Tag;
 use Duyler\OpenApi\Schema\Model\Tags;
 use Duyler\OpenApi\Schema\Model\Webhooks;
+use Duyler\OpenApi\Schema\Model\Xml;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\SchemaParserInterface;
 use Override;
@@ -42,9 +46,22 @@ use Throwable;
 
 use function is_array;
 use function is_string;
+use function assert;
+use function sprintf;
 
-abstract readonly class OpenApiBuilder implements SchemaParserInterface
+use const FILTER_VALIDATE_URL;
+
+abstract class OpenApiBuilder implements SchemaParserInterface
 {
+    protected string $documentVersion = '';
+    protected DeprecationLogger $deprecationLogger;
+
+    public function __construct(
+        ?DeprecationLogger $deprecationLogger = null,
+    ) {
+        $this->deprecationLogger = $deprecationLogger ?? new DeprecationLogger();
+    }
+
     #[Override]
     public function parse(string $content): OpenApiDocument
     {
@@ -84,6 +101,10 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
     protected function buildDocument(array $data): OpenApiDocument
     {
         $this->validateVersion($data);
+        $this->documentVersion = (string) $data['openapi'];
+
+        $self = TypeHelper::asStringOrNull($data['$self'] ?? null);
+        $this->validateSelfUri($self);
 
         return new OpenApiDocument(
             openapi: (string) $data['openapi'],
@@ -96,7 +117,21 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
             security: isset($data['security']) ? new SecurityRequirement(TypeHelper::asSecurityListMapOrNull($data['security']) ?? []) : null,
             tags: isset($data['tags']) ? new Tags($this->buildTags(TypeHelper::asList($data['tags']))) : null,
             externalDocs: isset($data['externalDocs']) && is_array($data['externalDocs']) ? $this->buildExternalDocs(TypeHelper::asArray($data['externalDocs'])) : null,
+            self: $self,
         );
+    }
+
+    protected function validateSelfUri(?string $self): void
+    {
+        if (null === $self) {
+            return;
+        }
+
+        if (false === filter_var($self, FILTER_VALIDATE_URL)) {
+            throw new InvalidSchemaException(
+                'Invalid $self URI: ' . $self,
+            );
+        }
     }
 
     protected function validateVersion(array $data): void
@@ -106,9 +141,14 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
         }
 
         $version = $data['openapi'];
-        if (false === is_string($version) || 1 !== preg_match('/^3\.[01]\.[0-9]+$/', $version)) {
-            throw new InvalidSchemaException('Unsupported OpenAPI version: ' . (string) $version . '. Only 3.0.x and 3.1.x are supported.');
+        if (false === is_string($version) || 1 !== preg_match('/^3\.[0-2]\.[0-9]+$/', $version)) {
+            throw new InvalidSchemaException('Unsupported OpenAPI version: ' . (string) $version . '. Only 3.0.x, 3.1.x and 3.2.x are supported.');
         }
+    }
+
+    protected function shouldWarnDeprecation(): bool
+    {
+        return version_compare($this->documentVersion, '3.2.0', '>=');
     }
 
     protected function buildInfo(array $data): InfoObject
@@ -156,6 +196,7 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
             variables: isset($server['variables']) && is_array($server['variables'])
                 ? TypeHelper::asStringMixedMapOrNull(TypeHelper::asArray($server['variables']))
                 : null,
+            name: TypeHelper::asStringOrNull($server['name'] ?? null),
         ), array_values($data));
     }
 
@@ -170,6 +211,9 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
             externalDocs: isset($tag['externalDocs']) && is_array($tag['externalDocs'])
                 ? $this->buildExternalDocs(TypeHelper::asArray($tag['externalDocs']))
                 : null,
+            summary: TypeHelper::asStringOrNull($tag['summary'] ?? null),
+            parent: TypeHelper::asStringOrNull($tag['parent'] ?? null),
+            kind: TypeHelper::asStringOrNull($tag['kind'] ?? null),
         ), array_values($data));
     }
 
@@ -199,9 +243,29 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
             head: isset($data['head']) ? $this->buildOperation(TypeHelper::asArray($data['head'])) : null,
             patch: isset($data['patch']) ? $this->buildOperation(TypeHelper::asArray($data['patch'])) : null,
             trace: isset($data['trace']) ? $this->buildOperation(TypeHelper::asArray($data['trace'])) : null,
+            query: isset($data['query']) ? $this->buildOperation(TypeHelper::asArray($data['query'])) : null,
+            additionalOperations: isset($data['additionalOperations']) && is_array($data['additionalOperations'])
+                ? $this->buildAdditionalOperations(TypeHelper::asArray($data['additionalOperations']))
+                : null,
             servers: isset($data['servers']) ? new Servers($this->buildServers(TypeHelper::asList($data['servers']))) : null,
             parameters: isset($data['parameters']) ? new Parameters($this->buildParameters(TypeHelper::asList($data['parameters']))) : null,
         );
+    }
+
+    /**
+     * @return array<string, Operation>
+     */
+    protected function buildAdditionalOperations(array $data): array
+    {
+        $operations = [];
+
+        foreach ($data as $method => $operationData) {
+            if (is_string($method) && is_array($operationData)) {
+                $operations[$method] = $this->buildOperation(TypeHelper::asArray($operationData));
+            }
+        }
+
+        return $operations;
     }
 
     /**
@@ -217,11 +281,21 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
         if (isset($data['$ref'])) {
             return new Parameter(
                 ref: TypeHelper::asString($data['$ref']),
+                refSummary: TypeHelper::asStringOrNull($data['summary'] ?? null),
+                refDescription: TypeHelper::asStringOrNull($data['description'] ?? null),
             );
         }
 
         if (false === isset($data['name']) || false === isset($data['in'])) {
             throw new InvalidSchemaException('Parameter must have name and in fields');
+        }
+
+        if ($this->shouldWarnDeprecation() && isset($data['allowEmptyValue']) && $data['allowEmptyValue']) {
+            $this->deprecationLogger->warn(
+                'allowEmptyValue',
+                'Parameter Object',
+                '3.2.0',
+            );
         }
 
         return new Parameter(
@@ -245,8 +319,19 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
 
     protected function buildSchema(array $data): Schema
     {
+        if ($this->shouldWarnDeprecation() && isset($data['example'])) {
+            $this->deprecationLogger->warn(
+                'example',
+                'Schema Object',
+                '3.2.0',
+                'examples in MediaType Object',
+            );
+        }
+
         return new Schema(
             ref: TypeHelper::asStringOrNull($data['$ref'] ?? null),
+            refSummary: isset($data['$ref']) ? TypeHelper::asStringOrNull($data['summary'] ?? null) : null,
+            refDescription: isset($data['$ref']) ? TypeHelper::asStringOrNull($data['description'] ?? null) : null,
             format: TypeHelper::asStringOrNull($data['format'] ?? null),
             title: TypeHelper::asStringOrNull($data['title'] ?? null),
             description: TypeHelper::asStringOrNull($data['description'] ?? null),
@@ -304,6 +389,9 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
             contentMediaType: TypeHelper::asStringOrNull($data['contentMediaType'] ?? null),
             contentSchema: TypeHelper::asStringOrNull($data['contentSchema'] ?? null),
             jsonSchemaDialect: TypeHelper::asStringOrNull($data['$schema'] ?? null),
+            xml: isset($data['xml']) && is_array($data['xml'])
+                ? $this->buildXml(TypeHelper::asArray($data['xml']))
+                : null,
         );
     }
 
@@ -325,14 +413,57 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
 
     protected function buildDiscriminator(array $data): Discriminator
     {
-        if (false === isset($data['propertyName'])) {
-            throw new InvalidSchemaException('Discriminator must have propertyName');
+        return new Discriminator(
+            propertyName: TypeHelper::asStringOrNull($data['propertyName'] ?? null),
+            mapping: TypeHelper::asStringMapOrNull($data['mapping'] ?? null),
+            defaultMapping: TypeHelper::asStringOrNull($data['defaultMapping'] ?? null),
+        );
+    }
+
+    protected function buildXml(array $data): Xml
+    {
+        if ($this->shouldWarnDeprecation() && isset($data['attribute'])) {
+            $this->deprecationLogger->warn(
+                'attribute',
+                'XML Object',
+                '3.2.0',
+                'nodeType: "attribute"',
+            );
         }
 
-        return new Discriminator(
-            propertyName: TypeHelper::asString($data['propertyName']),
-            mapping: TypeHelper::asStringMapOrNull($data['mapping'] ?? null),
+        if ($this->shouldWarnDeprecation() && isset($data['wrapped'])) {
+            $this->deprecationLogger->warn(
+                'wrapped',
+                'XML Object',
+                '3.2.0',
+            );
+        }
+
+        $xml = new Xml(
+            name: TypeHelper::asStringOrNull($data['name'] ?? null),
+            namespace: TypeHelper::asStringOrNull($data['namespace'] ?? null),
+            prefix: TypeHelper::asStringOrNull($data['prefix'] ?? null),
+            attribute: TypeHelper::asBoolOrNull($data['attribute'] ?? null),
+            wrapped: TypeHelper::asBoolOrNull($data['wrapped'] ?? null),
+            nodeType: TypeHelper::asStringOrNull($data['nodeType'] ?? null),
         );
+
+        $this->validateXml($xml);
+
+        return $xml;
+    }
+
+    protected function validateXml(Xml $xml): void
+    {
+        if (null !== $xml->nodeType && !Xml::isValidNodeType($xml->nodeType)) {
+            throw new InvalidSchemaException(
+                sprintf(
+                    'Invalid XML nodeType "%s". Must be one of: %s',
+                    $xml->nodeType,
+                    implode(', ', Xml::VALID_NODE_TYPES),
+                ),
+            );
+        }
     }
 
     protected function buildOperation(array $data): Operation
@@ -384,12 +515,76 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
             schema: isset($data['schema']) && is_array($data['schema'])
                 ? $this->buildSchema(TypeHelper::asArray($data['schema']))
                 : null,
-            encoding: TypeHelper::asStringOrNull($data['encoding'] ?? null),
+            itemSchema: isset($data['itemSchema']) && is_array($data['itemSchema'])
+                ? $this->buildSchema(TypeHelper::asArray($data['itemSchema']))
+                : null,
+            encoding: isset($data['encoding']) && is_array($data['encoding'])
+                ? $this->buildEncodingMap(TypeHelper::asArray($data['encoding']))
+                : null,
+            itemEncoding: isset($data['itemEncoding']) && is_array($data['itemEncoding'])
+                ? $this->buildEncoding(TypeHelper::asArray($data['itemEncoding']))
+                : null,
+            prefixEncoding: isset($data['prefixEncoding']) && is_array($data['prefixEncoding'])
+                ? $this->buildPrefixEncoding(TypeHelper::asArray($data['prefixEncoding']))
+                : null,
             example: isset($data['example']) && false === is_array($data['example'])
                 ? $this->buildExample(['value' => $data['example']])
                 : null,
             examples: isset($data['examples']) && is_array($data['examples']) ? TypeHelper::asStringMixedMapOrNull($data['examples']) : null,
         );
+    }
+
+    protected function buildEncoding(array $data): Encoding
+    {
+        return new Encoding(
+            contentType: TypeHelper::asStringOrNull($data['contentType'] ?? null),
+            headers: isset($data['headers']) && is_array($data['headers'])
+                ? $this->buildHeaders(TypeHelper::asArray($data['headers']))
+                : null,
+            style: TypeHelper::asStringOrNull($data['style'] ?? null),
+            explode: TypeHelper::asBoolOrNull($data['explode'] ?? null),
+            allowReserved: TypeHelper::asBoolOrNull($data['allowReserved'] ?? null),
+            encoding: isset($data['encoding']) && is_array($data['encoding'])
+                ? $this->buildEncodingMap(TypeHelper::asArray($data['encoding']))
+                : null,
+            prefixEncoding: isset($data['prefixEncoding']) && is_array($data['prefixEncoding'])
+                ? $this->buildPrefixEncoding(TypeHelper::asArray($data['prefixEncoding']))
+                : null,
+            itemEncoding: isset($data['itemEncoding']) && is_array($data['itemEncoding'])
+                ? $this->buildEncoding(TypeHelper::asArray($data['itemEncoding']))
+                : null,
+        );
+    }
+
+    /**
+     * @return array<string, Encoding>
+     */
+    protected function buildEncodingMap(array $data): array
+    {
+        $encodings = [];
+
+        foreach ($data as $name => $encoding) {
+            assert(is_string($name));
+            assert(is_array($encoding));
+            $encodings[$name] = $this->buildEncoding(TypeHelper::asArray($encoding));
+        }
+
+        return $encodings;
+    }
+
+    /**
+     * @return array<int, Encoding>
+     */
+    protected function buildPrefixEncoding(array $data): array
+    {
+        $encodings = [];
+
+        foreach ($data as $encoding) {
+            assert(is_array($encoding));
+            $encodings[] = $this->buildEncoding(TypeHelper::asArray($encoding));
+        }
+
+        return $encodings;
     }
 
     protected function buildResponses(array $data): Responses
@@ -411,10 +606,13 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
         if (isset($data['$ref'])) {
             return new Response(
                 ref: TypeHelper::asString($data['$ref']),
+                refSummary: TypeHelper::asStringOrNull($data['summary'] ?? null),
+                refDescription: TypeHelper::asStringOrNull($data['description'] ?? null),
             );
         }
 
         return new Response(
+            summary: TypeHelper::asStringOrNull($data['summary'] ?? null),
             description: TypeHelper::asStringOrNull($data['description'] ?? null),
             headers: isset($data['headers']) && is_array($data['headers'])
                 ? $this->buildHeaders(TypeHelper::asArray($data['headers']))
@@ -568,6 +766,9 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
             pathItems: isset($data['pathItems']) && is_array($data['pathItems'])
                 ? $this->buildPathItemsComponents(TypeHelper::asArray($data['pathItems']))
                 : null,
+            mediaTypes: isset($data['mediaTypes']) && is_array($data['mediaTypes'])
+                ? $this->buildMediaTypesComponents(TypeHelper::asArray($data['mediaTypes']))
+                : null,
         );
     }
 
@@ -641,7 +842,10 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
             summary: TypeHelper::asStringOrNull($data['summary'] ?? null),
             description: TypeHelper::asStringOrNull($data['description'] ?? null),
             value: $data['value'] ?? null,
+            dataValue: $data['dataValue'] ?? null,
+            serializedValue: $data['serializedValue'] ?? null,
             externalValue: TypeHelper::asStringOrNull($data['externalValue'] ?? null),
+            serializedExample: TypeHelper::asStringOrNull($data['serializedExample'] ?? null),
         );
     }
 
@@ -706,11 +910,52 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
             in: TypeHelper::asStringOrNull($data['in'] ?? null),
             scheme: TypeHelper::asStringOrNull($data['scheme'] ?? null),
             bearerFormat: TypeHelper::asStringOrNull($data['bearerFormat'] ?? null),
-            flows: TypeHelper::asStringOrNull($data['flows'] ?? null),
+            flows: isset($data['flows']) && is_array($data['flows'])
+                ? $this->buildOAuthFlows(TypeHelper::asArray($data['flows']))
+                : null,
+            openIdConnectUrl: TypeHelper::asStringOrNull($data['openIdConnectUrl'] ?? null),
+            oauth2MetadataUrl: TypeHelper::asStringOrNull($data['oauth2MetadataUrl'] ?? null),
             authorizationUrl: TypeHelper::asStringOrNull($data['authorizationUrl'] ?? null),
             tokenUrl: TypeHelper::asStringOrNull($data['tokenUrl'] ?? null),
             refreshUrl: TypeHelper::asStringOrNull($data['refreshUrl'] ?? null),
-            scopes: isset($data['scopes']) ? TypeHelper::asArray($data['scopes']) : null,
+            scopes: isset($data['scopes']) && is_array($data['scopes'])
+                ? TypeHelper::asStringMap($data['scopes'])
+                : null,
+        );
+    }
+
+    protected function buildOAuthFlows(array $data): OAuthFlows
+    {
+        return new OAuthFlows(
+            implicit: isset($data['implicit']) && is_array($data['implicit'])
+                ? $this->buildOAuthFlow(TypeHelper::asArray($data['implicit']))
+                : null,
+            password: isset($data['password']) && is_array($data['password'])
+                ? $this->buildOAuthFlow(TypeHelper::asArray($data['password']))
+                : null,
+            clientCredentials: isset($data['clientCredentials']) && is_array($data['clientCredentials'])
+                ? $this->buildOAuthFlow(TypeHelper::asArray($data['clientCredentials']))
+                : null,
+            authorizationCode: isset($data['authorizationCode']) && is_array($data['authorizationCode'])
+                ? $this->buildOAuthFlow(TypeHelper::asArray($data['authorizationCode']))
+                : null,
+            deviceCode: isset($data['deviceCode']) && is_array($data['deviceCode'])
+                ? $this->buildOAuthFlow(TypeHelper::asArray($data['deviceCode']))
+                : null,
+        );
+    }
+
+    protected function buildOAuthFlow(array $data): OAuthFlow
+    {
+        return new OAuthFlow(
+            authorizationUrl: TypeHelper::asStringOrNull($data['authorizationUrl'] ?? null),
+            tokenUrl: TypeHelper::asStringOrNull($data['tokenUrl'] ?? null),
+            refreshUrl: TypeHelper::asStringOrNull($data['refreshUrl'] ?? null),
+            scopes: isset($data['scopes']) && is_array($data['scopes'])
+                ? TypeHelper::asStringMap($data['scopes'])
+                : null,
+            deviceAuthorizationUrl: TypeHelper::asStringOrNull($data['deviceAuthorizationUrl'] ?? null),
+            deprecated: TypeHelper::asBoolOrNull($data['deprecated'] ?? null),
         );
     }
 
@@ -762,6 +1007,22 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
         return $pathItems;
     }
 
+    /**
+     * @return array<string, MediaType>
+     */
+    protected function buildMediaTypesComponents(array $data): array
+    {
+        $mediaTypes = [];
+
+        foreach ($data as $name => $mediaType) {
+            if (is_string($name) && is_array($mediaType)) {
+                $mediaTypes[$name] = $this->buildMediaType(TypeHelper::asArray($mediaType));
+            }
+        }
+
+        return $mediaTypes;
+    }
+
     protected function buildServer(array $data): Server
     {
         return new Server(
@@ -770,6 +1031,7 @@ abstract readonly class OpenApiBuilder implements SchemaParserInterface
             variables: isset($data['variables']) && is_array($data['variables'])
                 ? TypeHelper::asStringMixedMapOrNull($data['variables'])
                 : null,
+            name: TypeHelper::asStringOrNull($data['name'] ?? null),
         );
     }
 }

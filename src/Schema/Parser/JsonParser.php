@@ -8,7 +8,7 @@ use Override;
 
 use const JSON_THROW_ON_ERROR;
 
-readonly class JsonParser extends OpenApiBuilder
+final class JsonParser extends OpenApiBuilder
 {
     #[Override]
     protected function parseContent(string $content): mixed

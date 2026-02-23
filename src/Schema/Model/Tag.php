@@ -13,6 +13,9 @@ readonly class Tag implements JsonSerializable
         public string $name,
         public ?string $description = null,
         public ?ExternalDocs $externalDocs = null,
+        public ?string $summary = null,
+        public ?string $parent = null,
+        public ?string $kind = null,
     ) {}
 
     #[Override]
@@ -22,12 +25,24 @@ readonly class Tag implements JsonSerializable
             'name' => $this->name,
         ];
 
-        if ($this->description !== null) {
+        if (null !== $this->description) {
             $data['description'] = $this->description;
         }
 
-        if ($this->externalDocs !== null) {
+        if (null !== $this->externalDocs) {
             $data['externalDocs'] = $this->externalDocs;
+        }
+
+        if (null !== $this->summary) {
+            $data['summary'] = $this->summary;
+        }
+
+        if (null !== $this->parent) {
+            $data['parent'] = $this->parent;
+        }
+
+        if (null !== $this->kind) {
+            $data['kind'] = $this->kind;
         }
 
         return $data;

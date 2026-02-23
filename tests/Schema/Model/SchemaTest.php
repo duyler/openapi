@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Schema\Model;
 
+use Duyler\OpenApi\Schema\Model\Discriminator;
+use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Schema\Model\Xml;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Duyler\OpenApi\Schema\Model\Discriminator;
-use Duyler\OpenApi\Schema\Model\Schema;
 
 #[CoversClass(Schema::class)]
 final class SchemaTest extends TestCase
@@ -777,5 +778,41 @@ final class SchemaTest extends TestCase
 
         self::assertIsArray($serialized);
         self::assertArrayHasKey('discriminator', $serialized);
+    }
+
+    #[Test]
+    public function schema_has_xml_property(): void
+    {
+        $schema = new Schema(
+            type: 'string',
+            xml: new Xml(
+                name: 'value',
+                nodeType: 'attribute',
+            ),
+        );
+
+        self::assertNotNull($schema->xml);
+        self::assertSame('value', $schema->xml->name);
+        self::assertSame('attribute', $schema->xml->nodeType);
+    }
+
+    #[Test]
+    public function json_serialize_includes_xml(): void
+    {
+        $schema = new Schema(
+            type: 'string',
+            xml: new Xml(
+                name: 'item',
+                nodeType: 'element',
+            ),
+        );
+
+        $serialized = $schema->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertArrayHasKey('xml', $serialized);
+        self::assertInstanceOf(Xml::class, $serialized['xml']);
+        self::assertSame('item', $serialized['xml']->name);
+        self::assertSame('element', $serialized['xml']->nodeType);
     }
 }

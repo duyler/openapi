@@ -47,7 +47,7 @@ readonly class OneOfValidatorWithContext
     private function validateWithDiscriminator(mixed $data, Schema $schema, ValidationContext $context): void
     {
         if (null === $data) {
-            assert($schema->oneOf !== null);
+            assert(null !== $schema->oneOf);
             if ($this->hasNullableSchema($schema->oneOf) && $context->nullableAsType) {
                 return;
             }
@@ -86,7 +86,7 @@ readonly class OneOfValidatorWithContext
         $abstractErrors = [];
 
         foreach ($oneOf as $subSchema) {
-            if (!$subSchema instanceof Schema) {
+            if (false === $subSchema instanceof Schema) {
                 continue;
             }
 

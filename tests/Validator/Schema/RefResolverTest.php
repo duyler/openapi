@@ -12,6 +12,7 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Exception\RefResolutionException;
 
 /**
  * @internal
@@ -480,5 +481,103 @@ final class RefResolverTest extends TestCase
         $document = new OpenApiDocument('3.1.0', new InfoObject('Test API', '1.0.0'));
 
         $this->assertTrue($this->resolver->schemaHasDiscriminator($topSchema, $document));
+    }
+
+    #[Test]
+    public function get_base_uri_returns_self_from_document(): void
+    {
+        $document = new OpenApiDocument(
+            '3.2.0',
+            new InfoObject('Test API', '1.0.0'),
+            self: 'https://api.example.com/openapi.json',
+        );
+
+        $this->assertSame('https://api.example.com/openapi.json', $this->resolver->getBaseUri($document));
+    }
+
+    #[Test]
+    public function get_base_uri_returns_null_when_self_not_set(): void
+    {
+        $document = new OpenApiDocument(
+            '3.2.0',
+            new InfoObject('Test API', '1.0.0'),
+        );
+
+        $this->assertNull($this->resolver->getBaseUri($document));
+    }
+
+    #[Test]
+    public function resolve_relative_ref_using_self(): void
+    {
+        $document = new OpenApiDocument(
+            '3.2.0',
+            new InfoObject('Test API', '1.0.0'),
+            self: 'https://api.example.com/schemas/main.json',
+        );
+
+        $resolved = $this->resolver->resolveRelativeRef('schemas/user.yaml', $document);
+
+        $this->assertSame('https://api.example.com/schemas/schemas/user.yaml', $resolved);
+    }
+
+    #[Test]
+    public function throws_for_relative_ref_without_self(): void
+    {
+        $document = new OpenApiDocument(
+            '3.2.0',
+            new InfoObject('Test API', '1.0.0'),
+        );
+
+        $this->expectException(RefResolutionException::class);
+        $this->expectExceptionMessage("Cannot resolve relative reference 'schemas/user.yaml' without document \$self or base URI");
+
+        $this->resolver->resolveRelativeRef('schemas/user.yaml', $document);
+    }
+
+    #[Test]
+    public function combines_uris_correctly(): void
+    {
+        $combined = $this->resolver->combineUris(
+            'https://api.example.com/v1/openapi.json',
+            'schemas/user.yaml',
+        );
+
+        $this->assertSame('https://api.example.com/v1/schemas/user.yaml', $combined);
+    }
+
+    #[Test]
+    public function combines_uris_with_nested_path(): void
+    {
+        $combined = $this->resolver->combineUris(
+            'https://api.example.com/schemas/v2/main.json',
+            'components/responses.yaml',
+        );
+
+        $this->assertSame('https://api.example.com/schemas/v2/components/responses.yaml', $combined);
+    }
+
+    #[Test]
+    public function combines_uris_with_relative_path(): void
+    {
+        $combined = $this->resolver->combineUris(
+            'https://api.example.com/schemas/main.json',
+            '../common/types.yaml',
+        );
+
+        $this->assertSame('https://api.example.com/schemas/../common/types.yaml', $combined);
+    }
+
+    #[Test]
+    public function resolves_relative_ref_from_nested_directory(): void
+    {
+        $document = new OpenApiDocument(
+            '3.2.0',
+            new InfoObject('Test API', '1.0.0'),
+            self: 'https://api.example.com/api/v2/openapi.json',
+        );
+
+        $resolved = $this->resolver->resolveRelativeRef('paths/users.yaml', $document);
+
+        $this->assertSame('https://api.example.com/api/v2/paths/users.yaml', $resolved);
     }
 }

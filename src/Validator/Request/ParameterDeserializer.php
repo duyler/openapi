@@ -24,7 +24,6 @@ readonly class ParameterDeserializer
 
         $style = $param->style ?? $this->getDefaultStyle($param->in);
 
-        // Arrays are only valid for form style
         if (is_array($normalized)) {
             return 'form' === $style
                 ? $this->deserializeForm($normalized, $param->explode)
@@ -39,6 +38,7 @@ readonly class ParameterDeserializer
             'form' => $this->deserializeForm($normalized, $param->explode),
             'pipeDelimited' => $this->deserializePipeDelimited($normalized),
             'spaceDelimited' => $this->deserializeSpaceDelimited($normalized),
+            'cookie' => $this->deserializeCookie($normalized),
             default => $normalized,
         };
     }
@@ -56,7 +56,6 @@ readonly class ParameterDeserializer
 
     private function deserializeMatrix(string $value, string $name): string
     {
-        // Remove the leading ;name= if present
         $prefix = ';' . $name . '=';
         if (str_starts_with($value, $prefix)) {
             return substr($value, strlen($prefix));
@@ -67,7 +66,6 @@ readonly class ParameterDeserializer
 
     private function deserializeLabel(string $value): string
     {
-        // Remove the leading . if present
         if (str_starts_with($value, '.')) {
             return substr($value, 1);
         }
@@ -77,8 +75,6 @@ readonly class ParameterDeserializer
 
     private function deserializeSimple(string $value): string
     {
-        // For path parameters with simple style, keep as is
-        // The simple style is used for path parameters and doesn't need deserialization
         return $value;
     }
 
@@ -107,5 +103,10 @@ readonly class ParameterDeserializer
     private function deserializeSpaceDelimited(string $value): array
     {
         return explode(' ', $value);
+    }
+
+    private function deserializeCookie(string $value): string
+    {
+        return $value;
     }
 }

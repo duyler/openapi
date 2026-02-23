@@ -26,19 +26,19 @@ readonly class InfoObject implements JsonSerializable
             'version' => $this->version,
         ];
 
-        if ($this->description !== null) {
+        if (null !== $this->description) {
             $data['description'] = $this->description;
         }
 
-        if ($this->termsOfService !== null) {
+        if (null !== $this->termsOfService) {
             $data['termsOfService'] = $this->termsOfService;
         }
 
-        if ($this->contact !== null) {
+        if (null !== $this->contact) {
             $data['contact'] = $this->contact;
         }
 
-        if ($this->license !== null) {
+        if (null !== $this->license) {
             $data['license'] = $this->license;
         }
 

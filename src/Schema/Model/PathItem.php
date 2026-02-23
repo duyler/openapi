@@ -9,6 +9,9 @@ use Override;
 
 readonly class PathItem implements JsonSerializable
 {
+    /**
+     * @param array<string, Operation>|null $additionalOperations
+     */
     public function __construct(
         public ?string $ref = null,
         public ?string $summary = null,
@@ -21,6 +24,8 @@ readonly class PathItem implements JsonSerializable
         public ?Operation $head = null,
         public ?Operation $patch = null,
         public ?Operation $trace = null,
+        public ?Operation $query = null,
+        public ?array $additionalOperations = null,
         public ?Servers $servers = null,
         public ?Parameters $parameters = null,
     ) {}
@@ -30,55 +35,63 @@ readonly class PathItem implements JsonSerializable
     {
         $data = [];
 
-        if ($this->ref !== null) {
+        if (null !== $this->ref) {
             $data['$ref'] = $this->ref;
         }
 
-        if ($this->summary !== null) {
+        if (null !== $this->summary) {
             $data['summary'] = $this->summary;
         }
 
-        if ($this->description !== null) {
+        if (null !== $this->description) {
             $data['description'] = $this->description;
         }
 
-        if ($this->get !== null) {
+        if (null !== $this->get) {
             $data['get'] = $this->get;
         }
 
-        if ($this->put !== null) {
+        if (null !== $this->put) {
             $data['put'] = $this->put;
         }
 
-        if ($this->post !== null) {
+        if (null !== $this->post) {
             $data['post'] = $this->post;
         }
 
-        if ($this->delete !== null) {
+        if (null !== $this->delete) {
             $data['delete'] = $this->delete;
         }
 
-        if ($this->options !== null) {
+        if (null !== $this->options) {
             $data['options'] = $this->options;
         }
 
-        if ($this->head !== null) {
+        if (null !== $this->head) {
             $data['head'] = $this->head;
         }
 
-        if ($this->patch !== null) {
+        if (null !== $this->patch) {
             $data['patch'] = $this->patch;
         }
 
-        if ($this->trace !== null) {
+        if (null !== $this->trace) {
             $data['trace'] = $this->trace;
         }
 
-        if ($this->servers !== null) {
+        if (null !== $this->query) {
+            $data['query'] = $this->query;
+        }
+
+        if (null !== $this->additionalOperations) {
+            $data['additionalOperations'] = $this->additionalOperations;
+        }
+
+        if (null !== $this->servers) {
             $data['servers'] = $this->servers;
         }
 
-        if ($this->parameters !== null) {
+        if (null !== $this->parameters) {
             $data['parameters'] = $this->parameters;
         }
 

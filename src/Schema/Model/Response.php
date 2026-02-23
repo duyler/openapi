@@ -11,6 +11,9 @@ readonly class Response implements JsonSerializable
 {
     public function __construct(
         public ?string $ref = null,
+        public ?string $refSummary = null,
+        public ?string $refDescription = null,
+        public ?string $summary = null,
         public ?string $description = null,
         public ?Headers $headers = null,
         public ?Content $content = null,
@@ -20,25 +23,39 @@ readonly class Response implements JsonSerializable
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [];
+        if (null !== $this->ref) {
+            $data = ['$ref' => $this->ref];
 
-        if ($this->ref !== null) {
-            $data['$ref'] = $this->ref;
+            if (null !== $this->refSummary) {
+                $data['summary'] = $this->refSummary;
+            }
+
+            if (null !== $this->refDescription) {
+                $data['description'] = $this->refDescription;
+            }
+
+            return $data;
         }
 
-        if ($this->description !== null) {
+        $data = [];
+
+        if (null !== $this->summary) {
+            $data['summary'] = $this->summary;
+        }
+
+        if (null !== $this->description) {
             $data['description'] = $this->description;
         }
 
-        if ($this->headers !== null) {
+        if (null !== $this->headers) {
             $data['headers'] = $this->headers;
         }
 
-        if ($this->content !== null) {
+        if (null !== $this->content) {
             $data['content'] = $this->content;
         }
 
-        if ($this->links !== null) {
+        if (null !== $this->links) {
             $data['links'] = $this->links;
         }
 

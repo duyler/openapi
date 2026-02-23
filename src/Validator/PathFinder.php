@@ -90,7 +90,9 @@ readonly class PathFinder
 
     private function getOperation(PathItem $pathItem, string $method, string $pathPattern): ?Operation
     {
-        $op = match (strtolower($method)) {
+        $normalizedMethod = strtolower($method);
+
+        $op = match ($normalizedMethod) {
             'get' => $pathItem->get,
             'post' => $pathItem->post,
             'put' => $pathItem->put,
@@ -99,11 +101,20 @@ readonly class PathFinder
             'options' => $pathItem->options,
             'head' => $pathItem->head,
             'trace' => $pathItem->trace,
+            'query' => $pathItem->query,
             default => null,
         };
 
         if (null !== $op) {
             return new Operation($pathPattern, $method);
+        }
+
+        if (null !== $pathItem->additionalOperations) {
+            foreach ($pathItem->additionalOperations as $opMethod => $operation) {
+                if (strtolower($opMethod) === $normalizedMethod) {
+                    return new Operation($pathPattern, $method);
+                }
+            }
         }
 
         return null;

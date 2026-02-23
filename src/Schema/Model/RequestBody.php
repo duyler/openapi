@@ -20,11 +20,11 @@ readonly class RequestBody implements JsonSerializable
     {
         $data = [];
 
-        if ($this->description !== null) {
+        if (null !== $this->description) {
             $data['description'] = $this->description;
         }
 
-        if ($this->content !== null) {
+        if (null !== $this->content) {
             $data['content'] = $this->content;
         }
 

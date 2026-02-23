@@ -32,7 +32,7 @@ readonly class IfThenElseValidator extends AbstractSchemaValidator
             $ifValid = false;
         }
 
-        if (true === $ifValid && null !== $schema->then) {
+        if ($ifValid && null !== $schema->then) {
             $validator = new SchemaValidator($this->pool);
             $validator->validate($normalizedData, $schema->then, $context);
             return;

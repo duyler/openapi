@@ -16,6 +16,7 @@ use Duyler\OpenApi\Validator\ValidatorPool;
 use function array_key_exists;
 use function is_array;
 use function is_string;
+use function assert;
 
 readonly class DiscriminatorValidator
 {
@@ -36,12 +37,41 @@ readonly class DiscriminatorValidator
             return;
         }
 
+        if (null !== $discriminator->propertyName) {
+            $this->validateWithPropertyName($data, $discriminator, $schema, $document, $dataPath);
+        } else {
+            $this->validateWithoutPropertyName($data, $discriminator, $document, $dataPath);
+        }
+    }
+
+    private function validateWithPropertyName(
+        array|int|string|float|bool $data,
+        Discriminator $discriminator,
+        Schema $schema,
+        OpenApiDocument $document,
+        string $dataPath,
+    ): void {
         $propertyName = $discriminator->propertyName;
+        assert(null !== $propertyName);
         $value = $this->extractValue($data, $propertyName, $dataPath);
         $targetSchema = $this->resolveSchema($value, $discriminator, $schema, $document, $dataPath);
 
         $propertyPath = $this->buildPath($dataPath, $propertyName);
         $this->validateAgainstSchema($data, $targetSchema, $document, $propertyPath);
+    }
+
+    private function validateWithoutPropertyName(
+        array|int|string|float|bool $data,
+        Discriminator $discriminator,
+        OpenApiDocument $document,
+        string $dataPath,
+    ): void {
+        if (null === $discriminator->defaultMapping) {
+            return;
+        }
+
+        $targetSchema = $this->refResolver->resolve($discriminator->defaultMapping, $document);
+        $this->validateAgainstSchema($data, $targetSchema, $document, $dataPath);
     }
 
     private function buildPath(string $basePath, string $segment): string
@@ -98,11 +128,12 @@ readonly class DiscriminatorValidator
             return $this->refResolver->resolve($mapping[$value], $document);
         }
 
-        return $this->findMatchingSchema($value, $schema, $document, $dataPath);
+        return $this->findMatchingSchema($value, $discriminator, $schema, $document, $dataPath);
     }
 
     private function findMatchingSchema(
         string $value,
+        Discriminator $discriminator,
         Schema $schema,
         OpenApiDocument $document,
         string $dataPath,
@@ -121,6 +152,10 @@ readonly class DiscriminatorValidator
             if ($this->schemaMatchesValue($resolvedSchema, $value)) {
                 return $resolvedSchema;
             }
+        }
+
+        if (null !== $discriminator->defaultMapping) {
+            return $this->refResolver->resolve($discriminator->defaultMapping, $document);
         }
 
         throw new UnknownDiscriminatorValueException(

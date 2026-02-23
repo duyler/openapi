@@ -9,6 +9,9 @@ use Override;
 
 readonly class SecurityScheme implements JsonSerializable
 {
+    /**
+     * @param array<string, string>|null $scopes
+     */
     public function __construct(
         public string $type,
         public ?string $description = null,
@@ -16,12 +19,13 @@ readonly class SecurityScheme implements JsonSerializable
         public ?string $in = null,
         public ?string $scheme = null,
         public ?string $bearerFormat = null,
-        public ?string $flows = null,
+        public ?OAuthFlows $flows = null,
+        public ?string $openIdConnectUrl = null,
+        public ?string $oauth2MetadataUrl = null,
         public ?string $authorizationUrl = null,
         public ?string $tokenUrl = null,
         public ?string $refreshUrl = null,
         public ?array $scopes = null,
-        public ?string $openIdConnectUrl = null,
     ) {}
 
     #[Override]
@@ -31,48 +35,52 @@ readonly class SecurityScheme implements JsonSerializable
             'type' => $this->type,
         ];
 
-        if ($this->description !== null) {
+        if (null !== $this->description) {
             $data['description'] = $this->description;
         }
 
-        if ($this->name !== null) {
+        if (null !== $this->name) {
             $data['name'] = $this->name;
         }
 
-        if ($this->in !== null) {
+        if (null !== $this->in) {
             $data['in'] = $this->in;
         }
 
-        if ($this->scheme !== null) {
+        if (null !== $this->scheme) {
             $data['scheme'] = $this->scheme;
         }
 
-        if ($this->bearerFormat !== null) {
+        if (null !== $this->bearerFormat) {
             $data['bearerFormat'] = $this->bearerFormat;
         }
 
-        if ($this->flows !== null) {
-            $data['flows'] = $this->flows;
+        if (null !== $this->flows) {
+            $data['flows'] = $this->flows->jsonSerialize();
         }
 
-        if ($this->authorizationUrl !== null) {
+        if (null !== $this->openIdConnectUrl) {
+            $data['openIdConnectUrl'] = $this->openIdConnectUrl;
+        }
+
+        if (null !== $this->oauth2MetadataUrl) {
+            $data['oauth2MetadataUrl'] = $this->oauth2MetadataUrl;
+        }
+
+        if (null !== $this->authorizationUrl) {
             $data['authorizationUrl'] = $this->authorizationUrl;
         }
 
-        if ($this->tokenUrl !== null) {
+        if (null !== $this->tokenUrl) {
             $data['tokenUrl'] = $this->tokenUrl;
         }
 
-        if ($this->refreshUrl !== null) {
+        if (null !== $this->refreshUrl) {
             $data['refreshUrl'] = $this->refreshUrl;
         }
 
-        if ($this->scopes !== null) {
+        if (null !== $this->scopes) {
             $data['scopes'] = $this->scopes;
-        }
-
-        if ($this->openIdConnectUrl !== null) {
-            $data['openIdConnectUrl'] = $this->openIdConnectUrl;
         }
 
         return $data;

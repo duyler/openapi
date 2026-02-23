@@ -339,4 +339,83 @@ final class PathItemTest extends TestCase
         self::assertIsArray($serialized);
         self::assertArrayHasKey('trace', $serialized);
     }
+
+    #[Test]
+    public function json_serialize_includes_query(): void
+    {
+        $operation = new Operation(
+            responses: new Responses(
+                responses: ['200' => new Response(
+                    description: 'Success',
+                    headers: null,
+                    content: null,
+                )],
+            ),
+        );
+
+        $pathItem = new PathItem(
+            query: $operation,
+        );
+
+        $serialized = $pathItem->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertArrayHasKey('query', $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_includes_additional_operations(): void
+    {
+        $operation = new Operation(
+            responses: new Responses(
+                responses: ['200' => new Response(
+                    description: 'Success',
+                    headers: null,
+                    content: null,
+                )],
+            ),
+        );
+
+        $pathItem = new PathItem(
+            additionalOperations: [
+                'COPY' => $operation,
+                'MOVE' => $operation,
+            ],
+        );
+
+        $serialized = $pathItem->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertArrayHasKey('additionalOperations', $serialized);
+        self::assertArrayHasKey('COPY', $serialized['additionalOperations']);
+        self::assertArrayHasKey('MOVE', $serialized['additionalOperations']);
+    }
+
+    #[Test]
+    public function can_create_with_query_and_additional_operations(): void
+    {
+        $operation = new Operation(
+            responses: new Responses(
+                responses: ['200' => new Response(
+                    description: 'Success',
+                    headers: null,
+                    content: null,
+                )],
+            ),
+        );
+
+        $pathItem = new PathItem(
+            query: $operation,
+            additionalOperations: [
+                'COPY' => $operation,
+                'PURGE' => $operation,
+            ],
+        );
+
+        self::assertInstanceOf(Operation::class, $pathItem->query);
+        self::assertIsArray($pathItem->additionalOperations);
+        self::assertCount(2, $pathItem->additionalOperations);
+        self::assertArrayHasKey('COPY', $pathItem->additionalOperations);
+        self::assertArrayHasKey('PURGE', $pathItem->additionalOperations);
+    }
 }

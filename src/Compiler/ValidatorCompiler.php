@@ -332,7 +332,7 @@ readonly class ValidatorCompiler
             $code .= "        }\n\n";
         }
 
-        if (null !== $schema->uniqueItems && true === $schema->uniqueItems) {
+        if (null !== $schema->uniqueItems && $schema->uniqueItems) {
             $code .= "        if (count(\$data) !== count(array_unique(\$data, SORT_REGULAR))) {\n";
             $code .= "            throw new \\RuntimeException('Array items must be unique');\n";
             $code .= "        }\n\n";
