@@ -57,6 +57,8 @@ readonly class SchemaValidatorWithContext
     {
         $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy);
 
+        $schema = $this->resolveRef($schema);
+
         if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
             $oneOfValidator = new OneOfValidatorWithContext($this->pool, $this->refResolver, $this->document);
             $oneOfValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
@@ -73,27 +75,29 @@ readonly class SchemaValidatorWithContext
 
         if (null !== $schema->properties && [] !== $schema->properties && is_array($data)) {
             $propertiesValidator = new PropertiesValidatorWithContext($this->pool, $this->refResolver, $this->document);
-            $propertiesValidator->validateWithContext($data, $schema, $context);
+            $propertiesValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
         }
 
         if (null !== $schema->items && is_array($data)) {
             $itemsValidator = new ItemsValidatorWithContext($this->pool, $this->refResolver, $this->document);
-            $itemsValidator->validateWithContext($data, $schema, $context);
+            $itemsValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
         }
     }
 
     /**
      * Validate data with existing ValidationContext for breadcrumb tracking
      */
-    public function validateWithContext(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context): void
+    public function validateWithContext(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
     {
-        if (null !== $schema->discriminator && null !== $schema->oneOf) {
+        $schema = $this->resolveRef($schema);
+
+        if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
             $oneOfValidator = new OneOfValidatorWithContext($this->pool, $this->refResolver, $this->document);
-            $oneOfValidator->validateWithContext($data, $schema, $context, useDiscriminator: true);
+            $oneOfValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
             return;
         }
 
-        if (null !== $schema->discriminator && null !== $data) {
+        if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
             $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool);
             $discriminatorValidator->validate($data, $schema, $this->document);
             return;
@@ -103,13 +107,22 @@ readonly class SchemaValidatorWithContext
 
         if (null !== $schema->properties && [] !== $schema->properties && is_array($data)) {
             $propertiesValidator = new PropertiesValidatorWithContext($this->pool, $this->refResolver, $this->document);
-            $propertiesValidator->validateWithContext($data, $schema, $context);
+            $propertiesValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
         }
 
         if (null !== $schema->items && is_array($data)) {
             $itemsValidator = new ItemsValidatorWithContext($this->pool, $this->refResolver, $this->document);
-            $itemsValidator->validateWithContext($data, $schema, $context);
+            $itemsValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
         }
+    }
+
+    private function resolveRef(Schema $schema): Schema
+    {
+        if (null === $schema->ref) {
+            return $schema;
+        }
+
+        return $this->refResolver->resolveSchemaWithOverride($schema, $this->document);
     }
 
     private function validateInternal(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void

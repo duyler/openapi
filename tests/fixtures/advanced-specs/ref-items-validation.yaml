@@ -1,0 +1,29 @@
+openapi: 3.0.0
+info:
+  title: Ref Items Validation API
+  version: 1.0.0
+paths:
+  /items:
+    get:
+      operationId: items.get
+      responses:
+        '200':
+          description: 'result'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MyItem'
+components:
+  schemas:
+    MyItem:
+      title: MyItem
+      required:
+        - id
+      properties:
+        id:
+          type: integer
+          minimum: 1
+          nullable: false
+      type: object

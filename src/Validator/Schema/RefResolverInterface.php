@@ -53,6 +53,15 @@ interface RefResolverInterface
     public function schemaHasDiscriminator(Schema $schema, OpenApiDocument $document, array &$visited = []): bool;
 
     /**
+     * Check if schema or any of its nested schemas contains $ref
+     *
+     * @param Schema $schema Schema to check
+     * @param array<int, bool> $visited Internal tracking to prevent infinite recursion
+     * @return bool True if $ref found, false otherwise
+     */
+    public function schemaHasRef(Schema $schema, array &$visited = []): bool;
+
+    /**
      * Get base URI from document's $self field
      *
      * @param OpenApiDocument $document Root document

@@ -182,6 +182,6 @@ readonly class DiscriminatorValidator
     ): void {
         /** @var array<array-key, mixed> $data */
         $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document);
-        $validator->validate($data, $schema, useDiscriminator: true);
+        $validator->validate($data, $schema, useDiscriminator: false);
     }
 }

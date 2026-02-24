@@ -163,6 +163,134 @@ final class RefResolver implements RefResolverInterface
     }
 
     #[Override]
+    public function schemaHasRef(Schema $schema, array &$visited = []): bool
+    {
+        $schemaId = spl_object_id($schema);
+
+        if (isset($visited[$schemaId])) {
+            return false;
+        }
+
+        $visited[$schemaId] = true;
+
+        if (null !== $schema->ref) {
+            return true;
+        }
+
+        if (null !== $schema->properties) {
+            foreach ($schema->properties as $property) {
+                if ($this->schemaHasRef($property, $visited)) {
+                    return true;
+                }
+            }
+        }
+
+        if (null !== $schema->items) {
+            if ($this->schemaHasRef($schema->items, $visited)) {
+                return true;
+            }
+        }
+
+        if (null !== $schema->prefixItems) {
+            foreach ($schema->prefixItems as $prefixItem) {
+                if ($this->schemaHasRef($prefixItem, $visited)) {
+                    return true;
+                }
+            }
+        }
+
+        if (null !== $schema->allOf) {
+            foreach ($schema->allOf as $subSchema) {
+                if ($this->schemaHasRef($subSchema, $visited)) {
+                    return true;
+                }
+            }
+        }
+
+        if (null !== $schema->anyOf) {
+            foreach ($schema->anyOf as $subSchema) {
+                if ($this->schemaHasRef($subSchema, $visited)) {
+                    return true;
+                }
+            }
+        }
+
+        if (null !== $schema->oneOf) {
+            foreach ($schema->oneOf as $subSchema) {
+                if ($this->schemaHasRef($subSchema, $visited)) {
+                    return true;
+                }
+            }
+        }
+
+        if (null !== $schema->not) {
+            if ($this->schemaHasRef($schema->not, $visited)) {
+                return true;
+            }
+        }
+
+        if (null !== $schema->if) {
+            if ($this->schemaHasRef($schema->if, $visited)) {
+                return true;
+            }
+        }
+
+        if (null !== $schema->then) {
+            if ($this->schemaHasRef($schema->then, $visited)) {
+                return true;
+            }
+        }
+
+        if (null !== $schema->else) {
+            if ($this->schemaHasRef($schema->else, $visited)) {
+                return true;
+            }
+        }
+
+        if (null !== $schema->contains) {
+            if ($this->schemaHasRef($schema->contains, $visited)) {
+                return true;
+            }
+        }
+
+        if (null !== $schema->patternProperties) {
+            foreach ($schema->patternProperties as $subSchema) {
+                if ($this->schemaHasRef($subSchema, $visited)) {
+                    return true;
+                }
+            }
+        }
+
+        if (null !== $schema->dependentSchemas) {
+            foreach ($schema->dependentSchemas as $subSchema) {
+                if ($this->schemaHasRef($subSchema, $visited)) {
+                    return true;
+                }
+            }
+        }
+
+        if (null !== $schema->propertyNames) {
+            if ($this->schemaHasRef($schema->propertyNames, $visited)) {
+                return true;
+            }
+        }
+
+        if (null !== $schema->unevaluatedItems) {
+            if ($this->schemaHasRef($schema->unevaluatedItems, $visited)) {
+                return true;
+            }
+        }
+
+        if (null !== $schema->additionalProperties && $schema->additionalProperties instanceof Schema) {
+            if ($this->schemaHasRef($schema->additionalProperties, $visited)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    #[Override]
     public function resolveSchemaWithOverride(Schema $schema, OpenApiDocument $document): Schema
     {
         if (null === $schema->ref) {
