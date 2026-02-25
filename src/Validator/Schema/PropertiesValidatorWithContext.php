@@ -27,7 +27,7 @@ readonly class PropertiesValidatorWithContext
         private readonly OpenApiDocument $document,
     ) {}
 
-    public function validateWithContext(array $data, Schema $schema, ValidationContext $context): void
+    public function validateWithContext(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
     {
         if (null === $schema->properties || [] === $schema->properties) {
             return;
@@ -47,7 +47,7 @@ readonly class PropertiesValidatorWithContext
                 $propertyContext = $context->withBreadcrumb($name);
 
                 $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
-                $validator->validateWithContext($value, $propertySchema, $propertyContext);
+                $validator->validateWithContext($value, $propertySchema, $propertyContext, $useDiscriminator);
             } catch (DiscriminatorMismatchException|
                 InvalidDiscriminatorValueException|
                 MissingDiscriminatorPropertyException|

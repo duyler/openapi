@@ -26,7 +26,7 @@ readonly class ItemsValidatorWithContext
         private readonly OpenApiDocument $document,
     ) {}
 
-    public function validateWithContext(array $data, Schema $schema, ValidationContext $context): void
+    public function validateWithContext(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
     {
         if (null === $schema->items) {
             return;
@@ -43,7 +43,7 @@ readonly class ItemsValidatorWithContext
                 $allowNull = $itemSchema->nullable && $context->nullableAsType;
                 $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
                 $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
-                $validator->validateWithContext($normalizedItem, $itemSchema, $itemContext);
+                $validator->validateWithContext($normalizedItem, $itemSchema, $itemContext, $useDiscriminator);
             } catch (DiscriminatorMismatchException|
                 InvalidDiscriminatorValueException|
                 MissingDiscriminatorPropertyException|

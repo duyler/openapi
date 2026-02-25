@@ -356,7 +356,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
             'pet' => ['name' => 'Fluffy'],
         ];
 
-        $this->validator->validateWithContext($data, $schema, $this->context);
+        $validator->validateWithContext($data, $schema, $this->context);
 
         $this->assertTrue(true);
     }
@@ -398,11 +398,22 @@ final class PropertiesValidatorWithContextTest extends TestCase
     #[Test]
     public function validate_properties_with_nested_discriminator_schema(): void
     {
+        $catSchema = new Schema(
+            title: 'cat',
+            type: 'object',
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
         $petSchema = new Schema(
             type: 'object',
             discriminator: new Discriminator(
                 propertyName: 'petType',
             ),
+            oneOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+            ],
         );
 
         $schema = new Schema(
@@ -420,6 +431,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
             components: new Components(
                 schemas: [
                     'Pet' => $petSchema,
+                    'Cat' => $catSchema,
                 ],
             ),
         );

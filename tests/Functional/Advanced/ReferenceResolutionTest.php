@@ -8,6 +8,8 @@ use Override;
 use PHPUnit\Framework\Attributes\Test;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\OpenApiValidator;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
 
 final class ReferenceResolutionTest extends AdvancedFunctionalTestCase
 {
@@ -34,6 +36,21 @@ final class ReferenceResolutionTest extends AdvancedFunctionalTestCase
 
         $validator->validateResponse($response, $operation);
         $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function local_ref_to_schema_missing_required_throws(): void
+    {
+        $validator = $this->createValidator($this->specFile);
+        $request = $this->createRequest('GET', '/schema-ref?id=user-123&name=John+Doe');
+
+        $operation = $validator->validateRequest($request);
+        $response = $this->createResponse(200, [
+            'foo' => 'bar',
+        ]);
+
+        $this->expectException(ValidationException::class);
+        $validator->validateResponse($response, $operation);
     }
 
     #[Test]
@@ -144,8 +161,8 @@ final class ReferenceResolutionTest extends AdvancedFunctionalTestCase
             'test' => 'data',
         ]);
 
+        $this->expectException(UnresolvableRefException::class);
         $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
     }
 
     #[Test]

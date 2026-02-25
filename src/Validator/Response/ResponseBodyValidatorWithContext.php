@@ -80,10 +80,11 @@ readonly class ResponseBodyValidatorWithContext
         if (null !== $mediaTypeSchema->schema) {
             $schema = $mediaTypeSchema->schema;
             $hasDiscriminator = null !== $schema->discriminator || $this->refResolver->schemaHasDiscriminator($schema, $this->document);
+            $hasRef = $this->refResolver->schemaHasRef($schema);
 
             $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy);
 
-            if ($hasDiscriminator) {
+            if ($hasDiscriminator || $hasRef) {
                 $this->contextSchemaValidator->validate($parsedBody, $schema);
             } else {
                 $this->regularSchemaValidator->validate($parsedBody, $schema, $context);
@@ -107,10 +108,11 @@ readonly class ResponseBodyValidatorWithContext
 
         $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy);
         $hasDiscriminator = null !== $schema->discriminator || $this->refResolver->schemaHasDiscriminator($schema, $this->document);
+        $hasRef = $this->refResolver->schemaHasRef($schema);
 
         foreach ($items as $item) {
             if (null !== $item) {
-                if ($hasDiscriminator) {
+                if ($hasDiscriminator || $hasRef) {
                     $this->contextSchemaValidator->validate($item, $schema);
                 } else {
                     $this->regularSchemaValidator->validate($item, $schema, $context);

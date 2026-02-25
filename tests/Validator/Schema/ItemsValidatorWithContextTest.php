@@ -346,7 +346,7 @@ final class ItemsValidatorWithContextTest extends TestCase
     #[Test]
     public function validate_items_throws_missing_discriminator_property(): void
     {
-        $this->expectNotToPerformAssertions();
+        $this->expectException(MissingDiscriminatorPropertyException::class);
 
         $petSchema = new Schema(
             type: 'object',
@@ -381,20 +381,16 @@ final class ItemsValidatorWithContextTest extends TestCase
             $document,
         );
 
-        try {
-            $data = [
-                ['name' => 'Fluffy'],
-            ];
-            $validator->validateWithContext($data, $schema, $this->context);
-        } catch (MissingDiscriminatorPropertyException|ValidationException) {
-            return;
-        }
+        $data = [
+            ['name' => 'Fluffy'],
+        ];
+        $validator->validateWithContext($data, $schema, $this->context);
     }
 
     #[Test]
     public function validate_items_throws_unknown_discriminator_value(): void
     {
-        $this->expectNotToPerformAssertions();
+        $this->expectException(UnknownDiscriminatorValueException::class);
 
         $catSchema = new Schema(
             type: 'object',
@@ -452,14 +448,10 @@ final class ItemsValidatorWithContextTest extends TestCase
             $document,
         );
 
-        try {
-            $data = [
-                ['petType' => 'bird'],
-            ];
-            $validator->validateWithContext($data, $schema, $this->context);
-        } catch (UnknownDiscriminatorValueException|ValidationException) {
-            return;
-        }
+        $data = [
+            ['petType' => 'bird'],
+        ];
+        $validator->validateWithContext($data, $schema, $this->context);
     }
 
     #[Test]
