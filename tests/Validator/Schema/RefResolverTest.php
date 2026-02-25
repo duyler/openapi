@@ -580,4 +580,371 @@ final class RefResolverTest extends TestCase
 
         $this->assertSame('https://api.example.com/api/v2/paths/users.yaml', $resolved);
     }
+
+    #[Test]
+    public function schema_has_ref_returns_true(): void
+    {
+        $schema = new Schema(ref: '#/components/schemas/User');
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_without_ref_returns_false(): void
+    {
+        $schema = new Schema(type: 'string');
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_property_containing_ref_returns_true(): void
+    {
+        $propertySchema = new Schema(ref: '#/components/schemas/User');
+        $parentSchema = new Schema(properties: ['user' => $propertySchema]);
+
+        $this->assertTrue($this->resolver->schemaHasRef($parentSchema));
+    }
+
+    #[Test]
+    public function schema_with_property_without_ref_returns_false(): void
+    {
+        $propertySchema = new Schema(type: 'string');
+        $parentSchema = new Schema(properties: ['name' => $propertySchema]);
+
+        $this->assertFalse($this->resolver->schemaHasRef($parentSchema));
+    }
+
+    #[Test]
+    public function schema_with_items_containing_ref_returns_true(): void
+    {
+        $itemsSchema = new Schema(ref: '#/components/schemas/Item');
+        $arraySchema = new Schema(items: $itemsSchema);
+
+        $this->assertTrue($this->resolver->schemaHasRef($arraySchema));
+    }
+
+    #[Test]
+    public function schema_with_items_without_ref_returns_false(): void
+    {
+        $itemsSchema = new Schema(type: 'string');
+        $arraySchema = new Schema(items: $itemsSchema);
+
+        $this->assertFalse($this->resolver->schemaHasRef($arraySchema));
+    }
+
+    #[Test]
+    public function schema_with_prefix_items_containing_ref_returns_true(): void
+    {
+        $prefixItemSchema = new Schema(ref: '#/components/schemas/Item');
+        $schema = new Schema(prefixItems: [$prefixItemSchema]);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_prefix_items_without_ref_returns_false(): void
+    {
+        $prefixItemSchema = new Schema(type: 'string');
+        $schema = new Schema(prefixItems: [$prefixItemSchema]);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_allof_containing_ref_returns_true(): void
+    {
+        $subSchema = new Schema(ref: '#/components/schemas/Base');
+        $schema = new Schema(allOf: [$subSchema]);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_allof_without_ref_returns_false(): void
+    {
+        $subSchema = new Schema(type: 'object');
+        $schema = new Schema(allOf: [$subSchema]);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_anyof_containing_ref_returns_true(): void
+    {
+        $subSchema = new Schema(ref: '#/components/schemas/Option');
+        $schema = new Schema(anyOf: [$subSchema]);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_anyof_without_ref_returns_false(): void
+    {
+        $subSchema = new Schema(type: 'string');
+        $schema = new Schema(anyOf: [$subSchema]);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_oneof_containing_ref_returns_true(): void
+    {
+        $subSchema = new Schema(ref: '#/components/schemas/Variant');
+        $schema = new Schema(oneOf: [$subSchema]);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_oneof_without_ref_returns_false(): void
+    {
+        $subSchema = new Schema(type: 'string');
+        $schema = new Schema(oneOf: [$subSchema]);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_not_containing_ref_returns_true(): void
+    {
+        $notSchema = new Schema(ref: '#/components/schemas/Forbidden');
+        $schema = new Schema(not: $notSchema);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_not_without_ref_returns_false(): void
+    {
+        $notSchema = new Schema(type: 'null');
+        $schema = new Schema(not: $notSchema);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_if_containing_ref_returns_true(): void
+    {
+        $ifSchema = new Schema(ref: '#/components/schemas/Condition');
+        $schema = new Schema(if: $ifSchema);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_if_without_ref_returns_false(): void
+    {
+        $ifSchema = new Schema(type: 'object');
+        $schema = new Schema(if: $ifSchema);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_then_containing_ref_returns_true(): void
+    {
+        $thenSchema = new Schema(ref: '#/components/schemas/ThenSchema');
+        $schema = new Schema(then: $thenSchema);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_then_without_ref_returns_false(): void
+    {
+        $thenSchema = new Schema(type: 'object');
+        $schema = new Schema(then: $thenSchema);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_else_containing_ref_returns_true(): void
+    {
+        $elseSchema = new Schema(ref: '#/components/schemas/ElseSchema');
+        $schema = new Schema(else: $elseSchema);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_else_without_ref_returns_false(): void
+    {
+        $elseSchema = new Schema(type: 'object');
+        $schema = new Schema(else: $elseSchema);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_contains_containing_ref_returns_true(): void
+    {
+        $containsSchema = new Schema(ref: '#/components/schemas/Item');
+        $schema = new Schema(contains: $containsSchema);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_contains_without_ref_returns_false(): void
+    {
+        $containsSchema = new Schema(type: 'string');
+        $schema = new Schema(contains: $containsSchema);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_pattern_properties_containing_ref_returns_true(): void
+    {
+        $patternSchema = new Schema(ref: '#/components/schemas/Value');
+        $schema = new Schema(patternProperties: ['^x-' => $patternSchema]);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_pattern_properties_without_ref_returns_false(): void
+    {
+        $patternSchema = new Schema(type: 'string');
+        $schema = new Schema(patternProperties: ['^x-' => $patternSchema]);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_dependent_schemas_containing_ref_returns_true(): void
+    {
+        $dependentSchema = new Schema(ref: '#/components/schemas/Dependent');
+        $schema = new Schema(dependentSchemas: ['foo' => $dependentSchema]);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_dependent_schemas_without_ref_returns_false(): void
+    {
+        $dependentSchema = new Schema(type: 'object');
+        $schema = new Schema(dependentSchemas: ['foo' => $dependentSchema]);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_property_names_containing_ref_returns_true(): void
+    {
+        $propertyNamesSchema = new Schema(ref: '#/components/schemas/NamePattern');
+        $schema = new Schema(propertyNames: $propertyNamesSchema);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_property_names_without_ref_returns_false(): void
+    {
+        $propertyNamesSchema = new Schema(type: 'string');
+        $schema = new Schema(propertyNames: $propertyNamesSchema);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_unevaluated_items_containing_ref_returns_true(): void
+    {
+        $unevaluatedItemsSchema = new Schema(ref: '#/components/schemas/Item');
+        $schema = new Schema(unevaluatedItems: $unevaluatedItemsSchema);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_unevaluated_items_without_ref_returns_false(): void
+    {
+        $unevaluatedItemsSchema = new Schema(type: 'string');
+        $schema = new Schema(unevaluatedItems: $unevaluatedItemsSchema);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_additional_properties_containing_ref_returns_true(): void
+    {
+        $additionalPropertiesSchema = new Schema(ref: '#/components/schemas/Value');
+        $schema = new Schema(additionalProperties: $additionalPropertiesSchema);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_additional_properties_bool_returns_false(): void
+    {
+        $schema = new Schema(additionalProperties: true);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_with_nested_refs_returns_true(): void
+    {
+        $deepSchema = new Schema(ref: '#/components/schemas/Deep');
+        $midSchema = new Schema(properties: ['deep' => $deepSchema]);
+        $topSchema = new Schema(properties: ['mid' => $midSchema]);
+
+        $this->assertTrue($this->resolver->schemaHasRef($topSchema));
+    }
+
+    #[Test]
+    public function schema_has_ref_in_property_names(): void
+    {
+        $propertyNamesSchema = new Schema(ref: '#/components/schemas/NamePattern');
+        $schema = new Schema(propertyNames: $propertyNamesSchema);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_has_ref_in_unevaluated_items(): void
+    {
+        $unevaluatedItemsSchema = new Schema(ref: '#/components/schemas/Item');
+        $schema = new Schema(unevaluatedItems: $unevaluatedItemsSchema);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_has_ref_in_additional_properties_as_schema(): void
+    {
+        $additionalPropertiesSchema = new Schema(ref: '#/components/schemas/Value');
+        $schema = new Schema(additionalProperties: $additionalPropertiesSchema);
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_without_ref_in_property_names(): void
+    {
+        $propertyNamesSchema = new Schema(type: 'string');
+        $schema = new Schema(propertyNames: $propertyNamesSchema);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_without_ref_in_unevaluated_items(): void
+    {
+        $unevaluatedItemsSchema = new Schema(type: 'string');
+        $schema = new Schema(unevaluatedItems: $unevaluatedItemsSchema);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_without_ref_in_additional_properties_as_schema(): void
+    {
+        $additionalPropertiesSchema = new Schema(type: 'string');
+        $schema = new Schema(additionalProperties: $additionalPropertiesSchema);
+
+        $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
 }
