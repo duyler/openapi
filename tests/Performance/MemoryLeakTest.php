@@ -33,7 +33,7 @@ final class MemoryLeakTest extends TestCase
 
         gc_collect_cycles();
         $finalMemory = memory_get_usage();
-        $growth = ($finalMemory - $initialMemory) / $initialMemory * 100;
+        $growth = ($finalMemory - $initialMemory) / (float) $initialMemory * 100;
 
         self::assertLessThan(50, $growth, 'Memory growth should be less than 50%');
     }
@@ -51,7 +51,7 @@ final class MemoryLeakTest extends TestCase
 
         gc_collect_cycles();
         $finalMemory = memory_get_usage();
-        $growth = ($finalMemory - $initialMemory) / $initialMemory * 100;
+        $growth = ($finalMemory - $initialMemory) / (float) $initialMemory * 100;
 
         self::assertLessThan(20, $growth, 'Memory growth should be less than 20%');
     }
@@ -79,7 +79,7 @@ final class MemoryLeakTest extends TestCase
 
         gc_collect_cycles();
         $finalMemory = memory_get_usage();
-        $growth = ($finalMemory - $initialMemory) / $initialMemory * 100;
+        $growth = ($finalMemory - $initialMemory) / (float) $initialMemory * 100;
 
         self::assertLessThan(30, $growth, 'WeakMap should prevent memory leaks');
     }
@@ -89,7 +89,8 @@ final class MemoryLeakTest extends TestCase
         string $method,
         array $headers = [],
         string $body = '',
-    ): object {
+    ): ServerRequestInterface {
+        /** @var ServerRequestInterface $request */
         $request = $this->createMock(ServerRequestInterface::class);
 
         $request
@@ -114,7 +115,7 @@ final class MemoryLeakTest extends TestCase
 
         $request
             ->method('getHeaderLine')
-            ->willReturnCallback(function ($headerName) use ($headers) {
+            ->willReturnCallback(function (string $headerName) use ($headers): string {
                 if ('Content-Type' === $headerName) {
                     return 'application/json';
                 }

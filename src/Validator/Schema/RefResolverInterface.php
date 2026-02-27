@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Schema;
 
-use Duyler\OpenApi\Exception\RefResolutionException;
+use Duyler\OpenApi\Validator\Exception\RefResolutionException;
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
@@ -30,7 +30,10 @@ interface RefResolverInterface
      * @return Parameter Resolved parameter
      * @throws Exception\UnresolvableRefException
      */
-    public function resolveParameter(string $ref, OpenApiDocument $document): Parameter;
+    public function resolveParameter(
+        string $ref,
+        OpenApiDocument $document,
+    ): Parameter;
 
     /**
      * Resolve $ref to actual response
@@ -40,7 +43,10 @@ interface RefResolverInterface
      * @return Response Resolved response
      * @throws Exception\UnresolvableRefException
      */
-    public function resolveResponse(string $ref, OpenApiDocument $document): Response;
+    public function resolveResponse(
+        string $ref,
+        OpenApiDocument $document,
+    ): Response;
 
     /**
      * Check if schema contains discriminator (including nested references)
@@ -50,7 +56,11 @@ interface RefResolverInterface
      * @param array<int, bool> $visited Internal tracking to prevent infinite recursion
      * @return bool True if discriminator found, false otherwise
      */
-    public function schemaHasDiscriminator(Schema $schema, OpenApiDocument $document, array &$visited = []): bool;
+    public function schemaHasDiscriminator(
+        Schema $schema,
+        OpenApiDocument $document,
+        array &$visited = [],
+    ): bool;
 
     /**
      * Check if schema or any of its nested schemas contains $ref
@@ -77,7 +87,10 @@ interface RefResolverInterface
      * @return string Absolute URI
      * @throws RefResolutionException If document has no $self field
      */
-    public function resolveRelativeRef(string $ref, OpenApiDocument $document): string;
+    public function resolveRelativeRef(
+        string $ref,
+        OpenApiDocument $document,
+    ): string;
 
     /**
      * Combine base URI with relative reference
@@ -96,7 +109,10 @@ interface RefResolverInterface
      * @return Schema Resolved schema with overrides applied
      * @throws Exception\UnresolvableRefException
      */
-    public function resolveSchemaWithOverride(Schema $schema, OpenApiDocument $document): Schema;
+    public function resolveSchemaWithOverride(
+        Schema $schema,
+        OpenApiDocument $document,
+    ): Schema;
 
     /**
      * Resolve parameter reference with summary/description override
@@ -106,7 +122,10 @@ interface RefResolverInterface
      * @return Parameter Resolved parameter with overrides applied
      * @throws Exception\UnresolvableRefException
      */
-    public function resolveParameterWithOverride(Parameter $parameter, OpenApiDocument $document): Parameter;
+    public function resolveParameterWithOverride(
+        Parameter $parameter,
+        OpenApiDocument $document,
+    ): Parameter;
 
     /**
      * Resolve response reference with summary/description override
@@ -116,5 +135,8 @@ interface RefResolverInterface
      * @return Response Resolved response with overrides applied
      * @throws Exception\UnresolvableRefException
      */
-    public function resolveResponseWithOverride(Response $response, OpenApiDocument $document): Response;
+    public function resolveResponseWithOverride(
+        Response $response,
+        OpenApiDocument $document,
+    ): Response;
 }

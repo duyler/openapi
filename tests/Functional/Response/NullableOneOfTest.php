@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Duyler\OpenApi\Tests\Functional\Response;
+namespace Duyler\OpenApi\Test\Functional\Response;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use PHPUnit\Framework\Attributes\Test;

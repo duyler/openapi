@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Duyler\OpenApi\Tests\Integration;
+namespace Duyler\OpenApi\Test\Integration;
 
 use DateTime;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;

@@ -32,7 +32,7 @@ final class CompiledValidatorBenchTest extends TestCase
 
         $this->assertLessThan(1.0, $compilationTime, '100 compilations should take less than 1 second');
 
-        printf("\n100 compilations: %.4fs (%.4fs per compilation)\n", $compilationTime, $compilationTime / 100);
+        printf("\n100 compilations: %.4fs (%.4fs per compilation)\n", $compilationTime, $compilationTime / 100.0);
     }
 
     #[Test]

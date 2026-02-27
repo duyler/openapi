@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Duyler\OpenApi\Tests\Unit\Validator\Schema;
+namespace Duyler\OpenApi\Test\Unit\Validator\Schema;
 
 use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;

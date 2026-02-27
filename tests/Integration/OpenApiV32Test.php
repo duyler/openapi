@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Duyler\OpenApi\Tests\Integration;
+namespace Duyler\OpenApi\Test\Integration;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Schema\Parser\YamlParser;
