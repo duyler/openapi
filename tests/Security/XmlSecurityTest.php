@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Duyler\OpenApi\Tests\Security;
+namespace Duyler\OpenApi\Test\Security;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Nyholm\Psr7\Factory\Psr17Factory;

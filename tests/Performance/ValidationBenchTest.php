@@ -64,8 +64,8 @@ YAML;
             $validator->validateRequest($request);
         }
 
-        $duration = (microtime(true) - $start) * 1000;
-        $avgDuration = $duration / $iterations;
+        $duration = (microtime(true) - $start) * 1000.0;
+        $avgDuration = $duration / (float) $iterations;
 
         self::assertLessThan(10, $avgDuration, 'Average validation should be under 10ms');
     }
@@ -106,8 +106,8 @@ YAML;
             );
         }
 
-        $duration = (microtime(true) - $start) * 1000;
-        $avgDuration = $duration / $iterations;
+        $duration = (microtime(true) - $start) * 1000.0;
+        $avgDuration = $duration / (float) $iterations;
 
         self::assertLessThan(5, $avgDuration, 'Average schema validation should be under 5ms');
     }
@@ -117,7 +117,8 @@ YAML;
         string $method,
         array $headers = [],
         string $body = '',
-    ): object {
+    ): ServerRequestInterface {
+        /** @var ServerRequestInterface $request */
         $request = $this->createMock(ServerRequestInterface::class);
 
         $request
@@ -142,7 +143,7 @@ YAML;
 
         $request
             ->method('getHeaderLine')
-            ->willReturnCallback(function ($headerName) {
+            ->willReturnCallback(function (string $headerName): string {
                 if ('Content-Type' === $headerName) {
                     return 'application/json';
                 }
