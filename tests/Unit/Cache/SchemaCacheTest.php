@@ -20,7 +20,7 @@ final class SchemaCacheTest extends TestCase
         $pool = $this->createMockCachePool();
         $document = $this->createDocument();
 
-        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem = $this->createStub(CacheItemInterface::class);
         $cacheItem
             ->method('isHit')
             ->willReturn(true);
@@ -45,11 +45,19 @@ final class SchemaCacheTest extends TestCase
     {
         $pool = $this->createMockCachePool();
 
+        $cacheItem = $this->createStub(CacheItemInterface::class);
+        $cacheItem
+            ->method('isHit')
+            ->willReturn(false);
+        $cacheItem
+            ->method('get')
+            ->willReturn(null);
+
         $pool
             ->expects($this->once())
             ->method('getItem')
             ->with('test_key')
-            ->willReturn($this->createCacheItem(null, false));
+            ->willReturn($cacheItem);
 
         $cache = new SchemaCache($pool);
         $result = $cache->get('test_key');
@@ -62,11 +70,19 @@ final class SchemaCacheTest extends TestCase
     {
         $pool = $this->createMockCachePool();
 
+        $cacheItem = $this->createStub(CacheItemInterface::class);
+        $cacheItem
+            ->method('isHit')
+            ->willReturn(true);
+        $cacheItem
+            ->method('get')
+            ->willReturn('invalid_value');
+
         $pool
             ->expects($this->once())
             ->method('getItem')
             ->with('test_key')
-            ->willReturn($this->createCacheItem('invalid_value', true));
+            ->willReturn($cacheItem);
 
         $cache = new SchemaCache($pool);
         $result = $cache->get('test_key');
@@ -79,25 +95,24 @@ final class SchemaCacheTest extends TestCase
     {
         $pool = $this->createMockCachePool();
         $document = $this->createDocument();
-        $cacheItem = $this->createCacheItem(null, false);
+
+        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem
+            ->expects($this->once())
+            ->method('set')
+            ->with($document)
+            ->willReturnSelf();
+        $cacheItem
+            ->expects($this->once())
+            ->method('expiresAfter')
+            ->with(3600)
+            ->willReturnSelf();
 
         $pool
             ->expects($this->once())
             ->method('getItem')
             ->with('test_key')
             ->willReturn($cacheItem);
-
-        $cacheItem
-            ->expects($this->once())
-            ->method('set')
-            ->with($document)
-            ->willReturnSelf();
-
-        $cacheItem
-            ->expects($this->once())
-            ->method('expiresAfter')
-            ->with(3600)
-            ->willReturnSelf();
 
         $pool
             ->expects($this->once())
@@ -177,18 +192,10 @@ final class SchemaCacheTest extends TestCase
 
         $cacheItem = $this->createMock(CacheItemInterface::class);
         $cacheItem
-            ->method('get')
-            ->willReturn(null);
-        $cacheItem
-            ->method('isHit')
-            ->willReturn(false);
-
-        $cacheItem
             ->expects($this->once())
             ->method('set')
             ->with($document)
             ->willReturn($cacheItem);
-
         $cacheItem
             ->expects($this->once())
             ->method('expiresAfter')
@@ -196,7 +203,9 @@ final class SchemaCacheTest extends TestCase
             ->willReturn($cacheItem);
 
         $pool
+            ->expects($this->once())
             ->method('getItem')
+            ->with('test_key')
             ->willReturn($cacheItem);
 
         $pool
@@ -216,18 +225,10 @@ final class SchemaCacheTest extends TestCase
 
         $cacheItem = $this->createMock(CacheItemInterface::class);
         $cacheItem
-            ->method('get')
-            ->willReturn(null);
-        $cacheItem
-            ->method('isHit')
-            ->willReturn(false);
-
-        $cacheItem
             ->expects($this->once())
             ->method('set')
             ->with($document)
             ->willReturn($cacheItem);
-
         $cacheItem
             ->expects($this->once())
             ->method('expiresAfter')
@@ -235,7 +236,9 @@ final class SchemaCacheTest extends TestCase
             ->willReturn($cacheItem);
 
         $pool
+            ->expects($this->once())
             ->method('getItem')
+            ->with('test_key')
             ->willReturn($cacheItem);
 
         $pool
@@ -250,28 +253,6 @@ final class SchemaCacheTest extends TestCase
     private function createMockCachePool(): CacheItemPoolInterface
     {
         return $this->createMock(CacheItemPoolInterface::class);
-    }
-
-    private function createCacheItem(mixed $value, bool $isHit): CacheItemInterface
-    {
-        $item = $this->createMock(CacheItemInterface::class);
-        $item
-            ->method('get')
-            ->willReturn($value);
-
-        $item
-            ->method('isHit')
-            ->willReturn($isHit);
-
-        $item
-            ->method('set')
-            ->willReturnSelf();
-
-        $item
-            ->method('expiresAfter')
-            ->willReturnSelf();
-
-        return $item;
     }
 
     private function createDocument(): OpenApiDocument

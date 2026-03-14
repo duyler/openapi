@@ -4,7 +4,7 @@ tests:
 
 .PHONY: infection
 infection:
-	docker-compose run --rm php vendor/bin/infection
+	docker-compose run --rm php php -d memory_limit=512M vendor/bin/infection
 
 .PHONY: psalm
 psalm:

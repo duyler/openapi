@@ -177,7 +177,7 @@ final class ResponseValidatorIntegrationTest extends TestCase
         string $body,
         string $contentType,
     ): ResponseInterface {
-        $response = $this->createMock(ResponseInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
 
         $response->method('getStatusCode')->willReturn($statusCode);
         $response->method('getHeaders')->willReturn($headers);
@@ -185,7 +185,7 @@ final class ResponseValidatorIntegrationTest extends TestCase
             ['Content-Type', $contentType],
         ]);
 
-        $bodyMock = $this->createMock(StreamInterface::class);
+        $bodyMock = $this->createStub(StreamInterface::class);
         $bodyMock->method('__toString')->willReturn($body);
         $response->method('getBody')->willReturn($bodyMock);
 

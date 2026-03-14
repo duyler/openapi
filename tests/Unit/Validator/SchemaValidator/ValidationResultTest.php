@@ -37,7 +37,7 @@ final class ValidationResultTest extends TestCase
     #[Test]
     public function create_result_with_abstract_errors(): void
     {
-        $abstractError = $this->createMock(AbstractValidationError::class);
+        $abstractError = $this->createStub(AbstractValidationError::class);
         $result = new ValidationResult(0, [], [$abstractError]);
 
         $this->assertSame(0, $result->validCount);
@@ -59,8 +59,8 @@ final class ValidationResultTest extends TestCase
     {
         $error1 = new ValidationException('Error 1');
         $error2 = new ValidationException('Error 2');
-        $abstractError1 = $this->createMock(AbstractValidationError::class);
-        $abstractError2 = $this->createMock(AbstractValidationError::class);
+        $abstractError1 = $this->createStub(AbstractValidationError::class);
+        $abstractError2 = $this->createStub(AbstractValidationError::class);
 
         $result = new ValidationResult(
             1,

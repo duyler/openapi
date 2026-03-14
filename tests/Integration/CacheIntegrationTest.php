@@ -19,7 +19,7 @@ final class CacheIntegrationTest extends TestCase
         $isHitFirstCall = false;
         $isHitSecondCall = true;
 
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
 
         $cacheItemMiss = $this->createCacheItem();
         $cacheItemMiss
@@ -58,7 +58,7 @@ final class CacheIntegrationTest extends TestCase
     #[Test]
     public function cache_miss_on_first_load(): void
     {
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
 
         $cacheItem = $this->createCacheItem();
         $cacheItem
@@ -83,7 +83,7 @@ final class CacheIntegrationTest extends TestCase
     #[Test]
     public function cache_with_custom_ttl(): void
     {
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
 
         $cacheItem = $this->createCacheItem();
         $cacheItem
@@ -102,7 +102,7 @@ final class CacheIntegrationTest extends TestCase
     #[Test]
     public function cache_delete_works(): void
     {
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
 
         $pool
             ->method('deleteItem')
@@ -118,7 +118,7 @@ final class CacheIntegrationTest extends TestCase
     #[Test]
     public function cache_clear_works(): void
     {
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
 
         $pool
             ->method('clear')
@@ -134,7 +134,7 @@ final class CacheIntegrationTest extends TestCase
     #[Test]
     public function cache_has_works(): void
     {
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
 
         $pool
             ->method('hasItem')
@@ -147,7 +147,7 @@ final class CacheIntegrationTest extends TestCase
 
     private function createCacheItem(): CacheItemInterface
     {
-        $item = $this->createMock(CacheItemInterface::class);
+        $item = $this->createStub(CacheItemInterface::class);
         $item
             ->method('set')
             ->willReturnSelf();

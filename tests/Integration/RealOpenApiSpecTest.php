@@ -141,11 +141,11 @@ final class RealOpenApiSpecTest extends TestCase
         array $headers = [],
         string $body = '',
     ): ServerRequestInterface {
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
 
         $request->method('getMethod')->willReturn($method);
 
-        $uriMock = $this->createMock(UriInterface::class);
+        $uriMock = $this->createStub(UriInterface::class);
         $uriMock->method('getPath')->willReturn($uri);
         $uriMock->method('getQuery')->willReturn('');
 
@@ -155,7 +155,7 @@ final class RealOpenApiSpecTest extends TestCase
             fn($headerName) => $headers[$headerName] ?? '',
         );
 
-        $bodyMock = $this->createMock(StreamInterface::class);
+        $bodyMock = $this->createStub(StreamInterface::class);
         $bodyMock->method('__toString')->willReturn($body);
         $request->method('getBody')->willReturn($bodyMock);
 
@@ -167,13 +167,13 @@ final class RealOpenApiSpecTest extends TestCase
         array $headers = [],
         string $body = '',
     ): ResponseInterface {
-        $response = $this->createMock(ResponseInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
 
         $response->method('getStatusCode')->willReturn($statusCode);
         $response->method('getHeaders')->willReturn($headers);
         $response->method('getHeaderLine')->willReturn('application/json');
 
-        $bodyMock = $this->createMock(StreamInterface::class);
+        $bodyMock = $this->createStub(StreamInterface::class);
         $bodyMock->method('__toString')->willReturn($body);
         $response->method('getBody')->willReturn($bodyMock);
 

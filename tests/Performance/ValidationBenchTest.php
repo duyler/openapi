@@ -119,13 +119,13 @@ YAML;
         string $body = '',
     ): ServerRequestInterface {
         /** @var ServerRequestInterface $request */
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
 
         $request
             ->method('getMethod')
             ->willReturn($method);
 
-        $uriMock = $this->createMock(UriInterface::class);
+        $uriMock = $this->createStub(UriInterface::class);
         $uriMock
             ->method('getPath')
             ->willReturn($uri);
@@ -155,7 +155,7 @@ YAML;
                 return '';
             });
 
-        $stream = $this->createMock(StreamInterface::class);
+        $stream = $this->createStub(StreamInterface::class);
         $stream
             ->method('__toString')
             ->willReturn($body);
