@@ -134,7 +134,7 @@ JSON;
     public function use_custom_cache(): void
     {
         $yaml = "openapi: 3.0.3\ninfo:\n  title: Test\n  version: 1.0.0\npaths: []";
-        $cache = new SchemaCache($this->createMock(CacheItemPoolInterface::class));
+        $cache = new SchemaCache($this->createStub(CacheItemPoolInterface::class));
 
         $builder = OpenApiValidatorBuilder::create()
             ->fromYamlString($yaml)
@@ -301,12 +301,12 @@ JSON;
     {
         $yaml = "openapi: 3.0.3\ninfo:\n  title: Test\n  version: 1.0.0\npaths: []";
 
-        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem = $this->createStub(CacheItemInterface::class);
         $cacheItem
             ->method('isHit')
             ->willReturn(false);
 
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
         $pool
             ->method('getItem')
             ->willReturn($cacheItem);
@@ -417,12 +417,12 @@ JSON;
         $formatter = new DetailedFormatter();
         $logger = new class {};
 
-        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem = $this->createStub(CacheItemInterface::class);
         $cacheItem
             ->method('isHit')
             ->willReturn(false);
 
-        $cachePool = $this->createMock(CacheItemPoolInterface::class);
+        $cachePool = $this->createStub(CacheItemPoolInterface::class);
         $cachePool
             ->method('getItem')
             ->willReturn($cacheItem);
@@ -503,7 +503,7 @@ JSON;
         $tempFile = sys_get_temp_dir() . '/test_cache.yaml';
         file_put_contents($tempFile, "openapi: 3.0.3\ninfo:\n  title: Cached\n  version: 1.0.0\npaths: []");
 
-        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem = $this->createStub(CacheItemInterface::class);
         $cacheItem
             ->method('isHit')
             ->willReturn(true);
@@ -514,7 +514,7 @@ JSON;
                 info: new InfoObject(title: 'From Cache', version: '1.0.0'),
             ));
 
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
         $pool
             ->method('getItem')
             ->willReturn($cacheItem);
@@ -536,7 +536,7 @@ JSON;
     {
         $yaml = "openapi: 3.0.3\ninfo:\n  title: Original\n  version: 1.0.0\npaths: []";
 
-        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem = $this->createStub(CacheItemInterface::class);
         $cacheItem
             ->method('isHit')
             ->willReturn(true);
@@ -547,7 +547,7 @@ JSON;
                 info: new InfoObject(title: 'From Cache', version: '1.0.0'),
             ));
 
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
         $pool
             ->method('getItem')
             ->willReturn($cacheItem);
@@ -568,7 +568,7 @@ JSON;
         $tempFile = sys_get_temp_dir() . '/test_json_cache.json';
         file_put_contents($tempFile, '{"openapi":"3.0.3","info":{"title":"JSON Cached","version":"1.0.0"},"paths":{}}');
 
-        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem = $this->createStub(CacheItemInterface::class);
         $cacheItem
             ->method('isHit')
             ->willReturn(true);
@@ -579,7 +579,7 @@ JSON;
                 info: new InfoObject(title: 'From JSON Cache', version: '1.0.0'),
             ));
 
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
         $pool
             ->method('getItem')
             ->willReturn($cacheItem);
@@ -602,7 +602,7 @@ JSON;
         $tempFile = sys_get_temp_dir() . '/test_realpath.yaml';
         file_put_contents($tempFile, "openapi: 3.0.3\ninfo:\n  title: Test\n  version: 1.0.0\npaths: []");
 
-        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem = $this->createStub(CacheItemInterface::class);
         $cacheItem
             ->method('isHit')
             ->willReturn(false);
@@ -613,7 +613,7 @@ JSON;
             ->method('expiresAfter')
             ->willReturnSelf();
 
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
         $pool
             ->method('getItem')
             ->willReturn($cacheItem);

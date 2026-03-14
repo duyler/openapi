@@ -24,7 +24,7 @@ final class ArrayDispatcherTest extends TestCase
             ValidationStartedEvent::class => [$listener],
         ]);
 
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $event = new ValidationStartedEvent($request, '/test', 'GET');
 
         $dispatcher->dispatch($event);
@@ -37,7 +37,7 @@ final class ArrayDispatcherTest extends TestCase
     {
         $dispatcher = new ArrayDispatcher();
 
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $event = new ValidationStartedEvent($request, '/test', 'GET');
 
         $result = $dispatcher->dispatch($event);
@@ -50,7 +50,7 @@ final class ArrayDispatcherTest extends TestCase
     {
         $dispatcher = new ArrayDispatcher();
 
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $event = new ValidationStartedEvent($request, '/test', 'GET');
 
         $result = $dispatcher->dispatch($event);
@@ -69,7 +69,7 @@ final class ArrayDispatcherTest extends TestCase
         $dispatcher = new ArrayDispatcher();
         $dispatcher = $dispatcher->listen(ValidationStartedEvent::class, $listener);
 
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $event = new ValidationStartedEvent($request, '/test', 'GET');
 
         $dispatcher->dispatch($event);
@@ -103,7 +103,7 @@ final class ArrayDispatcherTest extends TestCase
             ValidationStartedEvent::class => [$listener1, $listener2],
         ]);
 
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $event = new ValidationStartedEvent($request, '/test', 'GET');
 
         $dispatcher->dispatch($event);

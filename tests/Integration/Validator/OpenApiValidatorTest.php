@@ -190,7 +190,7 @@ YAML;
      */
     private function createMockServerRequest(string $method, string $uri)
     {
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
 
         $request->method('getMethod')->willReturn($method);
         $request->method('getUri')->willReturn($this->createMockUri($uri));
@@ -203,7 +203,7 @@ YAML;
 
     private function createMockUri(string $uri)
     {
-        $uriMock = $this->createMock(UriInterface::class);
+        $uriMock = $this->createStub(UriInterface::class);
         $uriMock->method('getPath')->willReturn(parse_url($uri, PHP_URL_PATH) ?? $uri);
         $uriMock->method('getQuery')->willReturn(parse_url($uri, PHP_URL_QUERY) ?? '');
 
@@ -212,7 +212,7 @@ YAML;
 
     private function createMockStream(string $content)
     {
-        $stream = $this->createMock(StreamInterface::class);
+        $stream = $this->createStub(StreamInterface::class);
         $stream->method('__toString')->willReturn($content);
 
         return $stream;
@@ -227,7 +227,7 @@ YAML;
 
     private function createMockResponse()
     {
-        $response = $this->createMock(ResponseInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
         $response->method('getStatusCode')->willReturn(200);
         $response->method('getHeaders')->willReturn([]);
         $response->method('getHeaderLine')->willReturn('application/json');

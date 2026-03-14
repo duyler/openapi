@@ -186,9 +186,9 @@ final class RequestValidatorIntegrationTest extends TestCase
         string $body,
         string $contentType,
     ): ServerRequestInterface {
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
 
-        $uriMock = $this->createMock(UriInterface::class);
+        $uriMock = $this->createStub(UriInterface::class);
         $uriMock->method('getPath')->willReturn($uri);
         $uriMock->method('getQuery')->willReturn(http_build_query($queryParams));
 
@@ -201,7 +201,7 @@ final class RequestValidatorIntegrationTest extends TestCase
         ]);
         $request->method('getCookieParams')->willReturn($cookies);
 
-        $bodyMock = $this->createMock(StreamInterface::class);
+        $bodyMock = $this->createStub(StreamInterface::class);
         $bodyMock->method('__toString')->willReturn($body);
         $request->method('getBody')->willReturn($bodyMock);
 

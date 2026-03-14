@@ -18,12 +18,13 @@ final class CompilationCacheTest extends TestCase
     {
         $pool = $this->createMock(CacheItemPoolInterface::class);
 
-        $cacheItem = $this->createCacheItem();
+        $cacheItem = $this->createStub(CacheItemInterface::class);
         $cacheItem
             ->method('isHit')
             ->willReturn(false);
 
         $pool
+            ->expects($this->once())
             ->method('getItem')
             ->willReturn($cacheItem);
 
@@ -39,7 +40,7 @@ final class CompilationCacheTest extends TestCase
     {
         $pool = $this->createMock(CacheItemPoolInterface::class);
 
-        $cacheItem = $this->createCacheItem();
+        $cacheItem = $this->createStub(CacheItemInterface::class);
         $cacheItem
             ->method('isHit')
             ->willReturn(true);
@@ -48,6 +49,7 @@ final class CompilationCacheTest extends TestCase
             ->willReturn('<?php return true;');
 
         $pool
+            ->expects($this->once())
             ->method('getItem')
             ->willReturn($cacheItem);
 
@@ -63,7 +65,7 @@ final class CompilationCacheTest extends TestCase
     {
         $pool = $this->createMock(CacheItemPoolInterface::class);
 
-        $cacheItem = $this->createCacheItem();
+        $cacheItem = $this->createStub(CacheItemInterface::class);
         $cacheItem
             ->method('isHit')
             ->willReturn(true);
@@ -72,6 +74,7 @@ final class CompilationCacheTest extends TestCase
             ->willReturn(['not', 'a', 'string']);
 
         $pool
+            ->expects($this->once())
             ->method('getItem')
             ->willReturn($cacheItem);
 
@@ -87,32 +90,35 @@ final class CompilationCacheTest extends TestCase
     {
         $pool = $this->createMock(CacheItemPoolInterface::class);
 
-        $cacheItem = $this->createCacheItem();
+        $cacheItem = $this->createMock(CacheItemInterface::class);
         $cacheItem
+            ->expects($this->once())
             ->method('set')
+            ->with('<?php return true;')
             ->willReturnSelf();
         $cacheItem
+            ->expects($this->once())
             ->method('expiresAfter')
             ->willReturnSelf();
 
         $pool
+            ->expects($this->once())
             ->method('getItem')
             ->willReturn($cacheItem);
         $pool
+            ->expects($this->once())
             ->method('save')
-            ->willReturn(true);
+            ->with($cacheItem);
 
         $cache = new CompilationCache($pool);
 
         $cache->set('test_hash', '<?php return true;');
-
-        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
     public function generateKey_creates_unique_hash_for_schema(): void
     {
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
 
         $schema1 = new Schema(
@@ -136,7 +142,7 @@ final class CompilationCacheTest extends TestCase
     #[Test]
     public function generateKey_creates_different_hash_for_different_schemas(): void
     {
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
 
         $schema1 = new Schema(
@@ -158,7 +164,7 @@ final class CompilationCacheTest extends TestCase
     #[Test]
     public function generateKey_includes_namespace(): void
     {
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
 
         $schema = new Schema(type: 'string');
@@ -171,7 +177,7 @@ final class CompilationCacheTest extends TestCase
     #[Test]
     public function generateKey_with_custom_namespace(): void
     {
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool, 'custom_namespace');
 
         $schema = new Schema(type: 'string');
@@ -184,7 +190,7 @@ final class CompilationCacheTest extends TestCase
     #[Test]
     public function generateKey_hashes_all_schema_properties(): void
     {
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
 
         $schema1 = new Schema(
@@ -212,7 +218,7 @@ final class CompilationCacheTest extends TestCase
     #[Test]
     public function generateKey_different_for_nested_schemas(): void
     {
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
 
         $schema1 = new Schema(
@@ -238,7 +244,7 @@ final class CompilationCacheTest extends TestCase
     #[Test]
     public function generateKey_different_for_array_schemas(): void
     {
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
 
         $schema1 = new Schema(
@@ -260,7 +266,7 @@ final class CompilationCacheTest extends TestCase
     #[Test]
     public function generateKey_handles_null_properties(): void
     {
-        $pool = $this->createMock(CacheItemPoolInterface::class);
+        $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
 
         $schema1 = new Schema(type: 'string', minLength: null);
@@ -270,17 +276,5 @@ final class CompilationCacheTest extends TestCase
         $key2 = $cache->generateKey($schema2);
 
         self::assertSame($key1, $key2);
-    }
-
-    private function createCacheItem(): CacheItemInterface
-    {
-        $item = $this->createMock(CacheItemInterface::class);
-        $item
-            ->method('set')
-            ->willReturnSelf();
-        $item
-            ->method('expiresAfter')
-            ->willReturnSelf();
-        return $item;
     }
 }

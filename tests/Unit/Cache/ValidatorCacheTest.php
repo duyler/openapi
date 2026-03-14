@@ -19,11 +19,19 @@ final class ValidatorCacheTest extends TestCase
         $pool = $this->createMockCachePool();
         $schema = $this->createSchema();
 
+        $cacheItem = $this->createStub(CacheItemInterface::class);
+        $cacheItem
+            ->method('isHit')
+            ->willReturn(true);
+        $cacheItem
+            ->method('get')
+            ->willReturn($schema);
+
         $pool
             ->expects($this->once())
             ->method('getItem')
             ->with('test_key')
-            ->willReturn($this->createCacheItem($schema, true));
+            ->willReturn($cacheItem);
 
         $cache = new ValidatorCache($pool);
         $result = $cache->get('test_key');
@@ -36,11 +44,19 @@ final class ValidatorCacheTest extends TestCase
     {
         $pool = $this->createMockCachePool();
 
+        $cacheItem = $this->createStub(CacheItemInterface::class);
+        $cacheItem
+            ->method('isHit')
+            ->willReturn(false);
+        $cacheItem
+            ->method('get')
+            ->willReturn(null);
+
         $pool
             ->expects($this->once())
             ->method('getItem')
             ->with('test_key')
-            ->willReturn($this->createCacheItem(null, false));
+            ->willReturn($cacheItem);
 
         $cache = new ValidatorCache($pool);
         $result = $cache->get('test_key');
@@ -53,11 +69,19 @@ final class ValidatorCacheTest extends TestCase
     {
         $pool = $this->createMockCachePool();
 
+        $cacheItem = $this->createStub(CacheItemInterface::class);
+        $cacheItem
+            ->method('isHit')
+            ->willReturn(true);
+        $cacheItem
+            ->method('get')
+            ->willReturn('invalid_value');
+
         $pool
             ->expects($this->once())
             ->method('getItem')
             ->with('test_key')
-            ->willReturn($this->createCacheItem('invalid_value', true));
+            ->willReturn($cacheItem);
 
         $cache = new ValidatorCache($pool);
         $result = $cache->get('test_key');
@@ -70,7 +94,18 @@ final class ValidatorCacheTest extends TestCase
     {
         $pool = $this->createMockCachePool();
         $schema = $this->createSchema();
-        $cacheItem = $this->createCacheItem(null, false);
+
+        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem
+            ->expects($this->once())
+            ->method('set')
+            ->with($schema)
+            ->willReturnSelf();
+        $cacheItem
+            ->expects($this->once())
+            ->method('expiresAfter')
+            ->with(3600)
+            ->willReturnSelf();
 
         $pool
             ->expects($this->once())
@@ -151,28 +186,6 @@ final class ValidatorCacheTest extends TestCase
     private function createMockCachePool(): CacheItemPoolInterface
     {
         return $this->createMock(CacheItemPoolInterface::class);
-    }
-
-    private function createCacheItem(mixed $value, bool $isHit): CacheItemInterface
-    {
-        $item = $this->createMock(CacheItemInterface::class);
-        $item
-            ->method('get')
-            ->willReturn($value);
-
-        $item
-            ->method('isHit')
-            ->willReturn($isHit);
-
-        $item
-            ->method('set')
-            ->willReturnSelf();
-
-        $item
-            ->method('expiresAfter')
-            ->willReturnSelf();
-
-        return $item;
     }
 
     private function createSchema(): Schema
