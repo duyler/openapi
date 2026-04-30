@@ -5,6 +5,7 @@
 [![type-coverage](https://shepherd.dev/github/duyler/openapi/coverage.svg)](https://shepherd.dev/github/duyler/openapi)
 [![psalm-level](https://shepherd.dev/github/duyler/openapi/level.svg)](https://shepherd.dev/github/duyler/openapi)
 ![PHP Version](https://img.shields.io/packagist/dependency-v/duyler/openapi/php?version=dev-main)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/duyler/openapi)
 
 OpenAPI 3.2 validator for PHP 8.4+
 
