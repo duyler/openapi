@@ -10,7 +10,7 @@ use Override;
 readonly class Schema implements JsonSerializable
 {
     /**
-     * @param string|list<string>|null $type
+     * @param string|array<int, string|null>|null $type
      * @param array<string, Schema>|null $properties
      * @param list<string>|null $required
      * @param list<Schema>|null $allOf

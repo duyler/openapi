@@ -33,7 +33,7 @@ readonly class ItemsValidator extends AbstractSchemaValidator
             /** @var int $index */
             try {
                 $nullableAsType = $context?->nullableAsType ?? true;
-                $allowNull = $schema->items->nullable && $nullableAsType;
+                $allowNull = ($schema->items->nullable && $nullableAsType) || $this->typeIncludesNull($schema->items->type);
                 $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
                 $itemContext = $context?->withBreadcrumbIndex($index) ?? ValidationContext::create($this->pool, $nullableAsType);
                 $validator->validate($normalizedItem, $schema->items, $itemContext);

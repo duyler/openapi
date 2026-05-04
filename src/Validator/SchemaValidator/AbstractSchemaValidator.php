@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
 abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterface
@@ -20,5 +21,13 @@ abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterf
         }
 
         return $context->breadcrumbs->currentPath();
+    }
+
+    /**
+     * Check if type is an array that includes 'null' or null
+     */
+    protected function typeIncludesNull(string|array|null $type): bool
+    {
+        return SchemaValueNormalizer::typeIncludesNull($type);
     }
 }

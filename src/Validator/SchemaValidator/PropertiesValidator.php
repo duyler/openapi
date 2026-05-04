@@ -37,7 +37,7 @@ readonly class PropertiesValidator extends AbstractSchemaValidator
 
             try {
                 $nullableAsType = $context?->nullableAsType ?? true;
-                $allowNull = $propertySchema->nullable && $nullableAsType;
+                $allowNull = ($propertySchema->nullable && $nullableAsType) || $this->typeIncludesNull($propertySchema->type);
                 $value = SchemaValueNormalizer::normalize($data[$name], $allowNull);
                 $propertyContext = $context?->withBreadcrumb($name) ?? ValidationContext::create($this->pool, $nullableAsType);
                 $validator->validate($value, $propertySchema, $propertyContext);

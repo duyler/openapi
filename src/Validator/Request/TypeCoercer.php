@@ -45,13 +45,13 @@ readonly class TypeCoercer
     }
 
     /**
-     * @param array<int, string> $types
+     * @param array<int, string|null> $types
      * @return array<array-key, mixed>|int|string|float|bool
      */
     private function coerceUnionType(mixed $value, array $types, bool $strict): array|int|string|float|bool
     {
         foreach ($types as $type) {
-            if ('null' === $type) {
+            if ('null' === $type || null === $type) {
                 continue;
             }
 

@@ -11,6 +11,7 @@ use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 
 use function is_array;
+use function is_string;
 
 readonly class FormatValidator implements SchemaValidatorInterface
 {
@@ -26,7 +27,16 @@ readonly class FormatValidator implements SchemaValidatorInterface
             return;
         }
 
-        $type = is_array($schema->type) ? $schema->type[0] : $schema->type;
+        // For union types, get the first non-null string type for format validation
+        if (is_array($schema->type)) {
+            $type = array_find($schema->type, fn($t) => is_string($t));
+            if (!is_string($type)) {
+                return;
+            }
+        } else {
+            $type = $schema->type;
+        }
+
         $formatValidator = $this->formatRegistry->getValidator($type, $schema->format);
 
         if (null === $formatValidator) {

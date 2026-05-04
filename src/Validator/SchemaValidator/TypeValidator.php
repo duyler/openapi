@@ -73,11 +73,11 @@ readonly class TypeValidator extends AbstractSchemaValidator
     }
 
     /**
-     * @param array<int, string> $types
+     * @param array<int, string|null> $types
      */
     private function isValidUnionType(mixed $data, array $types, EmptyArrayStrategy $strategy): bool
     {
-        return array_any($types, fn($type) => $this->isValidType($data, $type, $strategy));
+        return array_any($types, fn($type) => null !== $type && $this->isValidType($data, $type, $strategy));
     }
 
     private function isArray(mixed $data, EmptyArrayStrategy $strategy): bool
