@@ -76,6 +76,36 @@ final class RequestBodyValidatorTest extends TestCase
     }
 
     #[Test]
+    public function validate_json_api_body(): void
+    {
+        $body = '{"data":{"type":"articles","id":"1","attributes":{"title":"Test"}}}';
+        $contentType = 'application/vnd.api+json';
+        $requestBody = new RequestBody(
+            content: new Content([
+                'application/vnd.api+json' => new MediaType(
+                    schema: new Schema(
+                        type: 'object',
+                        properties: [
+                            'data' => new Schema(
+                                type: 'object',
+                                properties: [
+                                    'type' => new Schema(type: 'string'),
+                                    'id' => new Schema(type: 'string'),
+                                ],
+                            ),
+                        ],
+                        required: ['data'],
+                    ),
+                ),
+            ]),
+        );
+
+        $this->validator->validate($body, $contentType, $requestBody);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
     public function validate_form_body(): void
     {
         $body = 'name=John&age=30';
