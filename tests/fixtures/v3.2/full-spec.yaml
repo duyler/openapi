@@ -98,6 +98,8 @@ components:
           type: integer
         name:
           type: string
+        email:
+          type: [string, "null"]
         type:
           type: string
       discriminator:
@@ -152,10 +154,23 @@ components:
           enum: [debug, info, warn, error]
         message:
           type: string
+        userId:
+          type: [integer, "null"]
       required:
         - timestamp
         - level
         - message
+    NullableResource:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: [string, "null"]
+        description:
+          type: [string, "null"]
+        metadata:
+          type: [object, "null"]
   mediaTypes:
     ProblemJson:
       schema:

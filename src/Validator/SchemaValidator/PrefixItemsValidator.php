@@ -36,7 +36,7 @@ readonly class PrefixItemsValidator extends AbstractSchemaValidator
 
         for ($i = 0; $i < $count; ++$i) {
             try {
-                $allowNull = $schema->prefixItems[$i]->nullable && $nullableAsType;
+                $allowNull = ($schema->prefixItems[$i]->nullable && $nullableAsType) || $this->typeIncludesNull($schema->prefixItems[$i]->type);
                 $value = SchemaValueNormalizer::normalize($data[$i], $allowNull);
                 $indexContext = $context?->withBreadcrumbIndex($i) ?? ValidationContext::create($this->pool, $nullableAsType);
                 $validator->validate($value, $schema->prefixItems[$i], $indexContext);
@@ -58,7 +58,7 @@ readonly class PrefixItemsValidator extends AbstractSchemaValidator
         if ([] !== $remainingItems && null !== $schema->items) {
             foreach ($remainingItems as $item) {
                 try {
-                    $allowNull = $schema->items->nullable && $nullableAsType;
+                    $allowNull = ($schema->items->nullable && $nullableAsType) || $this->typeIncludesNull($schema->items->type);
                     $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
                     $remainingContext = $context ?? ValidationContext::create($this->pool, $nullableAsType);
                     $validator->validate($normalizedItem, $schema->items, $remainingContext);

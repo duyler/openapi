@@ -2211,4 +2211,101 @@ final class OpenApiBuilderTest extends TestCase
 
         $this->assertSame('file:///path/to/openapi.json', $document->self);
     }
+
+    #[Test]
+    public function parses_type_array_with_null(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'NullableString' => [
+                        'type' => ['string', 'null'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['NullableString'];
+
+        $this->assertIsArray($schema->type);
+        $this->assertSame(['string', 'null'], $schema->type);
+    }
+
+    #[Test]
+    public function parses_type_array_with_multiple_types(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'MultiType' => [
+                        'type' => ['string', 'number', 'null'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['MultiType'];
+
+        $this->assertIsArray($schema->type);
+        $this->assertSame(['string', 'number', 'null'], $schema->type);
+    }
+
+    #[Test]
+    public function parses_type_array_without_null(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'StringOrNumber' => [
+                        'type' => ['string', 'number'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['StringOrNumber'];
+
+        $this->assertIsArray($schema->type);
+        $this->assertSame(['string', 'number'], $schema->type);
+    }
+
+    #[Test]
+    public function parses_nested_schema_with_type_array(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'User' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'name' => ['type' => 'string'],
+                            'email' => ['type' => ['string', 'null']],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['User'];
+
+        $this->assertSame('object', $schema->type);
+        $this->assertIsArray($schema->properties['email']->type);
+        $this->assertSame(['string', 'null'], $schema->properties['email']->type);
+    }
 }

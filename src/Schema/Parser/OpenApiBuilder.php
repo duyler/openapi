@@ -337,7 +337,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             description: TypeHelper::asStringOrNull($data['description'] ?? null),
             default: $data['default'] ?? null,
             deprecated: (bool) ($data['deprecated'] ?? false),
-            type: TypeHelper::asStringOrNull($data['type'] ?? null),
+            type: TypeHelper::asTypeOrNull($data['type'] ?? null),
             nullable: (bool) ($data['nullable'] ?? false),
             const: $data['const'] ?? null,
             multipleOf: TypeHelper::asFloatOrNull($data['multipleOf'] ?? null),

@@ -57,7 +57,7 @@ readonly class RequestBodyValidator implements RequestBodyValidatorInterface
     private function parseBody(string $body, string $mediaType): array|int|string|float|bool|null
     {
         return match ($mediaType) {
-            'application/json' => $this->jsonParser->parse($body),
+            'application/json', 'application/vnd.api+json' => $this->jsonParser->parse($body),
             'application/x-www-form-urlencoded' => $this->formParser->parse($body),
             'multipart/form-data' => $this->multipartParser->parse($body),
             'text/plain', 'text/html', 'text/csv' => $this->textParser->parse($body),
