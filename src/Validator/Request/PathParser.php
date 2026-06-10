@@ -12,18 +12,6 @@ use function assert;
 readonly class PathParser
 {
     /**
-     * Extract parameter names from path template
-     *
-     * @return array<int, string>
-     */
-    public function parseParameters(string $pathTemplate): array
-    {
-        preg_match_all('/\{([^}]+)\}/', $pathTemplate, $matches);
-
-        return $matches[1] ?? [];
-    }
-
-    /**
      * Match request path against template
      *
      * @return array<string, string> Parameter values
