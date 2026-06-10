@@ -9,6 +9,7 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -42,6 +43,8 @@ use function is_array;
 
 class SchemaValidatorWithContext
 {
+    private const int MAX_SCHEMA_DEPTH = 64;
+
     private ?array $validatorsCache = null;
 
     public function __construct(
@@ -91,6 +94,10 @@ class SchemaValidatorWithContext
      */
     public function validateWithContext(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
     {
+        $this->checkDepth($context);
+
+        $context = $context->withIncrementedDepth();
+
         $schema = $this->resolveRef($schema);
 
         if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
@@ -115,6 +122,13 @@ class SchemaValidatorWithContext
         if (null !== $schema->items && is_array($data)) {
             $itemsValidator = new ItemsValidatorWithContext($this->pool, $this->refResolver, $this->document);
             $itemsValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
+        }
+    }
+
+    private function checkDepth(ValidationContext $context): void
+    {
+        if ($context->depth >= self::MAX_SCHEMA_DEPTH) {
+            throw new SchemaDepthExceededException(self::MAX_SCHEMA_DEPTH);
         }
     }
 

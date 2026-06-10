@@ -273,11 +273,6 @@
       <code><![CDATA[Breadcrumb]]></code>
     </ClassMustBeFinal>
   </file>
-  <file src="src/Validator/Error/BreadcrumbManager.php">
-    <ClassMustBeFinal>
-      <code><![CDATA[BreadcrumbManager]]></code>
-    </ClassMustBeFinal>
-  </file>
   <file src="src/Validator/Error/Formatter/DetailedFormatter.php">
     <ClassMustBeFinal>
       <code><![CDATA[DetailedFormatter]]></code>

@@ -17,6 +17,7 @@ readonly class ValidationContext
         public readonly ErrorFormatterInterface $errorFormatter = new SimpleFormatter(),
         public readonly bool $nullableAsType = true,
         public readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
+        public readonly int $depth = 0,
     ) {}
 
     public static function create(
@@ -41,6 +42,7 @@ readonly class ValidationContext
             errorFormatter: $this->errorFormatter,
             nullableAsType: $this->nullableAsType,
             emptyArrayStrategy: $this->emptyArrayStrategy,
+            depth: $this->depth,
         );
     }
 
@@ -52,6 +54,7 @@ readonly class ValidationContext
             errorFormatter: $this->errorFormatter,
             nullableAsType: $this->nullableAsType,
             emptyArrayStrategy: $this->emptyArrayStrategy,
+            depth: $this->depth,
         );
     }
 
@@ -63,6 +66,19 @@ readonly class ValidationContext
             errorFormatter: $this->errorFormatter,
             nullableAsType: $this->nullableAsType,
             emptyArrayStrategy: $this->emptyArrayStrategy,
+            depth: $this->depth,
+        );
+    }
+
+    public function withIncrementedDepth(): self
+    {
+        return new self(
+            breadcrumbs: $this->breadcrumbs,
+            pool: $this->pool,
+            errorFormatter: $this->errorFormatter,
+            nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
+            depth: $this->depth + 1,
         );
     }
 }
