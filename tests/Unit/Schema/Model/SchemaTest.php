@@ -736,17 +736,79 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_contentSchema(): void
+    public function json_serialize_includes_contentSchema_as_bool(): void
     {
         $schema = new Schema(
             type: 'string',
-            contentSchema: 'https://example.com/schema',
+            contentSchema: true,
         );
 
         $serialized = $schema->jsonSerialize();
 
         self::assertIsArray($serialized);
         self::assertArrayHasKey('contentSchema', $serialized);
+        self::assertTrue($serialized['contentSchema']);
+    }
+
+    #[Test]
+    public function json_serialize_includes_contentSchema_as_schema(): void
+    {
+        $contentSchema = new Schema(type: 'object');
+        $schema = new Schema(
+            type: 'string',
+            contentSchema: $contentSchema,
+        );
+
+        $serialized = $schema->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertArrayHasKey('contentSchema', $serialized);
+        self::assertInstanceOf(Schema::class, $serialized['contentSchema']);
+        self::assertSame($contentSchema, $serialized['contentSchema']);
+    }
+
+    #[Test]
+    public function round_trip_content_schema_as_schema(): void
+    {
+        $innerSchema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+        );
+
+        $schema = new Schema(
+            type: 'string',
+            contentSchema: $innerSchema,
+        );
+
+        $serialized = $schema->jsonSerialize();
+        $json = json_encode($serialized);
+        $decoded = json_decode($json, true);
+
+        self::assertIsArray($decoded);
+        self::assertArrayHasKey('contentSchema', $decoded);
+        self::assertIsArray($decoded['contentSchema']);
+        self::assertSame('object', $decoded['contentSchema']['type']);
+        self::assertArrayHasKey('name', $decoded['contentSchema']['properties']);
+    }
+
+    #[Test]
+    public function round_trip_unevaluated_properties_as_schema(): void
+    {
+        $innerSchema = new Schema(type: 'string');
+
+        $schema = new Schema(
+            type: 'object',
+            unevaluatedProperties: $innerSchema,
+        );
+
+        $serialized = $schema->jsonSerialize();
+        $json = json_encode($serialized);
+        $decoded = json_decode($json, true);
+
+        self::assertIsArray($decoded);
+        self::assertArrayHasKey('unevaluatedProperties', $decoded);
+        self::assertIsArray($decoded['unevaluatedProperties']);
+        self::assertSame('string', $decoded['unevaluatedProperties']['type']);
     }
 
     #[Test]

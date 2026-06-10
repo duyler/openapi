@@ -31,6 +31,20 @@ readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValidator
         /** @var array<array-key, string> $stringUnevaluatedProperties */
         $stringUnevaluatedProperties = array_filter($unevaluatedProperties, is_string(...));
 
+        if ($schema->unevaluatedProperties instanceof Schema) {
+            $validator = new SchemaValidator($this->pool);
+            $nullableAsType = $context?->nullableAsType ?? true;
+
+            foreach ($stringUnevaluatedProperties as $propertyName) {
+                /** @var array-key|array<array-key, mixed> $value */
+                $value = $data[$propertyName];
+                $propertyContext = $context?->withBreadcrumb($propertyName) ?? ValidationContext::create($this->pool, $nullableAsType);
+                $validator->validate($value, $schema->unevaluatedProperties, $propertyContext);
+            }
+
+            return;
+        }
+
         if ($schema->unevaluatedProperties) {
             return;
         }

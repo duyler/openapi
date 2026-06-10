@@ -460,7 +460,7 @@ final class OpenApiBuilderTest extends TestCase
                         'enum' => ['a', 'b', 'c'],
                         'contentEncoding' => 'base64',
                         'contentMediaType' => 'application/json',
-                        'contentSchema' => '{"type": "object"}',
+                        'contentSchema' => ['type' => 'object'],
                         '$schema' => 'https://json-schema.org/draft/2020-12/schema',
                     ],
                 ],
@@ -518,7 +518,7 @@ final class OpenApiBuilderTest extends TestCase
         $this->assertSame(['a', 'b', 'c'], $schema->enum);
         $this->assertSame('base64', $schema->contentEncoding);
         $this->assertSame('application/json', $schema->contentMediaType);
-        $this->assertSame('{"type": "object"}', $schema->contentSchema);
+        $this->assertInstanceOf(Schema::class, $schema->contentSchema);
         $this->assertSame('https://json-schema.org/draft/2020-12/schema', $schema->jsonSchemaDialect);
     }
 
@@ -2210,5 +2210,53 @@ final class OpenApiBuilderTest extends TestCase
         $document = $this->parser->parse($json);
 
         $this->assertSame('file:///path/to/openapi.json', $document->self);
+    }
+
+    #[Test]
+    public function build_schema_with_unevaluated_properties_schema(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'TestSchema' => [
+                        'type' => 'object',
+                        'unevaluatedProperties' => ['type' => 'string'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['TestSchema'];
+
+        $this->assertInstanceOf(Schema::class, $schema->unevaluatedProperties);
+    }
+
+    #[Test]
+    public function build_schema_with_content_schema_as_object(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'TestSchema' => [
+                        'type' => 'string',
+                        'contentMediaType' => 'application/json',
+                        'contentSchema' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string']]],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['TestSchema'];
+
+        $this->assertInstanceOf(Schema::class, $schema->contentSchema);
+        $this->assertSame('object', $schema->contentSchema->type);
     }
 }

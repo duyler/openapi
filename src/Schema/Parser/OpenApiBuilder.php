@@ -365,7 +365,9 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             additionalProperties: isset($data['additionalProperties']) && is_array($data['additionalProperties'])
                 ? $this->buildSchema(TypeHelper::asArray($data['additionalProperties']))
                 : (isset($data['additionalProperties']) ? (bool) $data['additionalProperties'] : null),
-            unevaluatedProperties: TypeHelper::asBoolOrNull($data['unevaluatedProperties'] ?? null),
+            unevaluatedProperties: isset($data['unevaluatedProperties']) && is_array($data['unevaluatedProperties'])
+                ? $this->buildSchema(TypeHelper::asArray($data['unevaluatedProperties']))
+                : (isset($data['unevaluatedProperties']) ? (bool) $data['unevaluatedProperties'] : null),
             items: isset($data['items']) && is_array($data['items']) ? $this->buildSchema(TypeHelper::asArray($data['items'])) : null,
             prefixItems: isset($data['prefixItems']) ? array_values(array_map(fn($s) => $this->buildSchema(TypeHelper::asArray($s)), TypeHelper::asArray($data['prefixItems']))) : null,
             contains: isset($data['contains']) ? $this->buildSchema(TypeHelper::asArray($data['contains'])) : null,
@@ -387,7 +389,9 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             enum: TypeHelper::asEnumListOrNull($data['enum'] ?? null),
             contentEncoding: TypeHelper::asStringOrNull($data['contentEncoding'] ?? null),
             contentMediaType: TypeHelper::asStringOrNull($data['contentMediaType'] ?? null),
-            contentSchema: TypeHelper::asStringOrNull($data['contentSchema'] ?? null),
+            contentSchema: isset($data['contentSchema']) && is_array($data['contentSchema'])
+                ? $this->buildSchema(TypeHelper::asArray($data['contentSchema']))
+                : (isset($data['contentSchema']) ? (bool) $data['contentSchema'] : null),
             jsonSchemaDialect: TypeHelper::asStringOrNull($data['$schema'] ?? null),
             xml: isset($data['xml']) && is_array($data['xml'])
                 ? $this->buildXml(TypeHelper::asArray($data['xml']))

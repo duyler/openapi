@@ -4,39 +4,33 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator;
 
-use WeakMap;
+use function count;
 
-readonly class ValidatorPool
+class ValidatorPool
 {
-    /** @var WeakMap<object, mixed> */
-    public WeakMap $pool;
-
-    public function __construct()
-    {
-        $this->pool = new WeakMap();
-    }
+    /** @var array<string, object> */
+    private array $pool = [];
 
     /**
      * @template T of object
      * @param callable(): T $factory
      * @return T
      */
-    public function getOrCreate(callable $factory): object
+    public function getOrCreate(string $key, callable $factory): object
     {
-        $instance = $factory();
-
-        if ($this->pool->offsetExists($instance)) {
+        if (isset($this->pool[$key])) {
             /** @var T */
-            return $this->pool->offsetGet($instance);
+            return $this->pool[$key];
         }
 
-        $this->pool->offsetSet($instance, $instance);
+        $instance = $factory();
+        $this->pool[$key] = $instance;
 
         return $instance;
     }
 
     public function count(): int
     {
-        return $this->pool->count();
+        return count($this->pool);
     }
 }

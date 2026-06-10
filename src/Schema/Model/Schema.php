@@ -22,6 +22,8 @@ readonly class Schema implements JsonSerializable
      * @param array<string, Schema>|null $patternProperties
      * @param array<string, Schema>|null $dependentSchemas
      * @param Schema|bool|null $additionalProperties
+     * @param Schema|bool|null $unevaluatedProperties
+     * @param Schema|bool|null $contentSchema
      * @param list<mixed>|null $enum
      * @param array<string, mixed>|null $examples
      * @param Xml|null $xml
@@ -59,7 +61,7 @@ readonly class Schema implements JsonSerializable
         public ?Discriminator $discriminator = null,
         public ?array $properties = null,
         public Schema|bool|null $additionalProperties = null,
-        public ?bool $unevaluatedProperties = null,
+        public Schema|bool|null $unevaluatedProperties = null,
         public ?Schema $items = null,
         public ?array $prefixItems = null,
         public ?Schema $contains = null,
@@ -77,7 +79,7 @@ readonly class Schema implements JsonSerializable
         public ?array $enum = null,
         public ?string $contentEncoding = null,
         public ?string $contentMediaType = null,
-        public ?string $contentSchema = null,
+        public Schema|bool|null $contentSchema = null,
         public ?string $jsonSchemaDialect = null,
         public ?Xml $xml = null,
     ) {}

@@ -325,6 +325,24 @@ final class RefResolver implements RefResolverInterface
             }
         }
 
+        if (
+            null !== $schema->unevaluatedProperties
+            && $schema->unevaluatedProperties instanceof Schema
+        ) {
+            if ($this->schemaHasRef($schema->unevaluatedProperties, $visited)) {
+                return true;
+            }
+        }
+
+        if (
+            null !== $schema->contentSchema
+            && $schema->contentSchema instanceof Schema
+        ) {
+            if ($this->schemaHasRef($schema->contentSchema, $visited)) {
+                return true;
+            }
+        }
+
         return false;
     }
 
