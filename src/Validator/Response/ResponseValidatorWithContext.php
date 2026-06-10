@@ -28,6 +28,13 @@ readonly class ResponseValidatorWithContext
     public function __construct(
         private readonly ValidatorPool $pool,
         private readonly OpenApiDocument $document,
+        private readonly BodyParser $bodyParser = new BodyParser(
+            jsonParser: new JsonBodyParser(),
+            formParser: new FormBodyParser(),
+            multipartParser: new MultipartBodyParser(),
+            textParser: new TextBodyParser(),
+            xmlParser: new XmlBodyParser(),
+        ),
         private readonly bool $coercion = false,
         private readonly StatusCodeValidator $statusCodeValidator = new StatusCodeValidator(),
         private readonly bool $nullableAsType = true,
@@ -67,15 +74,7 @@ readonly class ResponseValidatorWithContext
         $contentType = $response->getHeaderLine('Content-Type');
         $body = (string) $response->getBody();
 
-        $bodyParser = new BodyParser(
-            jsonParser: new JsonBodyParser(),
-            formParser: new FormBodyParser(),
-            multipartParser: new MultipartBodyParser(),
-            textParser: new TextBodyParser(),
-            xmlParser: new XmlBodyParser(),
-        );
-
-        $bodyValidator = new ResponseBodyValidatorWithContext($this->pool, $this->document, $bodyParser, coercion: $this->coercion, nullableAsType: $this->nullableAsType, emptyArrayStrategy: $this->emptyArrayStrategy);
+        $bodyValidator = new ResponseBodyValidatorWithContext($this->pool, $this->document, $this->bodyParser, coercion: $this->coercion, nullableAsType: $this->nullableAsType, emptyArrayStrategy: $this->emptyArrayStrategy);
         $bodyValidator->validate($body, $contentType, $responseDefinition->content ?? null);
     }
 

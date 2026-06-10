@@ -7,7 +7,6 @@ namespace Duyler\OpenApi\Validator;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\OpenApiDocument;
-use Duyler\OpenApi\Validator\Exception\PathMismatchException;
 use Duyler\OpenApi\Validator\Request\PathParser;
 
 use function count;
@@ -60,22 +59,12 @@ readonly class PathFinder
                 continue;
             }
 
-            if ($this->pathMatches($pattern, $requestPath)) {
+            if (null !== $this->pathParser->tryMatchPath($requestPath, $pattern)) {
                 $candidates[] = $operation;
             }
         }
 
         return $candidates;
-    }
-
-    private function pathMatches(string $pattern, string $path): bool
-    {
-        try {
-            $this->pathParser->matchPath($path, $pattern);
-            return true;
-        } catch (PathMismatchException) {
-            return false;
-        }
     }
 
     /**

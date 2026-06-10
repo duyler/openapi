@@ -30,6 +30,17 @@ readonly class PathParser
      */
     public function matchPath(string $requestPath, string $template): array
     {
+        return $this->tryMatchPath($requestPath, $template)
+            ?? throw new PathMismatchException($template, $requestPath);
+    }
+
+    /**
+     * Non-throwing version of matchPath for iteration use
+     *
+     * @return array<string, string>|null Parameter values, or null if no match
+     */
+    public function tryMatchPath(string $requestPath, string $template): ?array
+    {
         $regex = $this->templateToRegex($template);
 
         assert('' !== $regex);
@@ -38,7 +49,7 @@ readonly class PathParser
         $matchResult = preg_match($regex, $requestPath, $matches);
 
         if (false === $matchResult || 1 !== $matchResult) {
-            throw new PathMismatchException($template, $requestPath);
+            return null;
         }
 
         $params = [];
