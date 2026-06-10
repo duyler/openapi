@@ -53,4 +53,14 @@ interface OpenApiValidatorInterface
      * @return string Formatted error messages
      */
     public function getFormattedErrors(ValidationException $e): string;
+
+    /**
+     * Validate webhook request against OpenAPI specification and return matched operation.
+     *
+     * @param ServerRequestInterface $request PSR-7 HTTP request
+     * @param string $webhookName Webhook name from OpenAPI specification
+     * @return Operation Matched operation from OpenAPI specification
+     * @throws ValidationException If validation fails
+     */
+    public function validateWebhook(ServerRequestInterface $request, string $webhookName): Operation;
 }

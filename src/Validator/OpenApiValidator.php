@@ -40,6 +40,8 @@ use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
 use Duyler\OpenApi\Validator\Response\StatusCodeValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
+use Duyler\OpenApi\Validator\Webhook\Exception\UnknownWebhookException;
+use Duyler\OpenApi\Validator\Webhook\WebhookValidator;
 use Override;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -52,6 +54,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
     private readonly RequestValidator $requestValidator;
     private readonly ResponseValidatorWithContext $responseValidator;
     private readonly RefResolver $refResolver;
+    private readonly WebhookValidator $webhookValidator;
 
     public function __construct(
         public readonly OpenApiDocument $document,
@@ -69,6 +72,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
         $this->requestValidator = $this->buildRequestValidator();
         $this->responseValidator = $this->buildResponseValidator();
         $this->refResolver = new RefResolver();
+        $this->webhookValidator = new WebhookValidator($this->requestValidator);
     }
 
     /**
@@ -189,6 +193,64 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
     public function getFormattedErrors(ValidationException $e): string
     {
         return $this->errorFormatter->formatMultiple($e->getErrors());
+    }
+
+    /**
+     * Validate webhook request against OpenAPI specification and return matched operation.
+     *
+     * @param ServerRequestInterface $request PSR-7 HTTP request
+     * @param string $webhookName Webhook name from OpenAPI specification
+     * @return Operation Matched operation from OpenAPI specification
+     * @throws ValidationException If validation fails
+     * @throws UnknownWebhookException If webhook not found in specification
+     */
+    #[Override]
+    public function validateWebhook(
+        ServerRequestInterface $request,
+        string $webhookName,
+    ): Operation {
+        $startTime = microtime(true);
+
+        $method = $request->getMethod();
+
+        $this->eventDispatcher?->dispatch(
+            new ValidationStartedEvent($request, $webhookName, $method),
+        );
+
+        try {
+            $this->webhookValidator->validate($request, $webhookName, $this->document);
+
+            $operation = new Operation($webhookName, $method);
+
+            $this->eventDispatcher?->dispatch(
+                new ValidationFinishedEvent(
+                    $request,
+                    $webhookName,
+                    $method,
+                    true,
+                    microtime(true) - $startTime,
+                ),
+            );
+
+            return $operation;
+        } catch (ValidationException|UnknownWebhookException $e) {
+            $this->eventDispatcher?->dispatch(
+                new ValidationFinishedEvent(
+                    $request,
+                    $webhookName,
+                    $method,
+                    false,
+                    microtime(true) - $startTime,
+                ),
+            );
+
+            if ($e instanceof ValidationException) {
+                $this->eventDispatcher?->dispatch(
+                    new ValidationErrorEvent($request, $webhookName, $method, $e),
+                );
+            }
+            throw $e;
+        }
     }
 
     private function getOperationFromPathItem(PathItem $pathItem, string $method): ?OperationModel

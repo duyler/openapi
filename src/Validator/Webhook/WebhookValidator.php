@@ -26,7 +26,8 @@ readonly class WebhookValidator
         $webhook = $this->findWebhook($webhookName, $document);
         $operation = $this->extractOperation($request, $webhookName, $webhook);
 
-        $this->requestValidator->validate($request, $operation, $webhookName);
+        $requestPath = $request->getUri()->getPath();
+        $this->requestValidator->validate($request, $operation, $requestPath);
     }
 
     private function findWebhook(string $webhookName, OpenApiDocument $document): object

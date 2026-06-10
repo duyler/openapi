@@ -70,23 +70,19 @@ class SchemaValidatorWithContext
             return;
         }
 
-        $this->validateInternal($data, $schema, $context);
-
         if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
+            $this->validateInternal($data, $schema, $context);
+
             $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool);
             $discriminatorValidator->validate($data, $schema, $this->document);
+
+            $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
             return;
         }
 
-        if (null !== $schema->properties && [] !== $schema->properties && is_array($data)) {
-            $propertiesValidator = new PropertiesValidatorWithContext($this->pool, $this->refResolver, $this->document);
-            $propertiesValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
-        }
+        $this->validateInternal($data, $schema, $context);
 
-        if (null !== $schema->items && is_array($data)) {
-            $itemsValidator = new ItemsValidatorWithContext($this->pool, $this->refResolver, $this->document);
-            $itemsValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
-        }
+        $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
     }
 
     /**
@@ -107,13 +103,33 @@ class SchemaValidatorWithContext
         }
 
         if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
+            $this->validateInternal($data, $schema, $context);
+
             $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool);
             $discriminatorValidator->validate($data, $schema, $this->document);
+
+            $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
             return;
         }
 
         $this->validateInternal($data, $schema, $context);
 
+        $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
+    }
+
+    private function checkDepth(ValidationContext $context): void
+    {
+        if ($context->depth >= self::MAX_SCHEMA_DEPTH) {
+            throw new SchemaDepthExceededException(self::MAX_SCHEMA_DEPTH);
+        }
+    }
+
+    private function validatePropertiesAndItems(
+        array|int|string|float|bool|null $data,
+        Schema $schema,
+        ValidationContext $context,
+        bool $useDiscriminator,
+    ): void {
         if (null !== $schema->properties && [] !== $schema->properties && is_array($data)) {
             $propertiesValidator = new PropertiesValidatorWithContext($this->pool, $this->refResolver, $this->document);
             $propertiesValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
@@ -122,13 +138,6 @@ class SchemaValidatorWithContext
         if (null !== $schema->items && is_array($data)) {
             $itemsValidator = new ItemsValidatorWithContext($this->pool, $this->refResolver, $this->document);
             $itemsValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
-        }
-    }
-
-    private function checkDepth(ValidationContext $context): void
-    {
-        if ($context->depth >= self::MAX_SCHEMA_DEPTH) {
-            throw new SchemaDepthExceededException(self::MAX_SCHEMA_DEPTH);
         }
     }
 

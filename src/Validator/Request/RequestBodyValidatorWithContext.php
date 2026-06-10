@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\Request;
 use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
+use Duyler\OpenApi\Validator\Exception\MissingRequestBodyException;
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
@@ -53,7 +54,19 @@ readonly class RequestBodyValidatorWithContext implements RequestBodyValidatorIn
             return;
         }
 
+        if ($requestBody->required && '' === trim($body)) {
+            throw new MissingRequestBodyException();
+        }
+
         if (null === $requestBody->content) {
+            if ($requestBody->required) {
+                throw new MissingRequestBodyException();
+            }
+
+            return;
+        }
+
+        if ('' === trim($body) && false === $requestBody->required) {
             return;
         }
 
