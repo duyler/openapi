@@ -51,7 +51,7 @@ readonly class DefaultValidatorRegistry implements ValidatorRegistryInterface
         private readonly ValidatorPool $pool,
         ?FormatRegistry $formatRegistry = null,
     ) {
-        $this->formatRegistry = $formatRegistry ?? BuiltinFormats::create();
+        $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
         $validators = $this->createValidators();
         foreach ($validators as $validator) {
             assert($validator instanceof SchemaValidatorInterface);

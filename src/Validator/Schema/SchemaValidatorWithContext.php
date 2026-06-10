@@ -40,8 +40,10 @@ use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedPropertiesValidator;
 use function count;
 use function is_array;
 
-readonly class SchemaValidatorWithContext
+class SchemaValidatorWithContext
 {
+    private ?array $validatorsCache = null;
+
     public function __construct(
         private readonly ValidatorPool $pool,
         private readonly RefResolverInterface $refResolver,
@@ -148,9 +150,13 @@ readonly class SchemaValidatorWithContext
 
     private function getValidators(): array
     {
-        return [
+        if (null !== $this->validatorsCache) {
+            return $this->validatorsCache;
+        }
+
+        $this->validatorsCache = [
             new TypeValidator($this->pool),
-            new FormatValidator($this->pool, BuiltinFormats::create()),
+            new FormatValidator($this->pool, BuiltinFormats::instance()),
             new StringLengthValidator($this->pool),
             new NumericRangeValidator($this->pool),
             new ArrayLengthValidator($this->pool),
@@ -173,5 +179,7 @@ readonly class SchemaValidatorWithContext
             new ConstValidator($this->pool),
             new EnumValidator($this->pool),
         ];
+
+        return $this->validatorsCache;
     }
 }

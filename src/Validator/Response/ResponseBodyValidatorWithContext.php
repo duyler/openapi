@@ -35,7 +35,7 @@ readonly class ResponseBodyValidatorWithContext
         private readonly bool $nullableAsType = true,
         private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
     ) {
-        $formatRegistry = BuiltinFormats::create();
+        $formatRegistry = BuiltinFormats::instance();
         $this->regularSchemaValidator = new SchemaValidator($this->pool, $formatRegistry);
 
         $this->refResolver = new RefResolver();

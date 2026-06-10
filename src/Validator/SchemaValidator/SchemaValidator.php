@@ -15,22 +15,23 @@ use Override;
 
 use function assert;
 
-readonly class SchemaValidator implements SchemaValidatorInterface
+class SchemaValidator implements SchemaValidatorInterface
 {
     public readonly FormatRegistry $formatRegistry;
+    private ?ValidatorRegistryInterface $cachedRegistry = null;
 
     public function __construct(
         private readonly ValidatorPool $pool,
         ?FormatRegistry $formatRegistry = null,
         private readonly ?ValidatorRegistryInterface $registry = null,
     ) {
-        $this->formatRegistry = $formatRegistry ?? BuiltinFormats::create();
+        $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
     }
 
     #[Override]
     public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
     {
-        $registry = $this->registry ?? new DefaultValidatorRegistry($this->pool, $this->formatRegistry);
+        $registry = $this->registry ?? $this->cachedRegistry ??= new DefaultValidatorRegistry($this->pool, $this->formatRegistry);
 
         foreach ($registry->getAllValidators() as $validator) {
             assert($validator instanceof SchemaValidatorInterface);

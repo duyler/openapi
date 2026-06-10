@@ -59,7 +59,7 @@ readonly class ResponseValidatorWithContext
             $normalizedHeaders[$key] = is_array($value) ? implode(', ', $value) : $value;
         }
 
-        $formatRegistry = BuiltinFormats::create();
+        $formatRegistry = BuiltinFormats::instance();
         $schemaValidator = new SchemaValidator($this->pool, $formatRegistry);
         $headersValidator = new ResponseHeadersValidator($schemaValidator);
         $headersValidator->validate($normalizedHeaders, $responseDefinition->headers ?? null);

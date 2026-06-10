@@ -301,11 +301,6 @@
       <code><![CDATA[ValidationContext]]></code>
     </ClassMustBeFinal>
   </file>
-  <file src="src/Validator/Format/BuiltinFormats.php">
-    <ClassMustBeFinal>
-      <code><![CDATA[BuiltinFormats]]></code>
-    </ClassMustBeFinal>
-  </file>
   <file src="src/Validator/Format/FormatRegistry.php">
     <ClassMustBeFinal>
       <code><![CDATA[FormatRegistry]]></code>
