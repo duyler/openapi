@@ -63,7 +63,12 @@ readonly class NumericRangeValidator extends AbstractSchemaValidator
 
         if (null !== $schema->multipleOf) {
             if (0.0 === $schema->multipleOf) {
-                return;
+                throw new MultipleOfKeywordError(
+                    multipleOf: $schema->multipleOf,
+                    value: $data,
+                    dataPath: $dataPath,
+                    schemaPath: '/multipleOf',
+                );
             }
 
             $remainder = fmod($data, $schema->multipleOf);

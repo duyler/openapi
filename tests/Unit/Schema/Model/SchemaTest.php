@@ -183,6 +183,7 @@ final class SchemaTest extends TestCase
         $schema = new Schema(
             type: 'string',
             default: 'example',
+            hasDefault: true,
         );
 
         $serialized = $schema->jsonSerialize();
@@ -299,6 +300,7 @@ final class SchemaTest extends TestCase
         $schema = new Schema(
             type: 'string',
             const: 'fixed value',
+            hasConst: true,
         );
 
         $serialized = $schema->jsonSerialize();

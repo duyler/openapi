@@ -177,13 +177,13 @@ class NumericRangeValidatorTest extends TestCase
     }
 
     #[Test]
-    public function skip_when_multiple_of_is_zero(): void
+    public function throw_error_when_multiple_of_is_zero(): void
     {
         $schema = new Schema(type: 'number', multipleOf: 0.0);
 
-        $this->validator->validate(7, $schema);
+        $this->expectException(MultipleOfKeywordError::class);
 
-        $this->expectNotToPerformAssertions();
+        $this->validator->validate(7, $schema);
     }
 
     #[Test]

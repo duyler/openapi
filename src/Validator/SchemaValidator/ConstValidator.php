@@ -14,7 +14,7 @@ readonly class ConstValidator extends AbstractSchemaValidator
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
-        if (null === $schema->const) {
+        if (false === $schema->hasConst && null === $schema->const) {
             return;
         }
 

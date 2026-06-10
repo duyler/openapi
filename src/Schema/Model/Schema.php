@@ -36,10 +36,12 @@ readonly class Schema implements JsonSerializable
         public ?string $title = null,
         public ?string $description = null,
         public mixed $default = null,
+        public bool $hasDefault = false,
         public bool $deprecated = false,
         public string|array|null $type = null,
         public bool $nullable = false,
         public mixed $const = null,
+        public bool $hasConst = false,
         public ?float $multipleOf = null,
         public ?float $maximum = null,
         public ?float $exclusiveMaximum = null,
@@ -111,7 +113,7 @@ readonly class Schema implements JsonSerializable
             $data['description'] = $this->description;
         }
 
-        if (null !== $this->default) {
+        if ($this->hasDefault) {
             $data['default'] = $this->default;
         }
 
@@ -127,7 +129,7 @@ readonly class Schema implements JsonSerializable
             $data['nullable'] = $this->nullable;
         }
 
-        if (null !== $this->const) {
+        if ($this->hasConst) {
             $data['const'] = $this->const;
         }
 

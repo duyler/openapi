@@ -27,6 +27,19 @@ readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator
         $definedProperties = array_keys($schema->properties ?? []);
         $additionalKeys = array_diff(array_keys($data), $definedProperties);
 
+        $patternProperties = $schema->patternProperties ?? [];
+        if ([] !== $patternProperties && [] !== $additionalKeys) {
+            $additionalKeys = array_values(array_filter($additionalKeys, function (int|string $key) use ($patternProperties): bool {
+                foreach (array_keys($patternProperties) as $pattern) {
+                    if (1 === preg_match('/' . str_replace('/', '\\/', $pattern) . '/', (string) $key)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }));
+        }
+
         if ([] === $additionalKeys) {
             return;
         }

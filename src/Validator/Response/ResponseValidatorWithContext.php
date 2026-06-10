@@ -19,10 +19,10 @@ use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Psr\Http\Message\ResponseInterface;
+use Duyler\OpenApi\Validator\Exception\UndefinedResponseException;
 use Duyler\OpenApi\Schema\Model\Response;
 
 use function is_array;
-use function assert;
 
 readonly class ResponseValidatorWithContext
 {
@@ -63,7 +63,9 @@ readonly class ResponseValidatorWithContext
 
         $responseDefinition = $this->resolveResponseRef($responseDefinition);
 
-        assert($responseDefinition instanceof Response, 'Response definition must be Response instance');
+        if (!$responseDefinition instanceof Response) {
+            throw new UndefinedResponseException($statusCode, array_keys($responses));
+        }
 
         $headers = $response->getHeaders();
         $normalizedHeaders = [];

@@ -102,7 +102,7 @@ readonly class ValidatorCompiler
         $checks = [];
         foreach ($types as $t) {
             $function = $this->getTypeCheckFunction($t);
-            $checks[] = sprintf('%s($data)', $function);
+            $checks[] = $this->buildTypeCheckExpression($function, '$data');
         }
 
         if (count($checks) === 0) {
@@ -141,11 +141,11 @@ readonly class ValidatorCompiler
         $conditions = [];
 
         if (null !== $schema->minLength) {
-            $conditions[] = sprintf('strlen($data) < %d', $schema->minLength);
+            $conditions[] = sprintf('mb_strlen($data, \'UTF-8\') < %d', $schema->minLength);
         }
 
         if (null !== $schema->maxLength) {
-            $conditions[] = sprintf('strlen($data) > %d', $schema->maxLength);
+            $conditions[] = sprintf('mb_strlen($data, \'UTF-8\') > %d', $schema->maxLength);
         }
 
         if ([] === $conditions) {
@@ -195,8 +195,9 @@ readonly class ValidatorCompiler
 
     private function generatePatternCheck(string $pattern): string
     {
-        $escapedPattern = addslashes($pattern);
-        $code = sprintf("        if (false === preg_match('%s', (string) \$data)) {\n", $escapedPattern);
+        $delimitedPattern = '/' . str_replace('/', '\\/', $pattern) . '/';
+        $escapedPattern = var_export($delimitedPattern, true);
+        $code = sprintf("        if (false === preg_match(%s, (string) \$data)) {\n", $escapedPattern);
         $code .= "            throw new \\RuntimeException('Pattern validation failed');\n";
         $code .= "        }\n\n";
 
@@ -207,7 +208,7 @@ readonly class ValidatorCompiler
     {
         return match ($type) {
             'string' => 'is_string',
-            'number' => 'is_float',
+            'number' => 'is_number',
             'integer' => 'is_int',
             'boolean' => 'is_bool',
             'array' => 'is_array',
@@ -290,7 +291,7 @@ readonly class ValidatorCompiler
         foreach ($types as $t) {
             $typeStr = (string) $t;
             $function = $this->getTypeCheckFunction($typeStr);
-            $checks[] = sprintf('%s(%s)', $function, $valueVar);
+            $checks[] = $this->buildTypeCheckExpression($function, $valueVar);
         }
 
         if (count($checks) === 0) {
@@ -308,6 +309,15 @@ readonly class ValidatorCompiler
         $code .= "        }\n";
 
         return $code;
+    }
+
+    private function buildTypeCheckExpression(string $function, string $variable): string
+    {
+        if ('is_number' === $function) {
+            return sprintf('(is_float(%s) || is_int(%s))', $variable, $variable);
+        }
+
+        return sprintf('%s(%s)', $function, $variable);
     }
 
     private function generateArrayCheck(Schema $schema): string

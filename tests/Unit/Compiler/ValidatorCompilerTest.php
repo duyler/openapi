@@ -56,7 +56,7 @@ final class ValidatorCompilerTest extends TestCase
         $schema = new Schema(type: 'string', minLength: 1, maxLength: 100);
         $code = $compiler->compile($schema, 'LengthValidator');
 
-        $this->assertStringContainsString('strlen($data)', $code);
+        $this->assertStringContainsString("mb_strlen(\$data, 'UTF-8')", $code);
     }
 
     #[Test]
@@ -95,7 +95,7 @@ final class ValidatorCompilerTest extends TestCase
         $code = $compiler->compile($schema, 'AllValidators');
 
         $this->assertStringContainsString('is_string($data)', $code);
-        $this->assertStringContainsString('strlen($data)', $code);
+        $this->assertStringContainsString("mb_strlen(\$data, 'UTF-8')", $code);
         $this->assertStringContainsString('preg_match', $code);
         $this->assertStringContainsString('in_array($data', $code);
     }
@@ -574,8 +574,8 @@ final class ValidatorCompilerTest extends TestCase
 
         $code = $compiler->compile($schema, 'AllStringConstraintsValidator');
 
-        $this->assertStringContainsString('strlen($data) < 5', $code);
-        $this->assertStringContainsString('strlen($data) > 100', $code);
+        $this->assertStringContainsString("mb_strlen(\$data, 'UTF-8') < 5", $code);
+        $this->assertStringContainsString("mb_strlen(\$data, 'UTF-8') > 100", $code);
         $this->assertStringContainsString('preg_match', $code);
     }
 
@@ -634,6 +634,7 @@ final class ValidatorCompilerTest extends TestCase
 
         $this->assertStringContainsString('is_string($data)', $compiler->compile($stringSchema, 'StringType'));
         $this->assertStringContainsString('is_float($data)', $compiler->compile($numberSchema, 'NumberType'));
+        $this->assertStringContainsString('is_int($data)', $compiler->compile($numberSchema, 'NumberType'));
         $this->assertStringContainsString('is_int($data)', $compiler->compile($integerSchema, 'IntegerType'));
         $this->assertStringContainsString('is_bool($data)', $compiler->compile($booleanSchema, 'BooleanType'));
         $this->assertStringContainsString('is_array($data)', $compiler->compile($arraySchema, 'ArrayType'));
@@ -651,6 +652,7 @@ final class ValidatorCompilerTest extends TestCase
 
         $this->assertStringContainsString('is_string($data)', $code);
         $this->assertStringContainsString('is_float($data)', $code);
+        $this->assertStringContainsString('is_int($data)', $code);
         $this->assertStringContainsString('is_bool($data)', $code);
         $this->assertStringContainsString('is_null($data)', $code);
     }

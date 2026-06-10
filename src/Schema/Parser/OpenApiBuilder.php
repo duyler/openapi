@@ -49,6 +49,8 @@ use function is_string;
 use function assert;
 use function sprintf;
 
+use function array_key_exists;
+
 use const FILTER_VALIDATE_URL;
 
 abstract class OpenApiBuilder implements SchemaParserInterface
@@ -336,10 +338,12 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             title: TypeHelper::asStringOrNull($data['title'] ?? null),
             description: TypeHelper::asStringOrNull($data['description'] ?? null),
             default: $data['default'] ?? null,
+            hasDefault: array_key_exists('default', $data),
             deprecated: (bool) ($data['deprecated'] ?? false),
             type: TypeHelper::asStringOrNull($data['type'] ?? null),
             nullable: (bool) ($data['nullable'] ?? false),
             const: $data['const'] ?? null,
+            hasConst: array_key_exists('const', $data),
             multipleOf: TypeHelper::asFloatOrNull($data['multipleOf'] ?? null),
             maximum: TypeHelper::asFloatOrNull($data['maximum'] ?? null),
             exclusiveMaximum: TypeHelper::asFloatOrNull($data['exclusiveMaximum'] ?? null),

@@ -12,6 +12,7 @@ use function is_float;
 use function is_int;
 use function is_numeric;
 use function is_string;
+use function in_array;
 use function is_array;
 use function is_object;
 use function get_object_vars;
@@ -19,12 +20,24 @@ use function get_object_vars;
 readonly class TypeCoercer
 {
     /**
-     * @return array<array-key, mixed>|int|string|float|bool
+     * @return array<array-key, mixed>|int|string|float|bool|null
      */
-    public function coerce(mixed $value, Parameter $param, bool $enabled, bool $strict = false): array|int|string|float|bool
+    public function coerce(mixed $value, Parameter $param, bool $enabled, bool $strict = false): array|int|string|float|bool|null
     {
         if (null === $value) {
-            $value = '';
+            if (null !== $param->schema && null !== $param->schema->type) {
+                $types = is_array($param->schema->type) ? $param->schema->type : [$param->schema->type];
+                if (in_array('null', $types, true) || $param->schema->nullable) {
+                    return null;
+                }
+            }
+
+            throw new TypeMismatchError(
+                expected: 'non-null',
+                actual: 'null',
+                dataPath: '',
+                schemaPath: '/type',
+            );
         }
 
         if (false === $enabled || null === $param->schema) {
