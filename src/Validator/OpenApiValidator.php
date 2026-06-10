@@ -49,6 +49,10 @@ use function sprintf;
 
 readonly class OpenApiValidator implements OpenApiValidatorInterface
 {
+    private readonly RequestValidator $requestValidator;
+    private readonly ResponseValidatorWithContext $responseValidator;
+    private readonly RefResolver $refResolver;
+
     public function __construct(
         public readonly OpenApiDocument $document,
         public readonly ValidatorPool $pool,
@@ -61,7 +65,11 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
         public readonly bool $nullableAsType = true,
         public readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         public readonly ?EventDispatcherInterface $eventDispatcher = null,
-    ) {}
+    ) {
+        $this->requestValidator = $this->buildRequestValidator();
+        $this->responseValidator = $this->buildResponseValidator();
+        $this->refResolver = new RefResolver();
+    }
 
     /**
      * Validate HTTP request against OpenAPI specification and return matched operation.
@@ -101,8 +109,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
                 );
             }
 
-            $requestValidator = $this->createRequestValidator();
-            $requestValidator->validate($request, $op, $operation->path);
+            $this->requestValidator->validate($request, $op, $operation->path);
 
             $this->eventDispatcher?->dispatch(
                 new ValidationFinishedEvent(
@@ -163,8 +170,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
             );
         }
 
-        $responseValidator = $this->createResponseValidator();
-        $responseValidator->validate($response, $op);
+        $this->responseValidator->validate($response, $op);
     }
 
     #[Override]
@@ -217,7 +223,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
         return null;
     }
 
-    private function createRequestValidator(): RequestValidator
+    private function buildRequestValidator(): RequestValidator
     {
         $deserializer = new ParameterDeserializer();
         $coercer = new TypeCoercer();
@@ -274,7 +280,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
         );
     }
 
-    private function createResponseValidator(): ResponseValidatorWithContext
+    private function buildResponseValidator(): ResponseValidatorWithContext
     {
         return new ResponseValidatorWithContext(
             pool: $this->pool,
@@ -302,8 +308,6 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
      */
     private function resolveSchema(string $ref): Schema
     {
-        $resolver = new RefResolver();
-
-        return $resolver->resolve($ref, $this->document);
+        return $this->refResolver->resolve($ref, $this->document);
     }
 }
