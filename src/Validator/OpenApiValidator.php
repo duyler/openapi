@@ -46,6 +46,8 @@ use Override;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 use function sprintf;
 
@@ -55,6 +57,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
     private readonly ResponseValidatorWithContext $responseValidator;
     private readonly RefResolver $refResolver;
     private readonly WebhookValidator $webhookValidator;
+    private readonly LoggerInterface $logger;
 
     public function __construct(
         public readonly OpenApiDocument $document,
@@ -63,28 +66,19 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
         public readonly ErrorFormatterInterface $errorFormatter,
         private readonly PathFinder $pathFinder,
         public readonly ?object $cache = null,
-        public readonly ?object $logger = null,
+        ?LoggerInterface $logger = null,
         public readonly bool $coercion = false,
         public readonly bool $nullableAsType = true,
         public readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         public readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {
+        $this->logger = $logger ?? new NullLogger();
         $this->requestValidator = $this->buildRequestValidator();
         $this->responseValidator = $this->buildResponseValidator();
         $this->refResolver = new RefResolver();
         $this->webhookValidator = new WebhookValidator($this->requestValidator);
     }
 
-    /**
-     * Validate HTTP request against OpenAPI specification and return matched operation.
-     *
-     * @param ServerRequestInterface $request PSR-7 HTTP request
-     * @return Operation Matched operation from OpenAPI specification
-     * @throws ValidationException|BuilderException If validation fails
-     *
-     * @example
-     * $operation = $validator->validateRequest($request);
-     */
     #[Override]
     public function validateRequest(
         ServerRequestInterface $request,
@@ -94,8 +88,8 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
         $requestPath = $request->getUri()->getPath();
         $method = $request->getMethod();
 
-        $this->eventDispatcher?->dispatch(
-            new ValidationStartedEvent($request, $requestPath, $method),
+        $this->dispatchValidationEvent(
+            new ValidationStartedEvent(request: $request, path: $requestPath, method: $method),
         );
 
         try {
@@ -113,80 +107,190 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
                 );
             }
 
+            $this->logger->info(sprintf('Validating request: %s %s', $method, $requestPath));
+
             $this->requestValidator->validate($request, $op, $operation->path);
 
-            $this->eventDispatcher?->dispatch(
+            $this->dispatchValidationEvent(
                 new ValidationFinishedEvent(
-                    $request,
-                    $operation->path,
-                    $operation->method,
-                    true,
-                    microtime(true) - $startTime,
+                    request: $request,
+                    path: $operation->path,
+                    method: $operation->method,
+                    success: true,
+                    duration: microtime(true) - $startTime,
                 ),
             );
 
             return $operation;
-        } catch (BuilderException|ValidationException $e) {
-            $this->eventDispatcher?->dispatch(
+        } catch (BuilderException $e) {
+            $this->dispatchValidationEvent(
                 new ValidationFinishedEvent(
-                    $request,
-                    $requestPath,
-                    $method,
-                    false,
-                    microtime(true) - $startTime,
+                    request: $request,
+                    path: $requestPath,
+                    method: $method,
+                    success: false,
+                    duration: microtime(true) - $startTime,
                 ),
             );
 
-            if ($e instanceof ValidationException) {
-                $this->eventDispatcher?->dispatch(
-                    new ValidationErrorEvent($request, $requestPath, $method, $e),
-                );
-            }
+            throw $e;
+        } catch (ValidationException $e) {
+            $this->dispatchValidationEvent(
+                new ValidationFinishedEvent(
+                    request: $request,
+                    path: $requestPath,
+                    method: $method,
+                    success: false,
+                    duration: microtime(true) - $startTime,
+                ),
+            );
+
+            $this->logger->warning(sprintf('Request validation failed: %s %s', $method, $requestPath));
+
+            $this->dispatchValidationEvent(
+                new ValidationErrorEvent(request: $request, path: $requestPath, method: $method, exception: $e),
+            );
             throw $e;
         }
     }
 
-    /**
-     * Validate HTTP response against OpenAPI specification.
-     *
-     * @param ResponseInterface $response PSR-7 HTTP response
-     * @param Operation $operation Operation to validate against
-     * @return void
-     * @throws ValidationException If validation fails
-     *
-     * @example
-     * $validator->validateResponse($response, $operation);
-     */
     #[Override]
     public function validateResponse(
         ResponseInterface $response,
         Operation $operation,
     ): void {
-        $pathItem = $this->document->paths?->paths[$operation->path] ?? null;
-        if (null === $pathItem) {
-            throw new BuilderException(sprintf('Path not found: %s', $operation->path));
-        }
+        $startTime = microtime(true);
 
-        $op = $this->getOperationFromPathItem($pathItem, $operation->method);
-        if (null === $op) {
-            throw new BuilderException(
-                sprintf('Method not found: %s %s', $operation->method, $operation->path),
+        $this->dispatchValidationEvent(
+            new ValidationStartedEvent(path: $operation->path, method: $operation->method, response: $response),
+        );
+
+        try {
+            $pathItem = $this->document->paths?->paths[$operation->path] ?? null;
+            if (null === $pathItem) {
+                throw new BuilderException(sprintf('Path not found: %s', $operation->path));
+            }
+
+            $op = $this->getOperationFromPathItem($pathItem, $operation->method);
+            if (null === $op) {
+                throw new BuilderException(
+                    sprintf('Method not found: %s %s', $operation->method, $operation->path),
+                );
+            }
+
+            $this->logger->info(sprintf('Validating response: %s %s', $operation->method, $operation->path));
+
+            $this->responseValidator->validate($response, $op);
+
+            $this->dispatchValidationEvent(
+                new ValidationFinishedEvent(
+                    path: $operation->path,
+                    method: $operation->method,
+                    success: true,
+                    duration: microtime(true) - $startTime,
+                    response: $response,
+                ),
             );
-        }
+        } catch (BuilderException $e) {
+            $this->dispatchValidationEvent(
+                new ValidationFinishedEvent(
+                    path: $operation->path,
+                    method: $operation->method,
+                    success: false,
+                    duration: microtime(true) - $startTime,
+                    response: $response,
+                ),
+            );
 
-        $this->responseValidator->validate($response, $op);
+            throw $e;
+        } catch (ValidationException $e) {
+            $this->dispatchValidationEvent(
+                new ValidationFinishedEvent(
+                    path: $operation->path,
+                    method: $operation->method,
+                    success: false,
+                    duration: microtime(true) - $startTime,
+                    response: $response,
+                ),
+            );
+
+            $this->logger->warning(sprintf('Response validation failed: %s %s', $operation->method, $operation->path));
+
+            $this->dispatchValidationEvent(
+                new ValidationErrorEvent(
+                    path: $operation->path,
+                    method: $operation->method,
+                    exception: $e,
+                    response: $response,
+                ),
+            );
+            throw $e;
+        }
     }
 
     #[Override]
     public function validateSchema(mixed $data, string $schemaRef): void
     {
-        $schema = $this->resolveSchema($schemaRef);
-        $context = $this->createValidationContext();
+        $startTime = microtime(true);
 
-        $validator = new SchemaValidator($this->pool, $this->formatRegistry);
+        $this->dispatchValidationEvent(
+            new ValidationStartedEvent(path: $schemaRef, method: 'SCHEMA', schemaRef: $schemaRef),
+        );
 
-        /** @var array<array-key, mixed>|array-key $data */
-        $validator->validate($data, $schema);
+        try {
+            $schema = $this->resolveSchema($schemaRef);
+
+            $this->logger->info(sprintf('Validating schema: %s', $schemaRef));
+
+            $validator = new SchemaValidator($this->pool, $this->formatRegistry);
+
+            /** @var array<array-key, mixed>|array-key $data */
+            $validator->validate($data, $schema);
+
+            $this->dispatchValidationEvent(
+                new ValidationFinishedEvent(
+                    path: $schemaRef,
+                    method: 'SCHEMA',
+                    success: true,
+                    duration: microtime(true) - $startTime,
+                    schemaRef: $schemaRef,
+                ),
+            );
+        } catch (BuilderException $e) {
+            $this->dispatchValidationEvent(
+                new ValidationFinishedEvent(
+                    path: $schemaRef,
+                    method: 'SCHEMA',
+                    success: false,
+                    duration: microtime(true) - $startTime,
+                    schemaRef: $schemaRef,
+                ),
+            );
+
+            throw $e;
+        } catch (ValidationException $e) {
+            $this->dispatchValidationEvent(
+                new ValidationFinishedEvent(
+                    path: $schemaRef,
+                    method: 'SCHEMA',
+                    success: false,
+                    duration: microtime(true) - $startTime,
+                    schemaRef: $schemaRef,
+                ),
+            );
+
+            $this->logger->warning(sprintf('Schema validation failed: %s', $schemaRef));
+
+            $this->dispatchValidationEvent(
+                new ValidationErrorEvent(
+                    path: $schemaRef,
+                    method: 'SCHEMA',
+                    exception: $e,
+                    schemaRef: $schemaRef,
+                ),
+            );
+            throw $e;
+        }
     }
 
     #[Override]
@@ -195,15 +299,6 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
         return $this->errorFormatter->formatMultiple($e->getErrors());
     }
 
-    /**
-     * Validate webhook request against OpenAPI specification and return matched operation.
-     *
-     * @param ServerRequestInterface $request PSR-7 HTTP request
-     * @param string $webhookName Webhook name from OpenAPI specification
-     * @return Operation Matched operation from OpenAPI specification
-     * @throws ValidationException If validation fails
-     * @throws UnknownWebhookException If webhook not found in specification
-     */
     #[Override]
     public function validateWebhook(
         ServerRequestInterface $request,
@@ -213,8 +308,8 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
 
         $method = $request->getMethod();
 
-        $this->eventDispatcher?->dispatch(
-            new ValidationStartedEvent($request, $webhookName, $method),
+        $this->dispatchValidationEvent(
+            new ValidationStartedEvent(request: $request, path: $webhookName, method: $method),
         );
 
         try {
@@ -222,35 +317,40 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
 
             $operation = new Operation($webhookName, $method);
 
-            $this->eventDispatcher?->dispatch(
+            $this->dispatchValidationEvent(
                 new ValidationFinishedEvent(
-                    $request,
-                    $webhookName,
-                    $method,
-                    true,
-                    microtime(true) - $startTime,
+                    request: $request,
+                    path: $webhookName,
+                    method: $method,
+                    success: true,
+                    duration: microtime(true) - $startTime,
                 ),
             );
 
             return $operation;
         } catch (ValidationException|UnknownWebhookException $e) {
-            $this->eventDispatcher?->dispatch(
+            $this->dispatchValidationEvent(
                 new ValidationFinishedEvent(
-                    $request,
-                    $webhookName,
-                    $method,
-                    false,
-                    microtime(true) - $startTime,
+                    request: $request,
+                    path: $webhookName,
+                    method: $method,
+                    success: false,
+                    duration: microtime(true) - $startTime,
                 ),
             );
 
             if ($e instanceof ValidationException) {
-                $this->eventDispatcher?->dispatch(
-                    new ValidationErrorEvent($request, $webhookName, $method, $e),
+                $this->dispatchValidationEvent(
+                    new ValidationErrorEvent(request: $request, path: $webhookName, method: $method, exception: $e),
                 );
             }
             throw $e;
         }
+    }
+
+    private function dispatchValidationEvent(object $event): void
+    {
+        $this->eventDispatcher?->dispatch($event);
     }
 
     private function getOperationFromPathItem(PathItem $pathItem, string $method): ?OperationModel
@@ -333,6 +433,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
             bodyValidator: new RequestBodyValidatorWithContext(
                 pool: $this->pool,
                 document: $this->document,
+                formatRegistry: $this->formatRegistry,
                 negotiator: new ContentTypeNegotiator(),
                 bodyParser: $bodyParser,
                 nullableAsType: $this->nullableAsType,
@@ -347,6 +448,7 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
         return new ResponseValidatorWithContext(
             pool: $this->pool,
             document: $this->document,
+            formatRegistry: $this->formatRegistry,
             coercion: $this->coercion,
             statusCodeValidator: new StatusCodeValidator(),
             nullableAsType: $this->nullableAsType,
@@ -365,11 +467,10 @@ readonly class OpenApiValidator implements OpenApiValidatorInterface
         );
     }
 
-    /**
-     * @throws BuilderException
-     */
     private function resolveSchema(string $ref): Schema
     {
+        $this->logger->info(sprintf('Resolving schema ref: %s', $ref));
+
         return $this->refResolver->resolve($ref, $this->document);
     }
 }

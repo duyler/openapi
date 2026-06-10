@@ -11,6 +11,8 @@ use Duyler\OpenApi\Validator\Exception\DiscriminatorMismatchException;
 use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
 use function array_key_exists;
@@ -20,10 +22,15 @@ use function assert;
 
 readonly class DiscriminatorValidator
 {
+    private readonly FormatRegistry $formatRegistry;
+
     public function __construct(
         private readonly RefResolverInterface $refResolver,
         private readonly ValidatorPool $pool,
-    ) {}
+        ?FormatRegistry $formatRegistry = null,
+    ) {
+        $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
+    }
 
     public function validate(
         array|int|string|float|bool $data,
@@ -181,7 +188,7 @@ readonly class DiscriminatorValidator
         string $dataPath,
     ): void {
         /** @var array<array-key, mixed> $data */
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->formatRegistry);
         $validator->validate($data, $schema, useDiscriminator: false);
     }
 }

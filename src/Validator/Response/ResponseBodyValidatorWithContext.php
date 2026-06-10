@@ -8,6 +8,8 @@ use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
@@ -16,18 +18,19 @@ use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\TypeGuarantor;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
-use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 
 readonly class ResponseBodyValidatorWithContext
 {
     private SchemaValidator $regularSchemaValidator;
     private SchemaValidatorWithContext $contextSchemaValidator;
     private RefResolver $refResolver;
+    private readonly FormatRegistry $formatRegistry;
 
     public function __construct(
         private readonly ValidatorPool $pool,
         private readonly OpenApiDocument $document,
         private readonly BodyParser $bodyParser,
+        ?FormatRegistry $formatRegistry = null,
         private readonly ContentTypeNegotiator $negotiator = new ContentTypeNegotiator(),
         private readonly ResponseTypeCoercer $typeCoercer = new ResponseTypeCoercer(),
         private readonly StreamingContentParser $streamingParser = new StreamingContentParser(),
@@ -35,11 +38,11 @@ readonly class ResponseBodyValidatorWithContext
         private readonly bool $nullableAsType = true,
         private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
     ) {
-        $formatRegistry = BuiltinFormats::instance();
-        $this->regularSchemaValidator = new SchemaValidator($this->pool, $formatRegistry);
+        $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
+        $this->regularSchemaValidator = new SchemaValidator($this->pool, $this->formatRegistry);
 
         $this->refResolver = new RefResolver();
-        $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->nullableAsType, $this->emptyArrayStrategy);
+        $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry, $this->nullableAsType, $this->emptyArrayStrategy);
     }
 
     public function validate(

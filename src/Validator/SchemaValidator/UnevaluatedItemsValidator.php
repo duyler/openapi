@@ -32,7 +32,7 @@ readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator
 
         foreach ($unevaluatedItems as $item) {
             /** @var array-key|array<array-key, mixed> $item */
-            $validator = new SchemaValidator($this->pool);
+            $validator = new SchemaValidator($this->pool, $this->formatRegistry);
             $nullableAsType = $context?->nullableAsType ?? true;
             $itemContext = $context ?? ValidationContext::create($this->pool, $nullableAsType);
             $validator->validate($item, $schema->unevaluatedItems, $itemContext);

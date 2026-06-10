@@ -17,6 +17,7 @@ use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Response\ResponseBodyValidatorWithContext;
 use Duyler\OpenApi\Validator\Response\ResponseTypeCoercer;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -53,6 +54,7 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             pool: $pool,
             document: $document,
             bodyParser: $bodyParser,
+            formatRegistry: BuiltinFormats::create(),
             negotiator: $negotiator,
             typeCoercer: $typeCoercer,
             coercion: false,
@@ -307,6 +309,7 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             pool: $pool,
             document: $document,
             bodyParser: $bodyParser,
+            formatRegistry: BuiltinFormats::create(),
             negotiator: $negotiator,
             typeCoercer: $typeCoercer,
             coercion: true,

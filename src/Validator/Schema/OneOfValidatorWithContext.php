@@ -9,6 +9,8 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
 use Exception;
@@ -18,11 +20,16 @@ use function assert;
 
 readonly class OneOfValidatorWithContext
 {
+    private readonly FormatRegistry $formatRegistry;
+
     public function __construct(
         private readonly ValidatorPool $pool,
         private readonly RefResolverInterface $refResolver,
         private readonly OpenApiDocument $document,
-    ) {}
+        ?FormatRegistry $formatRegistry = null,
+    ) {
+        $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
+    }
 
     public function validateWithContext(
         mixed $data,
@@ -62,21 +69,15 @@ readonly class OneOfValidatorWithContext
             );
         }
 
-        $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool);
+        $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool, $this->formatRegistry);
         $dataPath = $context->breadcrumbs->currentPath();
 
         $discriminatorValidator->validate($data, $schema, $this->document, $dataPath);
     }
 
-    /**
-     * Check if any schema in oneOf is nullable
-     *
-     * @param array<int, Schema> $oneOf
-     * @return bool
-     */
     private function hasNullableSchema(array $oneOf): bool
     {
-        return array_any($oneOf, fn($subSchema) => $subSchema->nullable);
+        return array_any($oneOf, fn(Schema $subSchema): bool => $subSchema->nullable);
     }
 
     private function validateWithoutDiscriminator(mixed $data, array $oneOf, ValidationContext $context): void
@@ -93,7 +94,7 @@ readonly class OneOfValidatorWithContext
             try {
                 $allowNull = $subSchema->nullable && $context->nullableAsType;
                 $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
-                $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $context->nullableAsType);
+                $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry, $context->nullableAsType);
                 $validator->validateWithContext($normalizedData, $subSchema, $context);
                 ++$validCount;
             } catch (Exception $e) {

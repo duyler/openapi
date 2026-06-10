@@ -11,9 +11,10 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\ValidatorPool;
-use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\AdditionalPropertiesValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\AllOfValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\AnyOfValidator;
@@ -46,18 +47,19 @@ class SchemaValidatorWithContext
     private const int MAX_SCHEMA_DEPTH = 64;
 
     private ?array $validatorsCache = null;
+    private readonly FormatRegistry $formatRegistry;
 
     public function __construct(
         private readonly ValidatorPool $pool,
         private readonly RefResolverInterface $refResolver,
         private readonly OpenApiDocument $document,
+        ?FormatRegistry $formatRegistry = null,
         private readonly bool $nullableAsType = true,
         private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
-    ) {}
+    ) {
+        $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
+    }
 
-    /**
-     * Validate data with ValidationContext for breadcrumb tracking
-     */
     public function validate(array|int|string|float|bool|null $data, Schema $schema, bool $useDiscriminator = true): void
     {
         $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy);
@@ -65,7 +67,7 @@ class SchemaValidatorWithContext
         $schema = $this->resolveRef($schema);
 
         if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
-            $oneOfValidator = new OneOfValidatorWithContext($this->pool, $this->refResolver, $this->document);
+            $oneOfValidator = new OneOfValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry);
             $oneOfValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
             return;
         }
@@ -73,7 +75,7 @@ class SchemaValidatorWithContext
         if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
             $this->validateInternal($data, $schema, $context);
 
-            $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool);
+            $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool, $this->formatRegistry);
             $discriminatorValidator->validate($data, $schema, $this->document);
 
             $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
@@ -85,9 +87,6 @@ class SchemaValidatorWithContext
         $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
     }
 
-    /**
-     * Validate data with existing ValidationContext for breadcrumb tracking
-     */
     public function validateWithContext(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
     {
         $this->checkDepth($context);
@@ -97,7 +96,7 @@ class SchemaValidatorWithContext
         $schema = $this->resolveRef($schema);
 
         if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
-            $oneOfValidator = new OneOfValidatorWithContext($this->pool, $this->refResolver, $this->document);
+            $oneOfValidator = new OneOfValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry);
             $oneOfValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
             return;
         }
@@ -105,7 +104,7 @@ class SchemaValidatorWithContext
         if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
             $this->validateInternal($data, $schema, $context);
 
-            $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool);
+            $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool, $this->formatRegistry);
             $discriminatorValidator->validate($data, $schema, $this->document);
 
             $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
@@ -131,12 +130,12 @@ class SchemaValidatorWithContext
         bool $useDiscriminator,
     ): void {
         if (null !== $schema->properties && [] !== $schema->properties && is_array($data)) {
-            $propertiesValidator = new PropertiesValidatorWithContext($this->pool, $this->refResolver, $this->document);
+            $propertiesValidator = new PropertiesValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry);
             $propertiesValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
         }
 
         if (null !== $schema->items && is_array($data)) {
-            $itemsValidator = new ItemsValidatorWithContext($this->pool, $this->refResolver, $this->document);
+            $itemsValidator = new ItemsValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry);
             $itemsValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
         }
     }
@@ -178,29 +177,29 @@ class SchemaValidatorWithContext
         }
 
         $this->validatorsCache = [
-            new TypeValidator($this->pool),
-            new FormatValidator($this->pool, BuiltinFormats::instance()),
-            new StringLengthValidator($this->pool),
-            new NumericRangeValidator($this->pool),
-            new ArrayLengthValidator($this->pool),
-            new ObjectLengthValidator($this->pool),
-            new PatternValidator($this->pool),
-            new AllOfValidator($this->pool),
-            new AnyOfValidator($this->pool),
-            new NotValidator($this->pool),
-            new IfThenElseValidator($this->pool),
-            new RequiredValidator($this->pool),
-            new AdditionalPropertiesValidator($this->pool),
-            new PropertyNamesValidator($this->pool),
-            new UnevaluatedPropertiesValidator($this->pool),
-            new PatternPropertiesValidator($this->pool),
-            new DependentSchemasValidator($this->pool),
-            new PrefixItemsValidator($this->pool),
-            new UnevaluatedItemsValidator($this->pool),
-            new ContainsValidator($this->pool),
-            new ContainsRangeValidator($this->pool),
-            new ConstValidator($this->pool),
-            new EnumValidator($this->pool),
+            new TypeValidator($this->pool, $this->formatRegistry),
+            new FormatValidator($this->pool, $this->formatRegistry),
+            new StringLengthValidator($this->pool, $this->formatRegistry),
+            new NumericRangeValidator($this->pool, $this->formatRegistry),
+            new ArrayLengthValidator($this->pool, $this->formatRegistry),
+            new ObjectLengthValidator($this->pool, $this->formatRegistry),
+            new PatternValidator($this->pool, $this->formatRegistry),
+            new AllOfValidator($this->pool, $this->formatRegistry),
+            new AnyOfValidator($this->pool, $this->formatRegistry),
+            new NotValidator($this->pool, $this->formatRegistry),
+            new IfThenElseValidator($this->pool, $this->formatRegistry),
+            new RequiredValidator($this->pool, $this->formatRegistry),
+            new AdditionalPropertiesValidator($this->pool, $this->formatRegistry),
+            new PropertyNamesValidator($this->pool, $this->formatRegistry),
+            new UnevaluatedPropertiesValidator($this->pool, $this->formatRegistry),
+            new PatternPropertiesValidator($this->pool, $this->formatRegistry),
+            new DependentSchemasValidator($this->pool, $this->formatRegistry),
+            new PrefixItemsValidator($this->pool, $this->formatRegistry),
+            new UnevaluatedItemsValidator($this->pool, $this->formatRegistry),
+            new ContainsValidator($this->pool, $this->formatRegistry),
+            new ContainsRangeValidator($this->pool, $this->formatRegistry),
+            new ConstValidator($this->pool, $this->formatRegistry),
+            new EnumValidator($this->pool, $this->formatRegistry),
         ];
 
         return $this->validatorsCache;

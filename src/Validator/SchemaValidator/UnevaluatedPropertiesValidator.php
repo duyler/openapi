@@ -32,7 +32,7 @@ readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValidator
         $stringUnevaluatedProperties = array_filter($unevaluatedProperties, is_string(...));
 
         if ($schema->unevaluatedProperties instanceof Schema) {
-            $validator = new SchemaValidator($this->pool);
+            $validator = new SchemaValidator($this->pool, $this->formatRegistry);
             $nullableAsType = $context?->nullableAsType ?? true;
 
             foreach ($stringUnevaluatedProperties as $propertyName) {

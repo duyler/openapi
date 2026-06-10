@@ -30,7 +30,7 @@ readonly class PrefixItemsValidator extends AbstractSchemaValidator
         }
 
         $nullableAsType = $context?->nullableAsType ?? true;
-        $validator = new SchemaValidator($this->pool);
+        $validator = new SchemaValidator($this->pool, $this->formatRegistry);
 
         $count = min(count($data), count($schema->prefixItems));
 

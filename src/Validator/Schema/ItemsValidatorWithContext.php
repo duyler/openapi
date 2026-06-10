@@ -13,6 +13,8 @@ use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
 use function count;
@@ -20,11 +22,16 @@ use function sprintf;
 
 readonly class ItemsValidatorWithContext
 {
+    private readonly FormatRegistry $formatRegistry;
+
     public function __construct(
         private readonly ValidatorPool $pool,
         private readonly RefResolverInterface $refResolver,
         private readonly OpenApiDocument $document,
-    ) {}
+        ?FormatRegistry $formatRegistry = null,
+    ) {
+        $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
+    }
 
     public function validateWithContext(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
     {
@@ -42,7 +49,7 @@ readonly class ItemsValidatorWithContext
 
                 $allowNull = $itemSchema->nullable && $context->nullableAsType;
                 $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
-                $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
+                $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry);
                 $validator->validateWithContext($normalizedItem, $itemSchema, $itemContext, $useDiscriminator);
             } catch (DiscriminatorMismatchException|
                 InvalidDiscriminatorValueException|

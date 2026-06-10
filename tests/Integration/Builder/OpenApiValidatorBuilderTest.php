@@ -15,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\NullLogger;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\OpenApiDocument;
@@ -147,7 +148,7 @@ JSON;
     public function use_custom_logger(): void
     {
         $yaml = "openapi: 3.0.3\ninfo:\n  title: Test\n  version: 1.0.0\npaths: []";
-        $logger = new class {};
+        $logger = new NullLogger();
 
         $builder = OpenApiValidatorBuilder::create()
             ->fromYamlString($yaml)
@@ -238,7 +239,7 @@ JSON;
 
         $builder1 = OpenApiValidatorBuilder::create()->fromYamlString($yaml);
         $builder2 = $builder1->enableCoercion();
-        $builder3 = $builder2->withLogger(new class {});
+        $builder3 = $builder2->withLogger(new NullLogger());
 
         $this->assertNotSame($builder1, $builder2);
         $this->assertNotSame($builder2, $builder3);
@@ -415,7 +416,7 @@ JSON;
         $yaml = "openapi: 3.0.3\ninfo:\n  title: Test\n  version: 1.0.0\npaths: []";
         $pool = new ValidatorPool();
         $formatter = new DetailedFormatter();
-        $logger = new class {};
+        $logger = new NullLogger();
 
         $cacheItem = $this->createStub(CacheItemInterface::class);
         $cacheItem

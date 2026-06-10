@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Builder;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Cache\SchemaCache;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Schema\Parser\DeprecationLogger;
 use Duyler\OpenApi\Schema\Parser\JsonParser;
 use Duyler\OpenApi\Schema\Parser\YamlParser;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
@@ -20,6 +21,8 @@ use Duyler\OpenApi\Validator\PathFinder;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Exception;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 use function sprintf;
 
@@ -31,7 +34,7 @@ final readonly class OpenApiValidatorBuilder
         protected ?string $specType = null,
         protected ?ValidatorPool $pool = null,
         protected ?SchemaCache $cache = null,
-        protected ?object $logger = null,
+        protected ?LoggerInterface $logger = null,
         protected ?FormatRegistry $formatRegistry = null,
         protected bool $coercion = false,
         protected bool $nullableAsType = true,
@@ -149,7 +152,7 @@ final readonly class OpenApiValidatorBuilder
         );
     }
 
-    public function withLogger(object $logger): self
+    public function withLogger(LoggerInterface $logger): self
     {
         return new self(
             specPath: $this->specPath,
@@ -323,9 +326,6 @@ final readonly class OpenApiValidatorBuilder
         );
     }
 
-    /**
-     * @throws BuilderException
-     */
     private function loadSpec(): OpenApiDocument
     {
         if (null !== $this->specPath) {
@@ -341,9 +341,6 @@ final readonly class OpenApiValidatorBuilder
         );
     }
 
-    /**
-     * @throws BuilderException
-     */
     private function loadSpecFromFile(): OpenApiDocument
     {
         if (null === $this->specPath || null === $this->specType) {
@@ -378,9 +375,6 @@ final readonly class OpenApiValidatorBuilder
         return $document;
     }
 
-    /**
-     * @throws BuilderException
-     */
     private function loadSpecFromString(): OpenApiDocument
     {
         if (null === $this->specContent || null === $this->specType) {
@@ -405,20 +399,19 @@ final readonly class OpenApiValidatorBuilder
         return $document;
     }
 
-    /**
-     * @throws BuilderException
-     */
     private function parseSpec(string $content): OpenApiDocument
     {
         try {
+            $deprecationLogger = new DeprecationLogger($this->logger ?? new NullLogger());
+
             if ('yaml' === $this->specType) {
-                $parser = new YamlParser();
+                $parser = new YamlParser($deprecationLogger);
 
                 return $parser->parse($content);
             }
 
             if ('json' === $this->specType) {
-                $parser = new JsonParser();
+                $parser = new JsonParser($deprecationLogger);
 
                 return $parser->parse($content);
             }

@@ -37,7 +37,7 @@ readonly class ContainsRangeValidator extends AbstractSchemaValidator
         foreach ($data as $item) {
             try {
                 /** @var array-key|array<array-key, mixed> $item */
-                $validator = new SchemaValidator($this->pool);
+                $validator = new SchemaValidator($this->pool, $this->formatRegistry);
                 $itemContext = $context ?? ValidationContext::create($this->pool, $nullableAsType);
                 $validator->validate($item, $schema->contains, $itemContext);
                 ++$matchCount;
