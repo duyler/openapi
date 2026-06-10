@@ -7,8 +7,10 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
+use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Override;
 
+use function assert;
 use function array_filter;
 use function is_array;
 use function is_string;
@@ -79,7 +81,9 @@ readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValidator
                         continue;
                     }
 
-                    if (preg_match($pattern, $propertyName)) {
+                    $normalizedPattern = RegexValidator::normalize($pattern);
+                    assert('' !== $normalizedPattern);
+                    if (1 === preg_match($normalizedPattern, $propertyName)) {
                         $evaluated[] = $propertyName;
                     }
                 }

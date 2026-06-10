@@ -7,8 +7,10 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Override;
 
+use function assert;
 use function is_array;
 
 readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator
@@ -31,7 +33,13 @@ readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator
         if ([] !== $patternProperties && [] !== $additionalKeys) {
             $additionalKeys = array_values(array_filter($additionalKeys, function (int|string $key) use ($patternProperties): bool {
                 foreach (array_keys($patternProperties) as $pattern) {
-                    if (1 === preg_match('/' . str_replace('/', '\\/', $pattern) . '/', (string) $key)) {
+                    if ('' === $pattern) {
+                        continue;
+                    }
+
+                    $normalizedPattern = RegexValidator::normalize($pattern);
+                    assert('' !== $normalizedPattern);
+                    if (1 === preg_match($normalizedPattern, (string) $key)) {
                         return false;
                     }
                 }

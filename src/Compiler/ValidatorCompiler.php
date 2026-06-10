@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Compiler;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use RuntimeException;
 
 use function count;
@@ -195,8 +196,8 @@ readonly class ValidatorCompiler
 
     private function generatePatternCheck(string $pattern): string
     {
-        $delimitedPattern = '/' . str_replace('/', '\\/', $pattern) . '/';
-        $escapedPattern = var_export($delimitedPattern, true);
+        $normalizedPattern = RegexValidator::normalize($pattern);
+        $escapedPattern = var_export($normalizedPattern, true);
         $code = sprintf("        if (false === preg_match(%s, (string) \$data)) {\n", $escapedPattern);
         $code .= "            throw new \\RuntimeException('Pattern validation failed');\n";
         $code .= "        }\n\n";
@@ -404,12 +405,18 @@ readonly class ValidatorCompiler
         return new Schema(
             type: $schema->type,
             enum: $schema->enum,
+            default: $schema->default,
+            hasDefault: $schema->hasDefault,
+            const: $schema->const,
+            hasConst: $schema->hasConst,
+            nullable: $schema->nullable,
             minLength: $schema->minLength,
             maxLength: $schema->maxLength,
             minimum: $schema->minimum,
             maximum: $schema->maximum,
             exclusiveMinimum: $schema->exclusiveMinimum,
             exclusiveMaximum: $schema->exclusiveMaximum,
+            multipleOf: $schema->multipleOf,
             pattern: $schema->pattern,
             minItems: $schema->minItems,
             maxItems: $schema->maxItems,

@@ -41,6 +41,8 @@ use NumberRejectStringB19;
 use NumberTypeValidatorB19;
 use PatternExportValidatorB13;
 use UnicodeLengthValidatorB12;
+use Duyler\OpenApi\Schema\Model\Components;
+use Duyler\OpenApi\Validator\Schema\RefResolver;
 use stdClass;
 
 final class BugfixBatchTest extends TestCase
@@ -703,5 +705,57 @@ YAML;
             ->fromYamlString($yaml)
             ->withLogger($logger)
             ->build();
+    }
+
+    #[Test]
+    public function b14_ref_resolver_preserves_has_const_for_null(): void
+    {
+        $refResolver = new RefResolver();
+
+        $schema = new Schema(
+            ref: '#/components/schemas/NullConst',
+            hasConst: false,
+        );
+
+        $document = new OpenApiDocument(
+            openapi: '3.0.3',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'NullConst' => new Schema(type: 'null', const: null, hasConst: true),
+                ],
+            ),
+        );
+
+        $resolved = $refResolver->resolveSchemaWithOverride($schema, $document);
+
+        $this->assertTrue($resolved->hasConst);
+        $this->assertNull($resolved->const);
+    }
+
+    #[Test]
+    public function b17_ref_resolver_preserves_has_default_for_null(): void
+    {
+        $refResolver = new RefResolver();
+
+        $schema = new Schema(
+            ref: '#/components/schemas/NullDefault',
+            hasDefault: false,
+        );
+
+        $document = new OpenApiDocument(
+            openapi: '3.0.3',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'NullDefault' => new Schema(type: 'string', default: null, hasDefault: true),
+                ],
+            ),
+        );
+
+        $resolved = $refResolver->resolveSchemaWithOverride($schema, $document);
+
+        $this->assertTrue($resolved->hasDefault);
+        $this->assertNull($resolved->default);
     }
 }
