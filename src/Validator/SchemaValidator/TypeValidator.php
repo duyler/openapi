@@ -68,7 +68,7 @@ readonly class TypeValidator extends AbstractSchemaValidator
             'null' => null === $data,
             'array' => $this->isArray($data, $strategy),
             'object' => $this->isObject($data, $strategy),
-            default => true,
+            default => false,
         };
     }
 

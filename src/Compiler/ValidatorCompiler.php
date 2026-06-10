@@ -55,7 +55,7 @@ readonly class ValidatorCompiler
 
     private function generateCode(Schema $schema, string $className): string
     {
-        $code = '<?php\n\n';
+        $code = "<?php\n\n";
         $code .= sprintf("readonly class %s\n{\n", $className);
         $code .= '    public function validate(mixed $data): void' . "\n";
         $code .= "    {\n";
@@ -129,7 +129,7 @@ readonly class ValidatorCompiler
         $valuesString = implode(', ', $enumValues);
 
         $code = "        if (false === in_array(\$data, [$valuesString], true)) {\n";
-        $code .= "            throw new \\RuntimeException('Value must be one of: ' . implode(', ', \$allowed));\n";
+        $code .= "            throw new \\RuntimeException('Value must be one of: ' . implode(', ', [$valuesString]));\n";
         $code .= "        }\n\n";
 
         return $code;

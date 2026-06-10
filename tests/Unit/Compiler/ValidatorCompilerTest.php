@@ -14,6 +14,7 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use EnumInlineValuesValidator;
 
 final class ValidatorCompilerTest extends TestCase
 {
@@ -652,5 +653,34 @@ final class ValidatorCompilerTest extends TestCase
         $this->assertStringContainsString('is_float($data)', $code);
         $this->assertStringContainsString('is_bool($data)', $code);
         $this->assertStringContainsString('is_null($data)', $code);
+    }
+
+    #[Test]
+    public function compile_enum_check_uses_inline_values_not_undefined_variable(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string', enum: ['active', 'inactive']);
+        $code = $compiler->compile($schema, 'EnumInlineValuesValidator');
+
+        $evalCode = substr($code, 5);
+        eval($evalCode);
+
+        $validator = new EnumInlineValuesValidator();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Value must be one of');
+
+        $validator->validate('unknown');
+    }
+
+    #[Test]
+    public function compile_generates_code_with_actual_newline_after_php_tag(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $code = $compiler->compile($schema, 'NewlineCheckValidator');
+
+        $this->assertStringStartsWith("<?php\n", $code);
     }
 }
