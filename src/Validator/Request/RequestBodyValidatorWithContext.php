@@ -89,6 +89,7 @@ readonly class RequestBodyValidatorWithContext implements RequestBodyValidatorIn
                 $schema = $this->refResolver->resolve($schema->ref, $this->document);
             }
 
+            /** @var array|int|string|float|bool|null $parsedBody */
             $parsedBody = $this->coercer->coerce($parsedBody, $schema, true, true, $this->nullableAsType);
             $parsedBody = TypeGuarantor::ensureValidType($parsedBody, $this->nullableAsType);
         }

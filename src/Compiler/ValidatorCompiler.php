@@ -16,6 +16,8 @@ use function sprintf;
 
 readonly class ValidatorCompiler
 {
+    private const int REF_COMPONENTS_SCHEMAS_PREFIX_LENGTH = 21;
+
     public function compile(Schema $schema, string $className): string
     {
         return $this->generateCode($schema, $className);
@@ -268,6 +270,9 @@ readonly class ValidatorCompiler
         return $code;
     }
 
+    /**
+     * @param list<string> $required
+     */
     private function generateRequiredCheck(array $required, string $dataVar): string
     {
         $code = '';
@@ -283,12 +288,12 @@ readonly class ValidatorCompiler
 
     private function generateTypeCheckForValue(string|array $type, string $valueVar): string
     {
+        /** @var array<string> $types */
         $types = is_array($type) ? $type : [$type];
         $checks = [];
 
         foreach ($types as $t) {
-            $typeStr = (string) $t;
-            $function = $this->getTypeCheckFunction($typeStr);
+            $function = $this->getTypeCheckFunction($t);
             $checks[] = $this->buildTypeCheckExpression($function, $valueVar);
         }
 
@@ -437,7 +442,7 @@ readonly class ValidatorCompiler
             throw new RuntimeException(sprintf('Unsupported $ref: %s', $ref));
         }
 
-        $schemaName = substr($ref, 21);
+        $schemaName = substr($ref, self::REF_COMPONENTS_SCHEMAS_PREFIX_LENGTH);
         $schemas = $document->components?->schemas ?? [];
 
         if (false === isset($schemas[$schemaName])) {

@@ -18,6 +18,9 @@ use const JSON_THROW_ON_ERROR;
 
 final readonly class StreamingContentParser
 {
+    private const string RECORD_SEPARATOR = "\x1E";
+    private const int JSON_MAX_DEPTH = 512;
+
     public function __construct(
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {}
@@ -53,7 +56,7 @@ final readonly class StreamingContentParser
             if ('' !== trim($line)) {
                 try {
                     /** @var array<int|string, mixed> $decoded */
-                    $decoded = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
+                    $decoded = json_decode($line, true, self::JSON_MAX_DEPTH, JSON_THROW_ON_ERROR);
                     $items[] = $decoded;
                 } catch (JsonException $exception) {
                     $this->logger->warning('Failed to parse JSON line in NDJSON stream', [
@@ -120,11 +123,11 @@ final readonly class StreamingContentParser
         $length = strlen($body);
 
         while ($pos < $length) {
-            if ("\x1E" === substr($body, $pos, 1)) {
+            if (self::RECORD_SEPARATOR === substr($body, $pos, 1)) {
                 $pos++;
             }
 
-            $endPos = strpos($body, "\x1E", $pos);
+            $endPos = strpos($body, self::RECORD_SEPARATOR, $pos);
             if (false === $endPos) {
                 $endPos = $length;
             }
@@ -135,7 +138,7 @@ final readonly class StreamingContentParser
             if ('' !== $json) {
                 try {
                     /** @var array<int|string, mixed> $decoded */
-                    $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+                    $decoded = json_decode($json, true, self::JSON_MAX_DEPTH, JSON_THROW_ON_ERROR);
                     $items[] = $decoded;
                 } catch (JsonException $exception) {
                     $this->logger->warning('Failed to parse JSON sequence item', [
@@ -168,7 +171,7 @@ final readonly class StreamingContentParser
         if (isset($event['data'])) {
             $dataValue = $event['data'];
             try {
-                $decoded = json_decode($event['data'], true, 512, JSON_THROW_ON_ERROR);
+                $decoded = json_decode($event['data'], true, self::JSON_MAX_DEPTH, JSON_THROW_ON_ERROR);
                 assert(is_array($decoded) || is_null($decoded) || is_scalar($decoded));
                 $dataValue = $decoded;
             } catch (JsonException $exception) {

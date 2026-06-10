@@ -14,6 +14,8 @@ use const JSON_THROW_ON_ERROR;
 
 readonly class QueryParser
 {
+    private const int JSON_MAX_DEPTH = 512;
+
     /**
      * Parse query string into parameters
      *
@@ -69,7 +71,7 @@ readonly class QueryParser
         if ('application/json' === $mediaType) {
             try {
                 $decoded = rawurldecode($raw);
-                return json_decode($decoded, true, 512, JSON_THROW_ON_ERROR);
+                return json_decode($decoded, true, self::JSON_MAX_DEPTH, JSON_THROW_ON_ERROR);
             } catch (JsonException $e) {
                 throw InvalidParameterException::malformedValue(
                     $parameterName,

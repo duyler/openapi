@@ -26,6 +26,7 @@ readonly class TypedCacheDecorator
             return null;
         }
 
+        /** @var object|null $value */
         $value = $item->get();
 
         if (null === $value) {

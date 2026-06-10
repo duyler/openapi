@@ -44,6 +44,7 @@ readonly class ResponseTypeCoercer
                 continue;
             }
 
+            /** @var array|int|string|float|bool|null $coerced */
             $coerced = $this->coerceToType($value, $type, $schema, $nullableAsType);
 
             if ($this->isValidType($coerced, $type)) {
@@ -163,6 +164,7 @@ readonly class ResponseTypeCoercer
             return $value;
         }
 
+        /** @var array<string, mixed> $coerced */
         $coerced = [];
 
         foreach ($properties as $name => $propertySchema) {

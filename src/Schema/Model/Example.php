@@ -22,6 +22,7 @@ readonly class Example implements JsonSerializable
     #[Override]
     public function jsonSerialize(): array
     {
+        /** @var array<string, mixed> $data */
         $data = [];
 
         if (null !== $this->summary) {

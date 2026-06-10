@@ -10,10 +10,12 @@ use const JSON_THROW_ON_ERROR;
 
 final class JsonParser extends OpenApiBuilder
 {
+    private const int JSON_MAX_DEPTH = 512;
+
     #[Override]
     protected function parseContent(string $content): mixed
     {
-        return json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+        return json_decode($content, true, self::JSON_MAX_DEPTH, JSON_THROW_ON_ERROR);
     }
 
     #[Override]

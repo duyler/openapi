@@ -153,9 +153,9 @@ class SchemaValidatorWithContext
     {
         $errors = [];
 
+        /** @var iterable<SchemaValidatorInterface> $validators */
         foreach ($this->getValidators() as $validator) {
             try {
-                /** @var SchemaValidatorInterface $validator */
                 $validator->validate($data, $schema, $context);
             } catch (AbstractValidationError $e) {
                 $errors[] = $e;

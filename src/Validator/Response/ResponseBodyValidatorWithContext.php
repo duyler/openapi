@@ -75,6 +75,7 @@ readonly class ResponseBodyValidatorWithContext
         MediaType $mediaTypeSchema,
         string $mediaType,
     ): void {
+        /** @var array|int|string|float|bool|null $parsedBody */
         $parsedBody = $this->bodyParser->parse($body, $mediaType);
 
         if ($this->coercion && null !== $mediaTypeSchema->schema) {

@@ -35,6 +35,7 @@ abstract readonly class AbstractParameterValidator
                 continue;
             }
 
+            /** @var string|null $value */
             $value = $this->findParameter($data, $name);
 
             if (null === $value) {

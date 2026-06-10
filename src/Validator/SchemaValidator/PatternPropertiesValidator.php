@@ -37,6 +37,7 @@ readonly class PatternPropertiesValidator extends AbstractSchemaValidator
             );
         }
 
+        /** @var array<string, mixed> $data */
         foreach ($data as $propertyName => $propertyValue) {
             if (false === is_string($propertyName)) {
                 continue;

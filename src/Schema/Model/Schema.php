@@ -103,6 +103,7 @@ readonly class Schema implements JsonSerializable
             return $data;
         }
 
+        /** @var array<string, mixed> $data */
         $data = [];
 
         if (null !== $this->title) {

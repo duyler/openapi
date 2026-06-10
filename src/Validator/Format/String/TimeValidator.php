@@ -14,6 +14,7 @@ use function substr;
 readonly class TimeValidator extends AbstractStringFormatValidator
 {
     private const string TIME_FORMAT = 'H:i:s';
+    private const int TIME_PREFIX_LENGTH = 8;
 
     #[Override]
     protected function getFormatName(): string
@@ -24,7 +25,7 @@ readonly class TimeValidator extends AbstractStringFormatValidator
     #[Override]
     protected function validateString(string $data): void
     {
-        $time = DateTime::createFromFormat(self::TIME_FORMAT, substr($data, 0, 8));
+        $time = DateTime::createFromFormat(self::TIME_FORMAT, substr($data, 0, self::TIME_PREFIX_LENGTH));
 
         if (false === $time) {
             throw new InvalidFormatException('time', $data, 'Invalid time format');
@@ -36,7 +37,7 @@ readonly class TimeValidator extends AbstractStringFormatValidator
             throw new InvalidFormatException('time', $data, 'Invalid time value');
         }
 
-        $remaining = substr($data, 8);
+        $remaining = substr($data, self::TIME_PREFIX_LENGTH);
         if ('' === $remaining) {
             return;
         }

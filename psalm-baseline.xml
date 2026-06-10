@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<files psalm-version="6.14.3@d0b040a91f280f071c1abcb1b77ce3822058725a">
+<files psalm-version="6.15.1@28dc127af1b5aecd52314f6f645bafc10d0e11f9">
   <file src="src/Cache/SchemaCache.php">
     <ClassMustBeFinal>
       <code><![CDATA[SchemaCache]]></code>
@@ -9,9 +9,6 @@
     <ClassMustBeFinal>
       <code><![CDATA[TypedCacheDecorator]]></code>
     </ClassMustBeFinal>
-    <MixedAssignment>
-      <code><![CDATA[$value]]></code>
-    </MixedAssignment>
   </file>
   <file src="src/Compiler/CompilationCache.php">
     <ClassMustBeFinal>
@@ -22,10 +19,9 @@
     <ClassMustBeFinal>
       <code><![CDATA[ValidatorCompiler]]></code>
     </ClassMustBeFinal>
-    <MixedAssignment>
-      <code><![CDATA[$propertyName]]></code>
-      <code><![CDATA[$t]]></code>
-    </MixedAssignment>
+    <RedundantCastGivenDocblockType>
+      <code><![CDATA[(string) $propertyName]]></code>
+    </RedundantCastGivenDocblockType>
   </file>
   <file src="src/Event/ArrayDispatcher.php">
     <ClassMustBeFinal>
@@ -220,32 +216,6 @@
       <code><![CDATA[OpenApiDocument]]></code>
     </ClassMustBeFinal>
   </file>
-  <file src="src/Schema/Parser/JsonParser.php"/>
-  <file src="src/Schema/Parser/OpenApiBuilder.php">
-    <MixedAssignment>
-      <code><![CDATA[$callback]]></code>
-      <code><![CDATA[$callback]]></code>
-      <code><![CDATA[$content]]></code>
-      <code><![CDATA[$example]]></code>
-      <code><![CDATA[$header]]></code>
-      <code><![CDATA[$header]]></code>
-      <code><![CDATA[$link]]></code>
-      <code><![CDATA[$link]]></code>
-      <code><![CDATA[$mediaType]]></code>
-      <code><![CDATA[$operationData]]></code>
-      <code><![CDATA[$parameter]]></code>
-      <code><![CDATA[$pathItem]]></code>
-      <code><![CDATA[$pathItem]]></code>
-      <code><![CDATA[$pathItem]]></code>
-      <code><![CDATA[$requestBody]]></code>
-      <code><![CDATA[$response]]></code>
-      <code><![CDATA[$response]]></code>
-      <code><![CDATA[$schema]]></code>
-      <code><![CDATA[$schema]]></code>
-      <code><![CDATA[$scheme]]></code>
-      <code><![CDATA[$webhook]]></code>
-    </MixedAssignment>
-  </file>
   <file src="src/Schema/Parser/TypeHelper.php">
     <ClassMustBeFinal>
       <code><![CDATA[TypeHelper]]></code>
@@ -255,7 +225,6 @@
       <code><![CDATA[$val]]></code>
     </MixedAssignment>
   </file>
-  <file src="src/Schema/Parser/YamlParser.php"/>
   <file src="src/Validator/Error/Breadcrumb.php">
     <ClassMustBeFinal>
       <code><![CDATA[Breadcrumb]]></code>
@@ -379,11 +348,6 @@
       <code><![CDATA[DefaultValidatorRegistry]]></code>
     </ClassMustBeFinal>
   </file>
-  <file src="src/Validator/Request/AbstractParameterValidator.php">
-    <MixedAssignment>
-      <code><![CDATA[$value]]></code>
-    </MixedAssignment>
-  </file>
   <file src="src/Validator/Request/BodyParser/BodyParser.php">
     <ClassMustBeFinal>
       <code><![CDATA[BodyParser]]></code>
@@ -398,9 +362,6 @@
     <ClassMustBeFinal>
       <code><![CDATA[JsonBodyParser]]></code>
     </ClassMustBeFinal>
-    <MixedAssignment>
-      <code><![CDATA[$decoded]]></code>
-    </MixedAssignment>
   </file>
   <file src="src/Validator/Request/BodyParser/MultipartBodyParser.php">
     <ClassMustBeFinal>
@@ -431,14 +392,17 @@
     <ClassMustBeFinal>
       <code><![CDATA[HeaderFinder]]></code>
     </ClassMustBeFinal>
-    <MixedAssignment>
-      <code><![CDATA[$value]]></code>
-    </MixedAssignment>
+    <RedundantConditionGivenDocblockType>
+      <code><![CDATA[is_string($value)]]></code>
+    </RedundantConditionGivenDocblockType>
   </file>
   <file src="src/Validator/Request/HeadersValidator.php">
     <ClassMustBeFinal>
       <code><![CDATA[HeadersValidator]]></code>
     </ClassMustBeFinal>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[$data]]></code>
+    </MixedArgumentTypeCoercion>
   </file>
   <file src="src/Validator/Request/ParameterDeserializer.php">
     <ClassMustBeFinal>
@@ -470,7 +434,6 @@
       <code><![CDATA[RequestBodyCoercer]]></code>
     </ClassMustBeFinal>
     <MixedAssignment>
-      <code><![CDATA[$coerced]]></code>
       <code><![CDATA[$coerced[$name]]]></code>
       <code><![CDATA[$coerced[]]]></code>
       <code><![CDATA[$item]]></code>
@@ -480,9 +443,6 @@
     <ClassMustBeFinal>
       <code><![CDATA[RequestBodyValidatorWithContext]]></code>
     </ClassMustBeFinal>
-    <MixedAssignment>
-      <code><![CDATA[$parsedBody]]></code>
-    </MixedAssignment>
   </file>
   <file src="src/Validator/Request/RequestValidator.php">
     <ClassMustBeFinal>
@@ -512,7 +472,6 @@
       <code><![CDATA[ResponseTypeCoercer]]></code>
     </ClassMustBeFinal>
     <MixedAssignment>
-      <code><![CDATA[$coerced]]></code>
       <code><![CDATA[$coerced[$name]]]></code>
       <code><![CDATA[$coerced[]]]></code>
       <code><![CDATA[$item]]></code>
@@ -551,8 +510,6 @@
       <code><![CDATA[PropertiesValidatorWithContext]]></code>
     </ClassMustBeFinal>
   </file>
-  <file src="src/Validator/Schema/RefResolver.php">
-  </file>
   <file src="src/Validator/Schema/SchemaValidatorWithContext.php">
     <ClassMustBeFinal>
       <code><![CDATA[SchemaValidatorWithContext]]></code>
@@ -560,6 +517,9 @@
     <MixedAssignment>
       <code><![CDATA[$validator]]></code>
     </MixedAssignment>
+    <MixedMethodCall>
+      <code><![CDATA[validate]]></code>
+    </MixedMethodCall>
   </file>
   <file src="src/Validator/Schema/SchemaValueNormalizer.php">
     <ClassMustBeFinal>
@@ -659,9 +619,15 @@
     <ClassMustBeFinal>
       <code><![CDATA[PatternPropertiesValidator]]></code>
     </ClassMustBeFinal>
+    <DocblockTypeContradiction>
+      <code><![CDATA[false === is_string($propertyName)]]></code>
+    </DocblockTypeContradiction>
     <MixedAssignment>
       <code><![CDATA[$propertyValue]]></code>
     </MixedAssignment>
+    <RedundantConditionGivenDocblockType>
+      <code><![CDATA[is_string($propertyName)]]></code>
+    </RedundantConditionGivenDocblockType>
   </file>
   <file src="src/Validator/SchemaValidator/PatternValidator.php">
     <ClassMustBeFinal>

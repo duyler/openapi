@@ -56,6 +56,7 @@ readonly class PrefixItemsValidator extends AbstractSchemaValidator
         $remainingItems = array_slice($data, $count);
 
         if ([] !== $remainingItems && null !== $schema->items) {
+            /** @var list<mixed> $remainingItems */
             foreach ($remainingItems as $item) {
                 try {
                     $allowNull = $schema->items->nullable && $nullableAsType;

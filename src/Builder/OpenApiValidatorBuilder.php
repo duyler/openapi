@@ -28,6 +28,9 @@ use function sprintf;
 
 final readonly class OpenApiValidatorBuilder
 {
+    private const string CACHE_KEY_FILE_PREFIX = 'openapi_spec_file_';
+    private const string CACHE_KEY_CONTENT_PREFIX = 'openapi_spec_content_';
+
     protected function __construct(
         protected ?string $specPath = null,
         protected ?string $specContent = null,
@@ -432,14 +435,14 @@ final readonly class OpenApiValidatorBuilder
         $realPath = realpath($path);
 
         if (false === $realPath) {
-            return 'openapi_spec_file_' . md5($path);
+            return self::CACHE_KEY_FILE_PREFIX . md5($path);
         }
 
-        return 'openapi_spec_file_' . md5($realPath);
+        return self::CACHE_KEY_FILE_PREFIX . md5($realPath);
     }
 
     private function generateCacheKeyFromString(string $content): string
     {
-        return 'openapi_spec_content_' . md5($content);
+        return self::CACHE_KEY_CONTENT_PREFIX . md5($content);
     }
 }

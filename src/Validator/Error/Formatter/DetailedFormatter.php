@@ -58,6 +58,7 @@ readonly class DetailedFormatter implements ErrorFormatterInterface
      */
     private function getDetails(AbstractValidationError $error): array
     {
+        /** @var array<string, mixed> $params */
         $params = $error->params();
         $details = [];
 

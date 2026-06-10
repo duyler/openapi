@@ -55,6 +55,9 @@ use const FILTER_VALIDATE_URL;
 
 abstract class OpenApiBuilder implements SchemaParserInterface
 {
+    private const string VERSION_PATTERN = '/^3\.[0-2]\.[0-9]+$/';
+    private const string DEPRECATION_VERSION = '3.2.0';
+
     protected string $documentVersion = '';
     protected DeprecationLogger $deprecationLogger;
 
@@ -143,14 +146,14 @@ abstract class OpenApiBuilder implements SchemaParserInterface
         }
 
         $version = $data['openapi'];
-        if (false === is_string($version) || 1 !== preg_match('/^3\.[0-2]\.[0-9]+$/', $version)) {
+        if (false === is_string($version) || 1 !== preg_match(self::VERSION_PATTERN, $version)) {
             throw new InvalidSchemaException('Unsupported OpenAPI version: ' . (string) $version . '. Only 3.0.x, 3.1.x and 3.2.x are supported.');
         }
     }
 
     protected function shouldWarnDeprecation(): bool
     {
-        return version_compare($this->documentVersion, '3.2.0', '>=');
+        return version_compare($this->documentVersion, self::DEPRECATION_VERSION, '>=');
     }
 
     protected function buildInfo(array $data): InfoObject
@@ -221,6 +224,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
     protected function buildPaths(array $data): Paths
     {
+        /** @var array<string, array<string, mixed>> $data */
         $paths = [];
 
         foreach ($data as $path => $pathItem) {
@@ -259,12 +263,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
      */
     protected function buildAdditionalOperations(array $data): array
     {
+        /** @var array<string, array<string, mixed>> $data */
         $operations = [];
 
         foreach ($data as $method => $operationData) {
-            if (is_string($method) && is_array($operationData)) {
-                $operations[$method] = $this->buildOperation(TypeHelper::asArray($operationData));
-            }
+            $operations[$method] = $this->buildOperation(TypeHelper::asArray($operationData));
         }
 
         return $operations;
@@ -296,7 +299,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             $this->deprecationLogger->warn(
                 'allowEmptyValue',
                 'Parameter Object',
-                '3.2.0',
+                self::DEPRECATION_VERSION,
             );
         }
 
@@ -325,7 +328,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             $this->deprecationLogger->warn(
                 'example',
                 'Schema Object',
-                '3.2.0',
+                self::DEPRECATION_VERSION,
                 'examples in MediaType Object',
             );
         }
@@ -408,12 +411,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
      */
     protected function buildProperties(array $data): array
     {
+        /** @var array<string, array<string, mixed>> $data */
         $properties = [];
 
         foreach ($data as $name => $schema) {
-            if (is_string($name) && is_array($schema)) {
-                $properties[$name] = $this->buildSchema(TypeHelper::asArray($schema));
-            }
+            $properties[$name] = $this->buildSchema(TypeHelper::asArray($schema));
         }
 
         return $properties;
@@ -434,7 +436,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             $this->deprecationLogger->warn(
                 'attribute',
                 'XML Object',
-                '3.2.0',
+                self::DEPRECATION_VERSION,
                 'nodeType: "attribute"',
             );
         }
@@ -443,7 +445,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             $this->deprecationLogger->warn(
                 'wrapped',
                 'XML Object',
-                '3.2.0',
+                self::DEPRECATION_VERSION,
             );
         }
 
@@ -505,12 +507,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
     protected function buildContent(array $data): Content
     {
+        /** @var array<string, array<string, mixed>> $data */
         $mediaTypes = [];
 
         foreach ($data as $mediaType => $content) {
-            if (is_array($content)) {
-                $mediaTypes[$mediaType] = $this->buildMediaType(TypeHelper::asArray($content));
-            }
+            $mediaTypes[$mediaType] = $this->buildMediaType(TypeHelper::asArray($content));
         }
 
         /** @var array<string, MediaType> $mediaTypes */
@@ -597,12 +598,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
     protected function buildResponses(array $data): Responses
     {
+        /** @var array<string, array<string, mixed>> $data */
         $responses = [];
 
         foreach ($data as $statusCode => $response) {
-            if (is_array($response)) {
-                $responses[$statusCode] = $this->buildResponse(TypeHelper::asArray($response));
-            }
+            $responses[$statusCode] = $this->buildResponse(TypeHelper::asArray($response));
         }
 
         /** @var array<string, Response> $responses */
@@ -636,12 +636,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
     protected function buildHeaders(array $data): Headers
     {
+        /** @var array<string, array<string, mixed>> $data */
         $headers = [];
 
         foreach ($data as $headerName => $header) {
-            if (is_array($header)) {
-                $headers[$headerName] = $this->buildHeader(TypeHelper::asArray($header));
-            }
+            $headers[$headerName] = $this->buildHeader(TypeHelper::asArray($header));
         }
 
         /** @var array<string, Header> $headers */
@@ -668,12 +667,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
     protected function buildLinks(array $data): Links
     {
+        /** @var array<string, array<string, mixed>> $data */
         $links = [];
 
         foreach ($data as $linkName => $link) {
-            if (is_array($link)) {
-                $links[$linkName] = $this->buildLink(TypeHelper::asArray($link));
-            }
+            $links[$linkName] = $this->buildLink(TypeHelper::asArray($link));
         }
 
         /** @var array<string, Link> $links */
@@ -711,12 +709,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
     protected function buildWebhooks(array $data): Webhooks
     {
+        /** @var array<string, array<string, mixed>> $data */
         $webhooks = [];
 
         foreach ($data as $webhookName => $webhook) {
-            if (is_array($webhook)) {
-                $webhooks[$webhookName] = $this->buildPathItem(TypeHelper::asArray($webhook));
-            }
+            $webhooks[$webhookName] = $this->buildPathItem(TypeHelper::asArray($webhook));
         }
 
         /** @var array<string, PathItem> $webhooks */
@@ -725,15 +722,12 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
     protected function buildCallbacks(array $data): Callbacks
     {
+        /** @var array<string, array<string, array<string, mixed>>> $data */
         $callbacks = [];
 
         foreach ($data as $callbackName => $callback) {
-            if (is_array($callback)) {
-                foreach ($callback as $expression => $pathItem) {
-                    if (is_string($expression) && is_array($pathItem)) {
-                        $callbacks[$callbackName][$expression] = $this->buildPathItem(TypeHelper::asArray($pathItem));
-                    }
-                }
+            foreach ($callback as $expression => $pathItem) {
+                $callbacks[$callbackName][$expression] = $this->buildPathItem(TypeHelper::asArray($pathItem));
             }
         }
 
@@ -785,12 +779,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
      */
     protected function buildSchemas(array $data): array
     {
+        /** @var array<string, array<string, mixed>> $data */
         $schemas = [];
 
         foreach ($data as $name => $schema) {
-            if (is_string($name) && is_array($schema)) {
-                $schemas[$name] = $this->buildSchema(TypeHelper::asArray($schema));
-            }
+            $schemas[$name] = $this->buildSchema(TypeHelper::asArray($schema));
         }
 
         return $schemas;
@@ -801,12 +794,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
      */
     protected function buildResponsesComponents(array $data): array
     {
+        /** @var array<string, array<string, mixed>> $data */
         $responses = [];
 
         foreach ($data as $name => $response) {
-            if (is_string($name) && is_array($response)) {
-                $responses[$name] = $this->buildResponse(TypeHelper::asArray($response));
-            }
+            $responses[$name] = $this->buildResponse(TypeHelper::asArray($response));
         }
 
         return $responses;
@@ -817,12 +809,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
      */
     protected function buildParametersComponents(array $data): array
     {
+        /** @var array<string, array<string, mixed>> $data */
         $parameters = [];
 
         foreach ($data as $name => $parameter) {
-            if (is_string($name) && is_array($parameter)) {
-                $parameters[$name] = $this->buildParameter(TypeHelper::asArray($parameter));
-            }
+            $parameters[$name] = $this->buildParameter(TypeHelper::asArray($parameter));
         }
 
         return $parameters;
@@ -833,12 +824,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
      */
     protected function buildExamplesComponents(array $data): array
     {
+        /** @var array<string, array<string, mixed>> $data */
         $examples = [];
 
         foreach ($data as $name => $example) {
-            if (is_string($name) && is_array($example)) {
-                $examples[$name] = $this->buildExample(TypeHelper::asArray($example));
-            }
+            $examples[$name] = $this->buildExample(TypeHelper::asArray($example));
         }
 
         return $examples;
@@ -862,12 +852,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
      */
     protected function buildRequestBodiesComponents(array $data): array
     {
+        /** @var array<string, array<string, mixed>> $data */
         $requestBodies = [];
 
         foreach ($data as $name => $requestBody) {
-            if (is_string($name) && is_array($requestBody)) {
-                $requestBodies[$name] = $this->buildRequestBody(TypeHelper::asArray($requestBody));
-            }
+            $requestBodies[$name] = $this->buildRequestBody(TypeHelper::asArray($requestBody));
         }
 
         return $requestBodies;
@@ -878,12 +867,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
      */
     protected function buildHeadersComponents(array $data): array
     {
+        /** @var array<string, array<string, mixed>> $data */
         $headers = [];
 
         foreach ($data as $name => $header) {
-            if (is_string($name) && is_array($header)) {
-                $headers[$name] = $this->buildHeader(TypeHelper::asArray($header));
-            }
+            $headers[$name] = $this->buildHeader(TypeHelper::asArray($header));
         }
 
         return $headers;
@@ -894,12 +882,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
      */
     protected function buildSecuritySchemesComponents(array $data): array
     {
+        /** @var array<string, array<string, mixed>> $data */
         $securitySchemes = [];
 
         foreach ($data as $name => $scheme) {
-            if (is_string($name) && is_array($scheme)) {
-                $securitySchemes[$name] = $this->buildSecurityScheme(TypeHelper::asArray($scheme));
-            }
+            $securitySchemes[$name] = $this->buildSecurityScheme(TypeHelper::asArray($scheme));
         }
 
         return $securitySchemes;
@@ -972,12 +959,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
      */
     protected function buildLinksComponents(array $data): array
     {
+        /** @var array<string, array<string, mixed>> $data */
         $links = [];
 
         foreach ($data as $name => $link) {
-            if (is_string($name) && is_array($link)) {
-                $links[$name] = $this->buildLink(TypeHelper::asArray($link));
-            }
+            $links[$name] = $this->buildLink(TypeHelper::asArray($link));
         }
 
         return $links;
@@ -988,12 +974,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
      */
     protected function buildCallbacksComponents(array $data): array
     {
+        /** @var array<string, array<string, mixed>> $data */
         $callbacks = [];
 
         foreach ($data as $name => $callback) {
-            if (is_string($name) && is_array($callback)) {
-                $callbacks[$name] = $this->buildCallbacks(TypeHelper::asArray($callback));
-            }
+            $callbacks[$name] = $this->buildCallbacks(TypeHelper::asArray($callback));
         }
 
         return $callbacks;
@@ -1004,12 +989,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
      */
     protected function buildPathItemsComponents(array $data): array
     {
+        /** @var array<string, array<string, mixed>> $data */
         $pathItems = [];
 
         foreach ($data as $name => $pathItem) {
-            if (is_string($name) && is_array($pathItem)) {
-                $pathItems[$name] = $this->buildPathItem(TypeHelper::asArray($pathItem));
-            }
+            $pathItems[$name] = $this->buildPathItem(TypeHelper::asArray($pathItem));
         }
 
         return $pathItems;
@@ -1020,12 +1004,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
      */
     protected function buildMediaTypesComponents(array $data): array
     {
+        /** @var array<string, array<string, mixed>> $data */
         $mediaTypes = [];
 
         foreach ($data as $name => $mediaType) {
-            if (is_string($name) && is_array($mediaType)) {
-                $mediaTypes[$name] = $this->buildMediaType(TypeHelper::asArray($mediaType));
-            }
+            $mediaTypes[$name] = $this->buildMediaType(TypeHelper::asArray($mediaType));
         }
 
         return $mediaTypes;

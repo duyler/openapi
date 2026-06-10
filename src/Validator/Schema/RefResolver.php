@@ -21,6 +21,8 @@ use function str_starts_with;
 
 final class RefResolver implements RefResolverInterface
 {
+    private const int REF_ROOT_PREFIX_LENGTH = 2;
+
     private WeakMap $cache;
 
     public function __construct()
@@ -528,7 +530,7 @@ final class RefResolver implements RefResolverInterface
             );
         }
 
-        $path = substr($ref, 2);
+        $path = substr($ref, self::REF_ROOT_PREFIX_LENGTH);
         $parts = explode("/", $path);
 
         try {

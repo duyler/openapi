@@ -12,8 +12,12 @@ use function strval;
 
 readonly class HeaderFinder
 {
+    /**
+     * @param array<array-key, string|array<array-key, string>> $headers
+     */
     public function find(array $headers, string $name): ?string
     {
+        /** @var array<array-key, string|array<array-key, string>> $headers */
         foreach ($headers as $key => $value) {
             if (false === is_string($key)) {
                 continue;

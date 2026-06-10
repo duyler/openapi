@@ -83,6 +83,7 @@ readonly class TypeHelper
         }
 
         if (is_array($value)) {
+            /** @var list<string|null> $result */
             $result = [];
             foreach ($value as $item) {
                 $result[] = match (true) {
@@ -343,6 +344,7 @@ readonly class TypeHelper
                 throw new TypeError('Expected array in security list, got ' . get_debug_type($item));
             }
 
+            /** @var array<string, list<string>> $securityItem */
             $securityItem = [];
             foreach ($item as $key => $val) {
                 if (false === is_string($key)) {
@@ -351,6 +353,7 @@ readonly class TypeHelper
                 if (false === is_array($val)) {
                     throw new TypeError('Expected list in security map value, got ' . get_debug_type($val));
                 }
+                /** @var list<string> $val */
                 $val = self::asStringList($val);
                 $securityItem[$key] = $val;
             }
