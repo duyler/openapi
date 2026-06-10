@@ -48,7 +48,7 @@ readonly class PatternPropertiesValidator extends AbstractSchemaValidator
                 }
 
                 $normalizedPattern = RegexValidator::normalize($pattern);
-                assert($normalizedPattern !== '');
+                assert('' !== $normalizedPattern);
 
                 $result = preg_match($normalizedPattern, $propertyName);
 

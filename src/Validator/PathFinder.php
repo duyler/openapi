@@ -32,13 +32,13 @@ readonly class PathFinder
 
         $candidates = $this->findCandidates($requestPath, $method);
 
-        if (count($candidates) === 0) {
+        if (0 === count($candidates)) {
             throw new BuilderException(
                 sprintf('Operation not found: %s %s', strtoupper($method), $requestPath),
             );
         }
 
-        if (count($candidates) === 1) {
+        if (1 === count($candidates)) {
             return $candidates[0];
         }
 

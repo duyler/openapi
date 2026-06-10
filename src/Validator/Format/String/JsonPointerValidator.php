@@ -22,7 +22,7 @@ readonly class JsonPointerValidator extends AbstractStringFormatValidator
     #[Override]
     protected function validateString(string $data): void
     {
-        if ($data === '' || $data === '/') {
+        if ('' === $data || '/' === $data) {
             return;
         }
 

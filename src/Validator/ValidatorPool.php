@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator;
 
-use function count;
-
 class ValidatorPool
 {
     /** @var array<string, object> */
@@ -27,10 +25,5 @@ class ValidatorPool
         $this->pool[$key] = $instance;
 
         return $instance;
-    }
-
-    public function count(): int
-    {
-        return count($this->pool);
     }
 }

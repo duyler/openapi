@@ -97,15 +97,13 @@ readonly class OneOfValidatorWithContext
                 $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry, $context->nullableAsType);
                 $validator->validateWithContext($normalizedData, $subSchema, $context);
                 ++$validCount;
+            } catch (AbstractValidationError $e) {
+                $abstractErrors[] = $e;
             } catch (Exception $e) {
-                if ($e instanceof AbstractValidationError) {
-                    $abstractErrors[] = $e;
-                } else {
-                    $errors[] = new ValidationException(
-                        message: 'Invalid data for oneOf schema: ' . $e->getMessage(),
-                        previous: $e,
-                    );
-                }
+                $errors[] = new ValidationException(
+                    message: 'Invalid data for oneOf schema: ' . $e->getMessage(),
+                    previous: $e,
+                );
             }
         }
 

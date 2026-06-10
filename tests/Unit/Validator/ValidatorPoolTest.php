@@ -71,28 +71,4 @@ final class ValidatorPoolTest extends TestCase
         self::assertSame($object, $result);
         self::assertSame(42, $result->value);
     }
-
-    #[Test]
-    public function count_returns_zero_for_empty_pool(): void
-    {
-        self::assertSame(0, $this->pool->count());
-    }
-
-    #[Test]
-    public function count_returns_number_of_unique_keys(): void
-    {
-        $this->pool->getOrCreate('key_a', fn() => new stdClass());
-        $this->pool->getOrCreate('key_b', fn() => new stdClass());
-
-        self::assertSame(2, $this->pool->count());
-    }
-
-    #[Test]
-    public function count_does_not_increase_on_duplicate_key(): void
-    {
-        $this->pool->getOrCreate('key_a', fn() => new stdClass());
-        $this->pool->getOrCreate('key_a', fn() => new stdClass());
-
-        self::assertSame(1, $this->pool->count());
-    }
 }

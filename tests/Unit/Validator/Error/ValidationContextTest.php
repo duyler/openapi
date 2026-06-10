@@ -49,18 +49,6 @@ class ValidationContextTest extends TestCase
     }
 
     #[Test]
-    public function without_breadcrumb(): void
-    {
-        $pool = new ValidatorPool();
-        $context = ValidationContext::create($pool);
-        $context2 = $context->withBreadcrumb('users');
-        $context3 = $context2->withoutBreadcrumb();
-
-        $this->assertSame('/users', $context2->breadcrumbs->currentPath());
-        $this->assertSame('/', $context3->breadcrumbs->currentPath());
-    }
-
-    #[Test]
     public function chain_breadcrumbs(): void
     {
         $pool = new ValidatorPool();
@@ -140,16 +128,5 @@ class ValidationContextTest extends TestCase
 
         $this->assertSame($formatter, $context->errorFormatter);
         $this->assertSame($formatter, $context2->errorFormatter);
-    }
-
-    #[Test]
-    public function maintain_formatter_without_breadcrumb(): void
-    {
-        $pool = new ValidatorPool();
-        $formatter = new DetailedFormatter();
-        $context = ValidationContext::create($pool)->withBreadcrumb('users');
-        $context2 = $context->withoutBreadcrumb();
-
-        $this->assertInstanceOf(SimpleFormatter::class, $context2->errorFormatter);
     }
 }

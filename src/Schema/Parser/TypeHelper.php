@@ -85,13 +85,11 @@ readonly class TypeHelper
         if (is_array($value)) {
             $result = [];
             foreach ($value as $item) {
-                if (null === $item) {
-                    $result[] = null;
-                } elseif (is_string($item)) {
-                    $result[] = $item;
-                } else {
-                    throw new TypeError('Expected string or null in type array, got ' . get_debug_type($item));
-                }
+                $result[] = match (true) {
+                    null === $item => null,
+                    is_string($item) => $item,
+                    default => throw new TypeError('Expected string or null in type array, got ' . get_debug_type($item)),
+                };
             }
 
             return $result;

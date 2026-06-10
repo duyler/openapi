@@ -63,9 +63,11 @@ readonly class ResponseBodyValidatorWithContext
 
         if (StreamingMediaTypeDetector::isStreaming($contentType)) {
             $this->validateStreamingContent($body, $mediaTypeSchema, $contentType);
-        } else {
-            $this->validateRegularContent($body, $mediaTypeSchema, $mediaType);
+
+            return;
         }
+
+        $this->validateRegularContent($body, $mediaTypeSchema, $mediaType);
     }
 
     private function validateRegularContent(
@@ -87,11 +89,13 @@ readonly class ResponseBodyValidatorWithContext
 
             $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy);
 
-            if ($hasDiscriminator || $hasRef) {
-                $this->contextSchemaValidator->validate($parsedBody, $schema);
-            } else {
+            if (false === ($hasDiscriminator || $hasRef)) {
                 $this->regularSchemaValidator->validate($parsedBody, $schema, $context);
+
+                return;
             }
+
+            $this->contextSchemaValidator->validate($parsedBody, $schema);
         }
     }
 
@@ -114,13 +118,17 @@ readonly class ResponseBodyValidatorWithContext
         $hasRef = $this->refResolver->schemaHasRef($schema);
 
         foreach ($items as $item) {
-            if (null !== $item) {
-                if ($hasDiscriminator || $hasRef) {
-                    $this->contextSchemaValidator->validate($item, $schema);
-                } else {
-                    $this->regularSchemaValidator->validate($item, $schema, $context);
-                }
+            if (null === $item) {
+                continue;
             }
+
+            if (false === ($hasDiscriminator || $hasRef)) {
+                $this->regularSchemaValidator->validate($item, $schema, $context);
+
+                continue;
+            }
+
+            $this->contextSchemaValidator->validate($item, $schema);
         }
     }
 }

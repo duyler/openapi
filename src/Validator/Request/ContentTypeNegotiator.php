@@ -12,11 +12,4 @@ readonly class ContentTypeNegotiator
 
         return trim($parts[0]);
     }
-
-    public function getCharset(string $contentType): ?string
-    {
-        preg_match('/charset=([^;]+)/', $contentType, $matches);
-
-        return $matches[1] ?? null;
-    }
 }

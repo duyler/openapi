@@ -37,11 +37,11 @@ readonly class TimeValidator extends AbstractStringFormatValidator
         }
 
         $remaining = substr($data, 8);
-        if ($remaining === '') {
+        if ('' === $remaining) {
             return;
         }
 
-        if ($remaining === 'Z') {
+        if ('Z' === $remaining) {
             return;
         }
 

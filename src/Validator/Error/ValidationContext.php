@@ -58,18 +58,6 @@ readonly class ValidationContext
         );
     }
 
-    public function withoutBreadcrumb(): self
-    {
-        return new self(
-            breadcrumbs: $this->breadcrumbs->pop(),
-            pool: $this->pool,
-            errorFormatter: $this->errorFormatter,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            depth: $this->depth,
-        );
-    }
-
     public function withIncrementedDepth(): self
     {
         return new self(

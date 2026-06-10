@@ -13,11 +13,6 @@
       <code><![CDATA[$value]]></code>
     </MixedAssignment>
   </file>
-  <file src="src/Cache/ValidatorCache.php">
-    <ClassMustBeFinal>
-      <code><![CDATA[ValidatorCache]]></code>
-    </ClassMustBeFinal>
-  </file>
   <file src="src/Compiler/CompilationCache.php">
     <ClassMustBeFinal>
       <code><![CDATA[CompilationCache]]></code>
@@ -35,11 +30,6 @@
   <file src="src/Event/ArrayDispatcher.php">
     <ClassMustBeFinal>
       <code><![CDATA[ArrayDispatcher]]></code>
-    </ClassMustBeFinal>
-  </file>
-  <file src="src/Event/SchemaLoadedEvent.php">
-    <ClassMustBeFinal>
-      <code><![CDATA[SchemaLoadedEvent]]></code>
     </ClassMustBeFinal>
   </file>
   <file src="src/Event/ValidationErrorEvent.php">
@@ -230,8 +220,7 @@
       <code><![CDATA[OpenApiDocument]]></code>
     </ClassMustBeFinal>
   </file>
-  <file src="src/Schema/Parser/JsonParser.php">
-  </file>
+  <file src="src/Schema/Parser/JsonParser.php"/>
   <file src="src/Schema/Parser/OpenApiBuilder.php">
     <MixedAssignment>
       <code><![CDATA[$callback]]></code>
@@ -266,8 +255,7 @@
       <code><![CDATA[$val]]></code>
     </MixedAssignment>
   </file>
-  <file src="src/Schema/Parser/YamlParser.php">
-  </file>
+  <file src="src/Schema/Parser/YamlParser.php"/>
   <file src="src/Validator/Error/Breadcrumb.php">
     <ClassMustBeFinal>
       <code><![CDATA[Breadcrumb]]></code>
@@ -488,11 +476,6 @@
       <code><![CDATA[$item]]></code>
     </MixedAssignment>
   </file>
-  <file src="src/Validator/Request/RequestBodyValidator.php">
-    <ClassMustBeFinal>
-      <code><![CDATA[RequestBodyValidator]]></code>
-    </ClassMustBeFinal>
-  </file>
   <file src="src/Validator/Request/RequestBodyValidatorWithContext.php">
     <ClassMustBeFinal>
       <code><![CDATA[RequestBodyValidatorWithContext]]></code>
@@ -510,14 +493,6 @@
     <ClassMustBeFinal>
       <code><![CDATA[TypeCoercer]]></code>
     </ClassMustBeFinal>
-  </file>
-  <file src="src/Validator/Response/ResponseBodyValidator.php">
-    <ClassMustBeFinal>
-      <code><![CDATA[ResponseBodyValidator]]></code>
-    </ClassMustBeFinal>
-    <MixedAssignment>
-      <code><![CDATA[$parsedBody]]></code>
-    </MixedAssignment>
   </file>
   <file src="src/Validator/Response/ResponseBodyValidatorWithContext.php">
     <ClassMustBeFinal>
@@ -542,11 +517,6 @@
       <code><![CDATA[$coerced[]]]></code>
       <code><![CDATA[$item]]></code>
     </MixedAssignment>
-  </file>
-  <file src="src/Validator/Response/ResponseValidator.php">
-    <ClassMustBeFinal>
-      <code><![CDATA[ResponseValidator]]></code>
-    </ClassMustBeFinal>
   </file>
   <file src="src/Validator/Response/ResponseValidatorWithContext.php">
     <ClassMustBeFinal>
@@ -582,9 +552,6 @@
     </ClassMustBeFinal>
   </file>
   <file src="src/Validator/Schema/RefResolver.php">
-    <MixedAssignment>
-      <code><![CDATA[$value]]></code>
-    </MixedAssignment>
   </file>
   <file src="src/Validator/Schema/SchemaValidatorWithContext.php">
     <ClassMustBeFinal>

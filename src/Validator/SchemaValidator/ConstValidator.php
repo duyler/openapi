@@ -18,7 +18,7 @@ readonly class ConstValidator extends AbstractSchemaValidator
             return;
         }
 
-        if ($data !== $schema->const) {
+        if ($schema->const !== $data) {
             $dataPath = $this->getDataPath($context);
             throw new ConstError(
                 expected: $schema->const,

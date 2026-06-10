@@ -44,11 +44,13 @@ readonly class DiscriminatorValidator
             return;
         }
 
-        if (null !== $discriminator->propertyName) {
-            $this->validateWithPropertyName($data, $discriminator, $schema, $document, $dataPath);
-        } else {
+        if (null === $discriminator->propertyName) {
             $this->validateWithoutPropertyName($data, $discriminator, $document, $dataPath);
+
+            return;
         }
+
+        $this->validateWithPropertyName($data, $discriminator, $schema, $document, $dataPath);
     }
 
     private function validateWithPropertyName(
@@ -83,7 +85,7 @@ readonly class DiscriminatorValidator
 
     private function buildPath(string $basePath, string $segment): string
     {
-        if ($basePath === '/') {
+        if ('/' === $basePath) {
             return '/' . $segment;
         }
 

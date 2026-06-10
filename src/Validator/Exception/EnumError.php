@@ -17,13 +17,13 @@ final class EnumError extends AbstractValidationError
     ) {
         $actualJson = json_encode($actual);
 
-        if ($actualJson === false) {
+        if (false === $actualJson) {
             $actualJson = 'null';
         }
 
         $allowedValuesJson = json_encode($allowedValues);
 
-        if ($allowedValuesJson === false) {
+        if (false === $allowedValuesJson) {
             $allowedValuesJson = 'null';
         }
 

@@ -582,25 +582,13 @@ final class RefResolver implements RefResolverInterface
         object|array $container,
         string $property,
     ): object|array {
-        if (is_array($container)) {
-            if (false === array_key_exists($property, $container)) {
-                throw new UnresolvableRefException(
-                    $property,
-                    "Array key does not exist",
-                );
-            }
-
-            $value = $container[$property];
-        } else {
-            if (false === property_exists($container, $property)) {
-                throw new UnresolvableRefException(
-                    $property,
-                    "Property does not exist",
-                );
-            }
-
-            $value = $container->$property;
-        }
+        $value = match (true) {
+            is_array($container) => array_key_exists($property, $container)
+                ? $container[$property]
+                : throw new UnresolvableRefException($property, "Array key does not exist"),
+            property_exists($container, $property) => $container->$property,
+            default => throw new UnresolvableRefException($property, "Property does not exist"),
+        };
 
         if (null === $value) {
             throw new UnresolvableRefException($property, "Value is null");

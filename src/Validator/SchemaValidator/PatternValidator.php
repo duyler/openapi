@@ -25,7 +25,7 @@ readonly class PatternValidator extends AbstractSchemaValidator
         $pattern = RegexValidator::normalize($schema->pattern);
         RegexValidator::validate($pattern);
 
-        assert($pattern !== '');
+        assert('' !== $pattern);
 
         $result = preg_match($pattern, $data);
 

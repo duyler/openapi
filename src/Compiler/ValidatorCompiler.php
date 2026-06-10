@@ -62,13 +62,11 @@ readonly class ValidatorCompiler
         $code .= "    {\n";
 
         if (null !== $schema->type) {
-            if ('array' === $schema->type) {
-                $code .= $this->generateArrayCheck($schema);
-            } elseif ('object' === $schema->type && null !== $schema->properties) {
-                $code .= $this->generateNestedObjectCheck($schema);
-            } else {
-                $code .= $this->generateTypeCheck($schema->type);
-            }
+            $code .= match (true) {
+                'array' === $schema->type => $this->generateArrayCheck($schema),
+                'object' === $schema->type && null !== $schema->properties => $this->generateNestedObjectCheck($schema),
+                default => $this->generateTypeCheck($schema->type),
+            };
         }
 
         if (null !== $schema->enum) {
@@ -106,16 +104,22 @@ readonly class ValidatorCompiler
             $checks[] = $this->buildTypeCheckExpression($function, '$data');
         }
 
-        if (count($checks) === 0) {
+        if (0 === count($checks)) {
             return '';
         }
 
-        if (count($checks) === 1) {
+        if (1 === count($checks)) {
             $code .= sprintf("        if (false === %s) {\n", $checks[0]);
-        } else {
-            $condition = implode(' && ', $checks);
-            $code .= sprintf("        if (false === (%s)) {\n", $condition);
+
+            $typesString = implode('|', $types);
+            $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected %s but got ' . get_debug_type(\$data));\n", $typesString);
+            $code .= "        }\n\n";
+
+            return $code;
         }
+
+        $condition = implode(' && ', $checks);
+        $code .= sprintf("        if (false === (%s)) {\n", $condition);
 
         $typesString = implode('|', $types);
         $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected %s but got ' . get_debug_type(\$data));\n", $typesString);
@@ -225,15 +229,10 @@ readonly class ValidatorCompiler
             return '';
         }
 
-        if ('$data' === $dataVar) {
-            $code = "        if (false === is_array(\$data)) {\n";
-            $code .= "            throw new \\RuntimeException('Expected object for \$data');\n";
-            $code .= "        }\n\n";
-        } else {
-            $code = sprintf("        if (false === is_array(%s)) {\n", $dataVar);
-            $code .= sprintf("            throw new \\RuntimeException('Expected object for %s');\n", $dataVar);
-            $code .= "        }\n\n";
-        }
+        $escapedVar = '$data' === $dataVar ? "\$data" : $dataVar;
+        $code = sprintf("        if (false === is_array(%s)) {\n", $escapedVar);
+        $code .= sprintf("            throw new \\RuntimeException('Expected object for %s');\n", $escapedVar);
+        $code .= "        }\n\n";
 
         foreach ($schema->properties as $propertyName => $propertySchema) {
             $propertyVar = sprintf('%s[\'%s\']', $dataVar, $propertyName);
@@ -258,15 +257,13 @@ readonly class ValidatorCompiler
             return $code;
         }
 
-        if ('object' === $propertySchema->type && null !== $propertySchema->properties) {
-            $code .= sprintf("        if (isset(%s)) {\n", $propertyVar);
-            $code .= $this->generateNestedObjectCheck($propertySchema, $propertyVar);
-            $code .= "        }\n\n";
-        } else {
-            $code .= sprintf("        if (isset(%s)) {\n", $propertyVar);
-            $code .= $this->generateTypeCheckForValue($propertySchema->type, $propertyVar);
-            $code .= "        }\n\n";
-        }
+        $code .= sprintf("        if (isset(%s)) {\n", $propertyVar);
+
+        $code .= ('object' === $propertySchema->type && null !== $propertySchema->properties)
+            ? $this->generateNestedObjectCheck($propertySchema, $propertyVar)
+            : $this->generateTypeCheckForValue($propertySchema->type, $propertyVar);
+
+        $code .= "        }\n\n";
 
         return $code;
     }
@@ -295,17 +292,20 @@ readonly class ValidatorCompiler
             $checks[] = $this->buildTypeCheckExpression($function, $valueVar);
         }
 
-        if (count($checks) === 0) {
+        if (0 === count($checks)) {
             return '';
         }
 
-        if (count($checks) === 1) {
+        if (1 === count($checks)) {
             $code = sprintf("        if (false === %s) {\n", $checks[0]);
-        } else {
-            $condition = implode(' && ', $checks);
-            $code = sprintf("        if (false === (%s)) {\n", $condition);
+            $code .= sprintf("            throw new \\RuntimeException('Type mismatch for %s');\n", $valueVar);
+            $code .= "        }\n";
+
+            return $code;
         }
 
+        $condition = implode(' && ', $checks);
+        $code = sprintf("        if (false === (%s)) {\n", $condition);
         $code .= sprintf("            throw new \\RuntimeException('Type mismatch for %s');\n", $valueVar);
         $code .= "        }\n";
 

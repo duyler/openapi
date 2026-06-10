@@ -120,7 +120,7 @@ final readonly class StreamingContentParser
         $length = strlen($body);
 
         while ($pos < $length) {
-            if (substr($body, $pos, 1) === "\x1E") {
+            if ("\x1E" === substr($body, $pos, 1)) {
                 $pos++;
             }
 

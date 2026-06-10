@@ -26,7 +26,7 @@ abstract readonly class AbstractParameterValidator
                 continue;
             }
 
-            if ($param->in !== $location) {
+            if ($location !== $param->in) {
                 continue;
             }
 

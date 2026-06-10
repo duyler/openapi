@@ -17,12 +17,12 @@ use Duyler\OpenApi\Schema\Model\Responses;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Model\Webhooks;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
-use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
 use Duyler\OpenApi\Validator\Request\CookieValidator;
 use Duyler\OpenApi\Validator\Request\HeadersValidator;
 use Duyler\OpenApi\Validator\Request\ParameterDeserializer;
@@ -31,7 +31,7 @@ use Duyler\OpenApi\Validator\Request\PathParser;
 use Duyler\OpenApi\Validator\Request\QueryParametersValidator;
 use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Request\QueryStringValidator;
-use Duyler\OpenApi\Validator\Request\RequestBodyValidator;
+use Duyler\OpenApi\Validator\Request\RequestBodyValidatorWithContext;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
@@ -64,20 +64,26 @@ final class WebhookValidatorTest extends TestCase
         $queryParamsValidator = new QueryParametersValidator($schemaValidator, $deserializer, $coercer);
         $headersValidator = new HeadersValidator($schemaValidator, $deserializer, $coercer);
         $cookieValidator = new CookieValidator($schemaValidator, $deserializer, $coercer);
-        $negotiator = new ContentTypeNegotiator();
         $jsonParser = new JsonBodyParser();
         $formParser = new FormBodyParser();
         $multipartParser = new MultipartBodyParser();
         $textParser = new TextBodyParser();
         $xmlParser = new XmlBodyParser();
-        $bodyValidator = new RequestBodyValidator(
-            $schemaValidator,
-            $negotiator,
+        $bodyParser = new BodyParser(
             $jsonParser,
             $formParser,
             $multipartParser,
             $textParser,
             $xmlParser,
+        );
+        $document = new OpenApiDocument(
+            openapi: '3.1.0',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+        );
+        $bodyValidator = new RequestBodyValidatorWithContext(
+            $pool,
+            $document,
+            $bodyParser,
         );
 
         $queryStringValidator = new QueryStringValidator($queryParser, $schemaValidator);

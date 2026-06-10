@@ -174,11 +174,11 @@ readonly class RequestBodyCoercer
         }
 
         if (is_int($value)) {
-            return $value !== 0;
+            return 0 !== $value;
         }
 
         if (is_float($value)) {
-            return $value !== 0.0;
+            return 0.0 !== $value;
         }
 
         return $value;
