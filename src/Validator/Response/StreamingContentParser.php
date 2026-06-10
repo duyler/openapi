@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Response;
 
 use JsonException;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 use function assert;
 use function is_array;
@@ -16,6 +18,10 @@ use const JSON_THROW_ON_ERROR;
 
 final readonly class StreamingContentParser
 {
+    public function __construct(
+        private readonly LoggerInterface $logger = new NullLogger(),
+    ) {}
+
     /**
      * Parse streaming content based on content type
      *
@@ -49,7 +55,11 @@ final readonly class StreamingContentParser
                     /** @var array<int|string, mixed> $decoded */
                     $decoded = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
                     $items[] = $decoded;
-                } catch (JsonException) {
+                } catch (JsonException $exception) {
+                    $this->logger->warning('Failed to parse JSON line in NDJSON stream', [
+                        'line' => $line,
+                        'exception' => $exception,
+                    ]);
                     $items[] = null;
                 }
             }
@@ -127,7 +137,11 @@ final readonly class StreamingContentParser
                     /** @var array<int|string, mixed> $decoded */
                     $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
                     $items[] = $decoded;
-                } catch (JsonException) {
+                } catch (JsonException $exception) {
+                    $this->logger->warning('Failed to parse JSON sequence item', [
+                        'json' => $json,
+                        'exception' => $exception,
+                    ]);
                     $items[] = null;
                 }
             }
@@ -157,7 +171,11 @@ final readonly class StreamingContentParser
                 $decoded = json_decode($event['data'], true, 512, JSON_THROW_ON_ERROR);
                 assert(is_array($decoded) || is_null($decoded) || is_scalar($decoded));
                 $dataValue = $decoded;
-            } catch (JsonException) {
+            } catch (JsonException $exception) {
+                $this->logger->warning('Failed to parse SSE event data as JSON, using raw value', [
+                    'data' => $event['data'],
+                    'exception' => $exception,
+                ]);
             }
             $result['data'] = $dataValue;
         }

@@ -168,4 +168,50 @@ class ContainsRangeValidatorTest extends TestCase
 
         $this->expectNotToPerformAssertions();
     }
+
+    #[Test]
+    public function catches_abstract_validation_error_on_type_mismatch(): void
+    {
+        $containsSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'array',
+            contains: $containsSchema,
+            minContains: 2,
+        );
+
+        $this->validator->validate(['hello', 123, 'world', 456], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function catches_abstract_validation_error_on_pattern_mismatch(): void
+    {
+        $containsSchema = new Schema(type: 'string', pattern: '^\d+$');
+        $schema = new Schema(
+            type: 'array',
+            contains: $containsSchema,
+            minContains: 1,
+        );
+
+        $this->validator->validate(['not-numeric', '123', 'also-not'], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function correctly_counts_matching_items_with_various_error_types(): void
+    {
+        $containsSchema = new Schema(type: 'string', minLength: 3);
+        $schema = new Schema(
+            type: 'array',
+            contains: $containsSchema,
+            minContains: 2,
+            maxContains: 3,
+        );
+
+        $this->validator->validate(['ab', 'hello', 42, 'world', 'x'], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
 }
