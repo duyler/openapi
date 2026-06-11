@@ -52,6 +52,39 @@ $operation = $validator->validateRequest($request);
 $validator->validateResponse($response, $operation);
 ```
 
+### Using the Validator Interface
+
+The builder returns an `OpenApiValidatorInterface` instance. Use this interface for type-hinting in your services:
+
+```php
+use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
+
+class UserService
+{
+    public function __construct(
+        private readonly OpenApiValidatorInterface $validator,
+    ) {}
+
+    public function handleRequest(ServerRequestInterface $request): void
+    {
+        $operation = $this->validator->validateRequest($request);
+        // ...
+    }
+}
+```
+
+The interface exposes the following methods:
+
+| Method | Description |
+|--------|-------------|
+| `validateRequest(ServerRequestInterface $request): Operation` | Validate and return matched operation |
+| `validateResponse(ResponseInterface $response, Operation $operation): void` | Validate response against operation |
+| `validateSchema(mixed $data, string $schemaRef): void` | Validate data against a schema reference |
+| `getFormattedErrors(ValidationException $e): string` | Format validation errors as string |
+| `validateWebhook(ServerRequestInterface $request, string $name): Operation` | Validate webhook request |
+| `validateCallback(ServerRequestInterface $request, string $name): Operation` | Validate callback request |
+| `resolveLink(string $linkName, array $responseData): array` | Resolve link parameters from response |
+
 ## Usage
 
 ### Loading OpenAPI Specifications
@@ -298,6 +331,7 @@ Subscribe to validation lifecycle events:
 use Duyler\OpenApi\Event\ValidationStartedEvent;
 use Duyler\OpenApi\Event\ValidationFinishedEvent;
 use Duyler\OpenApi\Event\ValidationErrorEvent;
+use Duyler\OpenApi\Event\ValidationWarningEvent;
 use Duyler\OpenApi\Event\ArrayDispatcher;
 
 $dispatcher = new ArrayDispatcher([
@@ -330,6 +364,15 @@ $dispatcher = new ArrayDispatcher([
             ));
         },
     ],
+    ValidationWarningEvent::class => [
+        function (ValidationWarningEvent $event) {
+            error_log(sprintf(
+                "Warning at %s: %s",
+                $event->propertyPath,
+                $event->message
+            ));
+        },
+    ],
 ]);
 
 $validator = OpenApiValidatorBuilder::create()
@@ -337,6 +380,15 @@ $validator = OpenApiValidatorBuilder::create()
     ->withEventDispatcher($dispatcher)
     ->build();
 ```
+
+Available events:
+
+| Event | Description |
+|-------|-------------|
+| `ValidationStartedEvent` | Dispatched before validation begins |
+| `ValidationFinishedEvent` | Dispatched after validation completes |
+| `ValidationErrorEvent` | Dispatched when validation fails |
+| `ValidationWarningEvent` | Dispatched for non-fatal validation warnings |
 
 ### Schema Registry
 
@@ -366,13 +418,28 @@ $registry = $registry
 // Get specific version
 $schema = $registry->get('api', '1.0.0');
 
-// Get latest version
+// Get latest version (sorted by semver)
 $schema = $registry->get('api');
 
 // List all versions
 $versions = $registry->getVersions('api');
 // ['1.0.0', '2.0.0']
+
+// Check if a schema exists
+$registry->has('api', '1.0.0'); // true
+$registry->has('api');          // true
+$registry->has('unknown');      // false
+
+// List all registered schema names
+$names = $registry->getNames();
+// ['api']
+
+// Count schemas and versions
+$total = $registry->count();                // 1
+$apiVersions = $registry->countVersions('api'); // 2
 ```
+
+The registry is immutable: `register()` returns a new instance with the added schema.
 
 ### Validator Pool
 
@@ -419,6 +486,48 @@ $validator = new UserValidator();
 $validator->validate(['name' => 'John', 'age' => 30]);
 ```
 
+The compiler generates a standalone PHP class with hardcoded validation rules. It does not depend on the library at runtime.
+
+#### Compilation with $ref Resolution
+
+Use `compileWithRefResolution()` to inline `$ref` references from an OpenAPI document:
+
+```php
+use Duyler\OpenApi\Compiler\ValidatorCompiler;
+use Duyler\OpenApi\Schema\OpenApiDocument;
+
+$compiler = new ValidatorCompiler();
+
+// Resolve $ref pointers against the document before compiling
+$code = $compiler->compileWithRefResolution($schema, 'PetValidator', $document);
+```
+
+Circular references are detected and throw a `RuntimeException`.
+
+#### Compilation with Caching
+
+Use `compileWithCache()` to avoid recompiling the same schema:
+
+```php
+use Duyler\OpenApi\Compiler\ValidatorCompiler;
+use Duyler\OpenApi\Compiler\CompilationCache;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+
+$cachePool = new FilesystemAdapter();
+$compilationCache = new CompilationCache($cachePool);
+
+$compiler = new ValidatorCompiler();
+
+// First call compiles and caches, subsequent calls return cached code
+$code = $compiler->compileWithCache($schema, 'UserValidator', $compilationCache);
+```
+
+`CompilationCache` uses a PSR-6 cache pool and generates a SHA-256 hash of the schema to use as the cache key. Cached entries expire after 24 hours by default.
+
+#### Compiler Limitations
+
+The compiler does not support all JSON Schema keywords. If a schema uses unsupported keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `patternProperties`), the compiler throws `UnsupportedKeywordException`. See the Limitations section below for details.
+
 ## Configuration Options
 
 ### Builder Methods
@@ -439,6 +548,26 @@ $validator->validate(['name' => 'John', 'age' => 30]);
 | `enableCoercion()` | Enable type coercion | `false` |
 | `enableNullableAsType()` | Enable nullable validation (default: true) | `true` |
 | `disableNullableAsType()` | Disable nullable validation | `false` |
+
+### EmptyArrayStrategy
+
+When an OpenAPI schema defines a property as `type: array` and the value is an empty array `[]`, JSON does not distinguish between an empty array and an empty object. This strategy controls how the validator treats empty arrays:
+
+| Strategy | Behavior |
+|----------|----------|
+| `AllowBoth` (default) | Empty arrays pass validation for both `array` and `object` types |
+| `PreferArray` | Empty arrays are treated as arrays, not objects |
+| `PreferObject` | Empty arrays are treated as objects, not arrays |
+| `Reject` | Empty arrays are rejected for both `array` and `object` types |
+
+```php
+use Duyler\OpenApi\Validator\EmptyArrayStrategy;
+
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withEmptyArrayStrategy(EmptyArrayStrategy::PreferArray)
+    ->build();
+```
 
 ### Example Configuration
 
@@ -590,20 +719,95 @@ try {
 }
 ```
 
-### Common Validation Errors
+### Validation Error Reference
 
-| Error Type | Description |
-|------------|-------------|
-| `TypeMismatchError` | Data type doesn't match schema type |
-| `RequiredError` | Required property is missing |
-| `MinLengthError` / `MaxLengthError` | String length constraint violation |
-| `MinimumError` / `MaximumError` | Numeric range constraint violation |
-| `PatternMismatchError` | Regular expression pattern violation |
-| `InvalidFormatException` | Format validation failed (email, URI, etc.) |
-| `OneOfError` / `AnyOfError` | Composition constraint violation |
-| `EnumError` | Value not in allowed enum |
-| `MissingParameterException` | Required parameter is missing |
-| `UnsupportedMediaTypeException` | Content-Type not supported |
+All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schemaPath()`, `keyword()`, `message()`, `params()`, `suggestion()`, and `getType()` methods.
+
+#### Type and Value Errors
+
+| Error Type | Keyword | Description |
+|------------|---------|-------------|
+| `TypeMismatchError` | `type` | Data type doesn't match schema type |
+| `EnumError` | `enum` | Value not in allowed enum |
+| `ConstError` | `const` | Value doesn't match constant |
+| `InvalidFormatException` | `format` | Format validation failed (email, URI, etc.) |
+| `InvalidDataTypeException` | `invalid` | Invalid data type encountered |
+
+#### String Validation Errors
+
+| Error Type | Keyword | Description |
+|------------|---------|-------------|
+| `MinLengthError` | `minLength` | String length below minimum |
+| `MaxLengthError` | `maxLength` | String length exceeds maximum |
+| `PatternMismatchError` | `pattern` | Regular expression pattern violation |
+
+#### Numeric Validation Errors
+
+| Error Type | Keyword | Description |
+|------------|---------|-------------|
+| `MinimumError` | `minimum` | Value below minimum |
+| `MaximumError` | `maximum` | Value exceeds maximum |
+| `MultipleOfKeywordError` | `multipleOf` | Value is not a multiple of the specified number |
+
+#### Array Validation Errors
+
+| Error Type | Keyword | Description |
+|------------|---------|-------------|
+| `MinItemsError` | `minItems` | Array has fewer items than required |
+| `MaxItemsError` | `maxItems` | Array has more items than allowed |
+| `DuplicateItemsError` | `uniqueItems` | Array contains duplicate items |
+| `ContainsMatchError` | `contains` | Array has no matching items for `contains` |
+| `MinContainsError` | `minContains` | Too few items match `contains` |
+| `MaxContainsError` | `maxContains` | Too many items match `contains` |
+
+#### Object Validation Errors
+
+| Error Type | Keyword | Description |
+|------------|---------|-------------|
+| `RequiredError` | `required` | Required property is missing |
+| `MinPropertiesError` | `minProperties` | Object has fewer properties than required |
+| `MaxPropertiesError` | `maxProperties` | Object has more properties than allowed |
+| `UnevaluatedPropertyError` | `unevaluatedProperties` | Property not allowed and not evaluated by any keyword |
+
+#### Composition Errors
+
+| Error Type | Keyword | Description |
+|------------|---------|-------------|
+| `OneOfError` | `oneOf` | Data matches multiple schemas (should match exactly one) |
+| `AnyOfError` | `anyOf` | Data doesn't match any of the schemas |
+
+#### Discriminator Errors
+
+| Error Type | Keyword | Description |
+|------------|---------|-------------|
+| `DiscriminatorMismatchException` | `discriminator` | Discriminator type doesn't match expected |
+| `InvalidDiscriminatorValueException` | `discriminator` | Discriminator property has wrong type |
+| `UnknownDiscriminatorValueException` | `discriminator` | Discriminator value not in mapping |
+| `MissingDiscriminatorPropertyException` | `discriminator` | Required discriminator property is missing |
+
+#### Security Errors
+
+| Error Type | Keyword | Description |
+|------------|---------|-------------|
+| `MissingSecurityCredentialsError` | `security` | Required security credentials missing from request |
+
+#### HTTP, Request, and Schema Errors
+
+These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentException` directly and do not implement `ValidationErrorInterface`:
+
+| Exception | Description |
+|-----------|-------------|
+| `MissingParameterException` | Required parameter is missing from request |
+| `MissingRequestBodyException` | Request body is required but missing |
+| `EmptyBodyException` | Request body is empty |
+| `UnsupportedMediaTypeException` | Content-Type not supported by the operation |
+| `PathMismatchException` | Request path doesn't match any operation template |
+| `InvalidParameterException` | Parameter value is malformed or invalid |
+| `InvalidPatternException` | Invalid regex pattern in schema definition |
+| `UndefinedResponseException` | Response status code not defined in spec |
+| `RefResolutionException` | Failed to resolve `$ref` reference |
+| `SchemaDepthExceededException` | Maximum schema nesting depth exceeded |
+| `UnknownValidatorException` | Unknown validator type requested |
 
 ### Error Formatters
 
@@ -721,6 +925,29 @@ $validator->validateResponse($response, $operation);
 // Schema validation
 $validator->validateSchema($data, '#/components/schemas/User');
 ```
+
+## Limitations
+
+### JSON Schema Coverage
+
+The validator covers approximately 95% of JSON Schema draft 2020-12 keywords. The following are not fully supported:
+
+- `$dynamicRef` / `$dynamicAnchor` - dynamic schema resolution
+- `$recursiveRef` / `$recursiveAnchor` - recursive schema resolution
+- `contentEncoding` / `contentMediaType` - content validation
+- Custom vocabularies and keyword extensions
+
+### Validator Compiler
+
+The `ValidatorCompiler` is marked as `@experimental`. It supports a subset of JSON Schema keywords: `type`, `enum`, `const`, `minLength`, `maxLength`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`, `pattern`, `minItems`, `maxItems`, `uniqueItems`, `properties`, `required`, `additionalProperties`, `items`.
+
+The compiler does not support composition keywords (`allOf`, `anyOf`, `oneOf`, `not`), conditional keywords (`if`/`then`/`else`), or `patternProperties`. If any of these are present in a schema, `compile()` throws `UnsupportedKeywordException`.
+
+Generated validators throw generic `RuntimeException` on failure rather than the typed error classes used by the runtime validator.
+
+### Security Validation
+
+Security scheme validation is basic. The validator checks that required credentials are present in the request (headers, query parameters, or cookies) but does not verify their correctness or format. Token validation, signature checking, and OAuth flow handling are outside the scope of this library.
 
 ## Requirements
 
