@@ -62,7 +62,7 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
 
         if ($schema->additionalProperties instanceof Schema) {
             $nullableAsType = $context?->nullableAsType ?? true;
-            $validator = new SchemaValidator($this->pool, $this->formatRegistry);
+            $validator = $this->createSchemaValidator();
 
             foreach ($additionalKeys as $key) {
                 /** @var array-key|array<array-key, mixed> $value */

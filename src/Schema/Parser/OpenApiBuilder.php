@@ -53,6 +53,8 @@ use function array_key_exists;
 
 use function is_bool;
 
+use function in_array;
+
 use const FILTER_VALIDATE_URL;
 
 abstract class OpenApiBuilder implements SchemaParserInterface
@@ -377,7 +379,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             deprecated: (bool) ($data['deprecated'] ?? false),
             readOnly: (bool) ($data['readOnly'] ?? false),
             writeOnly: (bool) ($data['writeOnly'] ?? false),
-            type: TypeHelper::asStringOrNull($data['type'] ?? null),
+            type: $this->resolveType($data),
             nullable: (bool) ($data['nullable'] ?? false),
             const: $data['const'] ?? null,
             hasConst: array_key_exists('const', $data),
@@ -1075,6 +1077,35 @@ abstract class OpenApiBuilder implements SchemaParserInterface
                 : null,
             name: TypeHelper::asStringOrNull($data['name'] ?? null),
         );
+    }
+
+    /**
+     * @param array<array-key, mixed> $data
+     *
+     * @return string|list<string>|null
+     */
+    protected function resolveType(array $data): string|array|null
+    {
+        $type = TypeHelper::asTypeOrNull($data['type'] ?? null);
+
+        if (false === $this->isVersion30() && true === ($data['nullable'] ?? false)) {
+            $baseType = is_array($type) ? array_values($type) : (is_string($type) ? [$type] : []);
+
+            if ([] === $baseType) {
+                /** @var string|list<string>|null $type */
+                return $type;
+            }
+
+            if (false === in_array('null', $baseType, true)) {
+                $baseType[] = 'null';
+            }
+
+            /** @var list<string> $baseType */
+            return $baseType;
+        }
+
+        /** @var string|list<string>|null $type */
+        return $type;
     }
 
     protected function isVersion30(): bool

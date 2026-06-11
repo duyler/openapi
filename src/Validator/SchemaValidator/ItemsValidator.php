@@ -27,7 +27,7 @@ final readonly class ItemsValidator extends AbstractSchemaValidator
             return;
         }
 
-        $validator = new SchemaValidator($this->pool, $this->formatRegistry);
+        $validator = $this->createSchemaValidator();
 
         foreach ($data as $index => $item) {
             /** @var int $index */

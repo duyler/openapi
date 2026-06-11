@@ -81,6 +81,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         public readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         public readonly ?EventDispatcherInterface $eventDispatcher = null,
         public readonly bool $securityValidation = false,
+        public readonly bool $strictFormats = false,
     ) {
         $this->logger = $logger ?? new NullLogger();
         $this->requestValidator = $this->buildRequestValidator();
@@ -270,7 +271,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
 
             $this->logger->info(sprintf('Validating schema: %s', $schemaRef));
 
-            $validator = new SchemaValidator($this->pool, $this->formatRegistry);
+            $validator = new SchemaValidator($this->pool, $this->formatRegistry, strictFormats: $this->strictFormats, logger: $this->logger);
 
             /** @var array<array-key, mixed>|array-key $data */
             $validator->validate($data, $schema);
@@ -491,34 +492,35 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         );
 
         $queryParser = new QueryParser();
+        $schemaValidator = new SchemaValidator($this->pool, $this->formatRegistry, strictFormats: $this->strictFormats, logger: $this->logger);
 
         return new RequestValidator(
             pathParser: new PathParser(),
             pathParamsValidator: new PathParametersValidator(
-                schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
+                schemaValidator: $schemaValidator,
                 deserializer: $deserializer,
                 coercer: $coercer,
                 coercion: $this->coercion,
             ),
             queryParser: $queryParser,
             queryParamsValidator: new QueryParametersValidator(
-                schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
+                schemaValidator: $schemaValidator,
                 deserializer: $deserializer,
                 coercer: $coercer,
                 coercion: $this->coercion,
             ),
             queryStringValidator: new QueryStringValidator(
                 queryParser: $queryParser,
-                schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
+                schemaValidator: $schemaValidator,
             ),
             headersValidator: new HeadersValidator(
-                schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
+                schemaValidator: $schemaValidator,
                 deserializer: $deserializer,
                 coercer: $coercer,
                 coercion: $this->coercion,
             ),
             cookieValidator: new CookieValidator(
-                schemaValidator: new SchemaValidator($this->pool, $this->formatRegistry),
+                schemaValidator: $schemaValidator,
                 deserializer: $deserializer,
                 coercer: $coercer,
                 coercion: $this->coercion,

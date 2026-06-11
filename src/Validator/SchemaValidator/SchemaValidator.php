@@ -12,6 +12,8 @@ use Duyler\OpenApi\Validator\Registry\DefaultValidatorRegistry;
 use Duyler\OpenApi\Validator\Registry\ValidatorRegistryInterface;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 use function assert;
 
@@ -24,6 +26,8 @@ final class SchemaValidator implements SchemaValidatorInterface
         private readonly ValidatorPool $pool,
         ?FormatRegistry $formatRegistry = null,
         private readonly ?ValidatorRegistryInterface $registry = null,
+        private readonly bool $strictFormats = false,
+        private readonly LoggerInterface $logger = new NullLogger(),
     ) {
         $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
     }
@@ -31,7 +35,12 @@ final class SchemaValidator implements SchemaValidatorInterface
     #[Override]
     public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
     {
-        $registry = $this->registry ?? $this->cachedRegistry ??= new DefaultValidatorRegistry($this->pool, $this->formatRegistry);
+        $registry = $this->registry ?? $this->cachedRegistry ??= new DefaultValidatorRegistry(
+            $this->pool,
+            $this->formatRegistry,
+            $this->strictFormats,
+            $this->logger,
+        );
 
         foreach ($registry->getAllValidators() as $validator) {
             assert($validator instanceof SchemaValidatorInterface);

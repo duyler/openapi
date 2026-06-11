@@ -26,20 +26,20 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator
         $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
         $ifValid = true;
         try {
-            $validator = new SchemaValidator($this->pool, $this->formatRegistry);
+            $validator = $this->createSchemaValidator();
             $validator->validate($normalizedData, $schema->if, $context);
         } catch (InvalidDataTypeException|ValidationException|AbstractValidationError) {
             $ifValid = false;
         }
 
         if ($ifValid && null !== $schema->then) {
-            $validator = new SchemaValidator($this->pool, $this->formatRegistry);
+            $validator = $this->createSchemaValidator();
             $validator->validate($normalizedData, $schema->then, $context);
             return;
         }
 
         if (false === $ifValid && null !== $schema->else) {
-            $validator = new SchemaValidator($this->pool, $this->formatRegistry);
+            $validator = $this->createSchemaValidator();
             $validator->validate($normalizedData, $schema->else, $context);
         }
     }

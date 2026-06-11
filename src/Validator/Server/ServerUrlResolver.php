@@ -1,0 +1,123 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Duyler\OpenApi\Validator\Server;
+
+use Duyler\OpenApi\Schema\Model\Server;
+
+use function sprintf;
+use function array_key_exists;
+use function is_array;
+use function is_string;
+
+final readonly class ServerUrlResolver
+{
+    /**
+     * Resolves a server URL template by substituting variables with provided values.
+     *
+     * @param Server $server The server definition containing URL template and default variables
+     * @param array<string, string> $variableOverrides Optional overrides for server variables
+     *
+     * @return string The resolved URL with all variables substituted
+     *
+     * @throws ServerVariableException If a required variable is missing
+     */
+    public function resolve(Server $server, array $variableOverrides = []): string
+    {
+        $url = $server->url;
+        $variables = $this->mergeVariables($server, $variableOverrides);
+
+        $result = preg_replace_callback(
+            '/\{(\w+)\}/',
+            function (array $matches) use ($variables, $server): string {
+                $variableName = $matches[1];
+
+                if (false === array_key_exists($variableName, $variables)) {
+                    throw new ServerVariableException(
+                        sprintf(
+                            'Server variable "%s" is not defined for server URL "%s"',
+                            $variableName,
+                            $server->url,
+                        ),
+                    );
+                }
+
+                return $variables[$variableName];
+            },
+            $url,
+        );
+
+        if (null === $result) {
+            return $url;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Extracts variable names from a server URL template.
+     *
+     * @return list<string>
+     */
+    public function extractVariableNames(Server $server): array
+    {
+        preg_match_all('/\{(\w+)\}/', $server->url, $matches);
+
+        /** @var list<string> $result */
+        $result = $matches[1];
+
+        return $result;
+    }
+
+    /**
+     * Validates that all template variables in the server URL have corresponding values.
+     *
+     * @param Server $server The server definition
+     * @param array<string, string> $variableOverrides Optional overrides for server variables
+     *
+     * @throws ServerVariableException If a variable is missing a value
+     */
+    public function validateVariables(Server $server, array $variableOverrides = []): void
+    {
+        $variableNames = $this->extractVariableNames($server);
+        $variables = $this->mergeVariables($server, $variableOverrides);
+
+        foreach ($variableNames as $name) {
+            if (false === array_key_exists($name, $variables)) {
+                throw new ServerVariableException(
+                    sprintf(
+                        'Missing value for server variable "%s" in URL "%s"',
+                        $name,
+                        $server->url,
+                    ),
+                );
+            }
+        }
+    }
+
+    /**
+     * @param array<string, string> $variableOverrides
+     *
+     * @return array<string, string>
+     */
+    private function mergeVariables(Server $server, array $variableOverrides): array
+    {
+        /** @var array<string, string> $defaults */
+        $defaults = [];
+
+        if (null !== $server->variables) {
+            /**
+             * @var string $name
+             * @var mixed $variable
+             */
+            foreach ($server->variables as $name => $variable) {
+                if (is_array($variable) && isset($variable['default']) && is_string($variable['default'])) {
+                    $defaults[$name] = $variable['default'];
+                }
+            }
+        }
+
+        return array_merge($defaults, $variableOverrides);
+    }
+}

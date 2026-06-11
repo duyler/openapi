@@ -9,14 +9,19 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 use function is_array;
+use function sprintf;
 
 final readonly class FormatValidator implements SchemaValidatorInterface
 {
     public function __construct(
         private readonly ValidatorPool $pool,
         private readonly FormatRegistry $formatRegistry,
+        private readonly bool $strictFormats = false,
+        private readonly LoggerInterface $logger = new NullLogger(),
     ) {}
 
     #[Override]
@@ -30,6 +35,14 @@ final readonly class FormatValidator implements SchemaValidatorInterface
         $formatValidator = $this->formatRegistry->getValidator($type, $schema->format);
 
         if (null === $formatValidator) {
+            if ($this->strictFormats) {
+                $this->logger->warning(sprintf(
+                    'Unknown format "%s" for type "%s" in strict mode',
+                    $schema->format,
+                    $type,
+                ));
+            }
+
             return;
         }
 

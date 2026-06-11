@@ -476,7 +476,7 @@ final class OpenApiBuilderTest extends TestCase
         $this->assertSame('Test description', $schema->description);
         $this->assertSame('default_value', $schema->default);
         $this->assertTrue($schema->deprecated);
-        $this->assertSame('string', $schema->type);
+        $this->assertSame(['string', 'null'], $schema->type);
         $this->assertTrue($schema->nullable);
         $this->assertSame('constant_value', $schema->const);
         $this->assertSame(2.0, $schema->multipleOf);

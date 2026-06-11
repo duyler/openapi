@@ -22,7 +22,7 @@ final readonly class NotValidator extends AbstractSchemaValidator
         }
 
         $nullableAsType = $context?->nullableAsType ?? true;
-        $validator = new SchemaValidator($this->pool, $this->formatRegistry);
+        $validator = $this->createSchemaValidator();
 
         try {
             $allowNull = $schema->not->nullable && $nullableAsType;

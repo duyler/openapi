@@ -45,6 +45,7 @@ final readonly class OpenApiValidatorBuilder
         protected ?ErrorFormatterInterface $errorFormatter = null,
         protected ?EventDispatcherInterface $eventDispatcher = null,
         protected bool $securityValidation = false,
+        protected bool $strictFormats = false,
     ) {}
 
     public static function create(): self
@@ -67,6 +68,7 @@ final readonly class OpenApiValidatorBuilder
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
+            strictFormats: $this->strictFormats,
         );
     }
 
@@ -85,6 +87,7 @@ final readonly class OpenApiValidatorBuilder
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
+            strictFormats: $this->strictFormats,
         );
     }
 
@@ -103,6 +106,7 @@ final readonly class OpenApiValidatorBuilder
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
+            strictFormats: $this->strictFormats,
         );
     }
 
@@ -121,6 +125,7 @@ final readonly class OpenApiValidatorBuilder
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
+            strictFormats: $this->strictFormats,
         );
     }
 
@@ -140,6 +145,7 @@ final readonly class OpenApiValidatorBuilder
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
+            strictFormats: $this->strictFormats,
         );
     }
 
@@ -159,6 +165,7 @@ final readonly class OpenApiValidatorBuilder
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
+            strictFormats: $this->strictFormats,
         );
     }
 
@@ -178,6 +185,7 @@ final readonly class OpenApiValidatorBuilder
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
+            strictFormats: $this->strictFormats,
         );
     }
 
@@ -197,6 +205,7 @@ final readonly class OpenApiValidatorBuilder
             errorFormatter: $formatter,
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
+            strictFormats: $this->strictFormats,
         );
     }
 
@@ -222,6 +231,7 @@ final readonly class OpenApiValidatorBuilder
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
+            strictFormats: $this->strictFormats,
         );
     }
 
@@ -241,6 +251,7 @@ final readonly class OpenApiValidatorBuilder
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
+            strictFormats: $this->strictFormats,
         );
     }
 
@@ -260,6 +271,7 @@ final readonly class OpenApiValidatorBuilder
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
+            strictFormats: $this->strictFormats,
         );
     }
 
@@ -279,6 +291,7 @@ final readonly class OpenApiValidatorBuilder
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
+            strictFormats: $this->strictFormats,
         );
     }
 
@@ -298,6 +311,7 @@ final readonly class OpenApiValidatorBuilder
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
+            strictFormats: $this->strictFormats,
         );
     }
 
@@ -317,6 +331,7 @@ final readonly class OpenApiValidatorBuilder
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $dispatcher,
             securityValidation: $this->securityValidation,
+            strictFormats: $this->strictFormats,
         );
     }
 
@@ -336,6 +351,27 @@ final readonly class OpenApiValidatorBuilder
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
             securityValidation: true,
+            strictFormats: $this->strictFormats,
+        );
+    }
+
+    public function enableStrictFormats(): self
+    {
+        return new self(
+            specPath: $this->specPath,
+            specContent: $this->specContent,
+            specType: $this->specType,
+            pool: $this->pool,
+            cache: $this->cache,
+            logger: $this->logger,
+            formatRegistry: $this->formatRegistry,
+            coercion: $this->coercion,
+            nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
+            errorFormatter: $this->errorFormatter,
+            eventDispatcher: $this->eventDispatcher,
+            securityValidation: $this->securityValidation,
+            strictFormats: true,
         );
     }
 
@@ -361,6 +397,7 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $this->eventDispatcher,
             pathFinder: $pathFinder,
             securityValidation: $this->securityValidation,
+            strictFormats: $this->strictFormats,
         );
     }
 

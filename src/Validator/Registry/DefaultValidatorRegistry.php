@@ -39,6 +39,8 @@ use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedItemsValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedPropertiesValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 use function array_key_exists;
 
@@ -53,6 +55,8 @@ final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterf
     public function __construct(
         private readonly ValidatorPool $pool,
         ?FormatRegistry $formatRegistry = null,
+        private readonly bool $strictFormats = false,
+        private readonly LoggerInterface $logger = new NullLogger(),
     ) {
         $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
         $validators = $this->createValidators();
@@ -84,33 +88,33 @@ final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterf
     private function createValidators(): array
     {
         $result = [
-            AllOfValidator::class => new AllOfValidator($this->pool, $this->formatRegistry),
-            AnyOfValidator::class => new AnyOfValidator($this->pool, $this->formatRegistry),
-            ArrayLengthValidator::class => new ArrayLengthValidator($this->pool, $this->formatRegistry),
-            ConstValidator::class => new ConstValidator($this->pool, $this->formatRegistry),
-            ContainsRangeValidator::class => new ContainsRangeValidator($this->pool, $this->formatRegistry),
-            ContainsValidator::class => new ContainsValidator($this->pool, $this->formatRegistry),
-            DependentSchemasValidator::class => new DependentSchemasValidator($this->pool, $this->formatRegistry),
-            EnumValidator::class => new EnumValidator($this->pool, $this->formatRegistry),
-            FormatValidator::class => new FormatValidator($this->pool, $this->formatRegistry),
-            IfThenElseValidator::class => new IfThenElseValidator($this->pool, $this->formatRegistry),
-            ItemsValidator::class => new ItemsValidator($this->pool, $this->formatRegistry),
-            NotValidator::class => new NotValidator($this->pool, $this->formatRegistry),
-            NumericRangeValidator::class => new NumericRangeValidator($this->pool, $this->formatRegistry),
-            ObjectLengthValidator::class => new ObjectLengthValidator($this->pool, $this->formatRegistry),
-            OneOfValidator::class => new OneOfValidator($this->pool, $this->formatRegistry),
-            PatternPropertiesValidator::class => new PatternPropertiesValidator($this->pool, $this->formatRegistry),
-            PatternValidator::class => new PatternValidator($this->pool, $this->formatRegistry),
-            PrefixItemsValidator::class => new PrefixItemsValidator($this->pool, $this->formatRegistry),
-            PropertiesValidator::class => new PropertiesValidator($this->pool, $this->formatRegistry),
-            PropertyNamesValidator::class => new PropertyNamesValidator($this->pool, $this->formatRegistry),
-            ReadOnlyWriteOnlyValidator::class => new ReadOnlyWriteOnlyValidator($this->pool, $this->formatRegistry),
-            RequiredValidator::class => new RequiredValidator($this->pool, $this->formatRegistry),
-            StringLengthValidator::class => new StringLengthValidator($this->pool, $this->formatRegistry),
-            TypeValidator::class => new TypeValidator($this->pool, $this->formatRegistry),
-            UnevaluatedItemsValidator::class => new UnevaluatedItemsValidator($this->pool, $this->formatRegistry),
-            UnevaluatedPropertiesValidator::class => new UnevaluatedPropertiesValidator($this->pool, $this->formatRegistry),
-            AdditionalPropertiesValidator::class => new AdditionalPropertiesValidator($this->pool, $this->formatRegistry),
+            AllOfValidator::class => new AllOfValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            AnyOfValidator::class => new AnyOfValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            ArrayLengthValidator::class => new ArrayLengthValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            ConstValidator::class => new ConstValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            ContainsRangeValidator::class => new ContainsRangeValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            ContainsValidator::class => new ContainsValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            DependentSchemasValidator::class => new DependentSchemasValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            EnumValidator::class => new EnumValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            FormatValidator::class => new FormatValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            IfThenElseValidator::class => new IfThenElseValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            ItemsValidator::class => new ItemsValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            NotValidator::class => new NotValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            NumericRangeValidator::class => new NumericRangeValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            ObjectLengthValidator::class => new ObjectLengthValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            OneOfValidator::class => new OneOfValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            PatternPropertiesValidator::class => new PatternPropertiesValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            PatternValidator::class => new PatternValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            PrefixItemsValidator::class => new PrefixItemsValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            PropertiesValidator::class => new PropertiesValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            PropertyNamesValidator::class => new PropertyNamesValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            ReadOnlyWriteOnlyValidator::class => new ReadOnlyWriteOnlyValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            RequiredValidator::class => new RequiredValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            StringLengthValidator::class => new StringLengthValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            TypeValidator::class => new TypeValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            UnevaluatedItemsValidator::class => new UnevaluatedItemsValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            UnevaluatedPropertiesValidator::class => new UnevaluatedPropertiesValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
+            AdditionalPropertiesValidator::class => new AdditionalPropertiesValidator($this->pool, $this->formatRegistry, $this->strictFormats, $this->logger),
             ContentEncodingValidator::class => new ContentEncodingValidator(),
             ContentMediaTypeValidator::class => new ContentMediaTypeValidator(),
         ];

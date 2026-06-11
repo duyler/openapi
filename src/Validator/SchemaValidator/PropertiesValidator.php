@@ -28,7 +28,7 @@ final readonly class PropertiesValidator extends AbstractSchemaValidator
             return;
         }
 
-        $validator = new SchemaValidator($this->pool, $this->formatRegistry);
+        $validator = $this->createSchemaValidator();
 
         foreach ($schema->properties as $name => $propertySchema) {
             if (false === array_key_exists($name, $data)) {
