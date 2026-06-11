@@ -122,7 +122,7 @@ final readonly class ServerUrlValidator
             try {
                 $resolved[] = $this->resolver->resolve($server, $typedOverrides);
             } catch (ServerVariableException) {
-                $resolved[] = $server->url;
+                continue;
             }
         }
 

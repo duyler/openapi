@@ -9,6 +9,10 @@ use Duyler\OpenApi\Validator\Server\ServerUrlMismatchException;
 use Duyler\OpenApi\Validator\Server\ServerUrlValidator;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\InfoObject;
+use Duyler\OpenApi\Schema\Model\Server;
+use Duyler\OpenApi\Schema\Model\Servers;
+use Duyler\OpenApi\Schema\OpenApiDocument;
 
 final class ServerUrlValidatorTest extends TestCase
 {
@@ -177,5 +181,53 @@ YAML;
         $serverValidator->validate($validator->document, 'https://anything.example.com');
 
         $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function unresolvable_server_url_not_added_to_result(): void
+    {
+        $document = new OpenApiDocument(
+            openapi: '3.1.0',
+            info: new InfoObject('Test API', '1.0.0'),
+            servers: new Servers([
+                new Server(
+                    url: 'https://{env}.api.example.com',
+                    variables: [],
+                ),
+                new Server(
+                    url: 'https://static.api.example.com',
+                ),
+            ]),
+        );
+
+        $serverValidator = new ServerUrlValidator();
+
+        $serverValidator->validate($document, 'https://static.api.example.com');
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function unresolvable_server_url_skipped_during_matching(): void
+    {
+        $document = new OpenApiDocument(
+            openapi: '3.1.0',
+            info: new InfoObject('Test API', '1.0.0'),
+            servers: new Servers([
+                new Server(
+                    url: 'https://{env}.api.example.com',
+                    variables: [],
+                ),
+                new Server(
+                    url: 'https://static.api.example.com',
+                ),
+            ]),
+        );
+
+        $serverValidator = new ServerUrlValidator();
+
+        $this->expectException(ServerUrlMismatchException::class);
+
+        $serverValidator->validate($document, 'https://unknown.api.example.com');
     }
 }

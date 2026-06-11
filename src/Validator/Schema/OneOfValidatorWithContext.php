@@ -8,13 +8,12 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-
-use Exception;
 
 use function is_array;
 use function assert;
@@ -103,7 +102,9 @@ final readonly class OneOfValidatorWithContext
                 ++$validCount;
             } catch (AbstractValidationError $e) {
                 $abstractErrors[] = $e;
-            } catch (Exception $e) {
+            } catch (InvalidDataTypeException) {
+                continue;
+            } catch (ValidationException $e) {
                 $errors[] = new ValidationException(
                     message: 'Invalid data for oneOf schema: ' . $e->getMessage(),
                     previous: $e,

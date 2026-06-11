@@ -20,6 +20,7 @@ use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 final class OneOfValidatorWithContextTest extends TestCase
 {
@@ -1259,5 +1260,19 @@ final class OneOfValidatorWithContextTest extends TestCase
         } catch (ValidationException $e) {
             self::assertStringContainsString('Exactly one of schemas must match', $e->getMessage());
         }
+    }
+
+    #[Test]
+    public function runtime_exception_in_one_of_is_not_swallowed(): void
+    {
+        $schema = new Schema(
+            oneOf: [
+                new Schema(ref: '#/components/schemas/NonExistent'),
+            ],
+        );
+
+        $this->expectException(RuntimeException::class);
+
+        $this->validator->validateWithContext(['data' => 'test'], $schema, $this->context);
     }
 }
