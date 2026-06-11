@@ -70,6 +70,7 @@ final readonly class ValidatorCompiler
     private function generateCode(Schema $schema, string $className): string
     {
         $code = "<?php\n\n";
+        $code .= "declare(strict_types=1);\n\n";
         $code .= sprintf("readonly class %s\n{\n", $className);
         $code .= '    public function validate(mixed $data): void' . "\n";
         $code .= "    {\n";
@@ -98,6 +99,14 @@ final readonly class ValidatorCompiler
             $code .= $this->generatePatternCheck($schema->pattern);
         }
 
+        if ($schema->hasConst) {
+            $code .= $this->generateConstCheck($schema->const);
+        }
+
+        if (null !== $schema->multipleOf) {
+            $code .= $this->generateMultipleOfCheck($schema->multipleOf);
+        }
+
         $code .= "    }\n";
         $code .= "}\n";
 
@@ -113,8 +122,7 @@ final readonly class ValidatorCompiler
 
         $checks = [];
         foreach ($types as $t) {
-            $function = $this->getTypeCheckFunction($t);
-            $checks[] = $this->buildTypeCheckExpression($function, '$data');
+            $checks[] = $this->buildTypeCheckExpression($t, '$data');
         }
 
         if (0 === count($checks)) {
@@ -131,7 +139,7 @@ final readonly class ValidatorCompiler
             return $code;
         }
 
-        $condition = implode(' && ', $checks);
+        $condition = implode(' || ', $checks);
         $code .= sprintf("        if (false === (%s)) {\n", $condition);
 
         $typesString = implode('|', $types);
@@ -222,11 +230,50 @@ final readonly class ValidatorCompiler
         return $code;
     }
 
+    private function generateConstCheck(mixed $constValue): string
+    {
+        $exportedValue = var_export($constValue, true);
+
+        $code = sprintf("        if (%s !== \$data) {\n", $exportedValue);
+        $code .= sprintf("            throw new \\RuntimeException(sprintf('Value must be const: %%s', var_export(\$data, true)));\n");
+        $code .= "        }\n\n";
+
+        return $code;
+    }
+
+    private function generateMultipleOfCheck(float $multipleOf): string
+    {
+        $multipleOfStr = var_export($multipleOf, true);
+
+        $code = sprintf("        if (0.0 !== fmod((float) \$data, %s)) {\n", $multipleOfStr);
+        $code .= sprintf("            throw new \\RuntimeException('Value must be a multiple of %s');\n", $multipleOfStr);
+        $code .= "        }\n\n";
+
+        return $code;
+    }
+
+    private function generateAdditionalPropertiesCheck(Schema $schema, string $dataVar = '$data'): string
+    {
+        if (null === $schema->properties) {
+            return '';
+        }
+
+        $allowedKeys = array_keys($schema->properties);
+        $exportedKeys = var_export($allowedKeys, true);
+
+        $code = sprintf("        foreach (array_keys(%s) as \$key) {\n", $dataVar);
+        $code .= sprintf("            if (false === in_array(\$key, %s, true)) {\n", $exportedKeys);
+        $code .= "                throw new \\RuntimeException('Additional property not allowed: ' . \$key);\n";
+        $code .= "            }\n";
+        $code .= "        }\n\n";
+
+        return $code;
+    }
+
     private function getTypeCheckFunction(string $type): string
     {
         return match ($type) {
             'string' => 'is_string',
-            'number' => 'is_number',
             'integer' => 'is_int',
             'boolean' => 'is_bool',
             'array' => 'is_array',
@@ -236,6 +283,17 @@ final readonly class ValidatorCompiler
         };
     }
 
+    private function buildTypeCheckExpression(string $type, string $variable): string
+    {
+        if ('number' === $type) {
+            return sprintf('(is_float(%s) || is_int(%s))', $variable, $variable);
+        }
+
+        $function = $this->getTypeCheckFunction($type);
+
+        return sprintf('%s(%s)', $function, $variable);
+    }
+
     private function generateNestedObjectCheck(Schema $schema, string $dataVar = '$data'): string
     {
         if (null === $schema->properties) {
@@ -243,8 +301,9 @@ final readonly class ValidatorCompiler
         }
 
         $escapedVar = '$data' === $dataVar ? "\$data" : $dataVar;
+        $safeVarForError = str_replace("'", "\'", $dataVar);
         $code = sprintf("        if (false === is_array(%s)) {\n", $escapedVar);
-        $code .= sprintf("            throw new \\RuntimeException('Expected object for %s');\n", $escapedVar);
+        $code .= sprintf("            throw new \\RuntimeException('Expected object for %s');\n", $safeVarForError);
         $code .= "        }\n\n";
 
         foreach ($schema->properties as $propertyName => $propertySchema) {
@@ -254,6 +313,10 @@ final readonly class ValidatorCompiler
 
         if (null !== $schema->required && [] !== $schema->required) {
             $code .= $this->generateRequiredCheck($schema->required, $dataVar);
+        }
+
+        if (false === $schema->additionalProperties) {
+            $code .= $this->generateAdditionalPropertiesCheck($schema, $dataVar);
         }
 
         return $code;
@@ -304,37 +367,29 @@ final readonly class ValidatorCompiler
         $checks = [];
 
         foreach ($types as $t) {
-            $function = $this->getTypeCheckFunction($t);
-            $checks[] = $this->buildTypeCheckExpression($function, $valueVar);
+            $checks[] = $this->buildTypeCheckExpression($t, $valueVar);
         }
 
         if (0 === count($checks)) {
             return '';
         }
 
+        $safeVarName = str_replace("'", "\'", $valueVar);
+
         if (1 === count($checks)) {
             $code = sprintf("        if (false === %s) {\n", $checks[0]);
-            $code .= sprintf("            throw new \\RuntimeException('Type mismatch for %s');\n", $valueVar);
+            $code .= sprintf("            throw new \\RuntimeException('Type mismatch for %s');\n", $safeVarName);
             $code .= "        }\n";
 
             return $code;
         }
 
-        $condition = implode(' && ', $checks);
+        $condition = implode(' || ', $checks);
         $code = sprintf("        if (false === (%s)) {\n", $condition);
-        $code .= sprintf("            throw new \\RuntimeException('Type mismatch for %s');\n", $valueVar);
+        $code .= sprintf("            throw new \\RuntimeException('Type mismatch for %s');\n", $safeVarName);
         $code .= "        }\n";
 
         return $code;
-    }
-
-    private function buildTypeCheckExpression(string $function, string $variable): string
-    {
-        if ('is_number' === $function) {
-            return sprintf('(is_float(%s) || is_int(%s))', $variable, $variable);
-        }
-
-        return sprintf('%s(%s)', $function, $variable);
     }
 
     private function generateArrayCheck(Schema $schema): string
