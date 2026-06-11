@@ -685,4 +685,163 @@ final class ValidatorCompilerTest extends TestCase
 
         $this->assertStringStartsWith("<?php\n", $code);
     }
+
+    #[Test]
+    public function compile_with_cache_returns_same_code_on_repeated_call(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $cache = $this->createMock(CompilationCache::class);
+        $schema = new Schema(type: 'string');
+
+        $callCount = 0;
+        $cache
+            ->method('generateKey')
+            ->willReturnCallback(function () use (&$callCount): string {
+                ++$callCount;
+
+                return 'key_' . $callCount;
+            });
+
+        $cache
+            ->method('get')
+            ->willReturnOnConsecutiveCalls(null, 'compiled_code_from_cache');
+
+        $cache
+            ->expects($this->once())
+            ->method('set');
+
+        $firstCode = $compiler->compileWithCache($schema, 'RepeatedCallValidator', $cache);
+        $this->assertStringContainsString('is_string($data)', $firstCode);
+
+        $secondCode = $compiler->compileWithCache($schema, 'RepeatedCallValidator', $cache);
+        $this->assertSame('compiled_code_from_cache', $secondCode);
+    }
+
+    #[Test]
+    public function compile_with_ref_resolution_schema_not_found(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(ref: '#/components/schemas/Missing');
+
+        $document = new OpenApiDocument(
+            openapi: '3.0.3',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(schemas: []),
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Schema not found: Missing');
+
+        $compiler->compileWithRefResolution($schema, 'MissingSchema', $document);
+    }
+
+    #[Test]
+    public function compile_with_ref_resolution_unsupported_ref_format(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(ref: '#/paths/some/path');
+
+        $document = new OpenApiDocument(
+            openapi: '3.0.3',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(),
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Unsupported $ref: #/paths/some/path');
+
+        $compiler->compileWithRefResolution($schema, 'UnsupportedRef', $document);
+    }
+
+    #[Test]
+    public function compile_with_cache_null_does_not_use_cache(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'integer');
+
+        $code = $compiler->compileWithCache($schema, 'NullCacheValidator', null);
+
+        $this->assertStringContainsString('is_int($data)', $code);
+    }
+
+    #[Test]
+    public function compile_generates_multiple_of_check(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'number', multipleOf: 0.5);
+        $code = $compiler->compile($schema, 'MultipleOfValidator');
+
+        $this->assertStringContainsString('is_float($data)', $code);
+        $this->assertStringContainsString('is_int($data)', $code);
+    }
+
+    #[Test]
+    public function compile_with_ref_resolution_resolves_properties(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'address' => new Schema(ref: '#/components/schemas/Address'),
+            ],
+        );
+
+        $document = new OpenApiDocument(
+            openapi: '3.0.3',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Address' => new Schema(
+                        type: 'object',
+                        properties: [
+                            'street' => new Schema(type: 'string'),
+                            'city' => new Schema(type: 'string'),
+                        ],
+                    ),
+                ],
+            ),
+        );
+
+        $code = $compiler->compileWithRefResolution($schema, 'ResolvedPropertySchema', $document);
+
+        $this->assertStringContainsString('is_array($data)', $code);
+        $this->assertStringContainsString("is_string", $code);
+    }
+
+    #[Test]
+    public function compile_with_items_ref_resolution(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(ref: '#/components/schemas/Tag'),
+        );
+
+        $document = new OpenApiDocument(
+            openapi: '3.0.3',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Tag' => new Schema(
+                        type: 'string',
+                    ),
+                ],
+            ),
+        );
+
+        $code = $compiler->compileWithRefResolution($schema, 'ItemsRefSchema', $document);
+
+        $this->assertStringContainsString('is_array($data)', $code);
+    }
+
+    #[Test]
+    public function compile_object_without_properties_generates_type_check(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'object');
+
+        $code = $compiler->compile($schema, 'PlainObjectValidator');
+
+        $this->assertStringContainsString('is_array($data)', $code);
+    }
 }

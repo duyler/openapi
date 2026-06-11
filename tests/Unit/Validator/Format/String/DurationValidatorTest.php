@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\String\DurationValidator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -18,61 +19,56 @@ final class DurationValidatorTest extends TestCase
         $this->validator = new DurationValidator();
     }
 
-    #[Test]
-    public function valid_year_duration(): void
+    public static function validDurationValuesProvider(): array
     {
-        $this->expectNotToPerformAssertions();
-        $this->validator->validate('P1Y');
-        $this->validator->validate('P2Y6M');
+        return [
+            'one year' => ['P1Y'],
+            'years and months' => ['P2Y6M'],
+            'one day' => ['P1D'],
+            'day and hours' => ['P1DT12H'],
+            'minutes only' => ['PT30M'],
+            'hours and minutes' => ['PT1H30M'],
+            'full time' => ['PT1H30M15S'],
+            'full duration' => ['P1Y2M3DT4H5M6S'],
+            'seconds only' => ['PT45S'],
+            'large values' => ['P100Y'],
+            'months only' => ['P6M'],
+            'hours only' => ['PT24H'],
+        ];
     }
 
+    #[DataProvider('validDurationValuesProvider')]
     #[Test]
-    public function valid_day_duration(): void
+    public function valid_duration_values_pass(string $value): void
     {
-        $this->expectNotToPerformAssertions();
-        $this->validator->validate('P1D');
-        $this->validator->validate('P1DT12H');
+        $this->validator->validate($value);
+
+        $this->assertTrue(true);
     }
 
-    #[Test]
-    public function valid_time_duration(): void
+    public static function invalidDurationValuesProvider(): array
     {
-        $this->expectNotToPerformAssertions();
-        $this->validator->validate('PT30M');
-        $this->validator->validate('PT1H30M');
-        $this->validator->validate('PT1H30M15S');
+        return [
+            'missing P prefix' => ['not-a-duration'],
+            'empty P' => ['P'],
+            'empty PT' => ['PT'],
+            'number without designator' => ['P1'],
+            'T with missing time value' => ['P1YT0H0M0'],
+            'lowercase p' => ['p1Y'],
+            'spaces' => ['P 1Y'],
+            'negative value' => ['-P1Y'],
+            'decimal value' => ['P1.5Y'],
+            'random string' => ['xyz'],
+        ];
     }
 
+    #[DataProvider('invalidDurationValuesProvider')]
     #[Test]
-    public function throw_error_for_invalid_format(): void
+    public function invalid_duration_values_throw_exception(string $value): void
     {
         $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Duration must start with P');
-        $this->validator->validate('not-a-duration');
-    }
 
-    #[Test]
-    public function throw_error_for_missing_designator(): void
-    {
-        $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Invalid duration format');
-        $this->validator->validate('P1');
-    }
-
-    #[Test]
-    public function throw_error_for_missing_designator_with_t(): void
-    {
-        $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Duration must have at least one component');
-        $this->validator->validate('PT');
-    }
-
-    #[Test]
-    public function throw_error_for_empty_duration(): void
-    {
-        $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Duration must have at least one component');
-        $this->validator->validate('P');
+        $this->validator->validate($value);
     }
 
     #[Test]
@@ -80,13 +76,39 @@ final class DurationValidatorTest extends TestCase
     {
         $this->expectException(InvalidFormatException::class);
         $this->expectExceptionMessage('Value must be a string');
+
         $this->validator->validate(123);
     }
 
     #[Test]
-    public function validate_full_duration(): void
+    public function throw_error_for_null(): void
     {
-        $this->expectNotToPerformAssertions();
-        $this->validator->validate('P1Y2M3DT4H5M6S');
+        $this->expectException(InvalidFormatException::class);
+
+        $this->validator->validate(null);
+    }
+
+    #[Test]
+    public function exception_contains_format_name(): void
+    {
+        try {
+            $this->validator->validate('invalid');
+            $this->fail('Expected InvalidFormatException was not thrown');
+        } catch (InvalidFormatException $exception) {
+            $this->assertSame('duration', $exception->format);
+        }
+    }
+
+    #[Test]
+    public function exception_contains_invalid_value(): void
+    {
+        $invalidValue = 'invalid-duration';
+
+        try {
+            $this->validator->validate($invalidValue);
+            $this->fail('Expected InvalidFormatException was not thrown');
+        } catch (InvalidFormatException $exception) {
+            $this->assertSame($invalidValue, $exception->value);
+        }
     }
 }
