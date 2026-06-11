@@ -70,6 +70,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
     private readonly SecurityValidator $securityValidator;
     private readonly LoggerInterface $logger;
     private readonly StatelessValidatorRegistry $statelessValidators;
+    private readonly SchemaValidator $schemaValidator;
 
     public function __construct(
         public readonly OpenApiDocument $document,
@@ -90,6 +91,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         $this->logger = $logger ?? new NullLogger();
         $this->statelessValidators = new StatelessValidatorRegistry($this->pool, $this->formatRegistry, $this->reportDeprecated, $this->logger, $this->eventDispatcher);
         $this->refResolver = new RefResolver();
+        $this->schemaValidator = new SchemaValidator($this->pool, $this->formatRegistry, strictFormats: $this->strictFormats, logger: $this->logger, reportDeprecated: $this->reportDeprecated, eventDispatcher: $this->eventDispatcher);
         $this->requestValidator = $this->buildRequestValidator();
         $this->responseValidator = $this->buildResponseValidator();
         $this->webhookValidator = new WebhookValidator($this->requestValidator);
@@ -276,10 +278,8 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
 
             $this->logger->info(sprintf('Validating schema: %s', $schemaRef));
 
-            $validator = new SchemaValidator($this->pool, $this->formatRegistry, strictFormats: $this->strictFormats, logger: $this->logger, reportDeprecated: $this->reportDeprecated, eventDispatcher: $this->eventDispatcher);
-
             /** @var array<array-key, mixed>|array-key $data */
-            $validator->validate($data, $schema);
+            $this->schemaValidator->validate($data, $schema);
 
             $this->dispatchValidationEvent(
                 new ValidationFinishedEvent(
@@ -331,6 +331,12 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
     public function getFormattedErrors(ValidationException $e): string
     {
         return $this->errorFormatter->formatMultiple($e->getErrors());
+    }
+
+    public function reset(): void
+    {
+        $this->pool->clear();
+        $this->refResolver->clear();
     }
 
     #[Override]
