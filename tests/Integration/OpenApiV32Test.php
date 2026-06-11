@@ -10,8 +10,6 @@ use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-use function assert;
-
 final class OpenApiV32Test extends TestCase
 {
     private Psr17Factory $psrFactory;
@@ -26,7 +24,7 @@ final class OpenApiV32Test extends TestCase
     {
         $parser = new YamlParser();
         $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
-        assert($content !== false);
+        self::assertNotFalse($content);
 
         $document = $parser->parse($content);
 
@@ -120,7 +118,7 @@ final class OpenApiV32Test extends TestCase
     {
         $parser = new YamlParser();
         $content = file_get_contents(__DIR__ . '/../fixtures/petstore.yaml');
-        assert($content !== false);
+        self::assertNotFalse($content);
 
         $document = $parser->parse($content);
 
@@ -133,7 +131,7 @@ final class OpenApiV32Test extends TestCase
     {
         $parser = new YamlParser();
         $content = file_get_contents(__DIR__ . '/../fixtures/v3.0/simple-api.yaml');
-        assert($content !== false);
+        self::assertNotFalse($content);
 
         $document = $parser->parse($content);
 
@@ -163,7 +161,7 @@ final class OpenApiV32Test extends TestCase
     {
         $parser = new YamlParser();
         $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
-        assert($content !== false);
+        self::assertNotFalse($content);
 
         $document = $parser->parse($content);
 
@@ -202,7 +200,7 @@ final class OpenApiV32Test extends TestCase
     {
         $parser = new YamlParser();
         $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
-        assert($content !== false);
+        self::assertNotFalse($content);
 
         $document = $parser->parse($content);
 
@@ -217,7 +215,7 @@ final class OpenApiV32Test extends TestCase
     {
         $parser = new YamlParser();
         $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
-        assert($content !== false);
+        self::assertNotFalse($content);
 
         $document = $parser->parse($content);
 
@@ -241,7 +239,7 @@ final class OpenApiV32Test extends TestCase
     {
         $parser = new YamlParser();
         $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
-        assert($content !== false);
+        self::assertNotFalse($content);
 
         $document = $parser->parse($content);
 
@@ -261,7 +259,7 @@ final class OpenApiV32Test extends TestCase
     {
         $parser = new YamlParser();
         $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
-        assert($content !== false);
+        self::assertNotFalse($content);
 
         $document = $parser->parse($content);
 
@@ -275,7 +273,7 @@ final class OpenApiV32Test extends TestCase
     {
         $parser = new YamlParser();
         $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
-        assert($content !== false);
+        self::assertNotFalse($content);
 
         $document = $parser->parse($content);
 
@@ -289,7 +287,7 @@ final class OpenApiV32Test extends TestCase
     {
         $parser = new YamlParser();
         $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
-        assert($content !== false);
+        self::assertNotFalse($content);
 
         $document = $parser->parse($content);
 

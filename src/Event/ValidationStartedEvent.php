@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Event;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-readonly class ValidationStartedEvent
+final readonly class ValidationStartedEvent
 {
     public function __construct(
         public readonly ?ServerRequestInterface $request = null,

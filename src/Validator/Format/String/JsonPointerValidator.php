@@ -9,7 +9,7 @@ use Override;
 
 use function preg_match;
 
-readonly class JsonPointerValidator extends AbstractStringFormatValidator
+final readonly class JsonPointerValidator extends AbstractStringFormatValidator
 {
     private const string POINTER_PATTERN = '/^(?:\/(?:[^~\/]|~0|~1)*)*$/';
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
-readonly class TextBodyParser
+final readonly class TextBodyParser
 {
     public function parse(string $body): string
     {

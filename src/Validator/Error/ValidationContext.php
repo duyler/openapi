@@ -9,7 +9,7 @@ use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
-readonly class ValidationContext
+final readonly class ValidationContext
 {
     public function __construct(
         public readonly BreadcrumbManager $breadcrumbs,

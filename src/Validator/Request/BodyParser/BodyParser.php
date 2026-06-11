@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
-readonly class BodyParser
+final readonly class BodyParser
 {
     public function __construct(
         private readonly JsonBodyParser $jsonParser,

@@ -14,7 +14,7 @@ use Override;
 use function is_float;
 use function is_int;
 
-readonly class NumericRangeValidator extends AbstractSchemaValidator
+final readonly class NumericRangeValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

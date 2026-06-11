@@ -51,6 +51,8 @@ use function sprintf;
 
 use function array_key_exists;
 
+use function is_bool;
+
 use const FILTER_VALIDATE_URL;
 
 abstract class OpenApiBuilder implements SchemaParserInterface
@@ -333,6 +335,36 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             );
         }
 
+        if ($this->shouldWarnDeprecation() && isset($data['nullable']) && $data['nullable']) {
+            $this->deprecationLogger->warn(
+                'nullable',
+                'Schema Object',
+                self::DEPRECATION_VERSION,
+                'type array with "null" (e.g., type: ["string", "null"])',
+            );
+        }
+
+        if ($this->shouldWarnDeprecation() && isset($data['exclusiveMinimum']) && is_bool($data['exclusiveMinimum'])) {
+            $this->deprecationLogger->warn(
+                'exclusiveMinimum (bool)',
+                'Schema Object',
+                '3.1.0',
+                'exclusiveMinimum as number',
+            );
+        }
+
+        if ($this->shouldWarnDeprecation() && isset($data['exclusiveMaximum']) && is_bool($data['exclusiveMaximum'])) {
+            $this->deprecationLogger->warn(
+                'exclusiveMaximum (bool)',
+                'Schema Object',
+                '3.1.0',
+                'exclusiveMaximum as number',
+            );
+        }
+
+        $exclusiveMinimum = $this->resolveExclusiveMinimum($data);
+        $exclusiveMaximum = $this->resolveExclusiveMaximum($data);
+
         return new Schema(
             ref: TypeHelper::asStringOrNull($data['$ref'] ?? null),
             refSummary: isset($data['$ref']) ? TypeHelper::asStringOrNull($data['summary'] ?? null) : null,
@@ -349,9 +381,9 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             hasConst: array_key_exists('const', $data),
             multipleOf: TypeHelper::asFloatOrNull($data['multipleOf'] ?? null),
             maximum: TypeHelper::asFloatOrNull($data['maximum'] ?? null),
-            exclusiveMaximum: TypeHelper::asFloatOrNull($data['exclusiveMaximum'] ?? null),
+            exclusiveMaximum: $exclusiveMaximum,
             minimum: TypeHelper::asFloatOrNull($data['minimum'] ?? null),
-            exclusiveMinimum: TypeHelper::asFloatOrNull($data['exclusiveMinimum'] ?? null),
+            exclusiveMinimum: $exclusiveMinimum,
             maxLength: TypeHelper::asIntOrNull($data['maxLength'] ?? null),
             minLength: TypeHelper::asIntOrNull($data['minLength'] ?? null),
             pattern: TypeHelper::asStringOrNull($data['pattern'] ?? null),
@@ -520,6 +552,15 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
     protected function buildMediaType(array $data): MediaType
     {
+        if ($this->shouldWarnDeprecation() && isset($data['example'])) {
+            $this->deprecationLogger->warn(
+                'example',
+                'MediaType Object',
+                self::DEPRECATION_VERSION,
+                'examples',
+            );
+        }
+
         return new MediaType(
             schema: isset($data['schema']) && is_array($data['schema'])
                 ? $this->buildSchema(TypeHelper::asArray($data['schema']))
@@ -649,6 +690,14 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
     protected function buildHeader(array $data): Header
     {
+        if ($this->shouldWarnDeprecation() && isset($data['allowEmptyValue']) && $data['allowEmptyValue']) {
+            $this->deprecationLogger->warn(
+                'allowEmptyValue',
+                'Header Object',
+                self::DEPRECATION_VERSION,
+            );
+        }
+
         return new Header(
             description: TypeHelper::asStringOrNull($data['description'] ?? null),
             required: (bool) ($data['required'] ?? false),
@@ -1024,5 +1073,62 @@ abstract class OpenApiBuilder implements SchemaParserInterface
                 : null,
             name: TypeHelper::asStringOrNull($data['name'] ?? null),
         );
+    }
+
+    protected function isVersion30(): bool
+    {
+        return version_compare($this->documentVersion, '3.1.0', '<');
+    }
+
+    /**
+     * Resolve exclusiveMinimum with version-aware handling.
+     *
+     * OpenAPI 3.0: exclusiveMinimum is boolean (works with minimum).
+     * OpenAPI 3.1+: exclusiveMinimum is number (standalone).
+     */
+    protected function resolveExclusiveMinimum(array $data): ?float
+    {
+        /** @var mixed $exclusiveMinimum */
+        $exclusiveMinimum = $data['exclusiveMinimum'] ?? null;
+
+        if ($this->isVersion30()) {
+            if (is_bool($exclusiveMinimum) && $exclusiveMinimum) {
+                return TypeHelper::asFloatOrNull($data['minimum'] ?? null);
+            }
+
+            return null;
+        }
+
+        if (is_bool($exclusiveMinimum)) {
+            return null;
+        }
+
+        return TypeHelper::asFloatOrNull($exclusiveMinimum);
+    }
+
+    /**
+     * Resolve exclusiveMaximum with version-aware handling.
+     *
+     * OpenAPI 3.0: exclusiveMaximum is boolean (works with maximum).
+     * OpenAPI 3.1+: exclusiveMaximum is number (standalone).
+     */
+    protected function resolveExclusiveMaximum(array $data): ?float
+    {
+        /** @var mixed $exclusiveMaximum */
+        $exclusiveMaximum = $data['exclusiveMaximum'] ?? null;
+
+        if ($this->isVersion30()) {
+            if (is_bool($exclusiveMaximum) && $exclusiveMaximum) {
+                return TypeHelper::asFloatOrNull($data['maximum'] ?? null);
+            }
+
+            return null;
+        }
+
+        if (is_bool($exclusiveMaximum)) {
+            return null;
+        }
+
+        return TypeHelper::asFloatOrNull($exclusiveMaximum);
     }
 }

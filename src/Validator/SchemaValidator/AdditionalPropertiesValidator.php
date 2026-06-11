@@ -13,7 +13,7 @@ use Override;
 use function assert;
 use function is_array;
 
-readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator
+final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

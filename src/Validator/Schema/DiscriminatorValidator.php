@@ -20,7 +20,7 @@ use function is_array;
 use function is_string;
 use function assert;
 
-readonly class DiscriminatorValidator
+final readonly class DiscriminatorValidator
 {
     private readonly FormatRegistry $formatRegistry;
 

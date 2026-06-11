@@ -15,7 +15,7 @@ use function assert;
  * Provides caching for parsed OpenAPI specifications to improve performance
  * by avoiding repeated parsing of the same documents.
  */
-readonly class SchemaCache
+final readonly class SchemaCache
 {
     private TypedCacheDecorator $decorator;
 

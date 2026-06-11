@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
 use function count;
 
-readonly class MultipartBodyParser
+final readonly class MultipartBodyParser
 {
     private const int BODY_PREVIEW_LENGTH = 500;
 

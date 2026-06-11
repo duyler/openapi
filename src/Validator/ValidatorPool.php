@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator;
 
-class ValidatorPool
+final class ValidatorPool
 {
     /** @var array<string, object> */
     private array $pool = [];

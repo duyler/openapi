@@ -42,7 +42,7 @@ use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedPropertiesValidator;
 use function count;
 use function is_array;
 
-class SchemaValidatorWithContext
+final class SchemaValidatorWithContext
 {
     private const int MAX_SCHEMA_DEPTH = 64;
 

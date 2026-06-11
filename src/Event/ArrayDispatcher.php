@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Event;
 use Override;
 use Psr\EventDispatcher\EventDispatcherInterface;
 
-readonly class ArrayDispatcher implements EventDispatcherInterface
+final readonly class ArrayDispatcher implements EventDispatcherInterface
 {
     /**
      * @param array<string, array<int, callable>> $listeners

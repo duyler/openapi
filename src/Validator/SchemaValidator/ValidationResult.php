@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 
-readonly class ValidationResult
+final readonly class ValidationResult
 {
     public function __construct(
         public readonly int $validCount,

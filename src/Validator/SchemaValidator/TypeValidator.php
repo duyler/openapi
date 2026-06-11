@@ -16,7 +16,7 @@ use function is_float;
 use function is_int;
 use function is_string;
 
-readonly class TypeValidator extends AbstractSchemaValidator
+final readonly class TypeValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

@@ -17,7 +17,7 @@ use function is_array;
 use function is_object;
 use function get_object_vars;
 
-readonly class TypeCoercer
+final readonly class TypeCoercer
 {
     /**
      * @return array<array-key, mixed>|int|string|float|bool|null

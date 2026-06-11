@@ -10,7 +10,7 @@ use function is_array;
 use function is_string;
 use function strval;
 
-readonly class HeaderFinder
+final readonly class HeaderFinder
 {
     /**
      * @param array<array-key, string|array<array-key, string>> $headers

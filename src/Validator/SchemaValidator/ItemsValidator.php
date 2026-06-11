@@ -14,7 +14,7 @@ use Override;
 use function is_array;
 use function sprintf;
 
-readonly class ItemsValidator extends AbstractSchemaValidator
+final readonly class ItemsValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

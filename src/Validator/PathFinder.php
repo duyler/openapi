@@ -15,7 +15,7 @@ use function strtolower;
 use function strtoupper;
 use function usort;
 
-readonly class PathFinder
+final readonly class PathFinder
 {
     public function __construct(
         private readonly OpenApiDocument $document,

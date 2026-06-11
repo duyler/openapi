@@ -12,7 +12,7 @@ use Psr\Http\Message\ServerRequestInterface;
 
 use function sprintf;
 
-readonly class WebhookValidator
+final readonly class WebhookValidator
 {
     public function __construct(
         private readonly RequestValidator $requestValidator,

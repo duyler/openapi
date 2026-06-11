@@ -11,7 +11,7 @@ use function is_array;
 use function strlen;
 use function assert;
 
-readonly class ParameterDeserializer
+final readonly class ParameterDeserializer
 {
     /**
      * Deserialize parameter value based on style

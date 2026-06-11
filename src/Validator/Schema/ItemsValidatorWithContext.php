@@ -20,7 +20,7 @@ use Duyler\OpenApi\Validator\ValidatorPool;
 use function count;
 use function sprintf;
 
-readonly class ItemsValidatorWithContext
+final readonly class ItemsValidatorWithContext
 {
     private readonly FormatRegistry $formatRegistry;
 

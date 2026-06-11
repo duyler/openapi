@@ -12,7 +12,7 @@ use JsonException;
 
 use const JSON_THROW_ON_ERROR;
 
-readonly class QueryParser
+final readonly class QueryParser
 {
     private const int JSON_MAX_DEPTH = 512;
 

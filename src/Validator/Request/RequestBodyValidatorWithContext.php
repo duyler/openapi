@@ -21,7 +21,7 @@ use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Override;
 
-readonly class RequestBodyValidatorWithContext implements RequestBodyValidatorInterface
+final readonly class RequestBodyValidatorWithContext implements RequestBodyValidatorInterface
 {
     private SchemaValidator $regularSchemaValidator;
     private SchemaValidatorWithContext $contextSchemaValidator;

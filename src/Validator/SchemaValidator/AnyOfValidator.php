@@ -9,7 +9,7 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 
-readonly class AnyOfValidator extends AbstractCompositionalValidator
+final readonly class AnyOfValidator extends AbstractCompositionalValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

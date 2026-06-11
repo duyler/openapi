@@ -18,7 +18,7 @@ use Exception;
 use function is_array;
 use function assert;
 
-readonly class OneOfValidatorWithContext
+final readonly class OneOfValidatorWithContext
 {
     private readonly FormatRegistry $formatRegistry;
 

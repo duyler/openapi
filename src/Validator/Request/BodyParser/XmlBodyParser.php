@@ -8,7 +8,7 @@ use ValueError;
 
 use function is_array;
 
-readonly class XmlBodyParser
+final readonly class XmlBodyParser
 {
     /**
      * @return array<array-key, mixed>|string

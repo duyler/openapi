@@ -8,7 +8,7 @@ use DateTime;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Override;
 
-readonly class DateValidator extends AbstractStringFormatValidator
+final readonly class DateValidator extends AbstractStringFormatValidator
 {
     private const string DATE_FORMAT = 'Y-m-d';
 

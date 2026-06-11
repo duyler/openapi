@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-readonly class InfoObject implements JsonSerializable
+final readonly class InfoObject implements JsonSerializable
 {
     public function __construct(
         public string $title,

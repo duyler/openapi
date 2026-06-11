@@ -9,7 +9,7 @@ use Duyler\OpenApi\Validator\Exception\PathMismatchException;
 use function is_string;
 use function assert;
 
-readonly class PathParser
+final readonly class PathParser
 {
     /**
      * Match request path against template

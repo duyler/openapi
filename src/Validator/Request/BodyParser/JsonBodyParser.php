@@ -9,7 +9,7 @@ use JsonException;
 
 use const JSON_THROW_ON_ERROR;
 
-readonly class JsonBodyParser
+final readonly class JsonBodyParser
 {
     private const int JSON_MAX_DEPTH = 512;
 

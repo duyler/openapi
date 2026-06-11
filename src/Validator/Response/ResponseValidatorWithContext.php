@@ -24,7 +24,7 @@ use Duyler\OpenApi\Schema\Model\Response;
 
 use function is_array;
 
-readonly class ResponseValidatorWithContext
+final readonly class ResponseValidatorWithContext
 {
     private readonly FormatRegistry $formatRegistry;
 

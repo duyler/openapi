@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-readonly class Schema implements JsonSerializable
+final readonly class Schema implements JsonSerializable
 {
     /**
      * @param string|list<string>|null $type

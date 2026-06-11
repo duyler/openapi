@@ -21,7 +21,7 @@ use function array_key_exists;
 use function count;
 use function sprintf;
 
-readonly class PropertiesValidatorWithContext
+final readonly class PropertiesValidatorWithContext
 {
     private readonly FormatRegistry $formatRegistry;
 

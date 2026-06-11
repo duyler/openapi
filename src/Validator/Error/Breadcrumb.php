@@ -12,7 +12,7 @@ use function count;
  * Uses JSON Pointer format (RFC 6901) for path representation.
  * Example: ["users", "0", "name"] -> "/users/0/name"
  */
-readonly class Breadcrumb
+final readonly class Breadcrumb
 {
     /**
      * @param array<int, string> $segments

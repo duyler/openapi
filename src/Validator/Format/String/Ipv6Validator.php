@@ -10,7 +10,7 @@ use Override;
 use const FILTER_FLAG_IPV6;
 use const FILTER_VALIDATE_IP;
 
-readonly class Ipv6Validator extends AbstractStringFormatValidator
+final readonly class Ipv6Validator extends AbstractStringFormatValidator
 {
     #[Override]
     protected function getFormatName(): string

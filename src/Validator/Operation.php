@@ -10,7 +10,7 @@ use Stringable;
 use function count;
 use function sprintf;
 
-readonly class Operation implements Stringable
+final readonly class Operation implements Stringable
 {
     public function __construct(
         public readonly string $path,

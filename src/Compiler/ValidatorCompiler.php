@@ -14,7 +14,7 @@ use function in_array;
 use function is_array;
 use function sprintf;
 
-readonly class ValidatorCompiler
+final readonly class ValidatorCompiler
 {
     private const int REF_COMPONENTS_SCHEMAS_PREFIX_LENGTH = 21;
 

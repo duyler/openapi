@@ -12,7 +12,7 @@ use Override;
 use function count;
 use function is_string;
 
-readonly class CookieValidator extends AbstractParameterValidator
+final readonly class CookieValidator extends AbstractParameterValidator
 {
     public function parseCookies(string $cookieHeader): array
     {

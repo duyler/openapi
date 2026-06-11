@@ -14,7 +14,7 @@ use function sprintf;
  *
  * Provides brief error messages including breadcrumb path.
  */
-readonly class SimpleFormatter implements ErrorFormatterInterface
+final readonly class SimpleFormatter implements ErrorFormatterInterface
 {
     #[Override]
     public function format(AbstractValidationError $error): string

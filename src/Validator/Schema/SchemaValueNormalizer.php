@@ -13,7 +13,7 @@ use function is_int;
 use function is_string;
 use function sprintf;
 
-readonly class SchemaValueNormalizer
+final readonly class SchemaValueNormalizer
 {
     /**
      * Normalize data to match SchemaValidatorInterface requirements

@@ -19,7 +19,7 @@ use function intval;
 use function is_numeric;
 use function strtolower;
 
-readonly class ResponseHeadersValidator
+final readonly class ResponseHeadersValidator
 {
     private const array TRUTHY_VALUES = ['true', '1', 'yes', 'on'];
     private const array FALSY_VALUES = ['false', '0', 'no', 'off'];

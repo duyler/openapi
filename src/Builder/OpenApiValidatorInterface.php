@@ -13,7 +13,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * OpenAPI validator interface
  *
- * Provides methods for validating PSR-7 HTTP messages against OpenAPI 3.1 specifications.
+ * Provides methods for validating PSR-7 HTTP messages against OpenAPI 3.2 specifications.
  * Operations are automatically detected from the request URI and method.
  */
 interface OpenApiValidatorInterface

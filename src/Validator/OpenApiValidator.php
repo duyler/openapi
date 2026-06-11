@@ -51,7 +51,7 @@ use Psr\Log\NullLogger;
 
 use function sprintf;
 
-readonly class OpenApiValidator implements OpenApiValidatorInterface
+final readonly class OpenApiValidator implements OpenApiValidatorInterface
 {
     private readonly RequestValidator $requestValidator;
     private readonly ResponseValidatorWithContext $responseValidator;

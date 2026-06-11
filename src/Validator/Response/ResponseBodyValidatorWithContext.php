@@ -19,7 +19,7 @@ use Duyler\OpenApi\Validator\TypeGuarantor;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 
-readonly class ResponseBodyValidatorWithContext
+final readonly class ResponseBodyValidatorWithContext
 {
     private SchemaValidator $regularSchemaValidator;
     private SchemaValidatorWithContext $contextSchemaValidator;

@@ -9,7 +9,7 @@ use Override;
 
 use const FILTER_VALIDATE_URL;
 
-readonly class UriValidator extends AbstractStringFormatValidator
+final readonly class UriValidator extends AbstractStringFormatValidator
 {
     #[Override]
     protected function getFormatName(): string

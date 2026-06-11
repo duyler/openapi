@@ -8,7 +8,7 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-readonly class ValidationErrorEvent
+final readonly class ValidationErrorEvent
 {
     public function __construct(
         public readonly ?ServerRequestInterface $request = null,

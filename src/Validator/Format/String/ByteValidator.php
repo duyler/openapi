@@ -10,7 +10,7 @@ use Override;
 use function base64_decode;
 use function base64_encode;
 
-readonly class ByteValidator extends AbstractStringFormatValidator
+final readonly class ByteValidator extends AbstractStringFormatValidator
 {
     #[Override]
     protected function getFormatName(): string
