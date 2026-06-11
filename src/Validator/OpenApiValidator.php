@@ -44,6 +44,7 @@ use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
+use Duyler\OpenApi\Validator\Link\LinkContext;
 use Duyler\OpenApi\Validator\Link\LinkResolver;
 use Duyler\OpenApi\Validator\Webhook\Exception\UnknownWebhookException;
 use Duyler\OpenApi\Validator\Webhook\WebhookValidator;
@@ -433,6 +434,14 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
     #[Override]
     public function resolveLink(string $linkName, array $responseData): array
     {
+        $context = new LinkContext(body: $responseData);
+
+        return $this->resolveLinkWithContext($linkName, $context);
+    }
+
+    #[Override]
+    public function resolveLinkWithContext(string $linkName, LinkContext $context): array
+    {
         $links = $this->document->components?->links ?? [];
 
         $link = $links[$linkName] ?? null;
@@ -443,7 +452,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
             );
         }
 
-        return $this->linkResolver->resolve($link, $responseData);
+        return $this->linkResolver->resolve($link, $context);
     }
 
     private function dispatchValidationEvent(object $event): void

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Builder;
 
 use Duyler\OpenApi\Builder\Exception\BuilderException;
+use Duyler\OpenApi\Validator\Link\LinkContext;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Psr\Http\Message\ResponseInterface;
@@ -82,4 +83,15 @@ interface OpenApiValidatorInterface
      * @return array{parameters: array<string, mixed>, requestBody: mixed, server: mixed|null}
      */
     public function resolveLink(string $linkName, array $responseData): array;
+
+    /**
+     * Resolve link parameters with full context for Runtime Expressions.
+     *
+     * Supports $response.body, $response.header, $response.query,
+     * $url, $method, and $statusCode expressions.
+     *
+     * @param string $linkName Link name from OpenAPI specification
+     * @return array{parameters: array<string, mixed>, requestBody: mixed, server: mixed|null}
+     */
+    public function resolveLinkWithContext(string $linkName, LinkContext $context): array;
 }

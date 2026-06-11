@@ -15,14 +15,12 @@ use function preg_match;
 final readonly class LinkResolver
 {
     /**
-     * @param array<string, mixed> $responseData
-     *
      * @return array{parameters: array<string, mixed>, requestBody: mixed, server: Server|null}
      */
-    public function resolve(Link $link, array $responseData): array
+    public function resolve(Link $link, LinkContext $context): array
     {
-        $parameters = $this->resolveParameters($link->parameters, $responseData);
-        $requestBody = $this->resolveValue($link->requestBody, $responseData);
+        $parameters = $this->resolveParameters($link->parameters, $context);
+        $requestBody = $this->resolveValue($link->requestBody, $context);
         $server = $link->server;
 
         return [
@@ -34,11 +32,10 @@ final readonly class LinkResolver
 
     /**
      * @param array<string, mixed>|null $parameters
-     * @param array<string, mixed> $responseData
      *
      * @return array<string, mixed>
      */
-    private function resolveParameters(?array $parameters, array $responseData): array
+    private function resolveParameters(?array $parameters, LinkContext $context): array
     {
         if (null === $parameters) {
             return [];
@@ -48,16 +45,28 @@ final readonly class LinkResolver
         $resolved = [];
 
         foreach ($parameters as $name => $expression) {
-            $resolved[$name] = $this->resolveValue($expression, $responseData);
+            $resolved[$name] = $this->resolveValue($expression, $context);
         }
 
         return $resolved;
     }
 
-    private function resolveValue(mixed $expression, array $responseData): mixed
+    private function resolveValue(mixed $expression, LinkContext $context): mixed
     {
         if (false === is_string($expression)) {
             return $expression;
+        }
+
+        if ('$url' === $expression) {
+            return $context->url;
+        }
+
+        if ('$method' === $expression) {
+            return $context->method;
+        }
+
+        if ('$statusCode' === $expression) {
+            return $context->statusCode;
         }
 
         if (1 !== preg_match('/^\$response\.(body|header|query)(?:#(\/.+))?$/', $expression, $matches)) {
@@ -68,12 +77,16 @@ final readonly class LinkResolver
         $path = $matches[2] ?? null;
 
         return match ($source) {
-            'body' => $this->extractByPath($responseData, $path),
-            'header', 'query' => $expression,
+            'body' => $this->extractByPath($context->body, $path),
+            'header' => $this->extractByPath($context->headers, $path),
+            'query' => $this->extractByPath($context->queryParams, $path),
             default => $expression,
         };
     }
 
+    /**
+     * @param array<string|int, mixed> $data
+     */
     private function extractByPath(array $data, ?string $path): mixed
     {
         if (null === $path || '' === $path) {
