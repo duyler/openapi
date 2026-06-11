@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
 use Duyler\OpenApi\Validator\Exception\PatternMismatchError;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Override;
@@ -23,14 +24,16 @@ final readonly class PatternValidator extends AbstractSchemaValidator
         }
 
         $pattern = RegexValidator::normalize($schema->pattern);
-        RegexValidator::validate($pattern);
 
         assert('' !== $pattern);
 
-        $result = preg_match($pattern, $data);
+        $result = @preg_match($pattern, $data);
 
         if (false === $result) {
-            return;
+            throw new InvalidPatternException(
+                pattern: $schema->pattern,
+                reason: 'Pattern validation failed',
+            );
         }
 
         if (0 === $result) {

@@ -47,7 +47,7 @@ final class RegexValidatorTest extends TestCase
     public function pattern_without_delimiters_normalized(): void
     {
         $result = RegexValidator::normalize('^test$');
-        self::assertSame('/^test$/', $result);
+        self::assertSame('#^test$#', $result);
     }
 
     #[Test]
@@ -96,5 +96,121 @@ final class RegexValidatorTest extends TestCase
         $this->expectException(InvalidPatternException::class);
         $this->expectExceptionMessage('Invalid regex pattern "": Empty pattern is not allowed');
         RegexValidator::validate('');
+    }
+
+    #[Test]
+    public function normalize_pattern_with_forward_slash(): void
+    {
+        $result = RegexValidator::normalize('path/to/resource');
+
+        self::assertSame('#path/to/resource#', $result);
+
+        self::assertSame(1, preg_match($result, 'path/to/resource'));
+        self::assertSame(0, preg_match($result, 'other/value'));
+    }
+
+    #[Test]
+    public function normalize_pattern_with_tilde(): void
+    {
+        $result = RegexValidator::normalize('hello~world');
+
+        self::assertSame('#hello~world#', $result);
+
+        self::assertSame(1, preg_match($result, 'hello~world'));
+    }
+
+    #[Test]
+    public function normalize_pattern_with_hash(): void
+    {
+        $result = RegexValidator::normalize('section#anchor');
+
+        self::assertSame('~section#anchor~', $result);
+
+        self::assertSame(1, preg_match($result, 'section#anchor'));
+    }
+
+    #[Test]
+    public function normalize_pattern_with_slash_tilde_and_hash(): void
+    {
+        $result = RegexValidator::normalize('path/~value#frag');
+
+        self::assertSame('!path/~value#frag!', $result);
+
+        self::assertSame(1, preg_match($result, 'path/~value#frag'));
+    }
+
+    #[Test]
+    public function validate_pattern_with_slash_delimiters_and_forward_slash_inside(): void
+    {
+        $pattern = '/path\/to\/resource/';
+        $result = RegexValidator::validate($pattern);
+        self::assertSame($pattern, $result);
+    }
+
+    #[Test]
+    public function normalize_simple_path_pattern_works_with_preg_match(): void
+    {
+        $normalized = RegexValidator::normalize('path/to/resource');
+
+        self::assertSame(1, preg_match($normalized, '/some/path/to/resource/here'));
+    }
+
+    #[Test]
+    public function normalize_already_delimited_pattern_unchanged(): void
+    {
+        $pattern = '/^test$/';
+        $result = RegexValidator::normalize($pattern);
+        self::assertSame($pattern, $result);
+    }
+
+    #[Test]
+    public function normalize_hash_delimited_pattern_unchanged(): void
+    {
+        $pattern = '#^test$#';
+        $result = RegexValidator::normalize($pattern);
+        self::assertSame($pattern, $result);
+    }
+
+    #[Test]
+    public function normalize_tilde_delimited_pattern_unchanged(): void
+    {
+        $pattern = '~^test$~';
+        $result = RegexValidator::normalize($pattern);
+        self::assertSame($pattern, $result);
+    }
+
+    #[Test]
+    public function normalize_pattern_with_all_delimiter_candidates_and_slash(): void
+    {
+        // Pattern contains ALL 8 delimiter candidates (#~!|@%+;) AND /
+        $result = RegexValidator::normalize('#~!|@%+;path/to/resource');
+
+        // Should fallback to '/' as delimiter and escape slashes inside
+        self::assertSame('/#~!|@%+;path\/to\/resource/', $result);
+
+        // Must be a valid regex that actually works
+        self::assertSame(1, preg_match($result, '#~!|@%+;path/to/resource'));
+        self::assertSame(0, preg_match($result, 'other/value'));
+    }
+
+    #[Test]
+    public function normalize_pattern_with_pipe_at_and_slash(): void
+    {
+        $result = RegexValidator::normalize('path|value@here/now');
+
+        self::assertSame('#path|value@here/now#', $result);
+
+        self::assertSame(1, preg_match($result, 'path|value@here/now'));
+    }
+
+    #[Test]
+    public function normalize_pattern_with_all_old_candidates_plus_slash(): void
+    {
+        // Old candidates were #~!| — with / all present, ! is still available
+        $result = RegexValidator::normalize('#~|path/to/resource');
+
+        self::assertSame('!#~|path/to/resource!', $result);
+
+        self::assertSame(1, preg_match($result, '#~|path/to/resource'));
     }
 }
