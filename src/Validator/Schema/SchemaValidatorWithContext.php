@@ -23,6 +23,8 @@ use Duyler\OpenApi\Validator\SchemaValidator\ArrayLengthValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ConstValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContainsRangeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContainsValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ContentEncodingValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ContentMediaTypeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\DependentSchemasValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\EnumValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\FormatValidator;
@@ -203,6 +205,8 @@ final class SchemaValidatorWithContext
             new ContainsRangeValidator($this->pool, $this->formatRegistry),
             new ConstValidator($this->pool, $this->formatRegistry),
             new EnumValidator($this->pool, $this->formatRegistry),
+            new ContentEncodingValidator(),
+            new ContentMediaTypeValidator(),
         ];
 
         return $this->validatorsCache;

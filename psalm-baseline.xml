@@ -40,6 +40,25 @@
       <code><![CDATA[$value]]></code>
     </MixedAssignment>
   </file>
+  <file src="src/Validator/Example/ExampleValidator.php">
+    <MixedAssignment>
+      <code><![CDATA[$example]]></code>
+      <code><![CDATA[$example]]></code>
+      <code><![CDATA[$exampleEntry]]></code>
+      <code><![CDATA[$examples[]]]></code>
+      <code><![CDATA[$examples[]]]></code>
+      <code><![CDATA[$target[]]]></code>
+      <code><![CDATA[$target[]]]></code>
+    </MixedAssignment>
+  </file>
+  <file src="src/Validator/Link/LinkResolver.php">
+    <MixedAssignment>
+      <code><![CDATA[$current]]></code>
+      <code><![CDATA[$expression]]></code>
+      <code><![CDATA[$requestBody]]></code>
+      <code><![CDATA[$resolved[$name]]]></code>
+    </MixedAssignment>
+  </file>
   <file src="src/Validator/Request/HeaderFinder.php">
     <RedundantConditionGivenDocblockType>
       <code><![CDATA[is_string($value)]]></code>

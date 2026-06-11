@@ -14,6 +14,8 @@ use Duyler\OpenApi\Validator\SchemaValidator\ArrayLengthValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ConstValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContainsRangeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContainsValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ContentEncodingValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ContentMediaTypeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\DependentSchemasValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\EnumValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\FormatValidator;
@@ -109,6 +111,8 @@ final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterf
             UnevaluatedItemsValidator::class => new UnevaluatedItemsValidator($this->pool, $this->formatRegistry),
             UnevaluatedPropertiesValidator::class => new UnevaluatedPropertiesValidator($this->pool, $this->formatRegistry),
             AdditionalPropertiesValidator::class => new AdditionalPropertiesValidator($this->pool, $this->formatRegistry),
+            ContentEncodingValidator::class => new ContentEncodingValidator(),
+            ContentMediaTypeValidator::class => new ContentMediaTypeValidator(),
         ];
 
         return $result;

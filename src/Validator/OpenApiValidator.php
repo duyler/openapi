@@ -16,6 +16,8 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Error\BreadcrumbManager;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Callback\CallbackValidator;
+use Duyler\OpenApi\Validator\Callback\Exception\UnknownCallbackException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
@@ -41,6 +43,7 @@ use Duyler\OpenApi\Validator\Response\StatusCodeValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
+use Duyler\OpenApi\Validator\Link\LinkResolver;
 use Duyler\OpenApi\Validator\Webhook\Exception\UnknownWebhookException;
 use Duyler\OpenApi\Validator\Webhook\WebhookValidator;
 use Override;
@@ -50,6 +53,8 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
+use InvalidArgumentException;
+
 use function sprintf;
 
 final readonly class OpenApiValidator implements OpenApiValidatorInterface
@@ -58,6 +63,8 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
     private readonly ResponseValidatorWithContext $responseValidator;
     private readonly RefResolver $refResolver;
     private readonly WebhookValidator $webhookValidator;
+    private readonly CallbackValidator $callbackValidator;
+    private readonly LinkResolver $linkResolver;
     private readonly SecurityValidator $securityValidator;
     private readonly LoggerInterface $logger;
 
@@ -80,6 +87,8 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         $this->responseValidator = $this->buildResponseValidator();
         $this->refResolver = new RefResolver();
         $this->webhookValidator = new WebhookValidator($this->requestValidator);
+        $this->callbackValidator = new CallbackValidator($this->requestValidator);
+        $this->linkResolver = new LinkResolver();
         $this->securityValidator = new SecurityValidator();
     }
 
@@ -365,6 +374,71 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
             }
             throw $e;
         }
+    }
+
+    #[Override]
+    public function validateCallback(
+        ServerRequestInterface $request,
+        string $callbackName,
+    ): Operation {
+        $startTime = microtime(true);
+
+        $method = $request->getMethod();
+
+        $this->dispatchValidationEvent(
+            new ValidationStartedEvent(request: $request, path: $callbackName, method: $method),
+        );
+
+        try {
+            $this->callbackValidator->validate($request, $callbackName, $this->document);
+
+            $operation = new Operation($callbackName, $method);
+
+            $this->dispatchValidationEvent(
+                new ValidationFinishedEvent(
+                    request: $request,
+                    path: $callbackName,
+                    method: $method,
+                    success: true,
+                    duration: microtime(true) - $startTime,
+                ),
+            );
+
+            return $operation;
+        } catch (ValidationException|UnknownCallbackException $e) {
+            $this->dispatchValidationEvent(
+                new ValidationFinishedEvent(
+                    request: $request,
+                    path: $callbackName,
+                    method: $method,
+                    success: false,
+                    duration: microtime(true) - $startTime,
+                ),
+            );
+
+            if ($e instanceof ValidationException) {
+                $this->dispatchValidationEvent(
+                    new ValidationErrorEvent(request: $request, path: $callbackName, method: $method, exception: $e),
+                );
+            }
+            throw $e;
+        }
+    }
+
+    #[Override]
+    public function resolveLink(string $linkName, array $responseData): array
+    {
+        $links = $this->document->components?->links ?? [];
+
+        $link = $links[$linkName] ?? null;
+
+        if (null === $link) {
+            throw new InvalidArgumentException(
+                sprintf('Unknown link: %s', $linkName),
+            );
+        }
+
+        return $this->linkResolver->resolve($link, $responseData);
     }
 
     private function dispatchValidationEvent(object $event): void

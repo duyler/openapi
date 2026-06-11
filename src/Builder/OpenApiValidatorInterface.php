@@ -63,4 +63,23 @@ interface OpenApiValidatorInterface
      * @throws ValidationException If validation fails
      */
     public function validateWebhook(ServerRequestInterface $request, string $webhookName): Operation;
+
+    /**
+     * Validate callback request against OpenAPI specification and return matched operation.
+     *
+     * @param ServerRequestInterface $request PSR-7 HTTP request
+     * @param string $callbackName Callback name from OpenAPI specification
+     * @return Operation Matched operation from OpenAPI specification
+     * @throws ValidationException If validation fails
+     */
+    public function validateCallback(ServerRequestInterface $request, string $callbackName): Operation;
+
+    /**
+     * Resolve link parameters from response data.
+     *
+     * @param string $linkName Link name from OpenAPI specification
+     * @param array<string, mixed> $responseData Response data to extract values from
+     * @return array{parameters: array<string, mixed>, requestBody: mixed, server: mixed|null}
+     */
+    public function resolveLink(string $linkName, array $responseData): array;
 }

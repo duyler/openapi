@@ -95,7 +95,7 @@ final class DefaultValidatorRegistryTest extends TestCase
     {
         $validators = $this->registry->getAllValidators();
 
-        self::assertCount(27, $validators);
+        self::assertCount(29, $validators);
     }
 
     #[Test]
