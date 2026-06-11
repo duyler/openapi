@@ -34,6 +34,8 @@ use Duyler\OpenApi\Validator\Request\QueryStringValidator;
 use Duyler\OpenApi\Validator\Request\RequestBodyValidatorWithContext;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Webhook\Exception\UnknownWebhookException;
@@ -84,6 +86,7 @@ final class WebhookValidatorTest extends TestCase
             $pool,
             $document,
             $bodyParser,
+            new StatelessValidatorRegistry($pool, BuiltinFormats::instance()),
         );
 
         $queryStringValidator = new QueryStringValidator($queryParser, $schemaValidator);

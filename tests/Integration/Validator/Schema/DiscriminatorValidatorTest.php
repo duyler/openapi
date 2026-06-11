@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Integration\Validator\Schema;
 
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\DiscriminatorValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 
 use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\Discriminator;
@@ -29,12 +31,14 @@ final class DiscriminatorValidatorTest extends TestCase
     private DiscriminatorValidator $validator;
     private RefResolverInterface $refResolver;
     private ValidatorPool $pool;
+    private StatelessValidatorRegistry $statelessValidators;
 
     protected function setUp(): void
     {
         $this->refResolver = new RefResolver();
         $this->pool = new ValidatorPool();
-        $this->validator = new DiscriminatorValidator($this->refResolver, $this->pool);
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
+        $this->validator = new DiscriminatorValidator($this->refResolver, $this->pool, $this->statelessValidators);
     }
 
     #[Test]

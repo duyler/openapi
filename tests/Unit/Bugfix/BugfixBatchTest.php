@@ -26,6 +26,7 @@ use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Request\CookieValidator;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\AdditionalPropertiesValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ConstValidator;
@@ -61,6 +62,7 @@ final class BugfixBatchTest extends TestCase
                 openapi: '3.0.3',
                 info: new InfoObject(title: 'Test', version: '1.0.0'),
             ),
+            statelessValidators: new StatelessValidatorRegistry($pool, $formatRegistry),
             formatRegistry: $formatRegistry,
         );
 
@@ -87,6 +89,7 @@ final class BugfixBatchTest extends TestCase
                 openapi: '3.0.3',
                 info: new InfoObject(title: 'Test', version: '1.0.0'),
             ),
+            statelessValidators: new StatelessValidatorRegistry($pool, $formatRegistry),
             formatRegistry: $formatRegistry,
         );
 
@@ -114,6 +117,7 @@ final class BugfixBatchTest extends TestCase
                 openapi: '3.0.3',
                 info: new InfoObject(title: 'Test', version: '1.0.0'),
             ),
+            statelessValidators: new StatelessValidatorRegistry($pool, $formatRegistry),
             formatRegistry: $formatRegistry,
         );
 

@@ -11,8 +11,6 @@ use Duyler\OpenApi\Validator\Exception\DiscriminatorMismatchException;
 use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
-use Duyler\OpenApi\Validator\Format\BuiltinFormats;
-use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -25,18 +23,16 @@ use function assert;
 
 final readonly class DiscriminatorValidator
 {
-    private readonly FormatRegistry $formatRegistry;
     private readonly LoggerInterface $logger;
 
     public function __construct(
         private readonly RefResolverInterface $refResolver,
         private readonly ValidatorPool $pool,
-        ?FormatRegistry $formatRegistry = null,
+        private readonly StatelessValidatorRegistry $statelessValidators,
         private readonly bool $reportDeprecated = false,
         ?LoggerInterface $logger = null,
         private readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {
-        $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
         $this->logger = $logger ?? new NullLogger();
     }
 
@@ -198,7 +194,7 @@ final readonly class DiscriminatorValidator
         string $dataPath,
     ): void {
         /** @var array<array-key, mixed> $data */
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
         $validator->validate($data, $schema, useDiscriminator: false);
     }
 }

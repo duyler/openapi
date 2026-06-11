@@ -12,6 +12,7 @@ use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\ItemsValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\PropertiesValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Error\BreadcrumbManager;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
@@ -24,6 +25,7 @@ final class ContextValidatorsIntegrationTest extends TestCase
     private ValidatorPool $pool;
     private RefResolver $refResolver;
     private OpenApiDocument $document;
+    private StatelessValidatorRegistry $statelessValidators;
 
     protected function setUp(): void
     {
@@ -33,6 +35,7 @@ final class ContextValidatorsIntegrationTest extends TestCase
             openapi: '3.2.0',
             info: new InfoObject(title: 'Test', version: '1.0.0'),
         );
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
     }
 
     #[Test]
@@ -42,7 +45,7 @@ final class ContextValidatorsIntegrationTest extends TestCase
             $this->pool,
             $this->refResolver,
             $this->document,
-            BuiltinFormats::instance(),
+            $this->statelessValidators,
         );
 
         $schema = new Schema(
@@ -74,7 +77,7 @@ final class ContextValidatorsIntegrationTest extends TestCase
             $this->pool,
             $this->refResolver,
             $this->document,
-            BuiltinFormats::instance(),
+            $this->statelessValidators,
         );
 
         $schema = new Schema(

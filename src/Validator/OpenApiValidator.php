@@ -41,6 +41,7 @@ use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
 use Duyler\OpenApi\Validator\Response\StatusCodeValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
 use Duyler\OpenApi\Validator\Link\LinkResolver;
@@ -67,6 +68,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
     private readonly LinkResolver $linkResolver;
     private readonly SecurityValidator $securityValidator;
     private readonly LoggerInterface $logger;
+    private readonly StatelessValidatorRegistry $statelessValidators;
 
     public function __construct(
         public readonly OpenApiDocument $document,
@@ -85,6 +87,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         public readonly bool $reportDeprecated = false,
     ) {
         $this->logger = $logger ?? new NullLogger();
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, $this->formatRegistry, $this->reportDeprecated, $this->logger, $this->eventDispatcher);
         $this->requestValidator = $this->buildRequestValidator();
         $this->responseValidator = $this->buildResponseValidator();
         $this->refResolver = new RefResolver();
@@ -529,9 +532,10 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
             bodyValidator: new RequestBodyValidatorWithContext(
                 pool: $this->pool,
                 document: $this->document,
+                bodyParser: $bodyParser,
+                statelessValidators: $this->statelessValidators,
                 formatRegistry: $this->formatRegistry,
                 negotiator: new ContentTypeNegotiator(),
-                bodyParser: $bodyParser,
                 nullableAsType: $this->nullableAsType,
                 emptyArrayStrategy: $this->emptyArrayStrategy,
                 coercion: $this->coercion,
@@ -547,6 +551,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         return new ResponseValidatorWithContext(
             pool: $this->pool,
             document: $this->document,
+            statelessValidators: $this->statelessValidators,
             formatRegistry: $this->formatRegistry,
             coercion: $this->coercion,
             statusCodeValidator: new StatusCodeValidator(),

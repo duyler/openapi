@@ -15,6 +15,7 @@ use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\TypeGuarantor;
 use Duyler\OpenApi\Validator\ValidatorMode;
@@ -38,6 +39,7 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
         private readonly ValidatorPool $pool,
         private readonly OpenApiDocument $document,
         private readonly BodyParser $bodyParser,
+        StatelessValidatorRegistry $statelessValidators,
         ?FormatRegistry $formatRegistry = null,
         private readonly ContentTypeNegotiator $negotiator = new ContentTypeNegotiator(),
         private readonly bool $nullableAsType = true,
@@ -52,7 +54,7 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
         $this->regularSchemaValidator = new SchemaValidator($this->pool, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
 
         $this->refResolver = new RefResolver();
-        $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry, $this->nullableAsType, $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
+        $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $statelessValidators, $this->nullableAsType, $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
         $this->coercer = new RequestBodyCoercer();
     }
 

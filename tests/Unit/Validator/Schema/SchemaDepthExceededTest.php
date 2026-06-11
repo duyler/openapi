@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Schema;
 
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
@@ -21,11 +23,13 @@ final class SchemaDepthExceededTest extends TestCase
     private RefResolverInterface $refResolver;
     private ValidatorPool $pool;
     private OpenApiDocument $document;
+    private StatelessValidatorRegistry $statelessValidators;
 
     protected function setUp(): void
     {
         $this->refResolver = new RefResolver();
         $this->pool = new ValidatorPool();
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
 
         $recursiveSchema = new Schema(
             type: 'object',
@@ -49,7 +53,7 @@ final class SchemaDepthExceededTest extends TestCase
     public function circular_ref_throws_depth_exceeded(): void
     {
         $schema = new Schema(ref: '#/components/schemas/Recursive');
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
 
         $data = [];
         for ($i = 0; $i <= 70; ++$i) {
@@ -72,7 +76,7 @@ final class SchemaDepthExceededTest extends TestCase
             ],
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
         $data = ['name' => 'test'];
 
         $validator->validate($data, $schema);
@@ -84,7 +88,7 @@ final class SchemaDepthExceededTest extends TestCase
     public function deep_circular_ref_throws_depth_exceeded(): void
     {
         $schema = new Schema(ref: '#/components/schemas/Recursive');
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
 
         $data = [];
         for ($i = 0; $i <= 65; ++$i) {
@@ -106,7 +110,7 @@ final class SchemaDepthExceededTest extends TestCase
             ],
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
         $data = ['value' => 'test'];
 
         $validator->validate($data, $nestedSchema);

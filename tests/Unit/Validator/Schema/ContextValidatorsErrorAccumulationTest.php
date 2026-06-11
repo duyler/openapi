@@ -13,6 +13,7 @@ use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\ItemsValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\PropertiesValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -25,6 +26,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
     private ValidatorPool $pool;
     private RefResolver $refResolver;
     private OpenApiDocument $document;
+    private StatelessValidatorRegistry $statelessValidators;
 
     protected function setUp(): void
     {
@@ -34,6 +36,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             openapi: '3.2.0',
             info: new InfoObject(title: 'Test', version: '1.0.0'),
         );
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
     }
 
     #[Test]
@@ -43,7 +46,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             $this->pool,
             $this->refResolver,
             $this->document,
-            BuiltinFormats::instance(),
+            $this->statelessValidators,
         );
 
         $schema = new Schema(
@@ -70,7 +73,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             $this->pool,
             $this->refResolver,
             $this->document,
-            BuiltinFormats::instance(),
+            $this->statelessValidators,
         );
 
         $schema = new Schema(
@@ -92,7 +95,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             $this->pool,
             $this->refResolver,
             $this->document,
-            BuiltinFormats::instance(),
+            $this->statelessValidators,
         );
 
         $schema = new Schema(type: 'array');
@@ -110,7 +113,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             $this->pool,
             $this->refResolver,
             $this->document,
-            BuiltinFormats::instance(),
+            $this->statelessValidators,
         );
 
         $schema = new Schema(
@@ -135,7 +138,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             $this->pool,
             $this->refResolver,
             $this->document,
-            BuiltinFormats::instance(),
+            $this->statelessValidators,
         );
 
         $schema = new Schema(
@@ -162,7 +165,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             $this->pool,
             $this->refResolver,
             $this->document,
-            BuiltinFormats::instance(),
+            $this->statelessValidators,
         );
 
         $schema = new Schema(
@@ -186,7 +189,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             $this->pool,
             $this->refResolver,
             $this->document,
-            BuiltinFormats::instance(),
+            $this->statelessValidators,
         );
 
         $schema = new Schema(
@@ -211,7 +214,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             $this->pool,
             $this->refResolver,
             $this->document,
-            BuiltinFormats::instance(),
+            $this->statelessValidators,
         );
 
         $schema = new Schema(type: 'object');
@@ -229,7 +232,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             $this->pool,
             $this->refResolver,
             $this->document,
-            BuiltinFormats::instance(),
+            $this->statelessValidators,
         );
 
         $schema = new Schema(

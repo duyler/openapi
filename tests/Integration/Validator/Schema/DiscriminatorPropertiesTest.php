@@ -10,8 +10,10 @@ use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -23,11 +25,13 @@ final class DiscriminatorPropertiesTest extends TestCase
     private ValidatorPool $pool;
     private RefResolver $refResolver;
     private OpenApiDocument $document;
+    private StatelessValidatorRegistry $statelessValidators;
 
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
         $this->refResolver = new RefResolver();
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
 
         $catSchema = new Schema(
             title: 'Cat',
@@ -82,6 +86,7 @@ final class DiscriminatorPropertiesTest extends TestCase
             $this->pool,
             $this->refResolver,
             $this->document,
+            $this->statelessValidators,
         );
     }
 

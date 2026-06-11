@@ -18,6 +18,8 @@ use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
 use Duyler\OpenApi\Validator\Request\RequestBodyValidatorWithContext;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\Model\InfoObject;
@@ -50,6 +52,7 @@ final class RequestBodyRequiredTest extends TestCase
             pool: $pool,
             document: $this->document,
             bodyParser: $bodyParser,
+            statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::instance()),
             negotiator: new ContentTypeNegotiator(),
             nullableAsType: true,
             emptyArrayStrategy: EmptyArrayStrategy::AllowBoth,

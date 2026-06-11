@@ -15,9 +15,11 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -29,6 +31,7 @@ class ErrorHandlingIntegrationTest extends TestCase
     private ValidatorPool $pool;
     private RefResolverInterface $refResolver;
     private OpenApiDocument $document;
+    private StatelessValidatorRegistry $statelessValidators;
 
     protected function setUp(): void
     {
@@ -41,6 +44,7 @@ class ErrorHandlingIntegrationTest extends TestCase
             ),
         );
         $this->refResolver = new RefResolver();
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
     }
 
     #[Test]
@@ -59,7 +63,7 @@ class ErrorHandlingIntegrationTest extends TestCase
             pool: $this->pool,
             errorFormatter: $formatter,
         );
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
 
         try {
             $validator->validateWithContext(
@@ -97,7 +101,7 @@ class ErrorHandlingIntegrationTest extends TestCase
             pool: $this->pool,
             errorFormatter: $formatter,
         );
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
 
         try {
             $validator->validateWithContext(
@@ -129,7 +133,7 @@ class ErrorHandlingIntegrationTest extends TestCase
             pool: $this->pool,
             errorFormatter: $formatter,
         );
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
 
         try {
             $validator->validateWithContext(
@@ -173,7 +177,7 @@ class ErrorHandlingIntegrationTest extends TestCase
             pool: $this->pool,
             errorFormatter: $formatter,
         );
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
 
         try {
             $validator->validateWithContext(
@@ -207,7 +211,7 @@ class ErrorHandlingIntegrationTest extends TestCase
             pool: $this->pool,
             errorFormatter: $formatter,
         );
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
 
         try {
             $validator->validateWithContext(
@@ -244,7 +248,7 @@ class ErrorHandlingIntegrationTest extends TestCase
             pool: $this->pool,
             errorFormatter: $formatter,
         );
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
 
         try {
             $validator->validateWithContext(
@@ -284,7 +288,7 @@ class ErrorHandlingIntegrationTest extends TestCase
             pool: $this->pool,
             errorFormatter: $formatter,
         );
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
 
         try {
             $validator->validateWithContext(

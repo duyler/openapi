@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Integration\Validator\Schema;
 
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\OneOfValidatorWithContext;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\InfoObject;
@@ -26,6 +28,7 @@ final class OneOfValidatorWithContextTest extends TestCase
     private ValidatorPool $pool;
     private OpenApiDocument $document;
     private ValidationContext $context;
+    private StatelessValidatorRegistry $statelessValidators;
 
     protected function setUp(): void
     {
@@ -36,10 +39,12 @@ final class OneOfValidatorWithContextTest extends TestCase
             new InfoObject('Test API', '1.0.0'),
         );
         $this->context = ValidationContext::create($this->pool);
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
         $this->validator = new OneOfValidatorWithContext(
             $this->pool,
             $this->refResolver,
             $this->document,
+            $this->statelessValidators,
         );
     }
 
@@ -91,6 +96,7 @@ final class OneOfValidatorWithContextTest extends TestCase
             $this->pool,
             $this->refResolver,
             $document,
+            $this->statelessValidators,
         );
 
         $data = ['type' => 'user'];
@@ -212,6 +218,7 @@ final class OneOfValidatorWithContextTest extends TestCase
             $this->pool,
             $this->refResolver,
             $document,
+            $this->statelessValidators,
         );
 
         $validator->validateWithContext($data, $resolvedSchema, $this->context);
@@ -302,6 +309,7 @@ final class OneOfValidatorWithContextTest extends TestCase
             $this->pool,
             $this->refResolver,
             $document,
+            $this->statelessValidators,
         );
 
         $schema = new Schema(
@@ -1035,6 +1043,7 @@ final class OneOfValidatorWithContextTest extends TestCase
             $this->pool,
             $this->refResolver,
             $document,
+            $this->statelessValidators,
         );
 
         $schema = new Schema(
@@ -1082,6 +1091,7 @@ final class OneOfValidatorWithContextTest extends TestCase
             $this->pool,
             $this->refResolver,
             $document,
+            $this->statelessValidators,
         );
 
         $schema = new Schema(
