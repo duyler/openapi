@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
+use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
@@ -22,6 +23,7 @@ use function str_starts_with;
 final class RefResolver implements RefResolverInterface
 {
     private const int REF_ROOT_PREFIX_LENGTH = 2;
+    private const int MAX_SCHEMA_DEPTH = 64;
 
     private WeakMap $cache;
 
@@ -60,12 +62,15 @@ final class RefResolver implements RefResolverInterface
         return $basePath . "/" . $relativeRef;
     }
 
+    /**
+     * @throws SchemaDepthExceededException
+     */
     #[Override]
-    public function resolve(string $ref, OpenApiDocument $document): Schema
+    public function resolve(string $ref, OpenApiDocument $document, int $depth = 0): Schema
     {
         /** @var array<string, bool> $visited */
         $visited = [];
-        $result = $this->resolveRef($ref, $document, $visited);
+        $result = $this->resolveRef($ref, $document, $visited, $depth);
 
         if (false === $result instanceof Schema) {
             throw new UnresolvableRefException(
@@ -77,14 +82,18 @@ final class RefResolver implements RefResolverInterface
         return $result;
     }
 
+    /**
+     * @throws SchemaDepthExceededException
+     */
     #[Override]
     public function resolveParameter(
         string $ref,
         OpenApiDocument $document,
+        int $depth = 0,
     ): Parameter {
         /** @var array<string, bool> $visited */
         $visited = [];
-        $result = $this->resolveRef($ref, $document, $visited);
+        $result = $this->resolveRef($ref, $document, $visited, $depth);
 
         if (false === $result instanceof Parameter) {
             throw new UnresolvableRefException(
@@ -96,14 +105,18 @@ final class RefResolver implements RefResolverInterface
         return $result;
     }
 
+    /**
+     * @throws SchemaDepthExceededException
+     */
     #[Override]
     public function resolveResponse(
         string $ref,
         OpenApiDocument $document,
+        int $depth = 0,
     ): Response {
         /** @var array<string, bool> $visited */
         $visited = [];
-        $result = $this->resolveRef($ref, $document, $visited);
+        $result = $this->resolveRef($ref, $document, $visited, $depth);
 
         if (false === $result instanceof Response) {
             throw new UnresolvableRefException(
@@ -120,7 +133,12 @@ final class RefResolver implements RefResolverInterface
         Schema $schema,
         OpenApiDocument $document,
         array &$visited = [],
+        int $depth = 0,
     ): bool {
+        if ($depth >= self::MAX_SCHEMA_DEPTH) {
+            throw new SchemaDepthExceededException(self::MAX_SCHEMA_DEPTH);
+        }
+
         $schemaId = spl_object_id($schema);
 
         if (isset($visited[$schemaId])) {
@@ -136,6 +154,7 @@ final class RefResolver implements RefResolverInterface
                     $resolvedSchema,
                     $document,
                     $visited,
+                    $depth + 1,
                 );
             } catch (UnresolvableRefException) {
                 return false;
@@ -153,6 +172,7 @@ final class RefResolver implements RefResolverInterface
                         $property,
                         $document,
                         $visited,
+                        $depth + 1,
                     )
                 ) {
                     return true;
@@ -165,6 +185,7 @@ final class RefResolver implements RefResolverInterface
                 $schema->items,
                 $document,
                 $visited,
+                $depth + 1,
             );
         }
 
@@ -175,6 +196,7 @@ final class RefResolver implements RefResolverInterface
                         $subSchema,
                         $document,
                         $visited,
+                        $depth + 1,
                     )
                 ) {
                     return true;
@@ -189,6 +211,7 @@ final class RefResolver implements RefResolverInterface
                         $subSchema,
                         $document,
                         $visited,
+                        $depth + 1,
                     )
                 ) {
                     return true;
@@ -200,8 +223,12 @@ final class RefResolver implements RefResolverInterface
     }
 
     #[Override]
-    public function schemaHasRef(Schema $schema, array &$visited = []): bool
+    public function schemaHasRef(Schema $schema, array &$visited = [], int $depth = 0): bool
     {
+        if ($depth >= self::MAX_SCHEMA_DEPTH) {
+            throw new SchemaDepthExceededException(self::MAX_SCHEMA_DEPTH);
+        }
+
         $schemaId = spl_object_id($schema);
 
         if (isset($visited[$schemaId])) {
@@ -216,21 +243,21 @@ final class RefResolver implements RefResolverInterface
 
         if (null !== $schema->properties) {
             foreach ($schema->properties as $property) {
-                if ($this->schemaHasRef($property, $visited)) {
+                if ($this->schemaHasRef($property, $visited, $depth + 1)) {
                     return true;
                 }
             }
         }
 
         if (null !== $schema->items) {
-            if ($this->schemaHasRef($schema->items, $visited)) {
+            if ($this->schemaHasRef($schema->items, $visited, $depth + 1)) {
                 return true;
             }
         }
 
         if (null !== $schema->prefixItems) {
             foreach ($schema->prefixItems as $prefixItem) {
-                if ($this->schemaHasRef($prefixItem, $visited)) {
+                if ($this->schemaHasRef($prefixItem, $visited, $depth + 1)) {
                     return true;
                 }
             }
@@ -238,7 +265,7 @@ final class RefResolver implements RefResolverInterface
 
         if (null !== $schema->allOf) {
             foreach ($schema->allOf as $subSchema) {
-                if ($this->schemaHasRef($subSchema, $visited)) {
+                if ($this->schemaHasRef($subSchema, $visited, $depth + 1)) {
                     return true;
                 }
             }
@@ -246,7 +273,7 @@ final class RefResolver implements RefResolverInterface
 
         if (null !== $schema->anyOf) {
             foreach ($schema->anyOf as $subSchema) {
-                if ($this->schemaHasRef($subSchema, $visited)) {
+                if ($this->schemaHasRef($subSchema, $visited, $depth + 1)) {
                     return true;
                 }
             }
@@ -254,45 +281,45 @@ final class RefResolver implements RefResolverInterface
 
         if (null !== $schema->oneOf) {
             foreach ($schema->oneOf as $subSchema) {
-                if ($this->schemaHasRef($subSchema, $visited)) {
+                if ($this->schemaHasRef($subSchema, $visited, $depth + 1)) {
                     return true;
                 }
             }
         }
 
         if (null !== $schema->not) {
-            if ($this->schemaHasRef($schema->not, $visited)) {
+            if ($this->schemaHasRef($schema->not, $visited, $depth + 1)) {
                 return true;
             }
         }
 
         if (null !== $schema->if) {
-            if ($this->schemaHasRef($schema->if, $visited)) {
+            if ($this->schemaHasRef($schema->if, $visited, $depth + 1)) {
                 return true;
             }
         }
 
         if (null !== $schema->then) {
-            if ($this->schemaHasRef($schema->then, $visited)) {
+            if ($this->schemaHasRef($schema->then, $visited, $depth + 1)) {
                 return true;
             }
         }
 
         if (null !== $schema->else) {
-            if ($this->schemaHasRef($schema->else, $visited)) {
+            if ($this->schemaHasRef($schema->else, $visited, $depth + 1)) {
                 return true;
             }
         }
 
         if (null !== $schema->contains) {
-            if ($this->schemaHasRef($schema->contains, $visited)) {
+            if ($this->schemaHasRef($schema->contains, $visited, $depth + 1)) {
                 return true;
             }
         }
 
         if (null !== $schema->patternProperties) {
             foreach ($schema->patternProperties as $subSchema) {
-                if ($this->schemaHasRef($subSchema, $visited)) {
+                if ($this->schemaHasRef($subSchema, $visited, $depth + 1)) {
                     return true;
                 }
             }
@@ -300,20 +327,20 @@ final class RefResolver implements RefResolverInterface
 
         if (null !== $schema->dependentSchemas) {
             foreach ($schema->dependentSchemas as $subSchema) {
-                if ($this->schemaHasRef($subSchema, $visited)) {
+                if ($this->schemaHasRef($subSchema, $visited, $depth + 1)) {
                     return true;
                 }
             }
         }
 
         if (null !== $schema->propertyNames) {
-            if ($this->schemaHasRef($schema->propertyNames, $visited)) {
+            if ($this->schemaHasRef($schema->propertyNames, $visited, $depth + 1)) {
                 return true;
             }
         }
 
         if (null !== $schema->unevaluatedItems) {
-            if ($this->schemaHasRef($schema->unevaluatedItems, $visited)) {
+            if ($this->schemaHasRef($schema->unevaluatedItems, $visited, $depth + 1)) {
                 return true;
             }
         }
@@ -322,7 +349,7 @@ final class RefResolver implements RefResolverInterface
             null !== $schema->additionalProperties
             && $schema->additionalProperties instanceof Schema
         ) {
-            if ($this->schemaHasRef($schema->additionalProperties, $visited)) {
+            if ($this->schemaHasRef($schema->additionalProperties, $visited, $depth + 1)) {
                 return true;
             }
         }
@@ -331,7 +358,7 @@ final class RefResolver implements RefResolverInterface
             null !== $schema->unevaluatedProperties
             && $schema->unevaluatedProperties instanceof Schema
         ) {
-            if ($this->schemaHasRef($schema->unevaluatedProperties, $visited)) {
+            if ($this->schemaHasRef($schema->unevaluatedProperties, $visited, $depth + 1)) {
                 return true;
             }
         }
@@ -340,7 +367,7 @@ final class RefResolver implements RefResolverInterface
             null !== $schema->contentSchema
             && $schema->contentSchema instanceof Schema
         ) {
-            if ($this->schemaHasRef($schema->contentSchema, $visited)) {
+            if ($this->schemaHasRef($schema->contentSchema, $visited, $depth + 1)) {
                 return true;
             }
         }
@@ -499,12 +526,19 @@ final class RefResolver implements RefResolverInterface
 
     /**
      * @param array<string, bool> $visited
+     *
+     * @throws SchemaDepthExceededException
      */
     private function resolveRef(
         string $ref,
         OpenApiDocument $document,
         array &$visited,
+        int $depth = 0,
     ): Schema|Parameter|Response {
+        if ($depth >= self::MAX_SCHEMA_DEPTH) {
+            throw new SchemaDepthExceededException(self::MAX_SCHEMA_DEPTH);
+        }
+
         if (isset($visited[$ref])) {
             throw new UnresolvableRefException(
                 $ref,
@@ -540,7 +574,7 @@ final class RefResolver implements RefResolverInterface
         }
 
         if (null !== $result->ref) {
-            return $this->resolveRef($result->ref, $document, $visited);
+            return $this->resolveRef($result->ref, $document, $visited, $depth + 1);
         }
 
         /** @var array<string, Schema|Parameter|Response> */
@@ -553,11 +587,18 @@ final class RefResolver implements RefResolverInterface
 
     /**
      * @param array<int, string> $parts
+     *
+     * @throws SchemaDepthExceededException
      */
     private function navigate(
         object|array $current,
         array $parts,
+        int $depth = 0,
     ): Schema|Parameter|Response {
+        if ($depth >= self::MAX_SCHEMA_DEPTH) {
+            throw new SchemaDepthExceededException(self::MAX_SCHEMA_DEPTH);
+        }
+
         $part = array_shift($parts);
 
         if (null === $part) {
@@ -577,7 +618,7 @@ final class RefResolver implements RefResolverInterface
 
         $next = $this->getProperty($current, $part);
 
-        return $this->navigate($next, $parts);
+        return $this->navigate($next, $parts, $depth + 1);
     }
 
     private function getProperty(
