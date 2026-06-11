@@ -19,6 +19,7 @@ use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
 use Duyler\OpenApi\Validator\Request\RequestBodyValidatorWithContext;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Schema\OpenApiDocument;
@@ -53,6 +54,7 @@ final class RequestBodyRequiredTest extends TestCase
             document: $this->document,
             bodyParser: $bodyParser,
             statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::instance()),
+            refResolver: new RefResolver(),
             negotiator: new ContentTypeNegotiator(),
             nullableAsType: true,
             emptyArrayStrategy: EmptyArrayStrategy::AllowBoth,

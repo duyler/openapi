@@ -12,7 +12,6 @@ use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
-use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
@@ -30,7 +29,6 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
 {
     private SchemaValidator $regularSchemaValidator;
     private SchemaValidatorWithContext $contextSchemaValidator;
-    private RefResolverInterface $refResolver;
     private RequestBodyCoercer $coercer;
     private readonly FormatRegistry $formatRegistry;
     private readonly LoggerInterface $logger;
@@ -40,6 +38,7 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
         private readonly OpenApiDocument $document,
         private readonly BodyParser $bodyParser,
         StatelessValidatorRegistry $statelessValidators,
+        private readonly RefResolverInterface $refResolver,
         ?FormatRegistry $formatRegistry = null,
         private readonly ContentTypeNegotiator $negotiator = new ContentTypeNegotiator(),
         private readonly bool $nullableAsType = true,
@@ -53,7 +52,6 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
         $this->logger = $logger ?? new NullLogger();
         $this->regularSchemaValidator = new SchemaValidator($this->pool, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
 
-        $this->refResolver = new RefResolver();
         $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $statelessValidators, $this->nullableAsType, $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
         $this->coercer = new RequestBodyCoercer();
     }

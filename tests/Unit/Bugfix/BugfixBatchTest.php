@@ -63,6 +63,7 @@ final class BugfixBatchTest extends TestCase
                 info: new InfoObject(title: 'Test', version: '1.0.0'),
             ),
             statelessValidators: new StatelessValidatorRegistry($pool, $formatRegistry),
+            refResolver: new RefResolver(),
             formatRegistry: $formatRegistry,
         );
 
@@ -90,6 +91,7 @@ final class BugfixBatchTest extends TestCase
                 info: new InfoObject(title: 'Test', version: '1.0.0'),
             ),
             statelessValidators: new StatelessValidatorRegistry($pool, $formatRegistry),
+            refResolver: new RefResolver(),
             formatRegistry: $formatRegistry,
         );
 
@@ -118,6 +120,7 @@ final class BugfixBatchTest extends TestCase
                 info: new InfoObject(title: 'Test', version: '1.0.0'),
             ),
             statelessValidators: new StatelessValidatorRegistry($pool, $formatRegistry),
+            refResolver: new RefResolver(),
             formatRegistry: $formatRegistry,
         );
 

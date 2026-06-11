@@ -89,9 +89,9 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
     ) {
         $this->logger = $logger ?? new NullLogger();
         $this->statelessValidators = new StatelessValidatorRegistry($this->pool, $this->formatRegistry, $this->reportDeprecated, $this->logger, $this->eventDispatcher);
+        $this->refResolver = new RefResolver();
         $this->requestValidator = $this->buildRequestValidator();
         $this->responseValidator = $this->buildResponseValidator();
-        $this->refResolver = new RefResolver();
         $this->webhookValidator = new WebhookValidator($this->requestValidator);
         $this->callbackValidator = new CallbackValidator($this->requestValidator);
         $this->linkResolver = new LinkResolver();
@@ -543,6 +543,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
                 document: $this->document,
                 bodyParser: $bodyParser,
                 statelessValidators: $this->statelessValidators,
+                refResolver: $this->refResolver,
                 formatRegistry: $this->formatRegistry,
                 negotiator: new ContentTypeNegotiator(),
                 nullableAsType: $this->nullableAsType,
@@ -566,6 +567,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
             statusCodeValidator: new StatusCodeValidator(),
             nullableAsType: $this->nullableAsType,
             emptyArrayStrategy: $this->emptyArrayStrategy,
+            refResolver: $this->refResolver,
             reportDeprecated: $this->reportDeprecated,
             logger: $this->logger,
             eventDispatcher: $this->eventDispatcher,

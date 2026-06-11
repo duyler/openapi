@@ -12,7 +12,7 @@ use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
-use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
@@ -28,7 +28,6 @@ final readonly class ResponseBodyValidatorWithContext
 {
     private SchemaValidator $regularSchemaValidator;
     private SchemaValidatorWithContext $contextSchemaValidator;
-    private RefResolver $refResolver;
     private readonly FormatRegistry $formatRegistry;
     private readonly LoggerInterface $logger;
 
@@ -37,6 +36,7 @@ final readonly class ResponseBodyValidatorWithContext
         private readonly OpenApiDocument $document,
         private readonly BodyParser $bodyParser,
         StatelessValidatorRegistry $statelessValidators,
+        private readonly RefResolverInterface $refResolver,
         ?FormatRegistry $formatRegistry = null,
         private readonly ContentTypeNegotiator $negotiator = new ContentTypeNegotiator(),
         private readonly ResponseTypeCoercer $typeCoercer = new ResponseTypeCoercer(),
@@ -52,7 +52,6 @@ final readonly class ResponseBodyValidatorWithContext
         $this->logger = $logger ?? new NullLogger();
         $this->regularSchemaValidator = new SchemaValidator($this->pool, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
 
-        $this->refResolver = new RefResolver();
         $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $statelessValidators, $this->nullableAsType, $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
     }
 

@@ -38,6 +38,7 @@ final readonly class ResponseValidatorWithContext
         private readonly ValidatorPool $pool,
         private readonly OpenApiDocument $document,
         StatelessValidatorRegistry $statelessValidators,
+        private readonly RefResolverInterface $refResolver,
         ?FormatRegistry $formatRegistry = null,
         private readonly BodyParser $bodyParser = new BodyParser(
             jsonParser: new JsonBodyParser(),
@@ -50,7 +51,6 @@ final readonly class ResponseValidatorWithContext
         private readonly StatusCodeValidator $statusCodeValidator = new StatusCodeValidator(),
         private readonly bool $nullableAsType = true,
         private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
-        private readonly ?RefResolverInterface $refResolver = null,
         private readonly bool $reportDeprecated = false,
         ?LoggerInterface $logger = null,
         private readonly ?EventDispatcherInterface $eventDispatcher = null,
@@ -93,7 +93,7 @@ final readonly class ResponseValidatorWithContext
         $contentType = $response->getHeaderLine('Content-Type');
         $body = (string) $response->getBody();
 
-        $bodyValidator = new ResponseBodyValidatorWithContext(pool: $this->pool, document: $this->document, bodyParser: $this->bodyParser, statelessValidators: $this->statelessValidators, formatRegistry: $this->formatRegistry, coercion: $this->coercion, nullableAsType: $this->nullableAsType, emptyArrayStrategy: $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
+        $bodyValidator = new ResponseBodyValidatorWithContext(pool: $this->pool, document: $this->document, bodyParser: $this->bodyParser, statelessValidators: $this->statelessValidators, refResolver: $this->refResolver, formatRegistry: $this->formatRegistry, coercion: $this->coercion, nullableAsType: $this->nullableAsType, emptyArrayStrategy: $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
         $bodyValidator->validate($body, $contentType, $responseDefinition->content ?? null);
     }
 
@@ -110,7 +110,7 @@ final readonly class ResponseValidatorWithContext
             return $response;
         }
 
-        if (null === $response->ref || null === $this->refResolver) {
+        if (null === $response->ref) {
             return $response;
         }
 
