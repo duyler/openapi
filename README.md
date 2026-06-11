@@ -25,6 +25,7 @@ OpenAPI 3.2 validator for PHP 8.4+
  - **PSR-14 Events** - Subscribe to validation lifecycle events
  - **Error Formatting** - Multiple error formatters (simple, detailed, JSON)
 - **Webhooks Support** - Validate incoming webhook requests
+- **Streaming Validation** - Validate NDJSON, SSE, and JSON Text Sequences responses
 - **Schema Registry** - Manage multiple schema versions
 - **Validator Compilation** - Generate optimized validator code
 
@@ -924,6 +925,277 @@ $validator->validateResponse($response, $operation);
 
 // Schema validation
 $validator->validateSchema($data, '#/components/schemas/User');
+```
+
+## Performance
+
+### Benchmark Results
+
+The following measurements come from the test suite benchmarks run on a standard development machine. Actual numbers vary depending on hardware, PHP version, and schema complexity.
+
+| Scenario | Schema | Avg per validation | Memory per request |
+|----------|--------|--------------------|--------------------|
+| Simple (GET /ping) | 1 path, no body | < 5 ms | - |
+| Medium (POST /users) | 4 properties, format validation, enum | < 10 ms | - |
+| Complex (petstore.yaml) | Multiple paths, `$ref`, nested schemas | < 10 ms | - |
+| Path scanning | 100 routes, 50 iterations | < 100 ms total | < 1 MB growth |
+| Full request+response cycle | 2 properties, email format | - | < 50 KB |
+
+These numbers represent upper bounds enforced by assertions in `tests/Benchmark/PerformanceBenchmarkTest.php`. Real-world performance is typically better.
+
+### Caching
+
+Enable PSR-6 caching when the OpenAPI specification does not change between requests. This skips YAML/JSON parsing and schema construction on every build:
+
+```php
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Duyler\OpenApi\Cache\SchemaCache;
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+
+$cachePool = new FilesystemAdapter();
+$schemaCache = new SchemaCache($cachePool, 3600); // TTL: 1 hour
+
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withCache($schemaCache)
+    ->build();
+```
+
+For compiled validators, use `CompilationCache` to avoid regenerating PHP code:
+
+```php
+use Duyler\OpenApi\Compiler\ValidatorCompiler;
+use Duyler\OpenApi\Compiler\CompilationCache;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+
+$compilationCache = new CompilationCache(new FilesystemAdapter());
+$compiler = new ValidatorCompiler();
+
+$code = $compiler->compileWithCache($schema, 'UserValidator', $compilationCache);
+```
+
+### When to Use Compilation
+
+The `ValidatorCompiler` generates standalone PHP classes with hardcoded validation rules. This is faster than runtime schema traversal because the compiled code has no reflection, no `$ref` resolution, and no dynamic dispatch.
+
+Use compilation when:
+- The schema is stable and does not change at runtime
+- You need maximum throughput for hot-path validation
+- The schema uses only basic keywords (no `allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`)
+
+Stick with runtime validation when:
+- The schema changes frequently or is user-defined
+- You need composition keywords (`allOf`, `anyOf`, `oneOf`)
+- You need `$ref` resolution against an OpenAPI document (use `compileWithRefResolution()` instead)
+
+### Coercion Impact
+
+Enabling coercion with `enableCoercion()` adds a type conversion pass before validation. For request parameters (query, path, headers), this converts string values to their declared types (e.g., `"123"` to `123`). The overhead is proportional to the number of parameters and properties in the request body. For most APIs, the cost is negligible compared to the validation itself.
+
+### Memory Profiling
+
+The validator creates a fixed set of objects during `build()`. Per-request memory usage stays under 50 KB for typical schemas. To profile memory in your application:
+
+```php
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->build();
+
+gc_collect_cycles();
+$before = memory_get_usage();
+
+$operation = $validator->validateRequest($request);
+$validator->validateResponse($response, $operation);
+
+gc_collect_cycles();
+$after = memory_get_usage();
+
+printf("Memory delta: %d bytes\n", $after - $before);
+```
+
+### Long-Running Processes
+
+The validator instance is safe to reuse across requests in long-running processes (RoadRunner, FrankenPHP, Swoole). The internal `ValidatorPool` uses `WeakMap` to cache and reuse validator instances without manual cleanup.
+
+```php
+// Build once at worker startup
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withCache($schemaCache)
+    ->build();
+
+// Reuse across requests
+while ($request = $worker->waitRequest()) {
+    $operation = $validator->validateRequest($request);
+    // ...
+}
+```
+
+If the OpenAPI specification changes at runtime, rebuild the validator. The old instances will be garbage-collected when no longer referenced.
+
+## Streaming Response Validation
+
+The validator supports three streaming response formats. Each item in the stream is validated individually against the schema defined in `itemSchema` (or `schema` as fallback).
+
+### Supported Content Types
+
+| Format | Content-Type | Specification |
+|--------|-------------|---------------|
+| JSON Lines / NDJSON | `application/jsonl` or `application/x-ndjson` | Newline-delimited JSON objects |
+| Server-Sent Events | `text/event-stream` | W3C SSE specification |
+| JSON Text Sequences | `application/json-seq` | RFC 7464 |
+
+### OpenAPI Specification
+
+Use the `itemSchema` keyword within the media type definition to declare the schema for each individual item in the stream:
+
+```yaml
+openapi: '3.2.0'
+info:
+  title: Streaming API
+  version: '1.0.0'
+paths:
+  /logs:
+    get:
+      operationId: getLogs
+      responses:
+        '200':
+          description: Log stream
+          content:
+            application/jsonl:
+              itemSchema:
+                type: object
+                properties:
+                  timestamp:
+                    type: string
+                    format: date-time
+                  level:
+                    type: string
+                    enum: [debug, info, warn, error]
+                  message:
+                    type: string
+                required:
+                  - timestamp
+                  - level
+                  - message
+  /events:
+    get:
+      operationId: getEvents
+      responses:
+        '200':
+          description: Event stream
+          content:
+            text/event-stream:
+              itemSchema:
+                type: object
+                properties:
+                  event:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                      count:
+                        type: integer
+                required:
+                  - event
+                  - data
+  /records:
+    get:
+      operationId: getRecords
+      responses:
+        '200':
+          description: Record stream
+          content:
+            application/json-seq:
+              itemSchema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  value:
+                    type: string
+                required:
+                  - id
+```
+
+### NDJSON / JSON Lines
+
+Each line in the response body is a separate JSON object. Empty lines are skipped.
+
+```php
+use Nyholm\Psr7\Factory\Psr17Factory;
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+
+$factory = new Psr17Factory();
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->build();
+
+$request = $factory->createServerRequest('GET', '/logs');
+$operation = $validator->validateRequest($request);
+
+$body = '{"timestamp":"2024-01-01T00:00:00Z","level":"info","message":"Started"}' . "\n"
+    . '{"timestamp":"2024-01-01T00:00:01Z","level":"error","message":"Failed"}';
+
+$response = $factory->createResponse(200)
+    ->withHeader('Content-Type', 'application/jsonl')
+    ->withBody($factory->createStream($body));
+
+$validator->validateResponse($response, $operation);
+```
+
+### Server-Sent Events (SSE)
+
+The parser handles the standard SSE format with `event`, `data`, and `id` fields. Comments (lines starting with `:`) are ignored. The `data` field is automatically decoded from JSON when possible.
+
+```php
+$request = $factory->createServerRequest('GET', '/events');
+$operation = $validator->validateRequest($request);
+
+$body = "event: message\n"
+    . "data: {\"message\":\"hello\",\"count\":1}\n\n"
+    . "event: update\n"
+    . "data: {\"message\":\"world\",\"count\":2}\n\n";
+
+$response = $factory->createResponse(200)
+    ->withHeader('Content-Type', 'text/event-stream')
+    ->withBody($factory->createStream($body));
+
+$validator->validateResponse($response, $operation);
+```
+
+### JSON Text Sequences (RFC 7464)
+
+Each record is prefixed with a record separator byte (`0x1E`). This format avoids ambiguity with newlines inside JSON strings.
+
+```php
+$request = $factory->createServerRequest('GET', '/records');
+$operation = $validator->validateRequest($request);
+
+$body = "\x1E" . '{"id":"1","value":"first"}' . "\x1E" . '{"id":"2","value":"second"}';
+
+$response = $factory->createResponse(200)
+    ->withHeader('Content-Type', 'application/json-seq')
+    ->withBody($factory->createStream($body));
+
+$validator->validateResponse($response, $operation);
+```
+
+### Error Handling in Streams
+
+When a stream item fails to parse (invalid JSON), the parser logs a warning and yields `null` for that item. The validator skips `null` items. When a parsed item fails schema validation, a `ValidationException` is thrown immediately.
+
+```php
+use Duyler\OpenApi\Validator\Response\StreamingContentParser;
+use Psr\Log\LoggerInterface;
+
+// Custom logger to track parse failures
+$parser = new StreamingContentParser($logger);
+
+// Returns [valid, null, valid] - second item is null due to invalid JSON
+$items = $parser->parseJsonLines('{"ok":true}' . "\n" . 'bad json' . "\n" . '{"ok":false}');
 ```
 
 ## Limitations
