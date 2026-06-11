@@ -14,6 +14,7 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
+use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\SchemaValidator\AdditionalPropertiesValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\AllOfValidator;
@@ -33,6 +34,7 @@ use Duyler\OpenApi\Validator\SchemaValidator\PatternPropertiesValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\PatternValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\PrefixItemsValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\PropertyNamesValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ReadOnlyWriteOnlyValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\RequiredValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\StringLengthValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\TypeValidator;
@@ -60,9 +62,9 @@ final class SchemaValidatorWithContext
         $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
     }
 
-    public function validate(array|int|string|float|bool|null $data, Schema $schema, bool $useDiscriminator = true): void
+    public function validate(array|int|string|float|bool|null $data, Schema $schema, bool $useDiscriminator = true, ?ValidatorMode $mode = null): void
     {
-        $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy);
+        $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy, $mode);
 
         $schema = $this->resolveRef($schema);
 
@@ -191,6 +193,7 @@ final class SchemaValidatorWithContext
             new RequiredValidator($this->pool, $this->formatRegistry),
             new AdditionalPropertiesValidator($this->pool, $this->formatRegistry),
             new PropertyNamesValidator($this->pool, $this->formatRegistry),
+            new ReadOnlyWriteOnlyValidator($this->pool, $this->formatRegistry),
             new UnevaluatedPropertiesValidator($this->pool, $this->formatRegistry),
             new PatternPropertiesValidator($this->pool, $this->formatRegistry),
             new DependentSchemasValidator($this->pool, $this->formatRegistry),

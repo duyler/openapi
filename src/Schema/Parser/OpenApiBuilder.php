@@ -375,6 +375,8 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             default: $data['default'] ?? null,
             hasDefault: array_key_exists('default', $data),
             deprecated: (bool) ($data['deprecated'] ?? false),
+            readOnly: (bool) ($data['readOnly'] ?? false),
+            writeOnly: (bool) ($data['writeOnly'] ?? false),
             type: TypeHelper::asStringOrNull($data['type'] ?? null),
             nullable: (bool) ($data['nullable'] ?? false),
             const: $data['const'] ?? null,

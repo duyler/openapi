@@ -38,6 +38,8 @@ final readonly class Schema implements JsonSerializable
         public mixed $default = null,
         public bool $hasDefault = false,
         public bool $deprecated = false,
+        public bool $readOnly = false,
+        public bool $writeOnly = false,
         public string|array|null $type = null,
         public bool $nullable = false,
         public mixed $const = null,
@@ -120,6 +122,14 @@ final readonly class Schema implements JsonSerializable
 
         if ($this->deprecated) {
             $data['deprecated'] = $this->deprecated;
+        }
+
+        if ($this->readOnly) {
+            $data['readOnly'] = $this->readOnly;
+        }
+
+        if ($this->writeOnly) {
+            $data['writeOnly'] = $this->writeOnly;
         }
 
         if (null !== $this->type) {

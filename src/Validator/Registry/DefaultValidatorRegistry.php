@@ -28,6 +28,7 @@ use Duyler\OpenApi\Validator\SchemaValidator\PatternValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\PrefixItemsValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\PropertiesValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\PropertyNamesValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ReadOnlyWriteOnlyValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\RequiredValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\SchemaValidator\StringLengthValidator;
@@ -101,6 +102,7 @@ final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterf
             PrefixItemsValidator::class => new PrefixItemsValidator($this->pool, $this->formatRegistry),
             PropertiesValidator::class => new PropertiesValidator($this->pool, $this->formatRegistry),
             PropertyNamesValidator::class => new PropertyNamesValidator($this->pool, $this->formatRegistry),
+            ReadOnlyWriteOnlyValidator::class => new ReadOnlyWriteOnlyValidator($this->pool, $this->formatRegistry),
             RequiredValidator::class => new RequiredValidator($this->pool, $this->formatRegistry),
             StringLengthValidator::class => new StringLengthValidator($this->pool, $this->formatRegistry),
             TypeValidator::class => new TypeValidator($this->pool, $this->formatRegistry),

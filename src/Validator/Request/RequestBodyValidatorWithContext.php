@@ -17,6 +17,7 @@ use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\TypeGuarantor;
+use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Override;
@@ -104,13 +105,13 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
             $hasDiscriminator = null !== $schema->discriminator || $this->refResolver->schemaHasDiscriminator($schema, $this->document);
 
             if (false === $hasDiscriminator) {
-                $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy);
+                $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy, ValidatorMode::Request);
                 $this->regularSchemaValidator->validate($parsedBody, $schema, $context);
 
                 return;
             }
 
-            $this->contextSchemaValidator->validate($parsedBody, $schema);
+            $this->contextSchemaValidator->validate($parsedBody, $schema, true, ValidatorMode::Request);
         }
     }
 }

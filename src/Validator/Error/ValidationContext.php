@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\Error;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
+use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
 final readonly class ValidationContext
@@ -18,12 +19,14 @@ final readonly class ValidationContext
         public readonly bool $nullableAsType = true,
         public readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         public readonly int $depth = 0,
+        public readonly ?ValidatorMode $mode = null,
     ) {}
 
     public static function create(
         ValidatorPool $pool,
         bool $nullableAsType = true,
         EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
+        ?ValidatorMode $mode = null,
     ): self {
         return new self(
             breadcrumbs: BreadcrumbManager::create(),
@@ -31,6 +34,7 @@ final readonly class ValidationContext
             errorFormatter: new SimpleFormatter(),
             nullableAsType: $nullableAsType,
             emptyArrayStrategy: $emptyArrayStrategy,
+            mode: $mode,
         );
     }
 
@@ -43,6 +47,7 @@ final readonly class ValidationContext
             nullableAsType: $this->nullableAsType,
             emptyArrayStrategy: $this->emptyArrayStrategy,
             depth: $this->depth,
+            mode: $this->mode,
         );
     }
 
@@ -55,6 +60,7 @@ final readonly class ValidationContext
             nullableAsType: $this->nullableAsType,
             emptyArrayStrategy: $this->emptyArrayStrategy,
             depth: $this->depth,
+            mode: $this->mode,
         );
     }
 
@@ -67,6 +73,7 @@ final readonly class ValidationContext
             nullableAsType: $this->nullableAsType,
             emptyArrayStrategy: $this->emptyArrayStrategy,
             depth: $this->depth + 1,
+            mode: $this->mode,
         );
     }
 }

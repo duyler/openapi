@@ -4,22 +4,33 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Compiler;
 
+use Duyler\OpenApi\Compiler\Exception\UnsupportedKeywordException;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use RuntimeException;
 
+use function array_keys;
 use function count;
 use function in_array;
 use function is_array;
 use function sprintf;
 
+/**
+ * @experimental
+ */
 final readonly class ValidatorCompiler
 {
     private const int REF_COMPONENTS_SCHEMAS_PREFIX_LENGTH = 21;
 
     public function compile(Schema $schema, string $className): string
     {
+        $unsupported = $this->detectUnsupportedKeywords($schema);
+
+        if ([] !== $unsupported) {
+            throw new UnsupportedKeywordException($unsupported);
+        }
+
         return $this->generateCode($schema, $className);
     }
 
@@ -450,5 +461,36 @@ final readonly class ValidatorCompiler
         }
 
         return $this->resolveRefs($schemas[$schemaName], $document, $resolved);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function detectUnsupportedKeywords(Schema $schema): array
+    {
+        $keywordMap = [
+            'allOf' => null !== $schema->allOf,
+            'anyOf' => null !== $schema->anyOf,
+            'oneOf' => null !== $schema->oneOf,
+            'not' => null !== $schema->not,
+            'if' => null !== $schema->if,
+            'then' => null !== $schema->then,
+            'else' => null !== $schema->else,
+            'patternProperties' => null !== $schema->patternProperties,
+        ];
+
+        $detected = array_keys(array_filter($keywordMap));
+
+        if (null !== $schema->properties) {
+            foreach ($schema->properties as $propertySchema) {
+                $detected = [...$detected, ...$this->detectUnsupportedKeywords($propertySchema)];
+            }
+        }
+
+        if (null !== $schema->items) {
+            $detected = [...$detected, ...$this->detectUnsupportedKeywords($schema->items)];
+        }
+
+        return array_values(array_unique($detected));
     }
 }

@@ -16,6 +16,7 @@ use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\TypeGuarantor;
+use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 
@@ -88,7 +89,7 @@ final readonly class ResponseBodyValidatorWithContext
             $hasDiscriminator = null !== $schema->discriminator || $this->refResolver->schemaHasDiscriminator($schema, $this->document);
             $hasRef = $this->refResolver->schemaHasRef($schema);
 
-            $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy);
+            $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy, ValidatorMode::Response);
 
             if (false === ($hasDiscriminator || $hasRef)) {
                 $this->regularSchemaValidator->validate($parsedBody, $schema, $context);
@@ -96,7 +97,7 @@ final readonly class ResponseBodyValidatorWithContext
                 return;
             }
 
-            $this->contextSchemaValidator->validate($parsedBody, $schema);
+            $this->contextSchemaValidator->validate($parsedBody, $schema, true, ValidatorMode::Response);
         }
     }
 
@@ -114,7 +115,7 @@ final readonly class ResponseBodyValidatorWithContext
         $effectiveContentType = $mediaType->itemEncoding->contentType ?? $contentType;
         $items = $this->streamingParser->parse($body, $effectiveContentType);
 
-        $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy);
+        $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy, ValidatorMode::Response);
         $hasDiscriminator = null !== $schema->discriminator || $this->refResolver->schemaHasDiscriminator($schema, $this->document);
         $hasRef = $this->refResolver->schemaHasRef($schema);
 
@@ -129,7 +130,7 @@ final readonly class ResponseBodyValidatorWithContext
                 continue;
             }
 
-            $this->contextSchemaValidator->validate($item, $schema);
+            $this->contextSchemaValidator->validate($item, $schema, true, ValidatorMode::Response);
         }
     }
 }
