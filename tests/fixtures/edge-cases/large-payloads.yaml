@@ -130,3 +130,13 @@ paths:
       responses:
         '200':
           description: OK
+  /test/large/null:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NullHandling'
+      responses:
+        '200':
+          description: OK
