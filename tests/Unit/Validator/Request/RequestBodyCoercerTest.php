@@ -7,8 +7,17 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Request;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Request\RequestBodyCoercer;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+
+use function gettype;
+use function is_array;
+use function is_bool;
+use function is_float;
+use function is_int;
+use function is_string;
+use function sprintf;
 
 final class RequestBodyCoercerTest extends TestCase
 {
@@ -432,5 +441,378 @@ final class RequestBodyCoercerTest extends TestCase
         $result = $this->coercer->coerce($input, $schema, true);
 
         $this->assertSame(42, $result['level1']['level2']['value']);
+    }
+
+    public static function coerceToIntegerProvider(): array
+    {
+        return [
+            'string integer' => ['42', 42],
+            'string zero' => ['0', 0],
+            'string negative' => ['-10', -10],
+            'float value' => [3.14, 3],
+            'bool true' => [true, 1],
+            'bool false' => [false, 0],
+            'already integer' => [99, 99],
+        ];
+    }
+
+    #[DataProvider('coerceToIntegerProvider')]
+    #[Test]
+    public function coerce_to_integer_with_data_provider(mixed $input, int $expected): void
+    {
+        $schema = new Schema(type: 'integer');
+
+        $result = $this->coercer->coerce($input, $schema, true);
+
+        $this->assertSame($expected, $result);
+    }
+
+    public static function coerceToNumberProvider(): array
+    {
+        return [
+            'string float' => ['19.99', 19.99],
+            'string integer as float' => ['42', 42.0],
+            'string zero' => ['0', 0.0],
+            'string negative' => ['-3.14', -3.14],
+            'integer to float' => [42, 42.0],
+            'already float' => [3.14, 3.14],
+            'bool true' => [true, 1.0],
+            'bool false' => [false, 0.0],
+        ];
+    }
+
+    #[DataProvider('coerceToNumberProvider')]
+    #[Test]
+    public function coerce_to_number_with_data_provider(mixed $input, float $expected): void
+    {
+        $schema = new Schema(type: 'number');
+
+        $result = $this->coercer->coerce($input, $schema, true);
+
+        $this->assertSame($expected, $result);
+    }
+
+    public static function coerceToBooleanProvider(): array
+    {
+        return [
+            'string true' => ['true', true],
+            'string yes' => ['yes', true],
+            'string on' => ['on', true],
+            'string one' => ['1', true],
+            'string false' => ['false', false],
+            'string no' => ['no', false],
+            'string off' => ['off', false],
+            'string zero' => ['0', false],
+            'int one' => [1, true],
+            'int zero' => [0, false],
+            'int negative' => [-1, true],
+            'float one' => [1.0, true],
+            'float zero' => [0.0, false],
+            'float fraction' => [0.5, true],
+            'already bool true' => [true, true],
+            'already bool false' => [false, false],
+        ];
+    }
+
+    #[DataProvider('coerceToBooleanProvider')]
+    #[Test]
+    public function coerce_to_boolean_with_data_provider(mixed $input, bool $expected): void
+    {
+        $schema = new Schema(type: 'boolean');
+
+        $result = $this->coercer->coerce($input, $schema, true);
+
+        $this->assertSame($expected, $result);
+    }
+
+    public static function coerceUnionTypeProvider(): array
+    {
+        return [
+            'integer first match' => [
+                ['integer', 'string'],
+                '42',
+                42,
+            ],
+            'string first match' => [
+                ['string', 'integer'],
+                'hello',
+                'hello',
+            ],
+            'number match from string' => [
+                ['number', 'string'],
+                '3.14',
+                3.14,
+            ],
+            'boolean match from string' => [
+                ['boolean', 'string'],
+                'true',
+                true,
+            ],
+            'null skipped string matched' => [
+                ['null', 'string'],
+                'test',
+                'test',
+            ],
+            'all null types returns original' => [
+                ['null'],
+                'test',
+                'test',
+            ],
+        ];
+    }
+
+    #[DataProvider('coerceUnionTypeProvider')]
+    #[Test]
+    public function coerce_union_type_with_data_provider(array $types, mixed $input, mixed $expected): void
+    {
+        $schema = new Schema(type: $types);
+
+        $result = $this->coercer->coerce($input, $schema, true);
+
+        $this->assertSame($expected, $result);
+    }
+
+    public static function coerceToObjectProvider(): array
+    {
+        return [
+            'simple object with string properties' => [
+                ['name' => 'John'],
+                ['name' => new Schema(type: 'string')],
+                ['name' => 'John'],
+            ],
+            'object with mixed types' => [
+                ['age' => '25', 'active' => 'true'],
+                ['age' => new Schema(type: 'integer'), 'active' => new Schema(type: 'boolean')],
+                ['age' => 25, 'active' => true],
+            ],
+            'nested object' => [
+                ['user' => ['age' => '30']],
+                ['user' => new Schema(type: 'object', properties: ['age' => new Schema(type: 'integer')])],
+                ['user' => ['age' => 30]],
+            ],
+        ];
+    }
+
+    #[DataProvider('coerceToObjectProvider')]
+    #[Test]
+    public function coerce_to_object_with_data_provider(array $input, array $properties, array $expected): void
+    {
+        $schema = new Schema(type: 'object', properties: $properties);
+
+        $result = $this->coercer->coerce($input, $schema, true);
+
+        $this->assertSame($expected, $result);
+    }
+
+    public static function coerceToArrayProvider(): array
+    {
+        return [
+            'array of integers from strings' => [
+                ['1', '2', '3'],
+                new Schema(type: 'integer'),
+                [1, 2, 3],
+            ],
+            'array of floats from strings' => [
+                ['1.1', '2.2'],
+                new Schema(type: 'number'),
+                [1.1, 2.2],
+            ],
+            'array of booleans from strings' => [
+                ['true', 'false'],
+                new Schema(type: 'boolean'),
+                [true, false],
+            ],
+            'empty array' => [
+                [],
+                new Schema(type: 'integer'),
+                [],
+            ],
+        ];
+    }
+
+    #[DataProvider('coerceToArrayProvider')]
+    #[Test]
+    public function coerce_to_array_with_data_provider(array $input, Schema $itemsSchema, array $expected): void
+    {
+        $schema = new Schema(type: 'array', items: $itemsSchema);
+
+        $result = $this->coercer->coerce($input, $schema, true);
+
+        $this->assertSame($expected, $result);
+    }
+
+    public static function isValidTypeProvider(): array
+    {
+        return [
+            'string matches string type' => ['hello', 'string', true],
+            'integer matches integer type' => [42, 'integer', true],
+            'float matches number type' => [3.14, 'number', true],
+            'integer matches number type' => [42, 'number', true],
+            'bool matches boolean type' => [true, 'boolean', true],
+            'null matches null type' => [null, 'null', true],
+            'array matches object type' => [['key' => 'val'], 'object', true],
+            'array matches array type' => [[1, 2], 'array', true],
+            'unknown type matches always' => ['anything', 'custom', true],
+        ];
+    }
+
+    #[DataProvider('isValidTypeProvider')]
+    #[Test]
+    public function is_valid_type_checked_through_union_type(mixed $input, string $type, bool $shouldBeValid): void
+    {
+        $schema = new Schema(type: [$type, 'string']);
+
+        $result = $this->coercer->coerce($input, $schema, true);
+
+        if ($shouldBeValid) {
+            $typeCheck = match ($type) {
+                'string' => is_string($result),
+                'number' => is_float($result) || is_int($result),
+                'integer' => is_int($result),
+                'boolean' => is_bool($result),
+                'null' => null === $result,
+                'object' => is_array($result),
+                'array' => is_array($result),
+                default => true,
+            };
+            $this->assertTrue($typeCheck, sprintf(
+                'Expected result to match type "%s", got %s',
+                $type,
+                gettype($result),
+            ));
+        }
+    }
+
+    #[Test]
+    public function coerce_string_to_string(): void
+    {
+        $schema = new Schema(type: 'string');
+
+        $result = $this->coercer->coerce(42, $schema, true);
+
+        $this->assertSame('42', $result);
+    }
+
+    #[Test]
+    public function coerce_bool_to_string(): void
+    {
+        $schema = new Schema(type: 'string');
+
+        $result = $this->coercer->coerce(true, $schema, true);
+        $this->assertSame('1', $result);
+
+        $resultFalse = $this->coercer->coerce(false, $schema, true);
+        $this->assertSame('', $resultFalse);
+    }
+
+    #[Test]
+    public function coerce_float_to_string(): void
+    {
+        $schema = new Schema(type: 'string');
+
+        $result = $this->coercer->coerce(3.14, $schema, true);
+
+        $this->assertSame('3.14', $result);
+    }
+
+    #[Test]
+    public function coerce_object_preserves_extra_properties(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'age' => new Schema(type: 'integer'),
+            ],
+        );
+
+        $input = ['age' => '30', 'extra' => 'value'];
+
+        $result = $this->coercer->coerce($input, $schema, true);
+
+        $this->assertSame(30, $result['age']);
+        $this->assertSame('value', $result['extra']);
+    }
+
+    #[Test]
+    public function coerce_nullable_value_with_nullable_as_type(): void
+    {
+        $schema = new Schema(type: 'string', nullable: true);
+
+        $result = $this->coercer->coerce(null, $schema, true, false, true);
+
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function coerce_nullable_value_without_nullable_as_type(): void
+    {
+        $schema = new Schema(type: 'string', nullable: true);
+
+        $result = $this->coercer->coerce(null, $schema, true, false, false);
+
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function coerce_union_type_with_non_string_item(): void
+    {
+        $schema = new Schema(type: [42, 'string']);
+
+        $result = $this->coercer->coerce('test', $schema, true);
+
+        $this->assertSame('test', $result);
+    }
+
+    #[Test]
+    public function coerce_strict_integer_with_float_string(): void
+    {
+        $schema = new Schema(type: 'integer');
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->coercer->coerce('3.14', $schema, true, true);
+    }
+
+    #[Test]
+    public function coerce_strict_number_with_non_numeric_string(): void
+    {
+        $schema = new Schema(type: 'number');
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->coercer->coerce('abc', $schema, true, true);
+    }
+
+    #[Test]
+    public function coerce_non_array_to_object_returns_original(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+        );
+
+        $result = $this->coercer->coerce(42, $schema, true);
+
+        $this->assertSame(42, $result);
+    }
+
+    #[Test]
+    public function coerce_non_array_to_array_returns_empty(): void
+    {
+        $schema = new Schema(type: 'array', items: new Schema(type: 'integer'));
+
+        $result = $this->coercer->coerce('not-array', $schema, true);
+
+        $this->assertSame([], $result);
+    }
+
+    #[Test]
+    public function coerce_integer_to_string(): void
+    {
+        $schema = new Schema(type: 'string');
+
+        $result = $this->coercer->coerce(123, $schema, true);
+
+        $this->assertSame('123', $result);
     }
 }
