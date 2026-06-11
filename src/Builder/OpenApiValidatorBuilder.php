@@ -44,6 +44,7 @@ final readonly class OpenApiValidatorBuilder
         protected EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         protected ?ErrorFormatterInterface $errorFormatter = null,
         protected ?EventDispatcherInterface $eventDispatcher = null,
+        protected bool $securityValidation = false,
     ) {}
 
     public static function create(): self
@@ -65,6 +66,7 @@ final readonly class OpenApiValidatorBuilder
             emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
+            securityValidation: $this->securityValidation,
         );
     }
 
@@ -82,6 +84,7 @@ final readonly class OpenApiValidatorBuilder
             emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
+            securityValidation: $this->securityValidation,
         );
     }
 
@@ -99,6 +102,7 @@ final readonly class OpenApiValidatorBuilder
             emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
+            securityValidation: $this->securityValidation,
         );
     }
 
@@ -116,6 +120,7 @@ final readonly class OpenApiValidatorBuilder
             emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
+            securityValidation: $this->securityValidation,
         );
     }
 
@@ -134,6 +139,7 @@ final readonly class OpenApiValidatorBuilder
             emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
+            securityValidation: $this->securityValidation,
         );
     }
 
@@ -152,6 +158,7 @@ final readonly class OpenApiValidatorBuilder
             emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
+            securityValidation: $this->securityValidation,
         );
     }
 
@@ -170,6 +177,7 @@ final readonly class OpenApiValidatorBuilder
             emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
+            securityValidation: $this->securityValidation,
         );
     }
 
@@ -188,6 +196,7 @@ final readonly class OpenApiValidatorBuilder
             emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $formatter,
             eventDispatcher: $this->eventDispatcher,
+            securityValidation: $this->securityValidation,
         );
     }
 
@@ -212,6 +221,7 @@ final readonly class OpenApiValidatorBuilder
             emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
+            securityValidation: $this->securityValidation,
         );
     }
 
@@ -230,6 +240,7 @@ final readonly class OpenApiValidatorBuilder
             emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
+            securityValidation: $this->securityValidation,
         );
     }
 
@@ -248,6 +259,7 @@ final readonly class OpenApiValidatorBuilder
             emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
+            securityValidation: $this->securityValidation,
         );
     }
 
@@ -266,6 +278,7 @@ final readonly class OpenApiValidatorBuilder
             emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
+            securityValidation: $this->securityValidation,
         );
     }
 
@@ -284,6 +297,7 @@ final readonly class OpenApiValidatorBuilder
             emptyArrayStrategy: $strategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $this->eventDispatcher,
+            securityValidation: $this->securityValidation,
         );
     }
 
@@ -302,6 +316,26 @@ final readonly class OpenApiValidatorBuilder
             emptyArrayStrategy: $this->emptyArrayStrategy,
             errorFormatter: $this->errorFormatter,
             eventDispatcher: $dispatcher,
+            securityValidation: $this->securityValidation,
+        );
+    }
+
+    public function enableSecurityValidation(): self
+    {
+        return new self(
+            specPath: $this->specPath,
+            specContent: $this->specContent,
+            specType: $this->specType,
+            pool: $this->pool,
+            cache: $this->cache,
+            logger: $this->logger,
+            formatRegistry: $this->formatRegistry,
+            coercion: $this->coercion,
+            nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
+            errorFormatter: $this->errorFormatter,
+            eventDispatcher: $this->eventDispatcher,
+            securityValidation: true,
         );
     }
 
@@ -326,6 +360,7 @@ final readonly class OpenApiValidatorBuilder
             emptyArrayStrategy: $this->emptyArrayStrategy,
             eventDispatcher: $this->eventDispatcher,
             pathFinder: $pathFinder,
+            securityValidation: $this->securityValidation,
         );
     }
 

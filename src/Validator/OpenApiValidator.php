@@ -40,6 +40,7 @@ use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
 use Duyler\OpenApi\Validator\Response\StatusCodeValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
+use Duyler\OpenApi\Validator\Security\SecurityValidator;
 use Duyler\OpenApi\Validator\Webhook\Exception\UnknownWebhookException;
 use Duyler\OpenApi\Validator\Webhook\WebhookValidator;
 use Override;
@@ -57,6 +58,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
     private readonly ResponseValidatorWithContext $responseValidator;
     private readonly RefResolver $refResolver;
     private readonly WebhookValidator $webhookValidator;
+    private readonly SecurityValidator $securityValidator;
     private readonly LoggerInterface $logger;
 
     public function __construct(
@@ -71,12 +73,14 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         public readonly bool $nullableAsType = true,
         public readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         public readonly ?EventDispatcherInterface $eventDispatcher = null,
+        public readonly bool $securityValidation = false,
     ) {
         $this->logger = $logger ?? new NullLogger();
         $this->requestValidator = $this->buildRequestValidator();
         $this->responseValidator = $this->buildResponseValidator();
         $this->refResolver = new RefResolver();
         $this->webhookValidator = new WebhookValidator($this->requestValidator);
+        $this->securityValidator = new SecurityValidator();
     }
 
     #[Override]
@@ -110,6 +114,21 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
             $this->logger->info(sprintf('Validating request: %s %s', $method, $requestPath));
 
             $this->requestValidator->validate($request, $op, $operation->path);
+
+            if ($this->securityValidation) {
+                $securityRequirements = $op->security ?? $this->document->security;
+
+                if (null !== $securityRequirements) {
+                    $securitySchemes = $this->document->components?->securitySchemes ?? [];
+                    $this->securityValidator->validate(
+                        $request,
+                        $operation->path,
+                        $operation->method,
+                        $securityRequirements,
+                        $securitySchemes,
+                    );
+                }
+            }
 
             $this->dispatchValidationEvent(
                 new ValidationFinishedEvent(
