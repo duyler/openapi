@@ -171,4 +171,34 @@ class DependentSchemasValidatorTest extends TestCase
 
         $this->expectNotToPerformAssertions();
     }
+
+    #[Test]
+    public function catch_invalid_data_type_in_nested_property(): void
+    {
+        $resource = fopen('php://memory', 'r');
+
+        $dependentSchema = new Schema(
+            type: 'object',
+            properties: [
+                'nested' => new Schema(type: 'string'),
+            ],
+        );
+        $schema = new Schema(
+            type: 'object',
+            dependentSchemas: [
+                'trigger' => $dependentSchema,
+            ],
+        );
+
+        $this->expectException(ValidationException::class);
+
+        try {
+            $this->validator->validate([
+                'trigger' => 'active',
+                'nested' => $resource,
+            ], $schema);
+        } finally {
+            fclose($resource);
+        }
+    }
 }

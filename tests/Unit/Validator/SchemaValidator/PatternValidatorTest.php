@@ -183,4 +183,16 @@ class PatternValidatorTest extends TestCase
 
         $this->expectNotToPerformAssertions();
     }
+
+    #[Test]
+    public function handles_preg_match_failure_gracefully(): void
+    {
+        $schema = new Schema(type: 'string', pattern: '/^(a+)+$/');
+
+        $longString = str_repeat('a', 1000) . 'b';
+
+        $this->validator->validate($longString, $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
 }
