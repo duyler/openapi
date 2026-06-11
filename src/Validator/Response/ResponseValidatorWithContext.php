@@ -33,6 +33,9 @@ final readonly class ResponseValidatorWithContext
     private readonly FormatRegistry $formatRegistry;
     private readonly LoggerInterface $logger;
     private readonly StatelessValidatorRegistry $statelessValidators;
+    private readonly SchemaValidator $schemaValidator;
+    private readonly ResponseHeadersValidator $headersValidator;
+    private readonly ResponseBodyValidatorWithContext $bodyValidator;
 
     public function __construct(
         private readonly ValidatorPool $pool,
@@ -58,6 +61,10 @@ final readonly class ResponseValidatorWithContext
         $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
         $this->logger = $logger ?? new NullLogger();
         $this->statelessValidators = $statelessValidators;
+
+        $this->schemaValidator = new SchemaValidator($this->pool, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
+        $this->headersValidator = new ResponseHeadersValidator($this->schemaValidator);
+        $this->bodyValidator = new ResponseBodyValidatorWithContext(pool: $this->pool, document: $this->document, bodyParser: $this->bodyParser, statelessValidators: $this->statelessValidators, refResolver: $this->refResolver, formatRegistry: $this->formatRegistry, coercion: $this->coercion, nullableAsType: $this->nullableAsType, emptyArrayStrategy: $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
     }
 
     public function validate(
@@ -86,15 +93,12 @@ final readonly class ResponseValidatorWithContext
             $normalizedHeaders[$key] = is_array($value) ? implode(', ', $value) : $value;
         }
 
-        $schemaValidator = new SchemaValidator($this->pool, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
-        $headersValidator = new ResponseHeadersValidator($schemaValidator);
-        $headersValidator->validate($normalizedHeaders, $responseDefinition->headers ?? null);
+        $this->headersValidator->validate($normalizedHeaders, $responseDefinition->headers ?? null);
 
         $contentType = $response->getHeaderLine('Content-Type');
         $body = (string) $response->getBody();
 
-        $bodyValidator = new ResponseBodyValidatorWithContext(pool: $this->pool, document: $this->document, bodyParser: $this->bodyParser, statelessValidators: $this->statelessValidators, refResolver: $this->refResolver, formatRegistry: $this->formatRegistry, coercion: $this->coercion, nullableAsType: $this->nullableAsType, emptyArrayStrategy: $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
-        $bodyValidator->validate($body, $contentType, $responseDefinition->content ?? null);
+        $this->bodyValidator->validate($body, $contentType, $responseDefinition->content ?? null);
     }
 
     private function getRange(int $statusCode): string
