@@ -21,12 +21,16 @@ use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Psr\Http\Message\ResponseInterface;
 use Duyler\OpenApi\Validator\Exception\UndefinedResponseException;
 use Duyler\OpenApi\Schema\Model\Response;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 use function is_array;
 
 final readonly class ResponseValidatorWithContext
 {
     private readonly FormatRegistry $formatRegistry;
+    private readonly LoggerInterface $logger;
 
     public function __construct(
         private readonly ValidatorPool $pool,
@@ -44,8 +48,12 @@ final readonly class ResponseValidatorWithContext
         private readonly bool $nullableAsType = true,
         private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         private readonly ?RefResolverInterface $refResolver = null,
+        private readonly bool $reportDeprecated = false,
+        ?LoggerInterface $logger = null,
+        private readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {
         $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
+        $this->logger = $logger ?? new NullLogger();
     }
 
     public function validate(
@@ -74,14 +82,14 @@ final readonly class ResponseValidatorWithContext
             $normalizedHeaders[$key] = is_array($value) ? implode(', ', $value) : $value;
         }
 
-        $schemaValidator = new SchemaValidator($this->pool, $this->formatRegistry);
+        $schemaValidator = new SchemaValidator($this->pool, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
         $headersValidator = new ResponseHeadersValidator($schemaValidator);
         $headersValidator->validate($normalizedHeaders, $responseDefinition->headers ?? null);
 
         $contentType = $response->getHeaderLine('Content-Type');
         $body = (string) $response->getBody();
 
-        $bodyValidator = new ResponseBodyValidatorWithContext(pool: $this->pool, document: $this->document, bodyParser: $this->bodyParser, formatRegistry: $this->formatRegistry, coercion: $this->coercion, nullableAsType: $this->nullableAsType, emptyArrayStrategy: $this->emptyArrayStrategy);
+        $bodyValidator = new ResponseBodyValidatorWithContext(pool: $this->pool, document: $this->document, bodyParser: $this->bodyParser, formatRegistry: $this->formatRegistry, coercion: $this->coercion, nullableAsType: $this->nullableAsType, emptyArrayStrategy: $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
         $bodyValidator->validate($body, $contentType, $responseDefinition->content ?? null);
     }
 

@@ -25,6 +25,7 @@ use Duyler\OpenApi\Validator\SchemaValidator\ContainsRangeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContainsValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContentEncodingValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContentMediaTypeValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\DeprecatedValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\DependentSchemasValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\EnumValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\FormatValidator;
@@ -42,6 +43,9 @@ use Duyler\OpenApi\Validator\SchemaValidator\StringLengthValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\TypeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedItemsValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedPropertiesValidator;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 use function count;
 use function is_array;
@@ -52,6 +56,7 @@ final class SchemaValidatorWithContext
 
     private ?array $validatorsCache = null;
     private readonly FormatRegistry $formatRegistry;
+    private readonly LoggerInterface $logger;
 
     public function __construct(
         private readonly ValidatorPool $pool,
@@ -60,8 +65,12 @@ final class SchemaValidatorWithContext
         ?FormatRegistry $formatRegistry = null,
         private readonly bool $nullableAsType = true,
         private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
+        private readonly bool $reportDeprecated = false,
+        ?LoggerInterface $logger = null,
+        private readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {
         $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
+        $this->logger = $logger ?? new NullLogger();
     }
 
     public function validate(array|int|string|float|bool|null $data, Schema $schema, bool $useDiscriminator = true, ?ValidatorMode $mode = null): void
@@ -71,7 +80,7 @@ final class SchemaValidatorWithContext
         $schema = $this->resolveRef($schema);
 
         if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
-            $oneOfValidator = new OneOfValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry);
+            $oneOfValidator = new OneOfValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
             $oneOfValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
             return;
         }
@@ -79,7 +88,7 @@ final class SchemaValidatorWithContext
         if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
             $this->validateInternal($data, $schema, $context);
 
-            $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool, $this->formatRegistry);
+            $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
             $discriminatorValidator->validate($data, $schema, $this->document);
 
             $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
@@ -100,7 +109,7 @@ final class SchemaValidatorWithContext
         $schema = $this->resolveRef($schema);
 
         if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
-            $oneOfValidator = new OneOfValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry);
+            $oneOfValidator = new OneOfValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
             $oneOfValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
             return;
         }
@@ -108,7 +117,7 @@ final class SchemaValidatorWithContext
         if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
             $this->validateInternal($data, $schema, $context);
 
-            $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool, $this->formatRegistry);
+            $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
             $discriminatorValidator->validate($data, $schema, $this->document);
 
             $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
@@ -134,12 +143,12 @@ final class SchemaValidatorWithContext
         bool $useDiscriminator,
     ): void {
         if (null !== $schema->properties && [] !== $schema->properties && is_array($data)) {
-            $propertiesValidator = new PropertiesValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry);
+            $propertiesValidator = new PropertiesValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
             $propertiesValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
         }
 
         if (null !== $schema->items && is_array($data)) {
-            $itemsValidator = new ItemsValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry);
+            $itemsValidator = new ItemsValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
             $itemsValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
         }
     }
@@ -205,6 +214,7 @@ final class SchemaValidatorWithContext
             new ContainsRangeValidator($this->pool, $this->formatRegistry),
             new ConstValidator($this->pool, $this->formatRegistry),
             new EnumValidator($this->pool, $this->formatRegistry),
+            new DeprecatedValidator($this->pool, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher),
             new ContentEncodingValidator(),
             new ContentMediaTypeValidator(),
         ];

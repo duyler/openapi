@@ -16,6 +16,9 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 use function array_key_exists;
 use function count;
@@ -24,14 +27,19 @@ use function sprintf;
 final readonly class PropertiesValidatorWithContext
 {
     private readonly FormatRegistry $formatRegistry;
+    private readonly LoggerInterface $logger;
 
     public function __construct(
         private readonly ValidatorPool $pool,
         private readonly RefResolverInterface $refResolver,
         private readonly OpenApiDocument $document,
         ?FormatRegistry $formatRegistry = null,
+        private readonly bool $reportDeprecated = false,
+        ?LoggerInterface $logger = null,
+        private readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {
         $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
+        $this->logger = $logger ?? new NullLogger();
     }
 
     public function validateWithContext(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
@@ -53,7 +61,7 @@ final readonly class PropertiesValidatorWithContext
 
                 $propertyContext = $context->withBreadcrumb($name);
 
-                $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry);
+                $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
                 $validator->validateWithContext($value, $propertySchema, $propertyContext, $useDiscriminator);
             } catch (DiscriminatorMismatchException|
                 InvalidDiscriminatorValueException|

@@ -46,6 +46,7 @@ final readonly class OpenApiValidatorBuilder
         protected ?EventDispatcherInterface $eventDispatcher = null,
         protected bool $securityValidation = false,
         protected bool $strictFormats = false,
+        protected bool $reportDeprecated = false,
     ) {}
 
     public static function create(): self
@@ -69,6 +70,7 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
         );
     }
 
@@ -88,6 +90,7 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
         );
     }
 
@@ -107,6 +110,7 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
         );
     }
 
@@ -126,6 +130,7 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
         );
     }
 
@@ -146,6 +151,7 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
         );
     }
 
@@ -166,6 +172,7 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
         );
     }
 
@@ -186,6 +193,7 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
         );
     }
 
@@ -206,6 +214,7 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
         );
     }
 
@@ -232,6 +241,7 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
         );
     }
 
@@ -252,6 +262,7 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
         );
     }
 
@@ -272,6 +283,7 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
         );
     }
 
@@ -292,6 +304,7 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
         );
     }
 
@@ -312,6 +325,7 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
         );
     }
 
@@ -332,6 +346,7 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $dispatcher,
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
         );
     }
 
@@ -352,6 +367,7 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $this->eventDispatcher,
             securityValidation: true,
             strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
         );
     }
 
@@ -372,6 +388,28 @@ final readonly class OpenApiValidatorBuilder
             eventDispatcher: $this->eventDispatcher,
             securityValidation: $this->securityValidation,
             strictFormats: true,
+            reportDeprecated: $this->reportDeprecated,
+        );
+    }
+
+    public function enableReportDeprecated(): self
+    {
+        return new self(
+            specPath: $this->specPath,
+            specContent: $this->specContent,
+            specType: $this->specType,
+            pool: $this->pool,
+            cache: $this->cache,
+            logger: $this->logger,
+            formatRegistry: $this->formatRegistry,
+            coercion: $this->coercion,
+            nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
+            errorFormatter: $this->errorFormatter,
+            eventDispatcher: $this->eventDispatcher,
+            securityValidation: $this->securityValidation,
+            strictFormats: $this->strictFormats,
+            reportDeprecated: true,
         );
     }
 
@@ -398,6 +436,7 @@ final readonly class OpenApiValidatorBuilder
             pathFinder: $pathFinder,
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
         );
     }
 

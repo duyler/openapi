@@ -12,6 +12,7 @@ use Duyler\OpenApi\Validator\Registry\DefaultValidatorRegistry;
 use Duyler\OpenApi\Validator\Registry\ValidatorRegistryInterface;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -28,6 +29,8 @@ final class SchemaValidator implements SchemaValidatorInterface
         private readonly ?ValidatorRegistryInterface $registry = null,
         private readonly bool $strictFormats = false,
         private readonly LoggerInterface $logger = new NullLogger(),
+        private readonly bool $reportDeprecated = false,
+        private readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {
         $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
     }
@@ -40,6 +43,8 @@ final class SchemaValidator implements SchemaValidatorInterface
             $this->formatRegistry,
             $this->strictFormats,
             $this->logger,
+            $this->reportDeprecated,
+            $this->eventDispatcher,
         );
 
         foreach ($registry->getAllValidators() as $validator) {

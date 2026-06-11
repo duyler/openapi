@@ -19,6 +19,9 @@ use Duyler\OpenApi\Validator\TypeGuarantor;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 final readonly class ResponseBodyValidatorWithContext
 {
@@ -26,6 +29,7 @@ final readonly class ResponseBodyValidatorWithContext
     private SchemaValidatorWithContext $contextSchemaValidator;
     private RefResolver $refResolver;
     private readonly FormatRegistry $formatRegistry;
+    private readonly LoggerInterface $logger;
 
     public function __construct(
         private readonly ValidatorPool $pool,
@@ -38,12 +42,16 @@ final readonly class ResponseBodyValidatorWithContext
         private readonly bool $coercion = false,
         private readonly bool $nullableAsType = true,
         private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
+        private readonly bool $reportDeprecated = false,
+        ?LoggerInterface $logger = null,
+        private readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {
         $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
-        $this->regularSchemaValidator = new SchemaValidator($this->pool, $this->formatRegistry);
+        $this->logger = $logger ?? new NullLogger();
+        $this->regularSchemaValidator = new SchemaValidator($this->pool, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
 
         $this->refResolver = new RefResolver();
-        $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry, $this->nullableAsType, $this->emptyArrayStrategy);
+        $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->formatRegistry, $this->nullableAsType, $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
     }
 
     public function validate(

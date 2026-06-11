@@ -82,6 +82,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         public readonly ?EventDispatcherInterface $eventDispatcher = null,
         public readonly bool $securityValidation = false,
         public readonly bool $strictFormats = false,
+        public readonly bool $reportDeprecated = false,
     ) {
         $this->logger = $logger ?? new NullLogger();
         $this->requestValidator = $this->buildRequestValidator();
@@ -271,7 +272,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
 
             $this->logger->info(sprintf('Validating schema: %s', $schemaRef));
 
-            $validator = new SchemaValidator($this->pool, $this->formatRegistry, strictFormats: $this->strictFormats, logger: $this->logger);
+            $validator = new SchemaValidator($this->pool, $this->formatRegistry, strictFormats: $this->strictFormats, logger: $this->logger, reportDeprecated: $this->reportDeprecated, eventDispatcher: $this->eventDispatcher);
 
             /** @var array<array-key, mixed>|array-key $data */
             $validator->validate($data, $schema);
@@ -492,7 +493,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         );
 
         $queryParser = new QueryParser();
-        $schemaValidator = new SchemaValidator($this->pool, $this->formatRegistry, strictFormats: $this->strictFormats, logger: $this->logger);
+        $schemaValidator = new SchemaValidator($this->pool, $this->formatRegistry, strictFormats: $this->strictFormats, logger: $this->logger, reportDeprecated: $this->reportDeprecated, eventDispatcher: $this->eventDispatcher);
 
         return new RequestValidator(
             pathParser: new PathParser(),
@@ -534,6 +535,9 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
                 nullableAsType: $this->nullableAsType,
                 emptyArrayStrategy: $this->emptyArrayStrategy,
                 coercion: $this->coercion,
+                reportDeprecated: $this->reportDeprecated,
+                logger: $this->logger,
+                eventDispatcher: $this->eventDispatcher,
             ),
         );
     }
@@ -548,6 +552,9 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
             statusCodeValidator: new StatusCodeValidator(),
             nullableAsType: $this->nullableAsType,
             emptyArrayStrategy: $this->emptyArrayStrategy,
+            reportDeprecated: $this->reportDeprecated,
+            logger: $this->logger,
+            eventDispatcher: $this->eventDispatcher,
         );
     }
 
