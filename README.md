@@ -17,7 +17,7 @@ OpenAPI 3.2 validator for PHP 8.4+
 - **Request Validation** - Validate path parameters, query parameters, headers, cookies, and request body
 - **Response Validation** - Validate status codes, headers, and response bodies
 - **Multiple Content Types** - Support for JSON, form-data, multipart, text, and XML
-- **Built-in Format Validators** - 12+ built-in validators (email, UUID, date-time, URI, IPv4/IPv6, etc.)
+- **Built-in Format Validators** - 15 built-in validators (email, UUID, date-time, URI, IPv4/IPv6, etc.)
 - **Custom Format Validators** - Easily register custom format validators
 - **Discriminator Support** - Full support for polymorphic schemas with discriminators
  - **Type Coercion** - Optional automatic type conversion
@@ -138,18 +138,24 @@ $dispatcher = new ArrayDispatcher([
     ],
 ]);
 
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withEventDispatcher($dispatcher)
+    ->build();
 ```
 
 ### Webhooks
 
-Validate webhook requests:
+Validate webhook requests using the builder API:
 
 ```php
-use Duyler\OpenApi\Validator\Webhook\WebhookValidator;
-use Duyler\OpenApi\Validator\Request\RequestValidator;
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 
-$webhookValidator = new WebhookValidator($requestValidator);
-$webhookValidator->validate($request, 'payment.webhook', $document);
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->build();
+
+$operation = $validator->validateWebhook($request, 'payment.webhook');
 ```
 
 ## Advanced Usage
@@ -428,7 +434,7 @@ $validator->validate(['name' => 'John', 'age' => 30]);
 | `withErrorFormatter(ErrorFormatterInterface $formatter)` | Set error formatter | `SimpleFormatter` |
 | `withFormat(string $type, string $format, FormatValidatorInterface $validator)` | Register custom format | - |
 | `withValidatorPool(ValidatorPool $pool)` | Set custom validator pool | `new ValidatorPool()` |
-| `withLogger(object $logger)` | Set PSR-3 logger | `null` |
+| `withLogger(LoggerInterface $logger)` | Set PSR-3 logger | `null` |
 | `withEmptyArrayStrategy(EmptyArrayStrategy $strategy)` | Set empty array validation strategy | `AllowBoth` |
 | `enableCoercion()` | Enable type coercion | `false` |
 | `enableNullableAsType()` | Enable nullable validation (default: true) | `true` |
@@ -719,9 +725,11 @@ $validator->validateSchema($data, '#/components/schemas/User');
 ## Requirements
 
 - **PHP 8.4 or higher** - Uses modern PHP features (readonly classes, match expressions, etc.)
-- **PSR-7 HTTP message** - `psr/http-message ^2.0` (e.g., `nyholm/psr7`)
+- **PSR-7 HTTP message** - `psr/http-message ^2.0` (`nyholm/psr7`)
 - **PSR-6 cache** - `psr/cache ^3.0` (e.g., `symfony/cache`, `cache/cache`)
 - **PSR-14 events** - `psr/event-dispatcher ^1.0` (e.g., `symfony/event-dispatcher`)
+- **PSR-3 logging** - `psr/log ^3.0` (optional, for `withLogger()`)
+- **YAML parser** - `symfony/yaml ^7.0 || ^8.0`
 
 ## Testing
 
