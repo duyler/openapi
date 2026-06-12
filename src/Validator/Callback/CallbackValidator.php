@@ -9,7 +9,7 @@ use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Callback\Exception\UnknownCallbackException;
-use Duyler\OpenApi\Validator\Request\RequestValidator;
+use Duyler\OpenApi\Validator\Request\RequestValidatorInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 use function sprintf;
@@ -18,7 +18,7 @@ use function strtolower;
 final readonly class CallbackValidator
 {
     public function __construct(
-        private readonly RequestValidator $requestValidator,
+        private readonly RequestValidatorInterface $requestValidator,
     ) {}
 
     public function validate(

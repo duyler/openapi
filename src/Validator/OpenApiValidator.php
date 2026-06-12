@@ -16,6 +16,7 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Callback\CallbackValidator;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Cache\SchemaCache;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
@@ -76,7 +77,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         public readonly FormatRegistry $formatRegistry,
         public readonly ErrorFormatterInterface $errorFormatter,
         private readonly PathFinder $pathFinder,
-        public readonly ?object $cache = null,
+        public readonly ?SchemaCache $cache = null,
         ?LoggerInterface $logger = null,
         public readonly bool $coercion = false,
         public readonly bool $nullableAsType = true,

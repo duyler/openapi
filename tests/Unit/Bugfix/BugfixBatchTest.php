@@ -22,7 +22,7 @@ use Duyler\OpenApi\Validator\Exception\UndefinedResponseException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Request\ParameterDeserializer;
-use Duyler\OpenApi\Validator\Request\RequestValidator;
+use Duyler\OpenApi\Validator\Request\RequestValidatorInterface;
 use Duyler\OpenApi\Validator\Request\CookieValidator;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
@@ -370,7 +370,7 @@ final class BugfixBatchTest extends TestCase
     #[Test]
     public function b20_webhook_validator_uses_request_path(): void
     {
-        $requestValidator = $this->createMock(RequestValidator::class);
+        $requestValidator = $this->createMock(RequestValidatorInterface::class);
         $requestValidator->expects($this->once())->method('validate');
 
         $webhookValidator = new WebhookValidator($requestValidator);

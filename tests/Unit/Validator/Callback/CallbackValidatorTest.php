@@ -12,7 +12,7 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Validator\Callback\CallbackValidator;
 use Duyler\OpenApi\Validator\Callback\Exception\UnknownCallbackException;
-use Duyler\OpenApi\Validator\Request\RequestValidator;
+use Duyler\OpenApi\Validator\Request\RequestValidatorInterface;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -24,7 +24,7 @@ class CallbackValidatorTest extends TestCase
 
     protected function setUp(): void
     {
-        $requestValidator = $this->createMock(RequestValidator::class);
+        $requestValidator = $this->createMock(RequestValidatorInterface::class);
         $requestValidator->method('validate');
 
         $this->callbackValidator = new CallbackValidator($requestValidator);

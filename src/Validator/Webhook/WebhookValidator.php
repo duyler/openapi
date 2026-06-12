@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator\Webhook;
 
 use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\OpenApiDocument;
-use Duyler\OpenApi\Validator\Request\RequestValidator;
+use Duyler\OpenApi\Validator\Request\RequestValidatorInterface;
 use Duyler\OpenApi\Validator\Webhook\Exception\UnknownWebhookException;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -15,7 +15,7 @@ use function sprintf;
 final readonly class WebhookValidator
 {
     public function __construct(
-        private readonly RequestValidator $requestValidator,
+        private readonly RequestValidatorInterface $requestValidator,
     ) {}
 
     public function validate(

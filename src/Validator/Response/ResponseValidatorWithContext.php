@@ -86,7 +86,7 @@ final readonly class ResponseValidatorWithContext
 
         $responseDefinition = $this->resolveResponseRef($responseDefinition);
 
-        if (!$responseDefinition instanceof Response) {
+        if (false === ($responseDefinition instanceof Response)) {
             throw new UndefinedResponseException($statusCode, array_keys($responses));
         }
 

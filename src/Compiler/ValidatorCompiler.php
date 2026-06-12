@@ -46,7 +46,7 @@ final readonly class ValidatorCompiler
     public function compileWithCache(
         Schema $schema,
         string $className,
-        ?CompilationCache $cache = null,
+        ?CompilationCacheInterface $cache = null,
     ): string {
         if (null !== $cache) {
             $schemaHash = $cache->generateKey($schema);

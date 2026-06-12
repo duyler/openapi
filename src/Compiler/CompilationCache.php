@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Compiler;
 use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Model\Xml;
+use Override;
 use Psr\Cache\CacheItemPoolInterface;
 
 use function is_string;
@@ -15,13 +16,14 @@ use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
 
-readonly class CompilationCache
+final readonly class CompilationCache implements CompilationCacheInterface
 {
     public function __construct(
         private readonly CacheItemPoolInterface $pool,
         private readonly string $namespace = 'validator_compilation',
     ) {}
 
+    #[Override]
     public function get(string $schemaHash): ?string
     {
         $item = $this->pool->getItem($schemaHash);
@@ -39,6 +41,7 @@ readonly class CompilationCache
         return $code;
     }
 
+    #[Override]
     public function set(string $schemaHash, string $compiledCode): void
     {
         $item = $this->pool->getItem($schemaHash);
@@ -48,6 +51,7 @@ readonly class CompilationCache
         $this->pool->save($item);
     }
 
+    #[Override]
     public function generateKey(Schema $schema): string
     {
         $hash = $this->calculateSchemaHash($schema);

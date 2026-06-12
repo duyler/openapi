@@ -413,7 +413,7 @@ final readonly class OpenApiValidatorBuilder
         );
     }
 
-    public function build(): OpenApiValidator
+    public function build(): OpenApiValidatorInterface
     {
         $document = $this->loadSpec();
 

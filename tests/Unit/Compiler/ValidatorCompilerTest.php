@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Compiler;
 
-use Duyler\OpenApi\Compiler\CompilationCache;
+use Duyler\OpenApi\Compiler\CompilationCacheInterface;
 use Duyler\OpenApi\Compiler\ValidatorCompiler;
 use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\Discriminator;
@@ -310,7 +310,7 @@ final class ValidatorCompilerTest extends TestCase
     public function compile_with_cache_hit(): void
     {
         $compiler = new ValidatorCompiler();
-        $cache = $this->createMock(CompilationCache::class);
+        $cache = $this->createMock(CompilationCacheInterface::class);
         $schema = new Schema(type: 'string');
 
         $cache
@@ -333,7 +333,7 @@ final class ValidatorCompilerTest extends TestCase
     public function compile_with_cache_miss(): void
     {
         $compiler = new ValidatorCompiler();
-        $cache = $this->createMock(CompilationCache::class);
+        $cache = $this->createMock(CompilationCacheInterface::class);
         $schema = new Schema(type: 'string');
 
         $cache
@@ -702,7 +702,7 @@ final class ValidatorCompilerTest extends TestCase
     public function compile_with_cache_returns_same_code_on_repeated_call(): void
     {
         $compiler = new ValidatorCompiler();
-        $cache = $this->createMock(CompilationCache::class);
+        $cache = $this->createMock(CompilationCacheInterface::class);
         $schema = new Schema(type: 'string');
 
         $callCount = 0;
