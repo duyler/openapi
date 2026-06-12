@@ -371,14 +371,14 @@ final readonly class OpenApiValidatorBuilder
         $realPath = realpath($path);
 
         if (false === $realPath) {
-            return self::CACHE_KEY_FILE_PREFIX . md5($path);
+            return self::CACHE_KEY_FILE_PREFIX . hash('xxh64', $path);
         }
 
-        return self::CACHE_KEY_FILE_PREFIX . md5($realPath);
+        return self::CACHE_KEY_FILE_PREFIX . hash('xxh64', $realPath);
     }
 
     private function generateCacheKeyFromString(string $content): string
     {
-        return self::CACHE_KEY_CONTENT_PREFIX . md5($content);
+        return self::CACHE_KEY_CONTENT_PREFIX . hash('xxh64', $content);
     }
 }
