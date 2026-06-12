@@ -20,10 +20,10 @@ OpenAPI 3.2 validator for PHP 8.4+
 - **Built-in Format Validators** - 15 built-in validators (email, UUID, date-time, URI, IPv4/IPv6, etc.)
 - **Custom Format Validators** - Easily register custom format validators
 - **Discriminator Support** - Full support for polymorphic schemas with discriminators
- - **Type Coercion** - Optional automatic type conversion
- - **PSR-6 Caching** - Cache parsed OpenAPI documents for better performance
- - **PSR-14 Events** - Subscribe to validation lifecycle events
- - **Error Formatting** - Multiple error formatters (simple, detailed, JSON)
+- **Type Coercion** - Optional automatic type conversion
+- **PSR-6 Caching** - Cache parsed OpenAPI documents for better performance
+- **PSR-14 Events** - Subscribe to validation lifecycle events
+- **Error Formatting** - Multiple error formatters (simple, detailed, JSON)
 - **Webhooks Support** - Validate incoming webhook requests
 - **Streaming Validation** - Validate NDJSON, SSE, and JSON Text Sequences responses
 - **Schema Registry** - Manage multiple schema versions
@@ -140,21 +140,7 @@ $operation = $validator->validateRequest($request);
 
 ### Caching
 
-Enable PSR-6 caching for improved performance (see the [Caching](#caching-1) section for details):
-
-```php
-use Symfony\Component\Cache\Adapter\FilesystemAdapter;
-use Duyler\OpenApi\Cache\SchemaCache;
-use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-
-$cachePool = new FilesystemAdapter();
-$schemaCache = new SchemaCache($cachePool, 3600);
-
-$validator = OpenApiValidatorBuilder::create()
-    ->fromYamlFile('openapi.yaml')
-    ->withCache($schemaCache)
-    ->build();
-```
+Enable PSR-6 caching to skip YAML/JSON parsing and schema construction on every build. See the [Caching](#caching-1) section under Performance for configuration details and compiled validator caching.
 
 ### Events
 
