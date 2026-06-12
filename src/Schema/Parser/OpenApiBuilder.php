@@ -55,6 +55,8 @@ use function is_bool;
 
 use function in_array;
 
+use function gettype;
+
 use const FILTER_VALIDATE_URL;
 
 abstract class OpenApiBuilder implements SchemaParserInterface
@@ -79,7 +81,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
             if (false === is_array($data)) {
                 throw new InvalidSchemaException(
-                    'Invalid ' . $this->getFormatName() . ': expected object at root, got ' . get_debug_type($data),
+                    sprintf(
+                        'Invalid %s: expected object at root, got %s',
+                        $this->getFormatName(),
+                        gettype($data),
+                    ),
                 );
             }
 
@@ -340,7 +346,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
         if (false === is_array($data)) {
             throw new InvalidSchemaException(
-                'Expected array or boolean for schema, got ' . get_debug_type($data),
+                sprintf('Expected array or boolean for schema, got %s', gettype($data)),
             );
         }
         if ($this->shouldWarnDeprecation() && isset($data['example'])) {

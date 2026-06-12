@@ -143,7 +143,7 @@ final class ParameterDeserializerTest extends TestCase
         $param = new Parameter(name: 'test', in: 'query');
 
         $this->expectException(InvalidDataTypeException::class);
-        $this->expectExceptionMessage('Data must be array, int, string, float or bool, null given');
+        $this->expectExceptionMessage('Data must be array, int, string, float or bool, NULL given');
 
         $this->deserializer->deserialize(null, $param);
     }

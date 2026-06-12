@@ -20,6 +20,7 @@ use function array_key_exists;
 use function is_array;
 use function is_string;
 use function assert;
+use function gettype;
 
 final readonly class DiscriminatorValidator
 {
@@ -101,7 +102,7 @@ final readonly class DiscriminatorValidator
         if (false === is_array($data)) {
             throw new DiscriminatorMismatchException(
                 expectedType: 'object',
-                actualType: get_debug_type($data),
+                actualType: gettype($data),
                 propertyName: $propertyName,
                 dataPath: $dataPath,
             );
@@ -120,7 +121,7 @@ final readonly class DiscriminatorValidator
             throw new InvalidDiscriminatorValueException(
                 propertyName: $propertyName,
                 expectedType: 'string',
-                actualType: get_debug_type($value),
+                actualType: gettype($value),
                 dataPath: $this->buildPath($dataPath, $propertyName),
             );
         }

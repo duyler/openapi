@@ -110,7 +110,7 @@ final class SchemaHelperTest extends TestCase
     public function normalize_null_throws_exception(): void
     {
         $this->expectException(InvalidDataTypeException::class);
-        $this->expectExceptionMessage('Data must be array, int, string, float or bool, null given');
+        $this->expectExceptionMessage('Data must be array, int, string, float or bool, NULL given');
 
         SchemaValueNormalizer::normalize(null);
     }
@@ -119,7 +119,7 @@ final class SchemaHelperTest extends TestCase
     public function normalize_object_throws_exception(): void
     {
         $this->expectException(InvalidDataTypeException::class);
-        $this->expectExceptionMessage('Data must be array, int, string, float or bool, stdClass given');
+        $this->expectExceptionMessage('Data must be array, int, string, float or bool, object given');
 
         SchemaValueNormalizer::normalize(new stdClass());
     }
@@ -142,7 +142,7 @@ final class SchemaHelperTest extends TestCase
     public function normalize_callable_throws_exception(): void
     {
         $this->expectException(InvalidDataTypeException::class);
-        $this->expectExceptionMessageMatches('/Data must be array, int, string, float or bool, Closure/');
+        $this->expectExceptionMessageMatches('/Data must be array, int, string, float or bool, object/');
 
         SchemaValueNormalizer::normalize(fn() => true);
     }
@@ -151,7 +151,7 @@ final class SchemaHelperTest extends TestCase
     public function normalize_datetime_throws_exception(): void
     {
         $this->expectException(InvalidDataTypeException::class);
-        $this->expectExceptionMessageMatches('/Data must be array, int, string, float or bool, DateTime/');
+        $this->expectExceptionMessageMatches('/Data must be array, int, string, float or bool, object/');
 
         SchemaValueNormalizer::normalize(new DateTime());
     }

@@ -18,7 +18,7 @@ final class SchemaHelperIntegrationTest extends TestCase
     public function exception_is_thrown_when_validating_invalid_type_through_validator(): void
     {
         $this->expectException(InvalidDataTypeException::class);
-        $this->expectExceptionMessage('Data must be array, int, string, float or bool, null given');
+        $this->expectExceptionMessage('Data must be array, int, string, float or bool, NULL given');
 
         SchemaValueNormalizer::normalize(null);
     }
@@ -58,7 +58,7 @@ final class SchemaHelperIntegrationTest extends TestCase
             SchemaValueNormalizer::normalize($object);
             $this->fail('Expected InvalidDataTypeException for object');
         } catch (InvalidDataTypeException $e) {
-            self::assertStringContainsString('stdClass', $e->getMessage());
+            self::assertStringContainsString('object', $e->getMessage());
         }
 
         // Test DateTime
@@ -66,7 +66,7 @@ final class SchemaHelperIntegrationTest extends TestCase
             SchemaValueNormalizer::normalize($datetime);
             $this->fail('Expected InvalidDataTypeException for DateTime');
         } catch (InvalidDataTypeException $e) {
-            self::assertStringContainsString('DateTime', $e->getMessage());
+            self::assertStringContainsString('object', $e->getMessage());
         }
     }
 }

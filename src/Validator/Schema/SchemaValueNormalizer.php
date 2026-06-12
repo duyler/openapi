@@ -12,6 +12,7 @@ use function is_float;
 use function is_int;
 use function is_string;
 use function sprintf;
+use function gettype;
 
 final readonly class SchemaValueNormalizer
 {
@@ -34,7 +35,7 @@ final readonly class SchemaValueNormalizer
 
         throw new InvalidDataTypeException(sprintf(
             'Data must be array, int, string, float or bool, %s given',
-            get_debug_type($value),
+            gettype($value),
         ));
     }
 }

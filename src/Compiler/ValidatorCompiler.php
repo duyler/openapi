@@ -133,7 +133,7 @@ final readonly class ValidatorCompiler
             $code .= sprintf("        if (false === %s) {\n", $checks[0]);
 
             $typesString = implode('|', $types);
-            $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected %s but got ' . get_debug_type(\$data));\n", $typesString);
+            $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected %s but got ' . gettype(\$data));\n", $typesString);
             $code .= "        }\n\n";
 
             return $code;
@@ -143,7 +143,7 @@ final readonly class ValidatorCompiler
         $code .= sprintf("        if (false === (%s)) {\n", $condition);
 
         $typesString = implode('|', $types);
-        $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected %s but got ' . get_debug_type(\$data));\n", $typesString);
+        $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected %s but got ' . gettype(\$data));\n", $typesString);
         $code .= "        }\n\n";
 
         return $code;
