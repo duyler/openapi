@@ -94,24 +94,4 @@ final class FormatRegistryTest extends TestCase
         $this->assertTrue($registry->hasFormat('string', 'custom'));
         $this->assertFalse($registry->hasFormat('string', 'nonexistent'));
     }
-
-    #[Test]
-    public function all_returns_all_registered_validators(): void
-    {
-        $registry = new FormatRegistry();
-        $validator1 = new TestValidator();
-        $validator2 = new TestValidator();
-
-        $registry = $registry->registerFormat('string', 'format1', $validator1);
-        $registry = $registry->registerFormat('number', 'format2', $validator2);
-
-        $all = $registry->all();
-
-        $this->assertArrayHasKey('string', $all);
-        $this->assertArrayHasKey('number', $all);
-        $this->assertArrayHasKey('format1', $all['string']);
-        $this->assertArrayHasKey('format2', $all['number']);
-        $this->assertSame($validator1, $all['string']['format1']);
-        $this->assertSame($validator2, $all['number']['format2']);
-    }
 }

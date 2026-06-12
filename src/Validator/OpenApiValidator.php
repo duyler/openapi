@@ -17,7 +17,6 @@ use Duyler\OpenApi\Validator\Validation\CallbackValidator;
 use Duyler\OpenApi\Validator\Validation\RequestValidationHandler;
 use Duyler\OpenApi\Validator\Validation\ResponseValidationHandler;
 use Duyler\OpenApi\Validator\Validation\SchemaValidatorAdapter;
-use Duyler\OpenApi\Validator\Validation\ValidationContext;
 use Duyler\OpenApi\Validator\Validation\WebhookValidator;
 use InvalidArgumentException;
 use Override;
@@ -25,29 +24,26 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
 use function sprintf;
 
 final readonly class OpenApiValidator implements OpenApiValidatorInterface
 {
-    private readonly RequestValidationHandler $requestValidation;
-    private readonly ResponseValidationHandler $responseValidation;
-    private readonly SchemaValidatorAdapter $schemaValidation;
-    private readonly WebhookValidator $webhookValidation;
-    private readonly CallbackValidator $callbackValidation;
-    private readonly LinkResolver $linkResolver;
-    private readonly RefResolver $refResolver;
-    private readonly LoggerInterface $logger;
-
     public function __construct(
         private readonly OpenApiDocument $document,
         private readonly ValidatorPool $pool,
         private readonly FormatRegistry $formatRegistry,
         private readonly ErrorFormatterInterface $errorFormatter,
         private readonly PathFinder $pathFinder,
+        private readonly LoggerInterface $logger,
+        private readonly RefResolver $refResolver,
+        private readonly RequestValidationHandler $requestValidation,
+        private readonly ResponseValidationHandler $responseValidation,
+        private readonly SchemaValidatorAdapter $schemaValidation,
+        private readonly WebhookValidator $webhookValidation,
+        private readonly CallbackValidator $callbackValidation,
+        private readonly LinkResolver $linkResolver,
         private readonly ?SchemaCache $cache = null,
-        ?LoggerInterface $logger = null,
         private readonly bool $coercion = false,
         private readonly bool $nullableAsType = true,
         private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
@@ -55,40 +51,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         private readonly bool $securityValidation = false,
         private readonly bool $strictFormats = false,
         private readonly bool $reportDeprecated = false,
-        ?RefResolver $refResolver = null,
-        ?ValidationContext $validationContext = null,
-        ?RequestValidationHandler $requestValidationHandler = null,
-        ?ResponseValidationHandler $responseValidationHandler = null,
-        ?SchemaValidatorAdapter $schemaValidatorAdapter = null,
-        ?WebhookValidator $webhookValidator = null,
-        ?CallbackValidator $callbackValidator = null,
-        ?LinkResolver $linkResolver = null,
-    ) {
-        $this->logger = $logger ?? new NullLogger();
-        $this->refResolver = $refResolver ?? new RefResolver();
-
-        $context = $validationContext ?? new ValidationContext(
-            document: $this->document,
-            pool: $this->pool,
-            formatRegistry: $this->formatRegistry,
-            errorFormatter: $this->errorFormatter,
-            refResolver: $this->refResolver,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            reportDeprecated: $this->reportDeprecated,
-            logger: $this->logger,
-            eventDispatcher: $this->eventDispatcher,
-            strictFormats: $this->strictFormats,
-        );
-
-        $this->requestValidation = $requestValidationHandler ?? new RequestValidationHandler($context, $this->pathFinder, $this->securityValidation);
-        $this->responseValidation = $responseValidationHandler ?? new ResponseValidationHandler($context);
-        $this->schemaValidation = $schemaValidatorAdapter ?? new SchemaValidatorAdapter($context);
-        $this->webhookValidation = $webhookValidator ?? new WebhookValidator($context);
-        $this->callbackValidation = $callbackValidator ?? new CallbackValidator($context);
-        $this->linkResolver = $linkResolver ?? new LinkResolver();
-    }
+    ) {}
 
     public function getDocument(): OpenApiDocument
     {
