@@ -9,9 +9,11 @@ use RuntimeException;
 
 final readonly class TypedCacheDecorator
 {
+    private const int DEFAULT_TTL = 3600;
+
     public function __construct(
         private readonly CacheItemPoolInterface $pool,
-        private readonly int $ttl = 3600,
+        private readonly int $ttl = self::DEFAULT_TTL,
     ) {}
 
     /**

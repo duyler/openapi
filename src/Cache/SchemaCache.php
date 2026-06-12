@@ -17,6 +17,8 @@ use function assert;
  */
 final readonly class SchemaCache
 {
+    private const int DEFAULT_TTL = 3600;
+
     private TypedCacheDecorator $decorator;
 
     /**
@@ -30,9 +32,9 @@ final readonly class SchemaCache
      */
     public function __construct(
         private readonly CacheItemPoolInterface $pool,
-        private readonly int $ttl = 3600,
+        private readonly int $ttl = self::DEFAULT_TTL,
     ) {
-        $this->decorator = new TypedCacheDecorator($pool, $ttl);
+        $this->decorator = new TypedCacheDecorator($pool, $this->ttl);
     }
 
     /**

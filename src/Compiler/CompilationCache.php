@@ -18,6 +18,8 @@ use const JSON_UNESCAPED_UNICODE;
 
 final readonly class CompilationCache implements CompilationCacheInterface
 {
+    private const int DEFAULT_CACHE_TTL = 86400;
+
     public function __construct(
         private readonly CacheItemPoolInterface $pool,
         private readonly string $namespace = 'validator_compilation',
@@ -46,7 +48,7 @@ final readonly class CompilationCache implements CompilationCacheInterface
     {
         $item = $this->pool->getItem($schemaHash);
         $item->set($compiledCode);
-        $item->expiresAfter(86400);
+        $item->expiresAfter(self::DEFAULT_CACHE_TTL);
 
         $this->pool->save($item);
     }

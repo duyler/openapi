@@ -31,6 +31,8 @@ use function is_array;
 
 final readonly class ResponseValidatorWithContext
 {
+    private const int HTTP_STATUS_RANGE_DIVISOR = 100;
+
     private readonly FormatRegistry $formatRegistry;
     private readonly LoggerInterface $logger;
     private readonly ErrorFormatterInterface $errorFormatter;
@@ -107,7 +109,7 @@ final readonly class ResponseValidatorWithContext
 
     private function getRange(int $statusCode): string
     {
-        $firstDigit = (int) floor($statusCode / 100);
+        $firstDigit = (int) floor($statusCode / self::HTTP_STATUS_RANGE_DIVISOR);
 
         return $firstDigit . 'XX';
     }

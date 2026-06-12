@@ -16,6 +16,8 @@ use function is_int;
 
 final readonly class NumericRangeValidator extends AbstractSchemaValidator
 {
+    private const float FLOAT_COMPARISON_EPSILON = 1e-10;
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -86,8 +88,6 @@ final readonly class NumericRangeValidator extends AbstractSchemaValidator
 
     private function isMultipleOfValid(float $remainder, float $multipleOf): bool
     {
-        $epsilon = 1e-10;
-
-        return abs($remainder) < $epsilon || abs($remainder - $multipleOf) < $epsilon;
+        return abs($remainder) < self::FLOAT_COMPARISON_EPSILON || abs($remainder - $multipleOf) < self::FLOAT_COMPARISON_EPSILON;
     }
 }
