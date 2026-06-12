@@ -1,0 +1,13 @@
+openapi: 3.1.0
+info:
+  title: Root Server API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com
+paths:
+  /ping:
+    get:
+      operationId: ping
+      responses:
+        '200':
+          description: Pong

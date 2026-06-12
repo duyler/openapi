@@ -1,0 +1,19 @@
+openapi: 3.1.0
+info:
+  title: Variable Server API
+  version: 1.0.0
+servers:
+  - url: https://{env}.api.example.com/{version}
+    variables:
+      env:
+        default: prod
+        enum: [prod, staging, dev]
+      version:
+        default: v1
+paths:
+  /status:
+    get:
+      operationId: getStatus
+      responses:
+        '200':
+          description: Status
