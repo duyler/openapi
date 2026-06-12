@@ -391,72 +391,13 @@ final class RefResolver implements RefResolverInterface
 
         $resolved = $this->resolve($schema->ref, $document);
 
-        $description = $resolved->description;
-        if (null !== $schema->refDescription) {
-            $description = $schema->refDescription;
-        }
+        $title = null !== $schema->refSummary ? $schema->refSummary : $resolved->title;
 
-        $title = $resolved->title;
-        if (null !== $schema->refSummary) {
-            $title = $schema->refSummary;
-        }
+        $description = null !== $schema->refDescription ? $schema->refDescription : $resolved->description;
 
-        return new Schema(
-            ref: null,
-            refSummary: null,
-            refDescription: null,
-            format: $resolved->format,
+        return $resolved->withOverrides(
             title: $title,
             description: $description,
-            default: $resolved->default,
-            hasDefault: $resolved->hasDefault,
-            deprecated: $resolved->deprecated,
-            type: $resolved->type,
-            nullable: $resolved->nullable,
-            const: $resolved->const,
-            hasConst: $resolved->hasConst,
-            multipleOf: $resolved->multipleOf,
-            maximum: $resolved->maximum,
-            exclusiveMaximum: $resolved->exclusiveMaximum,
-            minimum: $resolved->minimum,
-            exclusiveMinimum: $resolved->exclusiveMinimum,
-            maxLength: $resolved->maxLength,
-            minLength: $resolved->minLength,
-            pattern: $resolved->pattern,
-            maxItems: $resolved->maxItems,
-            minItems: $resolved->minItems,
-            uniqueItems: $resolved->uniqueItems,
-            maxProperties: $resolved->maxProperties,
-            minProperties: $resolved->minProperties,
-            required: $resolved->required,
-            allOf: $resolved->allOf,
-            anyOf: $resolved->anyOf,
-            oneOf: $resolved->oneOf,
-            not: $resolved->not,
-            discriminator: $resolved->discriminator,
-            properties: $resolved->properties,
-            additionalProperties: $resolved->additionalProperties,
-            unevaluatedProperties: $resolved->unevaluatedProperties,
-            items: $resolved->items,
-            prefixItems: $resolved->prefixItems,
-            contains: $resolved->contains,
-            minContains: $resolved->minContains,
-            maxContains: $resolved->maxContains,
-            patternProperties: $resolved->patternProperties,
-            propertyNames: $resolved->propertyNames,
-            dependentSchemas: $resolved->dependentSchemas,
-            if: $resolved->if,
-            then: $resolved->then,
-            else: $resolved->else,
-            unevaluatedItems: $resolved->unevaluatedItems,
-            example: $resolved->example,
-            examples: $resolved->examples,
-            enum: $resolved->enum,
-            contentEncoding: $resolved->contentEncoding,
-            contentMediaType: $resolved->contentMediaType,
-            contentSchema: $resolved->contentSchema,
-            jsonSchemaDialect: $resolved->jsonSchemaDialect,
-            xml: $resolved->xml,
         );
     }
 

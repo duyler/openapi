@@ -473,32 +473,9 @@ final readonly class ValidatorCompiler
             $resolvedItems = $this->resolveRefs($schema->items, $document, $resolved);
         }
 
-        return new Schema(
-            type: $schema->type,
-            enum: $schema->enum,
-            default: $schema->default,
-            hasDefault: $schema->hasDefault,
-            const: $schema->const,
-            hasConst: $schema->hasConst,
-            nullable: $schema->nullable,
-            minLength: $schema->minLength,
-            maxLength: $schema->maxLength,
-            minimum: $schema->minimum,
-            maximum: $schema->maximum,
-            exclusiveMinimum: $schema->exclusiveMinimum,
-            exclusiveMaximum: $schema->exclusiveMaximum,
-            multipleOf: $schema->multipleOf,
-            pattern: $schema->pattern,
-            minItems: $schema->minItems,
-            maxItems: $schema->maxItems,
-            uniqueItems: $schema->uniqueItems,
-            minProperties: $schema->minProperties,
-            maxProperties: $schema->maxProperties,
-            required: $schema->required,
+        return $schema->withOverrides(
             properties: $resolvedProperties,
-            additionalProperties: $schema->additionalProperties,
             items: $resolvedItems,
-            ref: null,
         );
     }
 
