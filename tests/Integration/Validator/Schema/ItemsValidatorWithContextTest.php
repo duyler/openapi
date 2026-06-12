@@ -500,4 +500,81 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
     }
+
+    #[Test]
+    public function validate_items_with_discriminator_routes_each_element_by_type(): void
+    {
+        $catSchema = new Schema(
+            type: 'object',
+            title: 'Cat',
+            properties: [
+                'petType' => new Schema(type: 'string'),
+                'name' => new Schema(type: 'string'),
+                'indoor' => new Schema(type: 'boolean'),
+            ],
+            required: ['petType', 'name'],
+        );
+
+        $dogSchema = new Schema(
+            type: 'object',
+            title: 'Dog',
+            properties: [
+                'petType' => new Schema(type: 'string'),
+                'name' => new Schema(type: 'string'),
+                'breed' => new Schema(type: 'string'),
+            ],
+            required: ['petType', 'name', 'breed'],
+        );
+
+        $petSchema = new Schema(
+            type: 'object',
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+                mapping: [
+                    'cat' => '#/components/schemas/Cat',
+                    'dog' => '#/components/schemas/Dog',
+                ],
+            ),
+            oneOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+                new Schema(ref: '#/components/schemas/Dog'),
+            ],
+        );
+
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(ref: '#/components/schemas/Pet'),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                    'Dog' => $dogSchema,
+                ],
+            ),
+        );
+
+        $validator = new ItemsValidatorWithContext(
+            $this->pool,
+            $this->refResolver,
+            $document,
+            $this->statelessValidators,
+        );
+
+        // Arrange: массив с элементами разных discriminator-типов
+        $data = [
+            ['petType' => 'cat', 'name' => 'Fluffy', 'indoor' => true],
+            ['petType' => 'dog', 'name' => 'Rex', 'breed' => 'German Shepherd'],
+            ['petType' => 'cat', 'name' => 'Whiskers'],
+        ];
+
+        // Act & Assert: каждый элемент валидируется по своему discriminator-типу
+        $validator->validateWithContext($data, $schema, $this->context);
+
+        $this->assertTrue(true);
+    }
 }

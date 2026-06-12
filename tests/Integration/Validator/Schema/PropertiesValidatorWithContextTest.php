@@ -16,6 +16,8 @@ use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
+use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
@@ -460,5 +462,139 @@ final class PropertiesValidatorWithContextTest extends TestCase
         $validator->validateWithContext($data, $schema, $this->context);
 
         $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_properties_with_discriminator_unknown_mapping_value(): void
+    {
+        $catSchema = new Schema(
+            type: 'object',
+            title: 'Cat',
+            properties: [
+                'petType' => new Schema(type: 'string'),
+                'name' => new Schema(type: 'string'),
+            ],
+        );
+
+        $dogSchema = new Schema(
+            type: 'object',
+            title: 'Dog',
+            properties: [
+                'petType' => new Schema(type: 'string'),
+                'name' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            type: 'object',
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+                mapping: [
+                    'cat' => '#/components/schemas/Cat',
+                    'dog' => '#/components/schemas/Dog',
+                ],
+            ),
+            oneOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+                new Schema(ref: '#/components/schemas/Dog'),
+            ],
+        );
+
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'pet' => new Schema(ref: '#/components/schemas/Pet'),
+            ],
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                    'Dog' => $dogSchema,
+                ],
+            ),
+        );
+
+        $validator = new PropertiesValidatorWithContext(
+            $this->pool,
+            $this->refResolver,
+            $document,
+            $this->statelessValidators,
+        );
+
+        // Arrange: объект с discriminator property, содержащим неизвестное значение
+        $data = [
+            'pet' => ['petType' => 'bird', 'name' => 'Tweety'],
+        ];
+
+        // Act & Assert: неизвестный mapping value должен вызвать исключение
+        $this->expectException(UnknownDiscriminatorValueException::class);
+
+        $validator->validateWithContext($data, $schema, $this->context);
+    }
+
+    #[Test]
+    public function validate_properties_with_discriminator_missing_property(): void
+    {
+        $catSchema = new Schema(
+            type: 'object',
+            title: 'Cat',
+            properties: [
+                'petType' => new Schema(type: 'string'),
+                'name' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            type: 'object',
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+                mapping: [
+                    'cat' => '#/components/schemas/Cat',
+                ],
+            ),
+            oneOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+            ],
+        );
+
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'pet' => new Schema(ref: '#/components/schemas/Pet'),
+            ],
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                ],
+            ),
+        );
+
+        $validator = new PropertiesValidatorWithContext(
+            $this->pool,
+            $this->refResolver,
+            $document,
+            $this->statelessValidators,
+        );
+
+        // Arrange: объект без discriminator property
+        $data = [
+            'pet' => ['name' => 'Fluffy'],
+        ];
+
+        // Act & Assert: отсутствие discriminator property должно вызвать исключение
+        $this->expectException(MissingDiscriminatorPropertyException::class);
+
+        $validator->validateWithContext($data, $schema, $this->context);
     }
 }
