@@ -13,6 +13,7 @@ use Override;
 
 use function is_array;
 use function sprintf;
+use function count;
 
 final readonly class ItemsValidator extends AbstractSchemaValidator
 {
@@ -27,10 +28,15 @@ final readonly class ItemsValidator extends AbstractSchemaValidator
             return;
         }
 
+        $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
         $validator = $this->createSchemaValidator();
 
         foreach ($data as $index => $item) {
             /** @var int $index */
+            if ($index < $prefixCount) {
+                continue;
+            }
+
             try {
                 $nullableAsType = $context?->nullableAsType ?? true;
                 $allowNull = $schema->items->nullable && $nullableAsType;

@@ -45,10 +45,15 @@ final readonly class ItemsValidatorWithContext
 
         $errors = [];
         $itemSchema = $schema->items;
+        $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
 
         foreach ($data as $index => $item) {
+            /** @var int $index */
+            if ($index < $prefixCount) {
+                continue;
+            }
+
             try {
-                /** @var int $index */
                 $itemContext = $context->withBreadcrumbIndex($index);
 
                 $allowNull = $itemSchema->nullable && $context->nullableAsType;

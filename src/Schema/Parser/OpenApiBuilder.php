@@ -317,7 +317,9 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             style: TypeHelper::asStringOrNull($data['style'] ?? null),
             explode: (bool) ($data['explode'] ?? false),
             allowReserved: (bool) ($data['allowReserved'] ?? false),
-            schema: isset($data['schema']) ? $this->buildSchema(TypeHelper::asArray($data['schema'])) : null,
+            schema: isset($data['schema']) && (is_array($data['schema']) || is_bool($data['schema']))
+                ? $this->buildSchema($data['schema'])
+                : null,
             examples: isset($data['examples']) ? TypeHelper::asStringMixedMapOrNull($data['examples']) : null,
             example: isset($data['example']) && false === is_array($data['example'])
                 ? (is_string($data['example']) ? $this->buildExample(['value' => $data['example']]) : null)
@@ -326,8 +328,21 @@ abstract class OpenApiBuilder implements SchemaParserInterface
         );
     }
 
-    protected function buildSchema(array $data): Schema
+    protected function buildSchema(mixed $data): Schema
     {
+        if (is_bool($data)) {
+            if ($data) {
+                return new Schema();
+            }
+
+            return new Schema(not: new Schema());
+        }
+
+        if (false === is_array($data)) {
+            throw new InvalidSchemaException(
+                'Expected array or boolean for schema, got ' . get_debug_type($data),
+            );
+        }
         if ($this->shouldWarnDeprecation() && isset($data['example'])) {
             $this->deprecationLogger->warn(
                 'example',
@@ -397,10 +412,10 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             maxProperties: TypeHelper::asIntOrNull($data['maxProperties'] ?? null),
             minProperties: TypeHelper::asIntOrNull($data['minProperties'] ?? null),
             required: TypeHelper::asStringListOrNull($data['required'] ?? null),
-            allOf: isset($data['allOf']) ? array_values(array_map(fn($s) => $this->buildSchema(TypeHelper::asArray($s)), TypeHelper::asArray($data['allOf']))) : null,
-            anyOf: isset($data['anyOf']) ? array_values(array_map(fn($s) => $this->buildSchema(TypeHelper::asArray($s)), TypeHelper::asArray($data['anyOf']))) : null,
-            oneOf: isset($data['oneOf']) ? array_values(array_map(fn($s) => $this->buildSchema(TypeHelper::asArray($s)), TypeHelper::asArray($data['oneOf']))) : null,
-            not: isset($data['not']) ? $this->buildSchema(TypeHelper::asArray($data['not'])) : null,
+            allOf: isset($data['allOf']) ? array_values(array_map(fn($s) => $this->buildSchema($s), TypeHelper::asArray($data['allOf']))) : null,
+            anyOf: isset($data['anyOf']) ? array_values(array_map(fn($s) => $this->buildSchema($s), TypeHelper::asArray($data['anyOf']))) : null,
+            oneOf: isset($data['oneOf']) ? array_values(array_map(fn($s) => $this->buildSchema($s), TypeHelper::asArray($data['oneOf']))) : null,
+            not: isset($data['not']) ? $this->buildSchema($data['not']) : null,
             discriminator: isset($data['discriminator']) ? $this->buildDiscriminator(TypeHelper::asArray($data['discriminator'])) : null,
             properties: isset($data['properties']) && is_array($data['properties'])
                 ? $this->buildProperties(TypeHelper::asArray($data['properties']))
@@ -411,22 +426,24 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             unevaluatedProperties: isset($data['unevaluatedProperties']) && is_array($data['unevaluatedProperties'])
                 ? $this->buildSchema(TypeHelper::asArray($data['unevaluatedProperties']))
                 : (isset($data['unevaluatedProperties']) ? (bool) $data['unevaluatedProperties'] : null),
-            items: isset($data['items']) && is_array($data['items']) ? $this->buildSchema(TypeHelper::asArray($data['items'])) : null,
-            prefixItems: isset($data['prefixItems']) ? array_values(array_map(fn($s) => $this->buildSchema(TypeHelper::asArray($s)), TypeHelper::asArray($data['prefixItems']))) : null,
-            contains: isset($data['contains']) ? $this->buildSchema(TypeHelper::asArray($data['contains'])) : null,
+            items: isset($data['items']) && (is_array($data['items']) || is_bool($data['items']))
+                ? $this->buildSchema($data['items'])
+                : null,
+            prefixItems: isset($data['prefixItems']) ? array_values(array_map(fn($s) => $this->buildSchema($s), TypeHelper::asArray($data['prefixItems']))) : null,
+            contains: isset($data['contains']) ? $this->buildSchema($data['contains']) : null,
             minContains: TypeHelper::asIntOrNull($data['minContains'] ?? null),
             maxContains: TypeHelper::asIntOrNull($data['maxContains'] ?? null),
             patternProperties: isset($data['patternProperties']) && is_array($data['patternProperties'])
                 ? $this->buildProperties(TypeHelper::asArray($data['patternProperties']))
                 : null,
-            propertyNames: isset($data['propertyNames']) ? $this->buildSchema(TypeHelper::asArray($data['propertyNames'])) : null,
+            propertyNames: isset($data['propertyNames']) ? $this->buildSchema($data['propertyNames']) : null,
             dependentSchemas: isset($data['dependentSchemas']) && is_array($data['dependentSchemas'])
                 ? $this->buildProperties(TypeHelper::asArray($data['dependentSchemas']))
                 : null,
-            if: isset($data['if']) ? $this->buildSchema(TypeHelper::asArray($data['if'])) : null,
-            then: isset($data['then']) ? $this->buildSchema(TypeHelper::asArray($data['then'])) : null,
-            else: isset($data['else']) ? $this->buildSchema(TypeHelper::asArray($data['else'])) : null,
-            unevaluatedItems: isset($data['unevaluatedItems']) ? $this->buildSchema(TypeHelper::asArray($data['unevaluatedItems'])) : null,
+            if: isset($data['if']) ? $this->buildSchema($data['if']) : null,
+            then: isset($data['then']) ? $this->buildSchema($data['then']) : null,
+            else: isset($data['else']) ? $this->buildSchema($data['else']) : null,
+            unevaluatedItems: isset($data['unevaluatedItems']) ? $this->buildSchema($data['unevaluatedItems']) : null,
             example: $data['example'] ?? null,
             examples: isset($data['examples']) && is_array($data['examples']) ? TypeHelper::asStringMixedMapOrNull($data['examples']) : null,
             enum: TypeHelper::asEnumListOrNull($data['enum'] ?? null),
@@ -451,7 +468,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
         $properties = [];
 
         foreach ($data as $name => $schema) {
-            $properties[$name] = $this->buildSchema(TypeHelper::asArray($schema));
+            $properties[$name] = $this->buildSchema($schema);
         }
 
         return $properties;
@@ -566,11 +583,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
         }
 
         return new MediaType(
-            schema: isset($data['schema']) && is_array($data['schema'])
-                ? $this->buildSchema(TypeHelper::asArray($data['schema']))
+            schema: isset($data['schema']) && (is_array($data['schema']) || is_bool($data['schema']))
+                ? $this->buildSchema($data['schema'])
                 : null,
-            itemSchema: isset($data['itemSchema']) && is_array($data['itemSchema'])
-                ? $this->buildSchema(TypeHelper::asArray($data['itemSchema']))
+            itemSchema: isset($data['itemSchema']) && (is_array($data['itemSchema']) || is_bool($data['itemSchema']))
+                ? $this->buildSchema($data['itemSchema'])
                 : null,
             encoding: isset($data['encoding']) && is_array($data['encoding'])
                 ? $this->buildEncodingMap(TypeHelper::asArray($data['encoding']))
@@ -707,8 +724,8 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             required: (bool) ($data['required'] ?? false),
             deprecated: (bool) ($data['deprecated'] ?? false),
             allowEmptyValue: (bool) ($data['allowEmptyValue'] ?? false),
-            schema: isset($data['schema']) && is_array($data['schema'])
-                ? $this->buildSchema(TypeHelper::asArray($data['schema']))
+            schema: isset($data['schema']) && (is_array($data['schema']) || is_bool($data['schema']))
+                ? $this->buildSchema($data['schema'])
                 : null,
             example: $data['example'] ?? null,
             examples: isset($data['examples']) && is_array($data['examples']) ? TypeHelper::asStringMixedMapOrNull($data['examples']) : null,
@@ -836,7 +853,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
         $schemas = [];
 
         foreach ($data as $name => $schema) {
-            $schemas[$name] = $this->buildSchema(TypeHelper::asArray($schema));
+            $schemas[$name] = $this->buildSchema($schema);
         }
 
         return $schemas;

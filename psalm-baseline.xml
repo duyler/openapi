@@ -17,13 +17,6 @@
       <code><![CDATA[$data['example']]]></code>
     </MixedAssignment>
   </file>
-  <file src="src/Schema/Model/Schema.php">
-    <MixedAssignment>
-      <code><![CDATA[$data['const']]]></code>
-      <code><![CDATA[$data['default']]]></code>
-      <code><![CDATA[$data['example']]]></code>
-    </MixedAssignment>
-  </file>
   <file src="src/Schema/Parser/TypeHelper.php">
     <MixedAssignment>
       <code><![CDATA[$item]]></code>
@@ -40,7 +33,6 @@
       <code><![CDATA[$example]]></code>
       <code><![CDATA[$example]]></code>
       <code><![CDATA[$exampleEntry]]></code>
-      <code><![CDATA[$examples[]]]></code>
       <code><![CDATA[$examples[]]]></code>
       <code><![CDATA[$target[]]]></code>
       <code><![CDATA[$target[]]]></code>
@@ -123,5 +115,12 @@
     <MixedAssignment>
       <code><![CDATA[$item]]></code>
     </MixedAssignment>
+  </file>
+  <file src="src/Schema/Parser/OpenApiBuilder.php">
+    <MixedArgument>
+      <code><![CDATA[$data['const'] ?? null]]></code>
+      <code><![CDATA[$data['default'] ?? null]]></code>
+      <code><![CDATA[$data['example'] ?? null]]></code>
+    </MixedArgument>
   </file>
 </files>

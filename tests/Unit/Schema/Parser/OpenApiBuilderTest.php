@@ -2259,4 +2259,187 @@ final class OpenApiBuilderTest extends TestCase
         $this->assertInstanceOf(Schema::class, $schema->contentSchema);
         $this->assertSame('object', $schema->contentSchema->type);
     }
+
+    #[Test]
+    public function boolean_schema_true_in_components(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'AnyValue' => true,
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['AnyValue'];
+
+        $this->assertInstanceOf(Schema::class, $schema);
+        $this->assertNull($schema->type);
+        $this->assertNull($schema->not);
+    }
+
+    #[Test]
+    public function boolean_schema_false_in_components(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'NoValue' => false,
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['NoValue'];
+
+        $this->assertInstanceOf(Schema::class, $schema);
+        $this->assertInstanceOf(Schema::class, $schema->not);
+    }
+
+    #[Test]
+    public function boolean_schema_in_properties(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'TestSchema' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'anyField' => true,
+                            'noField' => false,
+                            'typedField' => ['type' => 'string'],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['TestSchema'];
+
+        $this->assertInstanceOf(Schema::class, $schema->properties['anyField']);
+        $this->assertNull($schema->properties['anyField']->not);
+
+        $this->assertInstanceOf(Schema::class, $schema->properties['noField']);
+        $this->assertInstanceOf(Schema::class, $schema->properties['noField']->not);
+
+        $this->assertInstanceOf(Schema::class, $schema->properties['typedField']);
+        $this->assertSame('string', $schema->properties['typedField']->type);
+    }
+
+    #[Test]
+    public function boolean_schema_in_all_of(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'TestSchema' => [
+                        'allOf' => [
+                            true,
+                            ['type' => 'string'],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['TestSchema'];
+
+        $this->assertCount(2, $schema->allOf);
+        $this->assertInstanceOf(Schema::class, $schema->allOf[0]);
+        $this->assertNull($schema->allOf[0]->type);
+        $this->assertSame('string', $schema->allOf[1]->type);
+    }
+
+    #[Test]
+    public function boolean_schema_in_items(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'TestSchema' => [
+                        'type' => 'array',
+                        'items' => true,
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['TestSchema'];
+
+        $this->assertInstanceOf(Schema::class, $schema->items);
+        $this->assertNull($schema->items->type);
+    }
+
+    #[Test]
+    public function boolean_schema_in_media_type(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [
+                '/test' => [
+                    'get' => [
+                        'responses' => [
+                            '200' => [
+                                'description' => 'OK',
+                                'content' => [
+                                    'application/json' => [
+                                        'schema' => true,
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $mediaType = $document->paths->paths['/test']->get->responses->responses['200']->content->mediaTypes['application/json'];
+
+        $this->assertInstanceOf(Schema::class, $mediaType->schema);
+        $this->assertNull($mediaType->schema->type);
+    }
+
+    #[Test]
+    public function boolean_schema_in_not(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'TestSchema' => [
+                        'not' => true,
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['TestSchema'];
+
+        $this->assertInstanceOf(Schema::class, $schema->not);
+        $this->assertNull($schema->not->type);
+    }
 }
