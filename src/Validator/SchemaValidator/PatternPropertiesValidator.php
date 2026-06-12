@@ -57,7 +57,7 @@ final readonly class PatternPropertiesValidator extends AbstractSchemaValidator
                     /** @var array-key|array<array-key, mixed> $propertyValue */
                     $validator = $this->createSchemaValidator();
                     $nullableAsType = $context?->nullableAsType ?? true;
-                    $propertyContext = $context?->withBreadcrumb($propertyName) ?? ValidationContext::create($this->pool, $nullableAsType);
+                    $propertyContext = $context?->withBreadcrumb($propertyName) ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
                     $validator->validate($propertyValue, $propertySchema, $propertyContext);
                 }
             }

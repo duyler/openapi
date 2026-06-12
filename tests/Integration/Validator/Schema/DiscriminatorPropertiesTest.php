@@ -31,7 +31,7 @@ final class DiscriminatorPropertiesTest extends TestCase
     {
         $this->pool = new ValidatorPool();
         $this->refResolver = new RefResolver();
-        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
 
         $catSchema = new Schema(
             title: 'Cat',

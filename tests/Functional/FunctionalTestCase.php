@@ -46,7 +46,7 @@ abstract class FunctionalTestCase extends TestCase
         );
         $this->refResolver = new RefResolver();
         $this->parser = new YamlParser();
-        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
     }
 
     /**

@@ -14,8 +14,15 @@ use function sprintf;
  *
  * Provides brief error messages including breadcrumb path.
  */
-final readonly class SimpleFormatter implements ErrorFormatterInterface
+final class SimpleFormatter implements ErrorFormatterInterface
 {
+    private static ?self $shared = null;
+
+    public static function shared(): self
+    {
+        return self::$shared ??= new self();
+    }
+
     #[Override]
     public function format(AbstractValidationError $error): string
     {

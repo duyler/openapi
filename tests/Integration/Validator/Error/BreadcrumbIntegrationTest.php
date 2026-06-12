@@ -37,7 +37,7 @@ class BreadcrumbIntegrationTest extends TestCase
             ),
         );
         $this->refResolver = new RefResolver();
-        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
     }
 
     #[Test]
@@ -58,7 +58,7 @@ class BreadcrumbIntegrationTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
         $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
 
         try {
@@ -89,7 +89,7 @@ class BreadcrumbIntegrationTest extends TestCase
             ),
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
         $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
 
         try {
@@ -124,7 +124,7 @@ class BreadcrumbIntegrationTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
         $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
 
         try {
@@ -151,7 +151,7 @@ class BreadcrumbIntegrationTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
         $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
 
         try {
@@ -194,7 +194,7 @@ class BreadcrumbIntegrationTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
         $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
 
         try {
@@ -227,7 +227,7 @@ class BreadcrumbIntegrationTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
         $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
 
         try {
@@ -265,7 +265,7 @@ class BreadcrumbIntegrationTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
         $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
 
         try {

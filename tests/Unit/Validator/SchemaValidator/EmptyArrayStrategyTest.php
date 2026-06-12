@@ -11,6 +11,7 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\SchemaValidator\TypeValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -26,8 +27,8 @@ final class EmptyArrayStrategyTest extends TestCase
     #[Test]
     public function empty_array_with_prefer_array_strategy_valid_for_array(): void
     {
-        $validator = new TypeValidator($this->pool);
-        $context = ValidationContext::create($this->pool, true, EmptyArrayStrategy::PreferArray);
+        $validator = new TypeValidator($this->pool, BuiltinFormats::create());
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: true, emptyArrayStrategy: EmptyArrayStrategy::PreferArray);
         $schema = new Schema(type: 'array');
 
         $validator->validate([], $schema, $context);
@@ -38,8 +39,8 @@ final class EmptyArrayStrategyTest extends TestCase
     #[Test]
     public function empty_array_with_prefer_array_strategy_invalid_for_object(): void
     {
-        $validator = new TypeValidator($this->pool);
-        $context = ValidationContext::create($this->pool, true, EmptyArrayStrategy::PreferArray);
+        $validator = new TypeValidator($this->pool, BuiltinFormats::create());
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: true, emptyArrayStrategy: EmptyArrayStrategy::PreferArray);
         $schema = new Schema(type: 'object');
 
         $this->expectException(TypeMismatchError::class);
@@ -50,8 +51,8 @@ final class EmptyArrayStrategyTest extends TestCase
     #[Test]
     public function empty_array_with_prefer_object_strategy_invalid_for_array(): void
     {
-        $validator = new TypeValidator($this->pool);
-        $context = ValidationContext::create($this->pool, true, EmptyArrayStrategy::PreferObject);
+        $validator = new TypeValidator($this->pool, BuiltinFormats::create());
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: true, emptyArrayStrategy: EmptyArrayStrategy::PreferObject);
         $schema = new Schema(type: 'array');
 
         $this->expectException(TypeMismatchError::class);
@@ -62,8 +63,8 @@ final class EmptyArrayStrategyTest extends TestCase
     #[Test]
     public function empty_array_with_prefer_object_strategy_valid_for_object(): void
     {
-        $validator = new TypeValidator($this->pool);
-        $context = ValidationContext::create($this->pool, true, EmptyArrayStrategy::PreferObject);
+        $validator = new TypeValidator($this->pool, BuiltinFormats::create());
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: true, emptyArrayStrategy: EmptyArrayStrategy::PreferObject);
         $schema = new Schema(type: 'object');
 
         $validator->validate([], $schema, $context);
@@ -74,8 +75,8 @@ final class EmptyArrayStrategyTest extends TestCase
     #[Test]
     public function empty_array_with_reject_strategy_invalid_for_array(): void
     {
-        $validator = new TypeValidator($this->pool);
-        $context = ValidationContext::create($this->pool, true, EmptyArrayStrategy::Reject);
+        $validator = new TypeValidator($this->pool, BuiltinFormats::create());
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: true, emptyArrayStrategy: EmptyArrayStrategy::Reject);
         $schema = new Schema(type: 'array');
 
         $this->expectException(TypeMismatchError::class);
@@ -86,8 +87,8 @@ final class EmptyArrayStrategyTest extends TestCase
     #[Test]
     public function empty_array_with_reject_strategy_invalid_for_object(): void
     {
-        $validator = new TypeValidator($this->pool);
-        $context = ValidationContext::create($this->pool, true, EmptyArrayStrategy::Reject);
+        $validator = new TypeValidator($this->pool, BuiltinFormats::create());
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: true, emptyArrayStrategy: EmptyArrayStrategy::Reject);
         $schema = new Schema(type: 'object');
 
         $this->expectException(TypeMismatchError::class);
@@ -98,8 +99,8 @@ final class EmptyArrayStrategyTest extends TestCase
     #[Test]
     public function empty_array_with_allow_both_strategy_valid_for_array(): void
     {
-        $validator = new TypeValidator($this->pool);
-        $context = ValidationContext::create($this->pool, true, EmptyArrayStrategy::AllowBoth);
+        $validator = new TypeValidator($this->pool, BuiltinFormats::create());
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: true, emptyArrayStrategy: EmptyArrayStrategy::AllowBoth);
         $schema = new Schema(type: 'array');
 
         $validator->validate([], $schema, $context);
@@ -110,8 +111,8 @@ final class EmptyArrayStrategyTest extends TestCase
     #[Test]
     public function empty_array_with_allow_both_strategy_valid_for_object(): void
     {
-        $validator = new TypeValidator($this->pool);
-        $context = ValidationContext::create($this->pool, true, EmptyArrayStrategy::AllowBoth);
+        $validator = new TypeValidator($this->pool, BuiltinFormats::create());
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: true, emptyArrayStrategy: EmptyArrayStrategy::AllowBoth);
         $schema = new Schema(type: 'object');
 
         $validator->validate([], $schema, $context);
@@ -122,8 +123,8 @@ final class EmptyArrayStrategyTest extends TestCase
     #[Test]
     public function empty_array_in_union_type_with_prefer_array(): void
     {
-        $validator = new TypeValidator($this->pool);
-        $context = ValidationContext::create($this->pool, true, EmptyArrayStrategy::PreferArray);
+        $validator = new TypeValidator($this->pool, BuiltinFormats::create());
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: true, emptyArrayStrategy: EmptyArrayStrategy::PreferArray);
         $schema = new Schema(type: ['array', 'object']);
 
         $validator->validate([], $schema, $context);
@@ -134,8 +135,8 @@ final class EmptyArrayStrategyTest extends TestCase
     #[Test]
     public function empty_array_in_union_type_with_prefer_object(): void
     {
-        $validator = new TypeValidator($this->pool);
-        $context = ValidationContext::create($this->pool, true, EmptyArrayStrategy::PreferObject);
+        $validator = new TypeValidator($this->pool, BuiltinFormats::create());
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: true, emptyArrayStrategy: EmptyArrayStrategy::PreferObject);
         $schema = new Schema(type: ['array', 'object']);
 
         $validator->validate([], $schema, $context);
@@ -146,8 +147,8 @@ final class EmptyArrayStrategyTest extends TestCase
     #[Test]
     public function empty_array_in_union_type_with_reject(): void
     {
-        $validator = new TypeValidator($this->pool);
-        $context = ValidationContext::create($this->pool, true, EmptyArrayStrategy::Reject);
+        $validator = new TypeValidator($this->pool, BuiltinFormats::create());
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: true, emptyArrayStrategy: EmptyArrayStrategy::Reject);
         $schema = new Schema(type: ['array', 'object']);
 
         $this->expectException(TypeMismatchError::class);
@@ -158,8 +159,8 @@ final class EmptyArrayStrategyTest extends TestCase
     #[Test]
     public function empty_array_in_union_type_with_allow_both(): void
     {
-        $validator = new TypeValidator($this->pool);
-        $context = ValidationContext::create($this->pool, true, EmptyArrayStrategy::AllowBoth);
+        $validator = new TypeValidator($this->pool, BuiltinFormats::create());
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: true, emptyArrayStrategy: EmptyArrayStrategy::AllowBoth);
         $schema = new Schema(type: ['array', 'object']);
 
         $validator->validate([], $schema, $context);
@@ -195,8 +196,8 @@ final class EmptyArrayStrategyTest extends TestCase
     #[Test]
     public function non_empty_array_validation_unchanged_with_prefer_array(): void
     {
-        $validator = new TypeValidator($this->pool);
-        $context = ValidationContext::create($this->pool, true, EmptyArrayStrategy::PreferArray);
+        $validator = new TypeValidator($this->pool, BuiltinFormats::create());
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: true, emptyArrayStrategy: EmptyArrayStrategy::PreferArray);
 
         $arraySchema = new Schema(type: 'array');
         $objectSchema = new Schema(type: 'object');
@@ -210,8 +211,8 @@ final class EmptyArrayStrategyTest extends TestCase
     #[Test]
     public function non_empty_object_validation_unchanged_with_prefer_object(): void
     {
-        $validator = new TypeValidator($this->pool);
-        $context = ValidationContext::create($this->pool, true, EmptyArrayStrategy::PreferObject);
+        $validator = new TypeValidator($this->pool, BuiltinFormats::create());
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: true, emptyArrayStrategy: EmptyArrayStrategy::PreferObject);
 
         $arraySchema = new Schema(type: 'array');
         $objectSchema = new Schema(type: 'object');

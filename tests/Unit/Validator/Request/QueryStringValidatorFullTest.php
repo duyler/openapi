@@ -26,7 +26,7 @@ final class QueryStringValidatorFullTest extends TestCase
     protected function setUp(): void
     {
         $queryParser = new QueryParser();
-        $schemaValidator = new SchemaValidator(new ValidatorPool(), BuiltinFormats::instance());
+        $schemaValidator = new SchemaValidator(new ValidatorPool(), BuiltinFormats::create());
 
         $this->validator = new QueryStringValidator(
             $queryParser,

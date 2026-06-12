@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -16,7 +17,7 @@ final class SchemaValidatorLazyInitTest extends TestCase
     public function repeated_validate_calls_reuse_cached_registry(): void
     {
         $pool = new ValidatorPool();
-        $validator = new SchemaValidator($pool);
+        $validator = new SchemaValidator($pool, BuiltinFormats::create());
 
         $schema = new Schema(type: 'string');
 
@@ -30,7 +31,7 @@ final class SchemaValidatorLazyInitTest extends TestCase
     public function validate_with_null_data_and_nullable_schema(): void
     {
         $pool = new ValidatorPool();
-        $validator = new SchemaValidator($pool);
+        $validator = new SchemaValidator($pool, BuiltinFormats::create());
 
         $schema = new Schema(type: 'string', nullable: true);
 

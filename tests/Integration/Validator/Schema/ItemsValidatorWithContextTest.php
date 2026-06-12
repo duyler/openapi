@@ -40,8 +40,8 @@ final class ItemsValidatorWithContextTest extends TestCase
             '3.1.0',
             new InfoObject('Test API', '1.0.0'),
         );
-        $this->context = ValidationContext::create($this->pool);
-        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
+        $this->context = ValidationContext::create(pool: $this->pool);
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
         $this->validator = new ItemsValidatorWithContext(
             $this->pool,
             $this->refResolver,
@@ -102,7 +102,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $data = ['value1', 'value2'];
 
-        $customContext = ValidationContext::create($this->pool);
+        $customContext = ValidationContext::create(pool: $this->pool);
         $this->validator->validateWithContext($data, $schema, $customContext);
 
         $this->assertTrue(true);
@@ -119,7 +119,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $data = ['first', 'second', 'third'];
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
 
         $this->validator->validateWithContext($data, $schema, $context);
 

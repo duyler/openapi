@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\Error\ValidationContext;
-use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -22,13 +21,13 @@ abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterf
 
     public function __construct(
         protected readonly ValidatorPool $pool,
-        ?FormatRegistry $formatRegistry = null,
+        FormatRegistry $formatRegistry,
         bool $strictFormats = false,
         ?LoggerInterface $logger = null,
         bool $reportDeprecated = false,
         ?EventDispatcherInterface $eventDispatcher = null,
     ) {
-        $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
+        $this->formatRegistry = $formatRegistry;
         $this->strictFormats = $strictFormats;
         $this->logger = $logger ?? new NullLogger();
         $this->reportDeprecated = $reportDeprecated;

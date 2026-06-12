@@ -8,6 +8,7 @@ use Duyler\OpenApi\Validator\SchemaValidator\ContainsValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\ContainsMatchError;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -20,7 +21,7 @@ class ContainsValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new ContainsValidator($this->pool);
+        $this->validator = new ContainsValidator($this->pool, BuiltinFormats::create());
     }
 
     #[Test]

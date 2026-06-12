@@ -21,13 +21,6 @@ use Duyler\OpenApi\Validator\Format\String\UuidValidator;
 
 final class BuiltinFormats
 {
-    private static ?FormatRegistry $instance = null;
-
-    public static function instance(): FormatRegistry
-    {
-        return self::$instance ??= self::create();
-    }
-
     public static function create(): FormatRegistry
     {
         $registry = new FormatRegistry();

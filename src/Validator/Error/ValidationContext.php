@@ -15,7 +15,7 @@ final readonly class ValidationContext
     public function __construct(
         public readonly BreadcrumbManager $breadcrumbs,
         public readonly ValidatorPool $pool,
-        public readonly ErrorFormatterInterface $errorFormatter = new SimpleFormatter(),
+        public readonly ErrorFormatterInterface $errorFormatter,
         public readonly bool $nullableAsType = true,
         public readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         public readonly int $depth = 0,
@@ -24,6 +24,7 @@ final readonly class ValidationContext
 
     public static function create(
         ValidatorPool $pool,
+        ?ErrorFormatterInterface $errorFormatter = null,
         bool $nullableAsType = true,
         EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         ?ValidatorMode $mode = null,
@@ -31,7 +32,7 @@ final readonly class ValidationContext
         return new self(
             breadcrumbs: BreadcrumbManager::create(),
             pool: $pool,
-            errorFormatter: new SimpleFormatter(),
+            errorFormatter: $errorFormatter ?? SimpleFormatter::shared(),
             nullableAsType: $nullableAsType,
             emptyArrayStrategy: $emptyArrayStrategy,
             mode: $mode,

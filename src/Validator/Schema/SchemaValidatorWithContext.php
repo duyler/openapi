@@ -7,6 +7,8 @@ namespace Duyler\OpenApi\Validator\Schema;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
+use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
+use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
@@ -25,6 +27,7 @@ final class SchemaValidatorWithContext
     private const int MAX_SCHEMA_DEPTH = 64;
 
     private readonly LoggerInterface $logger;
+    private readonly ErrorFormatterInterface $errorFormatter;
 
     public function __construct(
         private readonly ValidatorPool $pool,
@@ -36,13 +39,15 @@ final class SchemaValidatorWithContext
         private readonly bool $reportDeprecated = false,
         ?LoggerInterface $logger = null,
         private readonly ?EventDispatcherInterface $eventDispatcher = null,
+        ?ErrorFormatterInterface $errorFormatter = null,
     ) {
         $this->logger = $logger ?? new NullLogger();
+        $this->errorFormatter = $errorFormatter ?? SimpleFormatter::shared();
     }
 
     public function validate(array|int|string|float|bool|null $data, Schema $schema, bool $useDiscriminator = true, ?ValidatorMode $mode = null): void
     {
-        $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy, $mode);
+        $context = ValidationContext::create($this->pool, $this->errorFormatter, $this->nullableAsType, $this->emptyArrayStrategy, $mode);
 
         $schema = $this->resolveRef($schema);
 

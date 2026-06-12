@@ -7,7 +7,8 @@ namespace Duyler\OpenApi\Validator\Response;
 use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
-use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
+use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
@@ -32,6 +33,7 @@ final readonly class ResponseValidatorWithContext
 {
     private readonly FormatRegistry $formatRegistry;
     private readonly LoggerInterface $logger;
+    private readonly ErrorFormatterInterface $errorFormatter;
     private readonly StatelessValidatorRegistry $statelessValidators;
     private readonly SchemaValidator $schemaValidator;
     private readonly ResponseHeadersValidator $headersValidator;
@@ -42,7 +44,7 @@ final readonly class ResponseValidatorWithContext
         private readonly OpenApiDocument $document,
         StatelessValidatorRegistry $statelessValidators,
         private readonly RefResolverInterface $refResolver,
-        ?FormatRegistry $formatRegistry = null,
+        FormatRegistry $formatRegistry,
         private readonly BodyParser $bodyParser = new BodyParser(
             jsonParser: new JsonBodyParser(),
             formParser: new FormBodyParser(),
@@ -57,14 +59,16 @@ final readonly class ResponseValidatorWithContext
         private readonly bool $reportDeprecated = false,
         ?LoggerInterface $logger = null,
         private readonly ?EventDispatcherInterface $eventDispatcher = null,
+        ?ErrorFormatterInterface $errorFormatter = null,
     ) {
-        $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
+        $this->formatRegistry = $formatRegistry;
         $this->logger = $logger ?? new NullLogger();
+        $this->errorFormatter = $errorFormatter ?? SimpleFormatter::shared();
         $this->statelessValidators = $statelessValidators;
 
         $this->schemaValidator = new SchemaValidator($this->pool, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
         $this->headersValidator = new ResponseHeadersValidator($this->schemaValidator);
-        $this->bodyValidator = new ResponseBodyValidatorWithContext(pool: $this->pool, document: $this->document, bodyParser: $this->bodyParser, statelessValidators: $this->statelessValidators, refResolver: $this->refResolver, formatRegistry: $this->formatRegistry, coercion: $this->coercion, nullableAsType: $this->nullableAsType, emptyArrayStrategy: $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
+        $this->bodyValidator = new ResponseBodyValidatorWithContext(pool: $this->pool, document: $this->document, bodyParser: $this->bodyParser, statelessValidators: $this->statelessValidators, refResolver: $this->refResolver, formatRegistry: $this->formatRegistry, coercion: $this->coercion, nullableAsType: $this->nullableAsType, emptyArrayStrategy: $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher, errorFormatter: $this->errorFormatter);
     }
 
     public function validate(

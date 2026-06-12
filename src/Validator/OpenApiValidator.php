@@ -558,6 +558,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
                 reportDeprecated: $this->reportDeprecated,
                 logger: $this->logger,
                 eventDispatcher: $this->eventDispatcher,
+                errorFormatter: $this->errorFormatter,
             ),
         );
     }
@@ -577,6 +578,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
             reportDeprecated: $this->reportDeprecated,
             logger: $this->logger,
             eventDispatcher: $this->eventDispatcher,
+            errorFormatter: $this->errorFormatter,
         );
     }
 

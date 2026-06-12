@@ -15,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 use stdClass;
 
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 
 class PropertiesValidatorTest extends TestCase
 {
@@ -24,7 +25,7 @@ class PropertiesValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new PropertiesValidator($this->pool);
+        $this->validator = new PropertiesValidator($this->pool, BuiltinFormats::create());
     }
 
     #[Test]

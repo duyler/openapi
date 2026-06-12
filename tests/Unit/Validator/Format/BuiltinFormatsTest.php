@@ -8,21 +8,12 @@ use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-final class BuiltinFormatsSingletonTest extends TestCase
+final class BuiltinFormatsTest extends TestCase
 {
     #[Test]
-    public function instance_returns_same_object_on_repeated_calls(): void
+    public function create_returns_format_registry_with_builtin_formats(): void
     {
-        $first = BuiltinFormats::instance();
-        $second = BuiltinFormats::instance();
-
-        $this->assertSame($first, $second);
-    }
-
-    #[Test]
-    public function instance_returns_format_registry_with_builtin_formats(): void
-    {
-        $registry = BuiltinFormats::instance();
+        $registry = BuiltinFormats::create();
 
         $this->assertNotNull($registry->getValidator('string', 'email'));
         $this->assertNotNull($registry->getValidator('string', 'uri'));

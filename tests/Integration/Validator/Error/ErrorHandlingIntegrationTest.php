@@ -44,7 +44,7 @@ class ErrorHandlingIntegrationTest extends TestCase
             ),
         );
         $this->refResolver = new RefResolver();
-        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
     }
 
     #[Test]

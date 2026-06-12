@@ -37,7 +37,7 @@ final class DiscriminatorValidatorTest extends TestCase
     {
         $this->refResolver = new RefResolver();
         $this->pool = new ValidatorPool();
-        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
         $this->validator = new DiscriminatorValidator($this->refResolver, $this->pool, $this->statelessValidators);
     }
 

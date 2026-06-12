@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Functional\Schema;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Validator\Exception\ContainsMatchError;
@@ -36,7 +37,7 @@ final class SchemaValidationTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new SchemaValidator($this->pool);
+        $this->validator = new SchemaValidator($this->pool, BuiltinFormats::create());
     }
 
     #[Test]

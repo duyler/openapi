@@ -57,7 +57,7 @@ final class WebhookValidatorTest extends TestCase
     protected function setUp(): void
     {
         $pool = new ValidatorPool();
-        $schemaValidator = new SchemaValidator($pool);
+        $schemaValidator = new SchemaValidator($pool, BuiltinFormats::create());
         $deserializer = new ParameterDeserializer();
         $coercer = new TypeCoercer();
 
@@ -87,8 +87,9 @@ final class WebhookValidatorTest extends TestCase
             $pool,
             $document,
             $bodyParser,
-            new StatelessValidatorRegistry($pool, BuiltinFormats::instance()),
+            new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
             new RefResolver(),
+            BuiltinFormats::create(),
         );
 
         $queryStringValidator = new QueryStringValidator($queryParser, $schemaValidator);

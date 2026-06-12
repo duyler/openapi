@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\SchemaValidator\IfThenElseValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\MaximumError;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -20,7 +21,7 @@ class IfThenElseValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new IfThenElseValidator($this->pool);
+        $this->validator = new IfThenElseValidator($this->pool, BuiltinFormats::create());
     }
 
     #[Test]

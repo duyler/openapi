@@ -16,6 +16,7 @@ use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Error\BreadcrumbManager;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -35,7 +36,7 @@ final class ContextValidatorsIntegrationTest extends TestCase
             openapi: '3.2.0',
             info: new InfoObject(title: 'Test', version: '1.0.0'),
         );
-        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
     }
 
     #[Test]
@@ -56,6 +57,7 @@ final class ContextValidatorsIntegrationTest extends TestCase
         $context = new ValidationContext(
             breadcrumbs: BreadcrumbManager::create(),
             pool: $this->pool,
+            errorFormatter: new SimpleFormatter(),
             nullableAsType: false,
         );
 
@@ -90,6 +92,7 @@ final class ContextValidatorsIntegrationTest extends TestCase
         $context = new ValidationContext(
             breadcrumbs: BreadcrumbManager::create(),
             pool: $this->pool,
+            errorFormatter: new SimpleFormatter(),
             nullableAsType: false,
         );
 

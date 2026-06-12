@@ -8,7 +8,9 @@ use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
-use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
+use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
@@ -19,7 +21,6 @@ use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\TypeGuarantor;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
-use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -30,6 +31,7 @@ final readonly class ResponseBodyValidatorWithContext
     private SchemaValidatorWithContext $contextSchemaValidator;
     private readonly FormatRegistry $formatRegistry;
     private readonly LoggerInterface $logger;
+    private readonly ErrorFormatterInterface $errorFormatter;
 
     public function __construct(
         private readonly ValidatorPool $pool,
@@ -37,7 +39,7 @@ final readonly class ResponseBodyValidatorWithContext
         private readonly BodyParser $bodyParser,
         StatelessValidatorRegistry $statelessValidators,
         private readonly RefResolverInterface $refResolver,
-        ?FormatRegistry $formatRegistry = null,
+        FormatRegistry $formatRegistry,
         private readonly ContentTypeNegotiator $negotiator = new ContentTypeNegotiator(),
         private readonly ResponseTypeCoercer $typeCoercer = new ResponseTypeCoercer(),
         private readonly StreamingContentParser $streamingParser = new StreamingContentParser(),
@@ -47,12 +49,14 @@ final readonly class ResponseBodyValidatorWithContext
         private readonly bool $reportDeprecated = false,
         ?LoggerInterface $logger = null,
         private readonly ?EventDispatcherInterface $eventDispatcher = null,
+        ?ErrorFormatterInterface $errorFormatter = null,
     ) {
-        $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
+        $this->formatRegistry = $formatRegistry;
         $this->logger = $logger ?? new NullLogger();
+        $this->errorFormatter = $errorFormatter ?? SimpleFormatter::shared();
         $this->regularSchemaValidator = new SchemaValidator($this->pool, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
 
-        $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $statelessValidators, $this->nullableAsType, $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
+        $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $statelessValidators, $this->nullableAsType, $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher, errorFormatter: $this->errorFormatter);
     }
 
     public function validate(
@@ -98,7 +102,7 @@ final readonly class ResponseBodyValidatorWithContext
             $hasDiscriminator = null !== $schema->discriminator || $this->refResolver->schemaHasDiscriminator($schema, $this->document);
             $hasRef = $this->refResolver->schemaHasRef($schema);
 
-            $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy, ValidatorMode::Response);
+            $context = ValidationContext::create($this->pool, $this->errorFormatter, $this->nullableAsType, $this->emptyArrayStrategy, ValidatorMode::Response);
 
             if (false === ($hasDiscriminator || $hasRef)) {
                 $this->regularSchemaValidator->validate($parsedBody, $schema, $context);
@@ -124,7 +128,7 @@ final readonly class ResponseBodyValidatorWithContext
         $effectiveContentType = $mediaType->itemEncoding->contentType ?? $contentType;
         $items = $this->streamingParser->parse($body, $effectiveContentType);
 
-        $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy, ValidatorMode::Response);
+        $context = ValidationContext::create($this->pool, $this->errorFormatter, $this->nullableAsType, $this->emptyArrayStrategy, ValidatorMode::Response);
         $hasDiscriminator = null !== $schema->discriminator || $this->refResolver->schemaHasDiscriminator($schema, $this->document);
         $hasRef = $this->refResolver->schemaHasRef($schema);
 

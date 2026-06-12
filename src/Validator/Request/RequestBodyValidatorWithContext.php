@@ -7,9 +7,11 @@ namespace Duyler\OpenApi\Validator\Request;
 use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
+use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
+use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MissingRequestBodyException;
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
-use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
@@ -19,7 +21,6 @@ use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\TypeGuarantor;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
-use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Override;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -32,6 +33,7 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
     private RequestBodyCoercer $coercer;
     private readonly FormatRegistry $formatRegistry;
     private readonly LoggerInterface $logger;
+    private readonly ErrorFormatterInterface $errorFormatter;
 
     public function __construct(
         private readonly ValidatorPool $pool,
@@ -39,7 +41,7 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
         private readonly BodyParser $bodyParser,
         StatelessValidatorRegistry $statelessValidators,
         private readonly RefResolverInterface $refResolver,
-        ?FormatRegistry $formatRegistry = null,
+        FormatRegistry $formatRegistry,
         private readonly ContentTypeNegotiator $negotiator = new ContentTypeNegotiator(),
         private readonly bool $nullableAsType = true,
         private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
@@ -47,12 +49,14 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
         private readonly bool $reportDeprecated = false,
         ?LoggerInterface $logger = null,
         private readonly ?EventDispatcherInterface $eventDispatcher = null,
+        ?ErrorFormatterInterface $errorFormatter = null,
     ) {
-        $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
+        $this->formatRegistry = $formatRegistry;
         $this->logger = $logger ?? new NullLogger();
+        $this->errorFormatter = $errorFormatter ?? SimpleFormatter::shared();
         $this->regularSchemaValidator = new SchemaValidator($this->pool, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
 
-        $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $statelessValidators, $this->nullableAsType, $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
+        $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $statelessValidators, $this->nullableAsType, $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher, errorFormatter: $this->errorFormatter);
         $this->coercer = new RequestBodyCoercer();
     }
 
@@ -113,7 +117,7 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
             $hasDiscriminator = null !== $schema->discriminator || $this->refResolver->schemaHasDiscriminator($schema, $this->document);
 
             if (false === $hasDiscriminator) {
-                $context = ValidationContext::create($this->pool, $this->nullableAsType, $this->emptyArrayStrategy, ValidatorMode::Request);
+                $context = ValidationContext::create($this->pool, $this->errorFormatter, $this->nullableAsType, $this->emptyArrayStrategy, ValidatorMode::Request);
                 $this->regularSchemaValidator->validate($parsedBody, $schema, $context);
 
                 return;

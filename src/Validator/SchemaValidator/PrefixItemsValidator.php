@@ -38,7 +38,7 @@ final readonly class PrefixItemsValidator extends AbstractSchemaValidator
             try {
                 $allowNull = $schema->prefixItems[$i]->nullable && $nullableAsType;
                 $value = SchemaValueNormalizer::normalize($data[$i], $allowNull);
-                $indexContext = $context?->withBreadcrumbIndex($i) ?? ValidationContext::create($this->pool, $nullableAsType);
+                $indexContext = $context?->withBreadcrumbIndex($i) ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
                 $validator->validate($value, $schema->prefixItems[$i], $indexContext);
             } catch (InvalidDataTypeException $e) {
                 throw new ValidationException(
@@ -61,7 +61,7 @@ final readonly class PrefixItemsValidator extends AbstractSchemaValidator
                 try {
                     $allowNull = $schema->items->nullable && $nullableAsType;
                     $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
-                    $remainingContext = $context ?? ValidationContext::create($this->pool, $nullableAsType);
+                    $remainingContext = $context ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
                     $validator->validate($normalizedItem, $schema->items, $remainingContext);
                 } catch (InvalidDataTypeException $e) {
                     throw new ValidationException(

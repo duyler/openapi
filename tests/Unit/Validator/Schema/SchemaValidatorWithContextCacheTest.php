@@ -23,7 +23,7 @@ final class SchemaValidatorWithContextCacheTest extends TestCase
         $pool = new ValidatorPool();
         $refResolver = new RefResolver();
         $document = new OpenApiDocument(openapi: '3.2.0', info: new InfoObject(title: 'Test', version: '1.0.0'));
-        $statelessValidators = new StatelessValidatorRegistry($pool, BuiltinFormats::instance());
+        $statelessValidators = new StatelessValidatorRegistry($pool, BuiltinFormats::create());
 
         $validator = new SchemaValidatorWithContext($pool, $refResolver, $document, $statelessValidators);
 
@@ -41,7 +41,7 @@ final class SchemaValidatorWithContextCacheTest extends TestCase
         $pool = new ValidatorPool();
         $refResolver = new RefResolver();
         $document = new OpenApiDocument(openapi: '3.2.0', info: new InfoObject(title: 'Test', version: '1.0.0'));
-        $statelessValidators = new StatelessValidatorRegistry($pool, BuiltinFormats::instance());
+        $statelessValidators = new StatelessValidatorRegistry($pool, BuiltinFormats::create());
 
         $validator = new SchemaValidatorWithContext($pool, $refResolver, $document, $statelessValidators);
 

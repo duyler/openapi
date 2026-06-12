@@ -16,6 +16,7 @@ use PHPUnit\Framework\TestCase;
 use stdClass;
 
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 
 class ItemsValidatorTest extends TestCase
 {
@@ -25,7 +26,7 @@ class ItemsValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new ItemsValidator($this->pool);
+        $this->validator = new ItemsValidator($this->pool, BuiltinFormats::create());
     }
 
     #[Test]

@@ -10,6 +10,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\SchemaValidator\DeprecatedValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -37,6 +38,7 @@ class DeprecatedValidatorTest extends TestCase
 
         $validator = new DeprecatedValidator(
             pool: $this->pool,
+            formatRegistry: BuiltinFormats::create(),
             reportDeprecated: true,
             eventDispatcher: $dispatcher,
         );
@@ -72,6 +74,7 @@ class DeprecatedValidatorTest extends TestCase
 
         $validator = new DeprecatedValidator(
             pool: $this->pool,
+            formatRegistry: BuiltinFormats::create(),
             reportDeprecated: false,
             eventDispatcher: $dispatcher,
         );
@@ -104,6 +107,7 @@ class DeprecatedValidatorTest extends TestCase
 
         $validator = new DeprecatedValidator(
             pool: $this->pool,
+            formatRegistry: BuiltinFormats::create(),
             reportDeprecated: true,
             eventDispatcher: $dispatcher,
         );
@@ -137,6 +141,7 @@ class DeprecatedValidatorTest extends TestCase
 
         $validator = new DeprecatedValidator(
             pool: $this->pool,
+            formatRegistry: BuiltinFormats::create(),
             reportDeprecated: true,
             eventDispatcher: $dispatcher,
         );
@@ -169,6 +174,7 @@ class DeprecatedValidatorTest extends TestCase
 
         $validator = new DeprecatedValidator(
             pool: $this->pool,
+            formatRegistry: BuiltinFormats::create(),
             reportDeprecated: true,
             eventDispatcher: $dispatcher,
         );
@@ -204,6 +210,7 @@ class DeprecatedValidatorTest extends TestCase
 
         $validator = new DeprecatedValidator(
             pool: $this->pool,
+            formatRegistry: BuiltinFormats::create(),
             reportDeprecated: true,
             eventDispatcher: $dispatcher,
         );
@@ -235,6 +242,7 @@ class DeprecatedValidatorTest extends TestCase
 
         $validator = new DeprecatedValidator(
             pool: $this->pool,
+            formatRegistry: BuiltinFormats::create(),
             reportDeprecated: true,
             eventDispatcher: $dispatcher,
         );
@@ -266,6 +274,7 @@ class DeprecatedValidatorTest extends TestCase
 
         $validator = new DeprecatedValidator(
             pool: $this->pool,
+            formatRegistry: BuiltinFormats::create(),
             reportDeprecated: true,
             eventDispatcher: $dispatcher,
         );
@@ -277,7 +286,7 @@ class DeprecatedValidatorTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool)->withBreadcrumb('root');
+        $context = ValidationContext::create(pool: $this->pool)->withBreadcrumb('root');
 
         $validator->validate(['oldField' => 'value'], $schema, $context);
 
@@ -290,6 +299,7 @@ class DeprecatedValidatorTest extends TestCase
     {
         $validator = new DeprecatedValidator(
             pool: $this->pool,
+            formatRegistry: BuiltinFormats::create(),
             reportDeprecated: true,
         );
 

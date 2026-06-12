@@ -67,7 +67,7 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
             foreach ($additionalKeys as $key) {
                 /** @var array-key|array<array-key, mixed> $value */
                 $value = $data[$key];
-                $keyContext = $context?->withBreadcrumb((string) $key) ?? ValidationContext::create($this->pool, $nullableAsType);
+                $keyContext = $context?->withBreadcrumb((string) $key) ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
                 $validator->validate($value, $schema->additionalProperties, $keyContext);
             }
         }

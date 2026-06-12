@@ -39,8 +39,8 @@ final class OneOfValidatorWithContextTest extends TestCase
             '3.1.0',
             new InfoObject('Test API', '1.0.0'),
         );
-        $this->context = ValidationContext::create($this->pool);
-        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
+        $this->context = ValidationContext::create(pool: $this->pool);
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
         $this->validator = new OneOfValidatorWithContext(
             $this->pool,
             $this->refResolver,

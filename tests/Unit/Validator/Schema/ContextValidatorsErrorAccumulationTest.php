@@ -36,7 +36,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             openapi: '3.2.0',
             info: new InfoObject(title: 'Test', version: '1.0.0'),
         );
-        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
     }
 
     #[Test]
@@ -57,7 +57,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             ),
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
 
         $data = ['ab', 'cd', 'valid_string'];
 
@@ -81,7 +81,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             items: new Schema(type: 'string'),
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
 
         $validator->validateWithContext(['hello', 'world'], $schema, $context);
 
@@ -99,7 +99,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
         );
 
         $schema = new Schema(type: 'array');
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
 
         $validator->validateWithContext(['a', 'b'], $schema, $context);
 
@@ -121,7 +121,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             items: new Schema(type: 'integer'),
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
 
         try {
             $validator->validateWithContext(['not_int'], $schema, $context);
@@ -149,7 +149,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
 
         $data = ['name' => 'ab', 'email' => 'not-an-email'];
 
@@ -175,7 +175,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
 
         $validator->validateWithContext(['name' => 'John'], $schema, $context);
 
@@ -200,7 +200,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
 
         $validator->validateWithContext(['name' => 'John'], $schema, $context);
 
@@ -218,7 +218,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
         );
 
         $schema = new Schema(type: 'object');
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
 
         $validator->validateWithContext(['key' => 'value'], $schema, $context);
 
@@ -243,7 +243,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
 
         try {
             $validator->validateWithContext(['a' => 'string', 'b' => 'also_string'], $schema, $context);

@@ -23,7 +23,7 @@ final class CookieValidatorValidateWithHeaderTest extends TestCase
 
     protected function setUp(): void
     {
-        $schemaValidator = new SchemaValidator(new ValidatorPool(), BuiltinFormats::instance());
+        $schemaValidator = new SchemaValidator(new ValidatorPool(), BuiltinFormats::create());
         $deserializer = new ParameterDeserializer();
         $coercer = new TypeCoercer();
 

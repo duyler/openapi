@@ -223,7 +223,7 @@ final readonly class OpenApiValidatorBuilder
         string $format,
         FormatValidatorInterface $validator,
     ): self {
-        $registry = $this->formatRegistry ?? BuiltinFormats::instance();
+        $registry = $this->formatRegistry ?? BuiltinFormats::create();
         $registry = $registry->registerFormat($type, $format, $validator);
 
         return new self(
@@ -418,8 +418,8 @@ final readonly class OpenApiValidatorBuilder
         $document = $this->loadSpec();
 
         $pool = $this->pool ?? new ValidatorPool();
-        $formatRegistry = $this->formatRegistry ?? BuiltinFormats::instance();
-        $errorFormatter = $this->errorFormatter ?? new SimpleFormatter();
+        $formatRegistry = $this->formatRegistry ?? BuiltinFormats::create();
+        $errorFormatter = $this->errorFormatter ?? SimpleFormatter::shared();
         $pathFinder = new PathFinder($document);
 
         return new OpenApiValidator(

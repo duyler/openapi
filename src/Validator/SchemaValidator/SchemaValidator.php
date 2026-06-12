@@ -6,7 +6,6 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
-use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Registry\DefaultValidatorRegistry;
 use Duyler\OpenApi\Validator\Registry\ValidatorRegistryInterface;
@@ -25,14 +24,14 @@ final class SchemaValidator implements SchemaValidatorInterface
 
     public function __construct(
         private readonly ValidatorPool $pool,
-        ?FormatRegistry $formatRegistry = null,
+        FormatRegistry $formatRegistry,
         private readonly ?ValidatorRegistryInterface $registry = null,
         private readonly bool $strictFormats = false,
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly bool $reportDeprecated = false,
         private readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {
-        $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
+        $this->formatRegistry = $formatRegistry;
     }
 
     #[Override]

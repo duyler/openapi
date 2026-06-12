@@ -29,7 +29,7 @@ final class SchemaDepthExceededTest extends TestCase
     {
         $this->refResolver = new RefResolver();
         $this->pool = new ValidatorPool();
-        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
 
         $recursiveSchema = new Schema(
             type: 'object',

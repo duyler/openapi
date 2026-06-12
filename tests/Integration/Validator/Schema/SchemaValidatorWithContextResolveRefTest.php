@@ -30,7 +30,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
     {
         $this->refResolver = new RefResolver();
         $this->pool = new ValidatorPool();
-        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::instance());
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
 
         $itemSchema = new Schema(
             type: 'object',
@@ -134,7 +134,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
     {
         $schema = new Schema(ref: '#/components/schemas/Item');
         $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
 
         $data = [
             'id' => 1,
@@ -150,7 +150,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
     {
         $schema = new Schema(ref: '#/components/schemas/Item');
         $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
 
         $data = [];
 
@@ -316,7 +316,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
             ],
         );
         $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
 
         $data = ['value' => 'test'];
 
@@ -336,7 +336,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
             ],
         );
         $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::create(pool: $this->pool);
 
         $data = [];
 

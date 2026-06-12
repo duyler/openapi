@@ -28,7 +28,7 @@ final readonly class ContainsValidator extends AbstractSchemaValidator
 
         $nullableAsType = $context?->nullableAsType ?? true;
         $validator = $this->createSchemaValidator();
-        $containsContext = $context ?? ValidationContext::create($this->pool, $nullableAsType);
+        $containsContext = $context ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
         $hasMatch = false;
 
         foreach ($data as $item) {

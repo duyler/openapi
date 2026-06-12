@@ -40,7 +40,7 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
             foreach ($stringUnevaluatedProperties as $propertyName) {
                 /** @var array-key|array<array-key, mixed> $value */
                 $value = $data[$propertyName];
-                $propertyContext = $context?->withBreadcrumb($propertyName) ?? ValidationContext::create($this->pool, $nullableAsType);
+                $propertyContext = $context?->withBreadcrumb($propertyName) ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
                 $validator->validate($value, $schema->unevaluatedProperties, $propertyContext);
             }
 

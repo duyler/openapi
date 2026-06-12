@@ -35,7 +35,7 @@ final readonly class ItemsValidator extends AbstractSchemaValidator
                 $nullableAsType = $context?->nullableAsType ?? true;
                 $allowNull = $schema->items->nullable && $nullableAsType;
                 $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
-                $itemContext = $context?->withBreadcrumbIndex($index) ?? ValidationContext::create($this->pool, $nullableAsType);
+                $itemContext = $context?->withBreadcrumbIndex($index) ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
                 $validator->validate($normalizedItem, $schema->items, $itemContext);
             } catch (InvalidDataTypeException $e) {
                 throw new ValidationException(

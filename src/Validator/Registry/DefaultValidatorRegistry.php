@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Registry;
 
 use Duyler\OpenApi\Validator\Exception\UnknownValidatorException;
-use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\AllOfValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\AnyOfValidator;
@@ -56,13 +55,13 @@ final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterf
 
     public function __construct(
         private readonly ValidatorPool $pool,
-        ?FormatRegistry $formatRegistry = null,
+        FormatRegistry $formatRegistry,
         private readonly bool $strictFormats = false,
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly bool $reportDeprecated = false,
         private readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {
-        $this->formatRegistry = $formatRegistry ?? BuiltinFormats::instance();
+        $this->formatRegistry = $formatRegistry;
         $validators = $this->createValidators();
         foreach ($validators as $validator) {
             assert($validator instanceof SchemaValidatorInterface);
