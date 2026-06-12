@@ -7,11 +7,14 @@ namespace Duyler\OpenApi\Validator\Error;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
+use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
 final readonly class ValidationContext
 {
+    public const int MAX_DEPTH = 64;
+
     public function __construct(
         public readonly BreadcrumbManager $breadcrumbs,
         public readonly ValidatorPool $pool,
@@ -67,6 +70,10 @@ final readonly class ValidationContext
 
     public function withIncrementedDepth(): self
     {
+        if ($this->depth >= self::MAX_DEPTH) {
+            throw new SchemaDepthExceededException(self::MAX_DEPTH);
+        }
+
         return new self(
             breadcrumbs: $this->breadcrumbs,
             pool: $this->pool,

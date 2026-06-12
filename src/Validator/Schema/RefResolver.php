@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Schema;
 
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Schema\Model\Parameter;
@@ -23,7 +24,6 @@ use function str_starts_with;
 final class RefResolver implements RefResolverInterface
 {
     private const int REF_ROOT_PREFIX_LENGTH = 2;
-    private const int MAX_SCHEMA_DEPTH = 64;
 
     private WeakMap $cache;
 
@@ -140,8 +140,8 @@ final class RefResolver implements RefResolverInterface
         array &$visited = [],
         int $depth = 0,
     ): bool {
-        if ($depth >= self::MAX_SCHEMA_DEPTH) {
-            throw new SchemaDepthExceededException(self::MAX_SCHEMA_DEPTH);
+        if ($depth >= ValidationContext::MAX_DEPTH) {
+            throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
         }
 
         $schemaId = spl_object_id($schema);
@@ -230,8 +230,8 @@ final class RefResolver implements RefResolverInterface
     #[Override]
     public function schemaHasRef(Schema $schema, array &$visited = [], int $depth = 0): bool
     {
-        if ($depth >= self::MAX_SCHEMA_DEPTH) {
-            throw new SchemaDepthExceededException(self::MAX_SCHEMA_DEPTH);
+        if ($depth >= ValidationContext::MAX_DEPTH) {
+            throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
         }
 
         $schemaId = spl_object_id($schema);
@@ -481,8 +481,8 @@ final class RefResolver implements RefResolverInterface
         array &$visited,
         int $depth = 0,
     ): Schema|Parameter|Response {
-        if ($depth >= self::MAX_SCHEMA_DEPTH) {
-            throw new SchemaDepthExceededException(self::MAX_SCHEMA_DEPTH);
+        if ($depth >= ValidationContext::MAX_DEPTH) {
+            throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
         }
 
         if (isset($visited[$ref])) {
@@ -541,8 +541,8 @@ final class RefResolver implements RefResolverInterface
         array $parts,
         int $depth = 0,
     ): Schema|Parameter|Response {
-        if ($depth >= self::MAX_SCHEMA_DEPTH) {
-            throw new SchemaDepthExceededException(self::MAX_SCHEMA_DEPTH);
+        if ($depth >= ValidationContext::MAX_DEPTH) {
+            throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
         }
 
         $part = array_shift($parts);
