@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Schema;
 
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\InfoObject;
@@ -1162,6 +1163,15 @@ final class RefResolverTest extends TestCase
         $this->expectException(SchemaDepthExceededException::class);
 
         $this->resolver->schemaHasDiscriminator($schema, $document);
+    }
+
+    #[Test]
+    public function clear_is_available_through_interface(): void
+    {
+        $this->assertInstanceOf(RefResolverInterface::class, $this->resolver);
+
+        // clear() should be callable through the interface
+        $this->resolver->clear();
     }
 
     private function createNestedSchemaChain(int $depth, string $leafValue): Schema

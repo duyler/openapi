@@ -108,14 +108,20 @@ final readonly class OneOfValidatorWithContext
                 $errors[] = new ValidationException(
                     message: 'Invalid data for oneOf schema: ' . $e->getMessage(),
                     previous: $e,
+                    errors: $e->getErrors(),
                 );
             }
         }
 
         if (0 === $validCount) {
+            $allErrors = $abstractErrors;
+            foreach ($errors as $error) {
+                $allErrors = [...$allErrors, ...$error->getErrors()];
+            }
+
             throw new ValidationException(
                 'Exactly one of schemas must match, but none did',
-                errors: $abstractErrors,
+                errors: $allErrors,
             );
         }
 

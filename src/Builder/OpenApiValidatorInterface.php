@@ -100,4 +100,12 @@ interface OpenApiValidatorInterface
      * @throws InvalidArgumentException If the link name is not found in specification
      */
     public function resolveLinkWithContext(string $linkName, LinkContext $context): array;
+
+    /**
+     * Reset internal state for hot-reload scenarios.
+     *
+     * Clears validator pool cache and ref resolver cache.
+     * Safe to call between requests in long-running processes.
+     */
+    public function reset(): void;
 }

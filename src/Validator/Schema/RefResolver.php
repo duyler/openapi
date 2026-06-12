@@ -32,6 +32,7 @@ final class RefResolver implements RefResolverInterface
         $this->cache = new WeakMap();
     }
 
+    #[Override]
     public function clear(): void
     {
         $this->cache = new WeakMap();

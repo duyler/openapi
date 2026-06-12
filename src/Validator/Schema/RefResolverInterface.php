@@ -153,4 +153,11 @@ interface RefResolverInterface
         Response $response,
         OpenApiDocument $document,
     ): Response;
+
+    /**
+     * Clear internal cache.
+     *
+     * Recreates the WeakMap cache to free memory.
+     */
+    public function clear(): void;
 }

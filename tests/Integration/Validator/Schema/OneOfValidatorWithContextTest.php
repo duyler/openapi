@@ -1263,6 +1263,27 @@ final class OneOfValidatorWithContextTest extends TestCase
     }
 
     #[Test]
+    public function validate_without_discriminator_includes_all_errors_when_none_match(): void
+    {
+        $stringSchema = new Schema(type: 'string', minLength: 10);
+        $intSchema = new Schema(type: 'integer', minimum: 100);
+
+        $schema = new Schema(
+            oneOf: [$stringSchema, $intSchema],
+        );
+
+        // 'short' fails string (minLength 10) AND fails integer (wrong type)
+        try {
+            $this->validator->validateWithContext('short', $schema, $this->context);
+            $this->fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            // The exception message should indicate none matched
+            $this->assertStringContainsString('none did', $e->getMessage());
+            $this->assertNotEmpty($e->getErrors());
+        }
+    }
+
+    #[Test]
     public function runtime_exception_in_one_of_is_not_swallowed(): void
     {
         $schema = new Schema(

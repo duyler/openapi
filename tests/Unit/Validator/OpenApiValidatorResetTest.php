@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
@@ -261,6 +262,19 @@ YAML;
         $validator->validateSchema(5, '#/components/schemas/PositiveInt');
 
         $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function reset_is_available_through_interface(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::YAML)
+            ->build();
+
+        $this->assertInstanceOf(OpenApiValidatorInterface::class, $validator);
+
+        // reset() should be callable through the interface
+        $validator->reset();
     }
 
     private static function readSchemaValidator(OpenApiValidator $validator): SchemaValidator

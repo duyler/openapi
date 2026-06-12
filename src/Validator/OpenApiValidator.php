@@ -149,6 +149,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         return $this->errorFormatter->formatMultiple($e->getErrors());
     }
 
+    #[Override]
     public function reset(): void
     {
         $this->pool->clear();
