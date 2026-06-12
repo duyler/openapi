@@ -48,7 +48,8 @@ final readonly class StreamingContentParser
      */
     public function parseJsonLines(string $body): array
     {
-        $lines = explode("\n", trim($body));
+        $lines = preg_split('/\r?\n/', trim($body));
+        assert(is_array($lines));
         /** @var list<array<int|string, mixed>|null> $items */
         $items = [];
 

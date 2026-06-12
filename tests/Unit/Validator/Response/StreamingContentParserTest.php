@@ -370,4 +370,91 @@ final class StreamingContentParserTest extends TestCase
 
         $parser->parseServerSentEvents("event: test\ndata: {\"key\":\"value\"}\n\n");
     }
+
+    #[Test]
+    public function parse_json_lines_with_crlf_line_endings(): void
+    {
+        $body = "{\"a\":1}\r\n{\"b\":2}";
+
+        $result = $this->parser->parseJsonLines($body);
+
+        self::assertCount(2, $result);
+        self::assertSame(['a' => 1], $result[0]);
+        self::assertSame(['b' => 2], $result[1]);
+    }
+
+    #[Test]
+    public function parse_json_lines_with_mixed_line_endings(): void
+    {
+        $body = "{\"a\":1}\r\n{\"b\":2}\n{\"c\":3}";
+
+        $result = $this->parser->parseJsonLines($body);
+
+        self::assertCount(3, $result);
+        self::assertSame(['a' => 1], $result[0]);
+        self::assertSame(['b' => 2], $result[1]);
+        self::assertSame(['c' => 3], $result[2]);
+    }
+
+    #[Test]
+    public function parse_json_lines_crlf_via_parse_method(): void
+    {
+        $body = "{\"a\":1}\r\n{\"b\":2}";
+
+        $result = $this->parser->parse($body, 'application/jsonl');
+
+        self::assertCount(2, $result);
+        self::assertSame(['a' => 1], $result[0]);
+        self::assertSame(['b' => 2], $result[1]);
+    }
+
+    #[Test]
+    public function parse_json_lines_crlf_with_invalid_line(): void
+    {
+        $body = "{\"valid\":true}\r\ninvalid json\r\n{\"also\":\"valid\"}";
+
+        $result = $this->parser->parse($body, 'application/x-ndjson');
+
+        self::assertCount(3, $result);
+        self::assertSame(['valid' => true], $result[0]);
+        self::assertNull($result[1]);
+        self::assertSame(['also' => 'valid'], $result[2]);
+    }
+
+    #[Test]
+    public function parse_json_seq_without_leading_record_separator(): void
+    {
+        $body = "{\"a\":1}\x1E{\"b\":2}";
+
+        $result = $this->parser->parseJsonSeq($body);
+
+        self::assertCount(2, $result);
+        self::assertSame(['a' => 1], $result[0]);
+        self::assertSame(['b' => 2], $result[1]);
+    }
+
+    #[Test]
+    public function parse_json_seq_without_leading_rs_via_parse_method(): void
+    {
+        $body = "{\"a\":1}\x1E{\"b\":2}";
+
+        $result = $this->parser->parse($body, 'application/json-seq');
+
+        self::assertCount(2, $result);
+        self::assertSame(['a' => 1], $result[0]);
+        self::assertSame(['b' => 2], $result[1]);
+    }
+
+    #[Test]
+    public function parse_json_seq_without_leading_rs_with_invalid(): void
+    {
+        $body = "{\"valid\":true}\x1Einvalid\x1E{\"also\":\"valid\"}";
+
+        $result = $this->parser->parseJsonSeq($body);
+
+        self::assertCount(3, $result);
+        self::assertSame(['valid' => true], $result[0]);
+        self::assertNull($result[1]);
+        self::assertSame(['also' => 'valid'], $result[2]);
+    }
 }
