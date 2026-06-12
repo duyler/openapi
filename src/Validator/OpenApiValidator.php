@@ -337,18 +337,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
     {
         $method = strtolower($method);
 
-        $standardOperation = match ($method) {
-            'get' => $pathItem->get,
-            'post' => $pathItem->post,
-            'put' => $pathItem->put,
-            'patch' => $pathItem->patch,
-            'delete' => $pathItem->delete,
-            'options' => $pathItem->options,
-            'head' => $pathItem->head,
-            'trace' => $pathItem->trace,
-            'query' => $pathItem->query,
-            default => null,
-        };
+        $standardOperation = $pathItem->getOperation($method);
 
         if (null !== $standardOperation) {
             return $standardOperation;

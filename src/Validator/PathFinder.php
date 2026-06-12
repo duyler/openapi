@@ -81,18 +81,7 @@ final readonly class PathFinder
     {
         $normalizedMethod = strtolower($method);
 
-        $op = match ($normalizedMethod) {
-            'get' => $pathItem->get,
-            'post' => $pathItem->post,
-            'put' => $pathItem->put,
-            'patch' => $pathItem->patch,
-            'delete' => $pathItem->delete,
-            'options' => $pathItem->options,
-            'head' => $pathItem->head,
-            'trace' => $pathItem->trace,
-            'query' => $pathItem->query,
-            default => null,
-        };
+        $op = $pathItem->getOperation($normalizedMethod);
 
         if (null !== $op) {
             return new Operation($pathPattern, $method);

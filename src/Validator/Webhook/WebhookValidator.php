@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Webhook;
 
 use Duyler\OpenApi\Schema\Model\Operation;
+use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Request\RequestValidatorInterface;
 use Duyler\OpenApi\Validator\Webhook\Exception\UnknownWebhookException;
@@ -30,7 +31,7 @@ final readonly class WebhookValidator
         $this->requestValidator->validate($request, $operation, $requestPath);
     }
 
-    private function findWebhook(string $webhookName, OpenApiDocument $document): object
+    private function findWebhook(string $webhookName, OpenApiDocument $document): PathItem
     {
         $webhooks = $document->webhooks?->webhooks ?? [];
 
@@ -44,31 +45,15 @@ final readonly class WebhookValidator
     private function extractOperation(
         ServerRequestInterface $request,
         string $webhookName,
-        object $webhook,
+        PathItem $webhook,
     ): Operation {
         $method = strtolower($request->getMethod());
 
-        $operation = match ($method) {
-            'get' => $webhook->get ?? null,
-            'post' => $webhook->post ?? null,
-            'put' => $webhook->put ?? null,
-            'patch' => $webhook->patch ?? null,
-            'delete' => $webhook->delete ?? null,
-            'options' => $webhook->options ?? null,
-            'head' => $webhook->head ?? null,
-            'trace' => $webhook->trace ?? null,
-            default => null,
-        };
+        $operation = $webhook->getOperation($method);
 
         if (null === $operation) {
             throw new UnknownWebhookException(
                 sprintf('%s (method: %s)', $webhookName, $method),
-            );
-        }
-
-        if (false === $operation instanceof Operation) {
-            throw new UnknownWebhookException(
-                sprintf('%s (invalid operation)', $webhookName),
             );
         }
 

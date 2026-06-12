@@ -66,17 +66,7 @@ final readonly class CallbackValidator
                 continue;
             }
 
-            $operation = match ($method) {
-                'get' => $pathItem->get,
-                'post' => $pathItem->post,
-                'put' => $pathItem->put,
-                'patch' => $pathItem->patch,
-                'delete' => $pathItem->delete,
-                'options' => $pathItem->options,
-                'head' => $pathItem->head,
-                'trace' => $pathItem->trace,
-                default => null,
-            };
+            $operation = $pathItem->getOperation($method);
 
             if (null !== $operation) {
                 return $operation;

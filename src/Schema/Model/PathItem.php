@@ -7,6 +7,8 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
+use function strtolower;
+
 final readonly class PathItem implements JsonSerializable
 {
     /**
@@ -29,6 +31,22 @@ final readonly class PathItem implements JsonSerializable
         public ?Servers $servers = null,
         public ?Parameters $parameters = null,
     ) {}
+
+    public function getOperation(string $method): ?Operation
+    {
+        return match (strtolower($method)) {
+            'get' => $this->get,
+            'put' => $this->put,
+            'post' => $this->post,
+            'delete' => $this->delete,
+            'options' => $this->options,
+            'head' => $this->head,
+            'patch' => $this->patch,
+            'trace' => $this->trace,
+            'query' => $this->query,
+            default => null,
+        };
+    }
 
     #[Override]
     public function jsonSerialize(): array

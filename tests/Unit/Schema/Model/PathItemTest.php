@@ -418,4 +418,71 @@ final class PathItemTest extends TestCase
         self::assertArrayHasKey('COPY', $pathItem->additionalOperations);
         self::assertArrayHasKey('PURGE', $pathItem->additionalOperations);
     }
+
+    #[Test]
+    public function get_operation_returns_operation_for_known_method(): void
+    {
+        $operation = new Operation(
+            responses: new Responses(
+                responses: ['200' => new Response(
+                    description: 'Success',
+                    headers: null,
+                    content: null,
+                )],
+            ),
+        );
+
+        $pathItem = new PathItem(
+            get: $operation,
+            post: $operation,
+            put: $operation,
+            delete: $operation,
+            options: $operation,
+            head: $operation,
+            patch: $operation,
+            trace: $operation,
+            query: $operation,
+        );
+
+        self::assertSame($operation, $pathItem->getOperation('get'));
+        self::assertSame($operation, $pathItem->getOperation('GET'));
+        self::assertSame($operation, $pathItem->getOperation('post'));
+        self::assertSame($operation, $pathItem->getOperation('POST'));
+        self::assertSame($operation, $pathItem->getOperation('put'));
+        self::assertSame($operation, $pathItem->getOperation('delete'));
+        self::assertSame($operation, $pathItem->getOperation('options'));
+        self::assertSame($operation, $pathItem->getOperation('head'));
+        self::assertSame($operation, $pathItem->getOperation('patch'));
+        self::assertSame($operation, $pathItem->getOperation('trace'));
+        self::assertSame($operation, $pathItem->getOperation('query'));
+    }
+
+    #[Test]
+    public function get_operation_returns_null_for_unknown_method(): void
+    {
+        $pathItem = new PathItem();
+
+        self::assertNull($pathItem->getOperation('unknown'));
+        self::assertNull($pathItem->getOperation('propfind'));
+    }
+
+    #[Test]
+    public function get_operation_returns_null_for_unset_method(): void
+    {
+        $operation = new Operation(
+            responses: new Responses(
+                responses: ['200' => new Response(
+                    description: 'Success',
+                    headers: null,
+                    content: null,
+                )],
+            ),
+        );
+
+        $pathItem = new PathItem(get: $operation);
+
+        self::assertSame($operation, $pathItem->getOperation('get'));
+        self::assertNull($pathItem->getOperation('post'));
+        self::assertNull($pathItem->getOperation('put'));
+    }
 }

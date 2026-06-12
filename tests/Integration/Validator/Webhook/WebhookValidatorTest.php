@@ -48,6 +48,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UriInterface;
 use stdClass;
+use TypeError;
 
 /** @internal */
 final class WebhookValidatorTest extends TestCase
@@ -522,8 +523,7 @@ final class WebhookValidatorTest extends TestCase
 
         $request = $this->createPsr7RequestForWebhook(method: 'POST', webhookName: 'test.webhook');
 
-        $this->expectException(UnknownWebhookException::class);
-        $this->expectExceptionMessage('test.webhook (invalid operation)');
+        $this->expectException(TypeError::class);
 
         $this->webhookValidator->validate($request, 'test.webhook', $document);
     }
