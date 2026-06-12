@@ -16,8 +16,16 @@ use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
+use Duyler\OpenApi\Validator\Link\LinkResolver;
 use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Validator\PathFinder;
+use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Validation\CallbackValidator;
+use Duyler\OpenApi\Validator\Validation\RequestValidationHandler;
+use Duyler\OpenApi\Validator\Validation\ResponseValidationHandler;
+use Duyler\OpenApi\Validator\Validation\SchemaValidatorAdapter;
+use Duyler\OpenApi\Validator\Validation\ValidationContext;
+use Duyler\OpenApi\Validator\Validation\WebhookValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Exception;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -177,6 +185,23 @@ final readonly class OpenApiValidatorBuilder
         $formatRegistry = $this->formatRegistry ?? BuiltinFormats::create();
         $errorFormatter = $this->errorFormatter ?? SimpleFormatter::shared();
         $pathFinder = new PathFinder($document);
+        $logger = $this->logger ?? new NullLogger();
+        $refResolver = new RefResolver();
+
+        $context = new ValidationContext(
+            document: $document,
+            pool: $pool,
+            formatRegistry: $formatRegistry,
+            errorFormatter: $errorFormatter,
+            refResolver: $refResolver,
+            coercion: $this->coercion,
+            nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
+            reportDeprecated: $this->reportDeprecated,
+            logger: $logger,
+            eventDispatcher: $this->eventDispatcher,
+            strictFormats: $this->strictFormats,
+        );
 
         return new OpenApiValidator(
             document: $document,
@@ -184,7 +209,7 @@ final readonly class OpenApiValidatorBuilder
             formatRegistry: $formatRegistry,
             errorFormatter: $errorFormatter,
             cache: $this->cache,
-            logger: $this->logger,
+            logger: $logger,
             coercion: $this->coercion,
             nullableAsType: $this->nullableAsType,
             emptyArrayStrategy: $this->emptyArrayStrategy,
@@ -193,6 +218,14 @@ final readonly class OpenApiValidatorBuilder
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
             reportDeprecated: $this->reportDeprecated,
+            refResolver: $refResolver,
+            validationContext: $context,
+            requestValidationHandler: new RequestValidationHandler($context, $pathFinder, $this->securityValidation),
+            responseValidationHandler: new ResponseValidationHandler($context),
+            schemaValidatorAdapter: new SchemaValidatorAdapter($context),
+            webhookValidator: new WebhookValidator($context),
+            callbackValidator: new CallbackValidator($context),
+            linkResolver: new LinkResolver(),
         );
     }
 

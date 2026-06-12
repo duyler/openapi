@@ -55,11 +55,19 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         public readonly bool $securityValidation = false,
         public readonly bool $strictFormats = false,
         public readonly bool $reportDeprecated = false,
+        ?RefResolver $refResolver = null,
+        ?ValidationContext $validationContext = null,
+        ?RequestValidationHandler $requestValidationHandler = null,
+        ?ResponseValidationHandler $responseValidationHandler = null,
+        ?SchemaValidatorAdapter $schemaValidatorAdapter = null,
+        ?WebhookValidator $webhookValidator = null,
+        ?CallbackValidator $callbackValidator = null,
+        ?LinkResolver $linkResolver = null,
     ) {
         $this->logger = $logger ?? new NullLogger();
-        $this->refResolver = new RefResolver();
+        $this->refResolver = $refResolver ?? new RefResolver();
 
-        $context = new ValidationContext(
+        $context = $validationContext ?? new ValidationContext(
             document: $this->document,
             pool: $this->pool,
             formatRegistry: $this->formatRegistry,
@@ -74,12 +82,12 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
             strictFormats: $this->strictFormats,
         );
 
-        $this->requestValidation = new RequestValidationHandler($context, $this->pathFinder, $this->securityValidation);
-        $this->responseValidation = new ResponseValidationHandler($context);
-        $this->schemaValidation = new SchemaValidatorAdapter($context);
-        $this->webhookValidation = new WebhookValidator($context);
-        $this->callbackValidation = new CallbackValidator($context);
-        $this->linkResolver = new LinkResolver();
+        $this->requestValidation = $requestValidationHandler ?? new RequestValidationHandler($context, $this->pathFinder, $this->securityValidation);
+        $this->responseValidation = $responseValidationHandler ?? new ResponseValidationHandler($context);
+        $this->schemaValidation = $schemaValidatorAdapter ?? new SchemaValidatorAdapter($context);
+        $this->webhookValidation = $webhookValidator ?? new WebhookValidator($context);
+        $this->callbackValidation = $callbackValidator ?? new CallbackValidator($context);
+        $this->linkResolver = $linkResolver ?? new LinkResolver();
     }
 
     #[Override]
