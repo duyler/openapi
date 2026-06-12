@@ -13,9 +13,7 @@ use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\Model\Operation as OperationModel;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
-use Duyler\OpenApi\Validator\Error\BreadcrumbManager;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
-use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Callback\CallbackValidator;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
@@ -447,17 +445,6 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
             logger: $this->logger,
             eventDispatcher: $this->eventDispatcher,
             errorFormatter: $this->errorFormatter,
-        );
-    }
-
-    private function createValidationContext(): ValidationContext
-    {
-        return new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
-            pool: $this->pool,
-            errorFormatter: $this->errorFormatter,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
         );
     }
 
