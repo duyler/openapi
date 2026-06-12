@@ -56,166 +56,42 @@ final readonly class OpenApiValidatorBuilder
 
     public function fromYamlFile(string $path): self
     {
-        return new self(
-            specPath: $path,
-            specType: 'yaml',
-            pool: $this->pool,
-            cache: $this->cache,
-            logger: $this->logger,
-            formatRegistry: $this->formatRegistry,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            errorFormatter: $this->errorFormatter,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: $this->reportDeprecated,
-        );
+        return $this->with(specPath: $path, specType: 'yaml');
     }
 
     public function fromJsonFile(string $path): self
     {
-        return new self(
-            specPath: $path,
-            specType: 'json',
-            pool: $this->pool,
-            cache: $this->cache,
-            logger: $this->logger,
-            formatRegistry: $this->formatRegistry,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            errorFormatter: $this->errorFormatter,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: $this->reportDeprecated,
-        );
+        return $this->with(specPath: $path, specType: 'json');
     }
 
     public function fromYamlString(string $content): self
     {
-        return new self(
-            specContent: $content,
-            specType: 'yaml',
-            pool: $this->pool,
-            cache: $this->cache,
-            logger: $this->logger,
-            formatRegistry: $this->formatRegistry,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            errorFormatter: $this->errorFormatter,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: $this->reportDeprecated,
-        );
+        return $this->with(specContent: $content, specType: 'yaml');
     }
 
     public function fromJsonString(string $content): self
     {
-        return new self(
-            specContent: $content,
-            specType: 'json',
-            pool: $this->pool,
-            cache: $this->cache,
-            logger: $this->logger,
-            formatRegistry: $this->formatRegistry,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            errorFormatter: $this->errorFormatter,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: $this->reportDeprecated,
-        );
+        return $this->with(specContent: $content, specType: 'json');
     }
 
     public function withValidatorPool(ValidatorPool $pool): self
     {
-        return new self(
-            specPath: $this->specPath,
-            specContent: $this->specContent,
-            specType: $this->specType,
-            pool: $pool,
-            cache: $this->cache,
-            logger: $this->logger,
-            formatRegistry: $this->formatRegistry,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            errorFormatter: $this->errorFormatter,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: $this->reportDeprecated,
-        );
+        return $this->with(pool: $pool);
     }
 
     public function withCache(SchemaCache $cache): self
     {
-        return new self(
-            specPath: $this->specPath,
-            specContent: $this->specContent,
-            specType: $this->specType,
-            pool: $this->pool,
-            cache: $cache,
-            logger: $this->logger,
-            formatRegistry: $this->formatRegistry,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            errorFormatter: $this->errorFormatter,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: $this->reportDeprecated,
-        );
+        return $this->with(cache: $cache);
     }
 
     public function withLogger(LoggerInterface $logger): self
     {
-        return new self(
-            specPath: $this->specPath,
-            specContent: $this->specContent,
-            specType: $this->specType,
-            pool: $this->pool,
-            cache: $this->cache,
-            logger: $logger,
-            formatRegistry: $this->formatRegistry,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            errorFormatter: $this->errorFormatter,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: $this->reportDeprecated,
-        );
+        return $this->with(logger: $logger);
     }
 
     public function withErrorFormatter(ErrorFormatterInterface $formatter): self
     {
-        return new self(
-            specPath: $this->specPath,
-            specContent: $this->specContent,
-            specType: $this->specType,
-            pool: $this->pool,
-            cache: $this->cache,
-            logger: $this->logger,
-            formatRegistry: $this->formatRegistry,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            errorFormatter: $formatter,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: $this->reportDeprecated,
-        );
+        return $this->with(errorFormatter: $formatter);
     }
 
     public function withFormat(
@@ -223,194 +99,50 @@ final readonly class OpenApiValidatorBuilder
         string $format,
         FormatValidatorInterface $validator,
     ): self {
-        $registry = $this->formatRegistry ?? BuiltinFormats::create();
-        $registry = $registry->registerFormat($type, $format, $validator);
+        $registry = ($this->formatRegistry ?? BuiltinFormats::create())
+            ->registerFormat($type, $format, $validator);
 
-        return new self(
-            specPath: $this->specPath,
-            specContent: $this->specContent,
-            specType: $this->specType,
-            pool: $this->pool,
-            cache: $this->cache,
-            logger: $this->logger,
-            formatRegistry: $registry,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            errorFormatter: $this->errorFormatter,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: $this->reportDeprecated,
-        );
+        return $this->with(formatRegistry: $registry);
     }
 
     public function enableCoercion(): self
     {
-        return new self(
-            specPath: $this->specPath,
-            specContent: $this->specContent,
-            specType: $this->specType,
-            pool: $this->pool,
-            cache: $this->cache,
-            logger: $this->logger,
-            formatRegistry: $this->formatRegistry,
-            coercion: true,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            errorFormatter: $this->errorFormatter,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: $this->reportDeprecated,
-        );
+        return $this->with(coercion: true);
     }
 
     public function enableNullableAsType(): self
     {
-        return new self(
-            specPath: $this->specPath,
-            specContent: $this->specContent,
-            specType: $this->specType,
-            pool: $this->pool,
-            cache: $this->cache,
-            logger: $this->logger,
-            formatRegistry: $this->formatRegistry,
-            coercion: $this->coercion,
-            nullableAsType: true,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            errorFormatter: $this->errorFormatter,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: $this->reportDeprecated,
-        );
+        return $this->with(nullableAsType: true);
     }
 
     public function disableNullableAsType(): self
     {
-        return new self(
-            specPath: $this->specPath,
-            specContent: $this->specContent,
-            specType: $this->specType,
-            pool: $this->pool,
-            cache: $this->cache,
-            logger: $this->logger,
-            formatRegistry: $this->formatRegistry,
-            coercion: $this->coercion,
-            nullableAsType: false,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            errorFormatter: $this->errorFormatter,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: $this->reportDeprecated,
-        );
+        return $this->with(nullableAsType: false);
     }
 
     public function withEmptyArrayStrategy(EmptyArrayStrategy $strategy): self
     {
-        return new self(
-            specPath: $this->specPath,
-            specContent: $this->specContent,
-            specType: $this->specType,
-            pool: $this->pool,
-            cache: $this->cache,
-            logger: $this->logger,
-            formatRegistry: $this->formatRegistry,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $strategy,
-            errorFormatter: $this->errorFormatter,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: $this->reportDeprecated,
-        );
+        return $this->with(emptyArrayStrategy: $strategy);
     }
 
     public function withEventDispatcher(EventDispatcherInterface $dispatcher): self
     {
-        return new self(
-            specPath: $this->specPath,
-            specContent: $this->specContent,
-            specType: $this->specType,
-            pool: $this->pool,
-            cache: $this->cache,
-            logger: $this->logger,
-            formatRegistry: $this->formatRegistry,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            errorFormatter: $this->errorFormatter,
-            eventDispatcher: $dispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: $this->reportDeprecated,
-        );
+        return $this->with(eventDispatcher: $dispatcher);
     }
 
     public function enableSecurityValidation(): self
     {
-        return new self(
-            specPath: $this->specPath,
-            specContent: $this->specContent,
-            specType: $this->specType,
-            pool: $this->pool,
-            cache: $this->cache,
-            logger: $this->logger,
-            formatRegistry: $this->formatRegistry,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            errorFormatter: $this->errorFormatter,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: true,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: $this->reportDeprecated,
-        );
+        return $this->with(securityValidation: true);
     }
 
     public function enableStrictFormats(): self
     {
-        return new self(
-            specPath: $this->specPath,
-            specContent: $this->specContent,
-            specType: $this->specType,
-            pool: $this->pool,
-            cache: $this->cache,
-            logger: $this->logger,
-            formatRegistry: $this->formatRegistry,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            errorFormatter: $this->errorFormatter,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: true,
-            reportDeprecated: $this->reportDeprecated,
-        );
+        return $this->with(strictFormats: true);
     }
 
     public function enableReportDeprecated(): self
     {
-        return new self(
-            specPath: $this->specPath,
-            specContent: $this->specContent,
-            specType: $this->specType,
-            pool: $this->pool,
-            cache: $this->cache,
-            logger: $this->logger,
-            formatRegistry: $this->formatRegistry,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            errorFormatter: $this->errorFormatter,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: true,
-        );
+        return $this->with(reportDeprecated: true);
     }
 
     public function build(): OpenApiValidatorInterface
@@ -437,6 +169,42 @@ final readonly class OpenApiValidatorBuilder
             securityValidation: $this->securityValidation,
             strictFormats: $this->strictFormats,
             reportDeprecated: $this->reportDeprecated,
+        );
+    }
+
+    private function with(
+        ?string $specPath = null,
+        ?string $specContent = null,
+        ?string $specType = null,
+        ?ValidatorPool $pool = null,
+        ?SchemaCache $cache = null,
+        ?LoggerInterface $logger = null,
+        ?FormatRegistry $formatRegistry = null,
+        ?bool $coercion = null,
+        ?bool $nullableAsType = null,
+        ?EmptyArrayStrategy $emptyArrayStrategy = null,
+        ?ErrorFormatterInterface $errorFormatter = null,
+        ?EventDispatcherInterface $eventDispatcher = null,
+        ?bool $securityValidation = null,
+        ?bool $strictFormats = null,
+        ?bool $reportDeprecated = null,
+    ): self {
+        return new self(
+            specPath: $specPath ?? $this->specPath,
+            specContent: $specContent ?? $this->specContent,
+            specType: $specType ?? $this->specType,
+            pool: $pool ?? $this->pool,
+            cache: $cache ?? $this->cache,
+            logger: $logger ?? $this->logger,
+            formatRegistry: $formatRegistry ?? $this->formatRegistry,
+            coercion: $coercion ?? $this->coercion,
+            nullableAsType: $nullableAsType ?? $this->nullableAsType,
+            emptyArrayStrategy: $emptyArrayStrategy ?? $this->emptyArrayStrategy,
+            errorFormatter: $errorFormatter ?? $this->errorFormatter,
+            eventDispatcher: $eventDispatcher ?? $this->eventDispatcher,
+            securityValidation: $securityValidation ?? $this->securityValidation,
+            strictFormats: $strictFormats ?? $this->strictFormats,
+            reportDeprecated: $reportDeprecated ?? $this->reportDeprecated,
         );
     }
 
