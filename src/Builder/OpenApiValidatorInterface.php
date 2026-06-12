@@ -8,6 +8,7 @@ use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Validator\Link\LinkContext;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use InvalidArgumentException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -35,6 +36,7 @@ interface OpenApiValidatorInterface
      * @param ResponseInterface $response HTTP response to validate
      * @param Operation $operation Operation to validate against
      * @throws ValidationException If validation fails
+     * @throws BuilderException If operation not found in specification
      */
     public function validateResponse(ResponseInterface $response, Operation $operation): void;
 
@@ -62,6 +64,7 @@ interface OpenApiValidatorInterface
      * @param string $webhookName Webhook name from OpenAPI specification
      * @return Operation Matched operation from OpenAPI specification
      * @throws ValidationException If validation fails
+     * @throws InvalidArgumentException If webhook name not found in specification
      */
     public function validateWebhook(ServerRequestInterface $request, string $webhookName): Operation;
 
@@ -72,6 +75,7 @@ interface OpenApiValidatorInterface
      * @param string $callbackName Callback name from OpenAPI specification
      * @return Operation Matched operation from OpenAPI specification
      * @throws ValidationException If validation fails
+     * @throws InvalidArgumentException If callback name not found in specification
      */
     public function validateCallback(ServerRequestInterface $request, string $callbackName): Operation;
 
@@ -81,6 +85,7 @@ interface OpenApiValidatorInterface
      * @param string $linkName Link name from OpenAPI specification
      * @param array<string, mixed> $responseData Response data to extract values from
      * @return array{parameters: array<string, mixed>, requestBody: mixed, server: mixed|null}
+     * @throws InvalidArgumentException If the link name is not found in specification
      */
     public function resolveLink(string $linkName, array $responseData): array;
 
@@ -92,6 +97,7 @@ interface OpenApiValidatorInterface
      *
      * @param string $linkName Link name from OpenAPI specification
      * @return array{parameters: array<string, mixed>, requestBody: mixed, server: mixed|null}
+     * @throws InvalidArgumentException If the link name is not found in specification
      */
     public function resolveLinkWithContext(string $linkName, LinkContext $context): array;
 }

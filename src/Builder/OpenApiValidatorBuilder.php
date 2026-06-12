@@ -130,16 +130,40 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(eventDispatcher: $dispatcher);
     }
 
+    /**
+     * Enable security scheme validation for requests
+     *
+     * When enabled, the validator checks that required security credentials
+     * are present in the request headers, query parameters, or cookies.
+     *
+     * @return self New builder instance with security validation enabled
+     */
     public function enableSecurityValidation(): self
     {
         return $this->with(securityValidation: true);
     }
 
+    /**
+     * Enable strict format validation
+     *
+     * When enabled, unknown format values are rejected during validation
+     * instead of being silently skipped.
+     *
+     * @return self New builder instance with strict formats enabled
+     */
     public function enableStrictFormats(): self
     {
         return $this->with(strictFormats: true);
     }
 
+    /**
+     * Enable reporting of deprecated schema elements
+     *
+     * When enabled, deprecated fields in the OpenAPI specification are logged
+     * through the configured PSR-3 logger.
+     *
+     * @return self New builder instance with deprecation reporting enabled
+     */
     public function enableReportDeprecated(): self
     {
         return $this->with(reportDeprecated: true);
