@@ -125,7 +125,7 @@ final readonly class ValidatorCompiler
             $checks[] = $this->buildTypeCheckExpression($t, '$data');
         }
 
-        if (0 === count($checks)) {
+        if ([] === $checks) {
             return '';
         }
 
@@ -370,7 +370,7 @@ final readonly class ValidatorCompiler
             $checks[] = $this->buildTypeCheckExpression($t, $valueVar);
         }
 
-        if (0 === count($checks)) {
+        if ([] === $checks) {
             return '';
         }
 
