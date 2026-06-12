@@ -53,6 +53,7 @@ final readonly class OpenApiValidatorBuilder
         private ?ErrorFormatterInterface $errorFormatter = null,
         private ?EventDispatcherInterface $eventDispatcher = null,
         private bool $securityValidation = false,
+        private bool $serverPathResolution = false,
         private bool $strictFormats = false,
         private bool $reportDeprecated = true,
     ) {}
@@ -152,6 +153,21 @@ final readonly class OpenApiValidatorBuilder
     }
 
     /**
+     * Enable server path resolution for request validation
+     *
+     * When enabled, the validator strips the base path defined in server URLs
+     * from the request path before matching against OpenAPI path templates.
+     * This allows validation of requests routed through a reverse proxy
+     * that prefixes paths with a version segment (e.g., /v1/users).
+     *
+     * @return self New builder instance with server path resolution enabled
+     */
+    public function enableServerPathResolution(): self
+    {
+        return $this->with(serverPathResolution: true);
+    }
+
+    /**
      * Enable strict format validation
      *
      * When enabled, unknown format values are rejected during validation
@@ -220,7 +236,12 @@ final readonly class OpenApiValidatorBuilder
             reportDeprecated: $this->reportDeprecated,
             refResolver: $refResolver,
             validationContext: $context,
-            requestValidationHandler: new RequestValidationHandler($context, $pathFinder, $this->securityValidation),
+            requestValidationHandler: new RequestValidationHandler(
+                $context,
+                $pathFinder,
+                $this->securityValidation,
+                $this->serverPathResolution,
+            ),
             responseValidationHandler: new ResponseValidationHandler($context),
             schemaValidatorAdapter: new SchemaValidatorAdapter($context),
             webhookValidator: new WebhookValidator($context),
@@ -243,6 +264,7 @@ final readonly class OpenApiValidatorBuilder
         ?ErrorFormatterInterface $errorFormatter = null,
         ?EventDispatcherInterface $eventDispatcher = null,
         ?bool $securityValidation = null,
+        ?bool $serverPathResolution = null,
         ?bool $strictFormats = null,
         ?bool $reportDeprecated = null,
     ): self {
@@ -260,6 +282,7 @@ final readonly class OpenApiValidatorBuilder
             errorFormatter: $errorFormatter ?? $this->errorFormatter,
             eventDispatcher: $eventDispatcher ?? $this->eventDispatcher,
             securityValidation: $securityValidation ?? $this->securityValidation,
+            serverPathResolution: $serverPathResolution ?? $this->serverPathResolution,
             strictFormats: $strictFormats ?? $this->strictFormats,
             reportDeprecated: $reportDeprecated ?? $this->reportDeprecated,
         );

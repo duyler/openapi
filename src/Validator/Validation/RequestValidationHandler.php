@@ -13,6 +13,7 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\PathFinder;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
+use Duyler\OpenApi\Validator\Server\ServerPathMatcher;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
@@ -26,21 +27,26 @@ final readonly class RequestValidationHandler
     private readonly ?EventDispatcherInterface $eventDispatcher;
     private readonly LoggerInterface $logger;
     private readonly SecurityValidator $securityValidator;
+    private readonly ServerPathMatcher $serverPathMatcher;
 
     public function __construct(
         private readonly ValidationContext $context,
         private readonly PathFinder $pathFinder,
         private readonly bool $securityValidation = false,
+        private readonly bool $serverPathResolution = false,
     ) {
         $this->eventDispatcher = $context->eventDispatcher;
         $this->logger = $context->logger;
         $this->securityValidator = new SecurityValidator();
+        $this->serverPathMatcher = new ServerPathMatcher();
     }
 
     public function validate(ServerRequestInterface $request): Operation
     {
         $requestPath = $request->getUri()->getPath();
         $method = $request->getMethod();
+
+        $matchedPath = $this->resolveMatchedPath($requestPath);
 
         return $this->withValidationEvents(
             startedEvent: new ValidationStartedEvent(request: $request, path: $requestPath, method: $method),
@@ -57,8 +63,8 @@ final readonly class RequestValidationHandler
                 method: $method,
                 exception: $e,
             ),
-            callback: function () use ($request, $requestPath, $method): Operation {
-                $operation = $this->pathFinder->findOperation($requestPath, $method);
+            callback: function () use ($request, $requestPath, $matchedPath, $method): Operation {
+                $operation = $this->pathFinder->findOperation($matchedPath, $method);
 
                 $pathItem = $this->context->document->paths?->paths[$operation->path] ?? null;
                 if (null === $pathItem) {
@@ -74,7 +80,9 @@ final readonly class RequestValidationHandler
 
                 $this->logger->info(sprintf('Validating request: %s %s', $method, $requestPath));
 
-                $this->context->requestValidator->validate($request, $op, $operation->path);
+                $validatedRequest = $this->createValidatedRequest($request, $requestPath, $matchedPath);
+
+                $this->context->requestValidator->validate($validatedRequest, $op, $operation->path);
 
                 if ($this->securityValidation) {
                     $securityRequirements = $op->security ?? $this->context->document->security;
@@ -94,6 +102,36 @@ final readonly class RequestValidationHandler
                 return $operation;
             },
             warningMessage: sprintf('Request validation failed: %s %s', $method, $requestPath),
+        );
+    }
+
+    private function resolveMatchedPath(string $requestPath): string
+    {
+        if (false === $this->serverPathResolution) {
+            return $requestPath;
+        }
+
+        $servers = $this->context->document->servers?->servers ?? [];
+        $match = $this->serverPathMatcher->matchPath($servers, $requestPath);
+
+        if (null !== $match) {
+            return $match->strippedPath;
+        }
+
+        return $requestPath;
+    }
+
+    private function createValidatedRequest(
+        ServerRequestInterface $request,
+        string $requestPath,
+        string $matchedPath,
+    ): ServerRequestInterface {
+        if ($matchedPath === $requestPath) {
+            return $request;
+        }
+
+        return $request->withUri(
+            $request->getUri()->withPath($matchedPath),
         );
     }
 }
