@@ -1064,4 +1064,134 @@ final class ResponseTypeCoercerTest extends TestCase
 
         $this->assertNull($result);
     }
+
+    #[Test]
+    public function coerce_array_value_with_integer_type_returns_array_unchanged(): void
+    {
+        $schema = new Schema(type: 'integer');
+
+        $input = ['a', 'b'];
+        $result = $this->coercer->coerce($input, $schema, true);
+
+        $this->assertSame($input, $result);
+    }
+
+    #[Test]
+    public function coerce_null_value_with_integer_type_non_nullable_returns_null(): void
+    {
+        $schema = new Schema(type: 'integer', nullable: false);
+
+        $result = $this->coercer->coerce(null, $schema, true, true);
+
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function coerce_array_value_with_number_type_returns_array_unchanged(): void
+    {
+        $schema = new Schema(type: 'number');
+
+        $input = ['x', 'y'];
+        $result = $this->coercer->coerce($input, $schema, true);
+
+        $this->assertSame($input, $result);
+    }
+
+    #[Test]
+    public function coerce_null_value_with_number_type_non_nullable_returns_null(): void
+    {
+        $schema = new Schema(type: 'number', nullable: false);
+
+        $result = $this->coercer->coerce(null, $schema, true, true);
+
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function coerce_array_value_with_boolean_type_returns_array_unchanged(): void
+    {
+        $schema = new Schema(type: 'boolean');
+
+        $input = ['foo'];
+        $result = $this->coercer->coerce($input, $schema, true);
+
+        $this->assertSame($input, $result);
+    }
+
+    #[Test]
+    public function coerce_null_value_with_boolean_type_non_nullable_returns_null(): void
+    {
+        $schema = new Schema(type: 'boolean', nullable: false);
+
+        $result = $this->coercer->coerce(null, $schema, true, true);
+
+        $this->assertNull($result);
+    }
+
+    public static function coerceDefaultBranchProvider(): array
+    {
+        return [
+            'array to integer returns array' => [
+                ['a', 'b'],
+                'integer',
+                ['a', 'b'],
+            ],
+            'array to number returns array' => [
+                ['x'],
+                'number',
+                ['x'],
+            ],
+            'array to boolean returns array' => [
+                [1, 2, 3],
+                'boolean',
+                [1, 2, 3],
+            ],
+            'null to integer non-nullable returns null' => [
+                null,
+                'integer',
+                null,
+            ],
+            'null to number non-nullable returns null' => [
+                null,
+                'number',
+                null,
+            ],
+            'null to boolean non-nullable returns null' => [
+                null,
+                'boolean',
+                null,
+            ],
+        ];
+    }
+
+    #[DataProvider('coerceDefaultBranchProvider')]
+    #[Test]
+    public function coerce_default_branch_returns_value_unchanged(mixed $input, string $type, mixed $expected): void
+    {
+        $schema = new Schema(type: $type, nullable: false);
+
+        $result = $this->coercer->coerce($input, $schema, true, true);
+
+        $this->assertSame($expected, $result);
+    }
+
+    #[Test]
+    public function coerce_string_from_float(): void
+    {
+        $schema = new Schema(type: 'string');
+
+        $result = $this->coercer->coerce(3.14, $schema, true);
+
+        $this->assertSame(3.14, $result);
+    }
+
+    #[Test]
+    public function coerce_string_from_bool(): void
+    {
+        $schema = new Schema(type: 'string');
+
+        $result = $this->coercer->coerce(true, $schema, true);
+
+        $this->assertSame(true, $result);
+    }
 }
