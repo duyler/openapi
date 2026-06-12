@@ -8,11 +8,11 @@ use Duyler\OpenApi\Validator\SchemaValidator\Trait\LengthValidationTrait;
 
 use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MinItemsError;
-use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\CoversTrait;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-#[CoversClass(LengthValidationTrait::class)]
+#[CoversTrait(LengthValidationTrait::class)]
 class LengthValidationTraitTest extends TestCase
 {
     #[Test]

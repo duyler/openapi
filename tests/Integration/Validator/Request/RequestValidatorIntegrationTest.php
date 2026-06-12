@@ -49,7 +49,7 @@ final class RequestValidatorIntegrationTest extends TestCase
         $queryParamsValidator = new QueryParametersValidator($schemaValidator, $deserializer, $coercer);
         $headersValidator = new HeadersValidator($schemaValidator, $deserializer, $coercer);
         $cookieValidator = new CookieValidator($schemaValidator, $deserializer, $coercer);
-        $bodyValidator = $this->createMock(RequestBodyValidatorInterface::class);
+        $bodyValidator = $this->createStub(RequestBodyValidatorInterface::class);
 
         $queryStringValidator = new QueryStringValidator($queryParser, $schemaValidator);
 

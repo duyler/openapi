@@ -24,7 +24,7 @@ class CallbackValidatorTest extends TestCase
 
     protected function setUp(): void
     {
-        $requestValidator = $this->createMock(RequestValidatorInterface::class);
+        $requestValidator = $this->createStub(RequestValidatorInterface::class);
         $requestValidator->method('validate');
 
         $this->callbackValidator = new CallbackValidator($requestValidator);
