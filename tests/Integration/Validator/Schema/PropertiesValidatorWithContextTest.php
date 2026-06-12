@@ -20,9 +20,13 @@ use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerInterface;
 
+#[CoversClass(PropertiesValidatorWithContext::class)]
 final class PropertiesValidatorWithContextTest extends TestCase
 {
     private PropertiesValidatorWithContext $validator;
@@ -596,5 +600,54 @@ final class PropertiesValidatorWithContextTest extends TestCase
         $this->expectException(MissingDiscriminatorPropertyException::class);
 
         $validator->validateWithContext($data, $schema, $this->context);
+    }
+
+    #[Test]
+    public function validate_properties_with_nullable_property(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string', nullable: true),
+            ],
+        );
+
+        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $data = [
+            'name' => null,
+        ];
+
+        $this->validator->validateWithContext($data, $schema, $nullableContext);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_properties_with_custom_logger_and_event_dispatcher(): void
+    {
+        $logger = $this->createStub(LoggerInterface::class);
+        $eventDispatcher = $this->createStub(EventDispatcherInterface::class);
+
+        $validator = new PropertiesValidatorWithContext(
+            $this->pool,
+            $this->refResolver,
+            $this->document,
+            $this->statelessValidators,
+            reportDeprecated: true,
+            logger: $logger,
+            eventDispatcher: $eventDispatcher,
+        );
+
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+            ],
+        );
+
+        $validator->validateWithContext(['name' => 'John'], $schema, $this->context);
+
+        $this->assertTrue(true);
     }
 }

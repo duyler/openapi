@@ -20,9 +20,13 @@ use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerInterface;
 
+#[CoversClass(ItemsValidatorWithContext::class)]
 final class ItemsValidatorWithContextTest extends TestCase
 {
     private ItemsValidatorWithContext $validator;
@@ -499,6 +503,72 @@ final class ItemsValidatorWithContextTest extends TestCase
         $this->expectException(ValidationException::class);
 
         $this->validator->validateWithContext($data, $schema, $this->context);
+    }
+
+    #[Test]
+    public function validate_items_with_prefix_items_overlap_skips_prefixed_indices(): void
+    {
+        $prefixSchema = new Schema(type: 'integer');
+        $itemSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$prefixSchema],
+            items: $itemSchema,
+        );
+
+        // index 0 is covered by prefixItems, items validator should skip it
+        // indices 1+ should be validated against items schema
+        $data = [42, 'second', 'third'];
+
+        $this->validator->validateWithContext($data, $schema, $this->context);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_items_with_prefix_items_overlap_throws_for_items_after_prefix(): void
+    {
+        $prefixSchema = new Schema(type: 'integer');
+        $itemSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$prefixSchema],
+            items: $itemSchema,
+        );
+
+        // index 0 is prefix, index 1 is wrong type for items schema
+        $data = [42, 123, 'valid'];
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validateWithContext($data, $schema, $this->context);
+    }
+
+    #[Test]
+    public function validate_items_with_custom_logger(): void
+    {
+        $logger = $this->createStub(LoggerInterface::class);
+        $eventDispatcher = $this->createStub(EventDispatcherInterface::class);
+
+        $validator = new ItemsValidatorWithContext(
+            $this->pool,
+            $this->refResolver,
+            $this->document,
+            $this->statelessValidators,
+            reportDeprecated: true,
+            logger: $logger,
+            eventDispatcher: $eventDispatcher,
+        );
+
+        $itemSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'array',
+            items: $itemSchema,
+        );
+
+        $validator->validateWithContext(['valid'], $schema, $this->context);
+
+        $this->assertTrue(true);
     }
 
     #[Test]

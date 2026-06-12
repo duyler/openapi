@@ -13,6 +13,7 @@ use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 
 #[CoversClass(UnevaluatedPropertiesValidator::class)]
 class UnevaluatedPropertiesValidatorTest extends TestCase
@@ -307,6 +308,78 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
         );
 
         $this->validator->validate(['name' => 'John', 0 => 'numeric_key', 1 => 'another_numeric'], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_unevaluated_properties_with_schema_object(): void
+    {
+        $nameSchema = new Schema(type: 'string');
+        $unevaluatedSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => $nameSchema,
+            ],
+            unevaluatedProperties: $unevaluatedSchema,
+        );
+
+        // 'extra' is unevaluated and should be validated against unevaluatedSchema
+        $this->validator->validate(['name' => 'John', 'extra' => 'value'], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_unevaluated_properties_schema_object_with_invalid_value_throws(): void
+    {
+        $nameSchema = new Schema(type: 'string');
+        $unevaluatedSchema = new Schema(type: 'integer');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => $nameSchema,
+            ],
+            unevaluatedProperties: $unevaluatedSchema,
+        );
+
+        $this->expectException(TypeMismatchError::class);
+
+        // 'extra' is unevaluated and 'string' does not match integer schema
+        $this->validator->validate(['name' => 'John', 'extra' => 'not_an_integer'], $schema);
+    }
+
+    #[Test]
+    public function validate_unevaluated_properties_schema_object_without_context(): void
+    {
+        $unevaluatedSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'object',
+            unevaluatedProperties: $unevaluatedSchema,
+        );
+
+        // No ValidationContext provided — should use default
+        $this->validator->validate(['extra' => 'value'], $schema, null);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_unevaluated_properties_schema_object_all_evaluated(): void
+    {
+        $nameSchema = new Schema(type: 'string');
+        $unevaluatedSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => $nameSchema,
+            ],
+            unevaluatedProperties: $unevaluatedSchema,
+        );
+
+        // No unevaluated properties — schema validation not triggered
+        $this->validator->validate(['name' => 'John'], $schema);
 
         $this->expectNotToPerformAssertions();
     }
