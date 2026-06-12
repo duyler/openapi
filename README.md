@@ -84,7 +84,8 @@ The interface exposes the following methods:
 | `getFormattedErrors(ValidationException $e): string` | Format validation errors as string |
 | `validateWebhook(ServerRequestInterface $request, string $name): Operation` | Validate webhook request |
 | `validateCallback(ServerRequestInterface $request, string $name): Operation` | Validate callback request |
-| `resolveLink(string $linkName, array $responseData): array` | Resolve link parameters from response |
+| `resolveLink(string $linkName, array $responseData): array` | Resolve link parameters from response data (body only) |
+| `resolveLinkWithContext(string $linkName, LinkContext $context): array` | Resolve link parameters with full Runtime Expression support ($response.body/header/query, $url, $method, $statusCode) |
 
 ## Usage
 
@@ -118,7 +119,7 @@ $validator = OpenApiValidatorBuilder::create()
 
 ### PSR-7 Integration
 
-The validator works with any PSR-7 implementation:
+The validator uses `nyholm/psr7` as the PSR-7 implementation:
 
 ```php
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -139,7 +140,7 @@ $operation = $validator->validateRequest($request);
 
 ### Caching
 
-Enable PSR-6 caching for improved performance:
+Enable PSR-6 caching for improved performance (see the [Caching](#caching-1) section for details):
 
 ```php
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
@@ -191,6 +192,44 @@ $validator = OpenApiValidatorBuilder::create()
 
 $operation = $validator->validateWebhook($request, 'payment.webhook');
 ```
+
+### Callbacks
+
+Validate callback requests using the builder API:
+
+```php
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->build();
+
+$operation = $validator->validateCallback($request, 'myCallback');
+```
+
+### Link Resolution
+
+Resolve OpenAPI Link parameters from response data:
+
+```php
+use Duyler\OpenApi\Validator\Link\LinkContext;
+
+// Simple resolution (response body only)
+$result = $validator->resolveLink('GetUserById', ['id' => 42, 'name' => 'John']);
+
+// Full resolution with Runtime Expression support
+$context = new LinkContext(
+    body: ['id' => 42, 'name' => 'John'],
+    headers: ['X-Request-Id' => 'abc123'],
+    queryParams: ['page' => 1],
+    url: 'https://api.example.com/users/42',
+    method: 'GET',
+    statusCode: 200,
+);
+$result = $validator->resolveLinkWithContext('GetUserById', $context);
+```
+
+`resolveLink()` only resolves `$response.body` expressions. Use `resolveLinkWithContext()` for full Runtime Expression support: `$response.body`, `$response.header`, `$response.query`, `$url`, `$method`, and `$statusCode`. Note that `$request.body` and `$request.query` expressions are not supported.
 
 ## Advanced Usage
 
@@ -368,8 +407,10 @@ $dispatcher = new ArrayDispatcher([
     ValidationWarningEvent::class => [
         function (ValidationWarningEvent $event) {
             error_log(sprintf(
-                "Warning at %s: %s",
+                "Warning at %s (property: %s, schema: %s): %s",
                 $event->propertyPath,
+                $event->propertyName,
+                $event->schemaRef ?? 'unknown',
                 $event->message
             ));
         },
@@ -400,6 +441,7 @@ use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Registry\SchemaRegistry;
 
 // Load multiple versions
+// Note: $document is a property of the concrete OpenApiValidator class, not the interface
 $documentV1 = OpenApiValidatorBuilder::create()
     ->fromYamlFile('api-v1.yaml')
     ->build()
@@ -444,14 +486,15 @@ The registry is immutable: `register()` returns a new instance with the added sc
 
 ### Validator Pool
 
-The validator pool uses WeakMap to reuse validator instances:
+The validator pool uses an LRU (Least Recently Used) cache to reuse validator instances. The default capacity is 128 entries. When the pool is full, the least recently used validator is evicted.
 
 ```php
 use Duyler\OpenApi\Validator\ValidatorPool;
 
-$pool = new ValidatorPool();
+$pool = new ValidatorPool();          // default: 128 entries
+$pool = new ValidatorPool(maxSize: 64); // custom capacity
 
-// Validators are automatically reused
+// Validators are automatically reused and evicted when capacity is exceeded
 $validator = OpenApiValidatorBuilder::create()
     ->fromYamlFile('openapi.yaml')
     ->withValidatorPool($pool)
@@ -523,7 +566,7 @@ $compiler = new ValidatorCompiler();
 $code = $compiler->compileWithCache($schema, 'UserValidator', $compilationCache);
 ```
 
-`CompilationCache` uses a PSR-6 cache pool and generates a SHA-256 hash of the schema to use as the cache key. Cached entries expire after 24 hours by default.
+`CompilationCache` uses a PSR-6 cache pool and generates a SHA-256 hash of the schema to use as the cache key. Cached entries expire after 24 hours (86400 seconds). This TTL is hardcoded and not configurable.
 
 #### Compiler Limitations
 
@@ -549,6 +592,9 @@ The compiler does not support all JSON Schema keywords. If a schema uses unsuppo
 | `enableCoercion()` | Enable type coercion | `false` |
 | `enableNullableAsType()` | Enable nullable validation (default: true) | `true` |
 | `disableNullableAsType()` | Disable nullable validation | `false` |
+| `enableSecurityValidation()` | Enable security scheme validation for requests | `false` |
+| `enableStrictFormats()` | Reject unknown format values instead of skipping | `false` |
+| `enableReportDeprecated()` | Log deprecated schema elements via PSR-3 logger | `true` |
 
 ### EmptyArrayStrategy
 
@@ -722,7 +768,7 @@ try {
 
 ### Validation Error Reference
 
-All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schemaPath()`, `keyword()`, `message()`, `params()`, `suggestion()`, and `getType()` methods.
+All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schemaPath()`, `keyword()`, `message()`, `params()`, `suggestion()`, and `getType()` methods. The `getType()` method returns the validation keyword that triggered the error (e.g., `'type'`, `'minLength'`, `'format'`).
 
 #### Type and Value Errors
 
@@ -731,8 +777,15 @@ All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schem
 | `TypeMismatchError` | `type` | Data type doesn't match schema type |
 | `EnumError` | `enum` | Value not in allowed enum |
 | `ConstError` | `const` | Value doesn't match constant |
-| `InvalidFormatException` | `format` | Format validation failed (email, URI, etc.) |
 | `InvalidDataTypeException` | `invalid` | Invalid data type encountered |
+
+#### Format Validation Errors
+
+`InvalidFormatException` implements `ValidationErrorInterface` but extends `RuntimeException` directly (not `AbstractValidationError`). It is thrown by format validators rather than the schema validator.
+
+| Error Type | Keyword | Description |
+|------------|---------|-------------|
+| `InvalidFormatException` | `format` | Format validation failed (email, URI, etc.) |
 
 #### String Validation Errors
 
@@ -1015,7 +1068,7 @@ printf("Memory delta: %d bytes\n", $after - $before);
 
 ### Long-Running Processes
 
-The validator instance is safe to reuse across requests in long-running processes (RoadRunner, FrankenPHP, Swoole). The internal `ValidatorPool` uses `WeakMap` to cache and reuse validator instances without manual cleanup.
+The validator instance is safe to reuse across requests in long-running processes (RoadRunner, FrankenPHP, Swoole). The internal `ValidatorPool` uses an LRU cache to reuse validator instances without manual cleanup. The pool has a default capacity of 128 entries and automatically evicts the least recently used entries when full.
 
 ```php
 // Build once at worker startup
@@ -1221,10 +1274,21 @@ Generated validators throw generic `RuntimeException` on failure rather than the
 
 Security scheme validation is basic. The validator checks that required credentials are present in the request (headers, query parameters, or cookies) but does not verify their correctness or format. Token validation, signature checking, and OAuth flow handling are outside the scope of this library.
 
+The following security scheme types are supported:
+
+- `http/bearer` - Checks for `Authorization: Bearer ...` header
+- `apiKey` (query, header, cookie) - Checks for the named parameter in the specified location
+
+The following scheme types are not supported and will produce an error when encountered:
+
+- `http/basic` - Basic authentication
+- `oauth2` - OAuth 2.0 flows
+- `openIdConnect` - OpenID Connect Discovery
+
 ## Requirements
 
 - **PHP 8.4 or higher** - Uses modern PHP features (readonly classes, match expressions, etc.)
-- **PSR-7 HTTP message** - `psr/http-message ^2.0` (`nyholm/psr7`)
+- **PSR-7 HTTP message** - `psr/http-message ^2.0` (required: `nyholm/psr7 ^1.8`)
 - **PSR-6 cache** - `psr/cache ^3.0` (e.g., `symfony/cache`, `cache/cache`)
 - **PSR-14 events** - `psr/event-dispatcher ^1.0` (e.g., `symfony/event-dispatcher`)
 - **PSR-3 logging** - `psr/log ^3.0` (optional, for `withLogger()`)
