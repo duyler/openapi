@@ -9,6 +9,9 @@ use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Validation\RequestValidationHandler;
+use Duyler\OpenApi\Validator\Validation\ResponseValidationHandler;
+use Duyler\OpenApi\Validator\Validation\ValidationContext;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
@@ -60,9 +63,9 @@ YAML;
             ->fromYamlString(self::SCHEMA_YAML)
             ->build();
 
-        $property = new ReflectionProperty(OpenApiValidator::class, 'requestValidator');
-
-        $instance = $property->getValue($validator);
+        $validationRequestValidator = self::readProperty($validator, OpenApiValidator::class, 'requestValidation');
+        $context = self::readProperty($validationRequestValidator, RequestValidationHandler::class, 'context');
+        $instance = self::readProperty($context, ValidationContext::class, 'requestValidator');
 
         $this->assertInstanceOf(RequestValidator::class, $instance);
     }
@@ -74,9 +77,9 @@ YAML;
             ->fromYamlString(self::SCHEMA_YAML)
             ->build();
 
-        $property = new ReflectionProperty(OpenApiValidator::class, 'responseValidator');
-
-        $instance = $property->getValue($validator);
+        $validationResponseValidator = self::readProperty($validator, OpenApiValidator::class, 'responseValidation');
+        $context = self::readProperty($validationResponseValidator, ResponseValidationHandler::class, 'context');
+        $instance = self::readProperty($context, ValidationContext::class, 'responseValidator');
 
         $this->assertInstanceOf(ResponseValidatorWithContext::class, $instance);
     }
@@ -148,5 +151,12 @@ YAML;
 
         $this->assertSame($operation1->path, $operation2->path);
         $this->assertSame($operation1->method, $operation2->method);
+    }
+
+    private static function readProperty(object $object, string $class, string $property): object
+    {
+        $prop = new ReflectionProperty($class, $property);
+
+        return $prop->getValue($object);
     }
 }

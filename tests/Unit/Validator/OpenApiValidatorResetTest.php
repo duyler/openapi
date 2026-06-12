@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
+use Duyler\OpenApi\Validator\Validation\SchemaValidatorAdapter;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -67,7 +68,7 @@ YAML;
             ->fromYamlString(self::YAML)
             ->build();
 
-        $schemaValidator = self::readProperty($validator, OpenApiValidator::class, 'schemaValidator');
+        $schemaValidator = self::readSchemaValidator($validator);
 
         $this->assertInstanceOf(SchemaValidator::class, $schemaValidator);
     }
@@ -79,11 +80,11 @@ YAML;
             ->fromYamlString(self::YAML)
             ->build();
 
-        $schemaValidatorBefore = self::readProperty($validator, OpenApiValidator::class, 'schemaValidator');
+        $schemaValidatorBefore = self::readSchemaValidator($validator);
 
         $validator->validateSchema(['id' => '1', 'name' => 'Test'], '#/components/schemas/User');
 
-        $schemaValidatorAfter = self::readProperty($validator, OpenApiValidator::class, 'schemaValidator');
+        $schemaValidatorAfter = self::readSchemaValidator($validator);
 
         $this->assertSame($schemaValidatorBefore, $schemaValidatorAfter, 'SchemaValidator should be the same instance after validateSchema() call');
     }
@@ -220,11 +221,11 @@ YAML;
             ->fromYamlString(self::YAML)
             ->build();
 
-        $schemaValidatorBefore = self::readProperty($validator, OpenApiValidator::class, 'schemaValidator');
+        $schemaValidatorBefore = self::readSchemaValidator($validator);
 
         $validator->reset();
 
-        $schemaValidatorAfter = self::readProperty($validator, OpenApiValidator::class, 'schemaValidator');
+        $schemaValidatorAfter = self::readSchemaValidator($validator);
 
         $this->assertSame($schemaValidatorBefore, $schemaValidatorAfter, 'SchemaValidator should remain the same instance after reset()');
     }
@@ -260,6 +261,13 @@ YAML;
         $validator->validateSchema(5, '#/components/schemas/PositiveInt');
 
         $this->expectNotToPerformAssertions();
+    }
+
+    private static function readSchemaValidator(OpenApiValidator $validator): SchemaValidator
+    {
+        $schemaValidation = self::readProperty($validator, OpenApiValidator::class, 'schemaValidation');
+
+        return self::readProperty($schemaValidation, SchemaValidatorAdapter::class, 'schemaValidator');
     }
 
     private static function readProperty(object $object, string $class, string $property): object

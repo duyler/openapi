@@ -12,6 +12,11 @@ use Throwable;
 
 trait EventDispatchingTrait
 {
+    private function dispatchValidationEvent(object $event): void
+    {
+        $this->eventDispatcher?->dispatch($event);
+    }
+
     /**
      * @template T
      *

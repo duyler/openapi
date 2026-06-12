@@ -10,6 +10,9 @@ use Duyler\OpenApi\Validator\Request\RequestBodyValidatorWithContext;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Validation\RequestValidationHandler;
+use Duyler\OpenApi\Validator\Validation\ResponseValidationHandler;
+use Duyler\OpenApi\Validator\Validation\ValidationContext;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -65,7 +68,9 @@ YAML;
 
         $mainRefResolver = self::readProperty($validator, OpenApiValidator::class, 'refResolver');
         $requestRefResolver = self::readRequestBodyRefResolver($validator);
-        $responseValidator = self::readProperty($validator, OpenApiValidator::class, 'responseValidator');
+        $validationResponseValidator = self::readProperty($validator, OpenApiValidator::class, 'responseValidation');
+        $context = self::readProperty($validationResponseValidator, ResponseValidationHandler::class, 'context');
+        $responseValidator = self::readProperty($context, ValidationContext::class, 'responseValidator');
         $responseRefResolver = self::readProperty($responseValidator, ResponseValidatorWithContext::class, 'refResolver');
 
         $this->assertInstanceOf(RefResolver::class, $mainRefResolver);
@@ -86,7 +91,9 @@ YAML;
 
         $main = self::readProperty($validator, OpenApiValidator::class, 'refResolver');
         $request = self::readRequestBodyRefResolver($validator);
-        $responseValidator = self::readProperty($validator, OpenApiValidator::class, 'responseValidator');
+        $validationResponseValidator = self::readProperty($validator, OpenApiValidator::class, 'responseValidation');
+        $context = self::readProperty($validationResponseValidator, ResponseValidationHandler::class, 'context');
+        $responseValidator = self::readProperty($context, ValidationContext::class, 'responseValidator');
         $response = self::readProperty($responseValidator, ResponseValidatorWithContext::class, 'refResolver');
 
         $ids = [
@@ -145,7 +152,9 @@ YAML;
 
     private static function readRequestBodyRefResolver(OpenApiValidator $validator): RefResolver
     {
-        $requestValidator = self::readProperty($validator, OpenApiValidator::class, 'requestValidator');
+        $validationRequestValidator = self::readProperty($validator, OpenApiValidator::class, 'requestValidation');
+        $context = self::readProperty($validationRequestValidator, RequestValidationHandler::class, 'context');
+        $requestValidator = self::readProperty($context, ValidationContext::class, 'requestValidator');
         $bodyValidator = self::readProperty($requestValidator, RequestValidator::class, 'bodyValidator');
 
         return self::readProperty($bodyValidator, RequestBodyValidatorWithContext::class, 'refResolver');
