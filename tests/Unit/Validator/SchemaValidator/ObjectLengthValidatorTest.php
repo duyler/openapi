@@ -11,9 +11,11 @@ use Duyler\OpenApi\Validator\Exception\MaxPropertiesError;
 use Duyler\OpenApi\Validator\Exception\MinPropertiesError;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(ObjectLengthValidator::class)]
 class ObjectLengthValidatorTest extends TestCase
 {
     private ValidatorPool $pool;

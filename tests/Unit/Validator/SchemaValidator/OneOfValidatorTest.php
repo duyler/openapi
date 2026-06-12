@@ -11,11 +11,13 @@ use Duyler\OpenApi\Validator\Exception\OneOfError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 
+#[CoversClass(OneOfValidator::class)]
 class OneOfValidatorTest extends TestCase
 {
     private ValidatorPool $pool;

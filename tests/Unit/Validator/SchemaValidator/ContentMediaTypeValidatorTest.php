@@ -7,9 +7,11 @@ namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\SchemaValidator\ContentMediaTypeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\InvalidContentMediaTypeException;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(ContentMediaTypeValidator::class)]
 class ContentMediaTypeValidatorTest extends TestCase
 {
     private ContentMediaTypeValidator $validator;

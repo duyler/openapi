@@ -7,9 +7,11 @@ namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\SchemaValidator\ContentEncodingValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\InvalidContentEncodingException;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(ContentEncodingValidator::class)]
 class ContentEncodingValidatorTest extends TestCase
 {
     private ContentEncodingValidator $validator;

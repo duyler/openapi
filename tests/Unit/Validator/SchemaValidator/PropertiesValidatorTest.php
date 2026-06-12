@@ -10,6 +10,7 @@ use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\SchemaValidator\PropertiesValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use stdClass;
@@ -17,6 +18,7 @@ use stdClass;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 
+#[CoversClass(PropertiesValidator::class)]
 class PropertiesValidatorTest extends TestCase
 {
     private ValidatorPool $pool;

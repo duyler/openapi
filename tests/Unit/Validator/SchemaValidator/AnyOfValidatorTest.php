@@ -10,12 +10,14 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 
+#[CoversClass(AnyOfValidator::class)]
 class AnyOfValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
