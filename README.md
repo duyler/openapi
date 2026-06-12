@@ -741,7 +741,7 @@ try {
         printf(
             "Path: %s\nMessage: %s\nType: %s\n\n",
             $error->dataPath(),
-            $error->getMessage(),
+            $error->message(),
             $error->getType()
         );
     }

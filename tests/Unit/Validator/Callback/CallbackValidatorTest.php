@@ -87,12 +87,57 @@ class CallbackValidatorTest extends TestCase
         $this->callbackValidator->validate($request, 'myCallback', $document);
     }
 
-    private function createDocument(?Callbacks $callbacks): OpenApiDocument
+    #[Test]
+    public function finds_callback_when_expression_differs_from_name(): void
+    {
+        $operation = new Operation(operationId: 'webhookHandler');
+
+        $pathItem = new PathItem(post: $operation);
+
+        $callbacks = new Callbacks([
+            'webhookHandler' => [
+                'https://example.com/webhook' => $pathItem,
+            ],
+        ]);
+
+        $document = $this->createDocument($callbacks, 'webhookHandler');
+
+        $request = $this->psrFactory->createServerRequest('POST', '/webhook');
+
+        $this->callbackValidator->validate($request, 'webhookHandler', $document);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function finds_callback_with_multiple_expressions(): void
+    {
+        $operation = new Operation(operationId: 'multiCallback');
+
+        $pathItem = new PathItem(post: $operation);
+
+        $callbacks = new Callbacks([
+            'multiCallback' => [
+                '{$request.body#/url1}' => $pathItem,
+                '{$request.body#/url2}' => $pathItem,
+            ],
+        ]);
+
+        $document = $this->createDocument($callbacks, 'multiCallback');
+
+        $request = $this->psrFactory->createServerRequest('POST', '/callback');
+
+        $this->callbackValidator->validate($request, 'multiCallback', $document);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    private function createDocument(?Callbacks $callbacks, string $callbackName = 'myCallback'): OpenApiDocument
     {
         $componentsCallbacks = null;
 
         if (null !== $callbacks) {
-            $componentsCallbacks = ['myCallback' => $callbacks];
+            $componentsCallbacks = [$callbackName => $callbacks];
         }
 
         return new OpenApiDocument(

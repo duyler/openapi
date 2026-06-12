@@ -10,7 +10,7 @@ use Throwable;
 final class ValidationException extends Exception
 {
     /**
-     * @param array<int, AbstractValidationError> $errors
+     * @param array<int, ValidationErrorInterface> $errors
      */
     public function __construct(
         string $message = '',
@@ -22,7 +22,7 @@ final class ValidationException extends Exception
     }
 
     /**
-     * @return array<int, AbstractValidationError>
+     * @return array<int, ValidationErrorInterface>
      */
     public function getErrors(): array
     {

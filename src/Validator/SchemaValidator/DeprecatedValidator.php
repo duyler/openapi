@@ -48,6 +48,7 @@ final readonly class DeprecatedValidator extends AbstractSchemaValidator
                     propertyPath: $propertyPath,
                     propertyName: $name,
                     message: sprintf('Property "%s" is deprecated', $name),
+                    schemaRef: $schema->ref,
                 ),
             );
 

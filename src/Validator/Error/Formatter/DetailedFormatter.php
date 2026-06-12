@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Error\Formatter;
 
-use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Exception\ValidationErrorInterface;
 use Override;
 
 use function is_scalar;
@@ -18,10 +18,10 @@ use function sprintf;
 final readonly class DetailedFormatter implements ErrorFormatterInterface
 {
     #[Override]
-    public function format(AbstractValidationError $error): string
+    public function format(ValidationErrorInterface $error): string
     {
         $breadcrumb = $error->dataPath();
-        $message = $error->getMessage();
+        $message = $error->message();
         $details = $this->getDetails($error);
         $suggestion = $error->suggestion();
 
@@ -56,7 +56,7 @@ final readonly class DetailedFormatter implements ErrorFormatterInterface
     /**
      * @return array<string, string>
      */
-    private function getDetails(AbstractValidationError $error): array
+    private function getDetails(ValidationErrorInterface $error): array
     {
         /** @var array<string, mixed> $params */
         $params = $error->params();

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Error\Formatter;
 
-use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Exception\ValidationErrorInterface;
 use Override;
 
 use function sprintf;
@@ -24,10 +24,10 @@ final class SimpleFormatter implements ErrorFormatterInterface
     }
 
     #[Override]
-    public function format(AbstractValidationError $error): string
+    public function format(ValidationErrorInterface $error): string
     {
         $breadcrumb = $error->dataPath();
-        $message = $error->getMessage();
+        $message = $error->message();
 
         if ('/' === $breadcrumb) {
             return $message;
