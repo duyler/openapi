@@ -815,4 +815,108 @@ final class RequestBodyCoercerTest extends TestCase
 
         $this->assertSame('123', $result);
     }
+
+    #[Test]
+    public function coerce_array_to_string_returns_array_unchanged(): void
+    {
+        $schema = new Schema(type: 'string');
+        $value = ['foo', 'bar'];
+
+        $result = $this->coercer->coerce($value, $schema, true);
+
+        $this->assertSame(['foo', 'bar'], $result);
+    }
+
+    #[Test]
+    public function coerce_float_string_to_number_in_strict_mode_succeeds(): void
+    {
+        $schema = new Schema(type: 'number');
+
+        $result = $this->coercer->coerce('3.14', $schema, true, true);
+
+        $this->assertSame(3.14, $result);
+    }
+
+    #[Test]
+    public function coerce_four_level_nested_object(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'l1' => new Schema(
+                    type: 'object',
+                    properties: [
+                        'l2' => new Schema(
+                            type: 'object',
+                            properties: [
+                                'l3' => new Schema(
+                                    type: 'object',
+                                    properties: [
+                                        'l4' => new Schema(type: 'integer'),
+                                    ],
+                                ),
+                            ],
+                        ),
+                    ],
+                ),
+            ],
+        );
+        $input = ['l1' => ['l2' => ['l3' => ['l4' => '99']]]];
+
+        $result = $this->coercer->coerce($input, $schema, true);
+
+        $this->assertSame(99, $result['l1']['l2']['l3']['l4']);
+    }
+
+    #[Test]
+    public function coerce_union_type_selects_first_matching_integer(): void
+    {
+        $schema = new Schema(type: ['integer', 'string']);
+
+        $result = $this->coercer->coerce('42', $schema, true);
+
+        $this->assertSame(42, $result);
+        $this->assertIsInt($result);
+    }
+
+    #[Test]
+    public function coerce_null_with_nullable_and_nullable_as_type_false_proceeds_to_coercion(): void
+    {
+        $schema = new Schema(type: 'string', nullable: true);
+
+        $result = $this->coercer->coerce(null, $schema, true, false, false);
+
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function coerce_non_convertible_array_to_integer_returns_original(): void
+    {
+        $schema = new Schema(type: 'integer');
+        $value = ['foo', 'bar'];
+
+        $result = $this->coercer->coerce($value, $schema, true);
+
+        $this->assertSame(['foo', 'bar'], $result);
+    }
+
+    #[Test]
+    public function coerce_unknown_string_to_boolean_returns_cast(): void
+    {
+        $schema = new Schema(type: 'boolean');
+
+        $result = $this->coercer->coerce('maybe', $schema, true);
+
+        $this->assertTrue($result);
+    }
+
+    #[Test]
+    public function coerce_unknown_type_returns_value_unchanged(): void
+    {
+        $schema = new Schema(type: 'custom');
+
+        $result = $this->coercer->coerce('anything', $schema, true);
+
+        $this->assertSame('anything', $result);
+    }
 }
