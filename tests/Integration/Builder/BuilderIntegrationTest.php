@@ -134,8 +134,8 @@ YAML;
             ->fromYamlString(self::COMPLETE_YAML)
             ->build();
 
-        $this->assertSame('Complete API', $validator->document->info->title);
-        $this->assertSame('1.0.0', $validator->document->info->version);
+        $this->assertSame('Complete API', $validator->getDocument()->info->title);
+        $this->assertSame('1.0.0', $validator->getDocument()->info->version);
     }
 
     #[Test]
@@ -145,8 +145,8 @@ YAML;
             ->fromYamlString(self::COMPLETE_YAML)
             ->build();
 
-        $this->assertSame('Complete API', $validator->document->info->title);
-        $this->assertSame('1.0.0', $validator->document->info->version);
+        $this->assertSame('Complete API', $validator->getDocument()->info->title);
+        $this->assertSame('1.0.0', $validator->getDocument()->info->version);
     }
 
     #[Test]
@@ -171,7 +171,7 @@ YAML;
             ->enableNullableAsType()
             ->build();
 
-        $this->assertSame('Complete API', $validator->document->info->title);
+        $this->assertSame('Complete API', $validator->getDocument()->info->title);
     }
 
     #[Test]
@@ -190,13 +190,13 @@ YAML;
         $this->assertNotSame($validator2, $validator3);
 
         // Validators should have different configurations
-        $this->assertFalse($validator1->coercion);
-        $this->assertTrue($validator2->coercion);
-        $this->assertTrue($validator3->coercion);
+        $this->assertFalse($validator1->isCoercion());
+        $this->assertTrue($validator2->isCoercion());
+        $this->assertTrue($validator3->isCoercion());
 
-        $this->assertTrue($validator1->nullableAsType);
-        $this->assertTrue($validator2->nullableAsType);
-        $this->assertTrue($validator3->nullableAsType);
+        $this->assertTrue($validator1->isNullableAsType());
+        $this->assertTrue($validator2->isNullableAsType());
+        $this->assertTrue($validator3->isNullableAsType());
     }
 
     #[Test]
@@ -209,8 +209,8 @@ YAML;
             ->withErrorFormatter($formatter)
             ->build();
 
-        $this->assertSame('Complete API', $validator->document->info->title);
-        $this->assertInstanceOf(DetailedFormatter::class, $validator->errorFormatter);
+        $this->assertSame('Complete API', $validator->getDocument()->info->title);
+        $this->assertInstanceOf(DetailedFormatter::class, $validator->getErrorFormatter());
     }
 
     #[Test]
@@ -223,7 +223,7 @@ YAML;
         $validator2 = $builder->build();
 
         $this->assertNotSame($validator1, $validator2);
-        $this->assertSame($validator1->document->info->title, $validator2->document->info->title);
+        $this->assertSame($validator1->getDocument()->info->title, $validator2->getDocument()->info->title);
     }
 
     #[Test]
@@ -234,8 +234,8 @@ YAML;
             ->enableCoercion()
             ->build();
 
-        $this->assertTrue($validator->coercion);
-        $this->assertSame('Complete API', $validator->document->info->title);
+        $this->assertTrue($validator->isCoercion());
+        $this->assertSame('Complete API', $validator->getDocument()->info->title);
     }
 
     #[Test]
@@ -272,8 +272,8 @@ YAML;
             ->build();
 
         $this->assertSame(
-            $validatorFromYaml->document->info->title,
-            $validatorFromJson->document->info->title,
+            $validatorFromYaml->getDocument()->info->title,
+            $validatorFromJson->getDocument()->info->title,
         );
     }
 }

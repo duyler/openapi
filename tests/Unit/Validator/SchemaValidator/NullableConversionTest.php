@@ -42,7 +42,7 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $op = $validator->document->paths->paths['/users']->post;
+        $op = $validator->getDocument()->paths->paths['/users']->post;
         $schema = $op->requestBody->content->mediaTypes['application/json']->schema;
 
         $this->assertSame(['string', 'null'], $schema->properties['name']->type);
@@ -138,7 +138,7 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $op = $validator->document->paths->paths['/users']->post;
+        $op = $validator->getDocument()->paths->paths['/users']->post;
         $schema = $op->requestBody->content->mediaTypes['application/json']->schema;
 
         $this->assertSame('string', $schema->properties['name']->type);
@@ -177,7 +177,7 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $op = $validator->document->paths->paths['/users']->post;
+        $op = $validator->getDocument()->paths->paths['/users']->post;
         $schema = $op->requestBody->content->mediaTypes['application/json']->schema;
 
         $this->assertSame('string', $schema->properties['name']->type);

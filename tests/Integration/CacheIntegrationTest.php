@@ -49,10 +49,10 @@ final class CacheIntegrationTest extends TestCase
             ->withCache($cache);
 
         $validator1 = $builder->build();
-        self::assertNotNull($validator1->document);
+        self::assertNotNull($validator1->getDocument());
 
         $validator2 = $builder->build();
-        self::assertNotNull($validator2->document);
+        self::assertNotNull($validator2->getDocument());
     }
 
     #[Test]
@@ -77,7 +77,7 @@ final class CacheIntegrationTest extends TestCase
 
         $validator = $builder->build();
 
-        self::assertNotNull($validator->document);
+        self::assertNotNull($validator->getDocument());
     }
 
     #[Test]

@@ -427,16 +427,16 @@ use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Registry\SchemaRegistry;
 
 // Load multiple versions
-// Note: $document is a property of the concrete OpenApiValidator class, not the interface
+// Note: getDocument() is a method of the concrete OpenApiValidator class, not the interface
 $documentV1 = OpenApiValidatorBuilder::create()
     ->fromYamlFile('api-v1.yaml')
     ->build()
-    ->document;
+    ->getDocument();
 
 $documentV2 = OpenApiValidatorBuilder::create()
     ->fromYamlFile('api-v2.yaml')
     ->build()
-    ->document;
+    ->getDocument();
 
 // Register schemas
 $registry = new SchemaRegistry();

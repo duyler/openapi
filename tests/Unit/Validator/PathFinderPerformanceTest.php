@@ -35,7 +35,7 @@ final class PathFinderPerformanceTest extends TestCase
         $document = OpenApiValidatorBuilder::create()
             ->fromYamlString($yaml)
             ->build()
-            ->document;
+            ->getDocument();
 
         $finder = new PathFinder($document);
 
@@ -129,7 +129,7 @@ final class PathFinderPerformanceTest extends TestCase
         $document = OpenApiValidatorBuilder::create()
             ->fromYamlString($yaml)
             ->build()
-            ->document;
+            ->getDocument();
 
         $finder = new PathFinder($document);
 

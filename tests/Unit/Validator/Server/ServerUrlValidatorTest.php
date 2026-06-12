@@ -51,7 +51,7 @@ YAML;
 
         $serverValidator = new ServerUrlValidator();
 
-        $serverValidator->validate($validator->document, 'https://prod.api.example.com/v1');
+        $serverValidator->validate($validator->getDocument(), 'https://prod.api.example.com/v1');
 
         $this->assertTrue(true);
     }
@@ -65,7 +65,7 @@ YAML;
 
         $serverValidator = new ServerUrlValidator();
 
-        $serverValidator->validate($validator->document, 'https://static.api.example.com');
+        $serverValidator->validate($validator->getDocument(), 'https://static.api.example.com');
 
         $this->assertTrue(true);
     }
@@ -81,7 +81,7 @@ YAML;
 
         $this->expectException(ServerUrlMismatchException::class);
 
-        $serverValidator->validate($validator->document, 'https://unknown.example.com');
+        $serverValidator->validate($validator->getDocument(), 'https://unknown.example.com');
     }
 
     #[Test]
@@ -93,7 +93,7 @@ YAML;
 
         $serverValidator = new ServerUrlValidator();
 
-        $this->assertTrue($serverValidator->isValid($validator->document, 'https://prod.api.example.com/v1'));
+        $this->assertTrue($serverValidator->isValid($validator->getDocument(), 'https://prod.api.example.com/v1'));
     }
 
     #[Test]
@@ -105,7 +105,7 @@ YAML;
 
         $serverValidator = new ServerUrlValidator();
 
-        $this->assertFalse($serverValidator->isValid($validator->document, 'https://unknown.example.com'));
+        $this->assertFalse($serverValidator->isValid($validator->getDocument(), 'https://unknown.example.com'));
     }
 
     #[Test]
@@ -117,7 +117,7 @@ YAML;
 
         $serverValidator = new ServerUrlValidator();
 
-        $this->assertTrue($serverValidator->isValid($validator->document, 'https://prod.api.example.com/v1/users'));
+        $this->assertTrue($serverValidator->isValid($validator->getDocument(), 'https://prod.api.example.com/v1/users'));
     }
 
     #[Test]
@@ -131,7 +131,7 @@ YAML;
 
         $this->assertTrue(
             $serverValidator->isValid(
-                $validator->document,
+                $validator->getDocument(),
                 'https://staging.api.example.com/v2',
                 ['env' => 'staging', 'version' => '2'],
             ),
@@ -148,7 +148,7 @@ YAML;
         $serverValidator = new ServerUrlValidator();
 
         $matches = $serverValidator->findMatchingServers(
-            $validator->document,
+            $validator->getDocument(),
             'https://prod.api.example.com/v1',
         );
 
@@ -178,7 +178,7 @@ YAML;
 
         $serverValidator = new ServerUrlValidator();
 
-        $serverValidator->validate($validator->document, 'https://anything.example.com');
+        $serverValidator->validate($validator->getDocument(), 'https://anything.example.com');
 
         $this->assertTrue(true);
     }

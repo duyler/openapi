@@ -278,7 +278,7 @@ YAML;
         $document = OpenApiValidatorBuilder::create()
             ->fromYamlString($yaml)
             ->build()
-            ->document;
+            ->getDocument();
 
         $pathParser = new PathParser();
 

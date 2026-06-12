@@ -541,7 +541,7 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $document = $validator->document;
+        $document = $validator->getDocument();
         $schema = $document->components?->schemas['DefaultNullSchema'] ?? null;
 
         $this->assertNotNull($schema);
@@ -577,7 +577,7 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $document = $validator->document;
+        $document = $validator->getDocument();
         $schema = $document->components?->schemas['NoDefaultSchema'] ?? null;
 
         $this->assertNotNull($schema);
@@ -611,7 +611,7 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $document = $validator->document;
+        $document = $validator->getDocument();
         $schema = $document->components?->schemas['NoConstSchema'] ?? null;
 
         $this->assertNotNull($schema);

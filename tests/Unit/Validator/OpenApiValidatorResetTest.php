@@ -96,7 +96,7 @@ YAML;
             ->fromYamlString(self::YAML)
             ->build();
 
-        $pool = $validator->pool;
+        $pool = $validator->getPool();
 
         $callCount = 0;
         $factory = function () use (&$callCount) {
@@ -237,12 +237,12 @@ YAML;
             ->fromYamlString(self::YAML)
             ->build();
 
-        $poolBefore = $validator->pool;
+        $poolBefore = $validator->getPool();
         $refResolverBefore = self::readProperty($validator, OpenApiValidator::class, 'refResolver');
 
         $validator->reset();
 
-        $poolAfter = $validator->pool;
+        $poolAfter = $validator->getPool();
         $refResolverAfter = self::readProperty($validator, OpenApiValidator::class, 'refResolver');
 
         $this->assertSame($poolBefore, $poolAfter, 'Pool instance should remain the same after reset()');

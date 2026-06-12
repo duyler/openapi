@@ -178,7 +178,7 @@ final class EmptyArrayStrategyTest extends TestCase
             ->withEmptyArrayStrategy(EmptyArrayStrategy::PreferArray)
             ->build();
 
-        $this->assertSame(EmptyArrayStrategy::PreferArray, $validator->emptyArrayStrategy);
+        $this->assertSame(EmptyArrayStrategy::PreferArray, $validator->getEmptyArrayStrategy());
     }
 
     #[Test]
@@ -190,7 +190,7 @@ final class EmptyArrayStrategyTest extends TestCase
             ->fromJsonString($spec)
             ->build();
 
-        $this->assertSame(EmptyArrayStrategy::AllowBoth, $validator->emptyArrayStrategy);
+        $this->assertSame(EmptyArrayStrategy::AllowBoth, $validator->getEmptyArrayStrategy());
     }
 
     #[Test]
