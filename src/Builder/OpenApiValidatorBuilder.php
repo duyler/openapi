@@ -31,22 +31,22 @@ final readonly class OpenApiValidatorBuilder
     private const string CACHE_KEY_FILE_PREFIX = 'openapi_spec_file_';
     private const string CACHE_KEY_CONTENT_PREFIX = 'openapi_spec_content_';
 
-    protected function __construct(
-        protected ?string $specPath = null,
-        protected ?string $specContent = null,
-        protected ?string $specType = null,
-        protected ?ValidatorPool $pool = null,
-        protected ?SchemaCache $cache = null,
-        protected ?LoggerInterface $logger = null,
-        protected ?FormatRegistry $formatRegistry = null,
-        protected bool $coercion = false,
-        protected bool $nullableAsType = true,
-        protected EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
-        protected ?ErrorFormatterInterface $errorFormatter = null,
-        protected ?EventDispatcherInterface $eventDispatcher = null,
-        protected bool $securityValidation = false,
-        protected bool $strictFormats = false,
-        protected bool $reportDeprecated = false,
+    private function __construct(
+        private ?string $specPath = null,
+        private ?string $specContent = null,
+        private ?string $specType = null,
+        private ?ValidatorPool $pool = null,
+        private ?SchemaCache $cache = null,
+        private ?LoggerInterface $logger = null,
+        private ?FormatRegistry $formatRegistry = null,
+        private bool $coercion = false,
+        private bool $nullableAsType = true,
+        private EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
+        private ?ErrorFormatterInterface $errorFormatter = null,
+        private ?EventDispatcherInterface $eventDispatcher = null,
+        private bool $securityValidation = false,
+        private bool $strictFormats = false,
+        private bool $reportDeprecated = true,
     ) {}
 
     public static function create(): self
@@ -516,7 +516,7 @@ final readonly class OpenApiValidatorBuilder
     private function parseSpec(string $content): OpenApiDocument
     {
         try {
-            $deprecationLogger = new DeprecationLogger($this->logger ?? new NullLogger());
+            $deprecationLogger = new DeprecationLogger($this->logger ?? new NullLogger(), $this->reportDeprecated);
 
             if ('yaml' === $this->specType) {
                 $parser = new YamlParser($deprecationLogger);

@@ -30,19 +30,6 @@ final readonly class TypeHelper
 
     /**
      * @param mixed $value
-     * @return array<array-key, mixed>|null
-     * @throws TypeError
-     */
-    public static function asArrayOrNull(mixed $value): ?array
-    {
-        if (null === $value) {
-            return null;
-        }
-        return self::asArray($value);
-    }
-
-    /**
-     * @param mixed $value
      * @return string
      * @throws TypeError
      */
@@ -111,19 +98,6 @@ final readonly class TypeHelper
         }
 
         return array_values($value);
-    }
-
-    /**
-     * @param mixed $value
-     * @return array<array-key, mixed>|null
-     * @throws TypeError
-     */
-    public static function asListOrNull(mixed $value): ?array
-    {
-        if (null === $value) {
-            return null;
-        }
-        return self::asList($value);
     }
 
     /**

@@ -26,27 +26,6 @@ final class TypeHelperTest extends TestCase
     }
 
     #[Test]
-    public function as_array_or_null_returns_array(): void
-    {
-        $result = TypeHelper::asArrayOrNull(['key' => 'value']);
-        $this->assertSame(['key' => 'value'], $result);
-    }
-
-    #[Test]
-    public function as_array_or_null_returns_null(): void
-    {
-        $result = TypeHelper::asArrayOrNull(null);
-        $this->assertNull($result);
-    }
-
-    #[Test]
-    public function as_array_or_null_throws_on_non_array(): void
-    {
-        $this->expectException(TypeError::class);
-        TypeHelper::asArrayOrNull('not an array');
-    }
-
-    #[Test]
     public function as_string_map_or_null_returns_map(): void
     {
         $result = TypeHelper::asStringMapOrNull(['key' => 'value']);
@@ -107,27 +86,6 @@ final class TypeHelperTest extends TestCase
     {
         $this->expectException(TypeError::class);
         TypeHelper::asList('not an array');
-    }
-
-    #[Test]
-    public function as_list_or_null_returns_list(): void
-    {
-        $result = TypeHelper::asListOrNull(['a', 'b']);
-        $this->assertSame(['a', 'b'], $result);
-    }
-
-    #[Test]
-    public function as_list_or_null_returns_null(): void
-    {
-        $result = TypeHelper::asListOrNull(null);
-        $this->assertNull($result);
-    }
-
-    #[Test]
-    public function as_list_or_null_throws_on_non_array(): void
-    {
-        $this->expectException(TypeError::class);
-        TypeHelper::asListOrNull('not an array');
     }
 
     #[Test]
