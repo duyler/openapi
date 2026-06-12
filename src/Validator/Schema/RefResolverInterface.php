@@ -9,6 +9,7 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 
 interface RefResolverInterface
 {
@@ -17,22 +18,27 @@ interface RefResolverInterface
      *
      * @param string $ref JSON Pointer reference (e.g., '#/components/schemas/User')
      * @param OpenApiDocument $document Root document
+     * @param int $depth Current recursion depth
      * @return Schema Resolved schema
      * @throws Exception\UnresolvableRefException
+     * @throws SchemaDepthExceededException
      */
-    public function resolve(string $ref, OpenApiDocument $document): Schema;
+    public function resolve(string $ref, OpenApiDocument $document, int $depth = 0): Schema;
 
     /**
      * Resolve $ref to actual parameter
      *
      * @param string $ref JSON Pointer reference (e.g., '#/components/parameters/LimitParam')
      * @param OpenApiDocument $document Root document
+     * @param int $depth Current recursion depth
      * @return Parameter Resolved parameter
      * @throws Exception\UnresolvableRefException
+     * @throws SchemaDepthExceededException
      */
     public function resolveParameter(
         string $ref,
         OpenApiDocument $document,
+        int $depth = 0,
     ): Parameter;
 
     /**
@@ -40,12 +46,15 @@ interface RefResolverInterface
      *
      * @param string $ref JSON Pointer reference (e.g., '#/components/responses/SuccessResponse')
      * @param OpenApiDocument $document Root document
+     * @param int $depth Current recursion depth
      * @return Response Resolved response
      * @throws Exception\UnresolvableRefException
+     * @throws SchemaDepthExceededException
      */
     public function resolveResponse(
         string $ref,
         OpenApiDocument $document,
+        int $depth = 0,
     ): Response;
 
     /**
@@ -54,12 +63,15 @@ interface RefResolverInterface
      * @param Schema $schema Schema to check
      * @param OpenApiDocument $document Root document for resolving refs
      * @param array<int, bool> $visited Internal tracking to prevent infinite recursion
+     * @param int $depth Current recursion depth
      * @return bool True if discriminator found, false otherwise
+     * @throws SchemaDepthExceededException
      */
     public function schemaHasDiscriminator(
         Schema $schema,
         OpenApiDocument $document,
         array &$visited = [],
+        int $depth = 0,
     ): bool;
 
     /**
@@ -67,9 +79,11 @@ interface RefResolverInterface
      *
      * @param Schema $schema Schema to check
      * @param array<int, bool> $visited Internal tracking to prevent infinite recursion
+     * @param int $depth Current recursion depth
      * @return bool True if $ref found, false otherwise
+     * @throws SchemaDepthExceededException
      */
-    public function schemaHasRef(Schema $schema, array &$visited = []): bool;
+    public function schemaHasRef(Schema $schema, array &$visited = [], int $depth = 0): bool;
 
     /**
      * Get base URI from document's $self field
@@ -139,4 +153,11 @@ interface RefResolverInterface
         Response $response,
         OpenApiDocument $document,
     ): Response;
+
+    /**
+     * Clear internal cache.
+     *
+     * Recreates the WeakMap cache to free memory.
+     */
+    public function clear(): void;
 }

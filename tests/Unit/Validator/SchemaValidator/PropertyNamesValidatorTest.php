@@ -12,9 +12,12 @@ use Duyler\OpenApi\Validator\Exception\MaxLengthError;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
 use Duyler\OpenApi\Validator\Exception\PatternMismatchError;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(PropertyNamesValidator::class)]
 class PropertyNamesValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -23,7 +26,7 @@ class PropertyNamesValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new PropertyNamesValidator($this->pool);
+        $this->validator = new PropertyNamesValidator($this->pool, BuiltinFormats::create());
     }
 
     #[Test]
@@ -158,7 +161,7 @@ class PropertyNamesValidatorTest extends TestCase
         );
 
         $this->expectException(InvalidPatternException::class);
-        $this->expectExceptionMessage('Invalid regex pattern "/[invalid/":');
+        $this->expectExceptionMessage('Invalid regex pattern "#[invalid#":');
 
         $this->validator->validate(['name' => 'value'], $schema);
     }

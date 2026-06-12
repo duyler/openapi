@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-readonly class Response implements JsonSerializable
+final readonly class Response implements JsonSerializable
 {
     public function __construct(
         public ?string $ref = null,

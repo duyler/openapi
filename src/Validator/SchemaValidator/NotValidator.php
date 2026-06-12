@@ -12,7 +12,7 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Override;
 
-readonly class NotValidator extends AbstractSchemaValidator
+final readonly class NotValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -22,7 +22,7 @@ readonly class NotValidator extends AbstractSchemaValidator
         }
 
         $nullableAsType = $context?->nullableAsType ?? true;
-        $validator = new SchemaValidator($this->pool);
+        $validator = $this->createSchemaValidator();
 
         try {
             $allowNull = $schema->not->nullable && $nullableAsType;

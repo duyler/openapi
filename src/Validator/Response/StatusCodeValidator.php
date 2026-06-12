@@ -7,8 +7,10 @@ namespace Duyler\OpenApi\Validator\Response;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Validator\Exception\UndefinedResponseException;
 
-readonly class StatusCodeValidator
+final readonly class StatusCodeValidator
 {
+    private const int HTTP_STATUS_RANGE_DIVISOR = 100;
+
     /**
      * @param array<string, Response> $responses
      */
@@ -32,7 +34,7 @@ readonly class StatusCodeValidator
 
     private function getRange(int $statusCode): string
     {
-        $firstDigit = (int) floor($statusCode / 100);
+        $firstDigit = (int) floor($statusCode / self::HTTP_STATUS_RANGE_DIVISOR);
 
         return $firstDigit . 'XX';
     }

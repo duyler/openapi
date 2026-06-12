@@ -7,11 +7,13 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Override;
 
+use function assert;
 use function is_array;
 
-readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator
+final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -27,6 +29,25 @@ readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator
         $definedProperties = array_keys($schema->properties ?? []);
         $additionalKeys = array_diff(array_keys($data), $definedProperties);
 
+        $patternProperties = $schema->patternProperties ?? [];
+        if ([] !== $patternProperties && [] !== $additionalKeys) {
+            $additionalKeys = array_values(array_filter($additionalKeys, function (int|string $key) use ($patternProperties): bool {
+                foreach (array_keys($patternProperties) as $pattern) {
+                    if ('' === $pattern) {
+                        continue;
+                    }
+
+                    $normalizedPattern = RegexValidator::normalize($pattern);
+                    assert('' !== $normalizedPattern);
+                    if (1 === preg_match($normalizedPattern, (string) $key)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }));
+        }
+
         if ([] === $additionalKeys) {
             return;
         }
@@ -41,12 +62,12 @@ readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator
 
         if ($schema->additionalProperties instanceof Schema) {
             $nullableAsType = $context?->nullableAsType ?? true;
-            $validator = new SchemaValidator($this->pool);
+            $validator = $this->createSchemaValidator();
 
             foreach ($additionalKeys as $key) {
                 /** @var array-key|array<array-key, mixed> $value */
                 $value = $data[$key];
-                $keyContext = $context?->withBreadcrumb((string) $key) ?? ValidationContext::create($this->pool, $nullableAsType);
+                $keyContext = $context?->withBreadcrumb((string) $key) ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
                 $validator->validate($value, $schema->additionalProperties, $keyContext);
             }
         }

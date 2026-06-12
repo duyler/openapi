@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-readonly class Servers implements JsonSerializable
+final readonly class Servers implements JsonSerializable
 {
     /**
      * @param list<Server> $servers

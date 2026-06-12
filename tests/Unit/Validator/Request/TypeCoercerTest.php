@@ -314,7 +314,7 @@ final class TypeCoercerTest extends TestCase
     }
 
     #[Test]
-    public function convert_null_to_empty_string(): void
+    public function throw_type_mismatch_error_when_null_and_schema_type_is_string(): void
     {
         $param = new Parameter(
             name: 'test',
@@ -322,9 +322,37 @@ final class TypeCoercerTest extends TestCase
             schema: new Schema(type: 'string'),
         );
 
+        $this->expectException(TypeMismatchError::class);
+
+        $this->coercer->coerce(null, $param, true);
+    }
+
+    #[Test]
+    public function return_null_when_schema_allows_nullable(): void
+    {
+        $param = new Parameter(
+            name: 'test',
+            in: 'path',
+            schema: new Schema(type: ['string', 'null']),
+        );
+
         $result = $this->coercer->coerce(null, $param, true);
 
-        $this->assertSame('', $result);
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function return_null_when_schema_nullable_flag_is_set(): void
+    {
+        $param = new Parameter(
+            name: 'test',
+            in: 'path',
+            schema: new Schema(type: 'string', nullable: true),
+        );
+
+        $result = $this->coercer->coerce(null, $param, true);
+
+        $this->assertNull($result);
     }
 
     #[Test]

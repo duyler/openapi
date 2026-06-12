@@ -6,14 +6,14 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\MaxContainsError;
 use Duyler\OpenApi\Validator\Exception\MinContainsError;
-use Exception;
 use Override;
 
 use function is_array;
 
-readonly class ContainsRangeValidator extends AbstractSchemaValidator
+final readonly class ContainsRangeValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -37,11 +37,12 @@ readonly class ContainsRangeValidator extends AbstractSchemaValidator
         foreach ($data as $item) {
             try {
                 /** @var array-key|array<array-key, mixed> $item */
-                $validator = new SchemaValidator($this->pool);
-                $itemContext = $context ?? ValidationContext::create($this->pool, $nullableAsType);
+                $validator = $this->createSchemaValidator();
+                $itemContext = $context ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
                 $validator->validate($item, $schema->contains, $itemContext);
                 ++$matchCount;
-            } catch (Exception) {
+            } catch (AbstractValidationError) {
+                continue;
             }
         }
 

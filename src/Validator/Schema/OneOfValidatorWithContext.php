@@ -8,21 +8,31 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
-
-use Exception;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 use function is_array;
 use function assert;
 
-readonly class OneOfValidatorWithContext
+final readonly class OneOfValidatorWithContext
 {
+    private readonly LoggerInterface $logger;
+
     public function __construct(
         private readonly ValidatorPool $pool,
         private readonly RefResolverInterface $refResolver,
         private readonly OpenApiDocument $document,
-    ) {}
+        private readonly StatelessValidatorRegistry $statelessValidators,
+        private readonly bool $reportDeprecated = false,
+        ?LoggerInterface $logger = null,
+        private readonly ?EventDispatcherInterface $eventDispatcher = null,
+    ) {
+        $this->logger = $logger ?? new NullLogger();
+    }
 
     public function validateWithContext(
         mixed $data,
@@ -62,21 +72,15 @@ readonly class OneOfValidatorWithContext
             );
         }
 
-        $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool);
+        $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool, $this->statelessValidators, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
         $dataPath = $context->breadcrumbs->currentPath();
 
         $discriminatorValidator->validate($data, $schema, $this->document, $dataPath);
     }
 
-    /**
-     * Check if any schema in oneOf is nullable
-     *
-     * @param array<int, Schema> $oneOf
-     * @return bool
-     */
     private function hasNullableSchema(array $oneOf): bool
     {
-        return array_any($oneOf, fn($subSchema) => $subSchema->nullable);
+        return array_any($oneOf, fn(Schema $subSchema): bool => $subSchema->nullable);
     }
 
     private function validateWithoutDiscriminator(mixed $data, array $oneOf, ValidationContext $context): void
@@ -93,25 +97,31 @@ readonly class OneOfValidatorWithContext
             try {
                 $allowNull = $subSchema->nullable && $context->nullableAsType;
                 $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
-                $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $context->nullableAsType);
+                $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators, $context->nullableAsType, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
                 $validator->validateWithContext($normalizedData, $subSchema, $context);
                 ++$validCount;
-            } catch (Exception $e) {
-                if ($e instanceof AbstractValidationError) {
-                    $abstractErrors[] = $e;
-                } else {
-                    $errors[] = new ValidationException(
-                        message: 'Invalid data for oneOf schema: ' . $e->getMessage(),
-                        previous: $e,
-                    );
-                }
+            } catch (AbstractValidationError $e) {
+                $abstractErrors[] = $e;
+            } catch (InvalidDataTypeException) {
+                continue;
+            } catch (ValidationException $e) {
+                $errors[] = new ValidationException(
+                    message: 'Invalid data for oneOf schema: ' . $e->getMessage(),
+                    previous: $e,
+                    errors: $e->getErrors(),
+                );
             }
         }
 
         if (0 === $validCount) {
+            $allErrors = $abstractErrors;
+            foreach ($errors as $error) {
+                $allErrors = [...$allErrors, ...$error->getErrors()];
+            }
+
             throw new ValidationException(
                 'Exactly one of schemas must match, but none did',
-                errors: $abstractErrors,
+                errors: $allErrors,
             );
         }
 

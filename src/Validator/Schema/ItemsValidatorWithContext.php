@@ -14,17 +14,28 @@ use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 use function count;
 use function sprintf;
 
-readonly class ItemsValidatorWithContext
+final readonly class ItemsValidatorWithContext
 {
+    private readonly LoggerInterface $logger;
+
     public function __construct(
         private readonly ValidatorPool $pool,
         private readonly RefResolverInterface $refResolver,
         private readonly OpenApiDocument $document,
-    ) {}
+        private readonly StatelessValidatorRegistry $statelessValidators,
+        private readonly bool $reportDeprecated = false,
+        ?LoggerInterface $logger = null,
+        private readonly ?EventDispatcherInterface $eventDispatcher = null,
+    ) {
+        $this->logger = $logger ?? new NullLogger();
+    }
 
     public function validateWithContext(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
     {
@@ -34,15 +45,20 @@ readonly class ItemsValidatorWithContext
 
         $errors = [];
         $itemSchema = $schema->items;
+        $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
 
         foreach ($data as $index => $item) {
+            /** @var int $index */
+            if ($index < $prefixCount) {
+                continue;
+            }
+
             try {
-                /** @var int $index */
                 $itemContext = $context->withBreadcrumbIndex($index);
 
                 $allowNull = $itemSchema->nullable && $context->nullableAsType;
                 $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
-                $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document);
+                $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
                 $validator->validateWithContext($normalizedItem, $itemSchema, $itemContext, $useDiscriminator);
             } catch (DiscriminatorMismatchException|
                 InvalidDiscriminatorValueException|

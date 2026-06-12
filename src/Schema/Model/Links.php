@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-readonly class Links implements JsonSerializable
+final readonly class Links implements JsonSerializable
 {
     /**
      * @param array<string, Link> $links

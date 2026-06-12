@@ -10,9 +10,12 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(PatternPropertiesValidator::class)]
 class PatternPropertiesValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -21,7 +24,7 @@ class PatternPropertiesValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new PatternPropertiesValidator($this->pool);
+        $this->validator = new PatternPropertiesValidator($this->pool, BuiltinFormats::create());
     }
 
     #[Test]
@@ -204,7 +207,7 @@ class PatternPropertiesValidatorTest extends TestCase
         );
 
         $this->expectException(InvalidPatternException::class);
-        $this->expectExceptionMessage('Invalid regex pattern "/[invalid/":');
+        $this->expectExceptionMessage('Invalid regex pattern "#[invalid#":');
 
         $this->validator->validate(['invalid' => 'a'], $schema);
     }

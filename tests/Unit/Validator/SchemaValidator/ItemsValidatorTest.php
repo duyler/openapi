@@ -11,12 +11,15 @@ use Duyler\OpenApi\Validator\Exception\MaximumError;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 
+#[CoversClass(ItemsValidator::class)]
 class ItemsValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -25,7 +28,7 @@ class ItemsValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new ItemsValidator($this->pool);
+        $this->validator = new ItemsValidator($this->pool, BuiltinFormats::create());
     }
 
     #[Test]

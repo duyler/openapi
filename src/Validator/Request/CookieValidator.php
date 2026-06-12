@@ -12,7 +12,7 @@ use Override;
 use function count;
 use function is_string;
 
-readonly class CookieValidator extends AbstractParameterValidator
+final readonly class CookieValidator extends AbstractParameterValidator
 {
     public function parseCookies(string $cookieHeader): array
     {
@@ -88,15 +88,7 @@ readonly class CookieValidator extends AbstractParameterValidator
                 continue;
             }
 
-            if ('' !== trim($cookieHeader)) {
-                $value = $this->parseCookieStyle($cookieHeader, $param);
-            } else {
-                /** @var mixed $value */
-                $value = $this->findParameter($data, $name);
-                if (is_string($value)) {
-                    $value = $this->decodeValue($value);
-                }
-            }
+            $value = $this->resolveValue($data, $cookieHeader, $name, $param);
 
             if (null === $value) {
                 if ($this->isRequired($param, $value)) {
@@ -106,7 +98,7 @@ readonly class CookieValidator extends AbstractParameterValidator
             }
 
             $value = $this->deserializer->deserialize($value, $param);
-            $value = $this->coercer->coerce($value, $param, $this->coercion, $this->coercion);
+            $value = $this->coercer->coerce($value, $param, $this->coercion, false);
 
             if (null !== $param->schema) {
                 $this->schemaValidator->validate($value, $param->schema);
@@ -124,6 +116,18 @@ readonly class CookieValidator extends AbstractParameterValidator
     protected function findParameter(array $data, string $name): mixed
     {
         return $data[$name] ?? null;
+    }
+
+    private function resolveValue(array $data, string $cookieHeader, string $name, Parameter $param): array|int|string|float|bool|null
+    {
+        if ('' !== trim($cookieHeader)) {
+            return $this->parseCookieStyle($cookieHeader, $param);
+        }
+
+        /** @var array|int|string|float|bool|null $value */
+        $value = $this->findParameter($data, $name);
+
+        return is_string($value) ? $this->decodeValue($value) : $value;
     }
 
     private function parseExplodedValues(string $cookieHeader, string $name): array

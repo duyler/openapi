@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-readonly class Tags implements JsonSerializable
+final readonly class Tags implements JsonSerializable
 {
     /**
      * @param list<Tag> $tags

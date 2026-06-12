@@ -7,9 +7,11 @@ namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\SchemaValidator\ValidationResult;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(ValidationResult::class)]
 final class ValidationResultTest extends TestCase
 {
     #[Test]

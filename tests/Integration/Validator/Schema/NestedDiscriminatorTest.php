@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Integration\Validator\Schema;
 
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 
 use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\Discriminator;
@@ -25,18 +27,20 @@ final class NestedDiscriminatorTest extends TestCase
     private SchemaValidatorWithContext $validator;
     private RefResolverInterface $refResolver;
     private ValidatorPool $pool;
+    private StatelessValidatorRegistry $statelessValidators;
 
     protected function setUp(): void
     {
         $this->refResolver = new RefResolver();
         $this->pool = new ValidatorPool();
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
 
         $document = new OpenApiDocument(
             '3.1.0',
             new InfoObject('Event API', '1.0.0'),
         );
 
-        $this->validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document);
+        $this->validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
     }
 
     #[Test]
@@ -93,7 +97,7 @@ final class NestedDiscriminatorTest extends TestCase
             ),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
 
         $messageData = [
             'id' => 'msg-123',
@@ -162,7 +166,7 @@ final class NestedDiscriminatorTest extends TestCase
             ),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
 
         $petData = [
             'petType' => 'cat',
@@ -230,7 +234,7 @@ final class NestedDiscriminatorTest extends TestCase
             ),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
 
         $containerData = [
             'containerId' => 'cont-123',

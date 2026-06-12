@@ -14,6 +14,7 @@ use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 
 final class RefResolverCircularTest extends TestCase
 {
@@ -222,5 +223,56 @@ final class RefResolverCircularTest extends TestCase
         $result = $this->resolver->resolve('#/components/schemas/A', $document);
 
         self::assertSame('FinalSchema', $result->title);
+    }
+
+    #[Test]
+    public function linear_ref_chain_exceeding_depth_throws_exception(): void
+    {
+        $schemas = [];
+        for ($i = 0; $i < 100; ++$i) {
+            if ($i < 99) {
+                $schemas['S' . $i] = new Schema(ref: '#/components/schemas/S' . ($i + 1));
+            } else {
+                $schemas['S' . $i] = new Schema(title: 'Final', type: 'string');
+            }
+        }
+
+        $document = new OpenApiDocument(
+            openapi: '3.0.0',
+            info: new InfoObject(title: 'Test', version: '1.0'),
+            components: new Components(schemas: $schemas),
+        );
+
+        $this->expectException(SchemaDepthExceededException::class);
+
+        $this->resolver->resolve('#/components/schemas/S0', $document);
+    }
+
+    #[Test]
+    public function ref_with_many_path_segments_throws_exception(): void
+    {
+        // Build a deeply nested schema: S0 -> properties -> p0 -> properties -> p1 -> ... -> Leaf
+        $leafSchema = new Schema(title: 'Leaf', type: 'string');
+        $current = $leafSchema;
+        for ($i = 99; $i >= 0; --$i) {
+            $current = new Schema(properties: ['p' . $i => $current]);
+        }
+
+        $document = new OpenApiDocument(
+            openapi: '3.0.0',
+            info: new InfoObject(title: 'Test', version: '1.0'),
+            components: new Components(schemas: ['Deep' => $current]),
+        );
+
+        // Build ref: #/components/schemas/Deep/properties/p0/properties/p1/...
+        $segments = ['components', 'schemas', 'Deep'];
+        for ($i = 0; $i < 100; ++$i) {
+            $segments[] = 'properties';
+            $segments[] = 'p' . $i;
+        }
+
+        $this->expectException(SchemaDepthExceededException::class);
+
+        $this->resolver->resolve('#/' . implode('/', $segments), $document);
     }
 }

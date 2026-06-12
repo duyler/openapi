@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-readonly class SecurityScheme implements JsonSerializable
+final readonly class SecurityScheme implements JsonSerializable
 {
     /**
      * @param array<string, string>|null $scopes

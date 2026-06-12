@@ -10,13 +10,13 @@ namespace Duyler\OpenApi\Validator\Error;
  * Maintains a stack of path segments and provides methods to push/pop segments.
  * Each operation returns a new instance to maintain immutability.
  */
-readonly class BreadcrumbManager
+final class BreadcrumbManager
 {
     /**
      * @param array<int, string> $stack
      */
     private function __construct(
-        private readonly array $stack = [],
+        private array $stack = [],
     ) {}
 
     public static function create(): self
@@ -26,7 +26,10 @@ readonly class BreadcrumbManager
 
     public function push(string $segment): self
     {
-        return new self([...$this->stack, $segment]);
+        $clone = clone $this;
+        $clone->stack[] = $segment;
+
+        return $clone;
     }
 
     public function pushIndex(int $index): self
@@ -36,10 +39,10 @@ readonly class BreadcrumbManager
 
     public function pop(): self
     {
-        $newStack = $this->stack;
-        array_pop($newStack);
+        $clone = clone $this;
+        array_pop($clone->stack);
 
-        return new self($newStack);
+        return $clone;
     }
 
     public function toBreadcrumb(): Breadcrumb

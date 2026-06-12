@@ -31,7 +31,7 @@ final class SchemaHelperIntegrationTest extends TestCase
 
         $validator = $builder->build();
 
-        self::assertNotNull($validator->document);
+        self::assertNotNull($validator->getDocument());
 
         // Test that valid data types can be normalized
         $arrayData = ['name' => 'test'];

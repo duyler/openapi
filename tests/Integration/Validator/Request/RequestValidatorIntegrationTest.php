@@ -11,12 +11,6 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Parameters;
 use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\Model\Schema;
-use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
-use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
-use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
-use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
-use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
-use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
 use Duyler\OpenApi\Validator\Request\CookieValidator;
 use Duyler\OpenApi\Validator\Request\HeadersValidator;
 use Duyler\OpenApi\Validator\Request\ParameterDeserializer;
@@ -25,11 +19,12 @@ use Duyler\OpenApi\Validator\Request\PathParser;
 use Duyler\OpenApi\Validator\Request\QueryParametersValidator;
 use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Request\QueryStringValidator;
-use Duyler\OpenApi\Validator\Request\RequestBodyValidator;
+use Duyler\OpenApi\Validator\Request\RequestBodyValidatorInterface;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
@@ -44,7 +39,7 @@ final class RequestValidatorIntegrationTest extends TestCase
     protected function setUp(): void
     {
         $pool = new ValidatorPool();
-        $schemaValidator = new SchemaValidator($pool);
+        $schemaValidator = new SchemaValidator($pool, BuiltinFormats::create());
         $deserializer = new ParameterDeserializer();
         $coercer = new TypeCoercer();
 
@@ -54,21 +49,7 @@ final class RequestValidatorIntegrationTest extends TestCase
         $queryParamsValidator = new QueryParametersValidator($schemaValidator, $deserializer, $coercer);
         $headersValidator = new HeadersValidator($schemaValidator, $deserializer, $coercer);
         $cookieValidator = new CookieValidator($schemaValidator, $deserializer, $coercer);
-        $negotiator = new ContentTypeNegotiator();
-        $jsonParser = new JsonBodyParser();
-        $formParser = new FormBodyParser();
-        $multipartParser = new MultipartBodyParser();
-        $textParser = new TextBodyParser();
-        $xmlParser = new XmlBodyParser();
-        $bodyValidator = new RequestBodyValidator(
-            $schemaValidator,
-            $negotiator,
-            $jsonParser,
-            $formParser,
-            $multipartParser,
-            $textParser,
-            $xmlParser,
-        );
+        $bodyValidator = $this->createStub(RequestBodyValidatorInterface::class);
 
         $queryStringValidator = new QueryStringValidator($queryParser, $schemaValidator);
 
@@ -107,7 +88,7 @@ final class RequestValidatorIntegrationTest extends TestCase
                 new Parameter(
                     name: 'active',
                     in: 'query',
-                    schema: new Schema(type: 'string'),  // Query params are strings
+                    schema: new Schema(type: 'string'),
                 ),
                 new Parameter(
                     name: 'X-Custom-Header',
@@ -168,7 +149,7 @@ final class RequestValidatorIntegrationTest extends TestCase
                 new Parameter(
                     name: 'limit',
                     in: 'query',
-                    schema: new Schema(type: 'string'),  // Query params are strings
+                    schema: new Schema(type: 'string'),
                 ),
             ]),
         );

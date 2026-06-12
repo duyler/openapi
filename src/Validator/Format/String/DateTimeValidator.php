@@ -8,7 +8,7 @@ use DateTime;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Override;
 
-readonly class DateTimeValidator extends AbstractStringFormatValidator
+final readonly class DateTimeValidator extends AbstractStringFormatValidator
 {
     #[Override]
     protected function getFormatName(): string

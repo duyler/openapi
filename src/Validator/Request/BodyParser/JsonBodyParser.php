@@ -9,8 +9,10 @@ use JsonException;
 
 use const JSON_THROW_ON_ERROR;
 
-readonly class JsonBodyParser
+final readonly class JsonBodyParser
 {
+    private const int JSON_MAX_DEPTH = 512;
+
     /**
      * @throws JsonException
      * @throws EmptyBodyException
@@ -21,9 +23,9 @@ readonly class JsonBodyParser
             throw new EmptyBodyException('Request body cannot be empty');
         }
 
-        $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+        /** @var array|int|string|float|bool|null $decoded */
+        $decoded = json_decode($body, true, self::JSON_MAX_DEPTH, JSON_THROW_ON_ERROR);
 
-        /** @var array|int|string|float|bool|null */
         return $decoded;
     }
 }

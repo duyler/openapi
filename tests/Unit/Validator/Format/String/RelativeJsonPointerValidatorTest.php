@@ -6,9 +6,11 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\String\RelativeJsonPointerValidator;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(RelativeJsonPointerValidator::class)]
 final class RelativeJsonPointerValidatorTest extends TestCase
 {
     private RelativeJsonPointerValidator $validator;

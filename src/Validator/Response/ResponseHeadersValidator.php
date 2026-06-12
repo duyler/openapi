@@ -19,8 +19,11 @@ use function intval;
 use function is_numeric;
 use function strtolower;
 
-readonly class ResponseHeadersValidator
+final readonly class ResponseHeadersValidator
 {
+    private const array TRUTHY_VALUES = ['true', '1', 'yes', 'on'];
+    private const array FALSY_VALUES = ['false', '0', 'no', 'off'];
+
     public function __construct(
         private readonly SchemaValidatorInterface $schemaValidator,
         private readonly HeaderFinder $headerFinder = new HeaderFinder(),
@@ -108,14 +111,11 @@ readonly class ResponseHeadersValidator
     {
         $lowerValue = strtolower($value);
 
-        $trueValues = ['true', '1', 'yes', 'on'];
-        $falseValues = ['false', '0', 'no', 'off'];
-
-        if (in_array($lowerValue, $trueValues, true)) {
+        if (in_array($lowerValue, self::TRUTHY_VALUES, true)) {
             return true;
         }
 
-        if (in_array($lowerValue, $falseValues, true)) {
+        if (in_array($lowerValue, self::FALSY_VALUES, true)) {
             return false;
         }
 

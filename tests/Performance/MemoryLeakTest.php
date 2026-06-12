@@ -57,7 +57,7 @@ final class MemoryLeakTest extends TestCase
     }
 
     #[Test]
-    public function weakmap_prevents_memory_leaks(): void
+    public function pool_prevents_memory_leaks(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlFile(__DIR__ . '/../fixtures/petstore.yaml')
@@ -81,7 +81,7 @@ final class MemoryLeakTest extends TestCase
         $finalMemory = memory_get_usage();
         $growth = ($finalMemory - $initialMemory) / (float) $initialMemory * 100;
 
-        self::assertLessThan(30, $growth, 'WeakMap should prevent memory leaks');
+        self::assertLessThan(30, $growth, 'Pool should not accumulate objects indefinitely');
     }
 
     private function createPsr7Request(

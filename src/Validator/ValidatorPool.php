@@ -4,16 +4,34 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator;
 
-use WeakMap;
+use InvalidArgumentException;
 
-readonly class ValidatorPool
+use function sprintf;
+use function count;
+
+final class ValidatorPool
 {
-    /** @var WeakMap<object, mixed> */
-    public WeakMap $pool;
+    private const int DEFAULT_MAX_SIZE = 128;
 
-    public function __construct()
+    /** @var array<string, object> */
+    private array $cache = [];
+
+    /** @var list<string> */
+    private array $order = [];
+
+    private readonly int $maxSize;
+
+    public function __construct(?int $maxSize = null)
     {
-        $this->pool = new WeakMap();
+        $resolvedMaxSize = $maxSize ?? self::DEFAULT_MAX_SIZE;
+
+        if (1 > $resolvedMaxSize) {
+            throw new InvalidArgumentException(
+                sprintf('Max size must be at least 1, got %d', $resolvedMaxSize),
+            );
+        }
+
+        $this->maxSize = $resolvedMaxSize;
     }
 
     /**
@@ -21,22 +39,42 @@ readonly class ValidatorPool
      * @param callable(): T $factory
      * @return T
      */
-    public function getOrCreate(callable $factory): object
+    public function getOrCreate(string $key, callable $factory): object
     {
-        $instance = $factory();
+        if (isset($this->cache[$key])) {
+            $this->touch($key);
 
-        if ($this->pool->offsetExists($instance)) {
             /** @var T */
-            return $this->pool->offsetGet($instance);
+            return $this->cache[$key];
         }
 
-        $this->pool->offsetSet($instance, $instance);
+        $instance = $factory();
+        $this->cache[$key] = $instance;
+        $this->order[] = $key;
+
+        if (count($this->cache) > $this->maxSize) {
+            $evictedKey = array_shift($this->order);
+            unset($this->cache[$evictedKey]);
+        }
 
         return $instance;
     }
 
-    public function count(): int
+    public function clear(): void
     {
-        return $this->pool->count();
+        $this->cache = [];
+        $this->order = [];
+    }
+
+    private function touch(string $key): void
+    {
+        $index = array_search($key, $this->order, true);
+
+        if (false !== $index) {
+            unset($this->order[$index]);
+            $this->order = array_values($this->order);
+        }
+
+        $this->order[] = $key;
     }
 }

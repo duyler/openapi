@@ -9,16 +9,16 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ConstError;
 use Override;
 
-readonly class ConstValidator extends AbstractSchemaValidator
+final readonly class ConstValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
-        if (null === $schema->const) {
+        if (false === $schema->hasConst && null === $schema->const) {
             return;
         }
 
-        if ($data !== $schema->const) {
+        if ($schema->const !== $data) {
             $dataPath = $this->getDataPath($context);
             throw new ConstError(
                 expected: $schema->const,

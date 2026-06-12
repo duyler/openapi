@@ -10,9 +10,12 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\MaxLengthError;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(StringLengthValidator::class)]
 class StringLengthValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -21,7 +24,7 @@ class StringLengthValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new StringLengthValidator($this->pool);
+        $this->validator = new StringLengthValidator($this->pool, BuiltinFormats::create());
     }
 
     #[Test]

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Integration\Validator\Schema;
 
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 
 use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\Discriminator;
@@ -26,18 +28,20 @@ final class DiscriminatorIntegrationTest extends TestCase
     private SchemaValidatorWithContext $validator;
     private RefResolverInterface $refResolver;
     private ValidatorPool $pool;
+    private StatelessValidatorRegistry $statelessValidators;
 
     protected function setUp(): void
     {
         $this->refResolver = new RefResolver();
         $this->pool = new ValidatorPool();
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
 
         $document = new OpenApiDocument(
             '3.1.0',
             new InfoObject('API', '1.0.0'),
         );
 
-        $this->validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document);
+        $this->validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
     }
 
     #[Test]
@@ -119,7 +123,7 @@ final class DiscriminatorIntegrationTest extends TestCase
             ),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
 
         $petStoreData = [
             'storeId' => 'store-123',
@@ -221,7 +225,7 @@ final class DiscriminatorIntegrationTest extends TestCase
             ),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
 
         $catData = [
             'id' => 'cat-123',
@@ -288,7 +292,7 @@ final class DiscriminatorIntegrationTest extends TestCase
             ),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
 
         $treeData = [
             'nodeType' => 'TreeNode',
@@ -371,7 +375,7 @@ final class DiscriminatorIntegrationTest extends TestCase
             ),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
 
         $successData = [
             'status' => 'success',
@@ -447,7 +451,7 @@ final class DiscriminatorIntegrationTest extends TestCase
             ),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
 
         $containerData = [
             'item' => [

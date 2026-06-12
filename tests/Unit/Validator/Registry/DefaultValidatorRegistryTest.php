@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Registry\DefaultValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\FormatValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\TypeValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -20,7 +21,7 @@ final class DefaultValidatorRegistryTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->registry = new DefaultValidatorRegistry($this->pool);
+        $this->registry = new DefaultValidatorRegistry($this->pool, BuiltinFormats::create());
     }
 
     #[Test]
@@ -95,7 +96,7 @@ final class DefaultValidatorRegistryTest extends TestCase
     {
         $validators = $this->registry->getAllValidators();
 
-        self::assertCount(26, $validators);
+        self::assertCount(30, $validators);
     }
 
     #[Test]

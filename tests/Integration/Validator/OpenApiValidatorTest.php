@@ -99,8 +99,8 @@ YAML;
     #[Test]
     public function create_validator_from_yaml(): void
     {
-        $this->assertSame('Sample API', $this->validator->document->info->title);
-        $this->assertSame('1.0.0', $this->validator->document->info->version);
+        $this->assertSame('Sample API', $this->validator->getDocument()->info->title);
+        $this->assertSame('1.0.0', $this->validator->getDocument()->info->version);
     }
 
     #[Test]

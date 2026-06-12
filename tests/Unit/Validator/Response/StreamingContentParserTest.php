@@ -8,6 +8,7 @@ use Duyler\OpenApi\Validator\Response\StreamingContentParser;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 
 #[CoversClass(StreamingContentParser::class)]
 final class StreamingContentParserTest extends TestCase
@@ -253,5 +254,120 @@ final class StreamingContentParserTest extends TestCase
         self::assertCount(2, $result);
         self::assertSame(['direct' => 1], $result[0]);
         self::assertSame(['direct' => 2], $result[1]);
+    }
+
+    #[Test]
+    public function logs_warning_on_invalid_json_line_in_ndjson(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())
+            ->method('warning')
+            ->with(
+                $this->stringContains('NDJSON'),
+                $this->callback(function (array $context): bool {
+                    return isset($context['line']) && isset($context['exception']);
+                }),
+            );
+
+        $parser = new StreamingContentParser($logger);
+
+        $parser->parseJsonLines('{"valid":true}' . "\n" . 'not-json');
+    }
+
+    #[Test]
+    public function logs_warning_on_invalid_json_sequence_item(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())
+            ->method('warning')
+            ->with(
+                $this->stringContains('JSON sequence'),
+                $this->callback(function (array $context): bool {
+                    return isset($context['json']) && isset($context['exception']);
+                }),
+            );
+
+        $parser = new StreamingContentParser($logger);
+
+        $parser->parseJsonSeq("\x1E{\"valid\":true}\x1Enot-json");
+    }
+
+    #[Test]
+    public function logs_warning_on_invalid_sse_event_data(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())
+            ->method('warning')
+            ->with(
+                $this->stringContains('SSE event data'),
+                $this->callback(function (array $context): bool {
+                    return isset($context['data']) && isset($context['exception']);
+                }),
+            );
+
+        $parser = new StreamingContentParser($logger);
+
+        $body = "event: test\ndata: {invalid json}\n\n";
+
+        $result = $parser->parseServerSentEvents($body);
+
+        self::assertSame('{invalid json}', $result[0]['data']);
+    }
+
+    #[Test]
+    public function uses_null_logger_by_default(): void
+    {
+        $parser = new StreamingContentParser();
+
+        $body = "{\"valid\":true}\nnot-json\n{\"also\":\"valid\"}";
+
+        $result = $parser->parseJsonLines($body);
+
+        self::assertCount(3, $result);
+        self::assertNull($result[1]);
+    }
+
+    #[Test]
+    public function logs_each_invalid_line_in_ndjson(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->exactly(2))->method('warning');
+
+        $parser = new StreamingContentParser($logger);
+
+        $parser->parseJsonLines("{\"ok\":1}\nbad1\nbad2\n{\"ok\":2}");
+    }
+
+    #[Test]
+    public function does_not_log_on_valid_json_lines(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->never())->method('warning');
+
+        $parser = new StreamingContentParser($logger);
+
+        $parser->parseJsonLines("{\"a\":1}\n{\"b\":2}");
+    }
+
+    #[Test]
+    public function does_not_log_on_valid_json_sequence(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->never())->method('warning');
+
+        $parser = new StreamingContentParser($logger);
+
+        $parser->parseJsonSeq("\x1E{\"a\":1}\x1E{\"b\":2}");
+    }
+
+    #[Test]
+    public function does_not_log_on_valid_sse_event_data(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->never())->method('warning');
+
+        $parser = new StreamingContentParser($logger);
+
+        $parser->parseServerSentEvents("event: test\ndata: {\"key\":\"value\"}\n\n");
     }
 }

@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-readonly class ExternalDocs implements JsonSerializable
+final readonly class ExternalDocs implements JsonSerializable
 {
     public function __construct(
         public string $url,

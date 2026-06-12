@@ -9,26 +9,25 @@ use Duyler\OpenApi\Validator\Exception\PathMismatchException;
 use function is_string;
 use function assert;
 
-readonly class PathParser
+final readonly class PathParser
 {
-    /**
-     * Extract parameter names from path template
-     *
-     * @return array<int, string>
-     */
-    public function parseParameters(string $pathTemplate): array
-    {
-        preg_match_all('/\{([^}]+)\}/', $pathTemplate, $matches);
-
-        return $matches[1] ?? [];
-    }
-
     /**
      * Match request path against template
      *
      * @return array<string, string> Parameter values
      */
     public function matchPath(string $requestPath, string $template): array
+    {
+        return $this->tryMatchPath($requestPath, $template)
+            ?? throw new PathMismatchException($template, $requestPath);
+    }
+
+    /**
+     * Non-throwing version of matchPath for iteration use
+     *
+     * @return array<string, string>|null Parameter values, or null if no match
+     */
+    public function tryMatchPath(string $requestPath, string $template): ?array
     {
         $regex = $this->templateToRegex($template);
 
@@ -38,7 +37,7 @@ readonly class PathParser
         $matchResult = preg_match($regex, $requestPath, $matches);
 
         if (false === $matchResult || 1 !== $matchResult) {
-            throw new PathMismatchException($template, $requestPath);
+            return null;
         }
 
         $params = [];

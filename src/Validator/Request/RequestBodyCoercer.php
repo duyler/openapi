@@ -14,7 +14,7 @@ use function is_int;
 use function is_numeric;
 use function is_string;
 
-readonly class RequestBodyCoercer
+final readonly class RequestBodyCoercer
 {
     public function coerce(mixed $value, ?Schema $schema, bool $enabled, bool $strict = false, bool $nullableAsType = true): mixed
     {
@@ -46,6 +46,7 @@ readonly class RequestBodyCoercer
                 continue;
             }
 
+            /** @var array|int|string|float|bool|null $coerced */
             $coerced = $this->coerceToType($value, $type, $schema, $strict, $nullableAsType);
 
             if ($this->isValidType($coerced, $type)) {
@@ -174,11 +175,11 @@ readonly class RequestBodyCoercer
         }
 
         if (is_int($value)) {
-            return $value !== 0;
+            return 0 !== $value;
         }
 
         if (is_float($value)) {
-            return $value !== 0.0;
+            return 0.0 !== $value;
         }
 
         return $value;
@@ -196,6 +197,7 @@ readonly class RequestBodyCoercer
             return $value;
         }
 
+        /** @var array<string, mixed> $coerced */
         $coerced = $value;
 
         foreach ($properties as $name => $propertySchema) {

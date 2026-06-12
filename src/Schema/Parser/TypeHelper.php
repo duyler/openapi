@@ -12,7 +12,7 @@ use function is_float;
 use function is_int;
 use function is_string;
 
-readonly class TypeHelper
+final readonly class TypeHelper
 {
     /**
      * @param mixed $value
@@ -26,19 +26,6 @@ readonly class TypeHelper
         }
 
         return $value;
-    }
-
-    /**
-     * @param mixed $value
-     * @return array<array-key, mixed>|null
-     * @throws TypeError
-     */
-    public static function asArrayOrNull(mixed $value): ?array
-    {
-        if (null === $value) {
-            return null;
-        }
-        return self::asArray($value);
     }
 
     /**
@@ -83,15 +70,14 @@ readonly class TypeHelper
         }
 
         if (is_array($value)) {
+            /** @var list<string|null> $result */
             $result = [];
             foreach ($value as $item) {
-                if (null === $item) {
-                    $result[] = null;
-                } elseif (is_string($item)) {
-                    $result[] = $item;
-                } else {
-                    throw new TypeError('Expected string or null in type array, got ' . get_debug_type($item));
-                }
+                $result[] = match (true) {
+                    null === $item => null,
+                    is_string($item) => $item,
+                    default => throw new TypeError('Expected string or null in type array, got ' . get_debug_type($item)),
+                };
             }
 
             return $result;
@@ -112,19 +98,6 @@ readonly class TypeHelper
         }
 
         return array_values($value);
-    }
-
-    /**
-     * @param mixed $value
-     * @return array<array-key, mixed>|null
-     * @throws TypeError
-     */
-    public static function asListOrNull(mixed $value): ?array
-    {
-        if (null === $value) {
-            return null;
-        }
-        return self::asList($value);
     }
 
     /**
@@ -345,6 +318,7 @@ readonly class TypeHelper
                 throw new TypeError('Expected array in security list, got ' . get_debug_type($item));
             }
 
+            /** @var array<string, list<string>> $securityItem */
             $securityItem = [];
             foreach ($item as $key => $val) {
                 if (false === is_string($key)) {
@@ -353,6 +327,7 @@ readonly class TypeHelper
                 if (false === is_array($val)) {
                     throw new TypeError('Expected list in security map value, got ' . get_debug_type($val));
                 }
+                /** @var list<string> $val */
                 $val = self::asStringList($val);
                 $securityItem[$key] = $val;
             }

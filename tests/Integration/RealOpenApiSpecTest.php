@@ -34,7 +34,7 @@ final class RealOpenApiSpecTest extends TestCase
     #[Test]
     public function validate_petstore_spec_loaded(): void
     {
-        $document = $this->petstoreValidator->document;
+        $document = $this->petstoreValidator->getDocument();
 
         self::assertSame('3.1.0', $document->openapi);
         self::assertSame('Petstore API', $document->info->title);

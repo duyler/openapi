@@ -7,6 +7,9 @@ namespace Duyler\OpenApi\Validator\Response;
 use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
+use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
+use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
+use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
@@ -15,25 +18,60 @@ use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
-use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Psr\Http\Message\ResponseInterface;
+use Duyler\OpenApi\Validator\Exception\UndefinedResponseException;
 use Duyler\OpenApi\Schema\Model\Response;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 use function is_array;
-use function assert;
 
-readonly class ResponseValidatorWithContext
+final readonly class ResponseValidatorWithContext
 {
+    private const int HTTP_STATUS_RANGE_DIVISOR = 100;
+
+    private readonly FormatRegistry $formatRegistry;
+    private readonly LoggerInterface $logger;
+    private readonly ErrorFormatterInterface $errorFormatter;
+    private readonly StatelessValidatorRegistry $statelessValidators;
+    private readonly SchemaValidator $schemaValidator;
+    private readonly ResponseHeadersValidator $headersValidator;
+    private readonly ResponseBodyValidatorWithContext $bodyValidator;
+
     public function __construct(
         private readonly ValidatorPool $pool,
         private readonly OpenApiDocument $document,
+        StatelessValidatorRegistry $statelessValidators,
+        private readonly RefResolverInterface $refResolver,
+        FormatRegistry $formatRegistry,
+        private readonly BodyParser $bodyParser = new BodyParser(
+            jsonParser: new JsonBodyParser(),
+            formParser: new FormBodyParser(),
+            multipartParser: new MultipartBodyParser(),
+            textParser: new TextBodyParser(),
+            xmlParser: new XmlBodyParser(),
+        ),
         private readonly bool $coercion = false,
         private readonly StatusCodeValidator $statusCodeValidator = new StatusCodeValidator(),
         private readonly bool $nullableAsType = true,
         private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
-        private readonly ?RefResolverInterface $refResolver = null,
-    ) {}
+        private readonly bool $reportDeprecated = false,
+        ?LoggerInterface $logger = null,
+        private readonly ?EventDispatcherInterface $eventDispatcher = null,
+        ?ErrorFormatterInterface $errorFormatter = null,
+    ) {
+        $this->formatRegistry = $formatRegistry;
+        $this->logger = $logger ?? new NullLogger();
+        $this->errorFormatter = $errorFormatter ?? SimpleFormatter::shared();
+        $this->statelessValidators = $statelessValidators;
+
+        $this->schemaValidator = new SchemaValidator($this->pool, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
+        $this->headersValidator = new ResponseHeadersValidator($this->schemaValidator);
+        $this->bodyValidator = new ResponseBodyValidatorWithContext(pool: $this->pool, document: $this->document, bodyParser: $this->bodyParser, statelessValidators: $this->statelessValidators, refResolver: $this->refResolver, formatRegistry: $this->formatRegistry, coercion: $this->coercion, nullableAsType: $this->nullableAsType, emptyArrayStrategy: $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher, errorFormatter: $this->errorFormatter);
+    }
 
     public function validate(
         ResponseInterface $response,
@@ -50,7 +88,9 @@ readonly class ResponseValidatorWithContext
 
         $responseDefinition = $this->resolveResponseRef($responseDefinition);
 
-        assert($responseDefinition instanceof Response, 'Response definition must be Response instance');
+        if (false === ($responseDefinition instanceof Response)) {
+            throw new UndefinedResponseException($statusCode, array_keys($responses));
+        }
 
         $headers = $response->getHeaders();
         $normalizedHeaders = [];
@@ -59,29 +99,17 @@ readonly class ResponseValidatorWithContext
             $normalizedHeaders[$key] = is_array($value) ? implode(', ', $value) : $value;
         }
 
-        $formatRegistry = BuiltinFormats::create();
-        $schemaValidator = new SchemaValidator($this->pool, $formatRegistry);
-        $headersValidator = new ResponseHeadersValidator($schemaValidator);
-        $headersValidator->validate($normalizedHeaders, $responseDefinition->headers ?? null);
+        $this->headersValidator->validate($normalizedHeaders, $responseDefinition->headers ?? null);
 
         $contentType = $response->getHeaderLine('Content-Type');
         $body = (string) $response->getBody();
 
-        $bodyParser = new BodyParser(
-            jsonParser: new JsonBodyParser(),
-            formParser: new FormBodyParser(),
-            multipartParser: new MultipartBodyParser(),
-            textParser: new TextBodyParser(),
-            xmlParser: new XmlBodyParser(),
-        );
-
-        $bodyValidator = new ResponseBodyValidatorWithContext($this->pool, $this->document, $bodyParser, coercion: $this->coercion, nullableAsType: $this->nullableAsType, emptyArrayStrategy: $this->emptyArrayStrategy);
-        $bodyValidator->validate($body, $contentType, $responseDefinition->content ?? null);
+        $this->bodyValidator->validate($body, $contentType, $responseDefinition->content ?? null);
     }
 
     private function getRange(int $statusCode): string
     {
-        $firstDigit = (int) floor($statusCode / 100);
+        $firstDigit = (int) floor($statusCode / self::HTTP_STATUS_RANGE_DIVISOR);
 
         return $firstDigit . 'XX';
     }
@@ -92,7 +120,7 @@ readonly class ResponseValidatorWithContext
             return $response;
         }
 
-        if (null === $response->ref || null === $this->refResolver) {
+        if (null === $response->ref) {
             return $response;
         }
 

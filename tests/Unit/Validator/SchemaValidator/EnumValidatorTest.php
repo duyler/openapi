@@ -9,9 +9,12 @@ use Duyler\OpenApi\Validator\SchemaValidator\EnumValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\EnumError;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(EnumValidator::class)]
 class EnumValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -20,7 +23,7 @@ class EnumValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new EnumValidator($this->pool);
+        $this->validator = new EnumValidator($this->pool, BuiltinFormats::create());
     }
 
     #[Test]

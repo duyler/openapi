@@ -14,7 +14,7 @@ use function is_array;
 
 use const PHP_INT_MAX;
 
-readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator
+final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -32,9 +32,9 @@ readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator
 
         foreach ($unevaluatedItems as $item) {
             /** @var array-key|array<array-key, mixed> $item */
-            $validator = new SchemaValidator($this->pool);
+            $validator = $this->createSchemaValidator();
             $nullableAsType = $context?->nullableAsType ?? true;
-            $itemContext = $context ?? ValidationContext::create($this->pool, $nullableAsType);
+            $itemContext = $context ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
             $validator->validate($item, $schema->unevaluatedItems, $itemContext);
         }
     }

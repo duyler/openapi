@@ -8,7 +8,7 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 
 use function count;
 
-readonly class SchemaRegistry
+final readonly class SchemaRegistry
 {
     /**
      * @param array<string, array<string, OpenApiDocument>> $schemas

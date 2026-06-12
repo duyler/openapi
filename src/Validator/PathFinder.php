@@ -7,7 +7,6 @@ namespace Duyler\OpenApi\Validator;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\OpenApiDocument;
-use Duyler\OpenApi\Validator\Exception\PathMismatchException;
 use Duyler\OpenApi\Validator\Request\PathParser;
 
 use function count;
@@ -16,7 +15,7 @@ use function strtolower;
 use function strtoupper;
 use function usort;
 
-readonly class PathFinder
+final readonly class PathFinder
 {
     public function __construct(
         private readonly OpenApiDocument $document,
@@ -33,13 +32,13 @@ readonly class PathFinder
 
         $candidates = $this->findCandidates($requestPath, $method);
 
-        if (count($candidates) === 0) {
+        if ([] === $candidates) {
             throw new BuilderException(
                 sprintf('Operation not found: %s %s', strtoupper($method), $requestPath),
             );
         }
 
-        if (count($candidates) === 1) {
+        if (1 === count($candidates)) {
             return $candidates[0];
         }
 
@@ -60,22 +59,12 @@ readonly class PathFinder
                 continue;
             }
 
-            if ($this->pathMatches($pattern, $requestPath)) {
+            if (null !== $this->pathParser->tryMatchPath($requestPath, $pattern)) {
                 $candidates[] = $operation;
             }
         }
 
         return $candidates;
-    }
-
-    private function pathMatches(string $pattern, string $path): bool
-    {
-        try {
-            $this->pathParser->matchPath($path, $pattern);
-            return true;
-        } catch (PathMismatchException) {
-            return false;
-        }
     }
 
     /**
@@ -92,18 +81,7 @@ readonly class PathFinder
     {
         $normalizedMethod = strtolower($method);
 
-        $op = match ($normalizedMethod) {
-            'get' => $pathItem->get,
-            'post' => $pathItem->post,
-            'put' => $pathItem->put,
-            'patch' => $pathItem->patch,
-            'delete' => $pathItem->delete,
-            'options' => $pathItem->options,
-            'head' => $pathItem->head,
-            'trace' => $pathItem->trace,
-            'query' => $pathItem->query,
-            default => null,
-        };
+        $op = $pathItem->getOperation($normalizedMethod);
 
         if (null !== $op) {
             return new Operation($pathPattern, $method);

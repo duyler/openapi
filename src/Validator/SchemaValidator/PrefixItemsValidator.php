@@ -16,7 +16,7 @@ use function count;
 use function is_array;
 use function sprintf;
 
-readonly class PrefixItemsValidator extends AbstractSchemaValidator
+final readonly class PrefixItemsValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -30,7 +30,7 @@ readonly class PrefixItemsValidator extends AbstractSchemaValidator
         }
 
         $nullableAsType = $context?->nullableAsType ?? true;
-        $validator = new SchemaValidator($this->pool);
+        $validator = $this->createSchemaValidator();
 
         $count = min(count($data), count($schema->prefixItems));
 
@@ -38,7 +38,7 @@ readonly class PrefixItemsValidator extends AbstractSchemaValidator
             try {
                 $allowNull = $schema->prefixItems[$i]->nullable && $nullableAsType;
                 $value = SchemaValueNormalizer::normalize($data[$i], $allowNull);
-                $indexContext = $context?->withBreadcrumbIndex($i) ?? ValidationContext::create($this->pool, $nullableAsType);
+                $indexContext = $context?->withBreadcrumbIndex($i) ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
                 $validator->validate($value, $schema->prefixItems[$i], $indexContext);
             } catch (InvalidDataTypeException $e) {
                 throw new ValidationException(
@@ -56,11 +56,12 @@ readonly class PrefixItemsValidator extends AbstractSchemaValidator
         $remainingItems = array_slice($data, $count);
 
         if ([] !== $remainingItems && null !== $schema->items) {
+            /** @var list<mixed> $remainingItems */
             foreach ($remainingItems as $item) {
                 try {
                     $allowNull = $schema->items->nullable && $nullableAsType;
                     $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
-                    $remainingContext = $context ?? ValidationContext::create($this->pool, $nullableAsType);
+                    $remainingContext = $context ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
                     $validator->validate($normalizedItem, $schema->items, $remainingContext);
                 } catch (InvalidDataTypeException $e) {
                     throw new ValidationException(

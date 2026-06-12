@@ -6,9 +6,11 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\String\DateTimeValidator;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(DateTimeValidator::class)]
 final class DateTimeValidatorTest extends TestCase
 {
     private DateTimeValidator $validator;

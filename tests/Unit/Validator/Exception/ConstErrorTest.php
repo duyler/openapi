@@ -140,4 +140,39 @@ final class ConstErrorTest extends TestCase
         self::assertNull($params['expected']);
         self::assertSame('value', $params['actual']);
     }
+
+    #[Test]
+    public function handles_json_encode_failure_for_expected(): void
+    {
+        $resource = fopen('php://memory', 'r');
+
+        $exception = new ConstError(
+            expected: $resource,
+            actual: 'value',
+            dataPath: '/field',
+            schemaPath: '/properties/field',
+        );
+
+        self::assertStringContainsString('null', $exception->getMessage());
+        self::assertStringContainsString('Use const value: null', $exception->suggestion());
+
+        fclose($resource);
+    }
+
+    #[Test]
+    public function handles_json_encode_failure_for_actual(): void
+    {
+        $resource = fopen('php://memory', 'r');
+
+        $exception = new ConstError(
+            expected: 'value',
+            actual: $resource,
+            dataPath: '/field',
+            schemaPath: '/properties/field',
+        );
+
+        self::assertStringContainsString('null', $exception->getMessage());
+
+        fclose($resource);
+    }
 }

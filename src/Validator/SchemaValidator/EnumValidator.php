@@ -9,7 +9,7 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\EnumError;
 use Override;
 
-readonly class EnumValidator extends AbstractSchemaValidator
+final readonly class EnumValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

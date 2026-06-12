@@ -9,9 +9,12 @@ use Duyler\OpenApi\Validator\SchemaValidator\TypeValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(TypeValidator::class)]
 class TypeValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -20,7 +23,7 @@ class TypeValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new TypeValidator($this->pool);
+        $this->validator = new TypeValidator($this->pool, BuiltinFormats::create());
     }
 
     #[Test]
@@ -191,5 +194,15 @@ class TypeValidatorTest extends TestCase
         $this->expectException(TypeMismatchError::class);
 
         $this->validator->validate(true, $schema);
+    }
+
+    #[Test]
+    public function throw_type_mismatch_error_for_unknown_type(): void
+    {
+        $schema = new Schema(type: 'unknown_type');
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate('any value', $schema);
     }
 }

@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-readonly class SecurityRequirement implements JsonSerializable
+final readonly class SecurityRequirement implements JsonSerializable
 {
     /**
      * @param list<array<string, list<string>>> $requirements

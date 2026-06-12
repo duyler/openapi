@@ -12,7 +12,7 @@ use function is_float;
 use function is_int;
 use function is_string;
 
-readonly class ResponseTypeCoercer
+final readonly class ResponseTypeCoercer
 {
     public function coerce(mixed $value, ?Schema $schema, bool $enabled, bool $nullableAsType = true): mixed
     {
@@ -44,6 +44,7 @@ readonly class ResponseTypeCoercer
                 continue;
             }
 
+            /** @var array|int|string|float|bool|null $coerced */
             $coerced = $this->coerceToType($value, $type, $schema, $nullableAsType);
 
             if ($this->isValidType($coerced, $type)) {
@@ -141,11 +142,11 @@ readonly class ResponseTypeCoercer
         }
 
         if (is_int($value)) {
-            return $value !== 0;
+            return 0 !== $value;
         }
 
         if (is_float($value)) {
-            return $value !== 0.0;
+            return 0.0 !== $value;
         }
 
         return $value;
@@ -163,6 +164,7 @@ readonly class ResponseTypeCoercer
             return $value;
         }
 
+        /** @var array<string, mixed> $coerced */
         $coerced = [];
 
         foreach ($properties as $name => $propertySchema) {

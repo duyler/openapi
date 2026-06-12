@@ -17,11 +17,11 @@ final class ConstError extends AbstractValidationError
         $expectedJson = json_encode($expected);
         $actualJson = json_encode($actual);
 
-        if ($expectedJson === false) {
+        if (false === $expectedJson) {
             $expectedJson = 'null';
         }
 
-        if ($actualJson === false) {
+        if (false === $actualJson) {
             $actualJson = 'null';
         }
 

@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-readonly class Header implements JsonSerializable
+final readonly class Header implements JsonSerializable
 {
     /**
      * @param array<string, mixed> $examples
@@ -26,6 +26,7 @@ readonly class Header implements JsonSerializable
     #[Override]
     public function jsonSerialize(): array
     {
+        /** @var array<string, mixed> $data */
         $data = [];
 
         if (null !== $this->description) {

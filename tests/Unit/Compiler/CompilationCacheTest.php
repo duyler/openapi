@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Compiler;
 
 use Duyler\OpenApi\Compiler\CompilationCache;
+use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -276,5 +277,146 @@ final class CompilationCacheTest extends TestCase
         $key2 = $cache->generateKey($schema2);
 
         self::assertSame($key1, $key2);
+    }
+
+    #[Test]
+    public function generateKey_no_collision_for_previously_excluded_format(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema1 = new Schema(type: 'string', format: 'email');
+        $schema2 = new Schema(type: 'string', format: 'uri');
+
+        $key1 = $cache->generateKey($schema1);
+        $key2 = $cache->generateKey($schema2);
+
+        self::assertNotSame($key1, $key2);
+    }
+
+    #[Test]
+    public function generateKey_no_collision_for_previously_excluded_title(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema1 = new Schema(type: 'string', title: 'Schema A');
+        $schema2 = new Schema(type: 'string', title: 'Schema B');
+
+        $key1 = $cache->generateKey($schema1);
+        $key2 = $cache->generateKey($schema2);
+
+        self::assertNotSame($key1, $key2);
+    }
+
+    #[Test]
+    public function generateKey_no_collision_for_previously_excluded_description(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema1 = new Schema(type: 'string', description: 'First description');
+        $schema2 = new Schema(type: 'string', description: 'Second description');
+
+        $key1 = $cache->generateKey($schema1);
+        $key2 = $cache->generateKey($schema2);
+
+        self::assertNotSame($key1, $key2);
+    }
+
+    #[Test]
+    public function generateKey_no_collision_for_previously_excluded_deprecated(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema1 = new Schema(type: 'string', deprecated: false);
+        $schema2 = new Schema(type: 'string', deprecated: true);
+
+        $key1 = $cache->generateKey($schema1);
+        $key2 = $cache->generateKey($schema2);
+
+        self::assertNotSame($key1, $key2);
+    }
+
+    #[Test]
+    public function generateKey_no_collision_for_previously_excluded_nullable(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema1 = new Schema(type: 'string', nullable: false);
+        $schema2 = new Schema(type: 'string', nullable: true);
+
+        $key1 = $cache->generateKey($schema1);
+        $key2 = $cache->generateKey($schema2);
+
+        self::assertNotSame($key1, $key2);
+    }
+
+    #[Test]
+    public function generateKey_no_collision_for_previously_excluded_default(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema1 = new Schema(type: 'string', default: 'alpha', hasDefault: true);
+        $schema2 = new Schema(type: 'string', default: 'beta', hasDefault: true);
+
+        $key1 = $cache->generateKey($schema1);
+        $key2 = $cache->generateKey($schema2);
+
+        self::assertNotSame($key1, $key2);
+    }
+
+    #[Test]
+    public function generateKey_no_collision_for_previously_excluded_const(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema1 = new Schema(type: 'string', const: 'fixed-a', hasConst: true);
+        $schema2 = new Schema(type: 'string', const: 'fixed-b', hasConst: true);
+
+        $key1 = $cache->generateKey($schema1);
+        $key2 = $cache->generateKey($schema2);
+
+        self::assertNotSame($key1, $key2);
+    }
+
+    #[Test]
+    public function generateKey_no_collision_for_previously_excluded_discriminator(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema1 = new Schema(
+            type: 'object',
+            discriminator: new Discriminator(propertyName: 'type'),
+        );
+        $schema2 = new Schema(
+            type: 'object',
+            discriminator: new Discriminator(propertyName: 'kind'),
+        );
+
+        $key1 = $cache->generateKey($schema1);
+        $key2 = $cache->generateKey($schema2);
+
+        self::assertNotSame($key1, $key2);
+    }
+
+    #[Test]
+    public function generateKey_no_collision_for_previously_excluded_readOnly_writeOnly(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema1 = new Schema(type: 'string', readOnly: false, writeOnly: false);
+        $schema2 = new Schema(type: 'string', readOnly: true, writeOnly: true);
+
+        $key1 = $cache->generateKey($schema1);
+        $key2 = $cache->generateKey($schema2);
+
+        self::assertNotSame($key1, $key2);
     }
 }

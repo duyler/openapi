@@ -4,19 +4,33 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Compiler;
 
+use Duyler\OpenApi\Compiler\Exception\UnsupportedKeywordException;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use RuntimeException;
 
+use function array_keys;
 use function count;
 use function in_array;
 use function is_array;
 use function sprintf;
 
-readonly class ValidatorCompiler
+/**
+ * @experimental
+ */
+final readonly class ValidatorCompiler
 {
+    private const int REF_COMPONENTS_SCHEMAS_PREFIX_LENGTH = 21;
+
     public function compile(Schema $schema, string $className): string
     {
+        $unsupported = $this->detectUnsupportedKeywords($schema);
+
+        if ([] !== $unsupported) {
+            throw new UnsupportedKeywordException($unsupported);
+        }
+
         return $this->generateCode($schema, $className);
     }
 
@@ -32,7 +46,7 @@ readonly class ValidatorCompiler
     public function compileWithCache(
         Schema $schema,
         string $className,
-        ?CompilationCache $cache = null,
+        ?CompilationCacheInterface $cache = null,
     ): string {
         if (null !== $cache) {
             $schemaHash = $cache->generateKey($schema);
@@ -55,19 +69,18 @@ readonly class ValidatorCompiler
 
     private function generateCode(Schema $schema, string $className): string
     {
-        $code = '<?php\n\n';
+        $code = "<?php\n\n";
+        $code .= "declare(strict_types=1);\n\n";
         $code .= sprintf("readonly class %s\n{\n", $className);
         $code .= '    public function validate(mixed $data): void' . "\n";
         $code .= "    {\n";
 
         if (null !== $schema->type) {
-            if ('array' === $schema->type) {
-                $code .= $this->generateArrayCheck($schema);
-            } elseif ('object' === $schema->type && null !== $schema->properties) {
-                $code .= $this->generateNestedObjectCheck($schema);
-            } else {
-                $code .= $this->generateTypeCheck($schema->type);
-            }
+            $code .= match (true) {
+                'array' === $schema->type => $this->generateArrayCheck($schema),
+                'object' === $schema->type && null !== $schema->properties => $this->generateNestedObjectCheck($schema),
+                default => $this->generateTypeCheck($schema->type),
+            };
         }
 
         if (null !== $schema->enum) {
@@ -86,6 +99,14 @@ readonly class ValidatorCompiler
             $code .= $this->generatePatternCheck($schema->pattern);
         }
 
+        if ($schema->hasConst) {
+            $code .= $this->generateConstCheck($schema->const);
+        }
+
+        if (null !== $schema->multipleOf) {
+            $code .= $this->generateMultipleOfCheck($schema->multipleOf);
+        }
+
         $code .= "    }\n";
         $code .= "}\n";
 
@@ -101,20 +122,25 @@ readonly class ValidatorCompiler
 
         $checks = [];
         foreach ($types as $t) {
-            $function = $this->getTypeCheckFunction($t);
-            $checks[] = sprintf('%s($data)', $function);
+            $checks[] = $this->buildTypeCheckExpression($t, '$data');
         }
 
-        if (count($checks) === 0) {
+        if ([] === $checks) {
             return '';
         }
 
-        if (count($checks) === 1) {
+        if (1 === count($checks)) {
             $code .= sprintf("        if (false === %s) {\n", $checks[0]);
-        } else {
-            $condition = implode(' && ', $checks);
-            $code .= sprintf("        if (false === (%s)) {\n", $condition);
+
+            $typesString = implode('|', $types);
+            $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected %s but got ' . get_debug_type(\$data));\n", $typesString);
+            $code .= "        }\n\n";
+
+            return $code;
         }
+
+        $condition = implode(' || ', $checks);
+        $code .= sprintf("        if (false === (%s)) {\n", $condition);
 
         $typesString = implode('|', $types);
         $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected %s but got ' . get_debug_type(\$data));\n", $typesString);
@@ -129,7 +155,7 @@ readonly class ValidatorCompiler
         $valuesString = implode(', ', $enumValues);
 
         $code = "        if (false === in_array(\$data, [$valuesString], true)) {\n";
-        $code .= "            throw new \\RuntimeException('Value must be one of: ' . implode(', ', \$allowed));\n";
+        $code .= "            throw new \\RuntimeException('Value must be one of: ' . implode(', ', [$valuesString]));\n";
         $code .= "        }\n\n";
 
         return $code;
@@ -141,11 +167,11 @@ readonly class ValidatorCompiler
         $conditions = [];
 
         if (null !== $schema->minLength) {
-            $conditions[] = sprintf('strlen($data) < %d', $schema->minLength);
+            $conditions[] = sprintf('mb_strlen($data, \'UTF-8\') < %d', $schema->minLength);
         }
 
         if (null !== $schema->maxLength) {
-            $conditions[] = sprintf('strlen($data) > %d', $schema->maxLength);
+            $conditions[] = sprintf('mb_strlen($data, \'UTF-8\') > %d', $schema->maxLength);
         }
 
         if ([] === $conditions) {
@@ -195,9 +221,50 @@ readonly class ValidatorCompiler
 
     private function generatePatternCheck(string $pattern): string
     {
-        $escapedPattern = addslashes($pattern);
-        $code = sprintf("        if (false === preg_match('%s', (string) \$data)) {\n", $escapedPattern);
+        $normalizedPattern = RegexValidator::normalize($pattern);
+        $escapedPattern = var_export($normalizedPattern, true);
+        $code = sprintf("        if (false === preg_match(%s, (string) \$data)) {\n", $escapedPattern);
         $code .= "            throw new \\RuntimeException('Pattern validation failed');\n";
+        $code .= "        }\n\n";
+
+        return $code;
+    }
+
+    private function generateConstCheck(mixed $constValue): string
+    {
+        $exportedValue = var_export($constValue, true);
+
+        $code = sprintf("        if (%s !== \$data) {\n", $exportedValue);
+        $code .= sprintf("            throw new \\RuntimeException(sprintf('Value must be const: %%s', var_export(\$data, true)));\n");
+        $code .= "        }\n\n";
+
+        return $code;
+    }
+
+    private function generateMultipleOfCheck(float $multipleOf): string
+    {
+        $multipleOfStr = var_export($multipleOf, true);
+
+        $code = sprintf("        if (0.0 !== fmod((float) \$data, %s)) {\n", $multipleOfStr);
+        $code .= sprintf("            throw new \\RuntimeException('Value must be a multiple of %s');\n", $multipleOfStr);
+        $code .= "        }\n\n";
+
+        return $code;
+    }
+
+    private function generateAdditionalPropertiesCheck(Schema $schema, string $dataVar = '$data'): string
+    {
+        if (null === $schema->properties) {
+            return '';
+        }
+
+        $allowedKeys = array_keys($schema->properties);
+        $exportedKeys = var_export($allowedKeys, true);
+
+        $code = sprintf("        foreach (array_keys(%s) as \$key) {\n", $dataVar);
+        $code .= sprintf("            if (false === in_array(\$key, %s, true)) {\n", $exportedKeys);
+        $code .= "                throw new \\RuntimeException('Additional property not allowed: ' . \$key);\n";
+        $code .= "            }\n";
         $code .= "        }\n\n";
 
         return $code;
@@ -207,7 +274,6 @@ readonly class ValidatorCompiler
     {
         return match ($type) {
             'string' => 'is_string',
-            'number' => 'is_float',
             'integer' => 'is_int',
             'boolean' => 'is_bool',
             'array' => 'is_array',
@@ -217,21 +283,28 @@ readonly class ValidatorCompiler
         };
     }
 
+    private function buildTypeCheckExpression(string $type, string $variable): string
+    {
+        if ('number' === $type) {
+            return sprintf('(is_float(%s) || is_int(%s))', $variable, $variable);
+        }
+
+        $function = $this->getTypeCheckFunction($type);
+
+        return sprintf('%s(%s)', $function, $variable);
+    }
+
     private function generateNestedObjectCheck(Schema $schema, string $dataVar = '$data'): string
     {
         if (null === $schema->properties) {
             return '';
         }
 
-        if ('$data' === $dataVar) {
-            $code = "        if (false === is_array(\$data)) {\n";
-            $code .= "            throw new \\RuntimeException('Expected object for \$data');\n";
-            $code .= "        }\n\n";
-        } else {
-            $code = sprintf("        if (false === is_array(%s)) {\n", $dataVar);
-            $code .= sprintf("            throw new \\RuntimeException('Expected object for %s');\n", $dataVar);
-            $code .= "        }\n\n";
-        }
+        $escapedVar = '$data' === $dataVar ? "\$data" : $dataVar;
+        $safeVarForError = str_replace("'", "\'", $dataVar);
+        $code = sprintf("        if (false === is_array(%s)) {\n", $escapedVar);
+        $code .= sprintf("            throw new \\RuntimeException('Expected object for %s');\n", $safeVarForError);
+        $code .= "        }\n\n";
 
         foreach ($schema->properties as $propertyName => $propertySchema) {
             $propertyVar = sprintf('%s[\'%s\']', $dataVar, $propertyName);
@@ -240,6 +313,10 @@ readonly class ValidatorCompiler
 
         if (null !== $schema->required && [] !== $schema->required) {
             $code .= $this->generateRequiredCheck($schema->required, $dataVar);
+        }
+
+        if (false === $schema->additionalProperties) {
+            $code .= $this->generateAdditionalPropertiesCheck($schema, $dataVar);
         }
 
         return $code;
@@ -256,19 +333,20 @@ readonly class ValidatorCompiler
             return $code;
         }
 
-        if ('object' === $propertySchema->type && null !== $propertySchema->properties) {
-            $code .= sprintf("        if (isset(%s)) {\n", $propertyVar);
-            $code .= $this->generateNestedObjectCheck($propertySchema, $propertyVar);
-            $code .= "        }\n\n";
-        } else {
-            $code .= sprintf("        if (isset(%s)) {\n", $propertyVar);
-            $code .= $this->generateTypeCheckForValue($propertySchema->type, $propertyVar);
-            $code .= "        }\n\n";
-        }
+        $code .= sprintf("        if (isset(%s)) {\n", $propertyVar);
+
+        $code .= ('object' === $propertySchema->type && null !== $propertySchema->properties)
+            ? $this->generateNestedObjectCheck($propertySchema, $propertyVar)
+            : $this->generateTypeCheckForValue($propertySchema->type, $propertyVar);
+
+        $code .= "        }\n\n";
 
         return $code;
     }
 
+    /**
+     * @param list<string> $required
+     */
     private function generateRequiredCheck(array $required, string $dataVar): string
     {
         $code = '';
@@ -284,27 +362,31 @@ readonly class ValidatorCompiler
 
     private function generateTypeCheckForValue(string|array $type, string $valueVar): string
     {
+        /** @var array<string> $types */
         $types = is_array($type) ? $type : [$type];
         $checks = [];
 
         foreach ($types as $t) {
-            $typeStr = (string) $t;
-            $function = $this->getTypeCheckFunction($typeStr);
-            $checks[] = sprintf('%s(%s)', $function, $valueVar);
+            $checks[] = $this->buildTypeCheckExpression($t, $valueVar);
         }
 
-        if (count($checks) === 0) {
+        if ([] === $checks) {
             return '';
         }
 
-        if (count($checks) === 1) {
+        $safeVarName = str_replace("'", "\'", $valueVar);
+
+        if (1 === count($checks)) {
             $code = sprintf("        if (false === %s) {\n", $checks[0]);
-        } else {
-            $condition = implode(' && ', $checks);
-            $code = sprintf("        if (false === (%s)) {\n", $condition);
+            $code .= sprintf("            throw new \\RuntimeException('Type mismatch for %s');\n", $safeVarName);
+            $code .= "        }\n";
+
+            return $code;
         }
 
-        $code .= sprintf("            throw new \\RuntimeException('Type mismatch for %s');\n", $valueVar);
+        $condition = implode(' || ', $checks);
+        $code = sprintf("        if (false === (%s)) {\n", $condition);
+        $code .= sprintf("            throw new \\RuntimeException('Type mismatch for %s');\n", $safeVarName);
         $code .= "        }\n";
 
         return $code;
@@ -391,26 +473,9 @@ readonly class ValidatorCompiler
             $resolvedItems = $this->resolveRefs($schema->items, $document, $resolved);
         }
 
-        return new Schema(
-            type: $schema->type,
-            enum: $schema->enum,
-            minLength: $schema->minLength,
-            maxLength: $schema->maxLength,
-            minimum: $schema->minimum,
-            maximum: $schema->maximum,
-            exclusiveMinimum: $schema->exclusiveMinimum,
-            exclusiveMaximum: $schema->exclusiveMaximum,
-            pattern: $schema->pattern,
-            minItems: $schema->minItems,
-            maxItems: $schema->maxItems,
-            uniqueItems: $schema->uniqueItems,
-            minProperties: $schema->minProperties,
-            maxProperties: $schema->maxProperties,
-            required: $schema->required,
+        return $schema->withOverrides(
             properties: $resolvedProperties,
-            additionalProperties: $schema->additionalProperties,
             items: $resolvedItems,
-            ref: null,
         );
     }
 
@@ -420,7 +485,7 @@ readonly class ValidatorCompiler
             throw new RuntimeException(sprintf('Unsupported $ref: %s', $ref));
         }
 
-        $schemaName = substr($ref, 21);
+        $schemaName = substr($ref, self::REF_COMPONENTS_SCHEMAS_PREFIX_LENGTH);
         $schemas = $document->components?->schemas ?? [];
 
         if (false === isset($schemas[$schemaName])) {
@@ -428,5 +493,36 @@ readonly class ValidatorCompiler
         }
 
         return $this->resolveRefs($schemas[$schemaName], $document, $resolved);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function detectUnsupportedKeywords(Schema $schema): array
+    {
+        $keywordMap = [
+            'allOf' => null !== $schema->allOf,
+            'anyOf' => null !== $schema->anyOf,
+            'oneOf' => null !== $schema->oneOf,
+            'not' => null !== $schema->not,
+            'if' => null !== $schema->if,
+            'then' => null !== $schema->then,
+            'else' => null !== $schema->else,
+            'patternProperties' => null !== $schema->patternProperties,
+        ];
+
+        $detected = array_keys(array_filter($keywordMap));
+
+        if (null !== $schema->properties) {
+            foreach ($schema->properties as $propertySchema) {
+                $detected = [...$detected, ...$this->detectUnsupportedKeywords($propertySchema)];
+            }
+        }
+
+        if (null !== $schema->items) {
+            $detected = [...$detected, ...$this->detectUnsupportedKeywords($schema->items)];
+        }
+
+        return array_values(array_unique($detected));
     }
 }

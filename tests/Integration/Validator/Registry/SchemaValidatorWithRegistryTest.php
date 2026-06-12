@@ -12,6 +12,7 @@ use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\SchemaValidator\TypeValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -28,8 +29,8 @@ final class SchemaValidatorWithRegistryTest extends TestCase
     #[Test]
     public function validate_with_registry_throws_type_mismatch_error(): void
     {
-        $registry = new DefaultValidatorRegistry($this->pool);
-        $schemaValidator = new SchemaValidator($this->pool, registry: $registry);
+        $registry = new DefaultValidatorRegistry($this->pool, BuiltinFormats::create());
+        $schemaValidator = new SchemaValidator($this->pool, formatRegistry: BuiltinFormats::create(), registry: $registry);
         $schema = new Schema(type: 'string');
 
         $this->expectException(TypeMismatchError::class);
@@ -40,8 +41,8 @@ final class SchemaValidatorWithRegistryTest extends TestCase
     #[Test]
     public function validate_with_registry_passes_for_valid_data(): void
     {
-        $registry = new DefaultValidatorRegistry($this->pool);
-        $schemaValidator = new SchemaValidator($this->pool, registry: $registry);
+        $registry = new DefaultValidatorRegistry($this->pool, BuiltinFormats::create());
+        $schemaValidator = new SchemaValidator($this->pool, formatRegistry: BuiltinFormats::create(), registry: $registry);
         $schema = new Schema(type: 'string');
 
         $schemaValidator->validate('hello', $schema);
@@ -52,7 +53,7 @@ final class SchemaValidatorWithRegistryTest extends TestCase
     #[Test]
     public function validate_without_registry_passes_for_valid_data(): void
     {
-        $schemaValidator = new SchemaValidator($this->pool);
+        $schemaValidator = new SchemaValidator($this->pool, BuiltinFormats::create());
         $schema = new Schema(type: 'string');
 
         $schemaValidator->validate('hello', $schema);
@@ -64,7 +65,7 @@ final class SchemaValidatorWithRegistryTest extends TestCase
     public function validate_with_custom_registry(): void
     {
         $customRegistry = $this->createCustomRegistry();
-        $schemaValidator = new SchemaValidator($this->pool, registry: $customRegistry);
+        $schemaValidator = new SchemaValidator($this->pool, formatRegistry: BuiltinFormats::create(), registry: $customRegistry);
         $schema = new Schema(type: 'string');
 
         $schemaValidator->validate('hello', $schema);
@@ -76,7 +77,7 @@ final class SchemaValidatorWithRegistryTest extends TestCase
     public function validate_with_custom_registry_throws_error(): void
     {
         $customRegistry = $this->createCustomRegistry();
-        $schemaValidator = new SchemaValidator($this->pool, registry: $customRegistry);
+        $schemaValidator = new SchemaValidator($this->pool, formatRegistry: BuiltinFormats::create(), registry: $customRegistry);
         $schema = new Schema(type: 'string');
 
         $this->expectException(TypeMismatchError::class);
@@ -87,8 +88,8 @@ final class SchemaValidatorWithRegistryTest extends TestCase
     #[Test]
     public function validate_with_registry_and_format_registry(): void
     {
-        $registry = new DefaultValidatorRegistry($this->pool);
-        $schemaValidator = new SchemaValidator($this->pool, registry: $registry);
+        $registry = new DefaultValidatorRegistry($this->pool, BuiltinFormats::create());
+        $schemaValidator = new SchemaValidator($this->pool, formatRegistry: BuiltinFormats::create(), registry: $registry);
         $schema = new Schema(type: 'string', format: 'email');
 
         $schemaValidator->validate('test@example.com', $schema);
@@ -99,8 +100,8 @@ final class SchemaValidatorWithRegistryTest extends TestCase
     #[Test]
     public function validate_with_registry_validates_multiple_keywords(): void
     {
-        $registry = new DefaultValidatorRegistry($this->pool);
-        $schemaValidator = new SchemaValidator($this->pool, registry: $registry);
+        $registry = new DefaultValidatorRegistry($this->pool, BuiltinFormats::create());
+        $schemaValidator = new SchemaValidator($this->pool, formatRegistry: BuiltinFormats::create(), registry: $registry);
         $schema = new Schema(
             type: 'string',
             minLength: 3,
@@ -115,8 +116,8 @@ final class SchemaValidatorWithRegistryTest extends TestCase
     #[Test]
     public function validate_with_registry_validates_minLength(): void
     {
-        $registry = new DefaultValidatorRegistry($this->pool);
-        $schemaValidator = new SchemaValidator($this->pool, registry: $registry);
+        $registry = new DefaultValidatorRegistry($this->pool, BuiltinFormats::create());
+        $schemaValidator = new SchemaValidator($this->pool, formatRegistry: BuiltinFormats::create(), registry: $registry);
         $schema = new Schema(type: 'string', minLength: 5);
 
         $this->expectExceptionMessage('less than minimum');
@@ -127,8 +128,8 @@ final class SchemaValidatorWithRegistryTest extends TestCase
     #[Test]
     public function validate_with_registry_validates_maxLength(): void
     {
-        $registry = new DefaultValidatorRegistry($this->pool);
-        $schemaValidator = new SchemaValidator($this->pool, registry: $registry);
+        $registry = new DefaultValidatorRegistry($this->pool, BuiltinFormats::create());
+        $schemaValidator = new SchemaValidator($this->pool, formatRegistry: BuiltinFormats::create(), registry: $registry);
         $schema = new Schema(type: 'string', maxLength: 5);
 
         $this->expectExceptionMessage('exceeds maximum');
@@ -144,14 +145,14 @@ final class SchemaValidatorWithRegistryTest extends TestCase
             #[Override]
             public function getValidator(string $type): SchemaValidatorInterface
             {
-                return new TypeValidator($this->pool);
+                return new TypeValidator($this->pool, BuiltinFormats::create());
             }
 
             #[Override]
             public function getAllValidators(): iterable
             {
                 return [
-                    TypeValidator::class => new TypeValidator($this->pool),
+                    TypeValidator::class => new TypeValidator($this->pool, BuiltinFormats::create()),
                 ];
             }
         };

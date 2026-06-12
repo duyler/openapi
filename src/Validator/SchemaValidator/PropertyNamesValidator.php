@@ -11,7 +11,7 @@ use Override;
 
 use function is_array;
 
-readonly class PropertyNamesValidator extends AbstractSchemaValidator
+final readonly class PropertyNamesValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -32,7 +32,7 @@ readonly class PropertyNamesValidator extends AbstractSchemaValidator
         }
 
         foreach (array_keys($data) as $propertyName) {
-            $validator = new SchemaValidator($this->pool);
+            $validator = $this->createSchemaValidator();
             $validator->validate($propertyName, $schema->propertyNames, $context);
         }
     }

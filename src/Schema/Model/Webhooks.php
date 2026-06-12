@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-readonly class Webhooks implements JsonSerializable
+final readonly class Webhooks implements JsonSerializable
 {
     /**
      * @param array<string, PathItem> $webhooks

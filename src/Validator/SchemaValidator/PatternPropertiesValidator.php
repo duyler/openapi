@@ -13,7 +13,7 @@ use function assert;
 use function is_array;
 use function is_string;
 
-readonly class PatternPropertiesValidator extends AbstractSchemaValidator
+final readonly class PatternPropertiesValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -37,6 +37,7 @@ readonly class PatternPropertiesValidator extends AbstractSchemaValidator
             );
         }
 
+        /** @var array<string, mixed> $data */
         foreach ($data as $propertyName => $propertyValue) {
             if (false === is_string($propertyName)) {
                 continue;
@@ -48,15 +49,15 @@ readonly class PatternPropertiesValidator extends AbstractSchemaValidator
                 }
 
                 $normalizedPattern = RegexValidator::normalize($pattern);
-                assert($normalizedPattern !== '');
+                assert('' !== $normalizedPattern);
 
                 $result = preg_match($normalizedPattern, $propertyName);
 
                 if (false !== $result && 1 === $result) {
                     /** @var array-key|array<array-key, mixed> $propertyValue */
-                    $validator = new SchemaValidator($this->pool);
+                    $validator = $this->createSchemaValidator();
                     $nullableAsType = $context?->nullableAsType ?? true;
-                    $propertyContext = $context?->withBreadcrumb($propertyName) ?? ValidationContext::create($this->pool, $nullableAsType);
+                    $propertyContext = $context?->withBreadcrumb($propertyName) ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
                     $validator->validate($propertyValue, $propertySchema, $propertyContext);
                 }
             }

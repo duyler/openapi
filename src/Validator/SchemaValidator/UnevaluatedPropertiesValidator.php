@@ -7,13 +7,15 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
+use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Override;
 
+use function assert;
 use function array_filter;
 use function is_array;
 use function is_string;
 
-readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValidator
+final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -30,6 +32,20 @@ readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValidator
         $unevaluatedProperties = array_diff(array_keys($data), $evaluatedProperties);
         /** @var array<array-key, string> $stringUnevaluatedProperties */
         $stringUnevaluatedProperties = array_filter($unevaluatedProperties, is_string(...));
+
+        if ($schema->unevaluatedProperties instanceof Schema) {
+            $validator = $this->createSchemaValidator();
+            $nullableAsType = $context?->nullableAsType ?? true;
+
+            foreach ($stringUnevaluatedProperties as $propertyName) {
+                /** @var array-key|array<array-key, mixed> $value */
+                $value = $data[$propertyName];
+                $propertyContext = $context?->withBreadcrumb($propertyName) ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
+                $validator->validate($value, $schema->unevaluatedProperties, $propertyContext);
+            }
+
+            return;
+        }
 
         if ($schema->unevaluatedProperties) {
             return;
@@ -65,7 +81,9 @@ readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValidator
                         continue;
                     }
 
-                    if (preg_match($pattern, $propertyName)) {
+                    $normalizedPattern = RegexValidator::normalize($pattern);
+                    assert('' !== $normalizedPattern);
+                    if (1 === preg_match($normalizedPattern, $propertyName)) {
                         $evaluated[] = $propertyName;
                     }
                 }

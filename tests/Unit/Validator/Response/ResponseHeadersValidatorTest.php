@@ -15,6 +15,7 @@ use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Response\ResponseHeadersValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -26,7 +27,7 @@ final class ResponseHeadersValidatorTest extends TestCase
     protected function setUp(): void
     {
         $pool = new ValidatorPool();
-        $schemaValidator = new SchemaValidator($pool);
+        $schemaValidator = new SchemaValidator($pool, BuiltinFormats::create());
 
         $this->validator = new ResponseHeadersValidator($schemaValidator);
     }

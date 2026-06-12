@@ -15,7 +15,7 @@ use function array_key_exists;
 use function is_array;
 use function sprintf;
 
-readonly class PropertiesValidator extends AbstractSchemaValidator
+final readonly class PropertiesValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -28,7 +28,7 @@ readonly class PropertiesValidator extends AbstractSchemaValidator
             return;
         }
 
-        $validator = new SchemaValidator($this->pool);
+        $validator = $this->createSchemaValidator();
 
         foreach ($schema->properties as $name => $propertySchema) {
             if (false === array_key_exists($name, $data)) {
@@ -39,7 +39,7 @@ readonly class PropertiesValidator extends AbstractSchemaValidator
                 $nullableAsType = $context?->nullableAsType ?? true;
                 $allowNull = $propertySchema->nullable && $nullableAsType;
                 $value = SchemaValueNormalizer::normalize($data[$name], $allowNull);
-                $propertyContext = $context?->withBreadcrumb($name) ?? ValidationContext::create($this->pool, $nullableAsType);
+                $propertyContext = $context?->withBreadcrumb($name) ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
                 $validator->validate($value, $propertySchema, $propertyContext);
             } catch (InvalidDataTypeException $e) {
                 throw new ValidationException(

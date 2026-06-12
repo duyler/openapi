@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Schema;
 
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\InfoObject;
@@ -14,6 +15,7 @@ use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
+use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 
 /**
  * @internal
@@ -1109,5 +1111,88 @@ final class RefResolverTest extends TestCase
         $schema = new Schema(additionalProperties: $additionalPropertiesSchema);
 
         $this->assertFalse($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_has_ref_at_depth_63_succeeds(): void
+    {
+        $schema = $this->createNestedSchemaChain(63, 'ref');
+
+        $this->assertTrue($this->resolver->schemaHasRef($schema));
+    }
+
+    #[Test]
+    public function schema_has_ref_at_depth_65_throws_exception(): void
+    {
+        $schema = $this->createNestedSchemaChain(65, 'ref');
+
+        $this->expectException(SchemaDepthExceededException::class);
+
+        $this->resolver->schemaHasRef($schema);
+    }
+
+    #[Test]
+    public function schema_has_discriminator_at_depth_63_succeeds(): void
+    {
+        $leafSchema = new Schema(
+            discriminator: new Discriminator(propertyName: 'type'),
+        );
+        $schema = $this->createNestedSchemaChainWithLeaf(63, $leafSchema);
+
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $this->assertTrue($this->resolver->schemaHasDiscriminator($schema, $document));
+    }
+
+    #[Test]
+    public function schema_has_discriminator_at_depth_65_throws_exception(): void
+    {
+        $leafSchema = new Schema(
+            discriminator: new Discriminator(propertyName: 'type'),
+        );
+        $schema = $this->createNestedSchemaChainWithLeaf(65, $leafSchema);
+
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $this->expectException(SchemaDepthExceededException::class);
+
+        $this->resolver->schemaHasDiscriminator($schema, $document);
+    }
+
+    #[Test]
+    public function clear_is_available_through_interface(): void
+    {
+        $this->assertInstanceOf(RefResolverInterface::class, $this->resolver);
+
+        // clear() should be callable through the interface
+        $this->resolver->clear();
+    }
+
+    private function createNestedSchemaChain(int $depth, string $leafValue): Schema
+    {
+        $leaf = new Schema(ref: '#/components/schemas/' . $leafValue);
+
+        $current = $leaf;
+        for ($i = 0; $i < $depth - 1; ++$i) {
+            $current = new Schema(properties: ['nested' => $current]);
+        }
+
+        return $current;
+    }
+
+    private function createNestedSchemaChainWithLeaf(int $depth, Schema $leaf): Schema
+    {
+        $current = $leaf;
+        for ($i = 0; $i < $depth - 1; ++$i) {
+            $current = new Schema(properties: ['nested' => $current]);
+        }
+
+        return $current;
     }
 }

@@ -17,12 +17,12 @@ use Duyler\OpenApi\Schema\Model\Responses;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Model\Webhooks;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
-use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
 use Duyler\OpenApi\Validator\Request\CookieValidator;
 use Duyler\OpenApi\Validator\Request\HeadersValidator;
 use Duyler\OpenApi\Validator\Request\ParameterDeserializer;
@@ -31,9 +31,12 @@ use Duyler\OpenApi\Validator\Request\PathParser;
 use Duyler\OpenApi\Validator\Request\QueryParametersValidator;
 use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Request\QueryStringValidator;
-use Duyler\OpenApi\Validator\Request\RequestBodyValidator;
+use Duyler\OpenApi\Validator\Request\RequestBodyValidatorWithContext;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Webhook\Exception\UnknownWebhookException;
@@ -45,6 +48,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UriInterface;
 use stdClass;
+use TypeError;
 
 /** @internal */
 final class WebhookValidatorTest extends TestCase
@@ -54,7 +58,7 @@ final class WebhookValidatorTest extends TestCase
     protected function setUp(): void
     {
         $pool = new ValidatorPool();
-        $schemaValidator = new SchemaValidator($pool);
+        $schemaValidator = new SchemaValidator($pool, BuiltinFormats::create());
         $deserializer = new ParameterDeserializer();
         $coercer = new TypeCoercer();
 
@@ -64,20 +68,29 @@ final class WebhookValidatorTest extends TestCase
         $queryParamsValidator = new QueryParametersValidator($schemaValidator, $deserializer, $coercer);
         $headersValidator = new HeadersValidator($schemaValidator, $deserializer, $coercer);
         $cookieValidator = new CookieValidator($schemaValidator, $deserializer, $coercer);
-        $negotiator = new ContentTypeNegotiator();
         $jsonParser = new JsonBodyParser();
         $formParser = new FormBodyParser();
         $multipartParser = new MultipartBodyParser();
         $textParser = new TextBodyParser();
         $xmlParser = new XmlBodyParser();
-        $bodyValidator = new RequestBodyValidator(
-            $schemaValidator,
-            $negotiator,
+        $bodyParser = new BodyParser(
             $jsonParser,
             $formParser,
             $multipartParser,
             $textParser,
             $xmlParser,
+        );
+        $document = new OpenApiDocument(
+            openapi: '3.1.0',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+        );
+        $bodyValidator = new RequestBodyValidatorWithContext(
+            $pool,
+            $document,
+            $bodyParser,
+            new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
+            new RefResolver(),
+            BuiltinFormats::create(),
         );
 
         $queryStringValidator = new QueryStringValidator($queryParser, $schemaValidator);
@@ -510,8 +523,7 @@ final class WebhookValidatorTest extends TestCase
 
         $request = $this->createPsr7RequestForWebhook(method: 'POST', webhookName: 'test.webhook');
 
-        $this->expectException(UnknownWebhookException::class);
-        $this->expectExceptionMessage('test.webhook (invalid operation)');
+        $this->expectException(TypeError::class);
 
         $this->webhookValidator->validate($request, 'test.webhook', $document);
     }

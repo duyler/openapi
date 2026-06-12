@@ -153,3 +153,23 @@ paths:
       responses:
         '200':
           description: OK
+  /test/nesting/mixed:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MixedNesting'
+      responses:
+        '200':
+          description: OK
+  /test/nesting/arrays:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NestedArraysAndObjects'
+      responses:
+        '200':
+          description: OK

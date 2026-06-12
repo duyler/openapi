@@ -17,8 +17,11 @@ use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Response\ResponseBodyValidatorWithContext;
 use Duyler\OpenApi\Validator\Response\ResponseTypeCoercer;
+use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -53,6 +56,9 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             pool: $pool,
             document: $document,
             bodyParser: $bodyParser,
+            statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
+            refResolver: new RefResolver(),
+            formatRegistry: BuiltinFormats::create(),
             negotiator: $negotiator,
             typeCoercer: $typeCoercer,
             coercion: false,
@@ -307,6 +313,9 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             pool: $pool,
             document: $document,
             bodyParser: $bodyParser,
+            statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
+            refResolver: new RefResolver(),
+            formatRegistry: BuiltinFormats::create(),
             negotiator: $negotiator,
             typeCoercer: $typeCoercer,
             coercion: true,

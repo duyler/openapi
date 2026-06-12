@@ -6,9 +6,11 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\String\Ipv6Validator;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(Ipv6Validator::class)]
 final class Ipv6ValidatorTest extends TestCase
 {
     private Ipv6Validator $validator;

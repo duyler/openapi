@@ -9,9 +9,12 @@ use Duyler\OpenApi\Validator\SchemaValidator\NotValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(NotValidator::class)]
 class NotValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -20,7 +23,7 @@ class NotValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new NotValidator($this->pool);
+        $this->validator = new NotValidator($this->pool, BuiltinFormats::create());
     }
 
     #[Test]

@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Operation;
+use Override;
 use Psr\Http\Message\ServerRequestInterface;
 use Duyler\OpenApi\Schema\Model\Parameter;
 
 use function is_array;
 
-readonly class RequestValidator
+final readonly class RequestValidator implements RequestValidatorInterface
 {
     public function __construct(
         private readonly PathParser $pathParser,
@@ -23,6 +24,7 @@ readonly class RequestValidator
         private readonly RequestBodyValidatorInterface $bodyValidator,
     ) {}
 
+    #[Override]
     public function validate(
         ServerRequestInterface $request,
         Operation $operation,

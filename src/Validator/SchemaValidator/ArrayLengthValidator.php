@@ -17,7 +17,7 @@ use function is_array;
 
 use const SORT_REGULAR;
 
-readonly class ArrayLengthValidator extends AbstractSchemaValidator
+final readonly class ArrayLengthValidator extends AbstractSchemaValidator
 {
     use LengthValidationTrait;
 

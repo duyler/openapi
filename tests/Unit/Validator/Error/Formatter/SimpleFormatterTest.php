@@ -19,6 +19,12 @@ class SimpleFormatterTest extends TestCase
     }
 
     #[Test]
+    public function shared_returns_same_instance(): void
+    {
+        $this->assertSame(SimpleFormatter::shared(), SimpleFormatter::shared());
+    }
+
+    #[Test]
     public function format_simple_error(): void
     {
         $error = new MinLengthError(

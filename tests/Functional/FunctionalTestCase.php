@@ -17,9 +17,11 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 
 use function file_get_contents;
 use function is_array;
@@ -30,6 +32,7 @@ abstract class FunctionalTestCase extends TestCase
     protected RefResolverInterface $refResolver;
     protected OpenApiDocument $document;
     protected SchemaParserInterface $parser;
+    protected StatelessValidatorRegistry $statelessValidators;
 
     protected function setUp(): void
     {
@@ -43,6 +46,7 @@ abstract class FunctionalTestCase extends TestCase
         );
         $this->refResolver = new RefResolver();
         $this->parser = new YamlParser();
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
     }
 
     /**
@@ -92,6 +96,7 @@ abstract class FunctionalTestCase extends TestCase
             $this->pool,
             $this->refResolver,
             $this->document,
+            $this->statelessValidators,
         );
     }
 

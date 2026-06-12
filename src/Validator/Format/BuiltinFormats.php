@@ -19,7 +19,7 @@ use Duyler\OpenApi\Validator\Format\String\TimeValidator;
 use Duyler\OpenApi\Validator\Format\String\UriValidator;
 use Duyler\OpenApi\Validator\Format\String\UuidValidator;
 
-readonly class BuiltinFormats
+final class BuiltinFormats
 {
     public static function create(): FormatRegistry
     {

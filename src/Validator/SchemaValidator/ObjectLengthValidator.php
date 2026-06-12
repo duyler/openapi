@@ -14,7 +14,7 @@ use Override;
 use function count;
 use function is_array;
 
-readonly class ObjectLengthValidator extends AbstractSchemaValidator
+final readonly class ObjectLengthValidator extends AbstractSchemaValidator
 {
     use LengthValidationTrait;
 

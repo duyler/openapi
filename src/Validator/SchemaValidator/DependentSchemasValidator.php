@@ -15,7 +15,7 @@ use function array_key_exists;
 use function is_array;
 use function sprintf;
 
-readonly class DependentSchemasValidator extends AbstractSchemaValidator
+final readonly class DependentSchemasValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -35,7 +35,7 @@ readonly class DependentSchemasValidator extends AbstractSchemaValidator
                 try {
                     $allowNull = $dependentSchema->nullable && $nullableAsType;
                     $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
-                    $validator = new SchemaValidator($this->pool);
+                    $validator = $this->createSchemaValidator();
                     $validator->validate($normalizedData, $dependentSchema, $context);
                 } catch (InvalidDataTypeException $e) {
                     throw new ValidationException(

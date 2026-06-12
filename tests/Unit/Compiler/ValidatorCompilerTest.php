@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Compiler;
 
-use Duyler\OpenApi\Compiler\CompilationCache;
+use Duyler\OpenApi\Compiler\CompilationCacheInterface;
 use Duyler\OpenApi\Compiler\ValidatorCompiler;
 use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\Discriminator;
@@ -14,6 +14,19 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use ConstCorrectValidator;
+use ConstIntValidator;
+use ConstWrongValidator;
+use EnumInlineValuesValidator;
+use MultipleOfInvalidValidator;
+use MultipleOfValidValidator;
+use NestedRejectExtraValidator;
+use NumberIntValidator;
+use NumberRejectStringValidator;
+use RejectExtraPropValidator;
+use UnionAcceptsIntegerValidator;
+use UnionAcceptsStringValidator;
+use UnionRejectsFloatValidator;
 
 final class ValidatorCompilerTest extends TestCase
 {
@@ -55,7 +68,7 @@ final class ValidatorCompilerTest extends TestCase
         $schema = new Schema(type: 'string', minLength: 1, maxLength: 100);
         $code = $compiler->compile($schema, 'LengthValidator');
 
-        $this->assertStringContainsString('strlen($data)', $code);
+        $this->assertStringContainsString("mb_strlen(\$data, 'UTF-8')", $code);
     }
 
     #[Test]
@@ -94,7 +107,7 @@ final class ValidatorCompilerTest extends TestCase
         $code = $compiler->compile($schema, 'AllValidators');
 
         $this->assertStringContainsString('is_string($data)', $code);
-        $this->assertStringContainsString('strlen($data)', $code);
+        $this->assertStringContainsString("mb_strlen(\$data, 'UTF-8')", $code);
         $this->assertStringContainsString('preg_match', $code);
         $this->assertStringContainsString('in_array($data', $code);
     }
@@ -297,7 +310,7 @@ final class ValidatorCompilerTest extends TestCase
     public function compile_with_cache_hit(): void
     {
         $compiler = new ValidatorCompiler();
-        $cache = $this->createMock(CompilationCache::class);
+        $cache = $this->createMock(CompilationCacheInterface::class);
         $schema = new Schema(type: 'string');
 
         $cache
@@ -320,7 +333,7 @@ final class ValidatorCompilerTest extends TestCase
     public function compile_with_cache_miss(): void
     {
         $compiler = new ValidatorCompiler();
-        $cache = $this->createMock(CompilationCache::class);
+        $cache = $this->createMock(CompilationCacheInterface::class);
         $schema = new Schema(type: 'string');
 
         $cache
@@ -573,8 +586,8 @@ final class ValidatorCompilerTest extends TestCase
 
         $code = $compiler->compile($schema, 'AllStringConstraintsValidator');
 
-        $this->assertStringContainsString('strlen($data) < 5', $code);
-        $this->assertStringContainsString('strlen($data) > 100', $code);
+        $this->assertStringContainsString("mb_strlen(\$data, 'UTF-8') < 5", $code);
+        $this->assertStringContainsString("mb_strlen(\$data, 'UTF-8') > 100", $code);
         $this->assertStringContainsString('preg_match', $code);
     }
 
@@ -633,6 +646,7 @@ final class ValidatorCompilerTest extends TestCase
 
         $this->assertStringContainsString('is_string($data)', $compiler->compile($stringSchema, 'StringType'));
         $this->assertStringContainsString('is_float($data)', $compiler->compile($numberSchema, 'NumberType'));
+        $this->assertStringContainsString('is_int($data)', $compiler->compile($numberSchema, 'NumberType'));
         $this->assertStringContainsString('is_int($data)', $compiler->compile($integerSchema, 'IntegerType'));
         $this->assertStringContainsString('is_bool($data)', $compiler->compile($booleanSchema, 'BooleanType'));
         $this->assertStringContainsString('is_array($data)', $compiler->compile($arraySchema, 'ArrayType'));
@@ -650,7 +664,547 @@ final class ValidatorCompilerTest extends TestCase
 
         $this->assertStringContainsString('is_string($data)', $code);
         $this->assertStringContainsString('is_float($data)', $code);
+        $this->assertStringContainsString('is_int($data)', $code);
         $this->assertStringContainsString('is_bool($data)', $code);
         $this->assertStringContainsString('is_null($data)', $code);
+    }
+
+    #[Test]
+    public function compile_enum_check_uses_inline_values_not_undefined_variable(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string', enum: ['active', 'inactive']);
+        $code = $compiler->compile($schema, 'EnumInlineValuesValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new EnumInlineValuesValidator();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Value must be one of');
+
+        $validator->validate('unknown');
+    }
+
+    #[Test]
+    public function compile_generates_code_with_actual_newline_after_php_tag(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $code = $compiler->compile($schema, 'NewlineCheckValidator');
+
+        $this->assertStringStartsWith("<?php\n", $code);
+    }
+
+    #[Test]
+    public function compile_with_cache_returns_same_code_on_repeated_call(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $cache = $this->createMock(CompilationCacheInterface::class);
+        $schema = new Schema(type: 'string');
+
+        $callCount = 0;
+        $cache
+            ->method('generateKey')
+            ->willReturnCallback(function () use (&$callCount): string {
+                ++$callCount;
+
+                return 'key_' . $callCount;
+            });
+
+        $cache
+            ->method('get')
+            ->willReturnOnConsecutiveCalls(null, 'compiled_code_from_cache');
+
+        $cache
+            ->expects($this->once())
+            ->method('set');
+
+        $firstCode = $compiler->compileWithCache($schema, 'RepeatedCallValidator', $cache);
+        $this->assertStringContainsString('is_string($data)', $firstCode);
+
+        $secondCode = $compiler->compileWithCache($schema, 'RepeatedCallValidator', $cache);
+        $this->assertSame('compiled_code_from_cache', $secondCode);
+    }
+
+    #[Test]
+    public function compile_with_ref_resolution_schema_not_found(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(ref: '#/components/schemas/Missing');
+
+        $document = new OpenApiDocument(
+            openapi: '3.0.3',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(schemas: []),
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Schema not found: Missing');
+
+        $compiler->compileWithRefResolution($schema, 'MissingSchema', $document);
+    }
+
+    #[Test]
+    public function compile_with_ref_resolution_unsupported_ref_format(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(ref: '#/paths/some/path');
+
+        $document = new OpenApiDocument(
+            openapi: '3.0.3',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(),
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Unsupported $ref: #/paths/some/path');
+
+        $compiler->compileWithRefResolution($schema, 'UnsupportedRef', $document);
+    }
+
+    #[Test]
+    public function compile_with_cache_null_does_not_use_cache(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'integer');
+
+        $code = $compiler->compileWithCache($schema, 'NullCacheValidator', null);
+
+        $this->assertStringContainsString('is_int($data)', $code);
+    }
+
+    #[Test]
+    public function compile_generates_multiple_of_check(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'number', multipleOf: 0.5);
+        $code = $compiler->compile($schema, 'MultipleOfValidator');
+
+        $this->assertStringContainsString('is_float($data)', $code);
+        $this->assertStringContainsString('is_int($data)', $code);
+    }
+
+    #[Test]
+    public function compile_with_ref_resolution_resolves_properties(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'address' => new Schema(ref: '#/components/schemas/Address'),
+            ],
+        );
+
+        $document = new OpenApiDocument(
+            openapi: '3.0.3',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Address' => new Schema(
+                        type: 'object',
+                        properties: [
+                            'street' => new Schema(type: 'string'),
+                            'city' => new Schema(type: 'string'),
+                        ],
+                    ),
+                ],
+            ),
+        );
+
+        $code = $compiler->compileWithRefResolution($schema, 'ResolvedPropertySchema', $document);
+
+        $this->assertStringContainsString('is_array($data)', $code);
+        $this->assertStringContainsString("is_string", $code);
+    }
+
+    #[Test]
+    public function compile_with_items_ref_resolution(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(ref: '#/components/schemas/Tag'),
+        );
+
+        $document = new OpenApiDocument(
+            openapi: '3.0.3',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Tag' => new Schema(
+                        type: 'string',
+                    ),
+                ],
+            ),
+        );
+
+        $code = $compiler->compileWithRefResolution($schema, 'ItemsRefSchema', $document);
+
+        $this->assertStringContainsString('is_array($data)', $code);
+    }
+
+    #[Test]
+    public function compile_object_without_properties_generates_type_check(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'object');
+
+        $code = $compiler->compile($schema, 'PlainObjectValidator');
+
+        $this->assertStringContainsString('is_array($data)', $code);
+    }
+
+    #[Test]
+    public function compile_generates_declare_strict_types(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $code = $compiler->compile($schema, 'StrictTypesValidator');
+
+        $this->assertStringContainsString('declare(strict_types=1);', $code);
+    }
+
+    #[Test]
+    public function compile_number_type_generates_is_float_or_is_int(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'number');
+
+        $code = $compiler->compile($schema, 'NumberTypeValidator');
+
+        $this->assertStringContainsString('is_float($data)', $code);
+        $this->assertStringContainsString('is_int($data)', $code);
+        $this->assertStringNotContainsString('is_number', $code);
+    }
+
+    #[Test]
+    public function compile_number_type_validates_integer_value(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'number');
+
+        $code = $compiler->compile($schema, 'NumberIntValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new NumberIntValidator();
+
+        $validator->validate(42);
+        $validator->validate(3.14);
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function compile_number_type_rejects_string(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'number');
+
+        $code = $compiler->compile($schema, 'NumberRejectStringValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new NumberRejectStringValidator();
+
+        $this->expectException(RuntimeException::class);
+        $validator->validate('not a number');
+    }
+
+    #[Test]
+    public function compile_const_check_generates_validation(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string', const: 'fixed', hasConst: true);
+
+        $code = $compiler->compile($schema, 'ConstValidator');
+
+        $this->assertStringContainsString("'fixed' !== \$data", $code);
+        $this->assertStringContainsString('Value must be const', $code);
+    }
+
+    #[Test]
+    public function compile_const_check_validates_correct_value(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string', const: 'hello', hasConst: true);
+
+        $code = $compiler->compile($schema, 'ConstCorrectValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new ConstCorrectValidator();
+        $validator->validate('hello');
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function compile_const_check_rejects_wrong_value(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string', const: 'hello', hasConst: true);
+
+        $code = $compiler->compile($schema, 'ConstWrongValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new ConstWrongValidator();
+
+        $this->expectException(RuntimeException::class);
+        $validator->validate('world');
+    }
+
+    #[Test]
+    public function compile_const_with_integer_value(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'integer', const: 42, hasConst: true);
+
+        $code = $compiler->compile($schema, 'ConstIntValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new ConstIntValidator();
+        $validator->validate(42);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function compile_multiple_of_check_generates_fmod(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'number', multipleOf: 0.5);
+
+        $code = $compiler->compile($schema, 'MultipleOfGeneratedValidator');
+
+        $this->assertStringContainsString('fmod', $code);
+        $this->assertStringContainsString('Value must be a multiple of', $code);
+    }
+
+    #[Test]
+    public function compile_multiple_of_validates_correct_value(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'number', multipleOf: 0.5);
+
+        $code = $compiler->compile($schema, 'MultipleOfValidValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new MultipleOfValidValidator();
+        $validator->validate(1.0);
+        $validator->validate(2.5);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function compile_multiple_of_rejects_invalid_value(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'number', multipleOf: 3);
+
+        $code = $compiler->compile($schema, 'MultipleOfInvalidValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new MultipleOfInvalidValidator();
+
+        $this->expectException(RuntimeException::class);
+        $validator->validate(7);
+    }
+
+    #[Test]
+    public function compile_additional_properties_false_generates_check(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'age' => new Schema(type: 'integer'),
+            ],
+            additionalProperties: false,
+        );
+
+        $code = $compiler->compile($schema, 'NoAdditionalPropsValidator');
+
+        $this->assertStringContainsString('array_keys($data)', $code);
+        $this->assertStringContainsString('Additional property not allowed', $code);
+    }
+
+    #[Test]
+    public function compile_additional_properties_false_rejects_extra_property(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+            ],
+            additionalProperties: false,
+        );
+
+        $code = $compiler->compile($schema, 'RejectExtraPropValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new RejectExtraPropValidator();
+        $validator->validate(['name' => 'John']);
+
+        $this->expectException(RuntimeException::class);
+        $validator->validate(['name' => 'John', 'extra' => 'field']);
+    }
+
+    #[Test]
+    public function compile_additional_properties_true_allows_extra_properties(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+            ],
+            additionalProperties: true,
+        );
+
+        $code = $compiler->compile($schema, 'AllowExtraPropsValidator');
+
+        $this->assertStringNotContainsString('Additional property not allowed', $code);
+    }
+
+    #[Test]
+    public function compile_additional_properties_nested_object_rejects_extra(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'address' => new Schema(
+                    type: 'object',
+                    properties: [
+                        'city' => new Schema(type: 'string'),
+                    ],
+                    additionalProperties: false,
+                ),
+            ],
+        );
+
+        $code = $compiler->compile($schema, 'NestedRejectExtraValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new NestedRejectExtraValidator();
+
+        $validator->validate(['address' => ['city' => 'NYC']]);
+
+        $this->expectException(RuntimeException::class);
+        $validator->validate(['address' => ['city' => 'NYC', 'zip' => '10001']]);
+    }
+
+    #[Test]
+    public function compile_schema_without_const_does_not_generate_check(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $code = $compiler->compile($schema, 'NoConstValidator');
+
+        $this->assertStringNotContainsString('Value must be const', $code);
+    }
+
+    #[Test]
+    public function compile_schema_without_multiple_of_does_not_generate_check(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'number');
+
+        $code = $compiler->compile($schema, 'NoMultipleOfValidator');
+
+        $this->assertStringNotContainsString('fmod', $code);
+    }
+
+    #[Test]
+    public function compile_generated_code_is_valid_php(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'number',
+            minimum: 0,
+            maximum: 100,
+            multipleOf: 0.5,
+        );
+
+        $code = $compiler->compile($schema, 'ValidPhpOutputValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $this->assertTrue(class_exists('ValidPhpOutputValidator', false));
+    }
+
+    #[Test]
+    public function compile_union_type_accepts_string_value(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: ['string', 'integer']);
+
+        $code = $compiler->compile($schema, 'UnionAcceptsStringValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new UnionAcceptsStringValidator();
+        $validator->validate('hello');
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function compile_union_type_accepts_integer_value(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: ['string', 'integer']);
+
+        $code = $compiler->compile($schema, 'UnionAcceptsIntegerValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new UnionAcceptsIntegerValidator();
+        $validator->validate(42);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function compile_union_type_rejects_invalid_value(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: ['string', 'integer']);
+
+        $code = $compiler->compile($schema, 'UnionRejectsFloatValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new UnionRejectsFloatValidator();
+
+        $this->expectException(RuntimeException::class);
+        $validator->validate(3.14);
     }
 }

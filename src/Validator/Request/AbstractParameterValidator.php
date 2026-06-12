@@ -26,7 +26,7 @@ abstract readonly class AbstractParameterValidator
                 continue;
             }
 
-            if ($param->in !== $location) {
+            if ($location !== $param->in) {
                 continue;
             }
 
@@ -35,6 +35,7 @@ abstract readonly class AbstractParameterValidator
                 continue;
             }
 
+            /** @var string|null $value */
             $value = $this->findParameter($data, $name);
 
             if (null === $value) {
@@ -45,7 +46,7 @@ abstract readonly class AbstractParameterValidator
             }
 
             $value = $this->deserializer->deserialize($value, $param);
-            $value = $this->coercer->coerce($value, $param, $this->coercion, $this->coercion);
+            $value = $this->coercer->coerce($value, $param, $this->coercion, false);
 
             if (null !== $param->schema) {
                 $this->schemaValidator->validate($value, $param->schema);

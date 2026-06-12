@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-readonly class Schema implements JsonSerializable
+final readonly class Schema implements JsonSerializable
 {
     /**
      * @param string|list<string>|null $type
@@ -22,6 +22,8 @@ readonly class Schema implements JsonSerializable
      * @param array<string, Schema>|null $patternProperties
      * @param array<string, Schema>|null $dependentSchemas
      * @param Schema|bool|null $additionalProperties
+     * @param Schema|bool|null $unevaluatedProperties
+     * @param Schema|bool|null $contentSchema
      * @param list<mixed>|null $enum
      * @param array<string, mixed>|null $examples
      * @param Xml|null $xml
@@ -33,11 +35,15 @@ readonly class Schema implements JsonSerializable
         public ?string $format = null,
         public ?string $title = null,
         public ?string $description = null,
-        public mixed $default = null,
+        public string|int|float|bool|array|null $default = null,
+        public bool $hasDefault = false,
         public bool $deprecated = false,
+        public bool $readOnly = false,
+        public bool $writeOnly = false,
         public string|array|null $type = null,
         public bool $nullable = false,
-        public mixed $const = null,
+        public string|int|float|bool|array|null $const = null,
+        public bool $hasConst = false,
         public ?float $multipleOf = null,
         public ?float $maximum = null,
         public ?float $exclusiveMaximum = null,
@@ -59,7 +65,7 @@ readonly class Schema implements JsonSerializable
         public ?Discriminator $discriminator = null,
         public ?array $properties = null,
         public Schema|bool|null $additionalProperties = null,
-        public ?bool $unevaluatedProperties = null,
+        public Schema|bool|null $unevaluatedProperties = null,
         public ?Schema $items = null,
         public ?array $prefixItems = null,
         public ?Schema $contains = null,
@@ -72,15 +78,154 @@ readonly class Schema implements JsonSerializable
         public ?Schema $then = null,
         public ?Schema $else = null,
         public ?Schema $unevaluatedItems = null,
-        public mixed $example = null,
+        public string|int|float|bool|array|null $example = null,
         public ?array $examples = null,
         public ?array $enum = null,
         public ?string $contentEncoding = null,
         public ?string $contentMediaType = null,
-        public ?string $contentSchema = null,
+        public Schema|bool|null $contentSchema = null,
         public ?string $jsonSchemaDialect = null,
         public ?Xml $xml = null,
     ) {}
+
+    /**
+     * @param string|list<string>|null $type
+     * @param array<string, Schema>|null $properties
+     * @param list<string>|null $required
+     * @param list<Schema>|null $allOf
+     * @param list<Schema>|null $anyOf
+     * @param list<Schema>|null $oneOf
+     * @param Schema|null $not
+     * @param Schema|null $items
+     * @param list<Schema>|null $prefixItems
+     * @param array<string, Schema>|null $patternProperties
+     * @param array<string, Schema>|null $dependentSchemas
+     * @param Schema|bool|null $additionalProperties
+     * @param Schema|bool|null $unevaluatedProperties
+     * @param Schema|bool|null $contentSchema
+     * @param list<mixed>|null $enum
+     * @param array<string, mixed>|null $examples
+     * @param Xml|null $xml
+     */
+    public function withOverrides(
+        ?string $ref = null,
+        ?string $refSummary = null,
+        ?string $refDescription = null,
+        ?string $format = null,
+        ?string $title = null,
+        ?string $description = null,
+        string|int|float|bool|array|null $default = null,
+        ?bool $hasDefault = null,
+        ?bool $deprecated = null,
+        ?bool $readOnly = null,
+        ?bool $writeOnly = null,
+        string|array|null $type = null,
+        ?bool $nullable = null,
+        string|int|float|bool|array|null $const = null,
+        ?bool $hasConst = null,
+        ?float $multipleOf = null,
+        ?float $maximum = null,
+        ?float $exclusiveMaximum = null,
+        ?float $minimum = null,
+        ?float $exclusiveMinimum = null,
+        ?int $maxLength = null,
+        ?int $minLength = null,
+        ?string $pattern = null,
+        ?int $maxItems = null,
+        ?int $minItems = null,
+        ?bool $uniqueItems = null,
+        ?int $maxProperties = null,
+        ?int $minProperties = null,
+        ?array $required = null,
+        ?array $allOf = null,
+        ?array $anyOf = null,
+        ?array $oneOf = null,
+        ?Schema $not = null,
+        ?Discriminator $discriminator = null,
+        ?array $properties = null,
+        Schema|bool|null $additionalProperties = null,
+        Schema|bool|null $unevaluatedProperties = null,
+        ?Schema $items = null,
+        ?array $prefixItems = null,
+        ?Schema $contains = null,
+        ?int $minContains = null,
+        ?int $maxContains = null,
+        ?array $patternProperties = null,
+        ?Schema $propertyNames = null,
+        ?array $dependentSchemas = null,
+        ?Schema $if = null,
+        ?Schema $then = null,
+        ?Schema $else = null,
+        ?Schema $unevaluatedItems = null,
+        string|int|float|bool|array|null $example = null,
+        ?array $examples = null,
+        ?array $enum = null,
+        ?string $contentEncoding = null,
+        ?string $contentMediaType = null,
+        Schema|bool|null $contentSchema = null,
+        ?string $jsonSchemaDialect = null,
+        ?Xml $xml = null,
+    ): self {
+        return new self(
+            ref: $ref ?? $this->ref,
+            refSummary: $refSummary ?? $this->refSummary,
+            refDescription: $refDescription ?? $this->refDescription,
+            format: $format ?? $this->format,
+            title: $title ?? $this->title,
+            description: $description ?? $this->description,
+            default: $default ?? $this->default,
+            hasDefault: $hasDefault ?? $this->hasDefault,
+            deprecated: $deprecated ?? $this->deprecated,
+            readOnly: $readOnly ?? $this->readOnly,
+            writeOnly: $writeOnly ?? $this->writeOnly,
+            type: $type ?? $this->type,
+            nullable: $nullable ?? $this->nullable,
+            const: $const ?? $this->const,
+            hasConst: $hasConst ?? $this->hasConst,
+            multipleOf: $multipleOf ?? $this->multipleOf,
+            maximum: $maximum ?? $this->maximum,
+            exclusiveMaximum: $exclusiveMaximum ?? $this->exclusiveMaximum,
+            minimum: $minimum ?? $this->minimum,
+            exclusiveMinimum: $exclusiveMinimum ?? $this->exclusiveMinimum,
+            maxLength: $maxLength ?? $this->maxLength,
+            minLength: $minLength ?? $this->minLength,
+            pattern: $pattern ?? $this->pattern,
+            maxItems: $maxItems ?? $this->maxItems,
+            minItems: $minItems ?? $this->minItems,
+            uniqueItems: $uniqueItems ?? $this->uniqueItems,
+            maxProperties: $maxProperties ?? $this->maxProperties,
+            minProperties: $minProperties ?? $this->minProperties,
+            required: $required ?? $this->required,
+            allOf: $allOf ?? $this->allOf,
+            anyOf: $anyOf ?? $this->anyOf,
+            oneOf: $oneOf ?? $this->oneOf,
+            not: $not ?? $this->not,
+            discriminator: $discriminator ?? $this->discriminator,
+            properties: $properties ?? $this->properties,
+            additionalProperties: $additionalProperties ?? $this->additionalProperties,
+            unevaluatedProperties: $unevaluatedProperties ?? $this->unevaluatedProperties,
+            items: $items ?? $this->items,
+            prefixItems: $prefixItems ?? $this->prefixItems,
+            contains: $contains ?? $this->contains,
+            minContains: $minContains ?? $this->minContains,
+            maxContains: $maxContains ?? $this->maxContains,
+            patternProperties: $patternProperties ?? $this->patternProperties,
+            propertyNames: $propertyNames ?? $this->propertyNames,
+            dependentSchemas: $dependentSchemas ?? $this->dependentSchemas,
+            if: $if ?? $this->if,
+            then: $then ?? $this->then,
+            else: $else ?? $this->else,
+            unevaluatedItems: $unevaluatedItems ?? $this->unevaluatedItems,
+            example: $example ?? $this->example,
+            examples: $examples ?? $this->examples,
+            enum: $enum ?? $this->enum,
+            contentEncoding: $contentEncoding ?? $this->contentEncoding,
+            contentMediaType: $contentMediaType ?? $this->contentMediaType,
+            contentSchema: $contentSchema ?? $this->contentSchema,
+            jsonSchemaDialect: $jsonSchemaDialect ?? $this->jsonSchemaDialect,
+            xml: $xml ?? $this->xml,
+        );
+    }
 
     #[Override]
     public function jsonSerialize(): array
@@ -99,6 +244,7 @@ readonly class Schema implements JsonSerializable
             return $data;
         }
 
+        /** @var array<string, mixed> $data */
         $data = [];
 
         if (null !== $this->title) {
@@ -109,12 +255,20 @@ readonly class Schema implements JsonSerializable
             $data['description'] = $this->description;
         }
 
-        if (null !== $this->default) {
+        if ($this->hasDefault) {
             $data['default'] = $this->default;
         }
 
         if ($this->deprecated) {
             $data['deprecated'] = $this->deprecated;
+        }
+
+        if ($this->readOnly) {
+            $data['readOnly'] = $this->readOnly;
+        }
+
+        if ($this->writeOnly) {
+            $data['writeOnly'] = $this->writeOnly;
         }
 
         if (null !== $this->type) {
@@ -125,7 +279,7 @@ readonly class Schema implements JsonSerializable
             $data['nullable'] = $this->nullable;
         }
 
-        if (null !== $this->const) {
+        if ($this->hasConst) {
             $data['const'] = $this->const;
         }
 

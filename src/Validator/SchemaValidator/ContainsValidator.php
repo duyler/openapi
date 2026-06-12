@@ -13,7 +13,7 @@ use Override;
 
 use function is_array;
 
-readonly class ContainsValidator extends AbstractSchemaValidator
+final readonly class ContainsValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -27,8 +27,8 @@ readonly class ContainsValidator extends AbstractSchemaValidator
         }
 
         $nullableAsType = $context?->nullableAsType ?? true;
-        $validator = new SchemaValidator($this->pool);
-        $containsContext = $context ?? ValidationContext::create($this->pool, $nullableAsType);
+        $validator = $this->createSchemaValidator();
+        $containsContext = $context ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
         $hasMatch = false;
 
         foreach ($data as $item) {

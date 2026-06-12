@@ -20,7 +20,7 @@ use const JSON_UNESCAPED_UNICODE;
  *
  * Produces JSON-formatted error messages suitable for API responses.
  */
-readonly class JsonFormatter implements ErrorFormatterInterface
+final readonly class JsonFormatter implements ErrorFormatterInterface
 {
     #[Override]
     public function format(AbstractValidationError $error): string

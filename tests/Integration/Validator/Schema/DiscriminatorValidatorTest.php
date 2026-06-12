@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Integration\Validator\Schema;
 
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\DiscriminatorValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 
 use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\Discriminator;
@@ -18,23 +20,29 @@ use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * @internal
  */
+#[CoversClass(DiscriminatorValidator::class)]
 final class DiscriminatorValidatorTest extends TestCase
 {
     private DiscriminatorValidator $validator;
     private RefResolverInterface $refResolver;
     private ValidatorPool $pool;
+    private StatelessValidatorRegistry $statelessValidators;
 
     protected function setUp(): void
     {
         $this->refResolver = new RefResolver();
         $this->pool = new ValidatorPool();
-        $this->validator = new DiscriminatorValidator($this->refResolver, $this->pool);
+        $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
+        $this->validator = new DiscriminatorValidator($this->refResolver, $this->pool, $this->statelessValidators);
     }
 
     #[Test]
@@ -830,6 +838,188 @@ final class DiscriminatorValidatorTest extends TestCase
         ];
 
         $this->validator->validate($dogData, $petSchema, $document);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_with_nested_data_path_builds_correct_path(): void
+    {
+        // This tests buildPath with a non-root basePath (e.g., '/data/items')
+        $catSchema = new Schema(
+            title: 'Cat',
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            oneOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+            ],
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                ],
+            ),
+        );
+
+        $catData = [
+            'name' => 'Fluffy',
+            'petType' => 'Cat',
+        ];
+
+        // Use non-root data path to exercise buildPath's else branch
+        $this->validator->validate($catData, $petSchema, $document, '/data/items');
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_with_schema_without_title_falls_through_to_unknown(): void
+    {
+        // Tests schemaMatchesValue returning false when schema title is null
+        $schemaNoTitle = new Schema(
+            type: 'object',
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            oneOf: [
+                new Schema(ref: '#/components/schemas/NoTitle'),
+            ],
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'NoTitle' => $schemaNoTitle,
+                ],
+            ),
+        );
+
+        // Value 'unknown' doesn't match any title (schema has no title) and no mapping
+        $this->expectException(UnknownDiscriminatorValueException::class);
+
+        $this->validator->validate(['petType' => 'unknown'], $petSchema, $document);
+    }
+
+    #[Test]
+    public function validate_with_non_string_data_throws_mismatch(): void
+    {
+        // Tests extractValue when data is not an array — DiscriminatorMismatchException
+        $petSchema = new Schema(
+            oneOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+            ],
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => new Schema(type: 'object'),
+                ],
+            ),
+        );
+
+        // Test with int data — should throw DiscriminatorMismatchException
+        $this->expectException(DiscriminatorMismatchException::class);
+
+        $this->validator->validate(42, $petSchema, $document);
+    }
+
+    #[Test]
+    public function validate_with_custom_logger(): void
+    {
+        $logger = $this->createStub(LoggerInterface::class);
+        $eventDispatcher = $this->createStub(EventDispatcherInterface::class);
+
+        $validator = new DiscriminatorValidator(
+            $this->refResolver,
+            $this->pool,
+            $this->statelessValidators,
+            reportDeprecated: true,
+            logger: $logger,
+            eventDispatcher: $eventDispatcher,
+        );
+
+        $schema = new Schema(type: 'object');
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Test API', '1.0.0'),
+        );
+
+        $validator->validate(['data' => 'value'], $schema, $document);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_with_one_of_candidate_without_ref_is_skipped(): void
+    {
+        // Tests findMatchingSchema when a oneOf candidate has no $ref — it should be skipped
+        $catSchema = new Schema(
+            title: 'Cat',
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            oneOf: [
+                new Schema(type: 'object'), // no $ref — should be skipped
+                new Schema(ref: '#/components/schemas/Cat'),
+            ],
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                ],
+            ),
+        );
+
+        $catData = [
+            'name' => 'Fluffy',
+            'petType' => 'Cat',
+        ];
+
+        $this->validator->validate($catData, $petSchema, $document);
 
         $this->assertTrue(true);
     }

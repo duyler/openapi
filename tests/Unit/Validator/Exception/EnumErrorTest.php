@@ -153,4 +153,38 @@ final class EnumErrorTest extends TestCase
         self::assertSame([['id' => 1], ['id' => 2]], $params['allowed']);
         self::assertSame(['id' => 3], $params['actual']);
     }
+
+    #[Test]
+    public function handles_json_encode_failure_for_actual(): void
+    {
+        $resource = fopen('php://memory', 'r');
+
+        $exception = new EnumError(
+            allowedValues: ['red', 'green', 'blue'],
+            actual: $resource,
+            dataPath: '/color',
+            schemaPath: '/properties/color',
+        );
+
+        self::assertStringContainsString('null', $exception->getMessage());
+
+        fclose($resource);
+    }
+
+    #[Test]
+    public function handles_json_encode_failure_for_allowed_values(): void
+    {
+        $resource = fopen('php://memory', 'r');
+
+        $exception = new EnumError(
+            allowedValues: [$resource],
+            actual: 'value',
+            dataPath: '/field',
+            schemaPath: '/properties/field',
+        );
+
+        self::assertStringContainsString('null', $exception->getMessage());
+
+        fclose($resource);
+    }
 }

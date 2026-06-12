@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use JsonSerializable;
 use Override;
 
-readonly class Callbacks implements JsonSerializable
+final readonly class Callbacks implements JsonSerializable
 {
     /**
      * @param array<string, array<string, PathItem>> $callbacks

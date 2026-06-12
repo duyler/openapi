@@ -1,0 +1,369 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Duyler\OpenApi\Test\Unit\Validator\Server;
+
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\Server\ServerUrlMismatchException;
+use Duyler\OpenApi\Validator\Server\ServerUrlValidator;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Schema\Model\InfoObject;
+use Duyler\OpenApi\Schema\Model\Server;
+use Duyler\OpenApi\Schema\Model\Servers;
+use Duyler\OpenApi\Schema\OpenApiDocument;
+
+#[CoversClass(ServerUrlValidator::class)]
+final class ServerUrlValidatorTest extends TestCase
+{
+    private const string SERVERS_YAML = <<<YAML
+openapi: 3.1.0
+info:
+  title: Test API
+  version: 1.0.0
+servers:
+  - url: https://{env}.api.example.com/v{version}
+    description: Main server
+    variables:
+      env:
+        default: prod
+        enum:
+          - prod
+          - staging
+      version:
+        default: "1"
+  - url: https://static.api.example.com
+    description: Static server
+paths:
+  /test:
+    get:
+      responses:
+        '200':
+          description: OK
+YAML;
+
+    #[Test]
+    public function validates_matching_server_url(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::SERVERS_YAML)
+            ->build();
+
+        $serverValidator = new ServerUrlValidator();
+
+        $serverValidator->validate($validator->getDocument(), 'https://prod.api.example.com/v1');
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validates_static_server_url(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::SERVERS_YAML)
+            ->build();
+
+        $serverValidator = new ServerUrlValidator();
+
+        $serverValidator->validate($validator->getDocument(), 'https://static.api.example.com');
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function throws_for_non_matching_url(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::SERVERS_YAML)
+            ->build();
+
+        $serverValidator = new ServerUrlValidator();
+
+        $this->expectException(ServerUrlMismatchException::class);
+
+        $serverValidator->validate($validator->getDocument(), 'https://unknown.example.com');
+    }
+
+    #[Test]
+    public function is_valid_returns_true_for_match(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::SERVERS_YAML)
+            ->build();
+
+        $serverValidator = new ServerUrlValidator();
+
+        $this->assertTrue($serverValidator->isValid($validator->getDocument(), 'https://prod.api.example.com/v1'));
+    }
+
+    #[Test]
+    public function is_valid_returns_false_for_no_match(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::SERVERS_YAML)
+            ->build();
+
+        $serverValidator = new ServerUrlValidator();
+
+        $this->assertFalse($serverValidator->isValid($validator->getDocument(), 'https://unknown.example.com'));
+    }
+
+    #[Test]
+    public function matches_url_with_path_suffix(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::SERVERS_YAML)
+            ->build();
+
+        $serverValidator = new ServerUrlValidator();
+
+        $this->assertTrue($serverValidator->isValid($validator->getDocument(), 'https://prod.api.example.com/v1/users'));
+    }
+
+    #[Test]
+    public function matches_with_variable_overrides(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::SERVERS_YAML)
+            ->build();
+
+        $serverValidator = new ServerUrlValidator();
+
+        $this->assertTrue(
+            $serverValidator->isValid(
+                $validator->getDocument(),
+                'https://staging.api.example.com/v2',
+                ['env' => 'staging', 'version' => '2'],
+            ),
+        );
+    }
+
+    #[Test]
+    public function find_matching_servers_returns_matching(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::SERVERS_YAML)
+            ->build();
+
+        $serverValidator = new ServerUrlValidator();
+
+        $matches = $serverValidator->findMatchingServers(
+            $validator->getDocument(),
+            'https://prod.api.example.com/v1',
+        );
+
+        $this->assertCount(1, $matches);
+        $this->assertSame('https://{env}.api.example.com/v{version}', $matches[0]->url);
+    }
+
+    #[Test]
+    public function passes_when_no_servers_defined(): void
+    {
+        $yaml = <<<YAML
+openapi: 3.1.0
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /test:
+    get:
+      responses:
+        '200':
+          description: OK
+YAML;
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build();
+
+        $serverValidator = new ServerUrlValidator();
+
+        $serverValidator->validate($validator->getDocument(), 'https://anything.example.com');
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function unresolvable_server_url_not_added_to_result(): void
+    {
+        $document = new OpenApiDocument(
+            openapi: '3.1.0',
+            info: new InfoObject('Test API', '1.0.0'),
+            servers: new Servers([
+                new Server(
+                    url: 'https://{env}.api.example.com',
+                    variables: [],
+                ),
+                new Server(
+                    url: 'https://static.api.example.com',
+                ),
+            ]),
+        );
+
+        $serverValidator = new ServerUrlValidator();
+
+        $serverValidator->validate($document, 'https://static.api.example.com');
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function unresolvable_server_url_skipped_during_matching(): void
+    {
+        $document = new OpenApiDocument(
+            openapi: '3.1.0',
+            info: new InfoObject('Test API', '1.0.0'),
+            servers: new Servers([
+                new Server(
+                    url: 'https://{env}.api.example.com',
+                    variables: [],
+                ),
+                new Server(
+                    url: 'https://static.api.example.com',
+                ),
+            ]),
+        );
+
+        $serverValidator = new ServerUrlValidator();
+
+        $this->expectException(ServerUrlMismatchException::class);
+
+        $serverValidator->validate($document, 'https://unknown.api.example.com');
+    }
+
+    #[Test]
+    public function is_valid_returns_true_when_no_servers_defined(): void
+    {
+        $yaml = <<<YAML
+openapi: 3.1.0
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /test:
+    get:
+      responses:
+        '200':
+          description: OK
+YAML;
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build();
+
+        $serverValidator = new ServerUrlValidator();
+
+        $this->assertTrue($serverValidator->isValid($validator->getDocument(), 'https://anything.example.com'));
+    }
+
+    #[Test]
+    public function find_matching_servers_returns_empty_for_no_match(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::SERVERS_YAML)
+            ->build();
+
+        $serverValidator = new ServerUrlValidator();
+
+        $matches = $serverValidator->findMatchingServers(
+            $validator->getDocument(),
+            'https://unknown.example.com',
+        );
+
+        $this->assertSame([], $matches);
+    }
+
+    #[Test]
+    public function find_matching_servers_with_variable_overrides(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::SERVERS_YAML)
+            ->build();
+
+        $serverValidator = new ServerUrlValidator();
+
+        $matches = $serverValidator->findMatchingServers(
+            $validator->getDocument(),
+            'https://staging.api.example.com/v2',
+            ['env' => 'staging', 'version' => '2'],
+        );
+
+        $this->assertCount(1, $matches);
+        $this->assertSame('https://{env}.api.example.com/v{version}', $matches[0]->url);
+    }
+
+    #[Test]
+    public function find_matching_servers_skips_unresolvable(): void
+    {
+        $document = new OpenApiDocument(
+            openapi: '3.1.0',
+            info: new InfoObject('Test API', '1.0.0'),
+            servers: new Servers([
+                new Server(
+                    url: 'https://{env}.api.example.com',
+                    variables: [],
+                ),
+                new Server(
+                    url: 'https://static.api.example.com',
+                ),
+            ]),
+        );
+
+        $serverValidator = new ServerUrlValidator();
+
+        $matches = $serverValidator->findMatchingServers(
+            $document,
+            'https://static.api.example.com',
+        );
+
+        $this->assertCount(1, $matches);
+        $this->assertSame('https://static.api.example.com', $matches[0]->url);
+    }
+
+    #[Test]
+    public function find_matching_servers_returns_multiple_matches(): void
+    {
+        $document = new OpenApiDocument(
+            openapi: '3.1.0',
+            info: new InfoObject('Test API', '1.0.0'),
+            servers: new Servers([
+                new Server(
+                    url: 'https://api.example.com',
+                ),
+                new Server(
+                    url: 'https://api.example.com',
+                    description: 'Duplicate server',
+                ),
+            ]),
+        );
+
+        $serverValidator = new ServerUrlValidator();
+
+        $matches = $serverValidator->findMatchingServers(
+            $document,
+            'https://api.example.com',
+        );
+
+        $this->assertCount(2, $matches);
+    }
+
+    #[Test]
+    public function is_valid_with_variable_overrides(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::SERVERS_YAML)
+            ->build();
+
+        $serverValidator = new ServerUrlValidator();
+
+        $this->assertTrue(
+            $serverValidator->isValid(
+                $validator->getDocument(),
+                'https://staging.api.example.com/v1',
+                ['env' => 'staging'],
+            ),
+        );
+    }
+}

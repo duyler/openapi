@@ -157,7 +157,7 @@ info:
   version: 1.0.0
 YAML)
             ->build()
-            ->document;
+            ->getDocument();
 
         $finder = new PathFinder($document);
 
@@ -258,7 +258,7 @@ YAML)
         $document = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::TEST_SPEC_YAML)
             ->build()
-            ->document;
+            ->getDocument();
 
         return new PathFinder($document);
     }
@@ -317,7 +317,7 @@ YAML;
         $document = OpenApiValidatorBuilder::create()
             ->fromYamlString($yaml)
             ->build()
-            ->document;
+            ->getDocument();
 
         return new PathFinder($document);
     }

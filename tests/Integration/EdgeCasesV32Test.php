@@ -11,7 +11,6 @@ use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-use function assert;
 use function sprintf;
 
 final class EdgeCasesV32Test extends TestCase
@@ -275,7 +274,7 @@ YAML;
     {
         $parser = new YamlParser();
         $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
-        assert($content !== false);
+        self::assertNotFalse($content);
 
         $document = $parser->parse($content);
 

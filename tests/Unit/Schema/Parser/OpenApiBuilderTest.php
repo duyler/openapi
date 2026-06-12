@@ -460,7 +460,7 @@ final class OpenApiBuilderTest extends TestCase
                         'enum' => ['a', 'b', 'c'],
                         'contentEncoding' => 'base64',
                         'contentMediaType' => 'application/json',
-                        'contentSchema' => '{"type": "object"}',
+                        'contentSchema' => ['type' => 'object'],
                         '$schema' => 'https://json-schema.org/draft/2020-12/schema',
                     ],
                 ],
@@ -476,7 +476,7 @@ final class OpenApiBuilderTest extends TestCase
         $this->assertSame('Test description', $schema->description);
         $this->assertSame('default_value', $schema->default);
         $this->assertTrue($schema->deprecated);
-        $this->assertSame('string', $schema->type);
+        $this->assertSame(['string', 'null'], $schema->type);
         $this->assertTrue($schema->nullable);
         $this->assertSame('constant_value', $schema->const);
         $this->assertSame(2.0, $schema->multipleOf);
@@ -518,7 +518,7 @@ final class OpenApiBuilderTest extends TestCase
         $this->assertSame(['a', 'b', 'c'], $schema->enum);
         $this->assertSame('base64', $schema->contentEncoding);
         $this->assertSame('application/json', $schema->contentMediaType);
-        $this->assertSame('{"type": "object"}', $schema->contentSchema);
+        $this->assertInstanceOf(Schema::class, $schema->contentSchema);
         $this->assertSame('https://json-schema.org/draft/2020-12/schema', $schema->jsonSchemaDialect);
     }
 
@@ -2210,5 +2210,236 @@ final class OpenApiBuilderTest extends TestCase
         $document = $this->parser->parse($json);
 
         $this->assertSame('file:///path/to/openapi.json', $document->self);
+    }
+
+    #[Test]
+    public function build_schema_with_unevaluated_properties_schema(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'TestSchema' => [
+                        'type' => 'object',
+                        'unevaluatedProperties' => ['type' => 'string'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['TestSchema'];
+
+        $this->assertInstanceOf(Schema::class, $schema->unevaluatedProperties);
+    }
+
+    #[Test]
+    public function build_schema_with_content_schema_as_object(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'TestSchema' => [
+                        'type' => 'string',
+                        'contentMediaType' => 'application/json',
+                        'contentSchema' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string']]],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['TestSchema'];
+
+        $this->assertInstanceOf(Schema::class, $schema->contentSchema);
+        $this->assertSame('object', $schema->contentSchema->type);
+    }
+
+    #[Test]
+    public function boolean_schema_true_in_components(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'AnyValue' => true,
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['AnyValue'];
+
+        $this->assertInstanceOf(Schema::class, $schema);
+        $this->assertNull($schema->type);
+        $this->assertNull($schema->not);
+    }
+
+    #[Test]
+    public function boolean_schema_false_in_components(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'NoValue' => false,
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['NoValue'];
+
+        $this->assertInstanceOf(Schema::class, $schema);
+        $this->assertInstanceOf(Schema::class, $schema->not);
+    }
+
+    #[Test]
+    public function boolean_schema_in_properties(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'TestSchema' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'anyField' => true,
+                            'noField' => false,
+                            'typedField' => ['type' => 'string'],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['TestSchema'];
+
+        $this->assertInstanceOf(Schema::class, $schema->properties['anyField']);
+        $this->assertNull($schema->properties['anyField']->not);
+
+        $this->assertInstanceOf(Schema::class, $schema->properties['noField']);
+        $this->assertInstanceOf(Schema::class, $schema->properties['noField']->not);
+
+        $this->assertInstanceOf(Schema::class, $schema->properties['typedField']);
+        $this->assertSame('string', $schema->properties['typedField']->type);
+    }
+
+    #[Test]
+    public function boolean_schema_in_all_of(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'TestSchema' => [
+                        'allOf' => [
+                            true,
+                            ['type' => 'string'],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['TestSchema'];
+
+        $this->assertCount(2, $schema->allOf);
+        $this->assertInstanceOf(Schema::class, $schema->allOf[0]);
+        $this->assertNull($schema->allOf[0]->type);
+        $this->assertSame('string', $schema->allOf[1]->type);
+    }
+
+    #[Test]
+    public function boolean_schema_in_items(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'TestSchema' => [
+                        'type' => 'array',
+                        'items' => true,
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['TestSchema'];
+
+        $this->assertInstanceOf(Schema::class, $schema->items);
+        $this->assertNull($schema->items->type);
+    }
+
+    #[Test]
+    public function boolean_schema_in_media_type(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [
+                '/test' => [
+                    'get' => [
+                        'responses' => [
+                            '200' => [
+                                'description' => 'OK',
+                                'content' => [
+                                    'application/json' => [
+                                        'schema' => true,
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $mediaType = $document->paths->paths['/test']->get->responses->responses['200']->content->mediaTypes['application/json'];
+
+        $this->assertInstanceOf(Schema::class, $mediaType->schema);
+        $this->assertNull($mediaType->schema->type);
+    }
+
+    #[Test]
+    public function boolean_schema_in_not(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'TestSchema' => [
+                        'not' => true,
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['TestSchema'];
+
+        $this->assertInstanceOf(Schema::class, $schema->not);
+        $this->assertNull($schema->not->type);
     }
 }

@@ -15,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\NullLogger;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\OpenApiDocument;
@@ -50,7 +51,7 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $this->assertSame('Sample API', $validator->document->info->title);
+        $this->assertSame('Sample API', $validator->getDocument()->info->title);
     }
 
     #[Test]
@@ -82,7 +83,7 @@ JSON;
             ->fromJsonString($json)
             ->build();
 
-        $this->assertSame('Sample API', $validator->document->info->title);
+        $this->assertSame('Sample API', $validator->getDocument()->info->title);
     }
 
     #[Test]
@@ -147,7 +148,7 @@ JSON;
     public function use_custom_logger(): void
     {
         $yaml = "openapi: 3.0.3\ninfo:\n  title: Test\n  version: 1.0.0\npaths: []";
-        $logger = new class {};
+        $logger = new NullLogger();
 
         $builder = OpenApiValidatorBuilder::create()
             ->fromYamlString($yaml)
@@ -228,7 +229,7 @@ JSON;
             ->enableCoercion()
             ->build();
 
-        $this->assertSame('Test', $validator->document->info->title);
+        $this->assertSame('Test', $validator->getDocument()->info->title);
     }
 
     #[Test]
@@ -238,7 +239,7 @@ JSON;
 
         $builder1 = OpenApiValidatorBuilder::create()->fromYamlString($yaml);
         $builder2 = $builder1->enableCoercion();
-        $builder3 = $builder2->withLogger(new class {});
+        $builder3 = $builder2->withLogger(new NullLogger());
 
         $this->assertNotSame($builder1, $builder2);
         $this->assertNotSame($builder2, $builder3);
@@ -256,7 +257,7 @@ JSON;
             ->build();
 
         $this->assertInstanceOf(OpenApiValidator::class, $validator);
-        $this->assertSame('Test', $validator->document->info->title);
+        $this->assertSame('Test', $validator->getDocument()->info->title);
     }
 
     #[Test]
@@ -278,7 +279,7 @@ JSON;
             ->build();
 
         $this->assertInstanceOf(OpenApiValidator::class, $validator);
-        $this->assertSame('Test', $validator->document->info->title);
+        $this->assertSame('Test', $validator->getDocument()->info->title);
     }
 
     #[Test]
@@ -293,7 +294,7 @@ JSON;
             ->build();
 
         $this->assertInstanceOf(OpenApiValidator::class, $validator);
-        $this->assertSame('Test', $validator->document->info->title);
+        $this->assertSame('Test', $validator->getDocument()->info->title);
     }
 
     #[Test]
@@ -322,7 +323,7 @@ JSON;
             ->build();
 
         $this->assertInstanceOf(OpenApiValidator::class, $validator);
-        $this->assertSame('Test', $validator->document->info->title);
+        $this->assertSame('Test', $validator->getDocument()->info->title);
     }
 
     #[Test]
@@ -335,7 +336,7 @@ JSON;
             ->build();
 
         self::assertInstanceOf(OpenApiValidator::class, $validator);
-        self::assertNull($validator->cache);
+        self::assertNull($validator->getCache());
     }
 
     #[Test]
@@ -351,7 +352,7 @@ JSON;
         unlink($tempFile);
 
         $this->assertInstanceOf(OpenApiValidator::class, $validator);
-        $this->assertSame('File Test', $validator->document->info->title);
+        $this->assertSame('File Test', $validator->getDocument()->info->title);
     }
 
     #[Test]
@@ -415,7 +416,7 @@ JSON;
         $yaml = "openapi: 3.0.3\ninfo:\n  title: Test\n  version: 1.0.0\npaths: []";
         $pool = new ValidatorPool();
         $formatter = new DetailedFormatter();
-        $logger = new class {};
+        $logger = new NullLogger();
 
         $cacheItem = $this->createStub(CacheItemInterface::class);
         $cacheItem
@@ -458,7 +459,7 @@ JSON;
             ->build();
 
         $this->assertInstanceOf(OpenApiValidator::class, $validator);
-        $this->assertSame('Test', $validator->document->info->title);
+        $this->assertSame('Test', $validator->getDocument()->info->title);
     }
 
     #[Test]
@@ -474,7 +475,7 @@ JSON;
         unlink($tempFile);
 
         $this->assertInstanceOf(OpenApiValidator::class, $validator);
-        $this->assertSame('JSON Test', $validator->document->info->title);
+        $this->assertSame('JSON Test', $validator->getDocument()->info->title);
     }
 
     #[Test]
@@ -528,7 +529,7 @@ JSON;
 
         unlink($tempFile);
 
-        $this->assertSame('From Cache', $validator->document->info->title);
+        $this->assertSame('From Cache', $validator->getDocument()->info->title);
     }
 
     #[Test]
@@ -559,7 +560,7 @@ JSON;
             ->withCache($cache)
             ->build();
 
-        $this->assertSame('From Cache', $validator->document->info->title);
+        $this->assertSame('From Cache', $validator->getDocument()->info->title);
     }
 
     #[Test]
@@ -593,7 +594,7 @@ JSON;
 
         unlink($tempFile);
 
-        $this->assertSame('From JSON Cache', $validator->document->info->title);
+        $this->assertSame('From JSON Cache', $validator->getDocument()->info->title);
     }
 
     #[Test]
@@ -630,7 +631,7 @@ JSON;
 
         unlink($tempFile);
 
-        $this->assertSame('Test', $validator->document->info->title);
+        $this->assertSame('Test', $validator->getDocument()->info->title);
     }
 
     #[Test]

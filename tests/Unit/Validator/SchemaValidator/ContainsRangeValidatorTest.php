@@ -10,9 +10,12 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\MaxContainsError;
 use Duyler\OpenApi\Validator\Exception\MinContainsError;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(ContainsRangeValidator::class)]
 class ContainsRangeValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -21,7 +24,7 @@ class ContainsRangeValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new ContainsRangeValidator($this->pool);
+        $this->validator = new ContainsRangeValidator($this->pool, BuiltinFormats::create());
     }
 
     #[Test]
@@ -165,6 +168,52 @@ class ContainsRangeValidatorTest extends TestCase
         );
 
         $this->validator->validate([1, 2, 3, 4, 5], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function catches_abstract_validation_error_on_type_mismatch(): void
+    {
+        $containsSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'array',
+            contains: $containsSchema,
+            minContains: 2,
+        );
+
+        $this->validator->validate(['hello', 123, 'world', 456], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function catches_abstract_validation_error_on_pattern_mismatch(): void
+    {
+        $containsSchema = new Schema(type: 'string', pattern: '^\d+$');
+        $schema = new Schema(
+            type: 'array',
+            contains: $containsSchema,
+            minContains: 1,
+        );
+
+        $this->validator->validate(['not-numeric', '123', 'also-not'], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function correctly_counts_matching_items_with_various_error_types(): void
+    {
+        $containsSchema = new Schema(type: 'string', minLength: 3);
+        $schema = new Schema(
+            type: 'array',
+            contains: $containsSchema,
+            minContains: 2,
+            maxContains: 3,
+        );
+
+        $this->validator->validate(['ab', 'hello', 42, 'world', 'x'], $schema);
 
         $this->expectNotToPerformAssertions();
     }

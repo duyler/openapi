@@ -9,9 +9,12 @@ use Duyler\OpenApi\Validator\SchemaValidator\ConstValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\ConstError;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(ConstValidator::class)]
 class ConstValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -20,7 +23,7 @@ class ConstValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new ConstValidator($this->pool);
+        $this->validator = new ConstValidator($this->pool, BuiltinFormats::create());
     }
 
     #[Test]

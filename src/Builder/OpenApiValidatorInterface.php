@@ -5,15 +5,17 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Builder;
 
 use Duyler\OpenApi\Builder\Exception\BuilderException;
+use Duyler\OpenApi\Validator\Link\LinkContext;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use InvalidArgumentException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * OpenAPI validator interface
  *
- * Provides methods for validating PSR-7 HTTP messages against OpenAPI 3.1 specifications.
+ * Provides methods for validating PSR-7 HTTP messages against OpenAPI 3.2 specifications.
  * Operations are automatically detected from the request URI and method.
  */
 interface OpenApiValidatorInterface
@@ -34,6 +36,7 @@ interface OpenApiValidatorInterface
      * @param ResponseInterface $response HTTP response to validate
      * @param Operation $operation Operation to validate against
      * @throws ValidationException If validation fails
+     * @throws BuilderException If operation not found in specification
      */
     public function validateResponse(ResponseInterface $response, Operation $operation): void;
 
@@ -53,4 +56,56 @@ interface OpenApiValidatorInterface
      * @return string Formatted error messages
      */
     public function getFormattedErrors(ValidationException $e): string;
+
+    /**
+     * Validate webhook request against OpenAPI specification and return matched operation.
+     *
+     * @param ServerRequestInterface $request PSR-7 HTTP request
+     * @param string $webhookName Webhook name from OpenAPI specification
+     * @return Operation Matched operation from OpenAPI specification
+     * @throws ValidationException If validation fails
+     * @throws InvalidArgumentException If webhook name not found in specification
+     */
+    public function validateWebhook(ServerRequestInterface $request, string $webhookName): Operation;
+
+    /**
+     * Validate callback request against OpenAPI specification and return matched operation.
+     *
+     * @param ServerRequestInterface $request PSR-7 HTTP request
+     * @param string $callbackName Callback name from OpenAPI specification
+     * @return Operation Matched operation from OpenAPI specification
+     * @throws ValidationException If validation fails
+     * @throws InvalidArgumentException If callback name not found in specification
+     */
+    public function validateCallback(ServerRequestInterface $request, string $callbackName): Operation;
+
+    /**
+     * Resolve link parameters from response data.
+     *
+     * @param string $linkName Link name from OpenAPI specification
+     * @param array<string, mixed> $responseData Response data to extract values from
+     * @return array{parameters: array<string, mixed>, requestBody: mixed, server: mixed|null}
+     * @throws InvalidArgumentException If the link name is not found in specification
+     */
+    public function resolveLink(string $linkName, array $responseData): array;
+
+    /**
+     * Resolve link parameters with full context for Runtime Expressions.
+     *
+     * Supports $response.body, $response.header, $response.query,
+     * $url, $method, and $statusCode expressions.
+     *
+     * @param string $linkName Link name from OpenAPI specification
+     * @return array{parameters: array<string, mixed>, requestBody: mixed, server: mixed|null}
+     * @throws InvalidArgumentException If the link name is not found in specification
+     */
+    public function resolveLinkWithContext(string $linkName, LinkContext $context): array;
+
+    /**
+     * Reset internal state for hot-reload scenarios.
+     *
+     * Clears validator pool cache and ref resolver cache.
+     * Safe to call between requests in long-running processes.
+     */
+    public function reset(): void;
 }

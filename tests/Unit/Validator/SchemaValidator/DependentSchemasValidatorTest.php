@@ -9,9 +9,12 @@ use Duyler\OpenApi\Validator\SchemaValidator\DependentSchemasValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(DependentSchemasValidator::class)]
 class DependentSchemasValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -20,7 +23,7 @@ class DependentSchemasValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new DependentSchemasValidator($this->pool);
+        $this->validator = new DependentSchemasValidator($this->pool, BuiltinFormats::create());
     }
 
     #[Test]
@@ -170,5 +173,35 @@ class DependentSchemasValidatorTest extends TestCase
         ], $schema);
 
         $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function catch_invalid_data_type_in_nested_property(): void
+    {
+        $resource = fopen('php://memory', 'r');
+
+        $dependentSchema = new Schema(
+            type: 'object',
+            properties: [
+                'nested' => new Schema(type: 'string'),
+            ],
+        );
+        $schema = new Schema(
+            type: 'object',
+            dependentSchemas: [
+                'trigger' => $dependentSchema,
+            ],
+        );
+
+        $this->expectException(ValidationException::class);
+
+        try {
+            $this->validator->validate([
+                'trigger' => 'active',
+                'nested' => $resource,
+            ], $schema);
+        } finally {
+            fclose($resource);
+        }
     }
 }

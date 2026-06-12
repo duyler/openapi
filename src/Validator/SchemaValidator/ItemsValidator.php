@@ -13,8 +13,9 @@ use Override;
 
 use function is_array;
 use function sprintf;
+use function count;
 
-readonly class ItemsValidator extends AbstractSchemaValidator
+final readonly class ItemsValidator extends AbstractSchemaValidator
 {
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -27,15 +28,20 @@ readonly class ItemsValidator extends AbstractSchemaValidator
             return;
         }
 
-        $validator = new SchemaValidator($this->pool);
+        $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
+        $validator = $this->createSchemaValidator();
 
         foreach ($data as $index => $item) {
             /** @var int $index */
+            if ($index < $prefixCount) {
+                continue;
+            }
+
             try {
                 $nullableAsType = $context?->nullableAsType ?? true;
                 $allowNull = $schema->items->nullable && $nullableAsType;
                 $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
-                $itemContext = $context?->withBreadcrumbIndex($index) ?? ValidationContext::create($this->pool, $nullableAsType);
+                $itemContext = $context?->withBreadcrumbIndex($index) ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
                 $validator->validate($normalizedItem, $schema->items, $itemContext);
             } catch (InvalidDataTypeException $e) {
                 throw new ValidationException(

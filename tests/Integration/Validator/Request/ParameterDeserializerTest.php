@@ -237,4 +237,49 @@ final class ParameterDeserializerTest extends TestCase
 
         $this->assertSame('abc123', $result);
     }
+
+    #[Test]
+    public function deserialize_pipe_delimited(): void
+    {
+        $param = new Parameter(name: 'ids', in: 'query', style: 'pipeDelimited');
+        $result = $this->deserializer->deserialize('1|2|3', $param);
+
+        $this->assertSame(['1', '2', '3'], $result);
+    }
+
+    #[Test]
+    public function deserialize_space_delimited(): void
+    {
+        $param = new Parameter(name: 'tags', in: 'query', style: 'spaceDelimited');
+        $result = $this->deserializer->deserialize('foo bar baz', $param);
+
+        $this->assertSame(['foo', 'bar', 'baz'], $result);
+    }
+
+    #[Test]
+    public function deserialize_form_string_with_comma_no_explode(): void
+    {
+        $param = new Parameter(name: 'ids', in: 'query', style: 'form', explode: false);
+        $result = $this->deserializer->deserialize('1,2,3', $param);
+
+        $this->assertSame(['1', '2', '3'], $result);
+    }
+
+    #[Test]
+    public function deserialize_form_string_without_comma_no_explode(): void
+    {
+        $param = new Parameter(name: 'id', in: 'query', style: 'form', explode: false);
+        $result = $this->deserializer->deserialize('value', $param);
+
+        $this->assertSame('value', $result);
+    }
+
+    #[Test]
+    public function deserialize_unknown_style_returns_value(): void
+    {
+        $param = new Parameter(name: 'test', in: 'query', style: 'deepObject');
+        $result = $this->deserializer->deserialize('value', $param);
+
+        $this->assertSame('value', $result);
+    }
 }

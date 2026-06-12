@@ -7,11 +7,13 @@ namespace Duyler\OpenApi\Cache;
 use Psr\Cache\CacheItemPoolInterface;
 use RuntimeException;
 
-readonly class TypedCacheDecorator
+final readonly class TypedCacheDecorator
 {
+    private const int DEFAULT_TTL = 3600;
+
     public function __construct(
         private readonly CacheItemPoolInterface $pool,
-        private readonly int $ttl = 3600,
+        private readonly int $ttl = self::DEFAULT_TTL,
     ) {}
 
     /**
@@ -26,6 +28,7 @@ readonly class TypedCacheDecorator
             return null;
         }
 
+        /** @var object|null $value */
         $value = $item->get();
 
         if (null === $value) {

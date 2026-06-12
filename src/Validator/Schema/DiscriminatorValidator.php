@@ -12,18 +12,29 @@ use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 use function array_key_exists;
 use function is_array;
 use function is_string;
 use function assert;
 
-readonly class DiscriminatorValidator
+final readonly class DiscriminatorValidator
 {
+    private readonly LoggerInterface $logger;
+
     public function __construct(
         private readonly RefResolverInterface $refResolver,
         private readonly ValidatorPool $pool,
-    ) {}
+        private readonly StatelessValidatorRegistry $statelessValidators,
+        private readonly bool $reportDeprecated = false,
+        ?LoggerInterface $logger = null,
+        private readonly ?EventDispatcherInterface $eventDispatcher = null,
+    ) {
+        $this->logger = $logger ?? new NullLogger();
+    }
 
     public function validate(
         array|int|string|float|bool $data,
@@ -37,11 +48,13 @@ readonly class DiscriminatorValidator
             return;
         }
 
-        if (null !== $discriminator->propertyName) {
-            $this->validateWithPropertyName($data, $discriminator, $schema, $document, $dataPath);
-        } else {
+        if (null === $discriminator->propertyName) {
             $this->validateWithoutPropertyName($data, $discriminator, $document, $dataPath);
+
+            return;
         }
+
+        $this->validateWithPropertyName($data, $discriminator, $schema, $document, $dataPath);
     }
 
     private function validateWithPropertyName(
@@ -76,7 +89,7 @@ readonly class DiscriminatorValidator
 
     private function buildPath(string $basePath, string $segment): string
     {
-        if ($basePath === '/') {
+        if ('/' === $basePath) {
             return '/' . $segment;
         }
 
@@ -181,7 +194,7 @@ readonly class DiscriminatorValidator
         string $dataPath,
     ): void {
         /** @var array<array-key, mixed> $data */
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document);
+        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
         $validator->validate($data, $schema, useDiscriminator: false);
     }
 }

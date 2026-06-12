@@ -33,7 +33,7 @@ abstract readonly class AbstractCompositionalValidator extends AbstractSchemaVal
             try {
                 $allowNull = $subSchema->nullable && $nullableAsType;
                 $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
-                $validator = new SchemaValidator($this->pool);
+                $validator = $this->createSchemaValidator();
                 $validator->validate($normalizedData, $subSchema, $context);
                 ++$validCount;
             } catch (InvalidDataTypeException $e) {

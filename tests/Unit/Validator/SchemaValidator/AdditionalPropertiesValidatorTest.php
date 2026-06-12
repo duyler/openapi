@@ -9,10 +9,13 @@ use Duyler\OpenApi\Validator\SchemaValidator\AdditionalPropertiesValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\MaxLengthError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(AdditionalPropertiesValidator::class)]
 class AdditionalPropertiesValidatorTest extends TestCase
 {
     private ValidatorPool $pool;
@@ -21,7 +24,7 @@ class AdditionalPropertiesValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new AdditionalPropertiesValidator($this->pool);
+        $this->validator = new AdditionalPropertiesValidator($this->pool, BuiltinFormats::create());
     }
 
     #[Test]

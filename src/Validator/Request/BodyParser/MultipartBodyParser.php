@@ -6,8 +6,10 @@ namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
 use function count;
 
-readonly class MultipartBodyParser
+final readonly class MultipartBodyParser
 {
+    private const int BODY_PREVIEW_LENGTH = 500;
+
     /**
      * @return list<array<array-key, mixed>>
      */
@@ -42,7 +44,7 @@ readonly class MultipartBodyParser
 
     private function extractBoundary(string $body): ?string
     {
-        if (preg_match('/boundary="?([^"\s]+)"?/i', substr($body, 0, 500), $matches)) {
+        if (preg_match('/boundary="?([^"\s]+)"?/i', substr($body, 0, self::BODY_PREVIEW_LENGTH), $matches)) {
             return $matches[1];
         }
 
