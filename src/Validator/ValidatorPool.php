@@ -16,7 +16,7 @@ final class ValidatorPool
     /** @var array<string, object> */
     private array $cache = [];
 
-    /** @var list<string> */
+    /** @var array<string, true> */
     private array $order = [];
 
     private readonly int $maxSize;
@@ -50,11 +50,11 @@ final class ValidatorPool
 
         $instance = $factory();
         $this->cache[$key] = $instance;
-        $this->order[] = $key;
+        $this->order[$key] = true;
 
         if (count($this->cache) > $this->maxSize) {
-            $evictedKey = array_shift($this->order);
-            unset($this->cache[$evictedKey]);
+            $evictedKey = array_key_first($this->order);
+            unset($this->order[$evictedKey], $this->cache[$evictedKey]);
         }
 
         return $instance;
@@ -68,13 +68,7 @@ final class ValidatorPool
 
     private function touch(string $key): void
     {
-        $index = array_search($key, $this->order, true);
-
-        if (false !== $index) {
-            unset($this->order[$index]);
-            $this->order = array_values($this->order);
-        }
-
-        $this->order[] = $key;
+        unset($this->order[$key]);
+        $this->order[$key] = true;
     }
 }

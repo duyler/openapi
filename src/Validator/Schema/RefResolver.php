@@ -22,6 +22,7 @@ use function dirname;
 use function is_array;
 use function is_object;
 use function str_starts_with;
+use function count;
 
 final class RefResolver implements RefResolverInterface
 {
@@ -471,30 +472,28 @@ final class RefResolver implements RefResolverInterface
         array $parts,
         int $depth = 0,
     ): Schema|Parameter|Response {
-        if ($depth >= ValidationContext::MAX_DEPTH) {
-            throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
-        }
+        $count = count($parts);
 
-        $part = array_shift($parts);
-
-        if (null === $part) {
-            if (
-                $current instanceof Schema
-                || $current instanceof Parameter
-                || $current instanceof Response
-            ) {
-                return $current;
+        for ($i = 0; $i < $count; ++$i) {
+            if ($depth + $i >= ValidationContext::MAX_DEPTH) {
+                throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
             }
 
-            throw new UnresolvableRefException(
-                "",
-                "Target is not a Schema, Parameter, or Response",
-            );
+            $current = $this->getProperty($current, $parts[$i]);
         }
 
-        $next = $this->getProperty($current, $part);
+        if (
+            $current instanceof Schema
+            || $current instanceof Parameter
+            || $current instanceof Response
+        ) {
+            return $current;
+        }
 
-        return $this->navigate($next, $parts, $depth + 1);
+        throw new UnresolvableRefException(
+            "",
+            "Target is not a Schema, Parameter, or Response",
+        );
     }
 
     private function getProperty(
