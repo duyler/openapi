@@ -52,10 +52,6 @@ final readonly class PathParser
 
     private function templateToRegex(string $template): string
     {
-        $pattern = preg_replace('/\{([^}]+)\}/', '(?P<$1>[^/]+)', $template);
-
-        assert(null !== $pattern);
-
-        return '#^' . $pattern . '$#';
+        return PathRegexCache::getOrCompute($template);
     }
 }

@@ -12,6 +12,9 @@ final class RegexValidator
 {
     private const string DELIMITER_CANDIDATES = '#~!|@%+;';
 
+    /** @var array<string, string> */
+    private static array $normalizeCache = [];
+
     public static function validate(string $pattern, ?string $fieldName = null): string
     {
         $errorContext = new class {
@@ -46,6 +49,23 @@ final class RegexValidator
     }
 
     public static function normalize(string $pattern): string
+    {
+        if (isset(self::$normalizeCache[$pattern])) {
+            return self::$normalizeCache[$pattern];
+        }
+
+        $normalized = self::doNormalize($pattern);
+        self::$normalizeCache[$pattern] = $normalized;
+
+        return $normalized;
+    }
+
+    public static function clearNormalizeCache(): void
+    {
+        self::$normalizeCache = [];
+    }
+
+    private static function doNormalize(string $pattern): string
     {
         if (self::hasDelimiters($pattern)) {
             return $pattern;

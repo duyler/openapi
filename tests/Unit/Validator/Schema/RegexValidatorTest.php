@@ -11,6 +11,11 @@ use PHPUnit\Framework\TestCase;
 
 final class RegexValidatorTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        RegexValidator::clearNormalizeCache();
+    }
+
     #[Test]
     public function valid_pattern_passes(): void
     {
@@ -212,5 +217,41 @@ final class RegexValidatorTest extends TestCase
         self::assertSame('!#~|path/to/resource!', $result);
 
         self::assertSame(1, preg_match($result, '#~|path/to/resource'));
+    }
+
+    #[Test]
+    public function normalize_returns_same_result_on_repeated_call(): void
+    {
+        $first = RegexValidator::normalize('^cached$');
+        $second = RegexValidator::normalize('^cached$');
+
+        self::assertSame($first, $second);
+    }
+
+    #[Test]
+    public function clear_normalize_cache_resets_cache(): void
+    {
+        $before = RegexValidator::normalize('^cached$');
+
+        RegexValidator::clearNormalizeCache();
+
+        $after = RegexValidator::normalize('^cached$');
+
+        self::assertSame($before, $after);
+    }
+
+    #[Test]
+    public function normalize_cache_does_not_affect_different_patterns(): void
+    {
+        $alpha = RegexValidator::normalize('^alpha$');
+        $beta = RegexValidator::normalize('^beta$');
+
+        self::assertNotSame($alpha, $beta);
+
+        self::assertSame(1, preg_match($alpha, 'alpha'));
+        self::assertSame(0, preg_match($alpha, 'beta'));
+
+        self::assertSame(1, preg_match($beta, 'beta'));
+        self::assertSame(0, preg_match($beta, 'alpha'));
     }
 }
