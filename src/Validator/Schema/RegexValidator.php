@@ -22,10 +22,12 @@ final class RegexValidator
 
     public static function validate(string $pattern, ?string $fieldName = null): string
     {
-        $errorMessage = '';
+        $errorContext = new class {
+            public string $message = '';
+        };
 
-        set_error_handler(function ($errno, $errstr) use (&$errorMessage): bool {
-            $errorMessage = $errstr;
+        set_error_handler(function (int $errno, string $errstr) use ($errorContext): bool {
+            $errorContext->message = $errstr;
             return true;
         });
 
@@ -41,7 +43,7 @@ final class RegexValidator
             if (false === $testResult) {
                 throw new InvalidPatternException(
                     pattern: $pattern,
-                    reason: $errorMessage ?: 'Unknown regex error',
+                    reason: '' !== $errorContext->message ? $errorContext->message : 'Unknown regex error',
                 );
             }
         } finally {
@@ -90,7 +92,6 @@ final class RegexValidator
             }
         }
 
-        // All candidates present — use '/' as delimiter and escape it inside the pattern
         return '/';
     }
 

@@ -76,7 +76,7 @@ final class RefResolver implements RefResolverInterface
     {
         /** @var array<string, bool> $visited */
         $visited = [];
-        $result = $this->resolveRef($ref, $document, $visited, $depth);
+        [$result,] = $this->resolveRef($ref, $document, $visited, $depth);
 
         if (false === $result instanceof Schema) {
             throw new UnresolvableRefException(
@@ -99,7 +99,7 @@ final class RefResolver implements RefResolverInterface
     ): Parameter {
         /** @var array<string, bool> $visited */
         $visited = [];
-        $result = $this->resolveRef($ref, $document, $visited, $depth);
+        [$result,] = $this->resolveRef($ref, $document, $visited, $depth);
 
         if (false === $result instanceof Parameter) {
             throw new UnresolvableRefException(
@@ -122,7 +122,7 @@ final class RefResolver implements RefResolverInterface
     ): Response {
         /** @var array<string, bool> $visited */
         $visited = [];
-        $result = $this->resolveRef($ref, $document, $visited, $depth);
+        [$result,] = $this->resolveRef($ref, $document, $visited, $depth);
 
         if (false === $result instanceof Response) {
             throw new UnresolvableRefException(
@@ -138,247 +138,19 @@ final class RefResolver implements RefResolverInterface
     public function schemaHasDiscriminator(
         Schema $schema,
         OpenApiDocument $document,
-        array &$visited = [],
         int $depth = 0,
     ): bool {
-        if ($depth >= ValidationContext::MAX_DEPTH) {
-            throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
-        }
+        [$has,] = $this->doSchemaHasDiscriminator($schema, $document, [], $depth);
 
-        $schemaId = spl_object_id($schema);
-
-        if (isset($visited[$schemaId])) {
-            return false;
-        }
-
-        $visited[$schemaId] = true;
-
-        if (null !== $schema->ref) {
-            try {
-                $resolvedSchema = $this->resolve($schema->ref, $document);
-                return $this->schemaHasDiscriminator(
-                    $resolvedSchema,
-                    $document,
-                    $visited,
-                    $depth + 1,
-                );
-            } catch (UnresolvableRefException) {
-                return false;
-            }
-        }
-
-        if (null !== $schema->discriminator) {
-            return true;
-        }
-
-        if (null !== $schema->properties) {
-            foreach ($schema->properties as $property) {
-                if (
-                    $this->schemaHasDiscriminator(
-                        $property,
-                        $document,
-                        $visited,
-                        $depth + 1,
-                    )
-                ) {
-                    return true;
-                }
-            }
-        }
-
-        if (null !== $schema->items) {
-            return $this->schemaHasDiscriminator(
-                $schema->items,
-                $document,
-                $visited,
-                $depth + 1,
-            );
-        }
-
-        if (null !== $schema->oneOf) {
-            foreach ($schema->oneOf as $subSchema) {
-                if (
-                    $this->schemaHasDiscriminator(
-                        $subSchema,
-                        $document,
-                        $visited,
-                        $depth + 1,
-                    )
-                ) {
-                    return true;
-                }
-            }
-        }
-
-        if (null !== $schema->anyOf) {
-            foreach ($schema->anyOf as $subSchema) {
-                if (
-                    $this->schemaHasDiscriminator(
-                        $subSchema,
-                        $document,
-                        $visited,
-                        $depth + 1,
-                    )
-                ) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return $has;
     }
 
     #[Override]
-    public function schemaHasRef(Schema $schema, array &$visited = [], int $depth = 0): bool
+    public function schemaHasRef(Schema $schema, int $depth = 0): bool
     {
-        if ($depth >= ValidationContext::MAX_DEPTH) {
-            throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
-        }
+        [$has,] = $this->doSchemaHasRef($schema, [], $depth);
 
-        $schemaId = spl_object_id($schema);
-
-        if (isset($visited[$schemaId])) {
-            return false;
-        }
-
-        $visited[$schemaId] = true;
-
-        if (null !== $schema->ref) {
-            return true;
-        }
-
-        if (null !== $schema->properties) {
-            foreach ($schema->properties as $property) {
-                if ($this->schemaHasRef($property, $visited, $depth + 1)) {
-                    return true;
-                }
-            }
-        }
-
-        if (null !== $schema->items) {
-            if ($this->schemaHasRef($schema->items, $visited, $depth + 1)) {
-                return true;
-            }
-        }
-
-        if (null !== $schema->prefixItems) {
-            foreach ($schema->prefixItems as $prefixItem) {
-                if ($this->schemaHasRef($prefixItem, $visited, $depth + 1)) {
-                    return true;
-                }
-            }
-        }
-
-        if (null !== $schema->allOf) {
-            foreach ($schema->allOf as $subSchema) {
-                if ($this->schemaHasRef($subSchema, $visited, $depth + 1)) {
-                    return true;
-                }
-            }
-        }
-
-        if (null !== $schema->anyOf) {
-            foreach ($schema->anyOf as $subSchema) {
-                if ($this->schemaHasRef($subSchema, $visited, $depth + 1)) {
-                    return true;
-                }
-            }
-        }
-
-        if (null !== $schema->oneOf) {
-            foreach ($schema->oneOf as $subSchema) {
-                if ($this->schemaHasRef($subSchema, $visited, $depth + 1)) {
-                    return true;
-                }
-            }
-        }
-
-        if (null !== $schema->not) {
-            if ($this->schemaHasRef($schema->not, $visited, $depth + 1)) {
-                return true;
-            }
-        }
-
-        if (null !== $schema->if) {
-            if ($this->schemaHasRef($schema->if, $visited, $depth + 1)) {
-                return true;
-            }
-        }
-
-        if (null !== $schema->then) {
-            if ($this->schemaHasRef($schema->then, $visited, $depth + 1)) {
-                return true;
-            }
-        }
-
-        if (null !== $schema->else) {
-            if ($this->schemaHasRef($schema->else, $visited, $depth + 1)) {
-                return true;
-            }
-        }
-
-        if (null !== $schema->contains) {
-            if ($this->schemaHasRef($schema->contains, $visited, $depth + 1)) {
-                return true;
-            }
-        }
-
-        if (null !== $schema->patternProperties) {
-            foreach ($schema->patternProperties as $subSchema) {
-                if ($this->schemaHasRef($subSchema, $visited, $depth + 1)) {
-                    return true;
-                }
-            }
-        }
-
-        if (null !== $schema->dependentSchemas) {
-            foreach ($schema->dependentSchemas as $subSchema) {
-                if ($this->schemaHasRef($subSchema, $visited, $depth + 1)) {
-                    return true;
-                }
-            }
-        }
-
-        if (null !== $schema->propertyNames) {
-            if ($this->schemaHasRef($schema->propertyNames, $visited, $depth + 1)) {
-                return true;
-            }
-        }
-
-        if (null !== $schema->unevaluatedItems) {
-            if ($this->schemaHasRef($schema->unevaluatedItems, $visited, $depth + 1)) {
-                return true;
-            }
-        }
-
-        if (
-            null !== $schema->additionalProperties
-            && $schema->additionalProperties instanceof Schema
-        ) {
-            if ($this->schemaHasRef($schema->additionalProperties, $visited, $depth + 1)) {
-                return true;
-            }
-        }
-
-        if (
-            null !== $schema->unevaluatedProperties
-            && $schema->unevaluatedProperties instanceof Schema
-        ) {
-            if ($this->schemaHasRef($schema->unevaluatedProperties, $visited, $depth + 1)) {
-                return true;
-            }
-        }
-
-        if (
-            null !== $schema->contentSchema
-            && $schema->contentSchema instanceof Schema
-        ) {
-            if ($this->schemaHasRef($schema->contentSchema, $visited, $depth + 1)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $has;
     }
 
     #[Override]
@@ -472,16 +244,318 @@ final class RefResolver implements RefResolverInterface
     }
 
     /**
+     * @param array<int, bool> $visited
+     *
+     * @throws SchemaDepthExceededException
+     *
+     * @return array{bool, array<int, bool>}
+     */
+    private function doSchemaHasDiscriminator(
+        Schema $schema,
+        OpenApiDocument $document,
+        array $visited,
+        int $depth,
+    ): array {
+        if ($depth >= ValidationContext::MAX_DEPTH) {
+            throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
+        }
+
+        $schemaId = spl_object_id($schema);
+
+        if (isset($visited[$schemaId])) {
+            return [false, $visited];
+        }
+
+        $visited[$schemaId] = true;
+
+        if (null !== $schema->ref) {
+            try {
+                $resolvedSchema = $this->resolve($schema->ref, $document);
+
+                return $this->doSchemaHasDiscriminator(
+                    $resolvedSchema,
+                    $document,
+                    $visited,
+                    $depth + 1,
+                );
+            } catch (UnresolvableRefException) {
+                return [false, $visited];
+            }
+        }
+
+        if (null !== $schema->discriminator) {
+            return [true, $visited];
+        }
+
+        if (null !== $schema->properties) {
+            foreach ($schema->properties as $property) {
+                [$has, $visited] = $this->doSchemaHasDiscriminator(
+                    $property,
+                    $document,
+                    $visited,
+                    $depth + 1,
+                );
+
+                if ($has) {
+                    return [true, $visited];
+                }
+            }
+        }
+
+        if (null !== $schema->items) {
+            [$has, $visited] = $this->doSchemaHasDiscriminator(
+                $schema->items,
+                $document,
+                $visited,
+                $depth + 1,
+            );
+
+            if ($has) {
+                return [true, $visited];
+            }
+        }
+
+        if (null !== $schema->oneOf) {
+            foreach ($schema->oneOf as $subSchema) {
+                [$has, $visited] = $this->doSchemaHasDiscriminator(
+                    $subSchema,
+                    $document,
+                    $visited,
+                    $depth + 1,
+                );
+
+                if ($has) {
+                    return [true, $visited];
+                }
+            }
+        }
+
+        if (null !== $schema->anyOf) {
+            foreach ($schema->anyOf as $subSchema) {
+                [$has, $visited] = $this->doSchemaHasDiscriminator(
+                    $subSchema,
+                    $document,
+                    $visited,
+                    $depth + 1,
+                );
+
+                if ($has) {
+                    return [true, $visited];
+                }
+            }
+        }
+
+        return [false, $visited];
+    }
+
+    /**
+     * @param array<int, bool> $visited
+     *
+     * @throws SchemaDepthExceededException
+     *
+     * @return array{bool, array<int, bool>}
+     */
+    private function doSchemaHasRef(Schema $schema, array $visited, int $depth): array
+    {
+        if ($depth >= ValidationContext::MAX_DEPTH) {
+            throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
+        }
+
+        $schemaId = spl_object_id($schema);
+
+        if (isset($visited[$schemaId])) {
+            return [false, $visited];
+        }
+
+        $visited[$schemaId] = true;
+
+        if (null !== $schema->ref) {
+            return [true, $visited];
+        }
+
+        if (null !== $schema->properties) {
+            foreach ($schema->properties as $property) {
+                [$has, $visited] = $this->doSchemaHasRef($property, $visited, $depth + 1);
+
+                if ($has) {
+                    return [true, $visited];
+                }
+            }
+        }
+
+        if (null !== $schema->items) {
+            [$has, $visited] = $this->doSchemaHasRef($schema->items, $visited, $depth + 1);
+
+            if ($has) {
+                return [true, $visited];
+            }
+        }
+
+        if (null !== $schema->prefixItems) {
+            foreach ($schema->prefixItems as $prefixItem) {
+                [$has, $visited] = $this->doSchemaHasRef($prefixItem, $visited, $depth + 1);
+
+                if ($has) {
+                    return [true, $visited];
+                }
+            }
+        }
+
+        if (null !== $schema->allOf) {
+            foreach ($schema->allOf as $subSchema) {
+                [$has, $visited] = $this->doSchemaHasRef($subSchema, $visited, $depth + 1);
+
+                if ($has) {
+                    return [true, $visited];
+                }
+            }
+        }
+
+        if (null !== $schema->anyOf) {
+            foreach ($schema->anyOf as $subSchema) {
+                [$has, $visited] = $this->doSchemaHasRef($subSchema, $visited, $depth + 1);
+
+                if ($has) {
+                    return [true, $visited];
+                }
+            }
+        }
+
+        if (null !== $schema->oneOf) {
+            foreach ($schema->oneOf as $subSchema) {
+                [$has, $visited] = $this->doSchemaHasRef($subSchema, $visited, $depth + 1);
+
+                if ($has) {
+                    return [true, $visited];
+                }
+            }
+        }
+
+        if (null !== $schema->not) {
+            [$has, $visited] = $this->doSchemaHasRef($schema->not, $visited, $depth + 1);
+
+            if ($has) {
+                return [true, $visited];
+            }
+        }
+
+        if (null !== $schema->if) {
+            [$has, $visited] = $this->doSchemaHasRef($schema->if, $visited, $depth + 1);
+
+            if ($has) {
+                return [true, $visited];
+            }
+        }
+
+        if (null !== $schema->then) {
+            [$has, $visited] = $this->doSchemaHasRef($schema->then, $visited, $depth + 1);
+
+            if ($has) {
+                return [true, $visited];
+            }
+        }
+
+        if (null !== $schema->else) {
+            [$has, $visited] = $this->doSchemaHasRef($schema->else, $visited, $depth + 1);
+
+            if ($has) {
+                return [true, $visited];
+            }
+        }
+
+        if (null !== $schema->contains) {
+            [$has, $visited] = $this->doSchemaHasRef($schema->contains, $visited, $depth + 1);
+
+            if ($has) {
+                return [true, $visited];
+            }
+        }
+
+        if (null !== $schema->patternProperties) {
+            foreach ($schema->patternProperties as $subSchema) {
+                [$has, $visited] = $this->doSchemaHasRef($subSchema, $visited, $depth + 1);
+
+                if ($has) {
+                    return [true, $visited];
+                }
+            }
+        }
+
+        if (null !== $schema->dependentSchemas) {
+            foreach ($schema->dependentSchemas as $subSchema) {
+                [$has, $visited] = $this->doSchemaHasRef($subSchema, $visited, $depth + 1);
+
+                if ($has) {
+                    return [true, $visited];
+                }
+            }
+        }
+
+        if (null !== $schema->propertyNames) {
+            [$has, $visited] = $this->doSchemaHasRef($schema->propertyNames, $visited, $depth + 1);
+
+            if ($has) {
+                return [true, $visited];
+            }
+        }
+
+        if (null !== $schema->unevaluatedItems) {
+            [$has, $visited] = $this->doSchemaHasRef($schema->unevaluatedItems, $visited, $depth + 1);
+
+            if ($has) {
+                return [true, $visited];
+            }
+        }
+
+        if (
+            null !== $schema->additionalProperties
+            && $schema->additionalProperties instanceof Schema
+        ) {
+            [$has, $visited] = $this->doSchemaHasRef($schema->additionalProperties, $visited, $depth + 1);
+
+            if ($has) {
+                return [true, $visited];
+            }
+        }
+
+        if (
+            null !== $schema->unevaluatedProperties
+            && $schema->unevaluatedProperties instanceof Schema
+        ) {
+            [$has, $visited] = $this->doSchemaHasRef($schema->unevaluatedProperties, $visited, $depth + 1);
+
+            if ($has) {
+                return [true, $visited];
+            }
+        }
+
+        if (
+            null !== $schema->contentSchema
+            && $schema->contentSchema instanceof Schema
+        ) {
+            [$has, $visited] = $this->doSchemaHasRef($schema->contentSchema, $visited, $depth + 1);
+
+            if ($has) {
+                return [true, $visited];
+            }
+        }
+
+        return [false, $visited];
+    }
+
+    /**
      * @param array<string, bool> $visited
      *
      * @throws SchemaDepthExceededException
+     *
+     * @return array{Schema|Parameter|Response, array<string, bool>}
      */
     private function resolveRef(
         string $ref,
         OpenApiDocument $document,
-        array &$visited,
+        array $visited,
         int $depth = 0,
-    ): Schema|Parameter|Response {
+    ): array {
         if ($depth >= ValidationContext::MAX_DEPTH) {
             throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
         }
@@ -500,7 +574,7 @@ final class RefResolver implements RefResolverInterface
             /** @var array<string, Schema|Parameter|Response> */
             $cacheEntry = $this->cache[$document];
             if (isset($cacheEntry[$ref])) {
-                return $cacheEntry[$ref];
+                return [$cacheEntry[$ref], $visited];
             }
         }
 
@@ -529,7 +603,7 @@ final class RefResolver implements RefResolverInterface
         $cacheArray[$ref] = $result;
         $this->cache[$document] = $cacheArray;
 
-        return $result;
+        return [$result, $visited];
     }
 
     /**

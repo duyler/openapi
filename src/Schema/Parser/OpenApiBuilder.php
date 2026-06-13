@@ -94,7 +94,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             throw $e;
         } catch (Throwable $e) {
             throw new InvalidSchemaException(
-                'Failed to parse ' . $this->getFormatName() . ': ' . $e->getMessage(),
+                sprintf(
+                    'Failed to parse %s: %s',
+                    $this->getFormatName(),
+                    $e->getMessage(),
+                ),
                 0,
                 $e,
             );
@@ -144,7 +148,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
         if (false === filter_var($self, FILTER_VALIDATE_URL)) {
             throw new InvalidSchemaException(
-                'Invalid $self URI: ' . $self,
+                sprintf('Invalid $self URI: %s', $self),
             );
         }
     }
@@ -157,7 +161,12 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
         $version = $data['openapi'];
         if (false === is_string($version) || 1 !== preg_match(self::VERSION_PATTERN, $version)) {
-            throw new InvalidSchemaException('Unsupported OpenAPI version: ' . (string) $version . '. Only 3.0.x, 3.1.x and 3.2.x are supported.');
+            throw new InvalidSchemaException(
+                sprintf(
+                    'Unsupported OpenAPI version: %s. Only 3.0.x, 3.1.x and 3.2.x are supported.',
+                    (string) $version,
+                ),
+            );
         }
     }
 

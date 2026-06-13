@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Builder;
 
+use Duyler\OpenApi\Builder\Dto\BuilderConfig;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Cache\SchemaCache;
 use Duyler\OpenApi\Schema\OpenApiDocument;
@@ -14,12 +15,13 @@ use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
-use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Duyler\OpenApi\Validator\Link\LinkResolver;
 use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Validator\PathFinder;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
+use Duyler\OpenApi\Validator\Dto\ValidatorDependencies;
 use Duyler\OpenApi\Validator\Validation\CallbackValidator;
 use Duyler\OpenApi\Validator\Validation\RequestValidationHandler;
 use Duyler\OpenApi\Validator\Validation\ResponseValidationHandler;
@@ -40,67 +42,52 @@ final readonly class OpenApiValidatorBuilder
     private const string CACHE_KEY_CONTENT_PREFIX = 'openapi_spec_content_';
 
     private function __construct(
-        private ?string $specPath = null,
-        private ?string $specContent = null,
-        private ?string $specType = null,
-        private ?ValidatorPool $pool = null,
-        private ?SchemaCache $cache = null,
-        private ?LoggerInterface $logger = null,
-        private ?FormatRegistry $formatRegistry = null,
-        private bool $coercion = false,
-        private bool $nullableAsType = true,
-        private EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
-        private ?ErrorFormatterInterface $errorFormatter = null,
-        private ?EventDispatcherInterface $eventDispatcher = null,
-        private bool $securityValidation = false,
-        private bool $serverPathResolution = false,
-        private bool $strictFormats = false,
-        private bool $reportDeprecated = true,
+        private BuilderConfig $config,
     ) {}
 
     public static function create(): self
     {
-        return new self();
+        return new self(new BuilderConfig());
     }
 
     public function fromYamlFile(string $path): self
     {
-        return $this->with(specPath: $path, specType: 'yaml');
+        return $this->with(new BuilderConfig(specPath: $path, specType: 'yaml'));
     }
 
     public function fromJsonFile(string $path): self
     {
-        return $this->with(specPath: $path, specType: 'json');
+        return $this->with(new BuilderConfig(specPath: $path, specType: 'json'));
     }
 
     public function fromYamlString(string $content): self
     {
-        return $this->with(specContent: $content, specType: 'yaml');
+        return $this->with(new BuilderConfig(specContent: $content, specType: 'yaml'));
     }
 
     public function fromJsonString(string $content): self
     {
-        return $this->with(specContent: $content, specType: 'json');
+        return $this->with(new BuilderConfig(specContent: $content, specType: 'json'));
     }
 
     public function withValidatorPool(ValidatorPool $pool): self
     {
-        return $this->with(pool: $pool);
+        return $this->with(new BuilderConfig(pool: $pool));
     }
 
     public function withCache(SchemaCache $cache): self
     {
-        return $this->with(cache: $cache);
+        return $this->with(new BuilderConfig(cache: $cache));
     }
 
     public function withLogger(LoggerInterface $logger): self
     {
-        return $this->with(logger: $logger);
+        return $this->with(new BuilderConfig(logger: $logger));
     }
 
     public function withErrorFormatter(ErrorFormatterInterface $formatter): self
     {
-        return $this->with(errorFormatter: $formatter);
+        return $this->with(new BuilderConfig(errorFormatter: $formatter));
     }
 
     public function withFormat(
@@ -108,35 +95,35 @@ final readonly class OpenApiValidatorBuilder
         string $format,
         FormatValidatorInterface $validator,
     ): self {
-        $registry = ($this->formatRegistry ?? BuiltinFormats::create())
+        $registry = ($this->config->formatRegistry ?? BuiltinFormats::create())
             ->registerFormat($type, $format, $validator);
 
-        return $this->with(formatRegistry: $registry);
+        return $this->with(new BuilderConfig(formatRegistry: $registry));
     }
 
     public function enableCoercion(): self
     {
-        return $this->with(coercion: true);
+        return $this->with(new BuilderConfig(coercion: true));
     }
 
     public function enableNullableAsType(): self
     {
-        return $this->with(nullableAsType: true);
+        return $this->with(new BuilderConfig(nullableAsType: true));
     }
 
     public function disableNullableAsType(): self
     {
-        return $this->with(nullableAsType: false);
+        return $this->with(new BuilderConfig(nullableAsType: false));
     }
 
     public function withEmptyArrayStrategy(EmptyArrayStrategy $strategy): self
     {
-        return $this->with(emptyArrayStrategy: $strategy);
+        return $this->with(new BuilderConfig(emptyArrayStrategy: $strategy));
     }
 
     public function withEventDispatcher(EventDispatcherInterface $dispatcher): self
     {
-        return $this->with(eventDispatcher: $dispatcher);
+        return $this->with(new BuilderConfig(eventDispatcher: $dispatcher));
     }
 
     /**
@@ -149,7 +136,7 @@ final readonly class OpenApiValidatorBuilder
      */
     public function enableSecurityValidation(): self
     {
-        return $this->with(securityValidation: true);
+        return $this->with(new BuilderConfig(securityValidation: true));
     }
 
     /**
@@ -164,7 +151,7 @@ final readonly class OpenApiValidatorBuilder
      */
     public function enableServerPathResolution(): self
     {
-        return $this->with(serverPathResolution: true);
+        return $this->with(new BuilderConfig(serverPathResolution: true));
     }
 
     /**
@@ -177,7 +164,7 @@ final readonly class OpenApiValidatorBuilder
      */
     public function enableStrictFormats(): self
     {
-        return $this->with(strictFormats: true);
+        return $this->with(new BuilderConfig(strictFormats: true));
     }
 
     /**
@@ -190,19 +177,26 @@ final readonly class OpenApiValidatorBuilder
      */
     public function enableReportDeprecated(): self
     {
-        return $this->with(reportDeprecated: true);
+        return $this->with(new BuilderConfig(reportDeprecated: true));
     }
 
     public function build(): OpenApiValidatorInterface
     {
         $document = $this->loadSpec();
 
-        $pool = $this->pool ?? new ValidatorPool();
-        $formatRegistry = $this->formatRegistry ?? BuiltinFormats::create();
-        $errorFormatter = $this->errorFormatter ?? SimpleFormatter::shared();
+        $pool = $this->config->pool ?? new ValidatorPool();
+        $formatRegistry = $this->config->formatRegistry ?? BuiltinFormats::create();
+        $errorFormatter = $this->config->errorFormatter ?? SimpleFormatter::shared();
         $pathFinder = new PathFinder($document);
-        $logger = $this->logger ?? new NullLogger();
+        $logger = $this->config->logger ?? new NullLogger();
         $refResolver = new RefResolver();
+
+        $coercion = $this->config->coercion ?? false;
+        $nullableAsType = $this->config->nullableAsType ?? true;
+        $emptyArrayStrategy = $this->config->emptyArrayStrategy ?? EmptyArrayStrategy::AllowBoth;
+        $securityValidation = $this->config->securityValidation ?? false;
+        $strictFormats = $this->config->strictFormats ?? false;
+        $reportDeprecated = $this->config->reportDeprecated ?? true;
 
         $context = new ValidationContext(
             document: $document,
@@ -210,90 +204,61 @@ final readonly class OpenApiValidatorBuilder
             formatRegistry: $formatRegistry,
             errorFormatter: $errorFormatter,
             refResolver: $refResolver,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            reportDeprecated: $this->reportDeprecated,
+            coercion: $coercion,
+            nullableAsType: $nullableAsType,
+            emptyArrayStrategy: $emptyArrayStrategy,
+            reportDeprecated: $reportDeprecated,
             logger: $logger,
-            eventDispatcher: $this->eventDispatcher,
-            strictFormats: $this->strictFormats,
+            eventDispatcher: $this->config->eventDispatcher,
+            strictFormats: $strictFormats,
         );
 
         return new OpenApiValidator(
             document: $document,
-            pool: $pool,
-            formatRegistry: $formatRegistry,
-            errorFormatter: $errorFormatter,
-            pathFinder: $pathFinder,
-            logger: $logger,
-            refResolver: $refResolver,
-            requestValidation: new RequestValidationHandler(
-                $context,
-                $pathFinder,
-                $this->securityValidation,
-                $this->serverPathResolution,
+            configuration: new ValidatorConfiguration(
+                coercion: $coercion,
+                nullableAsType: $nullableAsType,
+                emptyArrayStrategy: $emptyArrayStrategy,
+                securityValidation: $securityValidation,
+                strictFormats: $strictFormats,
+                reportDeprecated: $reportDeprecated,
             ),
-            responseValidation: new ResponseValidationHandler($context),
-            schemaValidation: new SchemaValidatorAdapter($context),
-            webhookValidation: new WebhookValidator($context),
-            callbackValidation: new CallbackValidator($context),
-            linkResolver: new LinkResolver(),
-            cache: $this->cache,
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            eventDispatcher: $this->eventDispatcher,
-            securityValidation: $this->securityValidation,
-            strictFormats: $this->strictFormats,
-            reportDeprecated: $this->reportDeprecated,
+            dependencies: new ValidatorDependencies(
+                pool: $pool,
+                formatRegistry: $formatRegistry,
+                errorFormatter: $errorFormatter,
+                logger: $logger,
+                refResolver: $refResolver,
+                pathFinder: $pathFinder,
+                linkResolver: new LinkResolver(),
+                requestValidation: new RequestValidationHandler(
+                    $context,
+                    $pathFinder,
+                    $securityValidation,
+                    $this->config->serverPathResolution ?? false,
+                ),
+                responseValidation: new ResponseValidationHandler($context),
+                schemaValidation: new SchemaValidatorAdapter($context),
+                webhookValidation: new WebhookValidator($context),
+                callbackValidation: new CallbackValidator($context),
+                cache: $this->config->cache,
+                eventDispatcher: $this->config->eventDispatcher,
+            ),
         );
     }
 
-    private function with(
-        ?string $specPath = null,
-        ?string $specContent = null,
-        ?string $specType = null,
-        ?ValidatorPool $pool = null,
-        ?SchemaCache $cache = null,
-        ?LoggerInterface $logger = null,
-        ?FormatRegistry $formatRegistry = null,
-        ?bool $coercion = null,
-        ?bool $nullableAsType = null,
-        ?EmptyArrayStrategy $emptyArrayStrategy = null,
-        ?ErrorFormatterInterface $errorFormatter = null,
-        ?EventDispatcherInterface $eventDispatcher = null,
-        ?bool $securityValidation = null,
-        ?bool $serverPathResolution = null,
-        ?bool $strictFormats = null,
-        ?bool $reportDeprecated = null,
-    ): self {
-        return new self(
-            specPath: $specPath ?? $this->specPath,
-            specContent: $specContent ?? $this->specContent,
-            specType: $specType ?? $this->specType,
-            pool: $pool ?? $this->pool,
-            cache: $cache ?? $this->cache,
-            logger: $logger ?? $this->logger,
-            formatRegistry: $formatRegistry ?? $this->formatRegistry,
-            coercion: $coercion ?? $this->coercion,
-            nullableAsType: $nullableAsType ?? $this->nullableAsType,
-            emptyArrayStrategy: $emptyArrayStrategy ?? $this->emptyArrayStrategy,
-            errorFormatter: $errorFormatter ?? $this->errorFormatter,
-            eventDispatcher: $eventDispatcher ?? $this->eventDispatcher,
-            securityValidation: $securityValidation ?? $this->securityValidation,
-            serverPathResolution: $serverPathResolution ?? $this->serverPathResolution,
-            strictFormats: $strictFormats ?? $this->strictFormats,
-            reportDeprecated: $reportDeprecated ?? $this->reportDeprecated,
-        );
+    private function with(BuilderConfig $overrides): self
+    {
+        return new self($this->config->merge($overrides));
     }
 
     private function loadSpec(): OpenApiDocument
     {
-        if (null !== $this->specPath) {
+        if (null !== $this->config->specPath) {
             return $this->loadSpecFromFile();
         }
 
-        if (null !== $this->specContent) {
+        if (null !== $this->config->specContent) {
             return $this->loadSpecFromString();
         }
 
@@ -304,33 +269,33 @@ final readonly class OpenApiValidatorBuilder
 
     private function loadSpecFromFile(): OpenApiDocument
     {
-        if (null === $this->specPath || null === $this->specType) {
+        if (null === $this->config->specPath || null === $this->config->specType) {
             throw new BuilderException('Spec path or type not set');
         }
 
-        $cacheKey = $this->generateCacheKeyFromFile($this->specPath);
+        $cacheKey = $this->generateCacheKeyFromFile($this->config->specPath);
 
-        if (null !== $this->cache) {
-            $cachedDocument = $this->cache->get($cacheKey);
+        if (null !== $this->config->cache) {
+            $cachedDocument = $this->config->cache->get($cacheKey);
             if (null !== $cachedDocument) {
                 return $cachedDocument;
             }
         }
 
-        if (false === is_file($this->specPath)) {
-            throw new BuilderException(sprintf('Spec file does not exist: %s', $this->specPath));
+        if (false === is_file($this->config->specPath)) {
+            throw new BuilderException(sprintf('Spec file does not exist: %s', $this->config->specPath));
         }
 
-        $content = file_get_contents($this->specPath);
+        $content = file_get_contents($this->config->specPath);
 
         if (false === $content) {
-            throw new BuilderException(sprintf('Failed to read spec file: %s', $this->specPath));
+            throw new BuilderException(sprintf('Failed to read spec file: %s', $this->config->specPath));
         }
 
         $document = $this->parseSpec($content);
 
-        if (null !== $this->cache) {
-            $this->cache->set($cacheKey, $document);
+        if (null !== $this->config->cache) {
+            $this->config->cache->set($cacheKey, $document);
         }
 
         return $document;
@@ -338,23 +303,23 @@ final readonly class OpenApiValidatorBuilder
 
     private function loadSpecFromString(): OpenApiDocument
     {
-        if (null === $this->specContent || null === $this->specType) {
+        if (null === $this->config->specContent || null === $this->config->specType) {
             throw new BuilderException('Spec content or type not set');
         }
 
-        $cacheKey = $this->generateCacheKeyFromString($this->specContent);
+        $cacheKey = $this->generateCacheKeyFromString($this->config->specContent);
 
-        if (null !== $this->cache) {
-            $cachedDocument = $this->cache->get($cacheKey);
+        if (null !== $this->config->cache) {
+            $cachedDocument = $this->config->cache->get($cacheKey);
             if (null !== $cachedDocument) {
                 return $cachedDocument;
             }
         }
 
-        $document = $this->parseSpec($this->specContent);
+        $document = $this->parseSpec($this->config->specContent);
 
-        if (null !== $this->cache) {
-            $this->cache->set($cacheKey, $document);
+        if (null !== $this->config->cache) {
+            $this->config->cache->set($cacheKey, $document);
         }
 
         return $document;
@@ -363,21 +328,21 @@ final readonly class OpenApiValidatorBuilder
     private function parseSpec(string $content): OpenApiDocument
     {
         try {
-            $deprecationLogger = new DeprecationLogger($this->logger ?? new NullLogger(), $this->reportDeprecated);
+            $deprecationLogger = new DeprecationLogger($this->config->logger ?? new NullLogger(), $this->config->reportDeprecated ?? true);
 
-            if ('yaml' === $this->specType) {
+            if ('yaml' === $this->config->specType) {
                 $parser = new YamlParser($deprecationLogger);
 
                 return $parser->parse($content);
             }
 
-            if ('json' === $this->specType) {
+            if ('json' === $this->config->specType) {
                 $parser = new JsonParser($deprecationLogger);
 
                 return $parser->parse($content);
             }
 
-            throw new BuilderException(sprintf('Unsupported spec type: %s', $this->specType ?? 'none'));
+            throw new BuilderException(sprintf('Unsupported spec type: %s', $this->config->specType ?? 'none'));
         } catch (BuilderException $e) {
             throw $e;
         } catch (Exception $e) {

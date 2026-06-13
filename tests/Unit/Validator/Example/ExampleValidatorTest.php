@@ -8,9 +8,13 @@ use Duyler\OpenApi\Schema\Model\Example;
 use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Example\ExampleValidator;
+use Duyler\OpenApi\Validator\Example\ExampleWarning;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(ExampleValidator::class)]
+#[CoversClass(ExampleWarning::class)]
 class ExampleValidatorTest extends TestCase
 {
     private ExampleValidator $validator;
@@ -163,6 +167,64 @@ class ExampleValidatorTest extends TestCase
         $warnings = $this->validator->validate('hello', $schema);
 
         $this->assertSame([], $warnings);
+    }
+
+    #[Test]
+    public function example_warning_contains_serialized_data_property(): void
+    {
+        // Arrange
+        $schema = new Schema(
+            type: 'object',
+            example: ['name' => 'expected'],
+        );
+        $data = ['name' => 'actual'];
+
+        // Act
+        $warnings = $this->validator->validate($data, $schema);
+
+        // Assert
+        $this->assertCount(1, $warnings);
+        $this->assertSame('{"name":"actual"}', $warnings[0]->data);
+        $this->assertSame('Data does not match any of the declared examples', $warnings[0]->message);
+    }
+
+    #[Test]
+    public function example_warning_from_media_type_contains_serialized_data(): void
+    {
+        // Arrange
+        $mediaType = new MediaType(
+            example: new Example(value: ['status' => 'ok']),
+        );
+        $data = ['status' => 'error'];
+
+        // Act
+        $warnings = $this->validator->validateMediaType($data, $mediaType);
+
+        // Assert
+        $this->assertCount(1, $warnings);
+        $this->assertSame('{"status":"error"}', $warnings[0]->data);
+        $this->assertSame('Data does not match any of the declared media type examples', $warnings[0]->message);
+    }
+
+    #[Test]
+    public function example_warning_data_is_unable_to_encode_for_resource(): void
+    {
+        // Arrange
+        $schema = new Schema(
+            type: 'string',
+            example: 'hello',
+        );
+        // Use a resource that cannot be JSON-encoded
+        $resource = fopen('php://memory', 'r');
+
+        // Act
+        $warnings = $this->validator->validate($resource, $schema);
+
+        // Assert
+        $this->assertCount(1, $warnings);
+        $this->assertSame('(unable to encode data)', $warnings[0]->data);
+
+        fclose($resource);
     }
 
     #[Test]

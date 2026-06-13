@@ -39,7 +39,7 @@ final readonly class ValidatorCompiler
         string $className,
         OpenApiDocument $document,
     ): string {
-        $resolvedSchema = $this->resolveRefs($schema, $document);
+        [$resolvedSchema,] = $this->resolveRefs($schema, $document);
         return $this->compile($resolvedSchema, $className);
     }
 
@@ -446,7 +446,12 @@ final readonly class ValidatorCompiler
         return $code;
     }
 
-    private function resolveRefs(Schema $schema, OpenApiDocument $document, array &$resolved = []): Schema
+    /**
+     * @param list<string> $resolved
+     *
+     * @return array{Schema, list<string>}
+     */
+    private function resolveRefs(Schema $schema, OpenApiDocument $document, array $resolved = []): array
     {
         if (null !== $schema->ref) {
             if (in_array($schema->ref, $resolved, true)) {
@@ -454,32 +459,39 @@ final readonly class ValidatorCompiler
             }
 
             $resolved[] = $schema->ref;
-            $result = $this->resolveRef($schema->ref, $document, $resolved);
-            array_pop($resolved);
+            [$result,] = $this->resolveRef($schema->ref, $document, $resolved);
 
-            return $result;
+            return [$result, $resolved];
         }
 
         $resolvedProperties = null;
         if (null !== $schema->properties) {
             $resolvedProperties = [];
             foreach ($schema->properties as $name => $property) {
-                $resolvedProperties[$name] = $this->resolveRefs($property, $document, $resolved);
+                [$propResult,] = $this->resolveRefs($property, $document, $resolved);
+                $resolvedProperties[$name] = $propResult;
             }
         }
 
         $resolvedItems = null;
         if (null !== $schema->items) {
-            $resolvedItems = $this->resolveRefs($schema->items, $document, $resolved);
+            [$resolvedItems,] = $this->resolveRefs($schema->items, $document, $resolved);
         }
 
-        return $schema->withOverrides(
+        $result = $schema->withOverrides(
             properties: $resolvedProperties,
             items: $resolvedItems,
         );
+
+        return [$result, $resolved];
     }
 
-    private function resolveRef(string $ref, OpenApiDocument $document, array &$resolved): Schema
+    /**
+     * @param list<string> $resolved
+     *
+     * @return array{Schema, list<string>}
+     */
+    private function resolveRef(string $ref, OpenApiDocument $document, array $resolved): array
     {
         if (false === str_starts_with($ref, '#/components/schemas/')) {
             throw new RuntimeException(sprintf('Unsupported $ref: %s', $ref));
