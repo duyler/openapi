@@ -34,38 +34,24 @@ final class SchemaValidatorWithContext
             $mode,
         );
 
-        $schema = $this->resolveRef($schema);
-
-        if (null !== $schema->discriminator && null !== $schema->oneOf) {
-            $oneOfValidator = new OneOfValidatorWithContext($this->document, $this->dependencies, $this->configuration);
-            $oneOfValidator->validateWithContext($data, $schema, $context, true);
-            return;
-        }
-
-        if (null !== $schema->discriminator && null !== $data) {
-            $this->validateInternal($data, $schema, $context);
-
-            $discriminatorValidator = new DiscriminatorValidator($this->dependencies, $this->configuration);
-            $discriminatorValidator->validate($data, $schema, $this->document);
-
-            $this->validatePropertiesAndItems($data, $schema, $context, true);
-            return;
-        }
-
-        $this->validateInternal($data, $schema, $context);
-
-        $this->validatePropertiesAndItems($data, $schema, $context, true);
+        $this->doValidate($data, $schema, $context, true);
     }
 
     public function validateWithContext(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
     {
         $context = $context->withIncrementedDepth();
 
+        $this->doValidate($data, $schema, $context, $useDiscriminator);
+    }
+
+    private function doValidate(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
+    {
         $schema = $this->resolveRef($schema);
 
         if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
             $oneOfValidator = new OneOfValidatorWithContext($this->document, $this->dependencies, $this->configuration);
             $oneOfValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
+
             return;
         }
 
@@ -76,6 +62,7 @@ final class SchemaValidatorWithContext
             $discriminatorValidator->validate($data, $schema, $this->document);
 
             $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
+
             return;
         }
 
@@ -110,7 +97,7 @@ final class SchemaValidatorWithContext
         return $this->dependencies->refResolver->resolveSchemaWithOverride($schema, $this->document);
     }
 
-    private function validateInternal(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
+    private function validateInternal(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context): void
     {
         $errors = [];
 

@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Response;
 
+use Duyler\OpenApi\Validator\Coercion\AbstractCoercer;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
+use Override;
 
 use function is_array;
-use function is_bool;
-use function is_float;
-use function is_int;
 use function is_string;
 
-final readonly class ResponseTypeCoercer
+final readonly class ResponseTypeCoercer extends AbstractCoercer
 {
     public function coerce(mixed $value, CoercionContext $context): mixed
     {
@@ -35,6 +34,12 @@ final readonly class ResponseTypeCoercer
         }
 
         return $this->coerceToType($value, $type, $context);
+    }
+
+    #[Override]
+    protected function coerceToString(mixed $value): mixed
+    {
+        return $value;
     }
 
     private function coerceUnionType(mixed $value, array $types, CoercionContext $context): mixed
@@ -66,90 +71,6 @@ final readonly class ResponseTypeCoercer
             'array' => $this->coerceToArray($value, $context),
             default => $value,
         };
-    }
-
-    private function coerceToString(mixed $value): mixed
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        if (is_int($value) || is_float($value) || is_bool($value)) {
-            return $value;
-        }
-
-        return $value;
-    }
-
-    private function coerceToInteger(mixed $value): mixed
-    {
-        if (is_int($value)) {
-            return $value;
-        }
-
-        if (is_string($value)) {
-            $coerced = (int) $value;
-
-            return $coerced;
-        }
-
-        if (is_float($value)) {
-            return (int) $value;
-        }
-
-        if (is_bool($value)) {
-            return $value ? 1 : 0;
-        }
-
-        return $value;
-    }
-
-    private function coerceToNumber(mixed $value): mixed
-    {
-        if (is_float($value)) {
-            return $value;
-        }
-
-        if (is_int($value)) {
-            return (float) $value;
-        }
-
-        if (is_string($value)) {
-            return (float) $value;
-        }
-
-        if (is_bool($value)) {
-            return $value ? 1.0 : 0.0;
-        }
-
-        return $value;
-    }
-
-    private function coerceToBoolean(mixed $value): mixed
-    {
-        if (is_bool($value)) {
-            return $value;
-        }
-
-        if (is_string($value)) {
-            $lower = strtolower($value);
-
-            return match ($lower) {
-                'true', '1', 'yes', 'on' => true,
-                'false', '0', 'no', 'off' => false,
-                default => (bool) $value,
-            };
-        }
-
-        if (is_int($value)) {
-            return 0 !== $value;
-        }
-
-        if (is_float($value)) {
-            return 0.0 !== $value;
-        }
-
-        return $value;
     }
 
     private function coerceToObject(mixed $value, CoercionContext $context): mixed
@@ -211,19 +132,5 @@ final readonly class ResponseTypeCoercer
         }
 
         return $coerced;
-    }
-
-    private function isValidType(mixed $value, string $type): bool
-    {
-        return match ($type) {
-            'string' => is_string($value),
-            'number' => is_float($value) || is_int($value),
-            'integer' => is_int($value),
-            'boolean' => is_bool($value),
-            'null' => null === $value,
-            'object' => is_array($value),
-            'array' => is_array($value),
-            default => true,
-        };
     }
 }
