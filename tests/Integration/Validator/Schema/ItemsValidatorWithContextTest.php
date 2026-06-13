@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Integration\Validator\Schema;
 
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
@@ -46,12 +47,7 @@ final class ItemsValidatorWithContextTest extends TestCase
         );
         $this->context = ValidationContext::create(pool: $this->pool);
         $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
-        $this->validator = new ItemsValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
-        );
+        $this->validator = new ItemsValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
     }
 
     #[Test]
@@ -248,12 +244,7 @@ final class ItemsValidatorWithContextTest extends TestCase
             ),
         );
 
-        $validator = new ItemsValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $document,
-            $this->statelessValidators,
-        );
+        $validator = new ItemsValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = [
             ['petType' => 'cat'],
@@ -342,12 +333,7 @@ final class ItemsValidatorWithContextTest extends TestCase
             ),
         );
 
-        $validator = new ItemsValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $document,
-            $this->statelessValidators,
-        );
+        $validator = new ItemsValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = [
             ['petType' => 'cat'],
@@ -390,12 +376,7 @@ final class ItemsValidatorWithContextTest extends TestCase
             ),
         );
 
-        $validator = new ItemsValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $document,
-            $this->statelessValidators,
-        );
+        $validator = new ItemsValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = [
             ['name' => 'Fluffy'],
@@ -458,12 +439,7 @@ final class ItemsValidatorWithContextTest extends TestCase
             ),
         );
 
-        $validator = new ItemsValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $document,
-            $this->statelessValidators,
-        );
+        $validator = new ItemsValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = [
             ['petType' => 'bird'],
@@ -551,13 +527,14 @@ final class ItemsValidatorWithContextTest extends TestCase
         $eventDispatcher = $this->createStub(EventDispatcherInterface::class);
 
         $validator = new ItemsValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
-            reportDeprecated: true,
-            logger: $logger,
-            eventDispatcher: $eventDispatcher,
+            document: $this->document,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $this->pool,
+                refResolver: $this->refResolver,
+                statelessValidators: $this->statelessValidators,
+                logger: $logger,
+                eventDispatcher: $eventDispatcher,
+            ),
         );
 
         $itemSchema = new Schema(type: 'string');
@@ -628,12 +605,7 @@ final class ItemsValidatorWithContextTest extends TestCase
             ),
         );
 
-        $validator = new ItemsValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $document,
-            $this->statelessValidators,
-        );
+        $validator = new ItemsValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         // Arrange: массив с элементами разных discriminator-типов
         $data = [

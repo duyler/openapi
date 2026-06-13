@@ -4,11 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Validation;
 
-use Duyler\OpenApi\Event\ValidationErrorEvent;
-use Duyler\OpenApi\Event\ValidationFinishedEvent;
-use Duyler\OpenApi\Event\ValidationStartedEvent;
 use Duyler\OpenApi\Validator\EventDispatchingTrait;
-use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -44,20 +40,10 @@ final readonly class SchemaValidatorAdapter
     public function validate(mixed $data, string $schemaRef): void
     {
         $this->withValidationEvents(
-            startedEvent: new ValidationStartedEvent(path: $schemaRef, method: 'SCHEMA', schemaRef: $schemaRef),
-            makeFinishedEvent: fn(bool $success, float $duration): ValidationFinishedEvent => new ValidationFinishedEvent(
-                path: $schemaRef,
-                method: 'SCHEMA',
-                success: $success,
-                duration: $duration,
-                schemaRef: $schemaRef,
-            ),
-            makeErrorEvent: fn(ValidationException $e): ValidationErrorEvent => new ValidationErrorEvent(
-                path: $schemaRef,
-                method: 'SCHEMA',
-                exception: $e,
-                schemaRef: $schemaRef,
-            ),
+            request: null,
+            response: null,
+            path: $schemaRef,
+            method: 'SCHEMA',
             callback: function () use ($data, $schemaRef): void {
                 $this->logger->info(sprintf('Resolving schema ref: %s', $schemaRef));
 
@@ -69,6 +55,7 @@ final readonly class SchemaValidatorAdapter
                 $this->schemaValidator->validate($data, $schema);
             },
             warningMessage: sprintf('Schema validation failed: %s', $schemaRef),
+            schemaRef: $schemaRef,
         );
     }
 }

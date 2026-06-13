@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Integration\Validator\Schema;
 
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
@@ -40,7 +41,7 @@ final class NestedDiscriminatorTest extends TestCase
             new InfoObject('Event API', '1.0.0'),
         );
 
-        $this->validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
+        $this->validator = new SchemaValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
     }
 
     #[Test]
@@ -97,7 +98,7 @@ final class NestedDiscriminatorTest extends TestCase
             ),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $messageData = [
             'id' => 'msg-123',
@@ -166,7 +167,7 @@ final class NestedDiscriminatorTest extends TestCase
             ),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $petData = [
             'petType' => 'cat',
@@ -234,7 +235,7 @@ final class NestedDiscriminatorTest extends TestCase
             ),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $containerData = [
             'containerId' => 'cont-123',

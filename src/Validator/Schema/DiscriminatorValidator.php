@@ -7,34 +7,26 @@ namespace Duyler\OpenApi\Validator\Schema;
 use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Exception\DiscriminatorMismatchException;
 use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
-use Duyler\OpenApi\Validator\ValidatorPool;
-use Psr\EventDispatcher\EventDispatcherInterface;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 
 use function array_key_exists;
 use function is_array;
 use function is_string;
 use function assert;
+use function gettype;
 
 final readonly class DiscriminatorValidator
 {
-    private readonly LoggerInterface $logger;
-
     public function __construct(
-        private readonly RefResolverInterface $refResolver,
-        private readonly ValidatorPool $pool,
-        private readonly StatelessValidatorRegistry $statelessValidators,
-        private readonly bool $reportDeprecated = false,
-        ?LoggerInterface $logger = null,
-        private readonly ?EventDispatcherInterface $eventDispatcher = null,
-    ) {
-        $this->logger = $logger ?? new NullLogger();
-    }
+        private readonly SchemaValidatorDependencies $dependencies,
+        private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
+    ) {}
 
     public function validate(
         array|int|string|float|bool $data,
@@ -83,7 +75,7 @@ final readonly class DiscriminatorValidator
             return;
         }
 
-        $targetSchema = $this->refResolver->resolve($discriminator->defaultMapping, $document);
+        $targetSchema = $this->dependencies->refResolver->resolve($discriminator->defaultMapping, $document);
         $this->validateAgainstSchema($data, $targetSchema, $document, $dataPath);
     }
 
@@ -101,7 +93,7 @@ final readonly class DiscriminatorValidator
         if (false === is_array($data)) {
             throw new DiscriminatorMismatchException(
                 expectedType: 'object',
-                actualType: get_debug_type($data),
+                actualType: gettype($data),
                 propertyName: $propertyName,
                 dataPath: $dataPath,
             );
@@ -120,7 +112,7 @@ final readonly class DiscriminatorValidator
             throw new InvalidDiscriminatorValueException(
                 propertyName: $propertyName,
                 expectedType: 'string',
-                actualType: get_debug_type($value),
+                actualType: gettype($value),
                 dataPath: $this->buildPath($dataPath, $propertyName),
             );
         }
@@ -138,7 +130,7 @@ final readonly class DiscriminatorValidator
         $mapping = $discriminator->mapping ?? [];
 
         if (isset($mapping[$value])) {
-            return $this->refResolver->resolve($mapping[$value], $document);
+            return $this->dependencies->refResolver->resolve($mapping[$value], $document);
         }
 
         return $this->findMatchingSchema($value, $discriminator, $schema, $document, $dataPath);
@@ -160,7 +152,7 @@ final readonly class DiscriminatorValidator
 
             $refPath = $candidateSchema->ref;
 
-            $resolvedSchema = $this->refResolver->resolve($refPath, $document);
+            $resolvedSchema = $this->dependencies->refResolver->resolve($refPath, $document);
 
             if ($this->schemaMatchesValue($resolvedSchema, $value)) {
                 return $resolvedSchema;
@@ -168,7 +160,7 @@ final readonly class DiscriminatorValidator
         }
 
         if (null !== $discriminator->defaultMapping) {
-            return $this->refResolver->resolve($discriminator->defaultMapping, $document);
+            return $this->dependencies->refResolver->resolve($discriminator->defaultMapping, $document);
         }
 
         throw new UnknownDiscriminatorValueException(
@@ -194,7 +186,13 @@ final readonly class DiscriminatorValidator
         string $dataPath,
     ): void {
         /** @var array<array-key, mixed> $data */
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
-        $validator->validate($data, $schema, useDiscriminator: false);
+        $validator = new SchemaValidatorWithContext($document, $this->dependencies, $this->configuration);
+        $context = ValidationContext::create(
+            $this->dependencies->pool,
+            $this->dependencies->errorFormatter,
+            $this->configuration->nullableAsType,
+            $this->configuration->emptyArrayStrategy,
+        );
+        $validator->validateWithContext($data, $schema, $context, useDiscriminator: false);
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Schema;
 
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
@@ -42,12 +43,7 @@ final class ContextValidatorsIntegrationTest extends TestCase
     #[Test]
     public function items_validate_with_context_array_type_error(): void
     {
-        $validator = new ItemsValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
-        );
+        $validator = new ItemsValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $schema = new Schema(
             type: 'array',
@@ -75,12 +71,7 @@ final class ContextValidatorsIntegrationTest extends TestCase
     #[Test]
     public function properties_validate_with_context_type_error(): void
     {
-        $validator = new PropertiesValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
-        );
+        $validator = new PropertiesValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $schema = new Schema(
             type: 'object',

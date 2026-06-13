@@ -8,6 +8,7 @@ use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\PathMismatchException;
 use Duyler\OpenApi\Validator\PathFinder;
 use Duyler\OpenApi\Validator\Request\PathParser;
+use Duyler\OpenApi\Validator\Server\ServerPathMatcher;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -145,5 +146,82 @@ final class PathFinderPerformanceTest extends TestCase
         $memoryGrowth = $memoryAfter - $memoryBefore;
 
         $this->assertLessThan(2_000_000, $memoryGrowth, 'Memory growth for 100 route lookups should be under 2MB');
+    }
+
+    #[Test]
+    public function path_finding_with_base_path_100_routes(): void
+    {
+        $yamlParts = ["openapi: 3.1.0\ninfo:\n  title: Test API\n  version: 1.0.0\nservers:\n  - url: https://api.example.com/v1\npaths:"];
+
+        for ($i = 0; $i < 100; $i++) {
+            $yamlParts[] = sprintf(
+                "  /resource%d/{id}:\n    get:\n      responses:\n        '200':\n          description: OK",
+                $i,
+            );
+        }
+
+        $yaml = implode("\n", $yamlParts);
+
+        $document = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build()
+            ->getDocument();
+
+        $finder = new PathFinder($document);
+        $matcher = new ServerPathMatcher();
+        $servers = $document->servers->servers;
+
+        $start = microtime(true);
+
+        for ($i = 0; $i < 50; $i++) {
+            $requestPath = sprintf('/v1/resource%d/123', $i % 100);
+            $match = $matcher->matchPath($servers, $requestPath);
+            $matchedPath = null !== $match ? $match->strippedPath : $requestPath;
+            $finder->findOperation($matchedPath, 'GET');
+        }
+
+        $timeWithStripping = microtime(true) - $start;
+
+        $this->assertLessThan(0.15, $timeWithStripping, 'Path finding with server stripping for 100 routes over 50 iterations should be under 150ms');
+    }
+
+    #[Test]
+    public function path_finding_with_base_path_no_memory_leak(): void
+    {
+        $yamlParts = ["openapi: 3.1.0\ninfo:\n  title: Test API\n  version: 1.0.0\nservers:\n  - url: https://api.example.com/v1\npaths:"];
+
+        for ($i = 0; $i < 50; $i++) {
+            $yamlParts[] = sprintf(
+                "  /resource%d/{id}:\n    get:\n      responses:\n        '200':\n          description: OK",
+                $i,
+            );
+        }
+
+        $yaml = implode("\n", $yamlParts);
+
+        $document = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build()
+            ->getDocument();
+
+        $finder = new PathFinder($document);
+        $matcher = new ServerPathMatcher();
+        $servers = $document->servers->servers;
+
+        gc_collect_cycles();
+        $memoryBefore = memory_get_usage();
+
+        for ($i = 0; $i < 50; $i++) {
+            $requestPath = sprintf('/v1/resource%d/123', $i % 50);
+            $match = $matcher->matchPath($servers, $requestPath);
+            $matchedPath = null !== $match ? $match->strippedPath : $requestPath;
+            $finder->findOperation($matchedPath, 'GET');
+        }
+
+        gc_collect_cycles();
+        $memoryAfter = memory_get_usage();
+        $memoryDelta = $memoryAfter - $memoryBefore;
+
+        $this->assertLessThan(1_000_000, $memoryDelta, 'Memory delta for 50 iterations with server stripping should be under 1MB');
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Response;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Dto\CoercionContext;
 use Duyler\OpenApi\Validator\Response\ResponseTypeCoercer;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -24,7 +25,7 @@ final class ResponseTypeCoercerFullTest extends TestCase
     {
         $schema = new Schema(type: 'number');
 
-        $result = $this->coercer->coerce(3.14, $schema, true);
+        $result = $this->coercer->coerce(3.14, new CoercionContext(schema: $schema, enabled: true));
 
         $this->assertSame(3.14, $result);
     }
@@ -34,7 +35,7 @@ final class ResponseTypeCoercerFullTest extends TestCase
     {
         $schema = new Schema(type: 'number');
 
-        $result = $this->coercer->coerce(42, $schema, true);
+        $result = $this->coercer->coerce(42, new CoercionContext(schema: $schema, enabled: true));
 
         $this->assertSame(42.0, $result);
     }
@@ -44,7 +45,7 @@ final class ResponseTypeCoercerFullTest extends TestCase
     {
         $schema = new Schema(type: 'number');
 
-        $result = $this->coercer->coerce('3.14', $schema, true);
+        $result = $this->coercer->coerce('3.14', new CoercionContext(schema: $schema, enabled: true));
 
         $this->assertSame(3.14, $result);
     }
@@ -54,7 +55,7 @@ final class ResponseTypeCoercerFullTest extends TestCase
     {
         $schema = new Schema(type: 'number');
 
-        $result = $this->coercer->coerce(true, $schema, true);
+        $result = $this->coercer->coerce(true, new CoercionContext(schema: $schema, enabled: true));
 
         $this->assertSame(1.0, $result);
     }
@@ -64,7 +65,7 @@ final class ResponseTypeCoercerFullTest extends TestCase
     {
         $schema = new Schema(type: 'number');
 
-        $result = $this->coercer->coerce(false, $schema, true);
+        $result = $this->coercer->coerce(false, new CoercionContext(schema: $schema, enabled: true));
 
         $this->assertSame(0.0, $result);
     }
@@ -74,7 +75,7 @@ final class ResponseTypeCoercerFullTest extends TestCase
     {
         $schema = new Schema(type: ['integer', 'string']);
 
-        $result = $this->coercer->coerce('42', $schema, true);
+        $result = $this->coercer->coerce('42', new CoercionContext(schema: $schema, enabled: true));
 
         $this->assertSame(42, $result);
     }
@@ -84,7 +85,7 @@ final class ResponseTypeCoercerFullTest extends TestCase
     {
         $schema = new Schema(type: 'integer');
 
-        $result = $this->coercer->coerce('42', $schema, false);
+        $result = $this->coercer->coerce('42', new CoercionContext(schema: $schema, enabled: false));
 
         $this->assertSame('42', $result);
     }
@@ -92,7 +93,7 @@ final class ResponseTypeCoercerFullTest extends TestCase
     #[Test]
     public function coerce_returns_value_when_null_schema(): void
     {
-        $result = $this->coercer->coerce('test', null, true);
+        $result = $this->coercer->coerce('test', new CoercionContext(schema: null, enabled: true));
 
         $this->assertSame('test', $result);
     }
@@ -102,7 +103,7 @@ final class ResponseTypeCoercerFullTest extends TestCase
     {
         $schema = new Schema(type: 'string', nullable: true);
 
-        $result = $this->coercer->coerce(null, $schema, true, true);
+        $result = $this->coercer->coerce(null, new CoercionContext(schema: $schema, enabled: true, nullableAsType: true));
 
         $this->assertNull($result);
     }
@@ -118,7 +119,7 @@ final class ResponseTypeCoercerFullTest extends TestCase
             ],
         );
 
-        $result = $this->coercer->coerce(['name' => 'John', 'age' => '30'], $schema, true);
+        $result = $this->coercer->coerce(['name' => 'John', 'age' => '30'], new CoercionContext(schema: $schema, enabled: true));
 
         $this->assertSame(['name' => 'John', 'age' => 30], $result);
     }
@@ -131,7 +132,7 @@ final class ResponseTypeCoercerFullTest extends TestCase
             items: new Schema(type: 'integer'),
         );
 
-        $result = $this->coercer->coerce(['1', '2', '3'], $schema, true);
+        $result = $this->coercer->coerce(['1', '2', '3'], new CoercionContext(schema: $schema, enabled: true));
 
         $this->assertSame([1, 2, 3], $result);
     }
@@ -141,7 +142,7 @@ final class ResponseTypeCoercerFullTest extends TestCase
     {
         $schema = new Schema(type: 'string');
 
-        $result = $this->coercer->coerce(42, $schema, true);
+        $result = $this->coercer->coerce(42, new CoercionContext(schema: $schema, enabled: true));
 
         $this->assertSame(42, $result);
     }
@@ -151,7 +152,7 @@ final class ResponseTypeCoercerFullTest extends TestCase
     {
         $schema = new Schema(type: 'integer');
 
-        $result = $this->coercer->coerce('42', $schema, true);
+        $result = $this->coercer->coerce('42', new CoercionContext(schema: $schema, enabled: true));
 
         $this->assertSame(42, $result);
     }
@@ -161,7 +162,7 @@ final class ResponseTypeCoercerFullTest extends TestCase
     {
         $schema = new Schema(type: 'integer');
 
-        $result = $this->coercer->coerce(3.14, $schema, true);
+        $result = $this->coercer->coerce(3.14, new CoercionContext(schema: $schema, enabled: true));
 
         $this->assertSame(3, $result);
     }
@@ -171,8 +172,8 @@ final class ResponseTypeCoercerFullTest extends TestCase
     {
         $schema = new Schema(type: 'integer');
 
-        $this->assertSame(1, $this->coercer->coerce(true, $schema, true));
-        $this->assertSame(0, $this->coercer->coerce(false, $schema, true));
+        $this->assertSame(1, $this->coercer->coerce(true, new CoercionContext(schema: $schema, enabled: true)));
+        $this->assertSame(0, $this->coercer->coerce(false, new CoercionContext(schema: $schema, enabled: true)));
     }
 
     #[Test]
@@ -180,10 +181,10 @@ final class ResponseTypeCoercerFullTest extends TestCase
     {
         $schema = new Schema(type: 'boolean');
 
-        $this->assertTrue($this->coercer->coerce('true', $schema, true));
-        $this->assertFalse($this->coercer->coerce('false', $schema, true));
-        $this->assertTrue($this->coercer->coerce('1', $schema, true));
-        $this->assertFalse($this->coercer->coerce('0', $schema, true));
+        $this->assertTrue($this->coercer->coerce('true', new CoercionContext(schema: $schema, enabled: true)));
+        $this->assertFalse($this->coercer->coerce('false', new CoercionContext(schema: $schema, enabled: true)));
+        $this->assertTrue($this->coercer->coerce('1', new CoercionContext(schema: $schema, enabled: true)));
+        $this->assertFalse($this->coercer->coerce('0', new CoercionContext(schema: $schema, enabled: true)));
     }
 
     #[Test]
@@ -191,8 +192,8 @@ final class ResponseTypeCoercerFullTest extends TestCase
     {
         $schema = new Schema(type: 'boolean');
 
-        $this->assertTrue($this->coercer->coerce(1, $schema, true));
-        $this->assertFalse($this->coercer->coerce(0, $schema, true));
+        $this->assertTrue($this->coercer->coerce(1, new CoercionContext(schema: $schema, enabled: true)));
+        $this->assertFalse($this->coercer->coerce(0, new CoercionContext(schema: $schema, enabled: true)));
     }
 
     #[Test]
@@ -200,7 +201,7 @@ final class ResponseTypeCoercerFullTest extends TestCase
     {
         $schema = new Schema(type: 'boolean');
 
-        $this->assertTrue($this->coercer->coerce(1.0, $schema, true));
-        $this->assertFalse($this->coercer->coerce(0.0, $schema, true));
+        $this->assertTrue($this->coercer->coerce(1.0, new CoercionContext(schema: $schema, enabled: true)));
+        $this->assertFalse($this->coercer->coerce(0.0, new CoercionContext(schema: $schema, enabled: true)));
     }
 }

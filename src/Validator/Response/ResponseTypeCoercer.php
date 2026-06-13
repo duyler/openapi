@@ -4,40 +4,45 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Response;
 
-use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Coercion\AbstractCoercer;
+use Duyler\OpenApi\Validator\Dto\CoercionContext;
+use Override;
 
 use function is_array;
-use function is_bool;
-use function is_float;
-use function is_int;
 use function is_string;
 
-final readonly class ResponseTypeCoercer
+final readonly class ResponseTypeCoercer extends AbstractCoercer
 {
-    public function coerce(mixed $value, ?Schema $schema, bool $enabled, bool $nullableAsType = true): mixed
+    public function coerce(mixed $value, CoercionContext $context): mixed
     {
-        if (false === $enabled || null === $schema) {
+        if (false === $context->enabled || null === $context->schema) {
             return $value;
         }
 
-        if (null === $value && $schema->nullable && $nullableAsType) {
+        if (null === $value && $context->schema->nullable && $context->nullableAsType) {
             return $value;
         }
 
-        $type = $schema->type;
+        $type = $context->schema->type;
 
         if (null === $type) {
             return $value;
         }
 
         if (is_array($type)) {
-            return $this->coerceUnionType($value, $type, $schema, $nullableAsType);
+            return $this->coerceUnionType($value, $type, $context);
         }
 
-        return $this->coerceToType($value, $type, $schema, $nullableAsType);
+        return $this->coerceToType($value, $type, $context);
     }
 
-    private function coerceUnionType(mixed $value, array $types, Schema $schema, bool $nullableAsType): mixed
+    #[Override]
+    protected function coerceToString(mixed $value): mixed
+    {
+        return $value;
+    }
+
+    private function coerceUnionType(mixed $value, array $types, CoercionContext $context): mixed
     {
         foreach ($types as $type) {
             if (!is_string($type) || 'null' === $type) {
@@ -45,7 +50,7 @@ final readonly class ResponseTypeCoercer
             }
 
             /** @var array|int|string|float|bool|null $coerced */
-            $coerced = $this->coerceToType($value, $type, $schema, $nullableAsType);
+            $coerced = $this->coerceToType($value, $type, $context);
 
             if ($this->isValidType($coerced, $type)) {
                 return $coerced;
@@ -55,110 +60,26 @@ final readonly class ResponseTypeCoercer
         return $value;
     }
 
-    private function coerceToType(mixed $value, string $type, Schema $schema, bool $nullableAsType): mixed
+    private function coerceToType(mixed $value, string $type, CoercionContext $context): mixed
     {
         return match ($type) {
             'string' => $this->coerceToString($value),
             'integer' => $this->coerceToInteger($value),
             'number' => $this->coerceToNumber($value),
             'boolean' => $this->coerceToBoolean($value),
-            'object' => $this->coerceToObject($value, $schema, $nullableAsType),
-            'array' => $this->coerceToArray($value, $schema, $nullableAsType),
+            'object' => $this->coerceToObject($value, $context),
+            'array' => $this->coerceToArray($value, $context),
             default => $value,
         };
     }
 
-    private function coerceToString(mixed $value): mixed
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        if (is_int($value) || is_float($value) || is_bool($value)) {
-            return $value;
-        }
-
-        return $value;
-    }
-
-    private function coerceToInteger(mixed $value): mixed
-    {
-        if (is_int($value)) {
-            return $value;
-        }
-
-        if (is_string($value)) {
-            $coerced = (int) $value;
-
-            return $coerced;
-        }
-
-        if (is_float($value)) {
-            return (int) $value;
-        }
-
-        if (is_bool($value)) {
-            return $value ? 1 : 0;
-        }
-
-        return $value;
-    }
-
-    private function coerceToNumber(mixed $value): mixed
-    {
-        if (is_float($value)) {
-            return $value;
-        }
-
-        if (is_int($value)) {
-            return (float) $value;
-        }
-
-        if (is_string($value)) {
-            return (float) $value;
-        }
-
-        if (is_bool($value)) {
-            return $value ? 1.0 : 0.0;
-        }
-
-        return $value;
-    }
-
-    private function coerceToBoolean(mixed $value): mixed
-    {
-        if (is_bool($value)) {
-            return $value;
-        }
-
-        if (is_string($value)) {
-            $lower = strtolower($value);
-
-            return match ($lower) {
-                'true', '1', 'yes', 'on' => true,
-                'false', '0', 'no', 'off' => false,
-                default => (bool) $value,
-            };
-        }
-
-        if (is_int($value)) {
-            return 0 !== $value;
-        }
-
-        if (is_float($value)) {
-            return 0.0 !== $value;
-        }
-
-        return $value;
-    }
-
-    private function coerceToObject(mixed $value, Schema $schema, bool $nullableAsType): mixed
+    private function coerceToObject(mixed $value, CoercionContext $context): mixed
     {
         if (!is_array($value)) {
             return $value;
         }
 
-        $properties = $schema->properties;
+        $properties = $context->schema->properties ?? null;
 
         if (null === $properties) {
             return $value;
@@ -172,44 +93,44 @@ final readonly class ResponseTypeCoercer
                 continue;
             }
 
-            $coerced[$name] = $this->coerce($value[$name], $propertySchema, true, $nullableAsType);
+            $childContext = new CoercionContext(
+                schema: $propertySchema,
+                enabled: true,
+                strict: $context->strict,
+                nullableAsType: $context->nullableAsType,
+            );
+
+            $coerced[$name] = $this->coerce($value[$name], $childContext);
         }
 
         return $coerced;
     }
 
-    private function coerceToArray(mixed $value, Schema $schema, bool $nullableAsType): array
+    private function coerceToArray(mixed $value, CoercionContext $context): array
     {
         if (!is_array($value)) {
             return [];
         }
 
-        $itemsSchema = $schema->items;
+        $itemsSchema = $context->schema->items ?? null;
 
         if (null === $itemsSchema) {
             return $value;
         }
 
+        $childContext = new CoercionContext(
+            schema: $itemsSchema,
+            enabled: true,
+            strict: $context->strict,
+            nullableAsType: $context->nullableAsType,
+        );
+
         $coerced = [];
 
         foreach ($value as $item) {
-            $coerced[] = $this->coerce($item, $itemsSchema, true, $nullableAsType);
+            $coerced[] = $this->coerce($item, $childContext);
         }
 
         return $coerced;
-    }
-
-    private function isValidType(mixed $value, string $type): bool
-    {
-        return match ($type) {
-            'string' => is_string($value),
-            'number' => is_float($value) || is_int($value),
-            'integer' => is_int($value),
-            'boolean' => is_bool($value),
-            'null' => null === $value,
-            'object' => is_array($value),
-            'array' => is_array($value),
-            default => true,
-        };
     }
 }

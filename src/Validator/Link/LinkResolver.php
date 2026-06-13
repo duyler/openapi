@@ -69,12 +69,12 @@ final readonly class LinkResolver
             return $context->statusCode;
         }
 
-        if (1 !== preg_match('/^\$response\.(body|header|query)(?:#(\/.+))?$/', $expression, $matches)) {
+        if (1 !== preg_match('/^\$response\.(?<source>body|header|query)(?:#(?<path>\/.+))?$/', $expression, $matches)) {
             return $expression;
         }
 
-        $source = $matches[1];
-        $path = $matches[2] ?? null;
+        $source = $matches['source'];
+        $path = $matches['path'] ?? null;
 
         return match ($source) {
             'body' => $this->extractByPath($context->body, $path),

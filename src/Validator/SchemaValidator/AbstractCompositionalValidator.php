@@ -43,7 +43,9 @@ abstract readonly class AbstractCompositionalValidator extends AbstractSchemaVal
                 );
             } catch (ValidationException $e) {
                 $errors[] = $e;
-                $abstractErrors = [...$abstractErrors, ...$e->getErrors()];
+                foreach ($e->getErrors() as $error) {
+                    $abstractErrors[] = $error;
+                }
             } catch (AbstractValidationError $e) {
                 $abstractErrors[] = $e;
             }

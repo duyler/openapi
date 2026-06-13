@@ -16,14 +16,16 @@ use Duyler\OpenApi\Validator\Validation\ValidationContext;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use ReflectionProperty;
 use WeakMap;
+use Duyler\OpenApi\Test\Unit\Helper\ValidatorDependenciesAccessTrait;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 
 use function assert;
 
 /** @internal */
 final class RefResolverSharedInstanceTest extends TestCase
 {
+    use ValidatorDependenciesAccessTrait;
     private const string YAML = <<<YAML
 openapi: 3.1.0
 info:
@@ -66,12 +68,9 @@ YAML;
             ->fromYamlString(self::YAML)
             ->build();
 
-        $mainRefResolver = self::readProperty($validator, OpenApiValidator::class, 'refResolver');
+        $mainRefResolver = self::readDependenciesProperty($validator, 'refResolver');
         $requestRefResolver = self::readRequestBodyRefResolver($validator);
-        $validationResponseValidator = self::readProperty($validator, OpenApiValidator::class, 'responseValidation');
-        $context = self::readProperty($validationResponseValidator, ResponseValidationHandler::class, 'context');
-        $responseValidator = self::readProperty($context, ValidationContext::class, 'responseValidator');
-        $responseRefResolver = self::readProperty($responseValidator, ResponseValidatorWithContext::class, 'refResolver');
+        $responseRefResolver = self::readResponseRefResolver($validator);
 
         $this->assertInstanceOf(RefResolver::class, $mainRefResolver);
         $this->assertInstanceOf(RefResolver::class, $requestRefResolver);
@@ -89,12 +88,9 @@ YAML;
             ->fromYamlString(self::YAML)
             ->build();
 
-        $main = self::readProperty($validator, OpenApiValidator::class, 'refResolver');
+        $main = self::readDependenciesProperty($validator, 'refResolver');
         $request = self::readRequestBodyRefResolver($validator);
-        $validationResponseValidator = self::readProperty($validator, OpenApiValidator::class, 'responseValidation');
-        $context = self::readProperty($validationResponseValidator, ResponseValidationHandler::class, 'context');
-        $responseValidator = self::readProperty($context, ValidationContext::class, 'responseValidator');
-        $response = self::readProperty($responseValidator, ResponseValidatorWithContext::class, 'refResolver');
+        $response = self::readResponseRefResolver($validator);
 
         $ids = [
             spl_object_id($main),
@@ -123,7 +119,7 @@ YAML;
 
         $validator->validateResponse($response, $operation);
 
-        $refResolver = self::readProperty($validator, OpenApiValidator::class, 'refResolver');
+        $refResolver = self::readDependenciesProperty($validator, 'refResolver');
         $cache = self::readProperty($refResolver, RefResolver::class, 'cache');
         assert($cache instanceof WeakMap);
 
@@ -143,20 +139,24 @@ YAML;
         $this->assertSame($cacheCountAfterFirst, $cacheAfterSecond->count(), 'Cache should be reused across multiple response validations');
     }
 
-    private static function readProperty(object $object, string $class, string $property): object
-    {
-        $prop = new ReflectionProperty($class, $property);
-
-        return $prop->getValue($object);
-    }
-
     private static function readRequestBodyRefResolver(OpenApiValidator $validator): RefResolver
     {
-        $validationRequestValidator = self::readProperty($validator, OpenApiValidator::class, 'requestValidation');
-        $context = self::readProperty($validationRequestValidator, RequestValidationHandler::class, 'context');
+        $requestValidation = self::readDependenciesProperty($validator, 'requestValidation');
+        $context = self::readProperty($requestValidation, RequestValidationHandler::class, 'context');
         $requestValidator = self::readProperty($context, ValidationContext::class, 'requestValidator');
         $bodyValidator = self::readProperty($requestValidator, RequestValidator::class, 'bodyValidator');
+        $dependencies = self::readProperty($bodyValidator, RequestBodyValidatorWithContext::class, 'dependencies');
 
-        return self::readProperty($bodyValidator, RequestBodyValidatorWithContext::class, 'refResolver');
+        return self::readProperty($dependencies, SchemaValidatorDependencies::class, 'refResolver');
+    }
+
+    private static function readResponseRefResolver(OpenApiValidator $validator): RefResolver
+    {
+        $responseValidation = self::readDependenciesProperty($validator, 'responseValidation');
+        $context = self::readProperty($responseValidation, ResponseValidationHandler::class, 'context');
+        $responseValidator = self::readProperty($context, ValidationContext::class, 'responseValidator');
+        $dependencies = self::readProperty($responseValidator, ResponseValidatorWithContext::class, 'dependencies');
+
+        return self::readProperty($dependencies, SchemaValidatorDependencies::class, 'refResolver');
     }
 }

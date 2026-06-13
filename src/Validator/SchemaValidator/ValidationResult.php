@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
-use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Exception\ValidationErrorInterface;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 
 final readonly class ValidationResult
@@ -13,7 +13,7 @@ final readonly class ValidationResult
         public readonly int $validCount,
         /** @var array<int, ValidationException> */
         public readonly array $errors,
-        /** @var array<int, AbstractValidationError> */
+        /** @var array<int, ValidationErrorInterface> */
         public readonly array $abstractErrors,
     ) {}
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Integration\Validator\Schema;
 
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Schema\DiscriminatorValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
@@ -42,7 +43,7 @@ final class DiscriminatorValidatorTest extends TestCase
         $this->refResolver = new RefResolver();
         $this->pool = new ValidatorPool();
         $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
-        $this->validator = new DiscriminatorValidator($this->refResolver, $this->pool, $this->statelessValidators);
+        $this->validator = new DiscriminatorValidator(dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
     }
 
     #[Test]
@@ -960,12 +961,13 @@ final class DiscriminatorValidatorTest extends TestCase
         $eventDispatcher = $this->createStub(EventDispatcherInterface::class);
 
         $validator = new DiscriminatorValidator(
-            $this->refResolver,
-            $this->pool,
-            $this->statelessValidators,
-            reportDeprecated: true,
-            logger: $logger,
-            eventDispatcher: $eventDispatcher,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $this->pool,
+                refResolver: $this->refResolver,
+                statelessValidators: $this->statelessValidators,
+                logger: $logger,
+                eventDispatcher: $eventDispatcher,
+            ),
         );
 
         $schema = new Schema(type: 'object');

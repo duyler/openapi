@@ -67,6 +67,7 @@ final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterf
             $this->logger,
             $this->reportDeprecated,
             $this->eventDispatcher,
+            $this,
         ))->createAll();
     }
 }

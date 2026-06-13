@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Integration\Validator\Schema;
 
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
@@ -46,12 +47,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
         );
         $this->context = ValidationContext::create(pool: $this->pool);
         $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
-        $this->validator = new PropertiesValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
-        );
+        $this->validator = new PropertiesValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
     }
 
     #[Test]
@@ -361,12 +357,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
             ),
         );
 
-        $validator = new PropertiesValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $document,
-            $this->statelessValidators,
-        );
+        $validator = new PropertiesValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = [
             'pet' => ['name' => 'Fluffy'],
@@ -452,12 +443,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
             ),
         );
 
-        $validator = new PropertiesValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $document,
-            $this->statelessValidators,
-        );
+        $validator = new PropertiesValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = [
             'pet' => ['petType' => 'cat'],
@@ -523,12 +509,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
             ),
         );
 
-        $validator = new PropertiesValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $document,
-            $this->statelessValidators,
-        );
+        $validator = new PropertiesValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         // Arrange: объект с discriminator property, содержащим неизвестное значение
         $data = [
@@ -584,12 +565,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
             ),
         );
 
-        $validator = new PropertiesValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $document,
-            $this->statelessValidators,
-        );
+        $validator = new PropertiesValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         // Arrange: объект без discriminator property
         $data = [
@@ -630,13 +606,14 @@ final class PropertiesValidatorWithContextTest extends TestCase
         $eventDispatcher = $this->createStub(EventDispatcherInterface::class);
 
         $validator = new PropertiesValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
-            reportDeprecated: true,
-            logger: $logger,
-            eventDispatcher: $eventDispatcher,
+            document: $this->document,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $this->pool,
+                refResolver: $this->refResolver,
+                statelessValidators: $this->statelessValidators,
+                logger: $logger,
+                eventDispatcher: $eventDispatcher,
+            ),
         );
 
         $schema = new Schema(

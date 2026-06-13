@@ -15,6 +15,7 @@ use function is_bool;
 use function is_float;
 use function is_int;
 use function is_string;
+use function gettype;
 
 final readonly class TypeValidator extends AbstractSchemaValidator
 {
@@ -39,7 +40,7 @@ final readonly class TypeValidator extends AbstractSchemaValidator
             if (false === $this->isValidUnionType($data, $schema->type, $emptyArrayStrategy)) {
                 throw new TypeMismatchError(
                     expected: implode('|', $schema->type),
-                    actual: get_debug_type($data),
+                    actual: gettype($data),
                     dataPath: $dataPath,
                     schemaPath: '/type',
                 );
@@ -51,7 +52,7 @@ final readonly class TypeValidator extends AbstractSchemaValidator
         if (false === $this->isValidType($data, $schema->type, $emptyArrayStrategy)) {
             throw new TypeMismatchError(
                 expected: $schema->type,
-                actual: get_debug_type($data),
+                actual: gettype($data),
                 dataPath: $dataPath,
                 schemaPath: '/type',
             );

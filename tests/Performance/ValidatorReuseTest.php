@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Performance;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
@@ -14,11 +13,12 @@ use Duyler\OpenApi\Validator\Validation\ResponseValidationHandler;
 use Duyler\OpenApi\Validator\Validation\ValidationContext;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use ReflectionProperty;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use Duyler\OpenApi\Test\Unit\Helper\ValidatorDependenciesAccessTrait;
 
 final class ValidatorReuseTest extends TestCase
 {
+    use ValidatorDependenciesAccessTrait;
     private const string SCHEMA_YAML = <<<YAML
 openapi: 3.1.0
 info:
@@ -63,7 +63,7 @@ YAML;
             ->fromYamlString(self::SCHEMA_YAML)
             ->build();
 
-        $validationRequestValidator = self::readProperty($validator, OpenApiValidator::class, 'requestValidation');
+        $validationRequestValidator = self::readDependenciesProperty($validator, 'requestValidation');
         $context = self::readProperty($validationRequestValidator, RequestValidationHandler::class, 'context');
         $instance = self::readProperty($context, ValidationContext::class, 'requestValidator');
 
@@ -77,7 +77,7 @@ YAML;
             ->fromYamlString(self::SCHEMA_YAML)
             ->build();
 
-        $validationResponseValidator = self::readProperty($validator, OpenApiValidator::class, 'responseValidation');
+        $validationResponseValidator = self::readDependenciesProperty($validator, 'responseValidation');
         $context = self::readProperty($validationResponseValidator, ResponseValidationHandler::class, 'context');
         $instance = self::readProperty($context, ValidationContext::class, 'responseValidator');
 
@@ -91,9 +91,7 @@ YAML;
             ->fromYamlString(self::SCHEMA_YAML)
             ->build();
 
-        $property = new ReflectionProperty(OpenApiValidator::class, 'refResolver');
-
-        $instance = $property->getValue($validator);
+        $instance = self::readDependenciesProperty($validator, 'refResolver');
 
         $this->assertInstanceOf(RefResolver::class, $instance);
     }
@@ -105,15 +103,13 @@ YAML;
             ->fromYamlString(self::SCHEMA_YAML)
             ->build();
 
-        $property = new ReflectionProperty(OpenApiValidator::class, 'refResolver');
-
-        $refResolverBefore = $property->getValue($validator);
+        $refResolverBefore = self::readDependenciesProperty($validator, 'refResolver');
 
         $data = ['name' => 'John', 'email' => 'john@example.com'];
         $validator->validateSchema($data, '#/components/schemas/User');
         $validator->validateSchema($data, '#/components/schemas/User');
 
-        $refResolverAfter = $property->getValue($validator);
+        $refResolverAfter = self::readDependenciesProperty($validator, 'refResolver');
 
         $this->assertSame($refResolverBefore, $refResolverAfter);
     }
@@ -151,12 +147,5 @@ YAML;
 
         $this->assertSame($operation1->path, $operation2->path);
         $this->assertSame($operation1->method, $operation2->method);
-    }
-
-    private static function readProperty(object $object, string $class, string $property): object
-    {
-        $prop = new ReflectionProperty($class, $property);
-
-        return $prop->getValue($object);
     }
 }

@@ -26,53 +26,67 @@ class ValidationContextTest extends TestCase
     }
 
     #[Test]
-    public function with_breadcrumb(): void
+    public function enter_and_leave_breadcrumb(): void
     {
         $pool = new ValidatorPool();
         $context = ValidationContext::create(pool: $pool);
-        $context2 = $context->withBreadcrumb('users');
 
-        $this->assertNotSame($context, $context2);
-        $this->assertSame($pool, $context2->pool);
-        $this->assertSame('/', $context->breadcrumbs->currentPath());
-        $this->assertSame('/users', $context2->breadcrumbs->currentPath());
-    }
+        $context->enterBreadcrumb('users');
 
-    #[Test]
-    public function with_breadcrumb_index(): void
-    {
-        $pool = new ValidatorPool();
-        $context = ValidationContext::create(pool: $pool);
-        $context2 = $context->withBreadcrumbIndex(0);
+        $this->assertSame('/users', $context->breadcrumbs->currentPath());
 
-        $this->assertSame('/0', $context2->breadcrumbs->currentPath());
-    }
-
-    #[Test]
-    public function chain_breadcrumbs(): void
-    {
-        $pool = new ValidatorPool();
-        $context = ValidationContext::create(pool: $pool);
-        $context2 = $context->withBreadcrumb('users');
-        $context3 = $context2->withBreadcrumbIndex(0);
-        $context4 = $context3->withBreadcrumb('name');
+        $context->leaveBreadcrumb();
 
         $this->assertSame('/', $context->breadcrumbs->currentPath());
-        $this->assertSame('/users', $context2->breadcrumbs->currentPath());
-        $this->assertSame('/users/0', $context3->breadcrumbs->currentPath());
-        $this->assertSame('/users/0/name', $context4->breadcrumbs->currentPath());
     }
 
     #[Test]
-    public function maintain_pool_across_contexts(): void
+    public function enter_breadcrumb_index(): void
     {
         $pool = new ValidatorPool();
         $context = ValidationContext::create(pool: $pool);
-        $context2 = $context->withBreadcrumb('users');
+
+        $context->enterBreadcrumbIndex(0);
+
+        $this->assertSame('/0', $context->breadcrumbs->currentPath());
+    }
+
+    #[Test]
+    public function chain_breadcrumbs_with_push_pop(): void
+    {
+        $pool = new ValidatorPool();
+        $context = ValidationContext::create(pool: $pool);
+
+        $context->enterBreadcrumb('users');
+        $this->assertSame('/users', $context->breadcrumbs->currentPath());
+
+        $context->enterBreadcrumbIndex(0);
+        $this->assertSame('/users/0', $context->breadcrumbs->currentPath());
+
+        $context->enterBreadcrumb('name');
+        $this->assertSame('/users/0/name', $context->breadcrumbs->currentPath());
+
+        $context->leaveBreadcrumb();
+        $this->assertSame('/users/0', $context->breadcrumbs->currentPath());
+
+        $context->leaveBreadcrumb();
+        $this->assertSame('/users', $context->breadcrumbs->currentPath());
+
+        $context->leaveBreadcrumb();
+        $this->assertSame('/', $context->breadcrumbs->currentPath());
+    }
+
+    #[Test]
+    public function maintain_pool_across_mutations(): void
+    {
+        $pool = new ValidatorPool();
+        $context = ValidationContext::create(pool: $pool);
 
         $this->assertSame($pool, $context->pool);
-        $this->assertSame($pool, $context2->pool);
-        $this->assertSame($context->pool, $context2->pool);
+
+        $context->enterBreadcrumb('users');
+
+        $this->assertSame($pool, $context->pool);
     }
 
     #[Test]
@@ -85,7 +99,7 @@ class ValidationContextTest extends TestCase
     }
 
     #[Test]
-    public function maintain_formatter_across_contexts(): void
+    public function maintain_formatter_across_mutations(): void
     {
         $pool = new ValidatorPool();
         $formatter = new DetailedFormatter();
@@ -94,10 +108,10 @@ class ValidationContextTest extends TestCase
             pool: $pool,
             errorFormatter: $formatter,
         );
-        $context2 = $context->withBreadcrumb('users');
+
+        $context->enterBreadcrumb('users');
 
         $this->assertSame($formatter, $context->errorFormatter);
-        $this->assertSame($formatter, $context2->errorFormatter);
     }
 
     #[Test]
@@ -124,9 +138,48 @@ class ValidationContextTest extends TestCase
             pool: $pool,
             errorFormatter: $formatter,
         );
-        $context2 = $context->withBreadcrumbIndex(0);
+
+        $context->enterBreadcrumbIndex(0);
 
         $this->assertSame($formatter, $context->errorFormatter);
-        $this->assertSame($formatter, $context2->errorFormatter);
+    }
+
+    #[Test]
+    public function depth_increment_and_decrement(): void
+    {
+        $pool = new ValidatorPool();
+        $context = ValidationContext::create(pool: $pool);
+
+        $this->assertSame(0, $context->depth());
+
+        $context->incrementDepth();
+        $this->assertSame(1, $context->depth());
+
+        $context->incrementDepth();
+        $this->assertSame(2, $context->depth());
+
+        $context->decrementDepth();
+        $this->assertSame(1, $context->depth());
+
+        $context->decrementDepth();
+        $this->assertSame(0, $context->depth());
+    }
+
+    #[Test]
+    public function breadcrumb_restored_after_pop(): void
+    {
+        $pool = new ValidatorPool();
+        $context = ValidationContext::create(pool: $pool);
+
+        $context->enterBreadcrumb('a');
+        $context->enterBreadcrumb('b');
+        $context->enterBreadcrumb('c');
+
+        $this->assertSame('/a/b/c', $context->breadcrumbs->currentPath());
+
+        $context->leaveBreadcrumb();
+        $context->leaveBreadcrumb();
+
+        $this->assertSame('/a', $context->breadcrumbs->currentPath());
     }
 }

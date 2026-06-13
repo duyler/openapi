@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\SecurityRequirement;
 use Duyler\OpenApi\Schema\Model\SecurityScheme;
 use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
@@ -42,7 +43,7 @@ final class SecurityValidatorTest extends TestCase
         ];
 
         // Act
-        $this->validator->validate($request, '/users', 'GET', $securityRequirements, $securitySchemes);
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
 
         // Assert — no exception means success
         $this->expectNotToPerformAssertions();
@@ -68,7 +69,7 @@ final class SecurityValidatorTest extends TestCase
         $this->expectException(ValidationException::class);
 
         // Act
-        $this->validator->validate($request, '/users', 'GET', $securityRequirements, $securitySchemes);
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
     }
 
     #[Test]
@@ -89,7 +90,7 @@ final class SecurityValidatorTest extends TestCase
 
         // Act
         try {
-            $this->validator->validate($request, '/users', 'GET', $securityRequirements, $securitySchemes);
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
             $this->fail('Expected ValidationException was not thrown');
         } catch (ValidationException $e) {
             // Assert
@@ -120,7 +121,7 @@ final class SecurityValidatorTest extends TestCase
         ];
 
         // Act
-        $this->validator->validate($request, '/data', 'GET', $securityRequirements, $securitySchemes);
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
 
         // Assert — no exception means success
         $this->expectNotToPerformAssertions();
@@ -144,7 +145,7 @@ final class SecurityValidatorTest extends TestCase
         ];
 
         // Act
-        $this->validator->validate($request, '/data', 'GET', $securityRequirements, $securitySchemes);
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
 
         // Assert — no exception means success
         $this->expectNotToPerformAssertions();
@@ -168,7 +169,7 @@ final class SecurityValidatorTest extends TestCase
         ];
 
         // Act
-        $this->validator->validate($request, '/data', 'GET', $securityRequirements, $securitySchemes);
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
 
         // Assert — no exception means success
         $this->expectNotToPerformAssertions();
@@ -190,7 +191,7 @@ final class SecurityValidatorTest extends TestCase
 
         // Act
         try {
-            $this->validator->validate($request, '/users', 'GET', $securityRequirements, $securitySchemes);
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
             $this->fail('Expected ValidationException was not thrown');
         } catch (ValidationException $e) {
             // Assert
@@ -216,7 +217,7 @@ final class SecurityValidatorTest extends TestCase
 
         // Act
         try {
-            $this->validator->validate($request, '/users', 'GET', $securityRequirements, $securitySchemes);
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
             $this->fail('Expected ValidationException was not thrown');
         } catch (ValidationException $e) {
             // Assert
@@ -249,7 +250,7 @@ final class SecurityValidatorTest extends TestCase
         $this->expectException(ValidationException::class);
 
         // Act
-        $this->validator->validate($request, '/users', 'GET', $securityRequirements, $securitySchemes);
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
     }
 
     #[Test]
@@ -269,7 +270,7 @@ final class SecurityValidatorTest extends TestCase
 
         // Act
         try {
-            $this->validator->validate($request, '/users', 'GET', $securityRequirements, $securitySchemes);
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
             $this->fail('Expected ValidationException was not thrown');
         } catch (ValidationException $e) {
             // Assert

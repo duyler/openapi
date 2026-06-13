@@ -11,6 +11,7 @@ use function is_bool;
 use function is_float;
 use function is_int;
 use function is_string;
+use function gettype;
 
 final readonly class TypeHelper
 {
@@ -22,7 +23,7 @@ final readonly class TypeHelper
     public static function asArray(mixed $value): array
     {
         if (false === is_array($value)) {
-            throw new TypeError('Expected array, got ' . get_debug_type($value));
+            throw new TypeError('Expected array, got ' . gettype($value));
         }
 
         return $value;
@@ -36,7 +37,7 @@ final readonly class TypeHelper
     public static function asString(mixed $value): string
     {
         if (false === is_string($value)) {
-            throw new TypeError('Expected string, got ' . get_debug_type($value));
+            throw new TypeError('Expected string, got ' . gettype($value));
         }
         return $value;
     }
@@ -76,14 +77,14 @@ final readonly class TypeHelper
                 $result[] = match (true) {
                     null === $item => null,
                     is_string($item) => $item,
-                    default => throw new TypeError('Expected string or null in type array, got ' . get_debug_type($item)),
+                    default => throw new TypeError('Expected string or null in type array, got ' . gettype($item)),
                 };
             }
 
             return $result;
         }
 
-        throw new TypeError('Expected string or array for type, got ' . get_debug_type($value));
+        throw new TypeError('Expected string or array for type, got ' . gettype($value));
     }
 
     /**
@@ -94,7 +95,7 @@ final readonly class TypeHelper
     public static function asList(mixed $value): array
     {
         if (false === is_array($value)) {
-            throw new TypeError('Expected array, got ' . get_debug_type($value));
+            throw new TypeError('Expected array, got ' . gettype($value));
         }
 
         return array_values($value);
@@ -108,13 +109,13 @@ final readonly class TypeHelper
     public static function asStringList(mixed $value): array
     {
         if (false === is_array($value)) {
-            throw new TypeError('Expected list, got ' . get_debug_type($value));
+            throw new TypeError('Expected list, got ' . gettype($value));
         }
 
         $result = [];
         foreach ($value as $item) {
             if (false === is_string($item)) {
-                throw new TypeError('Expected string in list, got ' . get_debug_type($item));
+                throw new TypeError('Expected string in list, got ' . gettype($item));
             }
             $result[] = $item;
         }
@@ -144,15 +145,15 @@ final readonly class TypeHelper
     public static function asStringMap(mixed $value): array
     {
         if (false === is_array($value)) {
-            throw new TypeError('Expected string map, got ' . get_debug_type($value));
+            throw new TypeError('Expected string map, got ' . gettype($value));
         }
 
         foreach ($value as $key => $val) {
             if (false === is_string($key)) {
-                throw new TypeError('Expected string key in map, got ' . get_debug_type($key));
+                throw new TypeError('Expected string key in map, got ' . gettype($key));
             }
             if (false === is_string($val)) {
-                throw new TypeError('Expected string value in map, got ' . get_debug_type($val));
+                throw new TypeError('Expected string value in map, got ' . gettype($val));
             }
         }
 
@@ -184,12 +185,12 @@ final readonly class TypeHelper
             return null;
         }
         if (false === is_array($value)) {
-            throw new TypeError('Expected string mixed map, got ' . get_debug_type($value));
+            throw new TypeError('Expected string mixed map, got ' . gettype($value));
         }
 
         foreach ($value as $key => $_) {
             if (false === is_string($key)) {
-                throw new TypeError('Expected string key in mixed map, got ' . get_debug_type($key));
+                throw new TypeError('Expected string key in mixed map, got ' . gettype($key));
             }
         }
 
@@ -205,7 +206,7 @@ final readonly class TypeHelper
     public static function asEnumList(mixed $value): array
     {
         if (false === is_array($value)) {
-            throw new TypeError('Expected enum list, got ' . get_debug_type($value));
+            throw new TypeError('Expected enum list, got ' . gettype($value));
         }
         return array_values($value);
     }
@@ -231,7 +232,7 @@ final readonly class TypeHelper
     public static function asInt(mixed $value): int
     {
         if (false === is_int($value)) {
-            throw new TypeError('Expected int, got ' . get_debug_type($value));
+            throw new TypeError('Expected int, got ' . gettype($value));
         }
         return $value;
     }
@@ -257,7 +258,7 @@ final readonly class TypeHelper
     public static function asFloat(mixed $value): float
     {
         if (false === is_float($value) && !is_int($value)) {
-            throw new TypeError('Expected float, got ' . get_debug_type($value));
+            throw new TypeError('Expected float, got ' . gettype($value));
         }
         return (float) $value;
     }
@@ -283,7 +284,7 @@ final readonly class TypeHelper
     public static function asBool(mixed $value): bool
     {
         if (false === is_bool($value)) {
-            throw new TypeError('Expected bool, got ' . get_debug_type($value));
+            throw new TypeError('Expected bool, got ' . gettype($value));
         }
         return $value;
     }
@@ -309,23 +310,23 @@ final readonly class TypeHelper
     public static function asSecurityListMap(mixed $value): array
     {
         if (false === is_array($value)) {
-            throw new TypeError('Expected security list map, got ' . get_debug_type($value));
+            throw new TypeError('Expected security list map, got ' . gettype($value));
         }
 
         $result = [];
         foreach ($value as $item) {
             if (false === is_array($item)) {
-                throw new TypeError('Expected array in security list, got ' . get_debug_type($item));
+                throw new TypeError('Expected array in security list, got ' . gettype($item));
             }
 
             /** @var array<string, list<string>> $securityItem */
             $securityItem = [];
             foreach ($item as $key => $val) {
                 if (false === is_string($key)) {
-                    throw new TypeError('Expected string key in security map, got ' . get_debug_type($key));
+                    throw new TypeError('Expected string key in security map, got ' . gettype($key));
                 }
                 if (false === is_array($val)) {
-                    throw new TypeError('Expected list in security map value, got ' . get_debug_type($val));
+                    throw new TypeError('Expected list in security map value, got ' . gettype($val));
                 }
                 /** @var list<string> $val */
                 $val = self::asStringList($val);

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Error\Formatter;
 
-use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Exception\ValidationErrorInterface;
 use Override;
 use ValueError;
 
@@ -15,19 +15,14 @@ use const JSON_PRETTY_PRINT;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
 
-/**
- * JSON error formatter for structured output
- *
- * Produces JSON-formatted error messages suitable for API responses.
- */
 final readonly class JsonFormatter implements ErrorFormatterInterface
 {
     #[Override]
-    public function format(AbstractValidationError $error): string
+    public function format(ValidationErrorInterface $error): string
     {
         $data = [
             'breadcrumb' => $error->dataPath(),
-            'message' => $error->getMessage(),
+            'message' => $error->message(),
             'type' => $error->getType(),
             'details' => $this->getDetails($error),
         ];
@@ -74,7 +69,7 @@ final readonly class JsonFormatter implements ErrorFormatterInterface
     /**
      * @return array<string, mixed>
      */
-    private function getDetails(AbstractValidationError $error): array
+    private function getDetails(ValidationErrorInterface $error): array
     {
         return $error->params();
     }

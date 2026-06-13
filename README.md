@@ -13,7 +13,7 @@ OpenAPI 3.2 validator for PHP 8.4+
 
 - **Full OpenAPI 3.2 Support** - Complete implementation of OpenAPI 3.2 specification
 - **JSON Schema Validation** - Full JSON Schema draft 2020-12 validation with 25+ validators
-- **PSR-7 Integration** - Works with any PSR-7 HTTP message implementation
+- **PSR-7 Integration** - PSR-7 HTTP message validation (requires nyholm/psr7)
 - **Request Validation** - Validate path parameters, query parameters, headers, cookies, and request body
 - **Response Validation** - Validate status codes, headers, and response bodies
 - **Multiple Content Types** - Support for JSON, form-data, multipart, text, and XML
@@ -86,6 +86,7 @@ The interface exposes the following methods:
 | `validateCallback(ServerRequestInterface $request, string $name): Operation` | Validate callback request |
 | `resolveLink(string $linkName, array $responseData): array` | Resolve link parameters from response data (body only) |
 | `resolveLinkWithContext(string $linkName, LinkContext $context): array` | Resolve link parameters with full Runtime Expression support ($response.body/header/query, $url, $method, $statusCode) |
+| `reset(): void` | Reset validator state for reuse |
 
 ## Usage
 
@@ -422,21 +423,30 @@ Available events:
 
 Manage multiple API versions:
 
+> **Warning:** `getDocument()` is a method of the concrete `OpenApiValidator` class, not the `OpenApiValidatorInterface`. If you type-hint the interface, this method is unavailable and will cause a runtime error. Type-hint the concrete class directly or perform an `instanceof` check before calling it.
+
 ```php
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Registry\SchemaRegistry;
+use LogicException;
 
 // Load multiple versions
-// Note: getDocument() is a method of the concrete OpenApiValidator class, not the interface
-$documentV1 = OpenApiValidatorBuilder::create()
+$validatorV1 = OpenApiValidatorBuilder::create()
     ->fromYamlFile('api-v1.yaml')
-    ->build()
-    ->getDocument();
+    ->build();
+if (!($validatorV1 instanceof OpenApiValidator)) {
+    throw new LogicException('Validator must be an instance of OpenApiValidator to access getDocument()');
+}
+$documentV1 = $validatorV1->getDocument();
 
-$documentV2 = OpenApiValidatorBuilder::create()
+$validatorV2 = OpenApiValidatorBuilder::create()
     ->fromYamlFile('api-v2.yaml')
-    ->build()
-    ->getDocument();
+    ->build();
+if (!($validatorV2 instanceof OpenApiValidator)) {
+    throw new LogicException('Validator must be an instance of OpenApiValidator to access getDocument()');
+}
+$documentV2 = $validatorV2->getDocument();
 
 // Register schemas
 $registry = new SchemaRegistry();
@@ -581,6 +591,9 @@ The compiler does not support all JSON Schema keywords. If a schema uses unsuppo
 | `enableSecurityValidation()` | Enable security scheme validation for requests | `false` |
 | `enableStrictFormats()` | Reject unknown format values instead of skipping | `false` |
 | `enableReportDeprecated()` | Log deprecated schema elements via PSR-3 logger | `true` |
+| `enableServerPathResolution()` | Strip server base path from request path before matching | `false` |
+
+Deprecated reporting is enabled by default. Without a PSR-3 logger, deprecation warnings go to `NullLogger` and produce no output. There is no `disableReportDeprecated()` method; to suppress deprecation warnings, simply omit the logger (the default behavior).
 
 ### EmptyArrayStrategy
 
@@ -620,6 +633,72 @@ $validator = OpenApiValidatorBuilder::create()
     ->enableCoercion()                  // Auto type conversion
     ->build();
 ```
+
+## PSR-15 Middleware
+
+Wrap the validator in a PSR-15 middleware to validate incoming requests before they reach your handlers. On validation failure, the middleware returns a `400 Bad Request` response with error details.
+
+```php
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Nyholm\Psr7\Response;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
+use Throwable;
+
+final class ValidationMiddleware implements MiddlewareInterface
+{
+    public function __construct(
+        private readonly OpenApiValidatorInterface $validator,
+    ) {}
+
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
+    {
+        try {
+            $operation = $this->validator->validateRequest($request);
+        } catch (ValidationException $e) {
+            return new Response(
+                status: 400,
+                headers: ['Content-Type' => 'application/json'],
+                body: json_encode([
+                    'error' => 'Validation failed',
+                    'details' => array_map(fn ($error) => [
+                        'path' => $error->dataPath(),
+                        'message' => $error->message(),
+                    ], $e->getErrors()),
+                ], JSON_PRETTY_PRINT),
+            );
+        } catch (Throwable $e) {
+            return new Response(
+                status: 400,
+                headers: ['Content-Type' => 'application/json'],
+                body: json_encode(['error' => $e->getMessage()], JSON_PRETTY_PRINT),
+            );
+        }
+
+        return $handler->handle($request->withAttribute('operation', $operation));
+    }
+}
+```
+
+Register the middleware with your framework's middleware pipeline:
+
+```php
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->build();
+
+$middleware = new ValidationMiddleware($validator);
+
+// Register with any PSR-15 compatible framework or dispatcher
+// Example with Mezzio:
+// $pipeline->pipe(new ValidationMiddleware($validator));
+```
+
+> Note: The PSR-15 interfaces require the `psr/http-server-middleware` package, typically provided by your framework.
 
 ## Supported JSON Schema Keywords
 
@@ -741,7 +820,7 @@ try {
         printf(
             "Path: %s\nMessage: %s\nType: %s\n\n",
             $error->dataPath(),
-            $error->getMessage(),
+            $error->message(),
             $error->getType()
         );
     }
@@ -767,7 +846,7 @@ All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schem
 
 #### Format Validation Errors
 
-`InvalidFormatException` implements `ValidationErrorInterface` but extends `RuntimeException` directly (not `AbstractValidationError`). It is thrown by format validators rather than the schema validator.
+`InvalidFormatException` extends `RuntimeException` and implements `ValidationErrorInterface` directly (without extending `AbstractValidationError`). It is thrown by format validators rather than the schema validator.
 
 | Error Type | Keyword | Description |
 |------------|---------|-------------|
@@ -785,9 +864,11 @@ All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schem
 
 | Error Type | Keyword | Description |
 |------------|---------|-------------|
-| `MinimumError` | `minimum` | Value below minimum |
-| `MaximumError` | `maximum` | Value exceeds maximum |
+| `MinimumError` | `minimum` / `exclusiveMinimum` | Value below minimum (inclusive/exclusive) |
+| `MaximumError` | `maximum` / `exclusiveMaximum` | Value exceeds maximum (inclusive/exclusive) |
 | `MultipleOfKeywordError` | `multipleOf` | Value is not a multiple of the specified number |
+
+> Note: `MinimumError::keyword()` always returns `'minimum'` for both `minimum` and `exclusiveMinimum` violations. Similarly, `MaximumError::keyword()` always returns `'maximum'`. Use `schemaPath()` to distinguish between inclusive (`/minimum`, `/maximum`) and exclusive (`/exclusiveMinimum`, `/exclusiveMaximum`) constraints.
 
 #### Array Validation Errors
 
@@ -1277,7 +1358,7 @@ The following scheme types are not supported and will produce an error when enco
 - **PSR-7 HTTP message** - `psr/http-message ^2.0` (required: `nyholm/psr7 ^1.8`)
 - **PSR-6 cache** - `psr/cache ^3.0` (e.g., `symfony/cache`, `cache/cache`)
 - **PSR-14 events** - `psr/event-dispatcher ^1.0` (e.g., `symfony/event-dispatcher`)
-- **PSR-3 logging** - `psr/log ^3.0` (optional, for `withLogger()`)
+- **PSR-3 logging** - `psr/log ^3.0` (included, optional to use via `withLogger()`)
 - **YAML parser** - `symfony/yaml ^7.0 || ^8.0`
 
 ## Testing

@@ -8,24 +8,21 @@ use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
 
 use function str_split;
 
-/**
- * Validates and normalizes regex patterns for JSON Schema draft 2020-12.
- *
- * Per JSON Schema draft 2020-12, the "pattern" keyword requires partial matching
- * (substring match). The pattern matches if the regular expression matches any
- * substring of the input string. Use ^ and $ anchors explicitly for full-string
- * matching.
- */
 final class RegexValidator
 {
     private const string DELIMITER_CANDIDATES = '#~!|@%+;';
 
+    /** @var array<string, string> */
+    private static array $normalizeCache = [];
+
     public static function validate(string $pattern, ?string $fieldName = null): string
     {
-        $errorMessage = '';
+        $errorContext = new class {
+            public string $message = '';
+        };
 
-        set_error_handler(function ($errno, $errstr) use (&$errorMessage): bool {
-            $errorMessage = $errstr;
+        set_error_handler(function (int $errno, string $errstr) use ($errorContext): bool {
+            $errorContext->message = $errstr;
             return true;
         });
 
@@ -41,7 +38,7 @@ final class RegexValidator
             if (false === $testResult) {
                 throw new InvalidPatternException(
                     pattern: $pattern,
-                    reason: $errorMessage ?: 'Unknown regex error',
+                    reason: '' !== $errorContext->message ? $errorContext->message : 'Unknown regex error',
                 );
             }
         } finally {
@@ -52,6 +49,23 @@ final class RegexValidator
     }
 
     public static function normalize(string $pattern): string
+    {
+        if (isset(self::$normalizeCache[$pattern])) {
+            return self::$normalizeCache[$pattern];
+        }
+
+        $normalized = self::doNormalize($pattern);
+        self::$normalizeCache[$pattern] = $normalized;
+
+        return $normalized;
+    }
+
+    public static function clearNormalizeCache(): void
+    {
+        self::$normalizeCache = [];
+    }
+
+    private static function doNormalize(string $pattern): string
     {
         if (self::hasDelimiters($pattern)) {
             return $pattern;
@@ -90,7 +104,6 @@ final class RegexValidator
             }
         }
 
-        // All candidates present — use '/' as delimiter and escape it inside the pattern
         return '/';
     }
 

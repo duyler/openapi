@@ -31,6 +31,7 @@ use Duyler\OpenApi\Validator\Request\PathParser;
 use Duyler\OpenApi\Validator\Request\QueryParametersValidator;
 use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Request\QueryStringValidator;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Request\RequestBodyValidatorWithContext;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
@@ -85,12 +86,14 @@ final class WebhookValidatorTest extends TestCase
             info: new InfoObject(title: 'Test', version: '1.0.0'),
         );
         $bodyValidator = new RequestBodyValidatorWithContext(
-            $pool,
-            $document,
-            $bodyParser,
-            new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
-            new RefResolver(),
-            BuiltinFormats::create(),
+            document: $document,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $pool,
+                refResolver: new RefResolver(),
+                statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
+                formatRegistry: BuiltinFormats::create(),
+                bodyParser: $bodyParser,
+            ),
         );
 
         $queryStringValidator = new QueryStringValidator($queryParser, $schemaValidator);

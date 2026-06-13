@@ -92,7 +92,7 @@ final readonly class ExampleValidator
         }
 
         if (null !== $schema->examples) {
-            $this->extractExampleValues($schema->examples, $examples);
+            $examples = $this->extractExampleValues($schema->examples, $examples);
         }
 
         return $examples;
@@ -115,7 +115,7 @@ final readonly class ExampleValidator
         }
 
         if (null !== $mediaType->examples) {
-            $this->extractExampleValues($mediaType->examples, $examples);
+            $examples = $this->extractExampleValues($mediaType->examples, $examples);
         }
 
         return $examples;
@@ -124,8 +124,10 @@ final readonly class ExampleValidator
     /**
      * @param array<string, mixed> $source
      * @param list<mixed> $target
+     *
+     * @return list<mixed>
      */
-    private function extractExampleValues(array $source, array &$target): void
+    private function extractExampleValues(array $source, array $target): array
     {
         foreach ($source as $exampleEntry) {
             if ($exampleEntry instanceof Example && null !== $exampleEntry->value) {
@@ -134,6 +136,8 @@ final readonly class ExampleValidator
                 $target[] = $exampleEntry['value'];
             }
         }
+
+        return $target;
     }
 
     private function matchesExample(mixed $data, mixed $example): bool

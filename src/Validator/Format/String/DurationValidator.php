@@ -13,7 +13,7 @@ use function str_starts_with;
 
 final readonly class DurationValidator extends AbstractStringFormatValidator
 {
-    private const string DURATION_PATTERN = '/^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/';
+    private const string DURATION_PATTERN = '/^P(?:(?<years>\d+)Y)?(?:(?<months>\d+)M)?(?:(?<days>\d+)D)?(?:T(?:(?<hours>\d+)H)?(?:(?<minutes>\d+)M)?(?:(?<seconds>\d+)S)?)?$/';
 
     #[Override]
     protected function getFormatName(): string
@@ -32,8 +32,8 @@ final readonly class DurationValidator extends AbstractStringFormatValidator
             throw new InvalidFormatException('duration', $data, 'Invalid duration format');
         }
 
-        $hasDateComponent = isset($matches[1]) || isset($matches[2]) || isset($matches[3]);
-        $hasTimeComponent = isset($matches[4]) || isset($matches[5]) || isset($matches[6]);
+        $hasDateComponent = isset($matches['years']) || isset($matches['months']) || isset($matches['days']);
+        $hasTimeComponent = isset($matches['hours']) || isset($matches['minutes']) || isset($matches['seconds']);
 
         if ($hasTimeComponent && false === str_contains($data, 'T')) {
             throw new InvalidFormatException('duration', $data, 'Time components must be preceded by T');

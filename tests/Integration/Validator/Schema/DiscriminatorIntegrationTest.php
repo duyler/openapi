@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Integration\Validator\Schema;
 
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
@@ -41,7 +42,7 @@ final class DiscriminatorIntegrationTest extends TestCase
             new InfoObject('API', '1.0.0'),
         );
 
-        $this->validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
+        $this->validator = new SchemaValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
     }
 
     #[Test]
@@ -123,7 +124,7 @@ final class DiscriminatorIntegrationTest extends TestCase
             ),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $petStoreData = [
             'storeId' => 'store-123',
@@ -225,7 +226,7 @@ final class DiscriminatorIntegrationTest extends TestCase
             ),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $catData = [
             'id' => 'cat-123',
@@ -292,7 +293,7 @@ final class DiscriminatorIntegrationTest extends TestCase
             ),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $treeData = [
             'nodeType' => 'TreeNode',
@@ -375,7 +376,7 @@ final class DiscriminatorIntegrationTest extends TestCase
             ),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $successData = [
             'status' => 'success',
@@ -451,7 +452,7 @@ final class DiscriminatorIntegrationTest extends TestCase
             ),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $containerData = [
             'item' => [

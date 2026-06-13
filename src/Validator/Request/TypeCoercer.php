@@ -5,19 +5,19 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Validator\Coercion\AbstractCoercer;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 
-use function is_bool;
+use function is_array;
 use function is_float;
 use function is_int;
-use function is_numeric;
+use function is_object;
 use function is_string;
 use function in_array;
-use function is_array;
-use function is_object;
 use function get_object_vars;
+use function is_bool;
 
-final readonly class TypeCoercer
+final readonly class TypeCoercer extends AbstractCoercer
 {
     /**
      * @return array<array-key, mixed>|int|string|float|bool|null
@@ -84,6 +84,7 @@ final readonly class TypeCoercer
     private function coerceToType(mixed $value, string $type, bool $strict): array|int|string|float|bool
     {
         if (is_string($value)) {
+            /** @var int|float|bool|string */
             return match ($type) {
                 'integer' => $this->coerceToInteger($value, $strict),
                 'number' => $this->coerceToNumber($value, $strict),
@@ -113,63 +114,5 @@ final readonly class TypeCoercer
         }
 
         return (string) $value;
-    }
-
-    private function coerceToInteger(string $value, bool $strict): int
-    {
-        if ($strict && (!is_numeric($value) || (string) (int) $value !== $value)) {
-            throw new TypeMismatchError(
-                expected: 'integer',
-                actual: $value,
-                dataPath: '',
-                schemaPath: '/type',
-            );
-        }
-
-        $coerced = (int) $value;
-
-        if ((string) $coerced !== $value) {
-            return (int) $value;
-        }
-
-        return $coerced;
-    }
-
-    private function coerceToNumber(string $value, bool $strict): float
-    {
-        if ($strict && !is_numeric($value)) {
-            throw new TypeMismatchError(
-                expected: 'number',
-                actual: $value,
-                dataPath: '',
-                schemaPath: '/type',
-            );
-        }
-
-        return (float) $value;
-    }
-
-    private function coerceToBoolean(string $value): bool
-    {
-        $lower = strtolower($value);
-
-        return match ($lower) {
-            'true', '1', 'yes', 'on' => true,
-            'false', '0', 'no', 'off' => false,
-            default => (bool) $value,
-        };
-    }
-
-    private function isValidType(mixed $value, string $type): bool
-    {
-        return match ($type) {
-            'string' => is_string($value),
-            'number' => is_float($value) || is_int($value),
-            'integer' => is_int($value),
-            'boolean' => is_bool($value),
-            'null' => null === $value,
-            'object' => is_object($value),
-            default => true,
-        };
     }
 }

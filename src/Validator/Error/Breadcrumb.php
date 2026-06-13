@@ -6,12 +6,6 @@ namespace Duyler\OpenApi\Validator\Error;
 
 use function count;
 
-/**
- * Immutable breadcrumb for tracking validation error paths
- *
- * Uses JSON Pointer format (RFC 6901) for path representation.
- * Example: ["users", "0", "name"] -> "/users/0/name"
- */
 final readonly class Breadcrumb
 {
     /**
@@ -23,9 +17,10 @@ final readonly class Breadcrumb
 
     public function append(string $segment): self
     {
-        $newSegments = [...$this->segments, $segment];
+        $segments = $this->segments;
+        $segments[] = $segment;
 
-        return new self($newSegments);
+        return new self($segments);
     }
 
     public function appendIndex(int $index): self
@@ -33,11 +28,6 @@ final readonly class Breadcrumb
         return $this->append((string) $index);
     }
 
-    /**
-     * Convert to JSON Pointer format
-     *
-     * Example: ["users", "0", "name"] -> "/users/0/name"
-     */
     public function toString(): string
     {
         if ([] === $this->segments) {

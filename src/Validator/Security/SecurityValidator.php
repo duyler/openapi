@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Security;
 
-use Duyler\OpenApi\Schema\Model\SecurityRequirement;
 use Duyler\OpenApi\Schema\Model\SecurityScheme;
+use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
 use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Psr\Http\Message\ServerRequestInterface;
@@ -16,21 +16,12 @@ use function strtolower;
 
 final readonly class SecurityValidator
 {
-    /**
-     * @param SecurityRequirement $securityRequirements resolved security requirements (operation-level or global)
-     * @param array<string, SecurityScheme> $securitySchemes security schemes from components
-     */
-    public function validate(
-        ServerRequestInterface $request,
-        string $path,
-        string $method,
-        SecurityRequirement $securityRequirements,
-        array $securitySchemes,
-    ): void {
+    public function validate(SecurityValidationContext $context): void
+    {
         $allErrors = [];
 
-        foreach ($securityRequirements->requirements as $requirementAlternatives) {
-            $errors = $this->validateRequirement($request, $requirementAlternatives, $securitySchemes);
+        foreach ($context->securityRequirements->requirements as $requirementAlternatives) {
+            $errors = $this->validateRequirement($context->request, $requirementAlternatives, $context->securitySchemes);
 
             if ([] === $errors) {
                 return;
@@ -43,8 +34,8 @@ final readonly class SecurityValidator
             throw new ValidationException(
                 message: sprintf(
                     'Security validation failed for %s %s',
-                    strtoupper($method),
-                    $path,
+                    strtoupper($context->method),
+                    $context->path,
                 ),
                 errors: $allErrors,
             );

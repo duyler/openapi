@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Response;
 
 use Duyler\OpenApi\Validator\Response\StreamingContentParser;
+use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 
 #[CoversClass(StreamingContentParser::class)]
 final class StreamingContentParserTest extends TestCase
@@ -369,5 +371,312 @@ final class StreamingContentParserTest extends TestCase
         $parser = new StreamingContentParser($logger);
 
         $parser->parseServerSentEvents("event: test\ndata: {\"key\":\"value\"}\n\n");
+    }
+
+    #[Test]
+    public function parse_json_lines_with_crlf_line_endings(): void
+    {
+        $body = "{\"a\":1}\r\n{\"b\":2}";
+
+        $result = $this->parser->parseJsonLines($body);
+
+        self::assertCount(2, $result);
+        self::assertSame(['a' => 1], $result[0]);
+        self::assertSame(['b' => 2], $result[1]);
+    }
+
+    #[Test]
+    public function parse_json_lines_with_mixed_line_endings(): void
+    {
+        $body = "{\"a\":1}\r\n{\"b\":2}\n{\"c\":3}";
+
+        $result = $this->parser->parseJsonLines($body);
+
+        self::assertCount(3, $result);
+        self::assertSame(['a' => 1], $result[0]);
+        self::assertSame(['b' => 2], $result[1]);
+        self::assertSame(['c' => 3], $result[2]);
+    }
+
+    #[Test]
+    public function parse_json_lines_crlf_via_parse_method(): void
+    {
+        $body = "{\"a\":1}\r\n{\"b\":2}";
+
+        $result = $this->parser->parse($body, 'application/jsonl');
+
+        self::assertCount(2, $result);
+        self::assertSame(['a' => 1], $result[0]);
+        self::assertSame(['b' => 2], $result[1]);
+    }
+
+    #[Test]
+    public function parse_json_lines_crlf_with_invalid_line(): void
+    {
+        $body = "{\"valid\":true}\r\ninvalid json\r\n{\"also\":\"valid\"}";
+
+        $result = $this->parser->parse($body, 'application/x-ndjson');
+
+        self::assertCount(3, $result);
+        self::assertSame(['valid' => true], $result[0]);
+        self::assertNull($result[1]);
+        self::assertSame(['also' => 'valid'], $result[2]);
+    }
+
+    #[Test]
+    public function parse_json_seq_without_leading_record_separator(): void
+    {
+        $body = "{\"a\":1}\x1E{\"b\":2}";
+
+        $result = $this->parser->parseJsonSeq($body);
+
+        self::assertCount(2, $result);
+        self::assertSame(['a' => 1], $result[0]);
+        self::assertSame(['b' => 2], $result[1]);
+    }
+
+    #[Test]
+    public function parse_json_seq_without_leading_rs_via_parse_method(): void
+    {
+        $body = "{\"a\":1}\x1E{\"b\":2}";
+
+        $result = $this->parser->parse($body, 'application/json-seq');
+
+        self::assertCount(2, $result);
+        self::assertSame(['a' => 1], $result[0]);
+        self::assertSame(['b' => 2], $result[1]);
+    }
+
+    #[Test]
+    public function parse_json_seq_without_leading_rs_with_invalid(): void
+    {
+        $body = "{\"valid\":true}\x1Einvalid\x1E{\"also\":\"valid\"}";
+
+        $result = $this->parser->parseJsonSeq($body);
+
+        self::assertCount(3, $result);
+        self::assertSame(['valid' => true], $result[0]);
+        self::assertNull($result[1]);
+        self::assertSame(['also' => 'valid'], $result[2]);
+    }
+
+    #[Test]
+    public function parse_stream_jsonl_matches_parse(): void
+    {
+        $body = "{\"id\":1,\"name\":\"Alice\"}\n{\"id\":2,\"name\":\"Bob\"}\n{\"id\":3,\"name\":\"Charlie\"}";
+
+        $expected = $this->parser->parse($body, 'application/jsonl');
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $result = $this->parser->parseStream($stream, 'application/jsonl');
+
+        self::assertSame($expected, $result);
+        self::assertCount(3, $result);
+    }
+
+    #[Test]
+    public function parse_stream_ndjson_matches_parse(): void
+    {
+        $body = '{"name":"item1","count":10}' . "\n" . '{"name":"item2","count":20}';
+
+        $expected = $this->parser->parse($body, 'application/x-ndjson');
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $result = $this->parser->parseStream($stream, 'application/x-ndjson');
+
+        self::assertSame($expected, $result);
+    }
+
+    #[Test]
+    public function parse_stream_sse_matches_parse(): void
+    {
+        $body = "event: message\n"
+            . "data: {\"message\":\"hello\",\"count\":1}\n\n"
+            . "event: update\n"
+            . "data: {\"message\":\"world\",\"count\":2}\n";
+
+        $expected = $this->parser->parse($body, 'text/event-stream');
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $result = $this->parser->parseStream($stream, 'text/event-stream');
+
+        self::assertSame($expected, $result);
+    }
+
+    #[Test]
+    public function parse_stream_sse_with_id_matches_parse(): void
+    {
+        $body = "id: 123\nevent: message\ndata: {\"message\":\"test\",\"count\":1}\n\n";
+
+        $expected = $this->parser->parse($body, 'text/event-stream');
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $result = $this->parser->parseStream($stream, 'text/event-stream');
+
+        self::assertSame($expected, $result);
+    }
+
+    #[Test]
+    public function parse_stream_sse_ignores_comments(): void
+    {
+        $body = ": this is a comment\nevent: message\ndata: {\"message\":\"hello\",\"count\":1}\n\n";
+
+        $expected = $this->parser->parse($body, 'text/event-stream');
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $result = $this->parser->parseStream($stream, 'text/event-stream');
+
+        self::assertSame($expected, $result);
+    }
+
+    #[Test]
+    public function parse_stream_json_seq_matches_parse(): void
+    {
+        $body = "\x1E{\"id\":\"1\",\"value\":\"first\"}\x1E{\"id\":\"2\",\"value\":\"second\"}";
+
+        $expected = $this->parser->parse($body, 'application/json-seq');
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $result = $this->parser->parseStream($stream, 'application/json-seq');
+
+        self::assertSame($expected, $result);
+    }
+
+    #[Test]
+    public function parse_stream_jsonl_empty_body(): void
+    {
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream('');
+
+        $result = $this->parser->parseStream($stream, 'application/jsonl');
+
+        self::assertSame([], $result);
+    }
+
+    #[Test]
+    public function parse_stream_jsonl_empty_lines_ignored(): void
+    {
+        $body = "{\"valid\":true}\n\n{\"also\":\"valid\"}";
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $result = $this->parser->parseStream($stream, 'application/jsonl');
+
+        self::assertCount(2, $result);
+    }
+
+    #[Test]
+    public function parse_stream_jsonl_with_invalid_line(): void
+    {
+        $body = "{\"valid\":true}\ninvalid json\n{\"also\":\"valid\"}";
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $result = $this->parser->parseStream($stream, 'application/jsonl');
+
+        self::assertCount(3, $result);
+        self::assertSame(['valid' => true], $result[0]);
+        self::assertNull($result[1]);
+        self::assertSame(['also' => 'valid'], $result[2]);
+    }
+
+    #[Test]
+    public function parse_stream_non_streaming_type_returns_empty(): void
+    {
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream('{"foo":"bar"}');
+
+        $result = $this->parser->parseStream($stream, 'application/json');
+
+        self::assertSame([], $result);
+    }
+
+    #[Test]
+    public function parse_stream_large_ndjson_across_chunks(): void
+    {
+        $items = [];
+        for ($i = 0; $i < 100; $i++) {
+            $items[] = '{"id":' . $i . ',"name":"item-' . str_repeat('x', 100) . '"}';
+        }
+        $body = implode("\n", $items);
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $result = $this->parser->parseStream($stream, 'application/jsonl');
+
+        self::assertCount(100, $result);
+        self::assertSame(['id' => 0, 'name' => 'item-' . str_repeat('x', 100)], $result[0]);
+        self::assertSame(['id' => 99, 'name' => 'item-' . str_repeat('x', 100)], $result[99]);
+    }
+
+    #[Test]
+    public function parse_stream_jsonl_throws_on_line_exceeding_max_length(): void
+    {
+        $body = str_repeat('x', 1_048_577);
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('exceeds maximum allowed length');
+
+        $this->parser->parseStream($stream, 'application/jsonl');
+    }
+
+    #[Test]
+    public function parse_stream_sse_throws_on_line_exceeding_max_length(): void
+    {
+        $body = 'data: ' . str_repeat('x', 1_048_577);
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('exceeds maximum allowed length');
+
+        $this->parser->parseStream($stream, 'text/event-stream');
+    }
+
+    #[Test]
+    public function parse_stream_json_seq_throws_on_line_exceeding_max_length(): void
+    {
+        $body = str_repeat('x', 1_048_577);
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('exceeds maximum allowed length');
+
+        $this->parser->parseStream($stream, 'application/json-seq');
+    }
+
+    #[Test]
+    public function parse_stream_jsonl_allows_line_at_exact_max_length(): void
+    {
+        $body = str_repeat('x', 1_048_576);
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $result = $this->parser->parseStream($stream, 'application/jsonl');
+
+        self::assertCount(1, $result);
+        self::assertNull($result[0]);
     }
 }

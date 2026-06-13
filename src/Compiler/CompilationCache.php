@@ -10,20 +10,28 @@ use Duyler\OpenApi\Schema\Model\Xml;
 use Override;
 use Psr\Cache\CacheItemPoolInterface;
 
+use WeakMap;
+
 use function is_string;
 
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
 
-final readonly class CompilationCache implements CompilationCacheInterface
+final class CompilationCache implements CompilationCacheInterface
 {
     private const int DEFAULT_CACHE_TTL = 86400;
+
+    /** @var WeakMap<Schema, string> */
+    private WeakMap $hashCache;
 
     public function __construct(
         private readonly CacheItemPoolInterface $pool,
         private readonly string $namespace = 'validator_compilation',
-    ) {}
+    ) {
+        /** @var WeakMap<Schema, string> */
+        $this->hashCache = new WeakMap();
+    }
 
     #[Override]
     public function get(string $schemaHash): ?string
@@ -62,9 +70,17 @@ final readonly class CompilationCache implements CompilationCacheInterface
 
     private function calculateSchemaHash(Schema $schema): string
     {
-        $data = $this->schemaToArray($schema);
+        if ($this->hashCache->offsetExists($schema)) {
+            /** @var string */
+            return $this->hashCache[$schema];
+        }
 
-        return hash('sha256', json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+        $data = $this->schemaToArray($schema);
+        $hash = hash('sha256', json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+
+        $this->hashCache[$schema] = $hash;
+
+        return $hash;
     }
 
     private function schemaToArray(Schema $schema): array

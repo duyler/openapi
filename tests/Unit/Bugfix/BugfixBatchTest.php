@@ -43,6 +43,7 @@ use NumberTypeValidatorB19;
 use PatternExportValidatorB13;
 use UnicodeLengthValidatorB12;
 use Duyler\OpenApi\Schema\Model\Components;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use stdClass;
 
@@ -57,14 +58,16 @@ final class BugfixBatchTest extends TestCase
         $formatRegistry = BuiltinFormats::create();
 
         $validator = new ResponseValidatorWithContext(
-            pool: $pool,
             document: new OpenApiDocument(
                 openapi: '3.0.3',
                 info: new InfoObject(title: 'Test', version: '1.0.0'),
             ),
-            statelessValidators: new StatelessValidatorRegistry($pool, $formatRegistry),
-            refResolver: new RefResolver(),
-            formatRegistry: $formatRegistry,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $pool,
+                refResolver: new RefResolver(),
+                statelessValidators: new StatelessValidatorRegistry($pool, $formatRegistry),
+                formatRegistry: $formatRegistry,
+            ),
         );
 
         $factory = new Psr17Factory();
@@ -85,14 +88,16 @@ final class BugfixBatchTest extends TestCase
         $formatRegistry = BuiltinFormats::create();
 
         $validator = new ResponseValidatorWithContext(
-            pool: $pool,
             document: new OpenApiDocument(
                 openapi: '3.0.3',
                 info: new InfoObject(title: 'Test', version: '1.0.0'),
             ),
-            statelessValidators: new StatelessValidatorRegistry($pool, $formatRegistry),
-            refResolver: new RefResolver(),
-            formatRegistry: $formatRegistry,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $pool,
+                refResolver: new RefResolver(),
+                statelessValidators: new StatelessValidatorRegistry($pool, $formatRegistry),
+                formatRegistry: $formatRegistry,
+            ),
         );
 
         $factory = new Psr17Factory();
@@ -114,14 +119,16 @@ final class BugfixBatchTest extends TestCase
         $formatRegistry = BuiltinFormats::create();
 
         $validator = new ResponseValidatorWithContext(
-            pool: $pool,
             document: new OpenApiDocument(
                 openapi: '3.0.3',
                 info: new InfoObject(title: 'Test', version: '1.0.0'),
             ),
-            statelessValidators: new StatelessValidatorRegistry($pool, $formatRegistry),
-            refResolver: new RefResolver(),
-            formatRegistry: $formatRegistry,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $pool,
+                refResolver: new RefResolver(),
+                statelessValidators: new StatelessValidatorRegistry($pool, $formatRegistry),
+                formatRegistry: $formatRegistry,
+            ),
         );
 
         $factory = new Psr17Factory();

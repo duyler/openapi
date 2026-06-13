@@ -14,16 +14,17 @@ use Duyler\OpenApi\Validator\Validation\SchemaValidatorAdapter;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use ReflectionProperty;
 use WeakMap;
 
 use stdClass;
+use Duyler\OpenApi\Test\Unit\Helper\ValidatorDependenciesAccessTrait;
 
 use function assert;
 
 /** @internal */
 final class OpenApiValidatorResetTest extends TestCase
 {
+    use ValidatorDependenciesAccessTrait;
     private const string YAML = <<<YAML
 openapi: 3.2.0
 info:
@@ -125,7 +126,7 @@ YAML;
             ->fromYamlString(self::YAML)
             ->build();
 
-        $refResolver = self::readProperty($validator, OpenApiValidator::class, 'refResolver');
+        $refResolver = self::readDependenciesProperty($validator, 'refResolver');
 
         $factory = new Psr17Factory();
 
@@ -239,12 +240,12 @@ YAML;
             ->build();
 
         $poolBefore = $validator->getPool();
-        $refResolverBefore = self::readProperty($validator, OpenApiValidator::class, 'refResolver');
+        $refResolverBefore = self::readDependenciesProperty($validator, 'refResolver');
 
         $validator->reset();
 
         $poolAfter = $validator->getPool();
-        $refResolverAfter = self::readProperty($validator, OpenApiValidator::class, 'refResolver');
+        $refResolverAfter = self::readDependenciesProperty($validator, 'refResolver');
 
         $this->assertSame($poolBefore, $poolAfter, 'Pool instance should remain the same after reset()');
         $this->assertSame($refResolverBefore, $refResolverAfter, 'RefResolver instance should remain the same after reset()');
@@ -279,15 +280,8 @@ YAML;
 
     private static function readSchemaValidator(OpenApiValidator $validator): SchemaValidator
     {
-        $schemaValidation = self::readProperty($validator, OpenApiValidator::class, 'schemaValidation');
+        $schemaValidation = self::readDependenciesProperty($validator, 'schemaValidation');
 
         return self::readProperty($schemaValidation, SchemaValidatorAdapter::class, 'schemaValidator');
-    }
-
-    private static function readProperty(object $object, string $class, string $property): object
-    {
-        $prop = new ReflectionProperty($class, $property);
-
-        return $prop->getValue($object);
     }
 }

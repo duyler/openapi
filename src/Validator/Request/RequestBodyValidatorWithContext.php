@@ -6,57 +6,52 @@ namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\OpenApiDocument;
-use Duyler\OpenApi\Validator\EmptyArrayStrategy;
-use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
-use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
+use Duyler\OpenApi\Validator\Dto\CoercionContext;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MissingRequestBodyException;
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
-use Duyler\OpenApi\Validator\Format\FormatRegistry;
-use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
-use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
+use Duyler\OpenApi\Validator\Example\ExampleValidator;
+use Duyler\OpenApi\Validator\Example\ValidatesExamplesTrait;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
-use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\TypeGuarantor;
 use Duyler\OpenApi\Validator\ValidatorMode;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
-use Psr\EventDispatcher\EventDispatcherInterface;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
 final readonly class RequestBodyValidatorWithContext implements RequestBodyValidatorInterface
 {
+    use ValidatesExamplesTrait;
+
     private SchemaValidator $regularSchemaValidator;
     private SchemaValidatorWithContext $contextSchemaValidator;
     private RequestBodyCoercer $coercer;
-    private readonly FormatRegistry $formatRegistry;
-    private readonly LoggerInterface $logger;
-    private readonly ErrorFormatterInterface $errorFormatter;
+    private readonly ContentTypeNegotiator $negotiator;
+    private readonly ExampleValidator $exampleValidator;
 
     public function __construct(
-        private readonly ValidatorPool $pool,
         private readonly OpenApiDocument $document,
-        private readonly BodyParser $bodyParser,
-        StatelessValidatorRegistry $statelessValidators,
-        private readonly RefResolverInterface $refResolver,
-        FormatRegistry $formatRegistry,
-        private readonly ContentTypeNegotiator $negotiator = new ContentTypeNegotiator(),
-        private readonly bool $nullableAsType = true,
-        private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
-        private readonly bool $coercion = false,
-        private readonly bool $reportDeprecated = false,
-        ?LoggerInterface $logger = null,
-        private readonly ?EventDispatcherInterface $eventDispatcher = null,
-        ?ErrorFormatterInterface $errorFormatter = null,
+        private readonly SchemaValidatorDependencies $dependencies,
+        private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
     ) {
-        $this->formatRegistry = $formatRegistry;
-        $this->logger = $logger ?? new NullLogger();
-        $this->errorFormatter = $errorFormatter ?? SimpleFormatter::shared();
-        $this->regularSchemaValidator = new SchemaValidator($this->pool, $this->formatRegistry, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
+        $this->negotiator = new ContentTypeNegotiator();
+        $this->exampleValidator = new ExampleValidator();
+        $effectiveFormatRegistry = $this->dependencies->formatRegistry;
 
-        $this->contextSchemaValidator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $statelessValidators, $this->nullableAsType, $this->emptyArrayStrategy, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher, errorFormatter: $this->errorFormatter);
+        $this->regularSchemaValidator = new SchemaValidator(
+            $this->dependencies->pool,
+            $effectiveFormatRegistry,
+            reportDeprecated: $this->configuration->reportDeprecated,
+            logger: $this->dependencies->logger,
+            eventDispatcher: $this->dependencies->eventDispatcher,
+        );
+
+        $this->contextSchemaValidator = new SchemaValidatorWithContext(
+            $this->document,
+            $this->dependencies,
+            $this->configuration,
+        );
         $this->coercer = new RequestBodyCoercer();
     }
 
@@ -93,37 +88,65 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
             throw new UnsupportedMediaTypeException($mediaType, array_keys($requestBody->content->mediaTypes));
         }
 
-        $parsedBody = $this->bodyParser->parse($body, $mediaType);
+        $parsedBody = $this->dependencies->bodyParser->parse($body, $mediaType);
 
-        if ($this->coercion && null !== $content->schema) {
+        if ($this->configuration->coercion && null !== $content->schema) {
             $schema = $content->schema;
 
             if (null !== $schema->ref) {
-                $schema = $this->refResolver->resolve($schema->ref, $this->document);
+                $schema = $this->dependencies->refResolver->resolve($schema->ref, $this->document);
             }
 
+            $coercionContext = new CoercionContext(
+                schema: $schema,
+                enabled: true,
+                strict: true,
+                nullableAsType: $this->configuration->nullableAsType,
+            );
+
             /** @var array|int|string|float|bool|null $parsedBody */
-            $parsedBody = $this->coercer->coerce($parsedBody, $schema, true, true, $this->nullableAsType);
-            $parsedBody = TypeGuarantor::ensureValidType($parsedBody, $this->nullableAsType);
+            $parsedBody = $this->coercer->coerce($parsedBody, $coercionContext);
+            $parsedBody = TypeGuarantor::ensureValidType($parsedBody, $this->configuration->nullableAsType);
         }
 
         if (null !== $content->schema) {
             $schema = $content->schema;
 
             if (null !== $schema->ref) {
-                $schema = $this->refResolver->resolve($schema->ref, $this->document);
+                $schema = $this->dependencies->refResolver->resolve($schema->ref, $this->document);
             }
 
-            $hasDiscriminator = null !== $schema->discriminator || $this->refResolver->schemaHasDiscriminator($schema, $this->document);
+            $hasDiscriminator = null !== $schema->discriminator
+                || $this->dependencies->refResolver->schemaHasDiscriminator($schema, $this->document);
 
             if (false === $hasDiscriminator) {
-                $context = ValidationContext::create($this->pool, $this->errorFormatter, $this->nullableAsType, $this->emptyArrayStrategy, ValidatorMode::Request);
+                $context = ValidationContext::create(
+                    $this->dependencies->pool,
+                    $this->dependencies->errorFormatter,
+                    $this->configuration->nullableAsType,
+                    $this->configuration->emptyArrayStrategy,
+                    ValidatorMode::Request,
+                );
                 $this->regularSchemaValidator->validate($parsedBody, $schema, $context);
+
+                $this->dispatchExampleWarnings(
+                    $parsedBody,
+                    $content,
+                    $this->exampleValidator,
+                    $this->dependencies->eventDispatcher,
+                );
 
                 return;
             }
 
-            $this->contextSchemaValidator->validate($parsedBody, $schema, true, ValidatorMode::Request);
+            $this->contextSchemaValidator->validate($parsedBody, $schema, ValidatorMode::Request);
+
+            $this->dispatchExampleWarnings(
+                $parsedBody,
+                $content,
+                $this->exampleValidator,
+                $this->dependencies->eventDispatcher,
+            );
         }
     }
 }

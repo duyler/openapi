@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Response;
 
 use JsonException;
+use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use RuntimeException;
 
 use function assert;
 use function is_array;
 use function is_null;
 use function is_scalar;
+use function sprintf;
 use function strlen;
+use function trim;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -20,6 +24,8 @@ final readonly class StreamingContentParser
 {
     private const string RECORD_SEPARATOR = "\x1E";
     private const int JSON_MAX_DEPTH = 512;
+    private const int STREAM_CHUNK_SIZE = 8192;
+    private const int MAX_LINE_LENGTH = 1_048_576;
 
     public function __construct(
         private readonly LoggerInterface $logger = new NullLogger(),
@@ -42,30 +48,35 @@ final readonly class StreamingContentParser
     }
 
     /**
+     * Parse a PSR-7 stream in chunks without loading the entire body into memory.
+     *
+     * @return list<array<int|string, mixed>|null>
+     */
+    public function parseStream(StreamInterface $stream, string $contentType): array
+    {
+        return match (true) {
+            str_contains($contentType, 'application/jsonl'),
+            str_contains($contentType, 'application/x-ndjson') => $this->parseJsonLinesFromStream($stream),
+            str_contains($contentType, 'text/event-stream') => $this->parseServerSentEventsFromStream($stream),
+            str_contains($contentType, 'application/json-seq') => $this->parseJsonSeqFromStream($stream),
+            default => [],
+        };
+    }
+
+    /**
      * Parse JSON Lines (NDJSON) format
      *
      * @return list<array<int|string, mixed>|null>
      */
     public function parseJsonLines(string $body): array
     {
-        $lines = explode("\n", trim($body));
+        $lines = preg_split('/\r?\n/', trim($body));
+        assert(is_array($lines));
         /** @var list<array<int|string, mixed>|null> $items */
         $items = [];
 
         foreach ($lines as $line) {
-            if ('' !== trim($line)) {
-                try {
-                    /** @var array<int|string, mixed> $decoded */
-                    $decoded = json_decode($line, true, self::JSON_MAX_DEPTH, JSON_THROW_ON_ERROR);
-                    $items[] = $decoded;
-                } catch (JsonException $exception) {
-                    $this->logger->warning('Failed to parse JSON line in NDJSON stream', [
-                        'line' => $line,
-                        'exception' => $exception,
-                    ]);
-                    $items[] = null;
-                }
-            }
+            $this->appendJsonLine($items, $line);
         }
 
         return $items;
@@ -136,21 +147,210 @@ final readonly class StreamingContentParser
             $json = trim($json);
 
             if ('' !== $json) {
-                try {
-                    /** @var array<int|string, mixed> $decoded */
-                    $decoded = json_decode($json, true, self::JSON_MAX_DEPTH, JSON_THROW_ON_ERROR);
-                    $items[] = $decoded;
-                } catch (JsonException $exception) {
-                    $this->logger->warning('Failed to parse JSON sequence item', [
-                        'json' => $json,
-                        'exception' => $exception,
-                    ]);
-                    $items[] = null;
-                }
+                $this->appendJsonSeqItem($items, $json);
             }
 
             $pos = $endPos;
         }
+
+        return $items;
+    }
+
+    /**
+     * @param list<array<int|string, mixed>|null> $items
+     */
+    private function appendJsonLine(array &$items, string $line): void
+    {
+        if ('' === trim($line)) {
+            return;
+        }
+
+        try {
+            /** @var array<int|string, mixed> $decoded */
+            $decoded = json_decode($line, true, self::JSON_MAX_DEPTH, JSON_THROW_ON_ERROR);
+            $items[] = $decoded;
+        } catch (JsonException $exception) {
+            $this->logger->warning('Failed to parse JSON line in NDJSON stream', [
+                'line' => $line,
+                'exception' => $exception,
+            ]);
+            $items[] = null;
+        }
+    }
+
+    /**
+     * @param list<array<int|string, mixed>|null> $items
+     */
+    private function appendJsonSeqItem(array &$items, string $json): void
+    {
+        $json = trim($json);
+
+        if ('' === $json) {
+            return;
+        }
+
+        try {
+            /** @var array<int|string, mixed> $decoded */
+            $decoded = json_decode($json, true, self::JSON_MAX_DEPTH, JSON_THROW_ON_ERROR);
+            $items[] = $decoded;
+        } catch (JsonException $exception) {
+            $this->logger->warning('Failed to parse JSON sequence item', [
+                'json' => $json,
+                'exception' => $exception,
+            ]);
+            $items[] = null;
+        }
+    }
+
+    /**
+     * @return list<array<int|string, mixed>|null>
+     */
+    private function parseJsonLinesFromStream(StreamInterface $stream): array
+    {
+        /** @var list<array<int|string, mixed>|null> $items */
+        $items = [];
+        $buffer = '';
+
+        while (!$stream->eof()) {
+            $chunk = $stream->read(self::STREAM_CHUNK_SIZE);
+
+            if ('' === $chunk) {
+                break;
+            }
+
+            $buffer .= $chunk;
+
+            if (strlen($buffer) > self::MAX_LINE_LENGTH) {
+                throw new RuntimeException(sprintf(
+                    'Stream line exceeds maximum allowed length of %d bytes',
+                    self::MAX_LINE_LENGTH,
+                ));
+            }
+
+            $lines = preg_split('/\r?\n/', $buffer);
+            assert(is_array($lines));
+
+            $buffer = array_pop($lines);
+
+            foreach ($lines as $line) {
+                $this->appendJsonLine($items, $line);
+            }
+        }
+
+        $this->appendJsonLine($items, $buffer);
+
+        return $items;
+    }
+
+    /**
+     * @return list<array<int|string, mixed>|null>
+     */
+    private function parseServerSentEventsFromStream(StreamInterface $stream): array
+    {
+        /** @var list<array<int|string, mixed>|null> $events */
+        $events = [];
+        $buffer = '';
+        $currentEvent = [];
+
+        while (!$stream->eof()) {
+            $chunk = $stream->read(self::STREAM_CHUNK_SIZE);
+
+            if ('' === $chunk) {
+                break;
+            }
+
+            $buffer .= $chunk;
+
+            if (strlen($buffer) > self::MAX_LINE_LENGTH) {
+                throw new RuntimeException(sprintf(
+                    'Stream line exceeds maximum allowed length of %d bytes',
+                    self::MAX_LINE_LENGTH,
+                ));
+            }
+
+            $lines = explode("\n", $buffer);
+
+            $buffer = array_pop($lines);
+
+            foreach ($lines as $line) {
+                $this->processSseLine($line, $currentEvent, $events);
+            }
+        }
+
+        foreach (explode("\n", $buffer) as $line) {
+            $this->processSseLine($line, $currentEvent, $events);
+        }
+
+        if ([] !== $currentEvent) {
+            $events[] = $this->formatSseEvent($currentEvent);
+        }
+
+        return $events;
+    }
+
+    /**
+     * @param array<string, string> $currentEvent
+     * @param list<array<int|string, mixed>|null> $events
+     */
+    private function processSseLine(string $line, array &$currentEvent, array &$events): void
+    {
+        if ('' === $line) {
+            if ([] !== $currentEvent) {
+                $events[] = $this->formatSseEvent($currentEvent);
+                $currentEvent = [];
+            }
+
+            return;
+        }
+
+        if (str_starts_with($line, ':')) {
+            return;
+        }
+
+        $colonPos = strpos($line, ':');
+
+        if (false !== $colonPos) {
+            $field = substr($line, 0, $colonPos);
+            $value = ltrim(substr($line, $colonPos + 1));
+            $currentEvent[$field] = $value;
+        }
+    }
+
+    /**
+     * @return list<array<int|string, mixed>|null>
+     */
+    private function parseJsonSeqFromStream(StreamInterface $stream): array
+    {
+        /** @var list<array<int|string, mixed>|null> $items */
+        $items = [];
+        $buffer = '';
+
+        while (!$stream->eof()) {
+            $chunk = $stream->read(self::STREAM_CHUNK_SIZE);
+
+            if ('' === $chunk) {
+                break;
+            }
+
+            $buffer .= $chunk;
+
+            if (strlen($buffer) > self::MAX_LINE_LENGTH) {
+                throw new RuntimeException(sprintf(
+                    'Stream line exceeds maximum allowed length of %d bytes',
+                    self::MAX_LINE_LENGTH,
+                ));
+            }
+
+            $records = explode(self::RECORD_SEPARATOR, $buffer);
+
+            $buffer = array_pop($records);
+
+            foreach ($records as $record) {
+                $this->appendJsonSeqItem($items, $record);
+            }
+        }
+
+        $this->appendJsonSeqItem($items, $buffer);
 
         return $items;
     }

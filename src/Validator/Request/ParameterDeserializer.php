@@ -13,9 +13,6 @@ use function assert;
 
 final readonly class ParameterDeserializer
 {
-    /**
-     * Deserialize parameter value based on style
-     */
     public function deserialize(mixed $value, Parameter $param): array|int|string|float|bool
     {
         $normalized = SchemaValueNormalizer::normalize($value);

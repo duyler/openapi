@@ -288,7 +288,8 @@ class DeprecatedValidatorTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create(pool: $this->pool)->withBreadcrumb('root');
+        $context = ValidationContext::create(pool: $this->pool);
+        $context->enterBreadcrumb('root');
 
         $validator->validate(['oldField' => 'value'], $schema, $context);
 
@@ -315,5 +316,72 @@ class DeprecatedValidatorTest extends TestCase
         $validator->validate(['oldField' => 'value'], $schema);
 
         $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function warning_includes_schema_ref(): void
+    {
+        $warningReceived = null;
+
+        $dispatcher = new ArrayDispatcher([
+            ValidationWarningEvent::class => [
+                function (ValidationWarningEvent $event) use (&$warningReceived): void {
+                    $warningReceived = $event;
+                },
+            ],
+        ]);
+
+        $validator = new DeprecatedValidator(
+            pool: $this->pool,
+            formatRegistry: BuiltinFormats::create(),
+            reportDeprecated: true,
+            eventDispatcher: $dispatcher,
+        );
+
+        $schema = new Schema(
+            ref: '#/components/schemas/User',
+            type: 'object',
+            properties: [
+                'oldField' => new Schema(type: 'string', deprecated: true),
+            ],
+        );
+
+        $validator->validate(['oldField' => 'value'], $schema);
+
+        self::assertNotNull($warningReceived);
+        self::assertSame('#/components/schemas/User', $warningReceived->schemaRef);
+    }
+
+    #[Test]
+    public function warning_schema_ref_is_null_when_schema_has_no_ref(): void
+    {
+        $warningReceived = null;
+
+        $dispatcher = new ArrayDispatcher([
+            ValidationWarningEvent::class => [
+                function (ValidationWarningEvent $event) use (&$warningReceived): void {
+                    $warningReceived = $event;
+                },
+            ],
+        ]);
+
+        $validator = new DeprecatedValidator(
+            pool: $this->pool,
+            formatRegistry: BuiltinFormats::create(),
+            reportDeprecated: true,
+            eventDispatcher: $dispatcher,
+        );
+
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'oldField' => new Schema(type: 'string', deprecated: true),
+            ],
+        );
+
+        $validator->validate(['oldField' => 'value'], $schema);
+
+        self::assertNotNull($warningReceived);
+        self::assertNull($warningReceived->schemaRef);
     }
 }

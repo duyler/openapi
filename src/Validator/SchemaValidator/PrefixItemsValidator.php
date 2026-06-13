@@ -38,8 +38,18 @@ final readonly class PrefixItemsValidator extends AbstractSchemaValidator
             try {
                 $allowNull = $schema->prefixItems[$i]->nullable && $nullableAsType;
                 $value = SchemaValueNormalizer::normalize($data[$i], $allowNull);
-                $indexContext = $context?->withBreadcrumbIndex($i) ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
-                $validator->validate($value, $schema->prefixItems[$i], $indexContext);
+
+                if (null === $context) {
+                    $context = ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
+                }
+
+                $context->enterBreadcrumbIndex($i);
+
+                try {
+                    $validator->validate($value, $schema->prefixItems[$i], $context);
+                } finally {
+                    $context->leaveBreadcrumb();
+                }
             } catch (InvalidDataTypeException $e) {
                 throw new ValidationException(
                     sprintf('Item at index %d has invalid data type: %s', $i, $e->getMessage()),

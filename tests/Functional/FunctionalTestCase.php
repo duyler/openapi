@@ -14,6 +14,8 @@ use Duyler\OpenApi\Validator\Error\Formatter\JsonFormatter;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
@@ -93,10 +95,13 @@ abstract class FunctionalTestCase extends TestCase
     protected function createValidator(): SchemaValidatorWithContext
     {
         return new SchemaValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
+            document: $this->document,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $this->pool,
+                refResolver: $this->refResolver,
+                statelessValidators: $this->statelessValidators,
+            ),
+            configuration: new ValidatorConfiguration(),
         );
     }
 

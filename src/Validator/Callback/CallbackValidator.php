@@ -26,15 +26,15 @@ final readonly class CallbackValidator
         string $callbackName,
         OpenApiDocument $document,
     ): void {
-        $callbacks = $this->findCallbacks($callbackName, $document);
-        $operation = $this->extractOperation($request, $callbackName, $callbacks);
+        $pathItems = $this->findCallbacks($callbackName, $document);
+        $operation = $this->extractOperation($request, $callbackName, $pathItems);
 
         $requestPath = $request->getUri()->getPath();
         $this->requestValidator->validate($request, $operation, $requestPath);
     }
 
     /**
-     * @return array<string, PathItem|array<string, PathItem>>
+     * @return array<string, PathItem>
      */
     private function findCallbacks(string $callbackName, OpenApiDocument $document): array
     {
@@ -44,24 +44,36 @@ final readonly class CallbackValidator
             /** @var Callbacks $callback */
             $callback = $operationCallbacks[$callbackName];
 
-            if (isset($callback->callbacks[$callbackName])) {
-                return $callback->callbacks[$callbackName];
-            }
-
-            return $callback->callbacks;
+            return $this->flattenPathItems($callback);
         }
 
         throw new UnknownCallbackException($callbackName);
     }
 
+    /**
+     * @return array<string, PathItem>
+     */
+    private function flattenPathItems(Callbacks $callbacks): array
+    {
+        $pathItems = [];
+
+        foreach ($callbacks->callbacks as $expression => $items) {
+            foreach ($items as $itemExpression => $pathItem) {
+                $pathItems[$itemExpression] = $pathItem;
+            }
+        }
+
+        return $pathItems;
+    }
+
     private function extractOperation(
         ServerRequestInterface $request,
         string $callbackName,
-        array $callbacks,
+        array $pathItems,
     ): Operation {
         $method = strtolower($request->getMethod());
 
-        foreach ($callbacks as $expression => $pathItem) {
+        foreach ($pathItems as $expression => $pathItem) {
             if (false === $pathItem instanceof PathItem) {
                 continue;
             }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Integration\Validator\Schema;
 
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
@@ -56,7 +57,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
     public function validate_resolves_ref_and_validates_required(): void
     {
         $schema = new Schema(ref: '#/components/schemas/Item');
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = [
             'id' => 1,
@@ -72,7 +73,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
     public function validate_resolves_ref_and_throws_for_missing_required(): void
     {
         $schema = new Schema(ref: '#/components/schemas/Item');
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = [
             'name' => 'Test',
@@ -86,7 +87,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
     public function validate_resolves_ref_and_throws_for_invalid_type(): void
     {
         $schema = new Schema(ref: '#/components/schemas/Item');
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = [
             'id' => 'not-an-integer',
@@ -100,7 +101,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
     public function validate_resolves_ref_and_throws_for_minimum_violation(): void
     {
         $schema = new Schema(ref: '#/components/schemas/Item');
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = [
             'id' => 0,
@@ -120,7 +121,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
                 'id' => new Schema(type: 'integer'),
             ],
         );
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = ['id' => 1];
 
@@ -133,7 +134,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
     public function validate_with_context_resolves_ref_and_validates(): void
     {
         $schema = new Schema(ref: '#/components/schemas/Item');
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
         $context = ValidationContext::create(pool: $this->pool);
 
         $data = [
@@ -149,7 +150,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
     public function validate_with_context_resolves_ref_and_throws_for_missing_required(): void
     {
         $schema = new Schema(ref: '#/components/schemas/Item');
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
         $context = ValidationContext::create(pool: $this->pool);
 
         $data = [];
@@ -168,7 +169,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
             ],
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = [
             'item' => [
@@ -191,7 +192,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
             ],
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = [
             'item' => [
@@ -211,7 +212,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
             items: new Schema(ref: '#/components/schemas/Item'),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = [
             ['id' => 1],
@@ -231,7 +232,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
             items: new Schema(ref: '#/components/schemas/Item'),
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = [
             ['name' => 'Invalid - missing id'],
@@ -255,7 +256,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
             ],
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = [
             'id' => 1,
@@ -277,7 +278,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
             ],
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = ['id' => 1];
 
@@ -296,7 +297,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
             ],
         );
 
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = ['id' => 1];
 
@@ -315,7 +316,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
                 'value' => new Schema(type: 'string'),
             ],
         );
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
         $context = ValidationContext::create(pool: $this->pool);
 
         $data = ['value' => 'test'];
@@ -335,7 +336,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
                 'value' => new Schema(type: 'string'),
             ],
         );
-        $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
         $context = ValidationContext::create(pool: $this->pool);
 
         $data = [];

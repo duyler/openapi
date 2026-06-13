@@ -8,6 +8,8 @@ use Duyler\OpenApi\Event\ValidationErrorEvent;
 use Duyler\OpenApi\Event\ValidationFinishedEvent;
 use Duyler\OpenApi\Event\ValidationStartedEvent;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 use Throwable;
 
 trait EventDispatchingTrait
@@ -20,47 +22,112 @@ trait EventDispatchingTrait
     /**
      * @template T
      *
-     * @param callable(bool $success, float $duration): ValidationFinishedEvent $makeFinishedEvent
-     * @param callable(ValidationException): ValidationErrorEvent $makeErrorEvent
      * @param callable(): T $callback
      *
      * @return T
      */
     private function withValidationEvents(
-        ValidationStartedEvent $startedEvent,
-        callable $makeFinishedEvent,
-        callable $makeErrorEvent,
+        ?ServerRequestInterface $request,
+        ?ResponseInterface $response,
+        string $path,
+        string $method,
         callable $callback,
         ?string $warningMessage = null,
+        ?string $schemaRef = null,
     ): mixed {
         $startTime = microtime(true);
 
-        $this->dispatchValidationEvent($startedEvent);
+        $this->dispatchValidationEvent(
+            new ValidationStartedEvent(
+                request: $request,
+                path: $path,
+                method: $method,
+                response: $response,
+                schemaRef: $schemaRef,
+            ),
+        );
 
         try {
             $result = $callback();
 
             $this->dispatchValidationEvent(
-                $makeFinishedEvent(true, microtime(true) - $startTime),
+                $this->createFinishedEvent(
+                    $request,
+                    $response,
+                    $path,
+                    $method,
+                    true,
+                    microtime(true) - $startTime,
+                    $schemaRef,
+                ),
             );
 
             return $result;
         } catch (ValidationException $e) {
             $duration = microtime(true) - $startTime;
 
-            $this->dispatchValidationEvent($makeFinishedEvent(false, $duration));
+            $this->dispatchValidationEvent(
+                $this->createFinishedEvent(
+                    $request,
+                    $response,
+                    $path,
+                    $method,
+                    false,
+                    $duration,
+                    $schemaRef,
+                ),
+            );
 
             if (null !== $warningMessage) {
                 $this->logger->warning($warningMessage);
             }
 
-            $this->dispatchValidationEvent($makeErrorEvent($e));
+            $this->dispatchValidationEvent(
+                new ValidationErrorEvent(
+                    request: $request,
+                    path: $path,
+                    method: $method,
+                    exception: $e,
+                    response: $response,
+                    schemaRef: $schemaRef,
+                ),
+            );
 
             throw $e;
         } catch (Throwable $e) {
-            $this->dispatchValidationEvent($makeFinishedEvent(false, microtime(true) - $startTime));
+            $this->dispatchValidationEvent(
+                $this->createFinishedEvent(
+                    $request,
+                    $response,
+                    $path,
+                    $method,
+                    false,
+                    microtime(true) - $startTime,
+                    $schemaRef,
+                ),
+            );
 
             throw $e;
         }
+    }
+
+    private function createFinishedEvent(
+        ?ServerRequestInterface $request,
+        ?ResponseInterface $response,
+        string $path,
+        string $method,
+        bool $success,
+        float $duration,
+        ?string $schemaRef = null,
+    ): ValidationFinishedEvent {
+        return new ValidationFinishedEvent(
+            request: $request,
+            path: $path,
+            method: $method,
+            success: $success,
+            duration: $duration,
+            response: $response,
+            schemaRef: $schemaRef,
+        );
     }
 }

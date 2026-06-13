@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Builder\Exception;
 
-use Exception;
+use RuntimeException;
 use Throwable;
 
-final class BuilderException extends Exception
+final class BuilderException extends RuntimeException
 {
     public function __construct(
         string $message = '',

@@ -15,9 +15,8 @@ use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
-use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Request\RequestBodyValidatorWithContext;
-use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
@@ -50,16 +49,14 @@ final class RequestBodyRequiredTest extends TestCase
         );
 
         $this->validator = new RequestBodyValidatorWithContext(
-            pool: $pool,
             document: $this->document,
-            bodyParser: $bodyParser,
-            statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
-            refResolver: new RefResolver(),
-            formatRegistry: BuiltinFormats::create(),
-            negotiator: new ContentTypeNegotiator(),
-            nullableAsType: true,
-            emptyArrayStrategy: EmptyArrayStrategy::AllowBoth,
-            coercion: false,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $pool,
+                refResolver: new RefResolver(),
+                statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
+                formatRegistry: BuiltinFormats::create(),
+                bodyParser: $bodyParser,
+            ),
         );
     }
 

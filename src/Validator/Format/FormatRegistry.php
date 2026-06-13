@@ -33,12 +33,4 @@ final readonly class FormatRegistry
     {
         return isset($this->validators[$type][$format]);
     }
-
-    /**
-     * @return array<string, array<string, FormatValidatorInterface>>
-     */
-    public function all(): array
-    {
-        return $this->validators;
-    }
 }

@@ -6,6 +6,8 @@ namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\DiscriminatorMismatchException;
@@ -13,10 +15,6 @@ use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
-use Duyler\OpenApi\Validator\ValidatorPool;
-use Psr\EventDispatcher\EventDispatcherInterface;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
 use function array_key_exists;
 use function count;
@@ -24,19 +22,11 @@ use function sprintf;
 
 final readonly class PropertiesValidatorWithContext
 {
-    private readonly LoggerInterface $logger;
-
     public function __construct(
-        private readonly ValidatorPool $pool,
-        private readonly RefResolverInterface $refResolver,
         private readonly OpenApiDocument $document,
-        private readonly StatelessValidatorRegistry $statelessValidators,
-        private readonly bool $reportDeprecated = false,
-        ?LoggerInterface $logger = null,
-        private readonly ?EventDispatcherInterface $eventDispatcher = null,
-    ) {
-        $this->logger = $logger ?? new NullLogger();
-    }
+        private readonly SchemaValidatorDependencies $dependencies,
+        private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
+    ) {}
 
     public function validateWithContext(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
     {
@@ -55,10 +45,14 @@ final readonly class PropertiesValidatorWithContext
                 $allowNull = $propertySchema->nullable && $context->nullableAsType;
                 $value = SchemaValueNormalizer::normalize($data[$name], $allowNull);
 
-                $propertyContext = $context->withBreadcrumb($name);
+                $context->enterBreadcrumb($name);
 
-                $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
-                $validator->validateWithContext($value, $propertySchema, $propertyContext, $useDiscriminator);
+                try {
+                    $validator = new SchemaValidatorWithContext($this->document, $this->dependencies, $this->configuration);
+                    $validator->validateWithContext($value, $propertySchema, $context, $useDiscriminator);
+                } finally {
+                    $context->leaveBreadcrumb();
+                }
             } catch (DiscriminatorMismatchException|
                 InvalidDiscriminatorValueException|
                 MissingDiscriminatorPropertyException|

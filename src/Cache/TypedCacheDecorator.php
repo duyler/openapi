@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Cache;
 
 use Psr\Cache\CacheItemPoolInterface;
-use RuntimeException;
 
 final readonly class TypedCacheDecorator
 {
@@ -33,10 +32,6 @@ final readonly class TypedCacheDecorator
 
         if (null === $value) {
             return null;
-        }
-
-        if (false === class_exists($expectedType)) {
-            throw new RuntimeException("Expected type class does not exist: {$expectedType}");
         }
 
         if (false === $value instanceof $expectedType) {
