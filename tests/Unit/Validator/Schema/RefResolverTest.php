@@ -597,6 +597,197 @@ final class RefResolverTest extends TestCase
     }
 
     #[Test]
+    public function schema_with_allof_containing_discriminator_returns_true(): void
+    {
+        $discriminatorSchema = new Schema(
+            discriminator: new Discriminator(propertyName: "type"),
+        );
+        $schema = new Schema(allOf: [$discriminatorSchema]);
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $this->assertTrue(
+            $this->resolver->schemaHasDiscriminator($schema, $document),
+        );
+    }
+
+    #[Test]
+    public function schema_with_not_containing_discriminator_returns_true(): void
+    {
+        $discriminatorSchema = new Schema(
+            discriminator: new Discriminator(propertyName: "type"),
+        );
+        $schema = new Schema(not: $discriminatorSchema);
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $this->assertTrue(
+            $this->resolver->schemaHasDiscriminator($schema, $document),
+        );
+    }
+
+    #[Test]
+    public function schema_with_prefix_items_containing_discriminator_returns_true(): void
+    {
+        $discriminatorSchema = new Schema(
+            discriminator: new Discriminator(propertyName: "type"),
+        );
+        $schema = new Schema(prefixItems: [$discriminatorSchema]);
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $this->assertTrue(
+            $this->resolver->schemaHasDiscriminator($schema, $document),
+        );
+    }
+
+    #[Test]
+    public function schema_with_additional_properties_containing_discriminator_returns_true(): void
+    {
+        $discriminatorSchema = new Schema(
+            discriminator: new Discriminator(propertyName: "type"),
+        );
+        $schema = new Schema(additionalProperties: $discriminatorSchema);
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $this->assertTrue(
+            $this->resolver->schemaHasDiscriminator($schema, $document),
+        );
+    }
+
+    #[Test]
+    public function schema_with_if_then_else_containing_discriminator_returns_true(): void
+    {
+        $discriminatorSchema = new Schema(
+            discriminator: new Discriminator(propertyName: "type"),
+        );
+        $schema = new Schema(
+            if: new Schema(type: "object"),
+            then: $discriminatorSchema,
+            else: new Schema(type: "string"),
+        );
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $this->assertTrue(
+            $this->resolver->schemaHasDiscriminator($schema, $document),
+        );
+    }
+
+    #[Test]
+    public function schema_with_contains_containing_discriminator_returns_true(): void
+    {
+        $discriminatorSchema = new Schema(
+            discriminator: new Discriminator(propertyName: "type"),
+        );
+        $schema = new Schema(contains: $discriminatorSchema);
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $this->assertTrue(
+            $this->resolver->schemaHasDiscriminator($schema, $document),
+        );
+    }
+
+    #[Test]
+    public function schema_with_pattern_properties_containing_discriminator_returns_true(): void
+    {
+        $discriminatorSchema = new Schema(
+            discriminator: new Discriminator(propertyName: "type"),
+        );
+        $schema = new Schema(patternProperties: ["^x-" => $discriminatorSchema]);
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $this->assertTrue(
+            $this->resolver->schemaHasDiscriminator($schema, $document),
+        );
+    }
+
+    #[Test]
+    public function schema_with_dependent_schemas_containing_discriminator_returns_true(): void
+    {
+        $discriminatorSchema = new Schema(
+            discriminator: new Discriminator(propertyName: "type"),
+        );
+        $schema = new Schema(dependentSchemas: ["foo" => $discriminatorSchema]);
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $this->assertTrue(
+            $this->resolver->schemaHasDiscriminator($schema, $document),
+        );
+    }
+
+    #[Test]
+    public function schema_with_property_names_containing_discriminator_returns_true(): void
+    {
+        $discriminatorSchema = new Schema(
+            discriminator: new Discriminator(propertyName: "type"),
+        );
+        $schema = new Schema(propertyNames: $discriminatorSchema);
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $this->assertTrue(
+            $this->resolver->schemaHasDiscriminator($schema, $document),
+        );
+    }
+
+    #[Test]
+    public function schema_with_unevaluated_properties_containing_discriminator_returns_true(): void
+    {
+        $discriminatorSchema = new Schema(
+            discriminator: new Discriminator(propertyName: "type"),
+        );
+        $schema = new Schema(unevaluatedProperties: $discriminatorSchema);
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $this->assertTrue(
+            $this->resolver->schemaHasDiscriminator($schema, $document),
+        );
+    }
+
+    #[Test]
+    public function schema_with_content_schema_containing_discriminator_returns_true(): void
+    {
+        $discriminatorSchema = new Schema(
+            discriminator: new Discriminator(propertyName: "type"),
+        );
+        $schema = new Schema(contentSchema: $discriminatorSchema);
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $this->assertTrue(
+            $this->resolver->schemaHasDiscriminator($schema, $document),
+        );
+    }
+
+    #[Test]
     public function nested_property_discriminator_returns_true(): void
     {
         $deepSchema = new Schema(

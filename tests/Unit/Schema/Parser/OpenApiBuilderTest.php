@@ -2261,6 +2261,54 @@ final class OpenApiBuilderTest extends TestCase
     }
 
     #[Test]
+    public function build_schema_with_content_schema_as_bool(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'TestSchema' => [
+                        'type' => 'string',
+                        'contentMediaType' => 'application/json',
+                        'contentSchema' => true,
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['TestSchema'];
+
+        $this->assertTrue($schema->contentSchema);
+    }
+
+    #[Test]
+    public function build_schema_with_additional_properties_as_bool_false(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'TestSchema' => [
+                        'type' => 'object',
+                        'properties' => ['name' => ['type' => 'string']],
+                        'additionalProperties' => false,
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+        $schema = $document->components->schemas['TestSchema'];
+
+        $this->assertFalse($schema->additionalProperties);
+    }
+
+    #[Test]
     public function boolean_schema_true_in_components(): void
     {
         $json = json_encode([

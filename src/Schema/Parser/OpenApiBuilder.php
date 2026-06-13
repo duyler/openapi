@@ -358,6 +358,85 @@ abstract class OpenApiBuilder implements SchemaParserInterface
                 sprintf('Expected array or boolean for schema, got %s', gettype($data)),
             );
         }
+
+        $this->checkSchemaDeprecations($data);
+
+        return new Schema(
+            ref: TypeHelper::asStringOrNull($data['$ref'] ?? null),
+            refSummary: isset($data['$ref']) ? TypeHelper::asStringOrNull($data['summary'] ?? null) : null,
+            refDescription: isset($data['$ref']) ? TypeHelper::asStringOrNull($data['description'] ?? null) : null,
+            format: TypeHelper::asStringOrNull($data['format'] ?? null),
+            title: TypeHelper::asStringOrNull($data['title'] ?? null),
+            description: TypeHelper::asStringOrNull($data['description'] ?? null),
+            default: $data['default'] ?? null,
+            hasDefault: array_key_exists('default', $data),
+            deprecated: (bool) ($data['deprecated'] ?? false),
+            readOnly: (bool) ($data['readOnly'] ?? false),
+            writeOnly: (bool) ($data['writeOnly'] ?? false),
+            type: $this->resolveType($data),
+            nullable: (bool) ($data['nullable'] ?? false),
+            const: $data['const'] ?? null,
+            hasConst: array_key_exists('const', $data),
+            multipleOf: TypeHelper::asFloatOrNull($data['multipleOf'] ?? null),
+            maximum: TypeHelper::asFloatOrNull($data['maximum'] ?? null),
+            exclusiveMaximum: $this->resolveExclusiveMaximum($data),
+            minimum: TypeHelper::asFloatOrNull($data['minimum'] ?? null),
+            exclusiveMinimum: $this->resolveExclusiveMinimum($data),
+            maxLength: TypeHelper::asIntOrNull($data['maxLength'] ?? null),
+            minLength: TypeHelper::asIntOrNull($data['minLength'] ?? null),
+            pattern: TypeHelper::asStringOrNull($data['pattern'] ?? null),
+            maxItems: TypeHelper::asIntOrNull($data['maxItems'] ?? null),
+            minItems: TypeHelper::asIntOrNull($data['minItems'] ?? null),
+            uniqueItems: TypeHelper::asBoolOrNull($data['uniqueItems'] ?? null),
+            maxProperties: TypeHelper::asIntOrNull($data['maxProperties'] ?? null),
+            minProperties: TypeHelper::asIntOrNull($data['minProperties'] ?? null),
+            required: TypeHelper::asStringListOrNull($data['required'] ?? null),
+            allOf: $this->buildSchemaList($data, 'allOf'),
+            anyOf: $this->buildSchemaList($data, 'anyOf'),
+            oneOf: $this->buildSchemaList($data, 'oneOf'),
+            not: isset($data['not']) ? $this->buildSchema($data['not']) : null,
+            discriminator: isset($data['discriminator']) ? $this->buildDiscriminator(TypeHelper::asArray($data['discriminator'])) : null,
+            properties: isset($data['properties']) && is_array($data['properties'])
+                ? $this->buildProperties(TypeHelper::asArray($data['properties']))
+                : null,
+            additionalProperties: $this->buildOptionalSchema($data, 'additionalProperties'),
+            unevaluatedProperties: $this->buildOptionalSchema($data, 'unevaluatedProperties'),
+            items: isset($data['items']) && (is_array($data['items']) || is_bool($data['items']))
+                ? $this->buildSchema($data['items'])
+                : null,
+            prefixItems: $this->buildSchemaList($data, 'prefixItems'),
+            contains: isset($data['contains']) ? $this->buildSchema($data['contains']) : null,
+            minContains: TypeHelper::asIntOrNull($data['minContains'] ?? null),
+            maxContains: TypeHelper::asIntOrNull($data['maxContains'] ?? null),
+            patternProperties: isset($data['patternProperties']) && is_array($data['patternProperties'])
+                ? $this->buildProperties(TypeHelper::asArray($data['patternProperties']))
+                : null,
+            propertyNames: isset($data['propertyNames']) ? $this->buildSchema($data['propertyNames']) : null,
+            dependentSchemas: isset($data['dependentSchemas']) && is_array($data['dependentSchemas'])
+                ? $this->buildProperties(TypeHelper::asArray($data['dependentSchemas']))
+                : null,
+            if: isset($data['if']) ? $this->buildSchema($data['if']) : null,
+            then: isset($data['then']) ? $this->buildSchema($data['then']) : null,
+            else: isset($data['else']) ? $this->buildSchema($data['else']) : null,
+            unevaluatedItems: isset($data['unevaluatedItems']) ? $this->buildSchema($data['unevaluatedItems']) : null,
+            example: $data['example'] ?? null,
+            examples: isset($data['examples']) && is_array($data['examples']) ? TypeHelper::asStringMixedMapOrNull($data['examples']) : null,
+            enum: TypeHelper::asEnumListOrNull($data['enum'] ?? null),
+            contentEncoding: TypeHelper::asStringOrNull($data['contentEncoding'] ?? null),
+            contentMediaType: TypeHelper::asStringOrNull($data['contentMediaType'] ?? null),
+            contentSchema: $this->buildOptionalSchema($data, 'contentSchema'),
+            jsonSchemaDialect: TypeHelper::asStringOrNull($data['$schema'] ?? null),
+            xml: isset($data['xml']) && is_array($data['xml'])
+                ? $this->buildXml(TypeHelper::asArray($data['xml']))
+                : null,
+        );
+    }
+
+    /**
+     * @param array<array-key, mixed> $data
+     */
+    protected function checkSchemaDeprecations(array $data): void
+    {
         if ($this->shouldWarnDeprecation() && isset($data['example'])) {
             $this->deprecationLogger->warn(
                 'example',
@@ -393,85 +472,39 @@ abstract class OpenApiBuilder implements SchemaParserInterface
                 'exclusiveMaximum as number',
             );
         }
+    }
 
-        $exclusiveMinimum = $this->resolveExclusiveMinimum($data);
-        $exclusiveMaximum = $this->resolveExclusiveMaximum($data);
+    /**
+     * @param array<array-key, mixed> $data
+     *
+     * @return ?list<Schema>
+     */
+    protected function buildSchemaList(array $data, string $key): ?array
+    {
+        if (false === isset($data[$key])) {
+            return null;
+        }
 
-        return new Schema(
-            ref: TypeHelper::asStringOrNull($data['$ref'] ?? null),
-            refSummary: isset($data['$ref']) ? TypeHelper::asStringOrNull($data['summary'] ?? null) : null,
-            refDescription: isset($data['$ref']) ? TypeHelper::asStringOrNull($data['description'] ?? null) : null,
-            format: TypeHelper::asStringOrNull($data['format'] ?? null),
-            title: TypeHelper::asStringOrNull($data['title'] ?? null),
-            description: TypeHelper::asStringOrNull($data['description'] ?? null),
-            default: $data['default'] ?? null,
-            hasDefault: array_key_exists('default', $data),
-            deprecated: (bool) ($data['deprecated'] ?? false),
-            readOnly: (bool) ($data['readOnly'] ?? false),
-            writeOnly: (bool) ($data['writeOnly'] ?? false),
-            type: $this->resolveType($data),
-            nullable: (bool) ($data['nullable'] ?? false),
-            const: $data['const'] ?? null,
-            hasConst: array_key_exists('const', $data),
-            multipleOf: TypeHelper::asFloatOrNull($data['multipleOf'] ?? null),
-            maximum: TypeHelper::asFloatOrNull($data['maximum'] ?? null),
-            exclusiveMaximum: $exclusiveMaximum,
-            minimum: TypeHelper::asFloatOrNull($data['minimum'] ?? null),
-            exclusiveMinimum: $exclusiveMinimum,
-            maxLength: TypeHelper::asIntOrNull($data['maxLength'] ?? null),
-            minLength: TypeHelper::asIntOrNull($data['minLength'] ?? null),
-            pattern: TypeHelper::asStringOrNull($data['pattern'] ?? null),
-            maxItems: TypeHelper::asIntOrNull($data['maxItems'] ?? null),
-            minItems: TypeHelper::asIntOrNull($data['minItems'] ?? null),
-            uniqueItems: TypeHelper::asBoolOrNull($data['uniqueItems'] ?? null),
-            maxProperties: TypeHelper::asIntOrNull($data['maxProperties'] ?? null),
-            minProperties: TypeHelper::asIntOrNull($data['minProperties'] ?? null),
-            required: TypeHelper::asStringListOrNull($data['required'] ?? null),
-            allOf: isset($data['allOf']) ? array_values(array_map(fn($s) => $this->buildSchema($s), TypeHelper::asArray($data['allOf']))) : null,
-            anyOf: isset($data['anyOf']) ? array_values(array_map(fn($s) => $this->buildSchema($s), TypeHelper::asArray($data['anyOf']))) : null,
-            oneOf: isset($data['oneOf']) ? array_values(array_map(fn($s) => $this->buildSchema($s), TypeHelper::asArray($data['oneOf']))) : null,
-            not: isset($data['not']) ? $this->buildSchema($data['not']) : null,
-            discriminator: isset($data['discriminator']) ? $this->buildDiscriminator(TypeHelper::asArray($data['discriminator'])) : null,
-            properties: isset($data['properties']) && is_array($data['properties'])
-                ? $this->buildProperties(TypeHelper::asArray($data['properties']))
-                : null,
-            additionalProperties: isset($data['additionalProperties']) && is_array($data['additionalProperties'])
-                ? $this->buildSchema(TypeHelper::asArray($data['additionalProperties']))
-                : (isset($data['additionalProperties']) ? (bool) $data['additionalProperties'] : null),
-            unevaluatedProperties: isset($data['unevaluatedProperties']) && is_array($data['unevaluatedProperties'])
-                ? $this->buildSchema(TypeHelper::asArray($data['unevaluatedProperties']))
-                : (isset($data['unevaluatedProperties']) ? (bool) $data['unevaluatedProperties'] : null),
-            items: isset($data['items']) && (is_array($data['items']) || is_bool($data['items']))
-                ? $this->buildSchema($data['items'])
-                : null,
-            prefixItems: isset($data['prefixItems']) ? array_values(array_map(fn($s) => $this->buildSchema($s), TypeHelper::asArray($data['prefixItems']))) : null,
-            contains: isset($data['contains']) ? $this->buildSchema($data['contains']) : null,
-            minContains: TypeHelper::asIntOrNull($data['minContains'] ?? null),
-            maxContains: TypeHelper::asIntOrNull($data['maxContains'] ?? null),
-            patternProperties: isset($data['patternProperties']) && is_array($data['patternProperties'])
-                ? $this->buildProperties(TypeHelper::asArray($data['patternProperties']))
-                : null,
-            propertyNames: isset($data['propertyNames']) ? $this->buildSchema($data['propertyNames']) : null,
-            dependentSchemas: isset($data['dependentSchemas']) && is_array($data['dependentSchemas'])
-                ? $this->buildProperties(TypeHelper::asArray($data['dependentSchemas']))
-                : null,
-            if: isset($data['if']) ? $this->buildSchema($data['if']) : null,
-            then: isset($data['then']) ? $this->buildSchema($data['then']) : null,
-            else: isset($data['else']) ? $this->buildSchema($data['else']) : null,
-            unevaluatedItems: isset($data['unevaluatedItems']) ? $this->buildSchema($data['unevaluatedItems']) : null,
-            example: $data['example'] ?? null,
-            examples: isset($data['examples']) && is_array($data['examples']) ? TypeHelper::asStringMixedMapOrNull($data['examples']) : null,
-            enum: TypeHelper::asEnumListOrNull($data['enum'] ?? null),
-            contentEncoding: TypeHelper::asStringOrNull($data['contentEncoding'] ?? null),
-            contentMediaType: TypeHelper::asStringOrNull($data['contentMediaType'] ?? null),
-            contentSchema: isset($data['contentSchema']) && is_array($data['contentSchema'])
-                ? $this->buildSchema(TypeHelper::asArray($data['contentSchema']))
-                : (isset($data['contentSchema']) ? (bool) $data['contentSchema'] : null),
-            jsonSchemaDialect: TypeHelper::asStringOrNull($data['$schema'] ?? null),
-            xml: isset($data['xml']) && is_array($data['xml'])
-                ? $this->buildXml(TypeHelper::asArray($data['xml']))
-                : null,
-        );
+        return array_values(array_map(
+            fn(mixed $schemaData): Schema => $this->buildSchema($schemaData),
+            TypeHelper::asArray($data[$key]),
+        ));
+    }
+
+    /**
+     * @param array<array-key, mixed> $data
+     */
+    protected function buildOptionalSchema(array $data, string $key): Schema|bool|null
+    {
+        if (false === isset($data[$key])) {
+            return null;
+        }
+
+        if (is_array($data[$key])) {
+            return $this->buildSchema(TypeHelper::asArray($data[$key]));
+        }
+
+        return (bool) $data[$key];
     }
 
     /**

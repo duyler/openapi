@@ -15,6 +15,8 @@ use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
 use Override;
 use WeakMap;
 
+use Generator;
+
 use function array_key_exists;
 use function dirname;
 use function is_array;
@@ -269,42 +271,21 @@ final class RefResolver implements RefResolverInterface
         $visited[$schemaId] = true;
 
         if (null !== $schema->ref) {
-            try {
-                $resolvedSchema = $this->resolve($schema->ref, $document);
-
-                return $this->doSchemaHasDiscriminator(
-                    $resolvedSchema,
-                    $document,
-                    $visited,
-                    $depth + 1,
-                );
-            } catch (UnresolvableRefException) {
-                return [false, $visited];
-            }
+            return $this->checkRefForDiscriminator(
+                $schema->ref,
+                $document,
+                $visited,
+                $depth + 1,
+            );
         }
 
         if (null !== $schema->discriminator) {
             return [true, $visited];
         }
 
-        if (null !== $schema->properties) {
-            foreach ($schema->properties as $property) {
-                [$has, $visited] = $this->doSchemaHasDiscriminator(
-                    $property,
-                    $document,
-                    $visited,
-                    $depth + 1,
-                );
-
-                if ($has) {
-                    return [true, $visited];
-                }
-            }
-        }
-
-        if (null !== $schema->items) {
+        foreach ($this->iterateSubSchemas($schema) as $subSchema) {
             [$has, $visited] = $this->doSchemaHasDiscriminator(
-                $schema->items,
+                $subSchema,
                 $document,
                 $visited,
                 $depth + 1,
@@ -315,37 +296,32 @@ final class RefResolver implements RefResolverInterface
             }
         }
 
-        if (null !== $schema->oneOf) {
-            foreach ($schema->oneOf as $subSchema) {
-                [$has, $visited] = $this->doSchemaHasDiscriminator(
-                    $subSchema,
-                    $document,
-                    $visited,
-                    $depth + 1,
-                );
-
-                if ($has) {
-                    return [true, $visited];
-                }
-            }
-        }
-
-        if (null !== $schema->anyOf) {
-            foreach ($schema->anyOf as $subSchema) {
-                [$has, $visited] = $this->doSchemaHasDiscriminator(
-                    $subSchema,
-                    $document,
-                    $visited,
-                    $depth + 1,
-                );
-
-                if ($has) {
-                    return [true, $visited];
-                }
-            }
-        }
-
         return [false, $visited];
+    }
+
+    /**
+     * @param array<int, bool> $visited
+     *
+     * @return array{bool, array<int, bool>}
+     */
+    private function checkRefForDiscriminator(
+        string $ref,
+        OpenApiDocument $document,
+        array $visited,
+        int $depth,
+    ): array {
+        try {
+            $resolvedSchema = $this->resolve($ref, $document);
+
+            return $this->doSchemaHasDiscriminator(
+                $resolvedSchema,
+                $document,
+                $visited,
+                $depth,
+            );
+        } catch (UnresolvableRefException) {
+            return [false, $visited];
+        }
     }
 
     /**
@@ -373,167 +349,8 @@ final class RefResolver implements RefResolverInterface
             return [true, $visited];
         }
 
-        if (null !== $schema->properties) {
-            foreach ($schema->properties as $property) {
-                [$has, $visited] = $this->doSchemaHasRef($property, $visited, $depth + 1);
-
-                if ($has) {
-                    return [true, $visited];
-                }
-            }
-        }
-
-        if (null !== $schema->items) {
-            [$has, $visited] = $this->doSchemaHasRef($schema->items, $visited, $depth + 1);
-
-            if ($has) {
-                return [true, $visited];
-            }
-        }
-
-        if (null !== $schema->prefixItems) {
-            foreach ($schema->prefixItems as $prefixItem) {
-                [$has, $visited] = $this->doSchemaHasRef($prefixItem, $visited, $depth + 1);
-
-                if ($has) {
-                    return [true, $visited];
-                }
-            }
-        }
-
-        if (null !== $schema->allOf) {
-            foreach ($schema->allOf as $subSchema) {
-                [$has, $visited] = $this->doSchemaHasRef($subSchema, $visited, $depth + 1);
-
-                if ($has) {
-                    return [true, $visited];
-                }
-            }
-        }
-
-        if (null !== $schema->anyOf) {
-            foreach ($schema->anyOf as $subSchema) {
-                [$has, $visited] = $this->doSchemaHasRef($subSchema, $visited, $depth + 1);
-
-                if ($has) {
-                    return [true, $visited];
-                }
-            }
-        }
-
-        if (null !== $schema->oneOf) {
-            foreach ($schema->oneOf as $subSchema) {
-                [$has, $visited] = $this->doSchemaHasRef($subSchema, $visited, $depth + 1);
-
-                if ($has) {
-                    return [true, $visited];
-                }
-            }
-        }
-
-        if (null !== $schema->not) {
-            [$has, $visited] = $this->doSchemaHasRef($schema->not, $visited, $depth + 1);
-
-            if ($has) {
-                return [true, $visited];
-            }
-        }
-
-        if (null !== $schema->if) {
-            [$has, $visited] = $this->doSchemaHasRef($schema->if, $visited, $depth + 1);
-
-            if ($has) {
-                return [true, $visited];
-            }
-        }
-
-        if (null !== $schema->then) {
-            [$has, $visited] = $this->doSchemaHasRef($schema->then, $visited, $depth + 1);
-
-            if ($has) {
-                return [true, $visited];
-            }
-        }
-
-        if (null !== $schema->else) {
-            [$has, $visited] = $this->doSchemaHasRef($schema->else, $visited, $depth + 1);
-
-            if ($has) {
-                return [true, $visited];
-            }
-        }
-
-        if (null !== $schema->contains) {
-            [$has, $visited] = $this->doSchemaHasRef($schema->contains, $visited, $depth + 1);
-
-            if ($has) {
-                return [true, $visited];
-            }
-        }
-
-        if (null !== $schema->patternProperties) {
-            foreach ($schema->patternProperties as $subSchema) {
-                [$has, $visited] = $this->doSchemaHasRef($subSchema, $visited, $depth + 1);
-
-                if ($has) {
-                    return [true, $visited];
-                }
-            }
-        }
-
-        if (null !== $schema->dependentSchemas) {
-            foreach ($schema->dependentSchemas as $subSchema) {
-                [$has, $visited] = $this->doSchemaHasRef($subSchema, $visited, $depth + 1);
-
-                if ($has) {
-                    return [true, $visited];
-                }
-            }
-        }
-
-        if (null !== $schema->propertyNames) {
-            [$has, $visited] = $this->doSchemaHasRef($schema->propertyNames, $visited, $depth + 1);
-
-            if ($has) {
-                return [true, $visited];
-            }
-        }
-
-        if (null !== $schema->unevaluatedItems) {
-            [$has, $visited] = $this->doSchemaHasRef($schema->unevaluatedItems, $visited, $depth + 1);
-
-            if ($has) {
-                return [true, $visited];
-            }
-        }
-
-        if (
-            null !== $schema->additionalProperties
-            && $schema->additionalProperties instanceof Schema
-        ) {
-            [$has, $visited] = $this->doSchemaHasRef($schema->additionalProperties, $visited, $depth + 1);
-
-            if ($has) {
-                return [true, $visited];
-            }
-        }
-
-        if (
-            null !== $schema->unevaluatedProperties
-            && $schema->unevaluatedProperties instanceof Schema
-        ) {
-            [$has, $visited] = $this->doSchemaHasRef($schema->unevaluatedProperties, $visited, $depth + 1);
-
-            if ($has) {
-                return [true, $visited];
-            }
-        }
-
-        if (
-            null !== $schema->contentSchema
-            && $schema->contentSchema instanceof Schema
-        ) {
-            [$has, $visited] = $this->doSchemaHasRef($schema->contentSchema, $visited, $depth + 1);
+        foreach ($this->iterateSubSchemas($schema) as $subSchema) {
+            [$has, $visited] = $this->doSchemaHasRef($subSchema, $visited, $depth + 1);
 
             if ($has) {
                 return [true, $visited];
@@ -541,6 +358,44 @@ final class RefResolver implements RefResolverInterface
         }
 
         return [false, $visited];
+    }
+
+    /**
+     * @return Generator<int, Schema, void, void>
+     */
+    private function iterateSubSchemas(Schema $schema): Generator
+    {
+        yield from $schema->properties ?? [];
+        yield from $schema->prefixItems ?? [];
+        yield from $schema->allOf ?? [];
+        yield from $schema->anyOf ?? [];
+        yield from $schema->oneOf ?? [];
+        yield from $schema->patternProperties ?? [];
+        yield from $schema->dependentSchemas ?? [];
+
+        foreach ($this->collectSingleSubSchemas($schema) as $subSchema) {
+            yield $subSchema;
+        }
+    }
+
+    /**
+     * @return list<Schema>
+     */
+    private function collectSingleSubSchemas(Schema $schema): array
+    {
+        return array_values(array_filter([
+            $schema->items,
+            $schema->not,
+            $schema->contains,
+            $schema->propertyNames,
+            $schema->if,
+            $schema->then,
+            $schema->else,
+            $schema->unevaluatedItems,
+            $schema->additionalProperties instanceof Schema ? $schema->additionalProperties : null,
+            $schema->unevaluatedProperties instanceof Schema ? $schema->unevaluatedProperties : null,
+            $schema->contentSchema instanceof Schema ? $schema->contentSchema : null,
+        ], fn(?Schema $s): bool => null !== $s));
     }
 
     /**
