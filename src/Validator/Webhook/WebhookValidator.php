@@ -23,12 +23,14 @@ final readonly class WebhookValidator
         ServerRequestInterface $request,
         string $webhookName,
         OpenApiDocument $document,
-    ): void {
+    ): Operation {
         $webhook = $this->findWebhook($webhookName, $document);
         $operation = $this->extractOperation($request, $webhookName, $webhook);
 
         $requestPath = $request->getUri()->getPath();
         $this->requestValidator->validate($request, $operation, $requestPath);
+
+        return $operation;
     }
 
     private function findWebhook(string $webhookName, OpenApiDocument $document): PathItem
