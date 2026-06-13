@@ -9,11 +9,6 @@ use Override;
 
 use function sprintf;
 
-/**
- * Simple error formatter with concise messages
- *
- * Provides brief error messages including breadcrumb path.
- */
 final class SimpleFormatter implements ErrorFormatterInterface
 {
     private static ?self $shared = null;

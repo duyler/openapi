@@ -10,11 +10,6 @@ use Override;
 use function is_scalar;
 use function sprintf;
 
-/**
- * Detailed error formatter with comprehensive information
- *
- * Provides detailed error messages with suggestions and context.
- */
 final readonly class DetailedFormatter implements ErrorFormatterInterface
 {
     #[Override]

@@ -4,12 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Error;
 
-/**
- * Immutable manager for tracking breadcrumb during validation
- *
- * Maintains a stack of path segments and provides methods to push/pop segments.
- * Each operation returns a new instance to maintain immutability.
- */
 final class BreadcrumbManager
 {
     /**

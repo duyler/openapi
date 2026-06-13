@@ -15,11 +15,6 @@ use const JSON_PRETTY_PRINT;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
 
-/**
- * JSON error formatter for structured output
- *
- * Produces JSON-formatted error messages suitable for API responses.
- */
 final readonly class JsonFormatter implements ErrorFormatterInterface
 {
     #[Override]

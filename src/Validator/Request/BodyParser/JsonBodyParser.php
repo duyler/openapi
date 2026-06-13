@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
 use Duyler\OpenApi\Validator\Exception\EmptyBodyException;
-use JsonException;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -13,10 +12,6 @@ final readonly class JsonBodyParser
 {
     private const int JSON_MAX_DEPTH = 512;
 
-    /**
-     * @throws JsonException
-     * @throws EmptyBodyException
-     */
     public function parse(string $body): array|int|string|float|bool|null
     {
         if ('' === trim($body)) {

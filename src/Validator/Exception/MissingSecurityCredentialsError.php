@@ -6,9 +6,6 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
-/**
- * Error thrown when security credentials required by the OpenAPI specification are missing from the request.
- */
 final class MissingSecurityCredentialsError extends AbstractValidationError
 {
     public function __construct(

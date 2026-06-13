@@ -105,16 +105,8 @@ abstract class OpenApiBuilder implements SchemaParserInterface
         }
     }
 
-    /**
-     * Parse raw content into array.
-     *
-     * @return mixed
-     */
     abstract protected function parseContent(string $content): mixed;
 
-    /**
-     * Get the format name for error messages.
-     */
     abstract protected function getFormatName(): string;
 
     protected function buildDocument(array $data): OpenApiDocument
@@ -1178,12 +1170,6 @@ abstract class OpenApiBuilder implements SchemaParserInterface
         return version_compare($this->documentVersion, '3.1.0', '<');
     }
 
-    /**
-     * Resolve exclusiveMinimum with version-aware handling.
-     *
-     * OpenAPI 3.0: exclusiveMinimum is boolean (works with minimum).
-     * OpenAPI 3.1+: exclusiveMinimum is number (standalone).
-     */
     protected function resolveExclusiveMinimum(array $data): ?float
     {
         /** @var mixed $exclusiveMinimum */
@@ -1204,12 +1190,6 @@ abstract class OpenApiBuilder implements SchemaParserInterface
         return TypeHelper::asFloatOrNull($exclusiveMinimum);
     }
 
-    /**
-     * Resolve exclusiveMaximum with version-aware handling.
-     *
-     * OpenAPI 3.0: exclusiveMaximum is boolean (works with maximum).
-     * OpenAPI 3.1+: exclusiveMaximum is number (standalone).
-     */
     protected function resolveExclusiveMaximum(array $data): ?float
     {
         /** @var mixed $exclusiveMaximum */

@@ -110,7 +110,8 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
                 $schema = $this->dependencies->refResolver->resolve($schema->ref, $this->document);
             }
 
-            $hasDiscriminator = null !== $schema->discriminator || $this->dependencies->refResolver->schemaHasDiscriminator($schema, $this->document);
+            $hasDiscriminator = null !== $schema->discriminator
+                || $this->dependencies->refResolver->schemaHasDiscriminator($schema, $this->document);
 
             if (false === $hasDiscriminator) {
                 $context = ValidationContext::create(

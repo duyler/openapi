@@ -8,14 +8,6 @@ use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
 
 use function str_split;
 
-/**
- * Validates and normalizes regex patterns for JSON Schema draft 2020-12.
- *
- * Per JSON Schema draft 2020-12, the "pattern" keyword requires partial matching
- * (substring match). The pattern matches if the regular expression matches any
- * substring of the input string. Use ^ and $ anchors explicitly for full-string
- * matching.
- */
 final class RegexValidator
 {
     private const string DELIMITER_CANDIDATES = '#~!|@%+;';

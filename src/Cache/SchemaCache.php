@@ -9,12 +9,6 @@ use Psr\Cache\CacheItemPoolInterface;
 
 use function assert;
 
-/**
- * PSR-6 cache wrapper for OpenAPI documents.
- *
- * Provides caching for parsed OpenAPI specifications to improve performance
- * by avoiding repeated parsing of the same documents.
- */
 final readonly class SchemaCache
 {
     private const int DEFAULT_TTL = 3600;
