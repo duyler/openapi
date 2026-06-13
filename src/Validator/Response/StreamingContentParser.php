@@ -110,7 +110,7 @@ final readonly class StreamingContentParser
             if (false !== $colonPos) {
                 $field = substr($line, 0, $colonPos);
                 $value = ltrim(substr($line, $colonPos + 1));
-                $currentEvent[$field] = $value;
+                $this->applySseField($currentEvent, $field, $value);
             }
         }
 
@@ -312,7 +312,7 @@ final readonly class StreamingContentParser
         if (false !== $colonPos) {
             $field = substr($line, 0, $colonPos);
             $value = ltrim(substr($line, $colonPos + 1));
-            $currentEvent[$field] = $value;
+            $this->applySseField($currentEvent, $field, $value);
         }
     }
 
@@ -353,6 +353,20 @@ final readonly class StreamingContentParser
         $this->appendJsonSeqItem($items, $buffer);
 
         return $items;
+    }
+
+    /**
+     * @param array<string, string> $currentEvent
+     */
+    private function applySseField(array &$currentEvent, string $field, string $value): void
+    {
+        if ('data' === $field && isset($currentEvent['data']) && '' !== $currentEvent['data']) {
+            $currentEvent['data'] .= "\n" . $value;
+
+            return;
+        }
+
+        $currentEvent[$field] = $value;
     }
 
     /**

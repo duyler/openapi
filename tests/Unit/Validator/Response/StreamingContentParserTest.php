@@ -208,7 +208,91 @@ final class StreamingContentParserTest extends TestCase
         $result = $this->parser->parse($body, 'text/event-stream');
 
         self::assertCount(1, $result);
-        self::assertSame('line2', $result[0]['data']);
+        self::assertSame('line1' . "\n" . 'line2', $result[0]['data']);
+    }
+
+    #[Test]
+    public function parse_server_sent_events_with_three_data_fields(): void
+    {
+        $body = "data: line1\ndata: line2\ndata: line3\n\n";
+
+        $result = $this->parser->parse($body, 'text/event-stream');
+
+        self::assertCount(1, $result);
+        self::assertSame('line1' . "\n" . 'line2' . "\n" . 'line3', $result[0]['data']);
+    }
+
+    #[Test]
+    public function parse_server_sent_events_with_empty_data_field(): void
+    {
+        $body = "data:\n\n";
+
+        $result = $this->parser->parse($body, 'text/event-stream');
+
+        self::assertCount(1, $result);
+        self::assertSame('', $result[0]['data']);
+    }
+
+    #[Test]
+    public function parse_server_sent_events_empty_data_then_non_empty(): void
+    {
+        $body = "data:\ndata: hello\n\n";
+
+        $result = $this->parser->parse($body, 'text/event-stream');
+
+        self::assertCount(1, $result);
+        self::assertSame('hello', $result[0]['data']);
+    }
+
+    #[Test]
+    public function parse_server_sent_events_non_empty_data_then_empty(): void
+    {
+        $body = "data: line1\ndata:\n\n";
+
+        $result = $this->parser->parse($body, 'text/event-stream');
+
+        self::assertCount(1, $result);
+        self::assertSame("line1\n", $result[0]['data']);
+    }
+
+    #[Test]
+    public function parse_server_sent_events_without_data_field(): void
+    {
+        $body = "event: notification\n\n";
+
+        $result = $this->parser->parse($body, 'text/event-stream');
+
+        self::assertCount(1, $result);
+        self::assertArrayNotHasKey('data', $result[0]);
+        self::assertSame('notification', $result[0]['event']);
+    }
+
+    #[Test]
+    public function parse_server_sent_events_non_data_fields_overwrite(): void
+    {
+        $body = "event: first\nevent: second\nid: 1\nid: 2\ndata: value\n\n";
+
+        $result = $this->parser->parse($body, 'text/event-stream');
+
+        self::assertSame('second', $result[0]['event']);
+        self::assertSame('2', $result[0]['id']);
+        self::assertSame('value', $result[0]['data']);
+    }
+
+    #[Test]
+    public function parse_stream_sse_multi_line_data_matches_parse(): void
+    {
+        $body = "data: line1\ndata: line2\ndata: line3\n\n";
+
+        $expected = $this->parser->parse($body, 'text/event-stream');
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $result = $this->parser->parseStream($stream, 'text/event-stream');
+
+        self::assertSame($expected, $result);
+        self::assertSame('line1' . "\n" . 'line2' . "\n" . 'line3', $result[0]['data']);
     }
 
     #[Test]
