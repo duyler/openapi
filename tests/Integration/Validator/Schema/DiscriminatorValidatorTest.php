@@ -20,12 +20,16 @@ use Duyler\OpenApi\Validator\Exception\DiscriminatorMismatchException;
 use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
+use Throwable;
+
+use function count;
 
 /**
  * @internal
@@ -52,19 +56,22 @@ final class DiscriminatorValidatorTest extends TestCase
         $catSchema = new Schema(
             title: 'Cat',
             type: 'object',
+            required: ['petType', 'name', 'meow'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
+                'meow' => new Schema(type: 'boolean'),
             ],
         );
 
         $dogSchema = new Schema(
             title: 'Dog',
             type: 'object',
+            required: ['petType', 'name', 'bark'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
-                'bark' => new Schema(type: 'string'),
+                'bark' => new Schema(type: 'boolean'),
             ],
         );
 
@@ -97,19 +104,33 @@ final class DiscriminatorValidatorTest extends TestCase
         $catData = [
             'name' => 'Fluffy',
             'petType' => 'cat',
+            'meow' => true,
         ];
-
-        $this->validator->validate($catData, $petSchema, $document);
 
         $dogData = [
             'name' => 'Rex',
             'petType' => 'dog',
-            'bark' => 'loud',
+            'bark' => true,
         ];
 
+        $this->validator->validate($catData, $petSchema, $document);
         $this->validator->validate($dogData, $petSchema, $document);
 
-        $this->assertTrue(true);
+        $catWithDogField = [
+            'name' => 'Fluffy',
+            'petType' => 'cat',
+            'bark' => true,
+        ];
+
+        try {
+            $this->validator->validate($catWithDogField, $petSchema, $document);
+            $this->fail('Cat schema should require "meow" field');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('meow', $errors[0]->message());
+        }
     }
 
     #[Test]
@@ -267,15 +288,28 @@ final class DiscriminatorValidatorTest extends TestCase
     #[Test]
     public function skip_validation_when_no_discriminator(): void
     {
-        $schema = new Schema(type: 'object');
+        $schema = new Schema(
+            type: 'object',
+            required: ['mustExist'],
+            properties: [
+                'mustExist' => new Schema(type: 'string'),
+            ],
+        );
+
         $document = new OpenApiDocument(
             '3.1.0',
             new InfoObject('Test API', '1.0.0'),
         );
 
-        $this->validator->validate(['data' => 'value'], $schema, $document);
+        $exception = null;
 
-        $this->assertTrue(true);
+        try {
+            $this->validator->validate(['data' => 'value'], $schema, $document);
+        } catch (Throwable $e) {
+            $exception = $e;
+        }
+
+        $this->assertNull($exception, 'Validation should be skipped when schema has no discriminator');
     }
 
     #[Test]
@@ -284,9 +318,11 @@ final class DiscriminatorValidatorTest extends TestCase
         $catSchema = new Schema(
             title: 'cat',
             type: 'object',
+            required: ['petType', 'name', 'meow'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
+                'meow' => new Schema(type: 'boolean'),
             ],
         );
 
@@ -313,11 +349,25 @@ final class DiscriminatorValidatorTest extends TestCase
         $catData = [
             'name' => 'Fluffy',
             'petType' => 'cat',
+            'meow' => true,
         ];
 
         $this->validator->validate($catData, $petSchema, $document);
 
-        $this->assertTrue(true);
+        $catWithoutMeow = [
+            'name' => 'Fluffy',
+            'petType' => 'cat',
+        ];
+
+        try {
+            $this->validator->validate($catWithoutMeow, $petSchema, $document);
+            $this->fail('Cat schema selected by title should require "meow"');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('meow', $errors[0]->message());
+        }
     }
 
     #[Test]
@@ -326,19 +376,22 @@ final class DiscriminatorValidatorTest extends TestCase
         $catSchema = new Schema(
             title: 'Cat',
             type: 'object',
+            required: ['petType', 'name', 'meow'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
+                'meow' => new Schema(type: 'boolean'),
             ],
         );
 
         $dogSchema = new Schema(
             title: 'Dog',
             type: 'object',
+            required: ['petType', 'name', 'bark'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
-                'bark' => new Schema(type: 'string'),
+                'bark' => new Schema(type: 'boolean'),
             ],
         );
 
@@ -367,19 +420,33 @@ final class DiscriminatorValidatorTest extends TestCase
         $catData = [
             'name' => 'Fluffy',
             'petType' => 'Cat',
+            'meow' => true,
         ];
-
-        $this->validator->validate($catData, $petSchema, $document);
 
         $dogData = [
             'name' => 'Rex',
             'petType' => 'Dog',
-            'bark' => 'loud',
+            'bark' => true,
         ];
 
+        $this->validator->validate($catData, $petSchema, $document);
         $this->validator->validate($dogData, $petSchema, $document);
 
-        $this->assertTrue(true);
+        $catWithBarkInsteadOfMeow = [
+            'name' => 'Fluffy',
+            'petType' => 'Cat',
+            'bark' => true,
+        ];
+
+        try {
+            $this->validator->validate($catWithBarkInsteadOfMeow, $petSchema, $document);
+            $this->fail('Cat schema selected by title should require "meow", not "bark"');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('meow', $errors[0]->message());
+        }
     }
 
     #[Test]
@@ -388,19 +455,22 @@ final class DiscriminatorValidatorTest extends TestCase
         $catSchema = new Schema(
             title: 'cat',
             type: 'object',
+            required: ['petType', 'name', 'meow'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
+                'meow' => new Schema(type: 'boolean'),
             ],
         );
 
         $dogSchema = new Schema(
             title: 'dog',
             type: 'object',
+            required: ['petType', 'name', 'bark'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
-                'bark' => new Schema(type: 'string'),
+                'bark' => new Schema(type: 'boolean'),
             ],
         );
 
@@ -429,67 +499,91 @@ final class DiscriminatorValidatorTest extends TestCase
         $catData = [
             'name' => 'Fluffy',
             'petType' => 'cat',
+            'meow' => true,
         ];
-
-        $this->validator->validate($catData, $petSchema, $document);
 
         $dogData = [
             'name' => 'Rex',
             'petType' => 'dog',
-            'bark' => 'loud',
+            'bark' => true,
         ];
 
+        $this->validator->validate($catData, $petSchema, $document);
         $this->validator->validate($dogData, $petSchema, $document);
 
-        $this->assertTrue(true);
+        $catWithBarkInsteadOfMeow = [
+            'name' => 'Fluffy',
+            'petType' => 'cat',
+            'bark' => true,
+        ];
+
+        try {
+            $this->validator->validate($catWithBarkInsteadOfMeow, $petSchema, $document);
+            $this->fail('Cat schema selected via anyOf should require "meow"');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('meow', $errors[0]->message());
+        }
     }
 
     #[Test]
-    public function validate_with_nested_discriminator(): void
+    public function validate_with_oneOf_and_discriminator_no_mapping(): void
     {
         $catSchema = new Schema(
             title: 'Cat',
             type: 'object',
+            required: ['petType', 'name', 'meow'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
+                'meow' => new Schema(type: 'boolean'),
             ],
         );
 
-        $ownerSchema = new Schema(
-            title: 'Owner',
-            type: 'object',
-            properties: [
-                'name' => new Schema(type: 'string'),
-                'pet' => $catSchema,
+        $petSchema = new Schema(
+            oneOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
             ],
-        );
-
-        $dataSchema = new Schema(
-            type: 'object',
-            properties: [
-                'owner' => $ownerSchema,
-            ],
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+            ),
         );
 
         $document = new OpenApiDocument(
             '3.1.0',
             new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                ],
+            ),
         );
 
-        $data = [
-            'owner' => [
-                'name' => 'John',
-                'pet' => [
-                    'name' => 'Fluffy',
-                    'petType' => 'Cat',
-                ],
-            ],
+        $validData = [
+            'name' => 'Fluffy',
+            'petType' => 'Cat',
+            'meow' => true,
         ];
 
-        $this->validator->validate($data, $dataSchema, $document);
+        $this->validator->validate($validData, $petSchema, $document);
 
-        $this->assertTrue(true);
+        $dataWithoutMeow = [
+            'name' => 'Fluffy',
+            'petType' => 'Cat',
+        ];
+
+        try {
+            $this->validator->validate($dataWithoutMeow, $petSchema, $document);
+            $this->fail('Cat schema should require "meow"');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('meow', $errors[0]->message());
+        }
     }
 
     #[Test]
@@ -498,9 +592,11 @@ final class DiscriminatorValidatorTest extends TestCase
         $catSchema = new Schema(
             title: 'Cat',
             type: 'object',
+            required: ['petType', 'name', 'meow'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
+                'meow' => new Schema(type: 'boolean'),
             ],
         );
 
@@ -527,11 +623,25 @@ final class DiscriminatorValidatorTest extends TestCase
         $catData = [
             'name' => 'Fluffy',
             'petType' => 'Cat',
+            'meow' => true,
         ];
 
         $this->validator->validate($catData, $petSchema, $document, '/custom/path');
 
-        $this->assertTrue(true);
+        $catWithoutMeow = [
+            'name' => 'Fluffy',
+            'petType' => 'Cat',
+        ];
+
+        try {
+            $this->validator->validate($catWithoutMeow, $petSchema, $document, '/custom/path');
+            $this->fail('Cat schema should require "meow" at custom path');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('meow', $errors[0]->message());
+        }
     }
 
     #[Test]
@@ -540,9 +650,11 @@ final class DiscriminatorValidatorTest extends TestCase
         $catSchema = new Schema(
             title: 'Cat',
             type: 'object',
+            required: ['petType', 'name', 'meow'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
+                'meow' => new Schema(type: 'boolean'),
             ],
         );
 
@@ -570,11 +682,25 @@ final class DiscriminatorValidatorTest extends TestCase
         $catData = [
             'name' => 'Fluffy',
             'petType' => 'Cat',
+            'meow' => true,
         ];
 
         $this->validator->validate($catData, $petSchema, $document);
 
-        $this->assertTrue(true);
+        $catWithoutMeow = [
+            'name' => 'Fluffy',
+            'petType' => 'Cat',
+        ];
+
+        try {
+            $this->validator->validate($catWithoutMeow, $petSchema, $document);
+            $this->fail('Cat schema found via title with empty mapping should require "meow"');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('meow', $errors[0]->message());
+        }
     }
 
     #[Test]
@@ -582,9 +708,11 @@ final class DiscriminatorValidatorTest extends TestCase
     {
         $catSchema = new Schema(
             type: 'object',
+            required: ['petType', 'name', 'meow'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
+                'meow' => new Schema(type: 'boolean'),
             ],
         );
 
@@ -614,11 +742,25 @@ final class DiscriminatorValidatorTest extends TestCase
         $catData = [
             'name' => 'Fluffy',
             'petType' => 'cat',
+            'meow' => true,
         ];
 
         $this->validator->validate($catData, $petSchema, $document);
 
-        $this->assertTrue(true);
+        $catWithoutMeow = [
+            'name' => 'Fluffy',
+            'petType' => 'cat',
+        ];
+
+        try {
+            $this->validator->validate($catWithoutMeow, $petSchema, $document);
+            $this->fail('Cat schema selected via mapping should require "meow"');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('meow', $errors[0]->message());
+        }
     }
 
     #[Test]
@@ -627,19 +769,22 @@ final class DiscriminatorValidatorTest extends TestCase
         $catSchema = new Schema(
             title: 'Cat',
             type: 'object',
+            required: ['petType', 'name', 'meow'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
+                'meow' => new Schema(type: 'boolean'),
             ],
         );
 
         $dogSchema = new Schema(
             title: 'Dog',
             type: 'object',
+            required: ['petType', 'name', 'bark'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
-                'bark' => new Schema(type: 'string'),
+                'bark' => new Schema(type: 'boolean'),
             ],
         );
 
@@ -668,19 +813,33 @@ final class DiscriminatorValidatorTest extends TestCase
         $catData = [
             'name' => 'Fluffy',
             'petType' => 'Cat',
+            'meow' => true,
         ];
-
-        $this->validator->validate($catData, $petSchema, $document);
 
         $dogData = [
             'name' => 'Rex',
             'petType' => 'Dog',
-            'bark' => 'loud',
+            'bark' => true,
         ];
 
+        $this->validator->validate($catData, $petSchema, $document);
         $this->validator->validate($dogData, $petSchema, $document);
 
-        $this->assertTrue(true);
+        $catWithBarkInsteadOfMeow = [
+            'name' => 'Fluffy',
+            'petType' => 'Cat',
+            'bark' => true,
+        ];
+
+        try {
+            $this->validator->validate($catWithBarkInsteadOfMeow, $petSchema, $document);
+            $this->fail('Cat schema found by title should require "meow"');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('meow', $errors[0]->message());
+        }
     }
 
     #[Test]
@@ -689,17 +848,21 @@ final class DiscriminatorValidatorTest extends TestCase
         $catSchema = new Schema(
             title: 'Cat',
             type: 'object',
+            required: ['petType', 'name', 'meow'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
+                'meow' => new Schema(type: 'boolean'),
             ],
         );
 
         $unknownPetSchema = new Schema(
             type: 'object',
+            required: ['petType', 'name', 'unknownTrait'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
+                'unknownTrait' => new Schema(type: 'string'),
             ],
         );
 
@@ -728,11 +891,25 @@ final class DiscriminatorValidatorTest extends TestCase
         $birdData = [
             'name' => 'Tweety',
             'petType' => 'bird',
+            'unknownTrait' => 'can-fly',
         ];
 
         $this->validator->validate($birdData, $petSchema, $document);
 
-        $this->assertTrue(true);
+        $birdWithoutUnknownTrait = [
+            'name' => 'Tweety',
+            'petType' => 'bird',
+        ];
+
+        try {
+            $this->validator->validate($birdWithoutUnknownTrait, $petSchema, $document);
+            $this->fail('UnknownPet schema selected via defaultMapping should require "unknownTrait"');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('unknownTrait', $errors[0]->message());
+        }
     }
 
     #[Test]
@@ -740,8 +917,10 @@ final class DiscriminatorValidatorTest extends TestCase
     {
         $fallbackSchema = new Schema(
             type: 'object',
+            required: ['name', 'fallbackId'],
             properties: [
                 'name' => new Schema(type: 'string'),
+                'fallbackId' => new Schema(type: 'integer'),
             ],
         );
 
@@ -764,11 +943,24 @@ final class DiscriminatorValidatorTest extends TestCase
 
         $data = [
             'name' => 'Something',
+            'fallbackId' => 42,
         ];
 
         $this->validator->validate($data, $schema, $document);
 
-        $this->assertTrue(true);
+        $dataWithoutFallbackId = [
+            'name' => 'Something',
+        ];
+
+        try {
+            $this->validator->validate($dataWithoutFallbackId, $schema, $document);
+            $this->fail('Fallback schema should require "fallbackId"');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('fallbackId', $errors[0]->message());
+        }
     }
 
     #[Test]
@@ -787,9 +979,15 @@ final class DiscriminatorValidatorTest extends TestCase
             'name' => 'Something',
         ];
 
-        $this->validator->validate($data, $schema, $document);
+        $exception = null;
 
-        $this->assertTrue(true);
+        try {
+            $this->validator->validate($data, $schema, $document);
+        } catch (Throwable $e) {
+            $exception = $e;
+        }
+
+        $this->assertNull($exception, 'Validation should be skipped when discriminator has no propertyName and no defaultMapping');
     }
 
     #[Test]
@@ -797,17 +995,21 @@ final class DiscriminatorValidatorTest extends TestCase
     {
         $catSchema = new Schema(
             type: 'object',
+            required: ['petType', 'name', 'meow'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
+                'meow' => new Schema(type: 'boolean'),
             ],
         );
 
         $unknownPetSchema = new Schema(
             type: 'object',
+            required: ['petType', 'name', 'unknownTrait'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
+                'unknownTrait' => new Schema(type: 'string'),
             ],
         );
 
@@ -836,23 +1038,38 @@ final class DiscriminatorValidatorTest extends TestCase
         $dogData = [
             'name' => 'Rex',
             'petType' => 'dog',
+            'unknownTrait' => 'mysterious',
         ];
 
         $this->validator->validate($dogData, $petSchema, $document);
 
-        $this->assertTrue(true);
+        $dogWithoutUnknownTrait = [
+            'name' => 'Rex',
+            'petType' => 'dog',
+        ];
+
+        try {
+            $this->validator->validate($dogWithoutUnknownTrait, $petSchema, $document);
+            $this->fail('UnknownPet schema selected via defaultMapping fallback should require "unknownTrait"');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('unknownTrait', $errors[0]->message());
+        }
     }
 
     #[Test]
     public function validate_with_nested_data_path_builds_correct_path(): void
     {
-        // This tests buildPath with a non-root basePath (e.g., '/data/items')
         $catSchema = new Schema(
             title: 'Cat',
             type: 'object',
+            required: ['petType', 'name', 'meow'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
+                'meow' => new Schema(type: 'boolean'),
             ],
         );
 
@@ -879,18 +1096,30 @@ final class DiscriminatorValidatorTest extends TestCase
         $catData = [
             'name' => 'Fluffy',
             'petType' => 'Cat',
+            'meow' => true,
         ];
 
-        // Use non-root data path to exercise buildPath's else branch
         $this->validator->validate($catData, $petSchema, $document, '/data/items');
 
-        $this->assertTrue(true);
+        $catWithoutMeow = [
+            'name' => 'Fluffy',
+            'petType' => 'Cat',
+        ];
+
+        try {
+            $this->validator->validate($catWithoutMeow, $petSchema, $document, '/data/items');
+            $this->fail('Cat schema should require "meow" at nested data path');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('meow', $errors[0]->message());
+        }
     }
 
     #[Test]
     public function validate_with_schema_without_title_falls_through_to_unknown(): void
     {
-        // Tests schemaMatchesValue returning false when schema title is null
         $schemaNoTitle = new Schema(
             type: 'object',
             properties: [
@@ -918,7 +1147,6 @@ final class DiscriminatorValidatorTest extends TestCase
             ),
         );
 
-        // Value 'unknown' doesn't match any title (schema has no title) and no mapping
         $this->expectException(UnknownDiscriminatorValueException::class);
 
         $this->validator->validate(['petType' => 'unknown'], $petSchema, $document);
@@ -927,7 +1155,6 @@ final class DiscriminatorValidatorTest extends TestCase
     #[Test]
     public function validate_with_non_string_data_throws_mismatch(): void
     {
-        // Tests extractValue when data is not an array — DiscriminatorMismatchException
         $petSchema = new Schema(
             oneOf: [
                 new Schema(ref: '#/components/schemas/Cat'),
@@ -948,7 +1175,6 @@ final class DiscriminatorValidatorTest extends TestCase
             ),
         );
 
-        // Test with int data — should throw DiscriminatorMismatchException
         $this->expectException(DiscriminatorMismatchException::class);
 
         $this->validator->validate(42, $petSchema, $document);
@@ -970,34 +1196,19 @@ final class DiscriminatorValidatorTest extends TestCase
             ),
         );
 
-        $schema = new Schema(type: 'object');
-
-        $document = new OpenApiDocument(
-            '3.1.0',
-            new InfoObject('Test API', '1.0.0'),
-        );
-
-        $validator->validate(['data' => 'value'], $schema, $document);
-
-        $this->assertTrue(true);
-    }
-
-    #[Test]
-    public function validate_with_one_of_candidate_without_ref_is_skipped(): void
-    {
-        // Tests findMatchingSchema when a oneOf candidate has no $ref — it should be skipped
         $catSchema = new Schema(
             title: 'Cat',
             type: 'object',
+            required: ['petType', 'name', 'meow'],
             properties: [
                 'name' => new Schema(type: 'string'),
                 'petType' => new Schema(type: 'string'),
+                'meow' => new Schema(type: 'boolean'),
             ],
         );
 
         $petSchema = new Schema(
             oneOf: [
-                new Schema(type: 'object'), // no $ref — should be skipped
                 new Schema(ref: '#/components/schemas/Cat'),
             ],
             discriminator: new Discriminator(
@@ -1019,10 +1230,219 @@ final class DiscriminatorValidatorTest extends TestCase
         $catData = [
             'name' => 'Fluffy',
             'petType' => 'Cat',
+            'meow' => true,
+        ];
+
+        $validator->validate($catData, $petSchema, $document);
+
+        $catWithoutMeow = [
+            'name' => 'Fluffy',
+            'petType' => 'Cat',
+        ];
+
+        try {
+            $validator->validate($catWithoutMeow, $petSchema, $document);
+            $this->fail('Cat schema should require "meow" even with logger configured');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('meow', $errors[0]->message());
+        }
+    }
+
+    #[Test]
+    public function validate_with_one_of_candidate_without_ref_is_skipped(): void
+    {
+        $catSchema = new Schema(
+            title: 'Cat',
+            type: 'object',
+            required: ['petType', 'name', 'meow'],
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+                'meow' => new Schema(type: 'boolean'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            oneOf: [
+                new Schema(type: 'object'),
+                new Schema(ref: '#/components/schemas/Cat'),
+            ],
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                ],
+            ),
+        );
+
+        $catData = [
+            'name' => 'Fluffy',
+            'petType' => 'Cat',
+            'meow' => true,
         ];
 
         $this->validator->validate($catData, $petSchema, $document);
 
-        $this->assertTrue(true);
+        $catWithoutMeow = [
+            'name' => 'Fluffy',
+            'petType' => 'Cat',
+        ];
+
+        try {
+            $this->validator->validate($catWithoutMeow, $petSchema, $document);
+            $this->fail('Cat schema (after skipping non-ref candidate) should require "meow"');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('meow', $errors[0]->message());
+        }
+    }
+
+    #[Test]
+    public function cat_without_required_meow_throws_required_error(): void
+    {
+        $catSchema = new Schema(
+            title: 'Cat',
+            type: 'object',
+            required: ['petType', 'name', 'meow'],
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+                'meow' => new Schema(type: 'boolean'),
+            ],
+        );
+
+        $dogSchema = new Schema(
+            title: 'Dog',
+            type: 'object',
+            required: ['petType', 'name', 'bark'],
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+                'bark' => new Schema(type: 'boolean'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            oneOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+                new Schema(ref: '#/components/schemas/Dog'),
+            ],
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+                mapping: [
+                    'cat' => '#/components/schemas/Cat',
+                    'dog' => '#/components/schemas/Dog',
+                ],
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                    'Dog' => $dogSchema,
+                ],
+            ),
+        );
+
+        $catWithoutMeow = [
+            'petType' => 'cat',
+            'name' => 'Fluffy',
+        ];
+
+        try {
+            $this->validator->validate($catWithoutMeow, $petSchema, $document);
+            $this->fail('Cat data without required "meow" should fail validation');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('meow', $errors[0]->message());
+        }
+    }
+
+    #[Test]
+    public function dog_without_required_bark_throws_required_error(): void
+    {
+        $catSchema = new Schema(
+            title: 'Cat',
+            type: 'object',
+            required: ['petType', 'name', 'meow'],
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+                'meow' => new Schema(type: 'boolean'),
+            ],
+        );
+
+        $dogSchema = new Schema(
+            title: 'Dog',
+            type: 'object',
+            required: ['petType', 'name', 'breed', 'bark'],
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'petType' => new Schema(type: 'string'),
+                'breed' => new Schema(type: 'string'),
+                'bark' => new Schema(type: 'boolean'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            oneOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+                new Schema(ref: '#/components/schemas/Dog'),
+            ],
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+                mapping: [
+                    'cat' => '#/components/schemas/Cat',
+                    'dog' => '#/components/schemas/Dog',
+                ],
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                    'Dog' => $dogSchema,
+                ],
+            ),
+        );
+
+        $dogWithoutBark = [
+            'petType' => 'dog',
+            'name' => 'Rex',
+            'breed' => 'Labrador',
+        ];
+
+        try {
+            $this->validator->validate($dogWithoutBark, $petSchema, $document);
+            $this->fail('Dog data without required "bark" should fail validation');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertGreaterThan(0, count($errors));
+            $this->assertSame('required', $errors[0]->keyword());
+            $this->assertStringContainsString('bark', $errors[0]->message());
+        }
     }
 }
