@@ -105,6 +105,13 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         return $this->dependencies->callbackValidation->validate($request, $callbackName);
     }
 
+    /**
+     * Resolve link parameters from response data.
+     *
+     * Limitation: this method only resolves component-level links
+     * (defined under components/links). Operation-level links defined
+     * inline within a response's links property are not supported.
+     */
     #[Override]
     public function resolveLink(string $linkName, array $responseData): array
     {
@@ -113,6 +120,13 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         return $this->resolveLinkWithContext($linkName, $context);
     }
 
+    /**
+     * Resolves link parameters using full Runtime Expression context.
+     *
+     * Limitation: only component-level links (defined under
+     * components/links) are resolved. Operation-level links defined
+     * inline within a response's links property are not supported.
+     */
     #[Override]
     public function resolveLinkWithContext(string $linkName, LinkContext $context): array
     {

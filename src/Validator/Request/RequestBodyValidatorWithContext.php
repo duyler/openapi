@@ -12,6 +12,8 @@ use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MissingRequestBodyException;
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
+use Duyler\OpenApi\Validator\Example\ExampleValidator;
+use Duyler\OpenApi\Validator\Example\ValidatesExamplesTrait;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\TypeGuarantor;
@@ -20,10 +22,13 @@ use Override;
 
 final readonly class RequestBodyValidatorWithContext implements RequestBodyValidatorInterface
 {
+    use ValidatesExamplesTrait;
+
     private SchemaValidator $regularSchemaValidator;
     private SchemaValidatorWithContext $contextSchemaValidator;
     private RequestBodyCoercer $coercer;
     private readonly ContentTypeNegotiator $negotiator;
+    private readonly ExampleValidator $exampleValidator;
 
     public function __construct(
         private readonly OpenApiDocument $document,
@@ -31,6 +36,7 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
     ) {
         $this->negotiator = new ContentTypeNegotiator();
+        $this->exampleValidator = new ExampleValidator();
         $effectiveFormatRegistry = $this->dependencies->formatRegistry;
 
         $this->regularSchemaValidator = new SchemaValidator(
@@ -123,10 +129,24 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
                 );
                 $this->regularSchemaValidator->validate($parsedBody, $schema, $context);
 
+                $this->dispatchExampleWarnings(
+                    $parsedBody,
+                    $content,
+                    $this->exampleValidator,
+                    $this->dependencies->eventDispatcher,
+                );
+
                 return;
             }
 
             $this->contextSchemaValidator->validate($parsedBody, $schema, ValidatorMode::Request);
+
+            $this->dispatchExampleWarnings(
+                $parsedBody,
+                $content,
+                $this->exampleValidator,
+                $this->dependencies->eventDispatcher,
+            );
         }
     }
 }

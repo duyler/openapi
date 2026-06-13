@@ -12,6 +12,8 @@ use Duyler\OpenApi\Validator\Dto\CoercionContext;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Example\ExampleValidator;
+use Duyler\OpenApi\Validator\Example\ValidatesExamplesTrait;
 use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
@@ -21,11 +23,14 @@ use Psr\Http\Message\StreamInterface;
 
 final readonly class ResponseBodyValidatorWithContext
 {
+    use ValidatesExamplesTrait;
+
     private SchemaValidator $regularSchemaValidator;
     private SchemaValidatorWithContext $contextSchemaValidator;
     private readonly ContentTypeNegotiator $negotiator;
     private readonly ResponseTypeCoercer $typeCoercer;
     private readonly StreamingContentParser $streamingParser;
+    private readonly ExampleValidator $exampleValidator;
 
     public function __construct(
         private readonly OpenApiDocument $document,
@@ -35,6 +40,7 @@ final readonly class ResponseBodyValidatorWithContext
         $this->negotiator = new ContentTypeNegotiator();
         $this->typeCoercer = new ResponseTypeCoercer();
         $this->streamingParser = new StreamingContentParser($this->dependencies->logger);
+        $this->exampleValidator = new ExampleValidator();
         $effectiveFormatRegistry = $this->dependencies->formatRegistry;
 
         $this->regularSchemaValidator = new SchemaValidator(
@@ -133,6 +139,13 @@ final readonly class ResponseBodyValidatorWithContext
         if (null !== $mediaTypeSchema->schema) {
             $this->validateAgainstSchema($parsedBody, $mediaTypeSchema->schema);
         }
+
+        $this->dispatchExampleWarnings(
+            $parsedBody,
+            $mediaTypeSchema,
+            $this->exampleValidator,
+            $this->dependencies->eventDispatcher,
+        );
     }
 
     private function validateStreamingContent(
