@@ -11,6 +11,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
@@ -83,10 +84,12 @@ final class DiscriminatorPropertiesTest extends TestCase
         );
 
         $this->validator = new SchemaValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
+            document: $this->document,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $this->pool,
+                refResolver: $this->refResolver,
+                statelessValidators: $this->statelessValidators,
+            ),
         );
     }
 

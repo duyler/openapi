@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Schema;
 
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\OpenApiDocument;
@@ -25,7 +26,7 @@ final class SchemaValidatorWithContextCacheTest extends TestCase
         $document = new OpenApiDocument(openapi: '3.2.0', info: new InfoObject(title: 'Test', version: '1.0.0'));
         $statelessValidators = new StatelessValidatorRegistry($pool, BuiltinFormats::create());
 
-        $validator = new SchemaValidatorWithContext($pool, $refResolver, $document, $statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $pool, refResolver: $refResolver, statelessValidators: $statelessValidators));
 
         $schema = new Schema(type: 'string');
 
@@ -43,7 +44,7 @@ final class SchemaValidatorWithContextCacheTest extends TestCase
         $document = new OpenApiDocument(openapi: '3.2.0', info: new InfoObject(title: 'Test', version: '1.0.0'));
         $statelessValidators = new StatelessValidatorRegistry($pool, BuiltinFormats::create());
 
-        $validator = new SchemaValidatorWithContext($pool, $refResolver, $document, $statelessValidators);
+        $validator = new SchemaValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $pool, refResolver: $refResolver, statelessValidators: $statelessValidators));
 
         $schema = new Schema(type: 'integer');
 

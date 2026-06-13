@@ -6,33 +6,23 @@ namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
-use Duyler\OpenApi\Validator\ValidatorPool;
-use Psr\EventDispatcher\EventDispatcherInterface;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
 use function is_array;
 use function assert;
 
 final readonly class OneOfValidatorWithContext
 {
-    private readonly LoggerInterface $logger;
-
     public function __construct(
-        private readonly ValidatorPool $pool,
-        private readonly RefResolverInterface $refResolver,
         private readonly OpenApiDocument $document,
-        private readonly StatelessValidatorRegistry $statelessValidators,
-        private readonly bool $reportDeprecated = false,
-        ?LoggerInterface $logger = null,
-        private readonly ?EventDispatcherInterface $eventDispatcher = null,
-    ) {
-        $this->logger = $logger ?? new NullLogger();
-    }
+        private readonly SchemaValidatorDependencies $dependencies,
+        private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
+    ) {}
 
     public function validateWithContext(
         mixed $data,
@@ -72,7 +62,7 @@ final readonly class OneOfValidatorWithContext
             );
         }
 
-        $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool, $this->statelessValidators, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
+        $discriminatorValidator = new DiscriminatorValidator($this->dependencies, $this->configuration);
         $dataPath = $context->breadcrumbs->currentPath();
 
         $discriminatorValidator->validate($data, $schema, $this->document, $dataPath);
@@ -97,7 +87,7 @@ final readonly class OneOfValidatorWithContext
             try {
                 $allowNull = $subSchema->nullable && $context->nullableAsType;
                 $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
-                $validator = new SchemaValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators, $context->nullableAsType, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
+                $validator = new SchemaValidatorWithContext($this->document, $this->dependencies, $this->configuration);
                 $validator->validateWithContext($normalizedData, $subSchema, $context);
                 ++$validCount;
             } catch (AbstractValidationError $e) {

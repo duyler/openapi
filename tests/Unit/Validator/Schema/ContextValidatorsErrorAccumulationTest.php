@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Schema;
 
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
@@ -42,12 +43,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
     #[Test]
     public function items_validator_accumulates_errors_for_invalid_items(): void
     {
-        $validator = new ItemsValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
-        );
+        $validator = new ItemsValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $schema = new Schema(
             type: 'array',
@@ -69,12 +65,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
     #[Test]
     public function items_validator_passes_for_valid_items(): void
     {
-        $validator = new ItemsValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
-        );
+        $validator = new ItemsValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $schema = new Schema(
             type: 'array',
@@ -91,12 +82,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
     #[Test]
     public function items_validator_skips_when_no_items_schema(): void
     {
-        $validator = new ItemsValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
-        );
+        $validator = new ItemsValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $schema = new Schema(type: 'array');
         $context = ValidationContext::create(pool: $this->pool);
@@ -109,12 +95,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
     #[Test]
     public function items_validator_reports_single_error_for_one_invalid_item(): void
     {
-        $validator = new ItemsValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
-        );
+        $validator = new ItemsValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $schema = new Schema(
             type: 'array',
@@ -134,12 +115,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
     #[Test]
     public function properties_validator_accumulates_errors_for_invalid_properties(): void
     {
-        $validator = new PropertiesValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
-        );
+        $validator = new PropertiesValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $schema = new Schema(
             type: 'object',
@@ -161,12 +137,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
     #[Test]
     public function properties_validator_passes_for_valid_data(): void
     {
-        $validator = new PropertiesValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
-        );
+        $validator = new PropertiesValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $schema = new Schema(
             type: 'object',
@@ -185,12 +156,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
     #[Test]
     public function properties_validator_skips_missing_optional_properties(): void
     {
-        $validator = new PropertiesValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
-        );
+        $validator = new PropertiesValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $schema = new Schema(
             type: 'object',
@@ -210,12 +176,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
     #[Test]
     public function properties_validator_skips_when_no_properties(): void
     {
-        $validator = new PropertiesValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
-        );
+        $validator = new PropertiesValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $schema = new Schema(type: 'object');
         $context = ValidationContext::create(pool: $this->pool);
@@ -228,12 +189,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
     #[Test]
     public function properties_validator_reports_errors_for_multiple_invalid_properties(): void
     {
-        $validator = new PropertiesValidatorWithContext(
-            $this->pool,
-            $this->refResolver,
-            $this->document,
-            $this->statelessValidators,
-        );
+        $validator = new PropertiesValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $schema = new Schema(
             type: 'object',

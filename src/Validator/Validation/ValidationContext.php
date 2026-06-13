@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Validation;
 
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
@@ -14,7 +16,6 @@ use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
-use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
 use Duyler\OpenApi\Validator\Request\CookieValidator;
 use Duyler\OpenApi\Validator\Request\HeadersValidator;
 use Duyler\OpenApi\Validator\Request\ParameterDeserializer;
@@ -27,7 +28,6 @@ use Duyler\OpenApi\Validator\Request\RequestBodyValidatorWithContext;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
-use Duyler\OpenApi\Validator\Response\StatusCodeValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
@@ -41,6 +41,7 @@ final readonly class ValidationContext
     public readonly RequestValidator $requestValidator;
     public readonly ResponseValidatorWithContext $responseValidator;
     private readonly StatelessValidatorRegistry $statelessValidators;
+    private readonly SchemaValidatorDependencies $schemaValidatorDependencies;
 
     public function __construct(
         public readonly OpenApiDocument $document,
@@ -63,21 +64,42 @@ final readonly class ValidationContext
             $this->logger,
             $this->eventDispatcher,
         );
+
+        $this->schemaValidatorDependencies = new SchemaValidatorDependencies(
+            pool: $this->pool,
+            refResolver: $this->refResolver,
+            statelessValidators: $this->statelessValidators,
+            logger: $this->logger,
+            eventDispatcher: $this->eventDispatcher,
+            errorFormatter: $this->errorFormatter,
+            formatRegistry: $this->formatRegistry,
+            bodyParser: new BodyParser(
+                jsonParser: new JsonBodyParser(),
+                formParser: new FormBodyParser(),
+                multipartParser: new MultipartBodyParser(),
+                textParser: new TextBodyParser(),
+                xmlParser: new XmlBodyParser(),
+            ),
+        );
+
         $this->requestValidator = $this->buildRequestValidator();
         $this->responseValidator = $this->buildResponseValidator();
+    }
+
+    private function buildValidatorConfiguration(): ValidatorConfiguration
+    {
+        return new ValidatorConfiguration(
+            coercion: $this->coercion,
+            nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
+            reportDeprecated: $this->reportDeprecated,
+        );
     }
 
     private function buildRequestValidator(): RequestValidator
     {
         $deserializer = new ParameterDeserializer();
         $coercer = new TypeCoercer();
-        $bodyParser = new BodyParser(
-            jsonParser: new JsonBodyParser(),
-            formParser: new FormBodyParser(),
-            multipartParser: new MultipartBodyParser(),
-            textParser: new TextBodyParser(),
-            xmlParser: new XmlBodyParser(),
-        );
 
         $queryParser = new QueryParser();
         $schemaValidator = new SchemaValidator(
@@ -121,20 +143,9 @@ final readonly class ValidationContext
                 coercion: $this->coercion,
             ),
             bodyValidator: new RequestBodyValidatorWithContext(
-                pool: $this->pool,
                 document: $this->document,
-                bodyParser: $bodyParser,
-                statelessValidators: $this->statelessValidators,
-                refResolver: $this->refResolver,
-                formatRegistry: $this->formatRegistry,
-                negotiator: new ContentTypeNegotiator(),
-                nullableAsType: $this->nullableAsType,
-                emptyArrayStrategy: $this->emptyArrayStrategy,
-                coercion: $this->coercion,
-                reportDeprecated: $this->reportDeprecated,
-                logger: $this->logger,
-                eventDispatcher: $this->eventDispatcher,
-                errorFormatter: $this->errorFormatter,
+                dependencies: $this->schemaValidatorDependencies,
+                configuration: $this->buildValidatorConfiguration(),
             ),
         );
     }
@@ -142,19 +153,9 @@ final readonly class ValidationContext
     private function buildResponseValidator(): ResponseValidatorWithContext
     {
         return new ResponseValidatorWithContext(
-            pool: $this->pool,
             document: $this->document,
-            statelessValidators: $this->statelessValidators,
-            formatRegistry: $this->formatRegistry,
-            coercion: $this->coercion,
-            statusCodeValidator: new StatusCodeValidator(),
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            refResolver: $this->refResolver,
-            reportDeprecated: $this->reportDeprecated,
-            logger: $this->logger,
-            eventDispatcher: $this->eventDispatcher,
-            errorFormatter: $this->errorFormatter,
+            dependencies: $this->schemaValidatorDependencies,
+            configuration: $this->buildValidatorConfiguration(),
         );
     }
 }

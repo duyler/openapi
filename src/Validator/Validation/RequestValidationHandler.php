@@ -8,6 +8,7 @@ use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Event\ValidationErrorEvent;
 use Duyler\OpenApi\Event\ValidationFinishedEvent;
 use Duyler\OpenApi\Event\ValidationStartedEvent;
+use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
 use Duyler\OpenApi\Validator\EventDispatchingTrait;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Operation;
@@ -89,13 +90,14 @@ final readonly class RequestValidationHandler
 
                     if (null !== $securityRequirements) {
                         $securitySchemes = $this->context->document->components?->securitySchemes ?? [];
-                        $this->securityValidator->validate(
-                            $request,
-                            $operation->path,
-                            $operation->method,
-                            $securityRequirements,
-                            $securitySchemes,
+                        $securityContext = new SecurityValidationContext(
+                            request: $request,
+                            path: $operation->path,
+                            method: $operation->method,
+                            securityRequirements: $securityRequirements,
+                            securitySchemes: $securitySchemes,
                         );
+                        $this->securityValidator->validate($securityContext);
                     }
                 }
 

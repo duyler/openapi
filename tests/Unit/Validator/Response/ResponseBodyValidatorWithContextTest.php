@@ -8,7 +8,6 @@ use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
-use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
@@ -18,6 +17,7 @@ use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Response\ResponseBodyValidatorWithContext;
 use Duyler\OpenApi\Validator\Response\ResponseTypeCoercer;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
@@ -27,6 +27,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Schema\Model\Encoding;
 use Duyler\OpenApi\Schema\Model\InfoObject;
+use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 
 /** @internal */
 final class ResponseBodyValidatorWithContextTest extends TestCase
@@ -52,18 +53,17 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
         $typeCoercer = new ResponseTypeCoercer();
         $bodyParser = new BodyParser($jsonParser, $formParser, $multipartParser, $textParser, $xmlParser);
 
-        $this->validator = new ResponseBodyValidatorWithContext(
+        $dependencies = new SchemaValidatorDependencies(
             pool: $pool,
-            document: $document,
-            bodyParser: $bodyParser,
-            statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
             refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
             formatRegistry: BuiltinFormats::create(),
-            negotiator: $negotiator,
-            typeCoercer: $typeCoercer,
-            coercion: false,
-            nullableAsType: true,
-            emptyArrayStrategy: EmptyArrayStrategy::AllowBoth,
+            bodyParser: $bodyParser,
+        );
+
+        $this->validator = new ResponseBodyValidatorWithContext(
+            document: $document,
+            dependencies: $dependencies,
         );
     }
 
@@ -310,17 +310,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
         $bodyParser = new BodyParser($jsonParser, $formParser, $multipartParser, $textParser, $xmlParser);
 
         $validator = new ResponseBodyValidatorWithContext(
-            pool: $pool,
             document: $document,
-            bodyParser: $bodyParser,
-            statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
-            refResolver: new RefResolver(),
-            formatRegistry: BuiltinFormats::create(),
-            negotiator: $negotiator,
-            typeCoercer: $typeCoercer,
-            coercion: true,
-            nullableAsType: true,
-            emptyArrayStrategy: EmptyArrayStrategy::AllowBoth,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $pool,
+                refResolver: new RefResolver(),
+                statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
+                formatRegistry: BuiltinFormats::create(),
+                bodyParser: $bodyParser,
+            ),
+            configuration: new ValidatorConfiguration(coercion: true),
         );
 
         $body = '{"id":"123"}';

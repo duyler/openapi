@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use WeakMap;
 use Duyler\OpenApi\Test\Unit\Helper\ValidatorDependenciesAccessTrait;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 
 use function assert;
 
@@ -144,8 +145,9 @@ YAML;
         $context = self::readProperty($requestValidation, RequestValidationHandler::class, 'context');
         $requestValidator = self::readProperty($context, ValidationContext::class, 'requestValidator');
         $bodyValidator = self::readProperty($requestValidator, RequestValidator::class, 'bodyValidator');
+        $dependencies = self::readProperty($bodyValidator, RequestBodyValidatorWithContext::class, 'dependencies');
 
-        return self::readProperty($bodyValidator, RequestBodyValidatorWithContext::class, 'refResolver');
+        return self::readProperty($dependencies, SchemaValidatorDependencies::class, 'refResolver');
     }
 
     private static function readResponseRefResolver(OpenApiValidator $validator): RefResolver
@@ -153,7 +155,8 @@ YAML;
         $responseValidation = self::readDependenciesProperty($validator, 'responseValidation');
         $context = self::readProperty($responseValidation, ResponseValidationHandler::class, 'context');
         $responseValidator = self::readProperty($context, ValidationContext::class, 'responseValidator');
+        $dependencies = self::readProperty($responseValidator, ResponseValidatorWithContext::class, 'dependencies');
 
-        return self::readProperty($responseValidator, ResponseValidatorWithContext::class, 'refResolver');
+        return self::readProperty($dependencies, SchemaValidatorDependencies::class, 'refResolver');
     }
 }

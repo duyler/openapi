@@ -6,67 +6,55 @@ namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
-use Duyler\OpenApi\Validator\EmptyArrayStrategy;
-use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
-use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorMode;
-use Duyler\OpenApi\Validator\ValidatorPool;
-use Psr\EventDispatcher\EventDispatcherInterface;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
 use function count;
 use function is_array;
 
 final class SchemaValidatorWithContext
 {
-    private readonly LoggerInterface $logger;
-    private readonly ErrorFormatterInterface $errorFormatter;
-
     public function __construct(
-        private readonly ValidatorPool $pool,
-        private readonly RefResolverInterface $refResolver,
         private readonly OpenApiDocument $document,
-        private readonly StatelessValidatorRegistry $statelessValidators,
-        private readonly bool $nullableAsType = true,
-        private readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
-        private readonly bool $reportDeprecated = false,
-        ?LoggerInterface $logger = null,
-        private readonly ?EventDispatcherInterface $eventDispatcher = null,
-        ?ErrorFormatterInterface $errorFormatter = null,
-    ) {
-        $this->logger = $logger ?? new NullLogger();
-        $this->errorFormatter = $errorFormatter ?? SimpleFormatter::shared();
-    }
+        private readonly SchemaValidatorDependencies $dependencies,
+        private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
+    ) {}
 
-    public function validate(array|int|string|float|bool|null $data, Schema $schema, bool $useDiscriminator = true, ?ValidatorMode $mode = null): void
+    public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidatorMode $mode = null): void
     {
-        $context = ValidationContext::create($this->pool, $this->errorFormatter, $this->nullableAsType, $this->emptyArrayStrategy, $mode);
+        $context = ValidationContext::create(
+            $this->dependencies->pool,
+            $this->dependencies->errorFormatter,
+            $this->configuration->nullableAsType,
+            $this->configuration->emptyArrayStrategy,
+            $mode,
+        );
 
         $schema = $this->resolveRef($schema);
 
-        if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
-            $oneOfValidator = new OneOfValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
-            $oneOfValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
+        if (null !== $schema->discriminator && null !== $schema->oneOf) {
+            $oneOfValidator = new OneOfValidatorWithContext($this->document, $this->dependencies, $this->configuration);
+            $oneOfValidator->validateWithContext($data, $schema, $context, true);
             return;
         }
 
-        if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
+        if (null !== $schema->discriminator && null !== $data) {
             $this->validateInternal($data, $schema, $context);
 
-            $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool, $this->statelessValidators, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
+            $discriminatorValidator = new DiscriminatorValidator($this->dependencies, $this->configuration);
             $discriminatorValidator->validate($data, $schema, $this->document);
 
-            $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
+            $this->validatePropertiesAndItems($data, $schema, $context, true);
             return;
         }
 
         $this->validateInternal($data, $schema, $context);
 
-        $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
+        $this->validatePropertiesAndItems($data, $schema, $context, true);
     }
 
     public function validateWithContext(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
@@ -76,7 +64,7 @@ final class SchemaValidatorWithContext
         $schema = $this->resolveRef($schema);
 
         if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
-            $oneOfValidator = new OneOfValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
+            $oneOfValidator = new OneOfValidatorWithContext($this->document, $this->dependencies, $this->configuration);
             $oneOfValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
             return;
         }
@@ -84,7 +72,7 @@ final class SchemaValidatorWithContext
         if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
             $this->validateInternal($data, $schema, $context);
 
-            $discriminatorValidator = new DiscriminatorValidator($this->refResolver, $this->pool, $this->statelessValidators, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
+            $discriminatorValidator = new DiscriminatorValidator($this->dependencies, $this->configuration);
             $discriminatorValidator->validate($data, $schema, $this->document);
 
             $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
@@ -103,12 +91,12 @@ final class SchemaValidatorWithContext
         bool $useDiscriminator,
     ): void {
         if (null !== $schema->properties && [] !== $schema->properties && is_array($data)) {
-            $propertiesValidator = new PropertiesValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
+            $propertiesValidator = new PropertiesValidatorWithContext($this->document, $this->dependencies, $this->configuration);
             $propertiesValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
         }
 
         if (null !== $schema->items && is_array($data)) {
-            $itemsValidator = new ItemsValidatorWithContext($this->pool, $this->refResolver, $this->document, $this->statelessValidators, reportDeprecated: $this->reportDeprecated, logger: $this->logger, eventDispatcher: $this->eventDispatcher);
+            $itemsValidator = new ItemsValidatorWithContext($this->document, $this->dependencies, $this->configuration);
             $itemsValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
         }
     }
@@ -119,14 +107,14 @@ final class SchemaValidatorWithContext
             return $schema;
         }
 
-        return $this->refResolver->resolveSchemaWithOverride($schema, $this->document);
+        return $this->dependencies->refResolver->resolveSchemaWithOverride($schema, $this->document);
     }
 
     private function validateInternal(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
     {
         $errors = [];
 
-        foreach ($this->statelessValidators->getValidators() as $validator) {
+        foreach ($this->dependencies->statelessValidators->getValidators() as $validator) {
             try {
                 $validator->validate($data, $schema, $context);
             } catch (AbstractValidationError $e) {
