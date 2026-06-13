@@ -39,9 +39,13 @@ final class SchemaValidatorWithContext
 
     public function validateWithContext(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
     {
-        $context = $context->withIncrementedDepth();
+        $context->incrementDepth();
 
-        $this->doValidate($data, $schema, $context, $useDiscriminator);
+        try {
+            $this->doValidate($data, $schema, $context, $useDiscriminator);
+        } finally {
+            $context->decrementDepth();
+        }
     }
 
     private function doValidate(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void

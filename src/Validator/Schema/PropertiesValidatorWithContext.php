@@ -45,10 +45,14 @@ final readonly class PropertiesValidatorWithContext
                 $allowNull = $propertySchema->nullable && $context->nullableAsType;
                 $value = SchemaValueNormalizer::normalize($data[$name], $allowNull);
 
-                $propertyContext = $context->withBreadcrumb($name);
+                $context->enterBreadcrumb($name);
 
-                $validator = new SchemaValidatorWithContext($this->document, $this->dependencies, $this->configuration);
-                $validator->validateWithContext($value, $propertySchema, $propertyContext, $useDiscriminator);
+                try {
+                    $validator = new SchemaValidatorWithContext($this->document, $this->dependencies, $this->configuration);
+                    $validator->validateWithContext($value, $propertySchema, $context, $useDiscriminator);
+                } finally {
+                    $context->leaveBreadcrumb();
+                }
             } catch (DiscriminatorMismatchException|
                 InvalidDiscriminatorValueException|
                 MissingDiscriminatorPropertyException|

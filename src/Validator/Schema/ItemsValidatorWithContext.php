@@ -44,12 +44,16 @@ final readonly class ItemsValidatorWithContext
             }
 
             try {
-                $itemContext = $context->withBreadcrumbIndex($index);
+                $context->enterBreadcrumbIndex($index);
 
-                $allowNull = $itemSchema->nullable && $context->nullableAsType;
-                $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
-                $validator = new SchemaValidatorWithContext($this->document, $this->dependencies, $this->configuration);
-                $validator->validateWithContext($normalizedItem, $itemSchema, $itemContext, $useDiscriminator);
+                try {
+                    $allowNull = $itemSchema->nullable && $context->nullableAsType;
+                    $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
+                    $validator = new SchemaValidatorWithContext($this->document, $this->dependencies, $this->configuration);
+                    $validator->validateWithContext($normalizedItem, $itemSchema, $context, $useDiscriminator);
+                } finally {
+                    $context->leaveBreadcrumb();
+                }
             } catch (DiscriminatorMismatchException|
                 InvalidDiscriminatorValueException|
                 MissingDiscriminatorPropertyException|

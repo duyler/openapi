@@ -24,31 +24,34 @@ class BreadcrumbManagerTest extends TestCase
     public function push_and_pop_segments(): void
     {
         $manager = BreadcrumbManager::create();
-        $manager2 = $manager->push('users');
-        $manager3 = $manager2->push('name');
+        $manager->push('users');
+        $manager->push('name');
 
-        $this->assertSame('/', $manager->currentPath());
-        $this->assertSame('/users', $manager2->currentPath());
-        $this->assertSame('/users/name', $manager3->currentPath());
+        $this->assertSame('/users/name', $manager->currentPath());
 
-        $manager4 = $manager3->pop();
-        $this->assertSame('/users', $manager4->currentPath());
+        $manager->pop();
+
+        $this->assertSame('/users', $manager->currentPath());
     }
 
     #[Test]
     public function push_index(): void
     {
         $manager = BreadcrumbManager::create();
-        $manager2 = $manager->push('users')->pushIndex(0);
+        $manager->push('users');
+        $manager->pushIndex(0);
 
-        $this->assertSame('/users/0', $manager2->currentPath());
+        $this->assertSame('/users/0', $manager->currentPath());
     }
 
     #[Test]
     public function track_nested_path(): void
     {
         $manager = BreadcrumbManager::create();
-        $manager = $manager->push('data')->pushIndex(0)->push('items')->pushIndex(5);
+        $manager->push('data');
+        $manager->pushIndex(0);
+        $manager->push('items');
+        $manager->pushIndex(5);
 
         $this->assertSame('/data/0/items/5', $manager->currentPath());
     }
@@ -57,7 +60,9 @@ class BreadcrumbManagerTest extends TestCase
     public function create_breadcrumb_from_stack(): void
     {
         $manager = BreadcrumbManager::create();
-        $manager = $manager->push('users')->pushIndex(0)->push('name');
+        $manager->push('users');
+        $manager->pushIndex(0);
+        $manager->push('name');
 
         $breadcrumb = $manager->toBreadcrumb();
 
@@ -66,22 +71,32 @@ class BreadcrumbManagerTest extends TestCase
     }
 
     #[Test]
-    public function maintain_immutability(): void
+    public function mutate_in_place_on_push(): void
     {
         $manager = BreadcrumbManager::create();
-        $manager2 = $manager->push('users');
+        $manager->push('users');
 
-        $this->assertNotSame($manager, $manager2);
-        $this->assertSame('/', $manager->currentPath());
-        $this->assertSame('/users', $manager2->currentPath());
+        $this->assertSame('/users', $manager->currentPath());
     }
 
     #[Test]
     public function pop_from_empty_manager(): void
     {
         $manager = BreadcrumbManager::create();
-        $manager2 = $manager->pop();
+        $manager->pop();
 
-        $this->assertSame('/', $manager2->currentPath());
+        $this->assertSame('/', $manager->currentPath());
+    }
+
+    #[Test]
+    public function push_pop_round_trip_restores_state(): void
+    {
+        $manager = BreadcrumbManager::create();
+        $manager->push('root');
+
+        $manager->push('child');
+        $manager->pop();
+
+        $this->assertSame('/root', $manager->currentPath());
     }
 }

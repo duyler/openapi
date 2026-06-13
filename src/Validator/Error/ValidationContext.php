@@ -11,7 +11,7 @@ use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
-final readonly class ValidationContext
+final class ValidationContext
 {
     public const int MAX_DEPTH = 64;
 
@@ -21,7 +21,7 @@ final readonly class ValidationContext
         public readonly ErrorFormatterInterface $errorFormatter,
         public readonly bool $nullableAsType = true,
         public readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
-        public readonly int $depth = 0,
+        private int $depth = 0,
         public readonly ?ValidatorMode $mode = null,
     ) {}
 
@@ -42,46 +42,37 @@ final readonly class ValidationContext
         );
     }
 
-    public function withBreadcrumb(string $segment): self
+    public function enterBreadcrumb(string $segment): void
     {
-        return new self(
-            breadcrumbs: $this->breadcrumbs->push($segment),
-            pool: $this->pool,
-            errorFormatter: $this->errorFormatter,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            depth: $this->depth,
-            mode: $this->mode,
-        );
+        $this->breadcrumbs->push($segment);
     }
 
-    public function withBreadcrumbIndex(int $index): self
+    public function enterBreadcrumbIndex(int $index): void
     {
-        return new self(
-            breadcrumbs: $this->breadcrumbs->pushIndex($index),
-            pool: $this->pool,
-            errorFormatter: $this->errorFormatter,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            depth: $this->depth,
-            mode: $this->mode,
-        );
+        $this->breadcrumbs->pushIndex($index);
     }
 
-    public function withIncrementedDepth(): self
+    public function leaveBreadcrumb(): void
+    {
+        $this->breadcrumbs->pop();
+    }
+
+    public function incrementDepth(): void
     {
         if ($this->depth >= self::MAX_DEPTH) {
             throw new SchemaDepthExceededException(self::MAX_DEPTH);
         }
 
-        return new self(
-            breadcrumbs: $this->breadcrumbs,
-            pool: $this->pool,
-            errorFormatter: $this->errorFormatter,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            depth: $this->depth + 1,
-            mode: $this->mode,
-        );
+        ++$this->depth;
+    }
+
+    public function decrementDepth(): void
+    {
+        --$this->depth;
+    }
+
+    public function depth(): int
+    {
+        return $this->depth;
     }
 }

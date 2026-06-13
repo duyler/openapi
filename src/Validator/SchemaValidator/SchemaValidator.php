@@ -37,20 +37,28 @@ final class SchemaValidator implements SchemaValidatorInterface
     #[Override]
     public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
     {
-        $context = $context?->withIncrementedDepth() ?? ValidationContext::create(pool: $this->pool);
+        if (null === $context) {
+            $context = ValidationContext::create(pool: $this->pool);
+        }
 
-        $registry = $this->registry ?? $this->cachedRegistry ??= new DefaultValidatorRegistry(
-            $this->pool,
-            $this->formatRegistry,
-            $this->strictFormats,
-            $this->logger,
-            $this->reportDeprecated,
-            $this->eventDispatcher,
-        );
+        $context->incrementDepth();
 
-        foreach ($registry->getAllValidators() as $validator) {
-            assert($validator instanceof SchemaValidatorInterface);
-            $validator->validate($data, $schema, $context);
+        try {
+            $registry = $this->registry ?? $this->cachedRegistry ??= new DefaultValidatorRegistry(
+                $this->pool,
+                $this->formatRegistry,
+                $this->strictFormats,
+                $this->logger,
+                $this->reportDeprecated,
+                $this->eventDispatcher,
+            );
+
+            foreach ($registry->getAllValidators() as $validator) {
+                assert($validator instanceof SchemaValidatorInterface);
+                $validator->validate($data, $schema, $context);
+            }
+        } finally {
+            $context->decrementDepth();
         }
     }
 }

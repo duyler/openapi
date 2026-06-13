@@ -288,7 +288,8 @@ class DeprecatedValidatorTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create(pool: $this->pool)->withBreadcrumb('root');
+        $context = ValidationContext::create(pool: $this->pool);
+        $context->enterBreadcrumb('root');
 
         $validator->validate(['oldField' => 'value'], $schema, $context);
 

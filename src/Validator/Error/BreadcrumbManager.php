@@ -4,39 +4,31 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Error;
 
+use function implode;
+
 final class BreadcrumbManager
 {
-    /**
-     * @param array<int, string> $stack
-     */
-    private function __construct(
-        private array $stack = [],
-    ) {}
+    /** @var array<int, string> */
+    private array $stack = [];
 
     public static function create(): self
     {
-        return new self([]);
+        return new self();
     }
 
-    public function push(string $segment): self
+    public function push(string $segment): void
     {
-        $clone = clone $this;
-        $clone->stack[] = $segment;
-
-        return $clone;
+        $this->stack[] = $segment;
     }
 
-    public function pushIndex(int $index): self
+    public function pushIndex(int $index): void
     {
-        return $this->push((string) $index);
+        $this->stack[] = (string) $index;
     }
 
-    public function pop(): self
+    public function pop(): void
     {
-        $clone = clone $this;
-        array_pop($clone->stack);
-
-        return $clone;
+        array_pop($this->stack);
     }
 
     public function toBreadcrumb(): Breadcrumb
@@ -46,6 +38,10 @@ final class BreadcrumbManager
 
     public function currentPath(): string
     {
-        return $this->toBreadcrumb()->toString();
+        if ([] === $this->stack) {
+            return '/';
+        }
+
+        return '/' . implode('/', $this->stack);
     }
 }

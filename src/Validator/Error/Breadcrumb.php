@@ -17,9 +17,10 @@ final readonly class Breadcrumb
 
     public function append(string $segment): self
     {
-        $newSegments = [...$this->segments, $segment];
+        $segments = $this->segments;
+        $segments[] = $segment;
 
-        return new self($newSegments);
+        return new self($segments);
     }
 
     public function appendIndex(int $index): self
