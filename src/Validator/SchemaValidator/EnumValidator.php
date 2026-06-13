@@ -9,6 +9,8 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\EnumError;
 use Override;
 
+use function in_array;
+
 final readonly class EnumValidator extends AbstractSchemaValidator
 {
     #[Override]
@@ -17,9 +19,7 @@ final readonly class EnumValidator extends AbstractSchemaValidator
         if (null === $schema->enum || [] === $schema->enum) {
             return;
         }
-        $found = array_any($schema->enum, fn($value) => $data === $value);
-
-        if (false === $found) {
+        if (false === in_array($data, $schema->enum, true)) {
             $dataPath = $this->getDataPath($context);
             throw new EnumError(
                 allowedValues: $schema->enum,
