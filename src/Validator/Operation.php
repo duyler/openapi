@@ -12,10 +12,16 @@ use function sprintf;
 
 final readonly class Operation implements Stringable
 {
+    private readonly int $placeholderCount;
+
     public function __construct(
         public readonly string $path,
         public readonly string $method,
-    ) {}
+    ) {
+        preg_match_all('/\{[^}]+\}/', $this->path, $matches);
+
+        $this->placeholderCount = count($matches[0] ?? []);
+    }
 
     #[Override]
     public function __toString(): string
@@ -25,8 +31,6 @@ final readonly class Operation implements Stringable
 
     public function countPlaceholders(): int
     {
-        preg_match_all('/\{[^}]+\}/', $this->path, $matches);
-
-        return count($matches[0] ?? []);
+        return $this->placeholderCount;
     }
 }

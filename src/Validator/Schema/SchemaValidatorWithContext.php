@@ -18,11 +18,21 @@ use function is_array;
 
 final class SchemaValidatorWithContext
 {
+    private OneOfValidatorWithContext $oneOfValidator;
+    private DiscriminatorValidator $discriminatorValidator;
+    private PropertiesValidatorWithContext $propertiesValidator;
+    private ItemsValidatorWithContext $itemsValidator;
+
     public function __construct(
         private readonly OpenApiDocument $document,
         private readonly SchemaValidatorDependencies $dependencies,
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
-    ) {}
+    ) {
+        $this->oneOfValidator = new OneOfValidatorWithContext($this->document, $this->dependencies, $this->configuration);
+        $this->discriminatorValidator = new DiscriminatorValidator($this->dependencies, $this->configuration);
+        $this->propertiesValidator = new PropertiesValidatorWithContext($this->document, $this->dependencies, $this->configuration);
+        $this->itemsValidator = new ItemsValidatorWithContext($this->document, $this->dependencies, $this->configuration);
+    }
 
     public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidatorMode $mode = null): void
     {
@@ -53,8 +63,7 @@ final class SchemaValidatorWithContext
         $schema = $this->resolveRef($schema);
 
         if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
-            $oneOfValidator = new OneOfValidatorWithContext($this->document, $this->dependencies, $this->configuration);
-            $oneOfValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
+            $this->oneOfValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
 
             return;
         }
@@ -62,8 +71,7 @@ final class SchemaValidatorWithContext
         if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
             $this->validateInternal($data, $schema, $context);
 
-            $discriminatorValidator = new DiscriminatorValidator($this->dependencies, $this->configuration);
-            $discriminatorValidator->validate($data, $schema, $this->document);
+            $this->discriminatorValidator->validate($data, $schema, $this->document);
 
             $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
 
@@ -82,13 +90,11 @@ final class SchemaValidatorWithContext
         bool $useDiscriminator,
     ): void {
         if (null !== $schema->properties && [] !== $schema->properties && is_array($data)) {
-            $propertiesValidator = new PropertiesValidatorWithContext($this->document, $this->dependencies, $this->configuration);
-            $propertiesValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
+            $this->propertiesValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
         }
 
         if (null !== $schema->items && is_array($data)) {
-            $itemsValidator = new ItemsValidatorWithContext($this->document, $this->dependencies, $this->configuration);
-            $itemsValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
+            $this->itemsValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
         }
     }
 

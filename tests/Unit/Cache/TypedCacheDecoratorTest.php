@@ -10,7 +10,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
-use RuntimeException;
 
 final class TypedCacheDecoratorTest extends TestCase
 {
@@ -116,9 +115,11 @@ final class TypedCacheDecoratorTest extends TestCase
     }
 
     #[Test]
-    public function get_throws_exception_when_expected_type_does_not_exist(): void
+    public function get_returns_null_when_expected_type_class_does_not_exist(): void
     {
         $pool = $this->createMockCachePool();
+
+        $schema = $this->createSchema();
 
         $cacheItem = $this->createStub(CacheItemInterface::class);
         $cacheItem
@@ -126,7 +127,7 @@ final class TypedCacheDecoratorTest extends TestCase
             ->willReturn(true);
         $cacheItem
             ->method('get')
-            ->willReturn('value');
+            ->willReturn($schema);
 
         $pool
             ->expects($this->once())
@@ -136,10 +137,9 @@ final class TypedCacheDecoratorTest extends TestCase
 
         $decorator = new TypedCacheDecorator($pool);
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Expected type class does not exist: NonExistentClass');
+        $result = $decorator->get('test_key', 'NonExistentClass');
 
-        $decorator->get('test_key', 'NonExistentClass');
+        self::assertNull($result);
     }
 
     #[Test]
