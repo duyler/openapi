@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Response;
 
 use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\MediaType;
+use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
@@ -16,6 +17,7 @@ use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\TypeGuarantor;
 use Duyler\OpenApi\Validator\ValidatorMode;
+use Psr\Http\Message\StreamInterface;
 
 final readonly class ResponseBodyValidatorWithContext
 {
@@ -32,7 +34,7 @@ final readonly class ResponseBodyValidatorWithContext
     ) {
         $this->negotiator = new ContentTypeNegotiator();
         $this->typeCoercer = new ResponseTypeCoercer();
-        $this->streamingParser = new StreamingContentParser();
+        $this->streamingParser = new StreamingContentParser($this->dependencies->logger);
         $effectiveFormatRegistry = $this->dependencies->formatRegistry;
 
         $this->regularSchemaValidator = new SchemaValidator(
@@ -75,6 +77,40 @@ final readonly class ResponseBodyValidatorWithContext
         $this->validateRegularContent($body, $mediaTypeSchema, $mediaType);
     }
 
+    public function validateStream(
+        StreamInterface $stream,
+        string $contentType,
+        ?Content $content,
+    ): void {
+        if (null === $content) {
+            return;
+        }
+
+        $mediaType = $this->negotiator->getMediaType($contentType);
+        $mediaTypeSchema = $content->mediaTypes[$mediaType] ?? null;
+
+        if (null === $mediaTypeSchema) {
+            return;
+        }
+
+        $schema = $mediaTypeSchema->itemSchema ?? $mediaTypeSchema->schema;
+
+        if (null === $schema) {
+            return;
+        }
+
+        $effectiveContentType = $mediaTypeSchema->itemEncoding->contentType ?? $contentType;
+        $items = $this->streamingParser->parseStream($stream, $effectiveContentType);
+
+        foreach ($items as $item) {
+            if (null === $item) {
+                continue;
+            }
+
+            $this->validateAgainstSchema($item, $schema);
+        }
+    }
+
     private function validateRegularContent(
         string $body,
         MediaType $mediaTypeSchema,
@@ -95,26 +131,7 @@ final readonly class ResponseBodyValidatorWithContext
         }
 
         if (null !== $mediaTypeSchema->schema) {
-            $schema = $mediaTypeSchema->schema;
-            $hasDiscriminator = null !== $schema->discriminator
-                || $this->dependencies->refResolver->schemaHasDiscriminator($schema, $this->document);
-            $hasRef = $this->dependencies->refResolver->schemaHasRef($schema);
-
-            $context = ValidationContext::create(
-                $this->dependencies->pool,
-                $this->dependencies->errorFormatter,
-                $this->configuration->nullableAsType,
-                $this->configuration->emptyArrayStrategy,
-                ValidatorMode::Response,
-            );
-
-            if (false === ($hasDiscriminator || $hasRef)) {
-                $this->regularSchemaValidator->validate($parsedBody, $schema, $context);
-
-                return;
-            }
-
-            $this->contextSchemaValidator->validate($parsedBody, $schema, ValidatorMode::Response);
+            $this->validateAgainstSchema($parsedBody, $mediaTypeSchema->schema);
         }
     }
 
@@ -132,6 +149,23 @@ final readonly class ResponseBodyValidatorWithContext
         $effectiveContentType = $mediaType->itemEncoding->contentType ?? $contentType;
         $items = $this->streamingParser->parse($body, $effectiveContentType);
 
+        foreach ($items as $item) {
+            if (null === $item) {
+                continue;
+            }
+
+            $this->validateAgainstSchema($item, $schema);
+        }
+    }
+
+    /**
+     * Validate data against a schema, choosing the appropriate validator
+     * based on discriminator or $ref presence.
+     *
+     * @param array<int|string, mixed>|int|string|float|bool|null $data
+     */
+    private function validateAgainstSchema(mixed $data, Schema $schema): void
+    {
         $context = ValidationContext::create(
             $this->dependencies->pool,
             $this->dependencies->errorFormatter,
@@ -139,22 +173,17 @@ final readonly class ResponseBodyValidatorWithContext
             $this->configuration->emptyArrayStrategy,
             ValidatorMode::Response,
         );
+
         $hasDiscriminator = null !== $schema->discriminator
             || $this->dependencies->refResolver->schemaHasDiscriminator($schema, $this->document);
         $hasRef = $this->dependencies->refResolver->schemaHasRef($schema);
 
-        foreach ($items as $item) {
-            if (null === $item) {
-                continue;
-            }
+        if (false === ($hasDiscriminator || $hasRef)) {
+            $this->regularSchemaValidator->validate($data, $schema, $context);
 
-            if (false === ($hasDiscriminator || $hasRef)) {
-                $this->regularSchemaValidator->validate($item, $schema, $context);
-
-                continue;
-            }
-
-            $this->contextSchemaValidator->validate($item, $schema, ValidatorMode::Response);
+            return;
         }
+
+        $this->contextSchemaValidator->validate($data, $schema, ValidatorMode::Response);
     }
 }

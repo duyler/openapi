@@ -5,11 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Validation;
 
 use Duyler\OpenApi\Builder\Exception\BuilderException;
-use Duyler\OpenApi\Event\ValidationErrorEvent;
-use Duyler\OpenApi\Event\ValidationFinishedEvent;
-use Duyler\OpenApi\Event\ValidationStartedEvent;
 use Duyler\OpenApi\Validator\EventDispatchingTrait;
-use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Operation;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -34,20 +30,10 @@ final readonly class ResponseValidationHandler
     public function validate(ResponseInterface $response, Operation $operation): void
     {
         $this->withValidationEvents(
-            startedEvent: new ValidationStartedEvent(path: $operation->path, method: $operation->method, response: $response),
-            makeFinishedEvent: fn(bool $success, float $duration): ValidationFinishedEvent => new ValidationFinishedEvent(
-                path: $operation->path,
-                method: $operation->method,
-                success: $success,
-                duration: $duration,
-                response: $response,
-            ),
-            makeErrorEvent: fn(ValidationException $e): ValidationErrorEvent => new ValidationErrorEvent(
-                path: $operation->path,
-                method: $operation->method,
-                exception: $e,
-                response: $response,
-            ),
+            request: null,
+            response: $response,
+            path: $operation->path,
+            method: $operation->method,
             callback: function () use ($response, $operation): void {
                 $pathItem = $this->context->document->paths?->paths[$operation->path] ?? null;
                 if (null === $pathItem) {

@@ -75,9 +75,21 @@ final readonly class ResponseValidatorWithContext
         $this->headersValidator->validate($normalizedHeaders, $responseDefinition->headers ?? null);
 
         $contentType = $response->getHeaderLine('Content-Type');
+        $content = $responseDefinition->content ?? null;
+
+        if (StreamingMediaTypeDetector::isStreaming($contentType)) {
+            $this->bodyValidator->validateStream(
+                $response->getBody(),
+                $contentType,
+                $content,
+            );
+
+            return;
+        }
+
         $body = (string) $response->getBody();
 
-        $this->bodyValidator->validate($body, $contentType, $responseDefinition->content ?? null);
+        $this->bodyValidator->validate($body, $contentType, $content);
     }
 
     private function getRange(int $statusCode): string
