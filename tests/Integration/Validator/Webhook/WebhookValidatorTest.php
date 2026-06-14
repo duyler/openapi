@@ -70,7 +70,7 @@ final class WebhookValidatorTest extends TestCase
         $headersValidator = new HeadersValidator($schemaValidator, $deserializer, $coercer);
         $cookieValidator = new CookieValidator($schemaValidator, $deserializer, $coercer);
         $jsonParser = new JsonBodyParser();
-        $formParser = new FormBodyParser();
+        $formParser = new FormBodyParser(new QueryParser());
         $multipartParser = new MultipartBodyParser();
         $textParser = new TextBodyParser();
         $xmlParser = new XmlBodyParser();

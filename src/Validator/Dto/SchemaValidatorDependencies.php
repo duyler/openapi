@@ -13,6 +13,7 @@ use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
+use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -42,7 +43,7 @@ final readonly class SchemaValidatorDependencies
         $this->formatRegistry = $formatRegistry ?? new FormatRegistry();
         $this->bodyParser = $bodyParser ?? new BodyParser(
             jsonParser: new JsonBodyParser(),
-            formParser: new FormBodyParser(),
+            formParser: new FormBodyParser(new QueryParser()),
             multipartParser: new MultipartBodyParser(),
             textParser: new TextBodyParser(),
             xmlParser: new XmlBodyParser(),

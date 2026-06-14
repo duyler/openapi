@@ -10,6 +10,7 @@ use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
+use Duyler\OpenApi\Validator\Request\QueryParser;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -22,7 +23,7 @@ final class BodyParserParseTest extends TestCase
     {
         $this->parser = new BodyParser(
             jsonParser: new JsonBodyParser(),
-            formParser: new FormBodyParser(),
+            formParser: new FormBodyParser(new QueryParser()),
             multipartParser: new MultipartBodyParser(),
             textParser: new TextBodyParser(),
             xmlParser: new XmlBodyParser(),

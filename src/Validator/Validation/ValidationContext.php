@@ -75,7 +75,7 @@ final readonly class ValidationContext
             formatRegistry: $this->formatRegistry,
             bodyParser: new BodyParser(
                 jsonParser: new JsonBodyParser(),
-                formParser: new FormBodyParser(),
+                formParser: new FormBodyParser(new QueryParser()),
                 multipartParser: new MultipartBodyParser(),
                 textParser: new TextBodyParser(),
                 xmlParser: new XmlBodyParser(),

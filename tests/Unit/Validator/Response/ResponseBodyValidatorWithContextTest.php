@@ -16,6 +16,7 @@ use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
+use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Response\ResponseBodyValidatorWithContext;
@@ -46,7 +47,7 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
         );
         $negotiator = new ContentTypeNegotiator();
         $jsonParser = new JsonBodyParser();
-        $formParser = new FormBodyParser();
+        $formParser = new FormBodyParser(new QueryParser());
         $multipartParser = new MultipartBodyParser();
         $textParser = new TextBodyParser();
         $xmlParser = new XmlBodyParser();
@@ -302,7 +303,7 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
         );
         $negotiator = new ContentTypeNegotiator();
         $jsonParser = new JsonBodyParser();
-        $formParser = new FormBodyParser();
+        $formParser = new FormBodyParser(new QueryParser());
         $multipartParser = new MultipartBodyParser();
         $textParser = new TextBodyParser();
         $xmlParser = new XmlBodyParser();
