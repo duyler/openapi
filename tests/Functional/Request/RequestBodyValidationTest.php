@@ -289,7 +289,7 @@ XML;
     }
 
     #[Test]
-    public function json_body_with_utf8_bom_throws_json_exception(): void
+    public function json_body_with_utf8_bom_passes_validation(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::JSON_REQUIRED_BODY_SPEC)
@@ -302,8 +302,10 @@ XML;
             ->withHeader('Content-Type', 'application/json')
             ->withBody($this->psrFactory->createStream($body));
 
-        $this->expectException(JsonException::class);
-        $validator->validateRequest($request);
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/data', $operation->path);
     }
 
     #[Test]
@@ -339,7 +341,7 @@ XML;
     }
 
     #[Test]
-    public function json_body_with_q_value_zero_still_accepted(): void
+    public function json_body_with_q_value_zero_throws_unsupported_media_type(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::JSON_REQUIRED_BODY_SPEC)
@@ -349,9 +351,8 @@ XML;
             ->withHeader('Content-Type', 'application/json; q=0')
             ->withBody($this->psrFactory->createStream('{"name":"John Doe"}'));
 
-        $operation = $validator->validateRequest($request);
-
-        $this->assertSame('POST', $operation->method);
+        $this->expectException(UnsupportedMediaTypeException::class);
+        $validator->validateRequest($request);
     }
 
     #[Test]
