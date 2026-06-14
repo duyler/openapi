@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Functional\Advanced;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
@@ -15,8 +16,51 @@ use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
 
+use function str_increment;
+
+use const PHP_INT_MAX;
+use const PHP_INT_MIN;
+
 final class TypeCoercionTest extends AdvancedFunctionalTestCase
 {
+    private const string INTEGER_COERCION_SPEC = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: Integer Coercion API
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      parameters:
+        - name: age
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: OK
+YAML;
+
+    private const string INTEGER_OVERFLOW_SPEC = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: Integer Overflow API
+  version: 1.0.0
+paths:
+  /items:
+    get:
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+YAML;
     private string $specFile = '';
     private TypeCoercer $paramCoercer;
     private RequestBodyCoercer $bodyCoercer;
@@ -524,5 +568,145 @@ final class TypeCoercionTest extends AdvancedFunctionalTestCase
 
         $this->expectException(TypeMismatchError::class);
         $this->bodyCoercer->coerce(['count' => 'abc'], $context);
+    }
+
+    #[Test]
+    public function integer_query_param_coercion_valid_age_passes(): void
+    {
+        $validator = $this->buildCoercionValidator(self::INTEGER_COERCION_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/users?age=25');
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('/users', $operation->path);
+        $this->assertSame('GET', $operation->method);
+    }
+
+    #[Test]
+    public function integer_query_param_coercion_invalid_format_throws_type_mismatch(): void
+    {
+        $validator = $this->buildCoercionValidator(self::INTEGER_COERCION_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/users?age=abc');
+
+        $this->expectException(TypeMismatchError::class);
+        $validator->validateRequest($request);
+    }
+
+    #[Test]
+    public function integer_query_param_coercion_float_string_for_integer_throws_type_mismatch(): void
+    {
+        $validator = $this->buildCoercionValidator(self::INTEGER_COERCION_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/users?age=12.5');
+
+        $this->expectException(TypeMismatchError::class);
+        $validator->validateRequest($request);
+    }
+
+    #[Test]
+    public function integer_query_param_coercion_small_id_valid(): void
+    {
+        $validator = $this->buildCoercionValidator(self::INTEGER_OVERFLOW_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/items?id=42');
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('/items', $operation->path);
+        $this->assertSame('GET', $operation->method);
+    }
+
+    #[Test]
+    public function integer_query_param_coercion_php_int_max_valid(): void
+    {
+        $validator = $this->buildCoercionValidator(self::INTEGER_OVERFLOW_SPEC);
+
+        $request = $this->psrFactory->createServerRequest(
+            'GET',
+            '/items?id=' . (string) PHP_INT_MAX,
+        );
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('/items', $operation->path);
+        $this->assertSame('GET', $operation->method);
+    }
+
+    #[Test]
+    public function integer_query_param_coercion_php_int_max_plus_one_throws_type_mismatch(): void
+    {
+        $validator = $this->buildCoercionValidator(self::INTEGER_OVERFLOW_SPEC);
+
+        $overflow = str_increment((string) PHP_INT_MAX);
+        $request = $this->psrFactory->createServerRequest('GET', '/items?id=' . $overflow);
+
+        $this->expectException(TypeMismatchError::class);
+        $validator->validateRequest($request);
+    }
+
+    #[Test]
+    public function integer_query_param_coercion_huge_overflow_throws_type_mismatch(): void
+    {
+        $validator = $this->buildCoercionValidator(self::INTEGER_OVERFLOW_SPEC);
+
+        $request = $this->psrFactory->createServerRequest(
+            'GET',
+            '/items?id=99999999999999999999',
+        );
+
+        $this->expectException(TypeMismatchError::class);
+        $validator->validateRequest($request);
+    }
+
+    #[Test]
+    public function coerce_to_integer_php_int_max_returns_exact_value(): void
+    {
+        $param = new Parameter(schema: new Schema(type: 'integer'));
+
+        $result = $this->paramCoercer->coerce((string) PHP_INT_MAX, $param, true, true);
+
+        $this->assertSame(PHP_INT_MAX, $result);
+        $this->assertIsInt($result);
+    }
+
+    #[Test]
+    public function coerce_to_integer_php_int_min_returns_exact_value(): void
+    {
+        $param = new Parameter(schema: new Schema(type: 'integer'));
+
+        $result = $this->paramCoercer->coerce((string) PHP_INT_MIN, $param, true, true);
+
+        $this->assertSame(PHP_INT_MIN, $result);
+        $this->assertIsInt($result);
+    }
+
+    #[Test]
+    public function coerce_to_integer_overflow_throws_type_mismatch(): void
+    {
+        $param = new Parameter(schema: new Schema(type: 'integer'));
+
+        $this->expectException(TypeMismatchError::class);
+        $this->paramCoercer->coerce('99999999999999999999', $param, true, true);
+    }
+
+    #[Test]
+    public function coerce_to_integer_php_int_max_plus_one_throws_type_mismatch(): void
+    {
+        $param = new Parameter(schema: new Schema(type: 'integer'));
+
+        $overflow = str_increment((string) PHP_INT_MAX);
+
+        $this->expectException(TypeMismatchError::class);
+        $this->paramCoercer->coerce($overflow, $param, true, true);
+    }
+
+    private function buildCoercionValidator(string $yaml): OpenApiValidatorInterface
+    {
+        return OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->enableCoercion()
+            ->build();
     }
 }
