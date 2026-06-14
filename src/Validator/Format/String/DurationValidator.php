@@ -13,7 +13,7 @@ use function str_starts_with;
 
 final readonly class DurationValidator extends AbstractStringFormatValidator
 {
-    private const string DURATION_PATTERN = '/^P(?:(?<years>\d+)Y)?(?:(?<months>\d+)M)?(?:(?<days>\d+)D)?(?:T(?:(?<hours>\d+)H)?(?:(?<minutes>\d+)M)?(?:(?<seconds>\d+)S)?)?$/';
+    private const string DURATION_PATTERN = '/^P(?:(?:(?<years>\d+)Y)?(?:(?<months>\d+)M)?(?:(?<days>\d+)D)?(?:T(?:(?<hours>\d+)H)?(?:(?<minutes>\d+)M)?(?:(?<seconds>\d+)S)?)?|(?<weeks>\d+)W)$/';
 
     #[Override]
     protected function getFormatName(): string
@@ -32,14 +32,19 @@ final readonly class DurationValidator extends AbstractStringFormatValidator
             throw new InvalidFormatException('duration', $data, 'Invalid duration format');
         }
 
-        $hasDateComponent = isset($matches['years']) || isset($matches['months']) || isset($matches['days']);
-        $hasTimeComponent = isset($matches['hours']) || isset($matches['minutes']) || isset($matches['seconds']);
+        $hasWeeksComponent = '' !== ($matches['weeks'] ?? '');
+        $hasDateComponent = '' !== ($matches['years'] ?? '')
+            || '' !== ($matches['months'] ?? '')
+            || '' !== ($matches['days'] ?? '');
+        $hasTimeComponent = '' !== ($matches['hours'] ?? '')
+            || '' !== ($matches['minutes'] ?? '')
+            || '' !== ($matches['seconds'] ?? '');
 
         if ($hasTimeComponent && false === str_contains($data, 'T')) {
             throw new InvalidFormatException('duration', $data, 'Time components must be preceded by T');
         }
 
-        if (false === $hasDateComponent && false === $hasTimeComponent) {
+        if (false === $hasWeeksComponent && false === $hasDateComponent && false === $hasTimeComponent) {
             throw new InvalidFormatException('duration', $data, 'Duration must have at least one component');
         }
     }

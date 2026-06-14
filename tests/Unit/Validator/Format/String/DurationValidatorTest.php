@@ -11,6 +11,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function sprintf;
+
 #[CoversClass(DurationValidator::class)]
 final class DurationValidatorTest extends TestCase
 {
@@ -110,6 +112,93 @@ final class DurationValidatorTest extends TestCase
             $this->validator->validate($invalidValue);
             $this->fail('Expected InvalidFormatException was not thrown');
         } catch (InvalidFormatException $exception) {
+            $this->assertSame($invalidValue, $exception->value);
+        }
+    }
+
+    #[Test]
+    public function accepts_one_week_duration(): void
+    {
+        try {
+            $this->validator->validate('P1W');
+        } catch (InvalidFormatException $exception) {
+            $this->fail(sprintf(
+                'P1W should be accepted as valid ISO 8601 duration, got: %s',
+                $exception->getMessage(),
+            ));
+        }
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function rejects_weeks_combined_with_days(): void
+    {
+        $invalidValue = 'P1W1D';
+
+        try {
+            $this->validator->validate($invalidValue);
+            $this->fail('P1W1D should be rejected: weeks are exclusive and cannot combine with days');
+        } catch (InvalidFormatException $exception) {
+            $this->assertSame('duration', $exception->format);
+            $this->assertSame($invalidValue, $exception->value);
+        }
+    }
+
+    #[Test]
+    public function accepts_two_weeks_duration(): void
+    {
+        try {
+            $this->validator->validate('P2W');
+        } catch (InvalidFormatException $exception) {
+            $this->fail(sprintf(
+                'P2W should be accepted as valid ISO 8601 duration, got: %s',
+                $exception->getMessage(),
+            ));
+        }
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function rejects_weeks_combined_with_hours(): void
+    {
+        $invalidValue = 'P1W1H';
+
+        try {
+            $this->validator->validate($invalidValue);
+            $this->fail('P1W1H should be rejected: weeks are exclusive and cannot combine with hours');
+        } catch (InvalidFormatException $exception) {
+            $this->assertSame('duration', $exception->format);
+            $this->assertSame($invalidValue, $exception->value);
+        }
+    }
+
+    #[Test]
+    public function accepts_zero_weeks_duration(): void
+    {
+        try {
+            $this->validator->validate('P0W');
+        } catch (InvalidFormatException $exception) {
+            $this->fail(sprintf(
+                'P0W should be accepted: ISO 8601 allows zero as valid number of weeks, got: %s',
+                $exception->getMessage(),
+            ));
+        }
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function rejects_weeks_without_number(): void
+    {
+        $invalidValue = 'PW';
+
+        try {
+            $this->validator->validate($invalidValue);
+            $this->fail('PW should be rejected: number of weeks is required before W designator');
+        } catch (InvalidFormatException $exception) {
+            $this->assertSame('duration', $exception->format);
             $this->assertSame($invalidValue, $exception->value);
         }
     }
