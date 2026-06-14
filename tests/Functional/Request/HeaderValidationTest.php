@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Functional\Request;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\MaxLengthError;
+use Duyler\OpenApi\Validator\Exception\MinItemsError;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -377,6 +378,80 @@ YAML;
             ->withHeader('X-Tags', 'solo');
 
         $this->expectException(TypeMismatchError::class);
+        $validator->validateRequest($request);
+    }
+
+    #[Test]
+    public function header_array_type_default_simple_style_passes(): void
+    {
+        $yaml = <<<'YAML'
+openapi: 3.1.0
+info:
+  title: Headers API
+  version: 1.0.0
+paths:
+  /test:
+    get:
+      parameters:
+        - name: X-Tags
+          in: header
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+            minItems: 2
+      responses:
+        '200':
+          description: Success
+YAML;
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/test')
+            ->withHeader('X-Tags', 'blue,black,brown');
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('GET', $operation->method);
+        $this->assertSame('/test', $operation->path);
+    }
+
+    #[Test]
+    public function header_array_type_default_simple_style_single_value_fails_min_items(): void
+    {
+        $yaml = <<<'YAML'
+openapi: 3.1.0
+info:
+  title: Headers API
+  version: 1.0.0
+paths:
+  /test:
+    get:
+      parameters:
+        - name: X-Tags
+          in: header
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+            minItems: 2
+      responses:
+        '200':
+          description: Success
+YAML;
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/test')
+            ->withHeader('X-Tags', 'solo');
+
+        $this->expectException(MinItemsError::class);
         $validator->validateRequest($request);
     }
 }

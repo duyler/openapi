@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Integration\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Request\ParameterDeserializer;
 use PHPUnit\Framework\Attributes\Test;
@@ -281,5 +282,274 @@ final class ParameterDeserializerTest extends TestCase
         $result = $this->deserializer->deserialize('value', $param);
 
         $this->assertSame('value', $result);
+    }
+
+    #[Test]
+    public function deserialize_simple_array_with_comma_separated_values_returns_array(): void
+    {
+        $param = new Parameter(
+            name: 'X-Tags',
+            in: 'header',
+            style: 'simple',
+            schema: new Schema(type: 'array'),
+        );
+
+        $result = $this->deserializer->deserialize('a,b,c', $param);
+
+        $this->assertSame(['a', 'b', 'c'], $result);
+    }
+
+    #[Test]
+    public function deserialize_simple_string_with_comma_stays_string(): void
+    {
+        $param = new Parameter(
+            name: 'X-Accept',
+            in: 'header',
+            style: 'simple',
+            schema: new Schema(type: 'string'),
+        );
+
+        $result = $this->deserializer->deserialize('text/html,application/json', $param);
+
+        $this->assertSame('text/html,application/json', $result);
+    }
+
+    #[Test]
+    public function deserialize_simple_array_single_value_returns_single_element_array(): void
+    {
+        $param = new Parameter(
+            name: 'X-Tags',
+            in: 'header',
+            style: 'simple',
+            schema: new Schema(type: 'array'),
+        );
+
+        $result = $this->deserializer->deserialize('solo', $param);
+
+        $this->assertSame(['solo'], $result);
+    }
+
+    #[Test]
+    public function deserialize_simple_array_empty_value_returns_empty_array(): void
+    {
+        $param = new Parameter(
+            name: 'X-Tags',
+            in: 'header',
+            style: 'simple',
+            schema: new Schema(type: 'array'),
+        );
+
+        $result = $this->deserializer->deserialize('', $param);
+
+        $this->assertSame([], $result);
+    }
+
+    #[Test]
+    public function deserialize_header_default_style_array_returns_array(): void
+    {
+        $param = new Parameter(
+            name: 'X-Tags',
+            in: 'header',
+            schema: new Schema(type: 'array'),
+        );
+
+        $result = $this->deserializer->deserialize('blue,black,brown', $param);
+
+        $this->assertSame(['blue', 'black', 'brown'], $result);
+    }
+
+    #[Test]
+    public function deserialize_header_default_style_string_stays_string(): void
+    {
+        $param = new Parameter(
+            name: 'X-Accept',
+            in: 'header',
+            schema: new Schema(type: 'string'),
+        );
+
+        $result = $this->deserializer->deserialize('application/json', $param);
+
+        $this->assertSame('application/json', $result);
+    }
+
+    #[Test]
+    public function deserialize_path_default_style_array_returns_array(): void
+    {
+        $param = new Parameter(
+            name: 'ids',
+            in: 'path',
+            schema: new Schema(type: 'array'),
+        );
+
+        $result = $this->deserializer->deserialize('1,2,3', $param);
+
+        $this->assertSame(['1', '2', '3'], $result);
+    }
+
+    #[Test]
+    public function deserialize_path_default_style_string_stays_string(): void
+    {
+        $param = new Parameter(
+            name: 'id',
+            in: 'path',
+            schema: new Schema(type: 'string'),
+        );
+
+        $result = $this->deserializer->deserialize('abc-123', $param);
+
+        $this->assertSame('abc-123', $result);
+    }
+
+    #[Test]
+    public function deserialize_matrix_array_explode_false_returns_comma_separated_array(): void
+    {
+        $param = new Parameter(
+            name: 'id',
+            in: 'path',
+            style: 'matrix',
+            explode: false,
+            schema: new Schema(type: 'array'),
+        );
+
+        $result = $this->deserializer->deserialize(';id=blue,black,brown', $param);
+
+        $this->assertSame(['blue', 'black', 'brown'], $result);
+    }
+
+    #[Test]
+    public function deserialize_matrix_array_explode_true_returns_repeated_name_array(): void
+    {
+        $param = new Parameter(
+            name: 'id',
+            in: 'path',
+            style: 'matrix',
+            explode: true,
+            schema: new Schema(type: 'array'),
+        );
+
+        $result = $this->deserializer->deserialize(';id=blue;id=black;id=brown', $param);
+
+        $this->assertSame(['blue', 'black', 'brown'], $result);
+    }
+
+    #[Test]
+    public function deserialize_matrix_string_stays_string(): void
+    {
+        $param = new Parameter(
+            name: 'id',
+            in: 'path',
+            style: 'matrix',
+            schema: new Schema(type: 'string'),
+        );
+
+        $result = $this->deserializer->deserialize(';id=value', $param);
+
+        $this->assertSame('value', $result);
+    }
+
+    #[Test]
+    public function deserialize_label_array_explode_false_returns_comma_separated_array(): void
+    {
+        $param = new Parameter(
+            name: 'id',
+            in: 'path',
+            style: 'label',
+            explode: false,
+            schema: new Schema(type: 'array'),
+        );
+
+        $result = $this->deserializer->deserialize('.blue,black,brown', $param);
+
+        $this->assertSame(['blue', 'black', 'brown'], $result);
+    }
+
+    #[Test]
+    public function deserialize_label_array_explode_true_returns_dot_separated_array(): void
+    {
+        $param = new Parameter(
+            name: 'id',
+            in: 'path',
+            style: 'label',
+            explode: true,
+            schema: new Schema(type: 'array'),
+        );
+
+        $result = $this->deserializer->deserialize('.blue.black.brown', $param);
+
+        $this->assertSame(['blue', 'black', 'brown'], $result);
+    }
+
+    #[Test]
+    public function deserialize_label_string_stays_string(): void
+    {
+        $param = new Parameter(
+            name: 'id',
+            in: 'path',
+            style: 'label',
+            schema: new Schema(type: 'string'),
+        );
+
+        $result = $this->deserializer->deserialize('.value', $param);
+
+        $this->assertSame('value', $result);
+    }
+
+    #[Test]
+    public function deserialize_cookie_style_array_returns_array(): void
+    {
+        $param = new Parameter(
+            name: 'session',
+            in: 'cookie',
+            style: 'cookie',
+            schema: new Schema(type: 'array'),
+        );
+
+        $result = $this->deserializer->deserialize('a,b,c', $param);
+
+        $this->assertSame(['a', 'b', 'c'], $result);
+    }
+
+    #[Test]
+    public function deserialize_cookie_style_string_stays_string(): void
+    {
+        $param = new Parameter(
+            name: 'session',
+            in: 'cookie',
+            style: 'cookie',
+            schema: new Schema(type: 'string'),
+        );
+
+        $result = $this->deserializer->deserialize('abc123', $param);
+
+        $this->assertSame('abc123', $result);
+    }
+
+    #[Test]
+    public function deserialize_simple_array_without_schema_stays_string(): void
+    {
+        $param = new Parameter(
+            name: 'X-Tags',
+            in: 'header',
+            style: 'simple',
+        );
+
+        $result = $this->deserializer->deserialize('a,b,c', $param);
+
+        $this->assertSame('a,b,c', $result);
+    }
+
+    #[Test]
+    public function deserialize_simple_array_with_nullable_type_union_returns_array(): void
+    {
+        $param = new Parameter(
+            name: 'X-Tags',
+            in: 'header',
+            style: 'simple',
+            schema: new Schema(type: ['array', 'null']),
+        );
+
+        $result = $this->deserializer->deserialize('a,b,c', $param);
+
+        $this->assertSame(['a', 'b', 'c'], $result);
     }
 }
