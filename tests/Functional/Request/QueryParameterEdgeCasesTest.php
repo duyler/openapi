@@ -281,11 +281,11 @@ YAML;
     }
 
     #[Test]
-    public function form_explode_duplicate_scalar_keys_overwritten_by_parse_str(): void
+    public function form_explode_duplicate_keys_parse_to_array(): void
     {
         $result = $this->queryParser->parse('tags=php&tags=go');
 
-        $this->assertSame(['tags' => 'go'], $result);
+        $this->assertSame(['tags' => ['php', 'go']], $result);
     }
 
     #[Test]
@@ -419,7 +419,7 @@ YAML;
     }
 
     #[Test]
-    public function form_explode_duplicate_scalar_keys_full_cycle_throws_type_mismatch(): void
+    public function form_explode_duplicate_keys_full_validation_cycle(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -457,8 +457,10 @@ YAML;
             '/items/abc?tags=php&tags=go',
         );
 
-        $this->expectException(TypeMismatchError::class);
-        $validator->validateRequest($request);
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('GET', $operation->method);
+        $this->assertSame('/items/{itemId}', $operation->path);
     }
 
     #[Test]

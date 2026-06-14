@@ -57,6 +57,129 @@ final class QueryParserTest extends TestCase
     }
 
     #[Test]
+    public function parse_duplicate_scalar_keys_collect_to_indexed_array(): void
+    {
+        $result = $this->parser->parse('tags=php&tags=go');
+
+        $this->assertSame(['tags' => ['php', 'go']], $result);
+    }
+
+    #[Test]
+    public function parse_duplicate_scalar_keys_three_values_collect_to_indexed_array(): void
+    {
+        $result = $this->parser->parse('tags=php&tags=go&tags=java');
+
+        $this->assertSame(['tags' => ['php', 'go', 'java']], $result);
+    }
+
+    #[Test]
+    public function parse_deep_object_flat_keys_preserve_associative_array(): void
+    {
+        $result = $this->parser->parse('filters[name]=John&filters[age]=30');
+
+        $this->assertSame(['filters' => ['name' => 'John', 'age' => '30']], $result);
+    }
+
+    #[Test]
+    public function parse_deep_object_two_level_nesting_preserves_structure(): void
+    {
+        $result = $this->parser->parse('filters[a][b]=value');
+
+        $this->assertSame(['filters' => ['a' => ['b' => 'value']]], $result);
+    }
+
+    #[Test]
+    public function parse_deep_object_five_level_nesting_preserves_full_structure(): void
+    {
+        $result = $this->parser->parse('filters[a][b][c][d][e]=v');
+
+        $this->assertSame(
+            ['filters' => ['a' => ['b' => ['c' => ['d' => ['e' => 'v']]]]]],
+            $result,
+        );
+    }
+
+    #[Test]
+    public function parse_bracket_append_syntax_collects_to_indexed_array(): void
+    {
+        $result = $this->parser->parse('tags[]=php&tags[]=go');
+
+        $this->assertSame(['tags' => ['php', 'go']], $result);
+    }
+
+    #[Test]
+    public function parse_bracket_append_syntax_three_values_collects_to_indexed_array(): void
+    {
+        $result = $this->parser->parse('tags[]=php&tags[]=go&tags[]=java');
+
+        $this->assertSame(['tags' => ['php', 'go', 'java']], $result);
+    }
+
+    #[Test]
+    public function parse_comma_separated_value_stays_scalar(): void
+    {
+        $result = $this->parser->parse('tags=php,go');
+
+        $this->assertSame(['tags' => 'php,go'], $result);
+    }
+
+    #[Test]
+    public function parse_multiple_distinct_keys_preserve_each_value(): void
+    {
+        $result = $this->parser->parse('a=1&b=2&c=3');
+
+        $this->assertSame(['a' => '1', 'b' => '2', 'c' => '3'], $result);
+    }
+
+    #[Test]
+    public function parse_url_encoded_value_decodes_to_plain_string(): void
+    {
+        $result = $this->parser->parse('name=John%20Doe');
+
+        $this->assertSame(['name' => 'John Doe'], $result);
+    }
+
+    #[Test]
+    public function parse_plus_encoded_value_decodes_to_space(): void
+    {
+        $result = $this->parser->parse('name=John+Doe');
+
+        $this->assertSame(['name' => 'John Doe'], $result);
+    }
+
+    #[Test]
+    public function parse_key_without_value_yields_empty_string(): void
+    {
+        $result = $this->parser->parse('key');
+
+        $this->assertSame(['key' => ''], $result);
+    }
+
+    #[Test]
+    public function parse_key_with_empty_value_yields_empty_string(): void
+    {
+        $result = $this->parser->parse('key=');
+
+        $this->assertSame(['key' => ''], $result);
+    }
+
+    #[Test]
+    public function parse_duplicate_scalar_keys_mixed_with_distinct_keys(): void
+    {
+        $result = $this->parser->parse('tags=php&tags=go&page=1');
+
+        $this->assertSame(['tags' => ['php', 'go'], 'page' => '1'], $result);
+    }
+
+    #[Test]
+    public function parse_mixed_scalar_and_bracket_keys_delegate_to_parse_str(): void
+    {
+        $result = $this->parser->parse('tags=php&tags[]=go');
+
+        $this->assertSame(['tags' => ['go']], $result);
+    }
+
+    #[Test]
     public function handle_explode_true(): void
     {
         $result = $this->parser->handleExplode(['1', '2', '3'], true);
