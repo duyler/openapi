@@ -57,6 +57,8 @@ use function in_array;
 
 use function gettype;
 
+use function strtolower;
+
 use const FILTER_VALIDATE_URL;
 
 abstract class OpenApiBuilder implements SchemaParserInterface
@@ -604,7 +606,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
         $mediaTypes = [];
 
         foreach ($data as $mediaType => $content) {
-            $mediaTypes[$mediaType] = $this->buildMediaType(TypeHelper::asArray($content));
+            $mediaTypes[strtolower($mediaType)] = $this->buildMediaType(TypeHelper::asArray($content));
         }
 
         /** @var array<string, MediaType> $mediaTypes */
