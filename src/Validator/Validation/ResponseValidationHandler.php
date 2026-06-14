@@ -35,7 +35,9 @@ final readonly class ResponseValidationHandler
             path: $operation->path,
             method: $operation->method,
             callback: function () use ($response, $operation): void {
-                $pathItem = $this->context->document->paths?->paths[$operation->path] ?? null;
+                $pathItem = $this->context->document->paths?->paths[$operation->path]
+                    ?? $this->context->document->webhooks?->webhooks[$operation->path]
+                    ?? null;
                 if (null === $pathItem) {
                     throw new BuilderException(sprintf('Path not found: %s', $operation->path));
                 }
