@@ -1285,7 +1285,7 @@ YAML;
     }
 
     #[Test]
-    public function body_json_coercion_integer_truncation_valid(): void
+    public function body_json_coercion_integer_truncation_rejected_in_strict_mode(): void
     {
         $yaml = <<<YAML
 openapi: 3.1.0
@@ -1321,8 +1321,8 @@ YAML;
                 'value' => '30.5',
             ])));
 
+        $this->expectException(TypeMismatchError::class);
         $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
     }
 
     #[Test]

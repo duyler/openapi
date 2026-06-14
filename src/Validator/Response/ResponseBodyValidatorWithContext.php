@@ -129,7 +129,7 @@ final readonly class ResponseBodyValidatorWithContext
             $coercionContext = new CoercionContext(
                 schema: $mediaTypeSchema->schema,
                 enabled: true,
-                strict: false,
+                strict: true,
                 nullableAsType: $this->configuration->nullableAsType,
             );
             $parsedBody = $this->typeCoercer->coerce($parsedBody, $coercionContext);

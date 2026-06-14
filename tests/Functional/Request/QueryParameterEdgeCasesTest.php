@@ -544,16 +544,6 @@ YAML;
     }
 
     #[Test]
-    public function boolean_coercion_invalid_string_truthy_fallback_in_non_strict_mode(): void
-    {
-        $param = new Parameter(schema: new Schema(type: 'boolean'));
-
-        $result = $this->coercer->coerce('invalid', $param, true);
-
-        $this->assertSame(true, $result);
-    }
-
-    #[Test]
     public function boolean_coercion_strict_rejects_invalid_string(): void
     {
         $param = new Parameter(schema: new Schema(type: 'boolean'));
@@ -774,7 +764,7 @@ YAML;
     }
 
     #[Test]
-    public function boolean_coercion_invalid_string_passes_in_non_strict_end_to_end(): void
+    public function boolean_coercion_invalid_string_rejected_in_full_cycle(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -802,9 +792,8 @@ YAML;
 
         $request = $this->psrFactory->createServerRequest('GET', '/flag?active=invalid');
 
-        $operation = $validator->validateRequest($request);
-
-        $this->assertSame('GET', $operation->method);
+        $this->expectException(TypeMismatchError::class);
+        $validator->validateRequest($request);
     }
 
     #[Test]
