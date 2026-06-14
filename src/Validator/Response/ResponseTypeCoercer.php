@@ -64,9 +64,9 @@ final readonly class ResponseTypeCoercer extends AbstractCoercer
     {
         return match ($type) {
             'string' => $this->coerceToString($value),
-            'integer' => $this->coerceToInteger($value),
-            'number' => $this->coerceToNumber($value),
-            'boolean' => $this->coerceToBoolean($value),
+            'integer' => $this->coerceToInteger($value, $context->strict),
+            'number' => $this->coerceToNumber($value, $context->strict),
+            'boolean' => $this->coerceToBoolean($value, $context->strict),
             'object' => $this->coerceToObject($value, $context),
             'array' => $this->coerceToArray($value, $context),
             default => $value,

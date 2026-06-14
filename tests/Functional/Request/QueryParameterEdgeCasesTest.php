@@ -544,13 +544,53 @@ YAML;
     }
 
     #[Test]
-    public function boolean_coercion_invalid_string_documents_truthy_fallback_behavior(): void
+    public function boolean_coercion_invalid_string_truthy_fallback_in_non_strict_mode(): void
     {
         $param = new Parameter(schema: new Schema(type: 'boolean'));
 
         $result = $this->coercer->coerce('invalid', $param, true);
 
         $this->assertSame(true, $result);
+    }
+
+    #[Test]
+    public function boolean_coercion_strict_rejects_invalid_string(): void
+    {
+        $param = new Parameter(schema: new Schema(type: 'boolean'));
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->coercer->coerce('invalid', $param, true, true);
+    }
+
+    #[Test]
+    public function boolean_coercion_strict_rejects_admin_string(): void
+    {
+        $param = new Parameter(schema: new Schema(type: 'boolean'));
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->coercer->coerce('admin', $param, true, true);
+    }
+
+    #[Test]
+    public function boolean_coercion_strict_accepts_true_string(): void
+    {
+        $param = new Parameter(schema: new Schema(type: 'boolean'));
+
+        $result = $this->coercer->coerce('true', $param, true, true);
+
+        $this->assertSame(true, $result);
+    }
+
+    #[Test]
+    public function boolean_coercion_strict_accepts_false_string(): void
+    {
+        $param = new Parameter(schema: new Schema(type: 'boolean'));
+
+        $result = $this->coercer->coerce('false', $param, true, true);
+
+        $this->assertSame(false, $result);
     }
 
     #[Test]
@@ -734,7 +774,7 @@ YAML;
     }
 
     #[Test]
-    public function boolean_coercion_invalid_string_documents_end_to_end_pass_behavior(): void
+    public function boolean_coercion_invalid_string_passes_in_non_strict_end_to_end(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -765,6 +805,48 @@ YAML;
         $operation = $validator->validateRequest($request);
 
         $this->assertSame('GET', $operation->method);
+    }
+
+    #[Test]
+    public function boolean_coercion_strict_rejects_invalid_string_in_request_body(): void
+    {
+        $yaml = <<<YAML
+openapi: 3.2.0
+info:
+  title: Boolean API
+  version: 1.0.0
+paths:
+  /flag:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                active:
+                  type: boolean
+              required:
+                - active
+      responses:
+        '200':
+          description: OK
+YAML;
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->enableCoercion()
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('POST', '/flag')
+            ->withHeader('Content-Type', 'application/json')
+            ->withBody(
+                $this->psrFactory->createStream('{"active":"invalid"}'),
+            );
+
+        $this->expectException(TypeMismatchError::class);
+        $validator->validateRequest($request);
     }
 
     #[Test]

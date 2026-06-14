@@ -29,7 +29,7 @@ abstract readonly class AbstractCoercer
         };
     }
 
-    protected function coerceToBoolean(mixed $value): mixed
+    protected function coerceToBoolean(mixed $value, bool $strict = false): mixed
     {
         if (is_bool($value)) {
             return $value;
@@ -41,7 +41,14 @@ abstract readonly class AbstractCoercer
             return match ($lower) {
                 'true', '1', 'yes', 'on' => true,
                 'false', '0', 'no', 'off' => false,
-                default => (bool) $value,
+                default => $strict
+                    ? throw new TypeMismatchError(
+                        expected: 'boolean',
+                        actual: $value,
+                        dataPath: '',
+                        schemaPath: '/type',
+                    )
+                    : (bool) $value,
             };
         }
 

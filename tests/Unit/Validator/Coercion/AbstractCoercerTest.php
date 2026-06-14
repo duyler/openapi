@@ -142,6 +142,62 @@ final class AbstractCoercerTest extends TestCase
     }
 
     #[Test]
+    public function coerce_to_boolean_strict_throws_on_invalid_string(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+
+        $this->coercer->exposedCoerceToBoolean('invalid', true);
+    }
+
+    #[Test]
+    public function coerce_to_boolean_strict_throws_on_admin_string(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+
+        $this->coercer->exposedCoerceToBoolean('admin', true);
+    }
+
+    #[Test]
+    public function coerce_to_boolean_strict_accepts_true_string(): void
+    {
+        $this->assertTrue($this->coercer->exposedCoerceToBoolean('true', true));
+    }
+
+    #[Test]
+    public function coerce_to_boolean_strict_accepts_false_string(): void
+    {
+        $this->assertFalse($this->coercer->exposedCoerceToBoolean('false', true));
+    }
+
+    #[Test]
+    public function coerce_to_boolean_strict_throws_on_empty_string(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+
+        $this->coercer->exposedCoerceToBoolean('', true);
+    }
+
+    #[Test]
+    public function coerce_to_boolean_strict_accepts_uppercase_true(): void
+    {
+        $result = $this->coercer->exposedCoerceToBoolean('TRUE', true);
+
+        $this->assertSame(true, $result);
+    }
+
+    #[Test]
+    public function coerce_to_boolean_non_strict_returns_true_for_invalid_string(): void
+    {
+        $this->assertTrue($this->coercer->exposedCoerceToBoolean('invalid', false));
+    }
+
+    #[Test]
+    public function coerce_to_boolean_non_strict_returns_false_for_empty_string(): void
+    {
+        $this->assertFalse($this->coercer->exposedCoerceToBoolean('', false));
+    }
+
+    #[Test]
     public function coerce_to_integer_returns_int_unchanged(): void
     {
         $this->assertSame(42, $this->coercer->exposedCoerceToInteger(42));
@@ -274,9 +330,9 @@ final readonly class ConcreteCoercer extends AbstractCoercer
         return $this->isValidType($value, $type);
     }
 
-    public function exposedCoerceToBoolean(mixed $value): mixed
+    public function exposedCoerceToBoolean(mixed $value, bool $strict = false): mixed
     {
-        return $this->coerceToBoolean($value);
+        return $this->coerceToBoolean($value, $strict);
     }
 
     public function exposedCoerceToInteger(mixed $value, bool $strict = false): mixed
