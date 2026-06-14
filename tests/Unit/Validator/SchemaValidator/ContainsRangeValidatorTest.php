@@ -14,6 +14,9 @@ use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Throwable;
+
+use function sprintf;
 
 #[CoversClass(ContainsRangeValidator::class)]
 class ContainsRangeValidatorTest extends TestCase
@@ -216,5 +219,98 @@ class ContainsRangeValidatorTest extends TestCase
         $this->validator->validate(['ab', 'hello', 42, 'world', 'x'], $schema);
 
         $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function regression_catches_validation_exception_when_matching_contains_schema(): void
+    {
+        $containsSchema = new Schema(type: 'object', required: ['id']);
+        $schema = new Schema(
+            type: 'array',
+            contains: $containsSchema,
+            minContains: 2,
+            maxContains: 2,
+        );
+
+        try {
+            $this->validator->validate(
+                [['id' => 1], ['name' => 'without-id'], ['id' => 2]],
+                $schema,
+            );
+        } catch (Throwable $e) {
+            self::fail(sprintf(
+                'Expected validation to pass after catching ValidationException, got %s: %s',
+                $e::class,
+                $e->getMessage(),
+            ));
+        }
+
+        self::assertTrue(true);
+    }
+
+    #[Test]
+    public function regression_throws_min_contains_error_when_validation_exception_reduces_match_count(): void
+    {
+        $containsSchema = new Schema(type: 'object', required: ['id']);
+        $schema = new Schema(
+            type: 'array',
+            contains: $containsSchema,
+            minContains: 3,
+        );
+
+        try {
+            $this->validator->validate(
+                [['id' => 1], ['name' => 'without-id'], ['id' => 2]],
+                $schema,
+            );
+            self::fail('Expected MinContainsError was not thrown');
+        } catch (MinContainsError $e) {
+            self::assertSame('minContains', $e->keyword());
+            self::assertSame('/', $e->dataPath());
+            self::assertSame(['minContains' => 3, 'actual' => 2], $e->params());
+        }
+    }
+
+    #[Test]
+    public function validate_max_contains_zero_when_no_item_matches(): void
+    {
+        $containsSchema = new Schema(type: 'number', minimum: 100);
+        $schema = new Schema(
+            type: 'array',
+            contains: $containsSchema,
+            maxContains: 0,
+        );
+
+        try {
+            $this->validator->validate([1, 2, 3], $schema);
+        } catch (Throwable $e) {
+            self::fail(sprintf(
+                'Expected validation to pass with maxContains=0 and no matching items, got %s: %s',
+                $e::class,
+                $e->getMessage(),
+            ));
+        }
+
+        self::assertTrue(true);
+    }
+
+    #[Test]
+    public function throw_max_contains_error_when_max_contains_zero_and_item_matches(): void
+    {
+        $containsSchema = new Schema(type: 'number', minimum: 10);
+        $schema = new Schema(
+            type: 'array',
+            contains: $containsSchema,
+            maxContains: 0,
+        );
+
+        try {
+            $this->validator->validate([1, 2, 15, 3], $schema);
+            self::fail('Expected MaxContainsError was not thrown');
+        } catch (MaxContainsError $e) {
+            self::assertSame('maxContains', $e->keyword());
+            self::assertSame('/', $e->dataPath());
+            self::assertSame(['maxContains' => 0, 'actual' => 1], $e->params());
+        }
     }
 }
