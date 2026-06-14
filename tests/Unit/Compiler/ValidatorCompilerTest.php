@@ -271,20 +271,6 @@ final class ValidatorCompilerTest extends TestCase
     }
 
     #[Test]
-    public function compile_schema_with_format_validators(): void
-    {
-        $compiler = new ValidatorCompiler();
-        $schema = new Schema(
-            type: 'string',
-            format: 'email',
-        );
-
-        $code = $compiler->compile($schema, 'FormatSchema');
-
-        $this->assertStringContainsString('is_string($data)', $code);
-    }
-
-    #[Test]
     public function compile_throws_exception_for_invalid_schema(): void
     {
         $compiler = new ValidatorCompiler();

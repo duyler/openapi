@@ -521,6 +521,7 @@ final readonly class ValidatorCompiler
             'then' => null !== $schema->then,
             'else' => null !== $schema->else,
             'patternProperties' => null !== $schema->patternProperties,
+            'format' => null !== $schema->format,
         ];
 
         $detected = array_keys(array_filter($keywordMap));

@@ -566,7 +566,7 @@ $code = $compiler->compileWithCache($schema, 'UserValidator', $compilationCache)
 
 #### Compiler Limitations
 
-The compiler does not support all JSON Schema keywords. If a schema uses unsupported keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `patternProperties`), the compiler throws `UnsupportedKeywordException`. See the Limitations section below for details.
+The compiler does not support all JSON Schema keywords. If a schema uses unsupported keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `patternProperties`, `format`), the compiler throws `UnsupportedKeywordException`. See the Limitations section below for details.
 
 ## Configuration Options
 
@@ -1101,11 +1101,12 @@ The `ValidatorCompiler` generates standalone PHP classes with hardcoded validati
 Use compilation when:
 - The schema is stable and does not change at runtime
 - You need maximum throughput for hot-path validation
-- The schema uses only basic keywords (no `allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`)
+- The schema uses only basic keywords (no `allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `format`)
 
 Stick with runtime validation when:
 - The schema changes frequently or is user-defined
 - You need composition keywords (`allOf`, `anyOf`, `oneOf`)
+- You need format validation (`email`, `uuid`, `date-time`, etc.)
 - You need `$ref` resolution against an OpenAPI document (use `compileWithRefResolution()` instead)
 
 ### Coercion Impact
@@ -1333,7 +1334,7 @@ The validator covers approximately 95% of JSON Schema draft 2020-12 keywords. Th
 
 The `ValidatorCompiler` is marked as `@experimental`. It supports a subset of JSON Schema keywords: `type`, `enum`, `const`, `minLength`, `maxLength`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`, `pattern`, `minItems`, `maxItems`, `uniqueItems`, `properties`, `required`, `additionalProperties`, `items`.
 
-The compiler does not support composition keywords (`allOf`, `anyOf`, `oneOf`, `not`), conditional keywords (`if`/`then`/`else`), or `patternProperties`. If any of these are present in a schema, `compile()` throws `UnsupportedKeywordException`.
+The compiler does not support composition keywords (`allOf`, `anyOf`, `oneOf`, `not`), conditional keywords (`if`/`then`/`else`), `patternProperties`, or `format`. If any of these are present in a schema, `compile()` throws `UnsupportedKeywordException`.
 
 Generated validators throw generic `RuntimeException` on failure rather than the typed error classes used by the runtime validator.
 
