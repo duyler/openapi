@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
@@ -36,11 +37,11 @@ final readonly class FormatValidator implements SchemaValidatorInterface
 
         if (null === $formatValidator) {
             if ($this->strictFormats) {
-                $this->logger->warning(sprintf(
-                    'Unknown format "%s" for type "%s" in strict mode',
+                throw new InvalidFormatException(
                     $schema->format,
-                    $type,
-                ));
+                    $data,
+                    sprintf('Unknown format "%s" for type "%s" in strict mode', $schema->format, $type),
+                );
             }
 
             return;

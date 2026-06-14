@@ -34,6 +34,7 @@ final readonly class ResponseValidatorWithContext
         $this->schemaValidator = new SchemaValidator(
             $this->dependencies->pool,
             $this->dependencies->formatRegistry,
+            strictFormats: $this->configuration->strictFormats,
             reportDeprecated: $this->configuration->reportDeprecated,
             logger: $this->dependencies->logger,
             eventDispatcher: $this->dependencies->eventDispatcher,

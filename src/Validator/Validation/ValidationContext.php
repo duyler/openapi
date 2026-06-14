@@ -93,6 +93,7 @@ final readonly class ValidationContext
             nullableAsType: $this->nullableAsType,
             emptyArrayStrategy: $this->emptyArrayStrategy,
             reportDeprecated: $this->reportDeprecated,
+            strictFormats: $this->strictFormats,
         );
     }
 
