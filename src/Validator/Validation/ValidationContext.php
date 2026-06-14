@@ -29,6 +29,7 @@ use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -40,6 +41,7 @@ final readonly class ValidationContext
 {
     public readonly RequestValidator $requestValidator;
     public readonly ResponseValidatorWithContext $responseValidator;
+    public readonly SchemaValidatorWithContext $schemaValidatorWithContext;
     private readonly StatelessValidatorRegistry $statelessValidators;
     private readonly SchemaValidatorDependencies $schemaValidatorDependencies;
 
@@ -84,6 +86,11 @@ final readonly class ValidationContext
 
         $this->requestValidator = $this->buildRequestValidator();
         $this->responseValidator = $this->buildResponseValidator();
+        $this->schemaValidatorWithContext = new SchemaValidatorWithContext(
+            $this->document,
+            $this->schemaValidatorDependencies,
+            $this->buildValidatorConfiguration(),
+        );
     }
 
     private function buildValidatorConfiguration(): ValidatorConfiguration
