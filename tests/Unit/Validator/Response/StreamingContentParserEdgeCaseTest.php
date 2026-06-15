@@ -205,6 +205,18 @@ final class StreamingContentParserEdgeCaseTest extends TestCase
     }
 
     #[Test]
+    public function sse_retry_only_event_has_no_default_message(): void
+    {
+        $body = "retry: 5000\n\n";
+
+        $result = $this->parser->parseServerSentEvents($body);
+
+        $this->assertCount(1, $result);
+        $this->assertSame(5000, $result[0]['retry']);
+        $this->assertArrayNotHasKey('event', $result[0]);
+    }
+
+    #[Test]
     public function sse_event_field_without_data_still_produces_event(): void
     {
         $body = "event: update\n\n";
@@ -229,7 +241,7 @@ final class StreamingContentParserEdgeCaseTest extends TestCase
     }
 
     #[Test]
-    public function sse_data_field_without_event_has_no_event_key(): void
+    public function sse_data_field_without_event_uses_w3c_default_message(): void
     {
         $body = "data: {\"msg\":\"hello\"}\n\n";
 
@@ -237,7 +249,7 @@ final class StreamingContentParserEdgeCaseTest extends TestCase
 
         $this->assertCount(1, $result);
         $this->assertSame(['msg' => 'hello'], $result[0]['data']);
-        $this->assertArrayNotHasKey('event', $result[0]);
+        $this->assertSame('message', $result[0]['event']);
     }
 
     #[Test]

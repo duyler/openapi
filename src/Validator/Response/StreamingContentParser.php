@@ -28,6 +28,13 @@ final readonly class StreamingContentParser
     private const int STREAM_CHUNK_SIZE = 8192;
     private const int MAX_LINE_LENGTH = 1_048_576;
 
+    /**
+     * W3C Server-Sent Events default event type used when the event field is absent.
+     *
+     * @see https://html.spec.whatwg.org/multipage/server-sent-events.html
+     */
+    private const string SSE_DEFAULT_EVENT_TYPE = 'message';
+
     public function __construct(
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {}
@@ -382,6 +389,8 @@ final readonly class StreamingContentParser
 
         if (isset($event['event'])) {
             $result['event'] = $event['event'];
+        } elseif (isset($event['data'])) {
+            $result['event'] = self::SSE_DEFAULT_EVENT_TYPE;
         }
         if (isset($event['data'])) {
             $dataValue = $event['data'];
