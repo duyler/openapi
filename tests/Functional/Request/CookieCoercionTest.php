@@ -26,9 +26,9 @@ use Psr\Http\Message\ServerRequestInterface;
  * proven indirectly through schema constraints that can only be satisfied by
  * the coerced integer form.
  *
- * CookieValidator invokes TypeCoercer with strict=false (non-strict mode).
- * In non-strict mode non-numeric strings silently coerce to 0 via PHP's
- * (int) cast, which then fails the schema constraint (e.g. const).
+ * CookieValidator invokes TypeCoercer with strict=true (consistent with
+ * HeadersValidator). In strict mode non-numeric strings are rejected with
+ * TypeMismatchError during coercion rather than silently coerced to 0.
  */
 final class CookieCoercionTest extends TestCase
 {
@@ -136,16 +136,14 @@ YAML;
     }
 
     /**
-     * Negative: cookie string "abc" silently coerces to int 0 in non-strict
-     * mode (PHP's `(int) "abc" === 0`). The coerced value 0 fails the const
-     * constraint, surfacing ConstError rather than TypeMismatchError.
+     * Negative: cookie string "abc" cannot be coerced to integer.
      *
-     * CookieValidator always passes strict=false, so TypeMismatchError is
-     * not raised for non-numeric cookie values. This characterizes the
-     * actual implementation behaviour.
+     * CookieValidator invokes TypeCoercer with strict=true, so the coercer
+     * rejects non-numeric strings directly with TypeMismatchError during
+     * coercion (before the const constraint is evaluated).
      */
     #[Test]
-    public function tc_07_cookie_non_numeric_string_silently_coerces_to_zero_fails_const(): void
+    public function tc_07_cookie_non_numeric_string_throws_type_mismatch(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::COOKIE_COERCION_SPEC)
@@ -158,23 +156,23 @@ YAML;
 
         try {
             $validator->validateRequest($request);
-        } catch (ConstError $e) {
+        } catch (TypeMismatchError $e) {
             $caught = $e;
         }
 
         $this->assertNotNull(
             $caught,
-            'Non-numeric cookie "abc" coerces to 0, which fails const: 42.',
+            'Non-numeric cookie "abc" must fail coercion with TypeMismatchError in strict mode.',
         );
 
-        $this->assertSame(42, $caught->params()['expected']);
-        $this->assertSame(0, $caught->params()['actual']);
+        $this->assertSame('integer', $caught->params()['expected']);
+        $this->assertSame('abc', $caught->params()['actual']);
     }
 
     /**
      * Direct unit-level proof: in strict mode TypeCoercer rejects non-numeric
-     * strings with TypeMismatchError. This documents the alternative path
-     * that CookieValidator does NOT use (it always passes strict=false).
+     * strings with TypeMismatchError. CookieValidator passes strict=true, so
+     * this is the path exercised end-to-end by the test above.
      */
     #[Test]
     public function tc_07_type_coercer_strict_mode_rejects_non_numeric_cookie_with_type_mismatch(): void

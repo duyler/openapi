@@ -255,19 +255,50 @@ class ArrayLengthValidatorTest extends TestCase
     }
 
     #[Test]
-    public function unique_items_documents_php_loose_comparison_duplication_for_mixed_scalar_types(): void
+    public function unique_items_treats_distinct_scalar_json_types_as_unique(): void
+    {
+        // JSON Schema draft 2020-12 §6.4.3: items of different JSON types
+        // (number, string, boolean) are never equal. Previously this array
+        // was wrongly rejected because PHP loose comparison (SORT_REGULAR)
+        // collapsed 1 == "1" == true into duplicates.
+        $schema = new Schema(type: 'array', uniqueItems: true);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate([1, '1', true], $schema);
+            $succeeded = true;
+        } catch (DuplicateItemsError $e) {
+            self::fail(sprintf(
+                'Expected [1, "1", true] to pass uniqueItems (distinct JSON types), got: %s',
+                $e->getMessage(),
+            ));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    /**
+     * Regression for review finding on bugfix 18: int and float that are
+     * mathematically equal MUST be treated as duplicates per JSON Schema
+     * §4.2.3 (numeric equality). PHP's strict === returns false for
+     * 1 === 1.0 because the types differ, which previously caused
+     * uniqueItems to silently accept [1, 1.0] as having no duplicates.
+     */
+    #[Test]
+    public function unique_items_detects_int_and_float_as_duplicate_when_mathematically_equal(): void
     {
         $schema = new Schema(type: 'array', uniqueItems: true);
 
         $caught = null;
 
         try {
-            $this->validator->validate([1, '1', true], $schema);
+            $this->validator->validate([1, 1.0], $schema);
         } catch (DuplicateItemsError $e) {
             $caught = $e;
         }
 
-        self::assertNotNull($caught);
+        self::assertNotNull($caught, 'Expected DuplicateItemsError for [1, 1.0] (numeric equality per JSON Schema §4.2.3).');
         self::assertSame('uniqueItems', $caught->keyword());
         self::assertSame('/uniqueItems', $caught->schemaPath());
     }
@@ -309,8 +340,8 @@ class ArrayLengthValidatorTest extends TestCase
     /**
      * SV-06 (uniqueItems) parameterized cases covering distinct arrays that
      * MUST pass validation. Complements the individual uniqueItems tests
-     * above (which carry specific assertions about error metadata and PHP
-     * loose-comparison behaviour) with a single data-provider-driven sweep.
+     * above (which carry specific assertions about error metadata and JSON
+     * type-aware equality semantics) with a single data-provider-driven sweep.
      *
      * @return array<string, array{0: array<mixed>}>
      */
@@ -322,6 +353,7 @@ class ArrayLengthValidatorTest extends TestCase
             'empty_array' => [[]],
             'single_element' => [[42]],
             'distinct_mixed_scalars' => [[42, 3.14, 'hello']],
+            'distinct_mixed_json_types' => [[1, '1', true]],
             'distinct_associative_arrays' => [[['a' => 1], ['a' => 2]]],
             'distinct_nested_sequential_arrays' => [[1, ['nested' => 'array'], ['key' => 'value']]],
         ];

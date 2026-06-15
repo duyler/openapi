@@ -28,8 +28,6 @@ use RejectExtraPropValidator;
 use UnionAcceptsIntegerValidator;
 use UnionAcceptsStringValidator;
 use UnionRejectsFloatValidator;
-use PrefixItemsOnlyValidator;
-use PrefixItemsStillValidatesItems;
 use DeepNestInvalidValidator;
 use DeepNestValidValidator;
 use TenLevelsValidator;
@@ -253,7 +251,7 @@ final class ValidatorCompilerTest extends TestCase
         $this->assertStringContainsString('is_array($data)', $code);
         $this->assertStringContainsString('count($data) < 1', $code);
         $this->assertStringContainsString('count($data) > 10', $code);
-        $this->assertStringContainsString('array_unique', $code);
+        $this->assertStringContainsString('json_encode', $code);
     }
 
     #[Test]
@@ -563,7 +561,7 @@ final class ValidatorCompilerTest extends TestCase
 
         $this->assertStringContainsString('count($data) < 1', $code);
         $this->assertStringContainsString('count($data) > 10', $code);
-        $this->assertStringContainsString('array_unique', $code);
+        $this->assertStringContainsString('json_encode', $code);
     }
 
     #[Test]
@@ -1447,15 +1445,12 @@ final class ValidatorCompilerTest extends TestCase
     }
 
     /**
-     * CP-04: The compiler silently ignores the `prefixItems` keyword — it is
-     * not in the unsupported-keyword list (so no exception is thrown) but
-     * the generated code does not enforce positional item types.
-     *
-     * This test documents the current behaviour: compile() succeeds and the
-     * generated code only validates `items` (the homogeneous item schema).
+     * CP-04 (fail-closed): `prefixItems` is in the unsupported-keyword set,
+     * so `compile()` throws `UnsupportedKeywordException` instead of
+     * silently producing a validator that ignores positional items.
      */
     #[Test]
-    public function compile_schema_with_prefix_items_does_not_throw(): void
+    public function compile_schema_with_prefix_items_throws_unsupported_keyword_exception(): void
     {
         $compiler = new ValidatorCompiler();
         $schema = new Schema(
@@ -1468,21 +1463,24 @@ final class ValidatorCompilerTest extends TestCase
             minItems: 2,
         );
 
-        $code = $compiler->compile($schema, 'PrefixItemsValidator');
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'PrefixItemsValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
 
-        $this->assertStringContainsString('readonly class PrefixItemsValidator', $code);
-        $this->assertStringContainsString('is_array($data)', $code);
+        $this->assertNotNull($caught);
+        $this->assertContains('prefixItems', $caught->keywords);
     }
 
     /**
-     * CP-04 (behaviour lock): The current compiler does not generate
-     * positional item validation — the generated `validate()` only enforces
-     * the homogeneous `items` schema. We assert the absence of any
-     * index-based branch (no `$data[0]` / `$data[1]` references) so a
-     * future implementation change is caught here.
+     * CP-04 (no silent positional checks): Because `prefixItems` is
+     * rejected as unsupported, no positional `$data[N]` access can be
+     * emitted. The exception is thrown before code generation runs.
      */
     #[Test]
-    public function compile_schema_with_prefix_items_does_not_generate_positional_checks(): void
+    public function compile_schema_with_prefix_items_rejects_before_positional_checks(): void
     {
         $compiler = new ValidatorCompiler();
         $schema = new Schema(
@@ -1495,21 +1493,25 @@ final class ValidatorCompilerTest extends TestCase
             items: new Schema(type: 'string'),
         );
 
-        $code = $compiler->compile($schema, 'PrefixItemsNoPositionalValidator');
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'PrefixItemsNoPositionalValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
 
-        // No positional access to $data[0], $data[1], $data[2] is emitted.
-        $this->assertStringNotContainsString('$data[0]', $code);
-        $this->assertStringNotContainsString('$data[1]', $code);
-        $this->assertStringNotContainsString('$data[2]', $code);
-        $this->assertStringNotContainsString('prefixItems', $code);
+        $this->assertNotNull($caught);
+        $this->assertContains('prefixItems', $caught->keywords);
     }
 
     /**
-     * CP-04 (positive): Even without prefix-items enforcement, the
-     * generated validator still validates the homogeneous `items` schema.
+     * CP-04 (items does not bypass prefixItems rejection): When both
+     * `items` and `prefixItems` are present, the compiler rejects the
+     * schema — the homogeneous `items` schema alone cannot substitute for
+     * positional validation, so compilation never reaches `items` handling.
      */
     #[Test]
-    public function compile_schema_with_prefix_items_still_validates_items_schema(): void
+    public function compile_schema_with_prefix_items_and_items_throws_unsupported_keyword_exception(): void
     {
         $compiler = new ValidatorCompiler();
         $schema = new Schema(
@@ -1521,29 +1523,25 @@ final class ValidatorCompilerTest extends TestCase
             items: new Schema(type: 'string'),
         );
 
-        $code = $compiler->compile($schema, 'PrefixItemsStillValidatesItems');
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'PrefixItemsStillValidatesItems');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
 
-        $this->assertStringContainsString('foreach ($data as $index => $item)', $code);
-        $this->assertStringContainsString('is_string($item)', $code);
-
-        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
-        eval($evalCode);
-
-        $validator = new PrefixItemsStillValidatesItems();
-        $validator->validate(['first', 'second', 'third']);
-
-        $this->expectException(RuntimeException::class);
-        $validator->validate(['ok', 42, 'ok']);
+        $this->assertNotNull($caught);
+        $this->assertContains('prefixItems', $caught->keywords);
     }
 
     /**
-     * CP-04 (negative): prefixItems alone (without items) compiles to an
-     * empty validate body — the array type check is skipped because
-     * generateArrayCheck() returns early when items is null. The generated
-     * validator accepts any value. This documents the current behaviour.
+     * CP-04 (prefixItems alone, without items): A schema with
+     * `prefixItems` and no `items` previously compiled to an empty
+     * `validate()` body that accepted any value. It is now rejected with
+     * `UnsupportedKeywordException` (fail-closed).
      */
     #[Test]
-    public function compile_schema_with_prefix_items_only_generates_empty_body(): void
+    public function compile_schema_with_prefix_items_without_items_throws_unsupported_keyword_exception(): void
     {
         $compiler = new ValidatorCompiler();
         $schema = new Schema(
@@ -1554,30 +1552,23 @@ final class ValidatorCompilerTest extends TestCase
             ],
         );
 
-        $code = $compiler->compile($schema, 'PrefixItemsOnlyValidator');
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'PrefixItemsOnlyValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
 
-        // No foreach loop is emitted because items is null.
-        $this->assertStringNotContainsString('foreach', $code);
-        $this->assertStringNotContainsString('prefixItems', $code);
-
-        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
-        eval($evalCode);
-
-        $validator = new PrefixItemsOnlyValidator();
-        // Without items enforcement, every value passes.
-        $validator->validate([1, 2, 3]);
-        $validator->validate([]);
-        $validator->validate('not-an-array');
-
-        self::assertTrue(class_exists('PrefixItemsOnlyValidator', false));
+        $this->assertNotNull($caught);
+        $this->assertContains('prefixItems', $caught->keywords);
     }
 
     /**
-     * CP-04 (detection): prefixItems is intentionally NOT in the
-     * unsupported-keyword set, so the compiler does not report it.
+     * CP-04 (detection): `prefixItems` IS in the unsupported-keyword set,
+     * so the compiler reports it in `UnsupportedKeywordException::keywords`.
      */
     #[Test]
-    public function compile_schema_with_prefix_items_is_not_in_unsupported_keywords(): void
+    public function compile_schema_with_prefix_items_is_in_unsupported_keywords(): void
     {
         $compiler = new ValidatorCompiler();
         $schema = new Schema(
@@ -1586,11 +1577,15 @@ final class ValidatorCompilerTest extends TestCase
             items: new Schema(type: 'string'),
         );
 
-        // If prefixItems were treated as unsupported, compile() would throw.
-        $code = $compiler->compile($schema, 'PrefixItemsNotUnsupported');
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'PrefixItemsNotUnsupported');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
 
-        $this->assertNotEmpty($code);
-        $this->assertStringContainsString('class PrefixItemsNotUnsupported', $code);
+        $this->assertNotNull($caught);
+        $this->assertSame(['prefixItems'], $caught->keywords);
     }
 
     /**

@@ -22,8 +22,8 @@ use Psr\Http\Message\ServerRequestInterface;
  * is declared `type: integer` and `enableCoercion()` is on, the validator's
  * TypeCoercer converts the header string to int before schema validation.
  *
- * HeadersValidator invokes TypeCoercer with strict=true (in contrast to
- * CookieValidator which uses strict=false). In strict mode non-numeric
+ * HeadersValidator invokes TypeCoercer with strict=true (consistent with
+ * CookieValidator which also uses strict=true). In strict mode non-numeric
  * strings and overflow values are rejected with TypeMismatchError.
  */
 final class HeaderCoercionTest extends TestCase
@@ -170,8 +170,6 @@ YAML;
      *
      * PHP's `(int) "99999999999999999999"` cannot represent the value
      * faithfully, so the strict coercer rejects it as a type mismatch.
-     * This documents the overflow-handling divergence from non-strict mode
-     * used by CookieValidator.
      */
     #[Test]
     public function tc_08_header_overflow_numeric_string_fails_coercion_with_type_mismatch(): void

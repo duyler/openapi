@@ -415,8 +415,19 @@ final readonly class ValidatorCompiler
         }
 
         if (null !== $schema->uniqueItems && $schema->uniqueItems) {
-            $code .= "        if (count(\$data) !== count(array_unique(\$data, SORT_REGULAR))) {\n";
-            $code .= "            throw new \\RuntimeException('Array items must be unique');\n";
+            // JSON Schema draft 2020-12 §6.4.3 / §4.2.3 equality: items are
+            // duplicates when their JSON serializations match. This mirrors
+            // the runtime ArrayLengthValidator behaviour, including numeric
+            // equality across int/float (json_encode(1) === json_encode(1.0)
+            // === "1"), while keeping distinct JSON types separate
+            // (json_encode(1)="1", json_encode("1")='"1"', json_encode(true)="true").
+            $code .= "        \$__seen = [];\n";
+            $code .= "        foreach (\$data as \$__item) {\n";
+            $code .= "            \$__key = json_encode(\$__item, JSON_THROW_ON_ERROR);\n";
+            $code .= "            if (in_array(\$__key, \$__seen, true)) {\n";
+            $code .= "                throw new \\RuntimeException('Array items must be unique');\n";
+            $code .= "            }\n";
+            $code .= "            \$__seen[] = \$__key;\n";
             $code .= "        }\n\n";
         }
 
@@ -525,6 +536,7 @@ final readonly class ValidatorCompiler
             'minProperties' => null !== $schema->minProperties,
             'maxProperties' => null !== $schema->maxProperties,
             'additionalProperties' => $schema->additionalProperties instanceof Schema,
+            'prefixItems' => null !== $schema->prefixItems,
         ];
 
         $detected = array_keys(array_filter($keywordMap));

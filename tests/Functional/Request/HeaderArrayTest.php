@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Functional\Request;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Validator\Exception\EnumError;
 use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -20,13 +19,10 @@ use Psr\Http\Message\ServerRequestInterface;
  * The RequestValidator normalizes each header into a single comma-joined
  * string via `implode(', ', $values)`. The HeadersValidator then routes
  * the value through `ParameterDeserializer::deserializeSimple`, which
- * splits on the comma character to produce the array form.
- *
- * Important quirk: the comma-space join in RequestValidator combined
- * with comma-only split in ParameterDeserializer means PSR-7 array
- * headers (multiple values joined with `, `) produce items with leading
- * spaces after the split. Single-string headers with `,` as separator
- * (no spaces) produce clean items.
+ * splits on the comma character and trims each item to produce the
+ * array form. Per RFC 7230 §3.2.3, optional whitespace around the list
+ * separator is allowed, so the comma-space join and comma split compose
+ * cleanly: split items never carry leading or trailing spaces.
  */
 final class HeaderArrayTest extends TestCase
 {
@@ -105,8 +101,8 @@ YAML;
      * HD-05 positive (PSR-7 multi-value): `withHeader('X-Items', ['a', 'b', 'c'])`
      * produces a clean array after split when each PSR-7 value contains a
      * single token. The RequestValidator joins PSR-7 values with `, ` and
-     * ParameterDeserializer splits by `,` — the resulting items have leading
-     * spaces, so this positive test uses an unconstrained `items: string`.
+     * ParameterDeserializer splits by `,` and trims each item, so the
+     * resulting items are clean regardless of the comma-space join.
      */
     #[Test]
     public function hd_05_header_psr7_array_value_parses_to_array(): void
@@ -207,17 +203,18 @@ YAML;
     }
 
     /**
-     * HD-05 edge: PSR-7 array header values joined with `, ` (comma+space)
-     * produce items with leading spaces after ParameterDeserializer's comma
-     * split. The split result `["a", " b", " c"]` fails `items.enum: [a,b,c]`
-     * because `" b"` is not in the allowed enum.
+     * HD-05 edge (fixed): PSR-7 array header values joined with `, `
+     * (comma+space) by the RequestValidator are split and trimmed by
+     * `ParameterDeserializer::splitBySeparator`, so the resulting items
+     * carry no leading spaces.
      *
-     * This documents the actual implementation: RequestValidator uses
-     * `implode(', ', $values)` but ParameterDeserializer splits on `','`
-     * only — there is no space-trimming step.
+     * Before bugfix-20 the split produced `["a", " b", " c"]` and the
+     * enum constraint `[a, b, c]` rejected `" b"`. After the trim fix
+     * the split produces `["a", "b", "c"]` and the enum validation
+     * passes, proving the items are clean.
      */
     #[Test]
-    public function hd_05_psr7_array_header_produces_leading_spaces_in_split_items(): void
+    public function hd_05_psr7_array_header_trims_split_items(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.2.0
@@ -248,19 +245,10 @@ YAML;
             ->createServerRequest('GET', '/items')
             ->withHeader('X-Items', ['a', 'b', 'c']);
 
-        $caught = null;
+        $operation = $validator->validateRequest($request);
 
-        try {
-            $validator->validateRequest($request);
-            self::fail('Expected EnumError because PSR-7 array header items gain leading spaces');
-        } catch (EnumError $error) {
-            $caught = $error;
-        }
-
-        self::assertInstanceOf(EnumError::class, $caught);
-        self::assertSame('enum', $caught->keyword());
-        self::assertSame(['a', 'b', 'c'], $caught->params()['allowed']);
-        self::assertSame(' b', $caught->params()['actual']);
+        $this->assertSame('/items', $operation->path);
+        $this->assertSame('GET', $operation->method);
     }
 
     private function buildHeaderRequest(string $headerValue): ServerRequestInterface

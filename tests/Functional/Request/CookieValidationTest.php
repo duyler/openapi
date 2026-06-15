@@ -21,8 +21,8 @@ use Psr\Http\Message\ServerRequestInterface;
  * - CK-01: integer cookie coercion with `enableCoercion()`. PSR-7 cookie
  *   values are always strings (RFC 6265); the TypeCoercer converts
  *   numeric strings to int when the schema declares `type: integer`.
- *   CookieValidator passes `strict=false` to the coercer, so non-numeric
- *   strings silently coerce to 0 via `(int) "abc" === 0`.
+ *   CookieValidator passes `strict=true` to the coercer, so non-numeric
+ *   strings are rejected with TypeMismatchError during coercion.
  * - CK-02: non-ASCII cookie values URL-encoded as `%XX` sequences.
  *   CookieValidator uses `rawurldecode` on the raw cookie value.
  * - CK-03: `style: form + explode: true` for cookie arrays. Multiple
@@ -43,7 +43,7 @@ final class CookieValidationTest extends TestCase
      *
      * `assertSame(25, $result)` checks both value and type — the only place
      * where the coerced integer is directly observable end-to-end.
-     * CookieValidator passes strict=false to the coercer.
+     * CookieValidator passes strict=true to the coercer.
      */
     #[Test]
     public function ck_01_type_coercer_directly_converts_cookie_string_to_int_25(): void
@@ -51,7 +51,7 @@ final class CookieValidationTest extends TestCase
         $coercer = new TypeCoercer();
         $param = new Parameter(schema: new Schema(type: 'integer'));
 
-        $result = $coercer->coerce('25', $param, enabled: true, strict: false);
+        $result = $coercer->coerce('25', $param, enabled: true, strict: true);
 
         $this->assertSame(25, $result);
         $this->assertIsInt($result);
@@ -150,16 +150,14 @@ YAML;
     }
 
     /**
-     * CK-01 negative: cookie "age=abc" coerces silently to int 0 in
-     * non-strict mode (`(int) "abc" === 0`). The coerced value 0 fails
-     * the const constraint and surfaces as ConstError, NOT TypeMismatchError.
+     * CK-01 negative: cookie "age=abc" cannot be coerced to integer.
      *
-     * This is the actual CookieValidator behavior (BUG-H1 in task-37
-     * context): strict=false means non-numeric strings never raise
-     * TypeMismatchError during cookie coercion.
+     * CookieValidator invokes TypeCoercer with strict=true, so the coercer
+     * rejects non-numeric strings directly with TypeMismatchError during
+     * coercion (before the const constraint is evaluated).
      */
     #[Test]
-    public function ck_01_cookie_non_numeric_string_silently_coerces_to_zero_fails_const(): void
+    public function ck_01_cookie_non_numeric_string_throws_type_mismatch(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.2.0
@@ -191,34 +189,45 @@ YAML;
 
         try {
             $validator->validateRequest($request);
-        } catch (ConstError $e) {
+        } catch (TypeMismatchError $e) {
             $caught = $e;
         }
 
         $this->assertNotNull(
             $caught,
-            'Non-numeric cookie "abc" coerces to 0, which fails const: 25.',
+            'Non-numeric cookie "abc" must fail coercion with TypeMismatchError in strict mode.',
         );
 
-        $this->assertSame(25, $caught->params()['expected']);
-        $this->assertSame(0, $caught->params()['actual']);
+        $this->assertSame('integer', $caught->params()['expected']);
+        $this->assertSame('abc', $caught->params()['actual']);
     }
 
     /**
-     * CK-01 unit-level negative: direct TypeCoercer invocation shows the
-     * silent coercion. `coerce('abc', integer, strict: false)` returns
-     * int 0 (no exception), while strict mode would raise TypeMismatchError.
+     * CK-01 unit-level negative: direct TypeCoercer invocation in strict
+     * mode. `coerce('abc', integer, strict: true)` raises TypeMismatchError,
+     * which is the path exercised end-to-end by the test above.
      */
     #[Test]
-    public function ck_01_type_coercer_non_numeric_string_silently_returns_zero_in_non_strict_mode(): void
+    public function ck_01_type_coercer_strict_mode_rejects_non_numeric_string_with_type_mismatch(): void
     {
         $coercer = new TypeCoercer();
         $param = new Parameter(schema: new Schema(type: 'integer'));
 
-        $result = $coercer->coerce('abc', $param, enabled: true, strict: false);
+        $caught = null;
 
-        $this->assertSame(0, $result);
-        $this->assertIsInt($result);
+        try {
+            $coercer->coerce('abc', $param, enabled: true, strict: true);
+        } catch (TypeMismatchError $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull(
+            $caught,
+            'Strict mode must reject non-numeric cookie value with TypeMismatchError.',
+        );
+
+        $this->assertSame('integer', $caught->params()['expected']);
+        $this->assertSame('abc', $caught->params()['actual']);
     }
 
     /**

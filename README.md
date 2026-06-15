@@ -589,9 +589,9 @@ $code = $compiler->compileWithCache($schema, 'UserValidator', $compilationCache)
 
 #### Compiler Limitations
 
-The compiler does not support all JSON Schema keywords. If a schema uses unsupported keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `patternProperties`, `format`, `minProperties`, `maxProperties`, or `additionalProperties` as a Schema — the bool `true`/`false` form is supported), the compiler throws `UnsupportedKeywordException`. See the Limitations section below for details.
+The compiler does not support all JSON Schema keywords. If a schema uses unsupported keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `patternProperties`, `format`, `minProperties`, `maxProperties`, `prefixItems`, or `additionalProperties` as a Schema — the bool `true`/`false` form is supported), the compiler throws `UnsupportedKeywordException`. See the Limitations section below for details.
 
-`prefixItems` is silently ignored during compilation — no exception is thrown, but positional item validation is not generated. Use the runtime validator for `prefixItems` enforcement.
+`prefixItems` is rejected with `UnsupportedKeywordException` during compilation — positional item validation is not generated. Use the runtime validator for `prefixItems` enforcement.
 
 ## Configuration Options
 
@@ -1360,7 +1360,7 @@ The validator covers approximately 95% of JSON Schema draft 2020-12 keywords. Th
 
 The `ValidatorCompiler` is marked as `@experimental`. It supports a subset of JSON Schema keywords: `type`, `enum`, `const`, `minLength`, `maxLength`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`, `pattern`, `minItems`, `maxItems`, `uniqueItems`, `properties`, `required`, `additionalProperties`, `items`.
 
-The compiler does not support composition keywords (`allOf`, `anyOf`, `oneOf`, `not`), conditional keywords (`if`/`then`/`else`), `patternProperties`, `format`, `minProperties`, `maxProperties`, or `additionalProperties` as a Schema (the bool `true`/`false` form is supported). If any of these are present in a schema, `compile()` throws `UnsupportedKeywordException`.
+The compiler does not support composition keywords (`allOf`, `anyOf`, `oneOf`, `not`), conditional keywords (`if`/`then`/`else`), `patternProperties`, `format`, `minProperties`, `maxProperties`, `prefixItems`, or `additionalProperties` as a Schema (the bool `true`/`false` form is supported). If any of these are present in a schema, `compile()` throws `UnsupportedKeywordException`.
 
 Generated validators throw generic `RuntimeException` on failure rather than the typed error classes used by the runtime validator.
 
