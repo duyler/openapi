@@ -11,6 +11,8 @@ use Override;
 use InvalidArgumentException;
 
 use function is_float;
+use function is_infinite;
+use function is_nan;
 
 final readonly class FloatDoubleValidator implements FormatValidatorInterface
 {
@@ -33,6 +35,16 @@ final readonly class FloatDoubleValidator implements FormatValidatorInterface
                 $this->format,
                 $data,
                 'Value must be a ' . $this->format,
+            );
+        }
+
+        // INF, -INF and NAN are float in PHP but cannot be serialized as JSON
+        // per RFC 8259 §6, so they must not validate as float/double format.
+        if (is_infinite($data) || is_nan($data)) {
+            throw new InvalidFormatException(
+                $this->format,
+                $data,
+                'INF and NAN are not valid JSON float values per RFC 8259 §6',
             );
         }
     }

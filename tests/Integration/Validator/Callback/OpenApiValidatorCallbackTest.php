@@ -726,23 +726,35 @@ YAML;
         $validator->validateCallback($request, 'eventCallback');
     }
 
-    /**
-     * Documented limitation: callback expressions with path templates such as
-     * `/callbacks/{eventId}` are matched literally by `CallbackValidator`, so
-     * a request to `/callbacks/evt_123` is reported as "unknown callback"
-     * rather than resolved via the path template.
-     *
-     * This characterization test pins the current behaviour. A future fix that
-     * enables path-template matching for callbacks will turn this test red.
-     */
     #[Test]
-    public function wh_07_callback_with_path_template_expression_currently_unsupported(): void
+    public function wh_07_callback_with_path_template_matches_and_returns_operation(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::PATH_TEMPLATE_CALLBACK_YAML)
             ->build();
 
         $request = $this->factory->createServerRequest('POST', '/callbacks/evt_123')
+            ->withHeader('Content-Type', 'application/json')
+            ->withBody(
+                $this->factory->createStream(
+                    json_encode(['payload' => 'event-data']),
+                ),
+            );
+
+        $operation = $validator->validateCallback($request, 'eventCallback');
+
+        $this->assertSame('eventCallback', $operation->path);
+        $this->assertSame('POST', $operation->method);
+    }
+
+    #[Test]
+    public function wh_07_callback_with_path_template_mismatched_value_throws_unknown_callback(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::PATH_TEMPLATE_CALLBACK_YAML)
+            ->build();
+
+        $request = $this->factory->createServerRequest('POST', '/callbacks/evt_123/extra/segments')
             ->withHeader('Content-Type', 'application/json')
             ->withBody(
                 $this->factory->createStream(

@@ -1378,7 +1378,7 @@ Response body validation does not expand wildcards: media type matching uses lit
 
 Security scheme validation is basic. The validator checks that required credentials are present in the request (headers, query parameters, or cookies) but does not verify their correctness or format. Token validation, signature checking, and OAuth flow handling are outside the scope of this library.
 
-> **Note:** Security scheme validation is only invoked by `validateRequest()`. The `validateWebhook()` and `validateCallback()` methods do **not** perform security validation, even when `enableSecurityValidation()` is enabled. If you need security checks for webhook or callback requests, you must validate credentials manually before calling these methods.
+> **Note:** Security scheme validation is invoked by `validateRequest()`, `validateWebhook()`, and `validateCallback()` when `enableSecurityValidation()` is enabled. If a security scheme is defined at the document or operation level, the validator checks that required credentials are present in the request. If `enableSecurityValidation()` is not called, security validation is skipped (default behavior).
 
 The following security scheme types are supported:
 

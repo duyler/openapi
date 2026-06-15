@@ -8,6 +8,7 @@ use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
@@ -118,17 +119,12 @@ YAML;
     }
 
     /**
-     * Documented limitation: webhook validation does not invoke the security
-     * validator (only `validateRequest()` does). The spec declares
-     * `security: bearerAuth`, but `validateWebhook()` will not reject a
-     * request without an `Authorization` header.
-     *
-     * This characterization test pins the current behaviour so that any future
-     * fix that enables security validation for webhooks will turn this test
-     * red and force the author to update expectations.
+     * When enableSecurityValidation() is active and the spec declares a
+     * security scheme for a webhook, a request missing the required
+     * credentials must be rejected with a ValidationException.
      */
     #[Test]
-    public function wh_04_webhook_without_authorization_currently_passes_security_gap(): void
+    public function wh_04_webhook_without_authorization_throws_security_exception(): void
     {
         $validator = $this->buildSecurityValidator();
 
@@ -137,10 +133,10 @@ YAML;
             '{"eventId":"evt_456"}',
         );
 
-        $operation = $validator->validateWebhook($request, 'payment.event');
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Security validation failed for POST payment.event');
 
-        self::assertSame('payment.event', $operation->path);
-        self::assertSame('POST', $operation->method);
+        $validator->validateWebhook($request, 'payment.event');
     }
 
     #[Test]

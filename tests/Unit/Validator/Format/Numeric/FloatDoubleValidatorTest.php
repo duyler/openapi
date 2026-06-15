@@ -90,19 +90,17 @@ final class FloatDoubleValidatorTest extends TestCase
     /**
      * Special IEEE 754 float values: INF, -INF, NAN.
      *
-     * The validator uses is_float() to validate. In PHP, INF, -INF, and NAN
-     * are all of type float, so they pass validation. This is a
-     * characterization of the validator's permissive behavior — it does NOT
-     * reject these special values as part of float/double format validation.
+     * JSON (RFC 8259 §6) does not support non-finite or NaN values, so the
+     * validator must reject them even though they are of type float in PHP.
      *
      * @return array<string, array{0: float, 1: bool}>
      */
     public static function specialFloatValuesProvider(): array
     {
         return [
-            'INF is accepted (is_float(INF) === true)' => [INF, true],
-            '-INF is accepted (is_float(-INF) === true)' => [-INF, true],
-            'NAN is accepted (is_float(NAN) === true)' => [NAN, true],
+            'INF is rejected (not serializable per RFC 8259 §6)' => [INF, false],
+            '-INF is rejected (not serializable per RFC 8259 §6)' => [-INF, false],
+            'NAN is rejected (not serializable per RFC 8259 §6)' => [NAN, false],
             'positive float 3.14 is valid' => [3.14, true],
             'negative float -1.5 is valid' => [-1.5, true],
             'zero float 0.0 is valid' => [0.0, true],
@@ -157,7 +155,7 @@ final class FloatDoubleValidatorTest extends TestCase
     }
 
     #[Test]
-    public function inf_acceptance_documents_current_validator_limitation(): void
+    public function inf_is_rejected_per_rfc_8259(): void
     {
         $exception = null;
 
@@ -166,15 +164,16 @@ final class FloatDoubleValidatorTest extends TestCase
         } catch (InvalidFormatException $exception) {
         }
 
-        $this->assertNull(
+        $this->assertNotNull(
             $exception,
-            'INF is accepted by current validator because is_float(INF) === true. '
-            . 'If this assertion fails, the validator has been updated to reject special IEEE 754 values.',
+            'INF must be rejected because it is not serializable as JSON per RFC 8259 §6.',
         );
+        $this->assertSame('float', $exception->format);
+        $this->assertSame(INF, $exception->value);
     }
 
     #[Test]
-    public function nan_acceptance_documents_current_validator_limitation(): void
+    public function nan_is_rejected_per_rfc_8259(): void
     {
         $exception = null;
 
@@ -183,15 +182,17 @@ final class FloatDoubleValidatorTest extends TestCase
         } catch (InvalidFormatException $exception) {
         }
 
-        $this->assertNull(
+        // NAN !== NAN per IEEE 754, so we use is_nan() for the value check.
+        $this->assertNotNull(
             $exception,
-            'NAN is accepted by current validator because is_float(NAN) === true. '
-            . 'If this assertion fails, the validator has been updated to reject special IEEE 754 values.',
+            'NAN must be rejected because it is not serializable as JSON per RFC 8259 §6.',
         );
+        $this->assertSame('float', $exception->format);
+        $this->assertTrue(is_nan($exception->value));
     }
 
     #[Test]
-    public function negative_inf_acceptance_documents_current_validator_limitation(): void
+    public function negative_inf_is_rejected_per_rfc_8259(): void
     {
         $exception = null;
 
@@ -200,10 +201,11 @@ final class FloatDoubleValidatorTest extends TestCase
         } catch (InvalidFormatException $exception) {
         }
 
-        $this->assertNull(
+        $this->assertNotNull(
             $exception,
-            '-INF is accepted by current validator because is_float(-INF) === true. '
-            . 'If this assertion fails, the validator has been updated to reject special IEEE 754 values.',
+            '-INF must be rejected because it is not serializable as JSON per RFC 8259 §6.',
         );
+        $this->assertSame('float', $exception->format);
+        $this->assertSame(-INF, $exception->value);
     }
 }

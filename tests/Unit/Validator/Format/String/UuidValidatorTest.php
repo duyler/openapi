@@ -108,9 +108,9 @@ final class UuidValidatorTest extends TestCase
     /**
      * RFC 4122 UUID versions 1-5 are accepted by the validator regex
      * `[1-5]` for the version nibble and `[89abAB]` for the variant nibble.
-     * The nil UUID `00000000-0000-0000-0000-000000000000` has version nibble
-     * `0`, which does NOT match `[1-5]` and is therefore rejected by the
-     * current validator implementation.
+     * The nil UUID `00000000-0000-0000-0000-000000000000` (RFC 4122 §4.1.7)
+     * has both version and variant nibbles set to `0` and is therefore
+     * validated explicitly before applying the standard regex pattern.
      *
      * @return array<string, array{0: string, 1: bool}>
      */
@@ -124,7 +124,7 @@ final class UuidValidatorTest extends TestCase
             'v5 UUID with variant b is valid' => ['2e9bff0c-31ff-5c11-9b51-001a7c7f9c10', true],
             'v1 UUID is valid (version nibble = 1)' => ['f47ac10b-58cc-4372-a567-0e02b2c3d479', true],
             'v2 UUID is valid (version nibble = 2)' => ['000003e8-113c-21ef-8500-325096b39f47', true],
-            'nil UUID is REJECTED — version nibble 0 does not match [1-5]' => ['00000000-0000-0000-0000-000000000000', false],
+            'nil UUID is valid per RFC 4122 §4.1.7' => ['00000000-0000-0000-0000-000000000000', true],
             'non-UUID string is rejected' => ['not-a-uuid', false],
             'UUID with invalid hex character is rejected' => ['123e4567-e89b-12d3-g456-426614174000', false],
             'UUID with version 6 is rejected' => ['123e4567-e89b-62d3-a456-426614174000', false],
@@ -157,7 +157,7 @@ final class UuidValidatorTest extends TestCase
     }
 
     #[Test]
-    public function nil_uuid_rejection_documents_current_validator_limitation(): void
+    public function nil_uuid_is_valid_per_rfc_4122(): void
     {
         $nilUuid = '00000000-0000-0000-0000-000000000000';
 
@@ -168,15 +168,10 @@ final class UuidValidatorTest extends TestCase
         } catch (InvalidFormatException $exception) {
         }
 
-        $this->assertNotNull(
+        $this->assertNull(
             $exception,
-            'Nil UUID should be rejected by current validator: version nibble 0 does not match [1-5]. '
-            . 'If this assertion fails, the validator has been updated to support nil UUIDs.',
+            'Nil UUID should be valid per RFC 4122 §4.1.7: the validator must accept '
+            . '00000000-0000-0000-0000-000000000000 as a special UUID with all bits zero.',
         );
-
-        if (null !== $exception) {
-            $this->assertSame('uuid', $exception->format);
-            $this->assertSame($nilUuid, $exception->value);
-        }
     }
 }
