@@ -7,7 +7,9 @@ namespace Duyler\OpenApi\Test\E2E;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
+use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\OpenApiValidator;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
@@ -52,6 +54,28 @@ paths:
       responses:
         '200':
           description: Valid
+YAML;
+
+    private const string COOKIE_AUTH_SPEC = <<<'YAML'
+openapi: 3.1.0
+info:
+  title: Cookie Auth Test API
+  version: 1.0.0
+security:
+  - CookieAuth: []
+paths:
+  /protected:
+    get:
+      summary: Cookie-protected endpoint
+      responses:
+        '200':
+          description: Protected data
+components:
+  securitySchemes:
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: session_id
 YAML;
 
     private const XML_SPEC = <<<'YAML'
@@ -455,6 +479,146 @@ YAML;
         $elapsed = microtime(true) - $startTime;
 
         $this->assertLessThan(1.0, $elapsed, 'Huge enum schema must validate within 1 second');
+    }
+
+    /**
+     * SE-06 Positive: apiKey in cookie with session_id present must pass
+     * security validation and return the matched operation. The cookie
+     * value extracted via PSR-7 must match the value supplied.
+     */
+    #[Test]
+    public function cookie_api_key_with_session_id_passes_security_validation(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::COOKIE_AUTH_SPEC)
+            ->enableSecurityValidation()
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/protected')
+            ->withCookieParams(['session_id' => 'abc123']);
+
+        $this->assertSame('abc123', $request->getCookieParams()['session_id']);
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('GET', $operation->method);
+        $this->assertSame('/protected', $operation->path);
+    }
+
+    /**
+     * SE-06 Negative: request without the session_id cookie must fail
+     * security validation with a MissingSecurityCredentialsError wrapped
+     * in ValidationException. The error must reference the cookie location
+     * and the expected cookie name.
+     */
+    #[Test]
+    public function cookie_api_key_without_session_id_throws_missing_credentials(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::COOKIE_AUTH_SPEC)
+            ->enableSecurityValidation()
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/protected');
+
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected ValidationException for missing session_id cookie');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+
+            $this->assertCount(1, $errors);
+
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+
+            $params = $error->params();
+            $this->assertSame('CookieAuth', $params['schemeName']);
+            $this->assertSame('apiKey', $params['schemeType']);
+            $this->assertSame('cookie "session_id"', $params['location']);
+        }
+    }
+
+    /**
+     * SE-06 Negative: empty session_id cookie must fail security
+     * validation. The PSR-7 layer returns an empty string, which the
+     * security validator treats as missing.
+     */
+    #[Test]
+    public function cookie_api_key_with_empty_session_id_throws_missing_credentials(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::COOKIE_AUTH_SPEC)
+            ->enableSecurityValidation()
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/protected')
+            ->withCookieParams(['session_id' => '']);
+
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected ValidationException for empty session_id cookie');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+
+            $this->assertCount(1, $errors);
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $errors[0]);
+            $this->assertSame(
+                'cookie "session_id"',
+                $errors[0]->params()['location'],
+            );
+        }
+    }
+
+    /**
+     * SE-06 Negative: cookie with a different name must not satisfy the
+     * security scheme. Only the cookie declared in the scheme (session_id)
+     * is accepted.
+     */
+    #[Test]
+    public function cookie_api_key_with_wrong_cookie_name_throws_missing_credentials(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::COOKIE_AUTH_SPEC)
+            ->enableSecurityValidation()
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/protected')
+            ->withCookieParams(['other_cookie' => 'abc123']);
+
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected ValidationException when cookie name does not match scheme');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+
+            $this->assertCount(1, $errors);
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $errors[0]);
+            $this->assertSame(
+                'cookie "session_id"',
+                $errors[0]->params()['location'],
+            );
+        }
+    }
+
+    /**
+     * SE-06 Default: when enableSecurityValidation() is not called, a
+     * missing cookie must not trigger any security error. This proves the
+     * opt-in nature of security validation.
+     */
+    #[Test]
+    public function cookie_api_key_skipped_when_security_validation_disabled(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::COOKIE_AUTH_SPEC)
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/protected');
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('GET', $operation->method);
+        $this->assertSame('/protected', $operation->path);
     }
 
     /**
