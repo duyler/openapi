@@ -454,11 +454,21 @@ $registry = $registry
     ->register('api', '1.0.0', $documentV1)
     ->register('api', '2.0.0', $documentV2);
 
-// Get specific version
+// Get specific version (returns null if missing)
 $schema = $registry->get('api', '1.0.0');
 
-// Get latest version (sorted by semver)
+// Get latest version (sorted by semver, returns null if no versions)
 $schema = $registry->get('api');
+
+// Get specific version with fail-fast semantics
+// Throws VersionNotFoundException if the schema name or version is missing
+use Duyler\OpenApi\Registry\Exception\VersionNotFoundException;
+try {
+    $schema = $registry->getOrFail('api', '1.0.0');
+    $latest = $registry->getOrFail('api');
+} catch (VersionNotFoundException $e) {
+    // $e->getMessage() describes the missing name and version
+}
 
 // List all versions
 $versions = $registry->getVersions('api');
@@ -479,6 +489,19 @@ $apiVersions = $registry->countVersions('api'); // 2
 ```
 
 The registry is immutable: `register()` returns a new instance with the added schema.
+
+#### Design choices
+
+- **Registering an existing name+version overwrites the document silently.** This is intentional and enables immutable update patterns (for example, hot-reloading a spec in development, or replacing a placeholder document with a final one). Guard with `has()` if silent overwrite is undesirable for your use case:
+
+  ```php
+  if ($registry->has('api', '1.0.0')) {
+      throw new LogicException('Refusing to overwrite api 1.0.0');
+  }
+  $registry = $registry->register('api', '1.0.0', $document);
+  ```
+
+- **`get()` returns `null` for a missing schema or version** (mirrors the PSR-6 cache convention). Use `has()` to distinguish "missing" from "present" before calling `get()`, or use `getOrFail()` to fail fast with a `VersionNotFoundException` (extends `\RuntimeException`).
 
 ### Validator Pool
 
@@ -929,6 +952,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `RefResolutionException` | Failed to resolve `$ref` reference |
 | `SchemaDepthExceededException` | Maximum schema nesting depth exceeded |
 | `UnknownValidatorException` | Unknown validator type requested |
+| `VersionNotFoundException` | Requested schema name or version is not registered (thrown by `SchemaRegistry::getOrFail()`) |
 
 ### Error Formatters
 

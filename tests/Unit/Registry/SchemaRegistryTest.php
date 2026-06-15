@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Registry;
 
+use Duyler\OpenApi\Registry\Exception\VersionNotFoundException;
 use Duyler\OpenApi\Registry\SchemaRegistry;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 final class SchemaRegistryTest extends TestCase
 {
@@ -264,6 +266,99 @@ final class SchemaRegistryTest extends TestCase
         $retrieved = $registry->get('api', '999.0.0');
 
         self::assertNull($retrieved);
+    }
+
+    #[Test]
+    public function get_or_fail_returns_document_for_existing_version(): void
+    {
+        $registry = new SchemaRegistry();
+        $doc = $this->createDocument();
+
+        $registry = $registry->register('api', '1.0.0', $doc);
+
+        $retrieved = $registry->getOrFail('api', '1.0.0');
+
+        self::assertSame($doc, $retrieved);
+    }
+
+    #[Test]
+    public function get_or_fail_returns_latest_version_when_no_version_given(): void
+    {
+        $registry = new SchemaRegistry();
+        $docV1 = $this->createDocumentWithTitle('v1');
+        $docV2 = $this->createDocumentWithTitle('v2');
+
+        $registry = $registry
+            ->register('api', '1.0.0', $docV1)
+            ->register('api', '2.0.0', $docV2);
+
+        $retrieved = $registry->getOrFail('api');
+
+        self::assertSame($docV2, $retrieved);
+    }
+
+    #[Test]
+    public function get_or_fail_throws_for_non_existent_version_when_other_versions_exist(): void
+    {
+        $registry = new SchemaRegistry();
+        $doc = $this->createDocument();
+
+        $registry = $registry->register('api', '1.0.0', $doc);
+
+        $this->expectException(VersionNotFoundException::class);
+        $this->expectExceptionMessage('Schema "api" does not have version "999.0.0"');
+
+        $registry->getOrFail('api', '999.0.0');
+    }
+
+    #[Test]
+    public function get_or_fail_throws_for_non_existent_schema_with_version(): void
+    {
+        $registry = new SchemaRegistry();
+
+        $this->expectException(VersionNotFoundException::class);
+        $this->expectExceptionMessage('Schema "unknown" does not have version "1.0.0"');
+
+        $registry->getOrFail('unknown', '1.0.0');
+    }
+
+    #[Test]
+    public function get_or_fail_throws_for_non_existent_schema_without_version(): void
+    {
+        $registry = new SchemaRegistry();
+
+        $this->expectException(VersionNotFoundException::class);
+        $this->expectExceptionMessage('Schema "unknown" has no registered versions');
+
+        $registry->getOrFail('unknown');
+    }
+
+    #[Test]
+    public function get_or_fail_throws_for_empty_registry_when_latest_version_requested(): void
+    {
+        $registry = new SchemaRegistry();
+        $doc = $this->createDocument();
+
+        $registry = $registry->register('api', '1.0.0', $doc);
+
+        $this->expectException(VersionNotFoundException::class);
+        $this->expectExceptionMessage('Schema "missing" has no registered versions');
+
+        $registry->getOrFail('missing');
+    }
+
+    #[Test]
+    public function version_not_found_exception_extends_runtime_exception(): void
+    {
+        $registry = new SchemaRegistry();
+
+        try {
+            $registry->getOrFail('api', '1.0.0');
+            self::fail('Expected VersionNotFoundException to be thrown');
+        } catch (VersionNotFoundException $exception) {
+            self::assertInstanceOf(RuntimeException::class, $exception);
+            self::assertSame('Schema "api" does not have version "1.0.0"', $exception->getMessage());
+        }
     }
 
     private function createDocument(): OpenApiDocument

@@ -10,6 +10,7 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
 use Duyler\OpenApi\Validator\Exception\MaxItemsError;
+use Duyler\OpenApi\Validator\Exception\MinItemsError;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Request\RequestBodyCoercer;
@@ -80,6 +81,31 @@ paths:
           required: true
           style: form
           explode: true
+          schema:
+            type: array
+            items:
+              type: string
+            minItems: 3
+            maxItems: 3
+      responses:
+        '200':
+          description: OK
+YAML;
+
+    private const string TC04_ARRAY_QUERY_CSV_SPEC = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: Array Query CSV API
+  version: 1.0.0
+paths:
+  /search:
+    get:
+      parameters:
+        - name: tags
+          in: query
+          required: true
+          style: form
+          explode: false
           schema:
             type: array
             items:
@@ -860,6 +886,68 @@ YAML;
             $this->assertSame('maxItems', $e->keyword());
             $this->assertSame(3, $e->params()['maxItems']);
             $this->assertSame(4, $e->params()['actual']);
+        }
+    }
+
+    #[Test]
+    public function tc04_query_array_csv_explode_false_validates_full_cycle(): void
+    {
+        $validator = $this->buildCoercionValidator(self::TC04_ARRAY_QUERY_CSV_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/search?tags=a,b,c');
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('/search', $operation->path);
+        $this->assertSame('GET', $operation->method);
+    }
+
+    #[Test]
+    public function tc04_query_array_csv_explode_false_without_coercion_validates_full_cycle(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::TC04_ARRAY_QUERY_CSV_SPEC)
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/search?tags=a,b,c');
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('/search', $operation->path);
+        $this->assertSame('GET', $operation->method);
+    }
+
+    #[Test]
+    public function tc04_query_array_csv_explode_false_exceeding_max_items_throws_max_items_error(): void
+    {
+        $validator = $this->buildCoercionValidator(self::TC04_ARRAY_QUERY_CSV_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/search?tags=a,b,c,d');
+
+        try {
+            $validator->validateRequest($request);
+            $this->fail('Expected MaxItemsError for 4 CSV items with maxItems: 3');
+        } catch (MaxItemsError $e) {
+            $this->assertSame('maxItems', $e->keyword());
+            $this->assertSame(3, $e->params()['maxItems']);
+            $this->assertSame(4, $e->params()['actual']);
+        }
+    }
+
+    #[Test]
+    public function tc04_query_array_csv_explode_false_too_few_items_throws_min_items_error(): void
+    {
+        $validator = $this->buildCoercionValidator(self::TC04_ARRAY_QUERY_CSV_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/search?tags=a,b');
+
+        try {
+            $validator->validateRequest($request);
+            $this->fail('Expected MinItemsError for 2 CSV items with minItems: 3');
+        } catch (MinItemsError $e) {
+            $this->assertSame('minItems', $e->keyword());
+            $this->assertSame(3, $e->params()['minItems']);
+            $this->assertSame(2, $e->params()['actual']);
         }
     }
 
