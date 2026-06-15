@@ -202,4 +202,49 @@ final class DurationValidatorTest extends TestCase
             $this->assertSame($invalidValue, $exception->value);
         }
     }
+
+    /**
+     * Weeks (W designator) edge cases per ISO 8601: the W designator is an
+     * alternative to Y/M/D + H/M/S. Weeks are exclusive — they cannot be
+     * combined with any other component.
+     *
+     * @return array<string, array{0: string, 1: bool}>
+     */
+    public static function weeksEdgeCasesProvider(): array
+    {
+        return [
+            'P1W — one week is valid' => ['P1W', true],
+            'P2W — two weeks is valid' => ['P2W', true],
+            'P0W — zero weeks is valid' => ['P0W', true],
+            'P10W — large number of weeks is valid' => ['P10W', true],
+            'P1W1D — weeks with days is invalid (weeks are exclusive)' => ['P1W1D', false],
+            'P1W1H — weeks with hours is invalid (weeks are exclusive)' => ['P1W1H', false],
+            'P1W1Y — weeks with years is invalid' => ['P1W1Y', false],
+            'P1W1M — weeks with months is invalid' => ['P1W1M', false],
+            'PW — weeks without number is invalid' => ['PW', false],
+        ];
+    }
+
+    #[DataProvider('weeksEdgeCasesProvider')]
+    #[Test]
+    public function weeks_edge_cases_match_expected_validation_result(string $duration, bool $expectedValid): void
+    {
+        $exception = null;
+
+        try {
+            $this->validator->validate($duration);
+        } catch (InvalidFormatException $exception) {
+        }
+
+        $this->assertSame(
+            $expectedValid,
+            null === $exception,
+            sprintf(
+                'Duration "%s" was expected to be %s but is %s',
+                $duration,
+                $expectedValid ? 'valid' : 'invalid',
+                null === $exception ? 'valid' : 'invalid: ' . $exception->getMessage(),
+            ),
+        );
+    }
 }

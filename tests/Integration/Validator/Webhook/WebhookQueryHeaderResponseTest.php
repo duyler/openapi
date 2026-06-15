@@ -372,6 +372,7 @@ YAML;
         return $builder->build();
     }
 
+    // Helper duplicated in WebhookSecurityCoercionTest for test isolation.
     /**
      * @param array<string, string> $headers
      */
