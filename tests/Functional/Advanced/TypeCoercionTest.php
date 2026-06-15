@@ -9,14 +9,18 @@ use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
+use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Request\RequestBodyCoercer;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
+use Duyler\OpenApi\Validator\Response\ResponseTypeCoercer;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
 
 use function str_increment;
+
+use function sprintf;
 
 use const PHP_INT_MAX;
 use const PHP_INT_MIN;
@@ -57,6 +61,120 @@ paths:
           required: true
           schema:
             type: integer
+      responses:
+        '200':
+          description: OK
+YAML;
+
+    private const string TC04_ARRAY_QUERY_SPEC = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: Array Query API
+  version: 1.0.0
+paths:
+  /search:
+    get:
+      parameters:
+        - name: tags
+          in: query
+          required: true
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+            minItems: 3
+            maxItems: 3
+      responses:
+        '200':
+          description: OK
+YAML;
+
+    private const string TC05_ARRAY_BODY_SPEC = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: Array Body API
+  version: 1.0.0
+paths:
+  /items:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    minimum: 1
+                required:
+                  - id
+      responses:
+        '200':
+          description: OK
+YAML;
+
+    private const string TC06_RESPONSE_COERCION_SPEC = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: Response Coercion API
+  version: 1.0.0
+paths:
+  /stats:
+    get:
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    minimum: 40
+                required:
+                  - count
+YAML;
+
+    private const string TC09_BOOLEAN_SPEC = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: Boolean Edge API
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      parameters:
+        - name: active
+          in: query
+          required: true
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+YAML;
+
+    private const string TC09_BOOLEAN_CONST_TRUE_SPEC = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: Boolean Edge API
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      parameters:
+        - name: active
+          in: query
+          required: true
+          schema:
+            type: boolean
+            const: true
       responses:
         '200':
           description: OK
@@ -700,6 +818,245 @@ YAML;
 
         $this->expectException(TypeMismatchError::class);
         $this->paramCoercer->coerce($overflow, $param, true, true);
+    }
+
+    #[Test]
+    public function tc04_query_array_coercion_preserves_string_items_unchanged(): void
+    {
+        $param = new Parameter(schema: new Schema(
+            type: 'array',
+            items: new Schema(type: 'string'),
+        ));
+
+        $result = $this->paramCoercer->coerce(['a', 'b', 'c'], $param, true, true);
+
+        $this->assertSame(['a', 'b', 'c'], $result);
+    }
+
+    #[Test]
+    public function tc04_query_array_with_string_items_validates_full_cycle(): void
+    {
+        $validator = $this->buildCoercionValidator(self::TC04_ARRAY_QUERY_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/search?tags[]=a&tags[]=b&tags[]=c');
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('/search', $operation->path);
+        $this->assertSame('GET', $operation->method);
+    }
+
+    #[Test]
+    public function tc04_query_array_exceeding_max_items_throws_max_items_error(): void
+    {
+        $validator = $this->buildCoercionValidator(self::TC04_ARRAY_QUERY_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/search?tags[]=a&tags[]=b&tags[]=c&tags[]=d');
+
+        try {
+            $validator->validateRequest($request);
+            $this->fail('Expected MaxItemsError for 4 items with maxItems: 3');
+        } catch (MaxItemsError $e) {
+            $this->assertSame('maxItems', $e->keyword());
+            $this->assertSame(3, $e->params()['maxItems']);
+            $this->assertSame(4, $e->params()['actual']);
+        }
+    }
+
+    #[Test]
+    public function tc05_top_level_array_body_coerces_nested_object_id_to_integer(): void
+    {
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(
+                type: 'object',
+                properties: [
+                    'id' => new Schema(type: 'integer'),
+                ],
+            ),
+        );
+
+        $context = new CoercionContext(schema: $schema, enabled: true, strict: true);
+
+        $result = $this->bodyCoercer->coerce([['id' => '1'], ['id' => '2']], $context);
+
+        $this->assertSame(1, $result[0]['id']);
+        $this->assertIsInt($result[0]['id']);
+
+        $this->assertSame(2, $result[1]['id']);
+        $this->assertIsInt($result[1]['id']);
+    }
+
+    #[Test]
+    public function tc05_top_level_array_body_validates_full_cycle_with_coercion(): void
+    {
+        $validator = $this->buildCoercionValidator(self::TC05_ARRAY_BODY_SPEC);
+
+        $request = $this->createRequest('POST', '/items', [['id' => '1'], ['id' => '2']]);
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('/items', $operation->path);
+        $this->assertSame('POST', $operation->method);
+    }
+
+    #[Test]
+    public function tc05_top_level_array_body_invalid_id_throws_type_mismatch(): void
+    {
+        $validator = $this->buildCoercionValidator(self::TC05_ARRAY_BODY_SPEC);
+
+        $request = $this->createRequest('POST', '/items', [['id' => 'abc']]);
+
+        try {
+            $validator->validateRequest($request);
+            $this->fail('Expected TypeMismatchError for non-numeric string id in array body');
+        } catch (TypeMismatchError $e) {
+            $this->assertSame('integer', $e->params()['expected']);
+            $this->assertSame('abc', $e->params()['actual']);
+        }
+    }
+
+    #[Test]
+    public function tc06_response_body_coerces_string_count_to_integer(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'count' => new Schema(type: 'integer'),
+            ],
+        );
+
+        $context = new CoercionContext(schema: $schema, enabled: true, strict: true);
+
+        $coercer = new ResponseTypeCoercer();
+        $result = $coercer->coerce(['count' => '42'], $context);
+
+        $this->assertSame(42, $result['count']);
+        $this->assertIsInt($result['count']);
+    }
+
+    #[Test]
+    public function tc06_response_body_string_integer_validates_full_cycle_with_coercion(): void
+    {
+        $validator = $this->buildCoercionValidator(self::TC06_RESPONSE_COERCION_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/stats');
+        $operation = $validator->validateRequest($request);
+
+        $response = $this->createResponse(200, ['count' => '42']);
+
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (TypeMismatchError|MinimumError $e) {
+            $this->fail(sprintf(
+                'Expected response coercion to convert "42" to int 42, got %s: %s',
+                $e::class,
+                $e->getMessage(),
+            ));
+        }
+
+        $this->assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function tc06_response_body_non_numeric_count_throws_type_mismatch(): void
+    {
+        $validator = $this->buildCoercionValidator(self::TC06_RESPONSE_COERCION_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/stats');
+        $operation = $validator->validateRequest($request);
+
+        $response = $this->createResponse(200, ['count' => 'abc']);
+
+        try {
+            $validator->validateResponse($response, $operation);
+            $this->fail('Expected TypeMismatchError for non-numeric count in response body');
+        } catch (TypeMismatchError $e) {
+            $this->assertSame('integer', $e->params()['expected']);
+            $this->assertSame('abc', $e->params()['actual']);
+        }
+    }
+
+    #[Test]
+    public function tc09_boolean_coercion_true_string_passes_const_true_schema(): void
+    {
+        $validator = $this->buildCoercionValidator(self::TC09_BOOLEAN_CONST_TRUE_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/users?active=true');
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('/users', $operation->path);
+        $this->assertSame('GET', $operation->method);
+    }
+
+    #[Test]
+    public function tc09_boolean_coercion_null_literal_string_throws_type_mismatch(): void
+    {
+        $validator = $this->buildCoercionValidator(self::TC09_BOOLEAN_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/users?active=null');
+
+        try {
+            $validator->validateRequest($request);
+            $this->fail('Expected TypeMismatchError for literal string "null" against boolean schema');
+        } catch (TypeMismatchError $e) {
+            $this->assertSame('boolean', $e->params()['expected']);
+            $this->assertSame('null', $e->params()['actual']);
+        }
+    }
+
+    #[Test]
+    public function tc09_boolean_coercion_empty_string_throws_type_mismatch_in_strict_mode(): void
+    {
+        $validator = $this->buildCoercionValidator(self::TC09_BOOLEAN_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/users?active=');
+
+        try {
+            $validator->validateRequest($request);
+            $this->fail('Expected TypeMismatchError for empty string against boolean schema in strict mode');
+        } catch (TypeMismatchError $e) {
+            $this->assertSame('boolean', $e->params()['expected']);
+            $this->assertSame('', $e->params()['actual']);
+        }
+    }
+
+    #[Test]
+    public function tc09_boolean_coercion_object_literal_string_throws_type_mismatch(): void
+    {
+        $validator = $this->buildCoercionValidator(self::TC09_BOOLEAN_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/users?active=%7B%7D');
+
+        try {
+            $validator->validateRequest($request);
+            $this->fail('Expected TypeMismatchError for object literal string "{}" against boolean schema');
+        } catch (TypeMismatchError $e) {
+            $this->assertSame('boolean', $e->params()['expected']);
+            $this->assertSame('{}', $e->params()['actual']);
+        }
+    }
+
+    #[Test]
+    public function tc09_boolean_coercion_array_value_throws_type_mismatch(): void
+    {
+        $validator = $this->buildCoercionValidator(self::TC09_BOOLEAN_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/users?active[]=x');
+
+        $caught = null;
+        try {
+            $validator->validateRequest($request);
+            $this->fail('Expected TypeMismatchError for array value against boolean schema');
+        } catch (TypeMismatchError $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertSame('boolean', $caught->params()['expected']);
     }
 
     private function buildCoercionValidator(string $yaml): OpenApiValidatorInterface

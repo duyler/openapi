@@ -197,12 +197,92 @@ final class SchemaRegistryTest extends TestCase
         self::assertNull($retrieved);
     }
 
+    #[Test]
+    public function register_same_version_overwrites_document(): void
+    {
+        $registry = new SchemaRegistry();
+        $docV1 = $this->createDocumentWithTitle('First API');
+        $docV2 = $this->createDocumentWithTitle('Second API');
+
+        $registry = $registry->register('api', '1.0.0', $docV1);
+        $registry = $registry->register('api', '1.0.0', $docV2);
+
+        $retrieved = $registry->get('api', '1.0.0');
+
+        self::assertSame($docV2, $retrieved);
+        self::assertNotSame($docV1, $retrieved);
+    }
+
+    #[Test]
+    public function overwrite_preserves_other_versions(): void
+    {
+        $registry = new SchemaRegistry();
+        $docV1Original = $this->createDocumentWithTitle('API v1 original');
+        $docV2 = $this->createDocumentWithTitle('API v2');
+        $docV1Overwrite = $this->createDocumentWithTitle('API v1 overwrite');
+
+        $registry = $registry
+            ->register('api', '1.0.0', $docV1Original)
+            ->register('api', '2.0.0', $docV2)
+            ->register('api', '1.0.0', $docV1Overwrite);
+
+        $retrievedV1 = $registry->get('api', '1.0.0');
+        $retrievedV2 = $registry->get('api', '2.0.0');
+        $versions = $registry->getVersions('api');
+
+        self::assertSame($docV1Overwrite, $retrievedV1);
+        self::assertSame($docV2, $retrievedV2);
+        self::assertSame(['1.0.0', '2.0.0'], $versions);
+        self::assertSame(2, $registry->countVersions('api'));
+    }
+
+    #[Test]
+    public function overwrite_does_not_mutate_original_instance(): void
+    {
+        $registry = new SchemaRegistry();
+        $docV1 = $this->createDocumentWithTitle('First');
+        $docV2 = $this->createDocumentWithTitle('Second');
+
+        $registryV1 = $registry->register('api', '1.0.0', $docV1);
+        $registryV2 = $registryV1->register('api', '1.0.0', $docV2);
+
+        $originalAfterOverwrite = $registryV1->get('api', '1.0.0');
+        $newAfterOverwrite = $registryV2->get('api', '1.0.0');
+
+        self::assertSame($docV1, $originalAfterOverwrite);
+        self::assertSame($docV2, $newAfterOverwrite);
+    }
+
+    #[Test]
+    public function get_returns_null_for_non_existent_version_when_other_versions_exist(): void
+    {
+        $registry = new SchemaRegistry();
+        $doc = $this->createDocument();
+
+        $registry = $registry->register('api', '1.0.0', $doc);
+
+        $retrieved = $registry->get('api', '999.0.0');
+
+        self::assertNull($retrieved);
+    }
+
     private function createDocument(): OpenApiDocument
     {
         return new OpenApiDocument(
             openapi: '3.1.0',
             info: new InfoObject(
                 title: 'Test API',
+                version: '1.0.0',
+            ),
+        );
+    }
+
+    private function createDocumentWithTitle(string $title): OpenApiDocument
+    {
+        return new OpenApiDocument(
+            openapi: '3.1.0',
+            info: new InfoObject(
+                title: $title,
                 version: '1.0.0',
             ),
         );

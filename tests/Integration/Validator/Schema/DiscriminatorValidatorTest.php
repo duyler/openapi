@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Integration\Validator\Schema;
 
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Schema\DiscriminatorValidator;
@@ -19,6 +20,7 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Exception\DiscriminatorMismatchException;
 use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
+use Duyler\OpenApi\Validator\Exception\RequiredError;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -30,6 +32,7 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 use function count;
+use function sprintf;
 
 /**
  * @internal
@@ -37,6 +40,123 @@ use function count;
 #[CoversClass(DiscriminatorValidator::class)]
 final class DiscriminatorValidatorTest extends TestCase
 {
+    private const string DI_05_ALLOF_COMPOSITION_SPEC = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: DI-05 Animal API
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Animal:
+      type: object
+      required: [type]
+      discriminator:
+        propertyName: type
+        mapping:
+          cat: '#/components/schemas/Cat'
+          dog: '#/components/schemas/Dog'
+    BasePet:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+    Cat:
+      allOf:
+        - type: object
+          required: [name]
+          properties:
+            name:
+              type: string
+        - type: object
+          required: [type, meow]
+          properties:
+            type:
+              type: string
+              enum: [cat]
+            meow:
+              type: boolean
+    Dog:
+      allOf:
+        - type: object
+          required: [name]
+          properties:
+            name:
+              type: string
+        - type: object
+          required: [type, bark, breed]
+          properties:
+            type:
+              type: string
+              enum: [dog]
+            bark:
+              type: boolean
+            breed:
+              type: string
+YAML;
+
+    private const string DI_06_NESTED_DISCRIMINATOR_SPEC = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: DI-06 Shape API
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Container:
+      type: object
+      allOf:
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: integer
+        - type: object
+          required: [shapeType]
+          oneOf:
+            - type: object
+              required: [shapeType, radius]
+              properties:
+                shapeType:
+                  type: string
+                  enum: [circle]
+                radius:
+                  type: number
+                  minimum: 0
+            - type: object
+              required: [shapeType, side]
+              properties:
+                shapeType:
+                  type: string
+                  enum: [square]
+                side:
+                  type: number
+                  minimum: 0
+          discriminator:
+            propertyName: shapeType
+            mapping:
+              circle: '#/components/schemas/CircleShape'
+              square: '#/components/schemas/SquareShape'
+    CircleShape:
+      type: object
+      required: [shapeType, radius]
+      properties:
+        shapeType:
+          type: string
+          enum: [circle]
+        radius:
+          type: number
+    SquareShape:
+      type: object
+      required: [shapeType, side]
+      properties:
+        shapeType:
+          type: string
+          enum: [square]
+        side:
+          type: number
+YAML;
     private DiscriminatorValidator $validator;
     private RefResolverInterface $refResolver;
     private ValidatorPool $pool;
@@ -1444,5 +1564,359 @@ final class DiscriminatorValidatorTest extends TestCase
             $this->assertSame('required', $errors[0]->keyword());
             $this->assertStringContainsString('bark', $errors[0]->message());
         }
+    }
+
+    #[Test]
+    public function di_05_cat_with_allof_composition_passes_via_discriminator(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::DI_05_ALLOF_COMPOSITION_SPEC)
+            ->build();
+
+        $catData = [
+            'type' => 'cat',
+            'name' => 'Fluffy',
+            'meow' => true,
+        ];
+
+        $succeeded = false;
+
+        try {
+            $validator->validateSchema($catData, '#/components/schemas/Animal');
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            $this->fail(sprintf('Expected cat to pass validation, got: %s', $e->getMessage()));
+        }
+
+        $this->assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function di_05_dog_with_allof_composition_passes_via_discriminator(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::DI_05_ALLOF_COMPOSITION_SPEC)
+            ->build();
+
+        $dogData = [
+            'type' => 'dog',
+            'name' => 'Rex',
+            'bark' => true,
+            'breed' => 'Labrador',
+        ];
+
+        $succeeded = false;
+
+        try {
+            $validator->validateSchema($dogData, '#/components/schemas/Animal');
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            $this->fail(sprintf('Expected dog to pass validation, got: %s', $e->getMessage()));
+        }
+
+        $this->assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function di_05_cat_data_with_dog_fields_rejected_by_cat_allof_schema(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::DI_05_ALLOF_COMPOSITION_SPEC)
+            ->build();
+
+        $catWithDogFields = [
+            'type' => 'cat',
+            'name' => 'Fluffy',
+            'bark' => true,
+        ];
+
+        $caught = null;
+
+        try {
+            $validator->validateSchema($catWithDogFields, '#/components/schemas/Animal');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught, 'Cat data with dog fields (no meow) should be rejected');
+
+        $errors = $caught->getErrors();
+        $this->assertGreaterThan(0, count($errors));
+
+        $foundRequiredMeow = false;
+
+        foreach ($errors as $error) {
+            if ($error instanceof RequiredError && 'meow' === $error->params()['property']) {
+                $foundRequiredMeow = true;
+
+                break;
+            }
+        }
+
+        $this->assertTrue(
+            $foundRequiredMeow,
+            'Expected RequiredError for "meow" property after discriminator selected Cat allOf composition',
+        );
+    }
+
+    #[Test]
+    public function di_05_dog_data_with_cat_fields_rejected_by_dog_allof_schema(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::DI_05_ALLOF_COMPOSITION_SPEC)
+            ->build();
+
+        $dogWithCatFields = [
+            'type' => 'dog',
+            'name' => 'Rex',
+            'meow' => true,
+        ];
+
+        $caught = null;
+
+        try {
+            $validator->validateSchema($dogWithCatFields, '#/components/schemas/Animal');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught, 'Dog data with cat fields (no bark/breed) should be rejected');
+
+        $errors = $caught->getErrors();
+        $this->assertGreaterThan(0, count($errors));
+
+        $requiredProperties = [];
+        $errorsCount = count($errors);
+
+        for ($i = 0; $i < $errorsCount; ++$i) {
+            if ($errors[$i] instanceof RequiredError) {
+                $requiredProperties[] = $errors[$i]->params()['property'];
+            }
+        }
+
+        $this->assertContains('bark', $requiredProperties);
+        $this->assertContains('breed', $requiredProperties);
+    }
+
+    #[Test]
+    public function di_05_cat_data_missing_base_pet_name_rejected_after_allof_merge(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::DI_05_ALLOF_COMPOSITION_SPEC)
+            ->build();
+
+        $catWithoutName = [
+            'type' => 'cat',
+            'meow' => true,
+        ];
+
+        $caught = null;
+
+        try {
+            $validator->validateSchema($catWithoutName, '#/components/schemas/Animal');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught, 'Cat data without BasePet "name" should be rejected after allOf merge');
+
+        $errors = $caught->getErrors();
+        $this->assertGreaterThan(0, count($errors));
+
+        $foundRequiredName = false;
+
+        foreach ($errors as $error) {
+            if ($error instanceof RequiredError && 'name' === $error->params()['property']) {
+                $foundRequiredName = true;
+
+                break;
+            }
+        }
+
+        $this->assertTrue(
+            $foundRequiredName,
+            'Expected RequiredError for "name" property from BasePet after allOf merge',
+        );
+    }
+
+    #[Test]
+    public function di_05_cat_data_does_not_validate_against_dog_schema_directly(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::DI_05_ALLOF_COMPOSITION_SPEC)
+            ->build();
+
+        $catData = [
+            'type' => 'cat',
+            'name' => 'Fluffy',
+            'meow' => true,
+        ];
+
+        $caught = null;
+
+        try {
+            $validator->validateSchema($catData, '#/components/schemas/Dog');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught, 'Cat data should not validate against Dog allOf schema directly');
+
+        $errors = $caught->getErrors();
+        $this->assertGreaterThan(0, count($errors));
+        $this->assertSame('enum', $errors[0]->keyword());
+        $this->assertSame('cat', $errors[0]->params()['actual']);
+    }
+
+    #[Test]
+    public function di_06_nested_discriminator_circle_shape_passes_validation(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::DI_06_NESTED_DISCRIMINATOR_SPEC)
+            ->build();
+
+        $circleData = [
+            'id' => 1,
+            'shapeType' => 'circle',
+            'radius' => 5.0,
+        ];
+
+        $succeeded = false;
+
+        try {
+            $validator->validateSchema($circleData, '#/components/schemas/Container');
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            $this->fail(sprintf('Expected circle data to pass nested composition validation, got: %s', $e->getMessage()));
+        }
+
+        $this->assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function di_06_nested_discriminator_square_shape_passes_validation(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::DI_06_NESTED_DISCRIMINATOR_SPEC)
+            ->build();
+
+        $squareData = [
+            'id' => 42,
+            'shapeType' => 'square',
+            'side' => 3.5,
+        ];
+
+        $succeeded = false;
+
+        try {
+            $validator->validateSchema($squareData, '#/components/schemas/Container');
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            $this->fail(sprintf('Expected square data to pass nested composition validation, got: %s', $e->getMessage()));
+        }
+
+        $this->assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function di_06_nested_discriminator_circle_fields_with_square_type_rejected(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::DI_06_NESTED_DISCRIMINATOR_SPEC)
+            ->build();
+
+        $invalidData = [
+            'id' => 1,
+            'shapeType' => 'square',
+            'radius' => 5.0,
+        ];
+
+        $caught = null;
+
+        try {
+            $validator->validateSchema($invalidData, '#/components/schemas/Container');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull(
+            $caught,
+            'Data with shapeType=square but radius (not side) should be rejected by nested composition',
+        );
+
+        $errors = $caught->getErrors();
+        $this->assertGreaterThan(0, count($errors));
+    }
+
+    #[Test]
+    public function di_06_nested_discriminator_missing_base_id_rejected(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::DI_06_NESTED_DISCRIMINATOR_SPEC)
+            ->build();
+
+        $dataWithoutId = [
+            'shapeType' => 'circle',
+            'radius' => 5.0,
+        ];
+
+        $caught = null;
+
+        try {
+            $validator->validateSchema($dataWithoutId, '#/components/schemas/Container');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull(
+            $caught,
+            'Data missing base "id" field should be rejected after allOf merge',
+        );
+
+        $errors = $caught->getErrors();
+        $this->assertGreaterThan(0, count($errors));
+
+        $foundRequiredId = false;
+
+        foreach ($errors as $error) {
+            if ($error instanceof RequiredError && 'id' === $error->params()['property']) {
+                $foundRequiredId = true;
+
+                break;
+            }
+        }
+
+        $this->assertTrue(
+            $foundRequiredId,
+            'Expected RequiredError for "id" property from base allOf subschema',
+        );
+    }
+
+    #[Test]
+    public function di_06_nested_discriminator_unknown_shape_type_rejected(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::DI_06_NESTED_DISCRIMINATOR_SPEC)
+            ->build();
+
+        $unknownShapeData = [
+            'id' => 1,
+            'shapeType' => 'triangle',
+            'base' => 4,
+            'height' => 3,
+        ];
+
+        $caught = null;
+
+        try {
+            $validator->validateSchema($unknownShapeData, '#/components/schemas/Container');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull(
+            $caught,
+            'Data with unknown shapeType should be rejected: neither circle nor square composition matches',
+        );
     }
 }
