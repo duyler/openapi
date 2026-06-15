@@ -11,6 +11,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
+use function sprintf;
+
 #[CoversClass(StreamingContentParser::class)]
 final class StreamingContentParserEdgeCaseTest extends TestCase
 {
@@ -135,5 +137,188 @@ final class StreamingContentParserEdgeCaseTest extends TestCase
         $this->expectExceptionMessage('Stream line exceeds maximum allowed length of 1048576 bytes');
 
         $this->parser->parseStream($stream, 'application/json-seq');
+    }
+
+    #[Test]
+    public function sse_retry_field_with_numeric_value_is_silently_dropped_from_output(): void
+    {
+        $body = "retry: 5000\n\n";
+
+        $result = $this->parser->parseServerSentEvents($body);
+
+        $this->assertCount(1, $result);
+        $this->assertSame([], $result[0]);
+        $this->assertArrayNotHasKey('retry', $result[0]);
+    }
+
+    #[Test]
+    public function sse_retry_field_with_non_numeric_value_does_not_throw_and_is_dropped(): void
+    {
+        $body = "retry: abc\n\n";
+
+        $caught = null;
+        $result = null;
+        try {
+            $result = $this->parser->parseServerSentEvents($body);
+        } catch (RuntimeException $exception) {
+            $caught = $exception;
+        }
+
+        $this->assertNull($caught);
+        $this->assertCount(1, $result);
+        $this->assertSame([], $result[0]);
+        $this->assertArrayNotHasKey('retry', $result[0]);
+    }
+
+    #[Test]
+    public function sse_retry_field_dropped_even_when_event_and_data_present(): void
+    {
+        $body = "retry: 5000\nevent: update\ndata: {\"v\":1}\n\n";
+
+        $result = $this->parser->parseServerSentEvents($body);
+
+        $this->assertCount(1, $result);
+        $this->assertSame('update', $result[0]['event']);
+        $this->assertSame(['v' => 1], $result[0]['data']);
+        $this->assertArrayNotHasKey('retry', $result[0]);
+    }
+
+    #[Test]
+    public function sse_event_field_without_data_still_produces_event(): void
+    {
+        $body = "event: update\n\n";
+
+        $result = $this->parser->parseServerSentEvents($body);
+
+        $this->assertCount(1, $result);
+        $this->assertSame('update', $result[0]['event']);
+        $this->assertArrayNotHasKey('data', $result[0]);
+    }
+
+    #[Test]
+    public function sse_event_field_with_data_includes_both_keys(): void
+    {
+        $body = "event: update\ndata: payload\n\n";
+
+        $result = $this->parser->parseServerSentEvents($body);
+
+        $this->assertCount(1, $result);
+        $this->assertSame('update', $result[0]['event']);
+        $this->assertSame('payload', $result[0]['data']);
+    }
+
+    #[Test]
+    public function sse_data_field_without_event_has_no_event_key(): void
+    {
+        $body = "data: {\"msg\":\"hello\"}\n\n";
+
+        $result = $this->parser->parseServerSentEvents($body);
+
+        $this->assertCount(1, $result);
+        $this->assertSame(['msg' => 'hello'], $result[0]['data']);
+        $this->assertArrayNotHasKey('event', $result[0]);
+    }
+
+    #[Test]
+    public function sse_explicit_event_message_with_data_produces_event_message_key(): void
+    {
+        $body = "event: message\ndata: {\"msg\":\"hello\"}\n\n";
+
+        $result = $this->parser->parseServerSentEvents($body);
+
+        $this->assertCount(1, $result);
+        $this->assertSame('message', $result[0]['event']);
+        $this->assertSame(['msg' => 'hello'], $result[0]['data']);
+    }
+
+    #[Test]
+    public function sse_empty_event_block_produces_no_events(): void
+    {
+        $body = "\n\n";
+
+        $result = $this->parser->parseServerSentEvents($body);
+
+        $this->assertSame([], $result);
+    }
+
+    #[Test]
+    public function sse_leading_blank_lines_then_event_produces_single_event(): void
+    {
+        $body = "\n\ndata: payload\n\n";
+
+        $result = $this->parser->parseServerSentEvents($body);
+
+        $this->assertCount(1, $result);
+        $this->assertSame('payload', $result[0]['data']);
+    }
+
+    #[Test]
+    public function sse_comments_only_stream_produces_empty_result(): void
+    {
+        $body = ": this is a comment\n\n: another comment\n\n";
+
+        $result = $this->parser->parseServerSentEvents($body);
+
+        $this->assertSame([], $result);
+    }
+
+    #[Test]
+    public function sse_comments_mixed_with_events_keeps_only_events(): void
+    {
+        $body = ": comment one\nevent: keep\ndata: payload\n\n: comment two\n\n";
+
+        $result = $this->parser->parseServerSentEvents($body);
+
+        $this->assertCount(1, $result);
+        $this->assertSame('keep', $result[0]['event']);
+        $this->assertSame('payload', $result[0]['data']);
+    }
+
+    #[Test]
+    public function parse_stream_ndjson_1000_lines_memory_growth_under_five_mebibytes(): void
+    {
+        $lines = [];
+        for ($i = 0; $i < 1000; $i++) {
+            $lines[] = sprintf('{"id":%d,"name":"item-%d","value":%d}', $i, $i, $i * 10);
+        }
+        $body = implode("\n", $lines);
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        gc_collect_cycles();
+        $before = memory_get_usage(false);
+
+        $result = $this->parser->parseStream($stream, 'application/x-ndjson');
+
+        gc_collect_cycles();
+        $after = memory_get_usage(false);
+
+        $growth = $after - $before;
+
+        $this->assertCount(1000, $result);
+        $this->assertSame(['id' => 0, 'name' => 'item-0', 'value' => 0], $result[0]);
+        $this->assertSame(['id' => 999, 'name' => 'item-999', 'value' => 9990], $result[999]);
+        $this->assertLessThan(5_242_880, $growth);
+    }
+
+    #[Test]
+    public function parse_stream_empty_ndjson_has_near_zero_memory_growth(): void
+    {
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream('');
+
+        gc_collect_cycles();
+        $before = memory_get_usage(false);
+
+        $result = $this->parser->parseStream($stream, 'application/x-ndjson');
+
+        gc_collect_cycles();
+        $after = memory_get_usage(false);
+
+        $growth = $after - $before;
+
+        $this->assertSame([], $result);
+        $this->assertLessThan(1024, $growth);
     }
 }

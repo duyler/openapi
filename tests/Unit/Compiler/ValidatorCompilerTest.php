@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Compiler;
 
 use Duyler\OpenApi\Compiler\CompilationCacheInterface;
+use Duyler\OpenApi\Compiler\Exception\UnsupportedKeywordException;
 use Duyler\OpenApi\Compiler\ValidatorCompiler;
 use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\Discriminator;
@@ -1192,5 +1193,250 @@ final class ValidatorCompilerTest extends TestCase
 
         $this->expectException(RuntimeException::class);
         $validator->validate(3.14);
+    }
+
+    #[Test]
+    public function compile_with_min_properties_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+            minProperties: 2,
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'MinPropertiesValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('minProperties', $caught->keywords);
+    }
+
+    #[Test]
+    public function compile_object_without_min_properties_succeeds(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+        );
+
+        $code = $compiler->compile($schema, 'NoMinPropertiesValidator');
+
+        $this->assertStringContainsString('readonly class NoMinPropertiesValidator', $code);
+        $this->assertStringNotContainsString('minProperties', $code);
+    }
+
+    #[Test]
+    public function compile_with_max_properties_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+            maxProperties: 5,
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'MaxPropertiesValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('maxProperties', $caught->keywords);
+    }
+
+    #[Test]
+    public function compile_object_without_max_properties_succeeds(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+        );
+
+        $code = $compiler->compile($schema, 'NoMaxPropertiesValidator');
+
+        $this->assertStringContainsString('readonly class NoMaxPropertiesValidator', $code);
+        $this->assertStringNotContainsString('maxProperties', $code);
+    }
+
+    #[Test]
+    public function compile_with_additional_properties_as_schema_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+            additionalProperties: new Schema(type: 'string'),
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'AdditionalPropertiesSchemaValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('additionalProperties', $caught->keywords);
+    }
+
+    #[Test]
+    public function compile_with_additional_properties_false_succeeds(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+            additionalProperties: false,
+        );
+
+        $code = $compiler->compile($schema, 'AdditionalPropertiesFalseValidator');
+
+        $this->assertStringContainsString('readonly class AdditionalPropertiesFalseValidator', $code);
+        $this->assertStringContainsString('Additional property not allowed', $code);
+    }
+
+    #[Test]
+    public function compile_with_additional_properties_true_succeeds(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+            additionalProperties: true,
+        );
+
+        $code = $compiler->compile($schema, 'AdditionalPropertiesTrueValidator');
+
+        $this->assertStringContainsString('readonly class AdditionalPropertiesTrueValidator', $code);
+        $this->assertStringNotContainsString('Additional property not allowed', $code);
+    }
+
+    #[Test]
+    public function compile_with_min_and_max_properties_throws_exception_with_both_keywords(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+            minProperties: 2,
+            maxProperties: 5,
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'MinMaxPropertiesValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('minProperties', $caught->keywords);
+        $this->assertContains('maxProperties', $caught->keywords);
+        $this->assertCount(2, $caught->keywords);
+    }
+
+    #[Test]
+    public function compile_with_min_properties_and_additional_properties_schema_lists_all_keywords(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+            minProperties: 1,
+            additionalProperties: new Schema(type: 'string'),
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'CombinedUnsupportedValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('minProperties', $caught->keywords);
+        $this->assertContains('additionalProperties', $caught->keywords);
+        $this->assertCount(2, $caught->keywords);
+    }
+
+    #[Test]
+    public function compile_unsupported_keyword_exception_message_contains_keyword_name(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+            minProperties: 3,
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'MessageCheckValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertStringContainsString('minProperties', $caught->getMessage());
+        $this->assertStringContainsString('Unsupported keywords', $caught->getMessage());
+    }
+
+    #[Test]
+    public function compile_nested_property_with_min_properties_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'address' => new Schema(
+                    type: 'object',
+                    properties: ['city' => new Schema(type: 'string')],
+                    minProperties: 2,
+                ),
+            ],
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'NestedMinPropertiesValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('minProperties', $caught->keywords);
+    }
+
+    #[Test]
+    public function compile_array_items_with_max_properties_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(
+                type: 'object',
+                properties: ['name' => new Schema(type: 'string')],
+                maxProperties: 3,
+            ),
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'ArrayItemsMaxPropertiesValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('maxProperties', $caught->keywords);
     }
 }

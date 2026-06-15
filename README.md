@@ -566,7 +566,7 @@ $code = $compiler->compileWithCache($schema, 'UserValidator', $compilationCache)
 
 #### Compiler Limitations
 
-The compiler does not support all JSON Schema keywords. If a schema uses unsupported keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `patternProperties`, `format`), the compiler throws `UnsupportedKeywordException`. See the Limitations section below for details.
+The compiler does not support all JSON Schema keywords. If a schema uses unsupported keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `patternProperties`, `format`, `minProperties`, `maxProperties`, or `additionalProperties` as a Schema — the bool `true`/`false` form is supported), the compiler throws `UnsupportedKeywordException`. See the Limitations section below for details.
 
 ## Configuration Options
 
@@ -1334,9 +1334,18 @@ The validator covers approximately 95% of JSON Schema draft 2020-12 keywords. Th
 
 The `ValidatorCompiler` is marked as `@experimental`. It supports a subset of JSON Schema keywords: `type`, `enum`, `const`, `minLength`, `maxLength`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`, `pattern`, `minItems`, `maxItems`, `uniqueItems`, `properties`, `required`, `additionalProperties`, `items`.
 
-The compiler does not support composition keywords (`allOf`, `anyOf`, `oneOf`, `not`), conditional keywords (`if`/`then`/`else`), `patternProperties`, or `format`. If any of these are present in a schema, `compile()` throws `UnsupportedKeywordException`.
+The compiler does not support composition keywords (`allOf`, `anyOf`, `oneOf`, `not`), conditional keywords (`if`/`then`/`else`), `patternProperties`, `format`, `minProperties`, `maxProperties`, or `additionalProperties` as a Schema (the bool `true`/`false` form is supported). If any of these are present in a schema, `compile()` throws `UnsupportedKeywordException`.
 
 Generated validators throw generic `RuntimeException` on failure rather than the typed error classes used by the runtime validator.
+
+### Content Negotiation
+
+Wildcard media types (`application/*`, `*/*`) are not expanded during Content Negotiation:
+
+- A spec media type like `application/*` or `*/*` does not match a request `Content-Type: application/json` — the request is rejected with `UnsupportedMediaTypeException`. Media type matching uses literal string comparison and does not implement RFC 7231 §3.1.1.1 wildcard patterns.
+- A request with a wildcard `Content-Type` (e.g., `Content-Type: application/*`) is not decoded by the body parser: the parser only recognises concrete media types such as `application/json`, `application/xml`, etc., so the body remains a raw string and schema validation fails with a type mismatch.
+
+This is a fail-closed limitation, not a security issue: requests that do not match a concrete media type are rejected. Use concrete media types (`application/json`, `application/xml`) in the OpenAPI specification to avoid these mismatches.
 
 ### Security Validation
 
