@@ -82,14 +82,20 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
             return;
         }
 
-        $mediaType = $this->negotiator->getMediaType($contentType);
-        $content = $requestBody->content->mediaTypes[$mediaType] ?? null;
+        $requestMediaType = $this->negotiator->getMediaType($contentType);
 
-        if (null === $content) {
-            throw new UnsupportedMediaTypeException($mediaType, array_keys($requestBody->content->mediaTypes));
+        $matchedSpecType = MediaTypeMatcher::findMatch(
+            $requestMediaType,
+            array_keys($requestBody->content->mediaTypes),
+        );
+
+        if (null === $matchedSpecType) {
+            throw new UnsupportedMediaTypeException($requestMediaType, array_keys($requestBody->content->mediaTypes));
         }
 
-        $parsedBody = $this->dependencies->bodyParser->parse($body, $mediaType);
+        $content = $requestBody->content->mediaTypes[$matchedSpecType];
+
+        $parsedBody = $this->dependencies->bodyParser->parse($body, $requestMediaType);
 
         if ($this->configuration->coercion && null !== $content->schema) {
             $schema = $content->schema;

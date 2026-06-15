@@ -104,6 +104,62 @@ paths:
           description: Created
 YAML;
 
+    private const string EXACT_AND_APPLICATION_WILDCARD_SPEC = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: Exact And Application Wildcard Priority API
+  version: 1.0.0
+paths:
+  /data:
+    post:
+      operationId: createData
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+          application/*:
+            schema:
+              type: string
+      responses:
+        '201':
+          description: Created
+YAML;
+
+    private const string APPLICATION_AND_ANY_WILDCARD_SPEC = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: Application And Any Wildcard Priority API
+  version: 1.0.0
+paths:
+  /data:
+    post:
+      operationId: createData
+      requestBody:
+        required: true
+        content:
+          application/*:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+          '*/*':
+            schema:
+              type: string
+      responses:
+        '201':
+          description: Created
+YAML;
+
     private const string MULTIPART_ARRAY_SPEC = <<<'YAML'
 openapi: 3.2.0
 info:
@@ -234,55 +290,105 @@ YAML;
     }
 
     #[Test]
-    public function application_wildcard_media_type_body_not_parsed_documents_limitation(): void
+    public function application_wildcard_spec_parses_application_json_body(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::WILDCARD_APPLICATION_WITH_SCHEMA_SPEC)
             ->build();
-        $request = $this->createPostRequest('application/*');
+        $request = $this->createPostRequest('application/json');
 
-        try {
-            $validator->validateRequest($request);
-            $this->fail('Expected TypeMismatchError because wildcard media type body is not JSON-decoded');
-        } catch (TypeMismatchError $error) {
-            $this->assertSame('object', $error->params()['expected']);
-            $this->assertSame('string', $error->params()['actual']);
-            $this->assertSame('type', $error->keyword());
-        }
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/data', $operation->path);
     }
 
     #[Test]
-    public function application_wildcard_documents_limited_matching_no_expansion_to_json(): void
+    public function application_wildcard_matches_application_json(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::WILDCARD_APPLICATION_SPEC)
             ->build();
         $request = $this->createPostRequest('application/json');
 
-        try {
-            $validator->validateRequest($request);
-            $this->fail('Expected UnsupportedMediaTypeException because wildcards are not expanded');
-        } catch (UnsupportedMediaTypeException $exception) {
-            $this->assertSame('application/json', $exception->mediaType);
-            $this->assertSame(['application/*'], $exception->supportedTypes);
-        }
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/data', $operation->path);
     }
 
     #[Test]
-    public function any_wildcard_documents_limited_matching_no_expansion_to_json(): void
+    public function application_wildcard_matches_application_xml(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::WILDCARD_APPLICATION_SPEC)
+            ->build();
+        $request = $this->factory->createServerRequest('POST', '/data')
+            ->withHeader('Content-Type', 'application/xml')
+            ->withBody($this->factory->createStream('<name>sample</name>'));
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/data', $operation->path);
+    }
+
+    #[Test]
+    public function any_wildcard_matches_application_json(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::WILDCARD_ANY_SPEC)
             ->build();
         $request = $this->createPostRequest('application/json');
 
-        try {
-            $validator->validateRequest($request);
-            $this->fail('Expected UnsupportedMediaTypeException because */* is not expanded');
-        } catch (UnsupportedMediaTypeException $exception) {
-            $this->assertSame('application/json', $exception->mediaType);
-            $this->assertSame(['*/*'], $exception->supportedTypes);
-        }
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/data', $operation->path);
+    }
+
+    #[Test]
+    public function any_wildcard_matches_text_plain(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::WILDCARD_ANY_SPEC)
+            ->build();
+        $request = $this->factory->createServerRequest('POST', '/data')
+            ->withHeader('Content-Type', 'text/plain')
+            ->withBody($this->factory->createStream('plain text body'));
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/data', $operation->path);
+    }
+
+    #[Test]
+    public function exact_match_takes_precedence_over_application_wildcard(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::EXACT_AND_APPLICATION_WILDCARD_SPEC)
+            ->build();
+        $request = $this->createPostRequest('application/json');
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/data', $operation->path);
+    }
+
+    #[Test]
+    public function application_wildcard_takes_precedence_over_any_wildcard(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::APPLICATION_AND_ANY_WILDCARD_SPEC)
+            ->build();
+        $request = $this->createPostRequest('application/json');
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/data', $operation->path);
     }
 
     #[Test]

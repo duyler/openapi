@@ -1269,7 +1269,7 @@ $validator->validateResponse($response, $operation);
 
 ### Server-Sent Events (SSE)
 
-The parser handles the standard SSE format with `event`, `data`, and `id` fields. Comments (lines starting with `:`) are ignored. The `data` field is automatically decoded from JSON when possible.
+The parser handles the standard SSE format with `event`, `data`, `id`, and `retry` fields. Comments (lines starting with `:`) are ignored. The `data` field is automatically decoded from JSON when possible. The `retry` field is the W3C reconnection time in integer milliseconds; non-numeric values are ignored.
 
 ```php
 $request = $factory->createServerRequest('GET', '/events');
@@ -1340,12 +1340,15 @@ Generated validators throw generic `RuntimeException` on failure rather than the
 
 ### Content Negotiation
 
-Wildcard media types (`application/*`, `*/*`) are not expanded during Content Negotiation:
+Request body validation honours RFC 7231 §3.1.1.1 wildcard patterns declared in the OpenAPI specification. The most specific declaration wins:
 
-- A spec media type like `application/*` or `*/*` does not match a request `Content-Type: application/json` — the request is rejected with `UnsupportedMediaTypeException`. Media type matching uses literal string comparison and does not implement RFC 7231 §3.1.1.1 wildcard patterns.
-- A request with a wildcard `Content-Type` (e.g., `Content-Type: application/*`) is not decoded by the body parser: the parser only recognises concrete media types such as `application/json`, `application/xml`, etc., so the body remains a raw string and schema validation fails with a type mismatch.
+1. Exact match (e.g., `application/json`)
+2. Subtype wildcard (e.g., `application/*`)
+3. Universal wildcard (`*/*`)
 
-This is a fail-closed limitation, not a security issue: requests that do not match a concrete media type are rejected. Use concrete media types (`application/json`, `application/xml`) in the OpenAPI specification to avoid these mismatches.
+When a wildcard declaration matches, the request body is parsed according to the concrete `Content-Type` sent by the client, so a spec `application/*` with a request `Content-Type: application/json` is decoded as JSON. A request whose `Content-Type` does not match any declared media type is rejected with `UnsupportedMediaTypeException` (fail-closed).
+
+Response body validation does not expand wildcards: media type matching uses literal string comparison, and a response `Content-Type` that does not match a declared media type simply skips response body validation.
 
 ### Security Validation
 

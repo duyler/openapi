@@ -140,19 +140,18 @@ final class StreamingContentParserEdgeCaseTest extends TestCase
     }
 
     #[Test]
-    public function sse_retry_field_with_numeric_value_is_silently_dropped_from_output(): void
+    public function sse_retry_field_with_numeric_value_is_preserved(): void
     {
         $body = "retry: 5000\n\n";
 
         $result = $this->parser->parseServerSentEvents($body);
 
         $this->assertCount(1, $result);
-        $this->assertSame([], $result[0]);
-        $this->assertArrayNotHasKey('retry', $result[0]);
+        $this->assertSame(5000, $result[0]['retry']);
     }
 
     #[Test]
-    public function sse_retry_field_with_non_numeric_value_does_not_throw_and_is_dropped(): void
+    public function sse_retry_field_with_non_numeric_value_is_ignored(): void
     {
         $body = "retry: abc\n\n";
 
@@ -171,7 +170,7 @@ final class StreamingContentParserEdgeCaseTest extends TestCase
     }
 
     #[Test]
-    public function sse_retry_field_dropped_even_when_event_and_data_present(): void
+    public function sse_retry_field_preserved_with_event_and_data(): void
     {
         $body = "retry: 5000\nevent: update\ndata: {\"v\":1}\n\n";
 
@@ -180,7 +179,29 @@ final class StreamingContentParserEdgeCaseTest extends TestCase
         $this->assertCount(1, $result);
         $this->assertSame('update', $result[0]['event']);
         $this->assertSame(['v' => 1], $result[0]['data']);
-        $this->assertArrayNotHasKey('retry', $result[0]);
+        $this->assertSame(5000, $result[0]['retry']);
+    }
+
+    #[Test]
+    public function sse_retry_field_with_zero_value_is_preserved(): void
+    {
+        $body = "retry: 0\n\n";
+
+        $result = $this->parser->parseServerSentEvents($body);
+
+        $this->assertCount(1, $result);
+        $this->assertSame(0, $result[0]['retry']);
+    }
+
+    #[Test]
+    public function sse_multiple_retry_fields_last_value_wins(): void
+    {
+        $body = "retry: 1000\nretry: 5000\n\n";
+
+        $result = $this->parser->parseServerSentEvents($body);
+
+        $this->assertCount(1, $result);
+        $this->assertSame(5000, $result[0]['retry']);
     }
 
     #[Test]

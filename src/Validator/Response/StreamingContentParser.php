@@ -11,6 +11,7 @@ use Psr\Log\NullLogger;
 use RuntimeException;
 
 use function assert;
+use function ctype_digit;
 use function is_array;
 use function is_null;
 use function is_scalar;
@@ -398,6 +399,13 @@ final readonly class StreamingContentParser
         }
         if (isset($event['id'])) {
             $result['id'] = $event['id'];
+        }
+        if (isset($event['retry'])) {
+            /** @var mixed $retry */
+            $retry = $event['retry'];
+            if (ctype_digit((string) $retry)) {
+                $result['retry'] = (int) $retry;
+            }
         }
 
         return $result;
