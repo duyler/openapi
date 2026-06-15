@@ -99,4 +99,14 @@ final class JsonBodyParserTest extends TestCase
 
         $this->parser->parse($body);
     }
+
+    #[Test]
+    public function parse_body_with_double_bom_throws_json_exception(): void
+    {
+        $body = "\xEF\xBB\xBF\xEF\xBB\xBF" . '{"name":"John"}';
+
+        $this->expectException(JsonException::class);
+
+        $this->parser->parse($body);
+    }
 }
