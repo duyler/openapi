@@ -591,6 +591,8 @@ $code = $compiler->compileWithCache($schema, 'UserValidator', $compilationCache)
 
 The compiler does not support all JSON Schema keywords. If a schema uses unsupported keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `patternProperties`, `format`, `minProperties`, `maxProperties`, or `additionalProperties` as a Schema — the bool `true`/`false` form is supported), the compiler throws `UnsupportedKeywordException`. See the Limitations section below for details.
 
+`prefixItems` is silently ignored during compilation — no exception is thrown, but positional item validation is not generated. Use the runtime validator for `prefixItems` enforcement.
+
 ## Configuration Options
 
 ### Builder Methods

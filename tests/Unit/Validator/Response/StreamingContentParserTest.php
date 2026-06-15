@@ -12,6 +12,8 @@ use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 
+use function count;
+
 #[CoversClass(StreamingContentParser::class)]
 final class StreamingContentParserTest extends TestCase
 {
@@ -762,5 +764,109 @@ final class StreamingContentParserTest extends TestCase
 
         self::assertCount(1, $result);
         self::assertNull($result[0]);
+    }
+
+    /**
+     * ST-12: JSON-seq (RFC 7464) with optional newline after record separator.
+     *
+     * RFC 7464 §2.1: "The remainder of the record [...] MAY be terminated by
+     * a line feed (U+000A)." This verifies the parser handles both forms.
+     */
+    #[Test]
+    public function parse_json_sequence_with_newline_after_record_separator(): void
+    {
+        $body = "\x1E\n{\"id\":\"1\"}\x1E\n{\"id\":\"2\"}";
+
+        $result = $this->parser->parseJsonSeq($body);
+
+        self::assertCount(2, $result);
+        self::assertSame(['id' => '1'], $result[0]);
+        self::assertSame(['id' => '2'], $result[1]);
+    }
+
+    /**
+     * ST-12: JSON-seq with newline after RS via parse() dispatcher.
+     */
+    #[Test]
+    public function parse_json_sequence_with_newline_after_rs_via_parse_method(): void
+    {
+        $body = "\x1E\n{\"id\":\"1\"}\x1E\n{\"id\":\"2\"}";
+
+        $result = $this->parser->parse($body, 'application/json-seq');
+
+        self::assertCount(2, $result);
+        self::assertSame(['id' => '1'], $result[0]);
+        self::assertSame(['id' => '2'], $result[1]);
+    }
+
+    /**
+     * ST-12: Behaviour parity — JSON-seq with newline must produce the same
+     * item count as JSON-seq without newline.
+     */
+    #[Test]
+    public function parse_json_sequence_newline_and_no_newline_produce_same_count(): void
+    {
+        $bodyWithNewline = "\x1E\n{\"id\":\"1\"}\x1E\n{\"id\":\"2\"}\x1E\n{\"id\":\"3\"}";
+        $bodyWithoutNewline = "\x1E{\"id\":\"1\"}\x1E{\"id\":\"2\"}\x1E{\"id\":\"3\"}";
+
+        $withNewline = $this->parser->parseJsonSeq($bodyWithNewline);
+        $withoutNewline = $this->parser->parseJsonSeq($bodyWithoutNewline);
+
+        self::assertSame(count($withoutNewline), count($withNewline));
+        self::assertCount(3, $withNewline);
+        self::assertSame($withoutNewline, $withNewline);
+    }
+
+    /**
+     * ST-12: Mixed form — some records have a trailing newline, others don't.
+     * RFC 7464 allows both forms within the same sequence.
+     */
+    #[Test]
+    public function parse_json_sequence_mixed_newline_and_no_newline(): void
+    {
+        $body = "\x1E\n{\"a\":1}\x1E{\"b\":2}\x1E\n{\"c\":3}";
+
+        $result = $this->parser->parseJsonSeq($body);
+
+        self::assertCount(3, $result);
+        self::assertSame(['a' => 1], $result[0]);
+        self::assertSame(['b' => 2], $result[1]);
+        self::assertSame(['c' => 3], $result[2]);
+    }
+
+    /**
+     * ST-12: CRLF after RS is also valid per RFC 7464 (newline can be \r\n).
+     */
+    #[Test]
+    public function parse_json_sequence_with_crlf_after_record_separator(): void
+    {
+        $body = "\x1E\r\n{\"id\":\"1\"}\x1E\r\n{\"id\":\"2\"}";
+
+        $result = $this->parser->parseJsonSeq($body);
+
+        self::assertCount(2, $result);
+        self::assertSame(['id' => '1'], $result[0]);
+        self::assertSame(['id' => '2'], $result[1]);
+    }
+
+    /**
+     * ST-12: Stream-based parser must also accept newline after RS.
+     */
+    #[Test]
+    public function parse_stream_json_sequence_with_newline_after_rs_matches_parse(): void
+    {
+        $body = "\x1E\n{\"id\":\"1\",\"value\":\"first\"}\x1E\n{\"id\":\"2\",\"value\":\"second\"}";
+
+        $expected = $this->parser->parse($body, 'application/json-seq');
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $result = $this->parser->parseStream($stream, 'application/json-seq');
+
+        self::assertSame($expected, $result);
+        self::assertCount(2, $result);
+        self::assertSame(['id' => '1', 'value' => 'first'], $result[0]);
+        self::assertSame(['id' => '2', 'value' => 'second'], $result[1]);
     }
 }

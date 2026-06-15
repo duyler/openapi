@@ -28,6 +28,12 @@ use RejectExtraPropValidator;
 use UnionAcceptsIntegerValidator;
 use UnionAcceptsStringValidator;
 use UnionRejectsFloatValidator;
+use PrefixItemsOnlyValidator;
+use PrefixItemsStillValidatesItems;
+use DeepNestInvalidValidator;
+use DeepNestValidValidator;
+use TenLevelsValidator;
+use TwentyLevelsValidator;
 
 final class ValidatorCompilerTest extends TestCase
 {
@@ -1438,5 +1444,308 @@ final class ValidatorCompilerTest extends TestCase
 
         $this->assertNotNull($caught);
         $this->assertContains('maxProperties', $caught->keywords);
+    }
+
+    /**
+     * CP-04: The compiler silently ignores the `prefixItems` keyword — it is
+     * not in the unsupported-keyword list (so no exception is thrown) but
+     * the generated code does not enforce positional item types.
+     *
+     * This test documents the current behaviour: compile() succeeds and the
+     * generated code only validates `items` (the homogeneous item schema).
+     */
+    #[Test]
+    public function compile_schema_with_prefix_items_does_not_throw(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [
+                new Schema(type: 'string'),
+                new Schema(type: 'integer'),
+            ],
+            items: new Schema(type: 'string'),
+            minItems: 2,
+        );
+
+        $code = $compiler->compile($schema, 'PrefixItemsValidator');
+
+        $this->assertStringContainsString('readonly class PrefixItemsValidator', $code);
+        $this->assertStringContainsString('is_array($data)', $code);
+    }
+
+    /**
+     * CP-04 (behaviour lock): The current compiler does not generate
+     * positional item validation — the generated `validate()` only enforces
+     * the homogeneous `items` schema. We assert the absence of any
+     * index-based branch (no `$data[0]` / `$data[1]` references) so a
+     * future implementation change is caught here.
+     */
+    #[Test]
+    public function compile_schema_with_prefix_items_does_not_generate_positional_checks(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [
+                new Schema(type: 'string'),
+                new Schema(type: 'integer'),
+                new Schema(type: 'boolean'),
+            ],
+            items: new Schema(type: 'string'),
+        );
+
+        $code = $compiler->compile($schema, 'PrefixItemsNoPositionalValidator');
+
+        // No positional access to $data[0], $data[1], $data[2] is emitted.
+        $this->assertStringNotContainsString('$data[0]', $code);
+        $this->assertStringNotContainsString('$data[1]', $code);
+        $this->assertStringNotContainsString('$data[2]', $code);
+        $this->assertStringNotContainsString('prefixItems', $code);
+    }
+
+    /**
+     * CP-04 (positive): Even without prefix-items enforcement, the
+     * generated validator still validates the homogeneous `items` schema.
+     */
+    #[Test]
+    public function compile_schema_with_prefix_items_still_validates_items_schema(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [
+                new Schema(type: 'string'),
+                new Schema(type: 'integer'),
+            ],
+            items: new Schema(type: 'string'),
+        );
+
+        $code = $compiler->compile($schema, 'PrefixItemsStillValidatesItems');
+
+        $this->assertStringContainsString('foreach ($data as $index => $item)', $code);
+        $this->assertStringContainsString('is_string($item)', $code);
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new PrefixItemsStillValidatesItems();
+        $validator->validate(['first', 'second', 'third']);
+
+        $this->expectException(RuntimeException::class);
+        $validator->validate(['ok', 42, 'ok']);
+    }
+
+    /**
+     * CP-04 (negative): prefixItems alone (without items) compiles to an
+     * empty validate body — the array type check is skipped because
+     * generateArrayCheck() returns early when items is null. The generated
+     * validator accepts any value. This documents the current behaviour.
+     */
+    #[Test]
+    public function compile_schema_with_prefix_items_only_generates_empty_body(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [
+                new Schema(type: 'string'),
+                new Schema(type: 'integer'),
+            ],
+        );
+
+        $code = $compiler->compile($schema, 'PrefixItemsOnlyValidator');
+
+        // No foreach loop is emitted because items is null.
+        $this->assertStringNotContainsString('foreach', $code);
+        $this->assertStringNotContainsString('prefixItems', $code);
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new PrefixItemsOnlyValidator();
+        // Without items enforcement, every value passes.
+        $validator->validate([1, 2, 3]);
+        $validator->validate([]);
+        $validator->validate('not-an-array');
+
+        self::assertTrue(class_exists('PrefixItemsOnlyValidator', false));
+    }
+
+    /**
+     * CP-04 (detection): prefixItems is intentionally NOT in the
+     * unsupported-keyword set, so the compiler does not report it.
+     */
+    #[Test]
+    public function compile_schema_with_prefix_items_is_not_in_unsupported_keywords(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [new Schema(type: 'string')],
+            items: new Schema(type: 'string'),
+        );
+
+        // If prefixItems were treated as unsupported, compile() would throw.
+        $code = $compiler->compile($schema, 'PrefixItemsNotUnsupported');
+
+        $this->assertNotEmpty($code);
+        $this->assertStringContainsString('class PrefixItemsNotUnsupported', $code);
+    }
+
+    /**
+     * CP-05: A schema nested more than 10 levels deep must compile without
+     * a stack overflow and produce a working validator.
+     *
+     * We generate a 12-level schema (object -> nested object -> ...) and
+     * verify the compile step. Runtime execution is covered by the
+     * dedicated tests below.
+     */
+    #[Test]
+    public function compile_deeply_nested_schema_over_ten_levels(): void
+    {
+        $compiler = new ValidatorCompiler();
+
+        $depth = 12;
+        $schema = $this->buildNestedSchema($depth);
+
+        $code = $compiler->compile($schema, 'DeepNestValidator');
+
+        $this->assertStringContainsString('readonly class DeepNestValidator', $code);
+        // The 12-level schema must produce deeply nested $data['nested']
+        // references in the compiled code (at least one per level).
+        $this->assertGreaterThan(
+            $depth,
+            substr_count($code, "['nested']"),
+        );
+    }
+
+    /**
+     * CP-05 (positive execution): The compiled validator accepts a valid
+     * deeply-nested payload without stack overflow.
+     */
+    #[Test]
+    public function compile_deeply_nested_schema_validates_valid_payload(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $depth = 12;
+        $schema = $this->buildNestedSchema($depth);
+
+        $code = $compiler->compile($schema, 'DeepNestValidValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new DeepNestValidValidator();
+        $payload = $this->buildNestedPayload($depth, 42);
+
+        $validator->validate($payload);
+
+        self::assertTrue(class_exists('DeepNestValidValidator', false));
+    }
+
+    /**
+     * CP-05 (negative execution): The compiled validator rejects a payload
+     * with a type error at the deepest level.
+     */
+    #[Test]
+    public function compile_deeply_nested_schema_rejects_invalid_payload_at_depth(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $depth = 12;
+        $schema = $this->buildNestedSchema($depth);
+
+        $code = $compiler->compile($schema, 'DeepNestInvalidValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new DeepNestInvalidValidator();
+
+        // Wrong leaf type: string instead of integer.
+        $payload = $this->buildNestedPayload($depth, 'not-an-integer');
+
+        $this->expectException(RuntimeException::class);
+        $validator->validate($payload);
+    }
+
+    /**
+     * CP-05 (boundary): Exactly 10 levels must also work (boundary case).
+     */
+    #[Test]
+    public function compile_exactly_ten_levels_nested_schema(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $depth = 10;
+        $schema = $this->buildNestedSchema($depth);
+
+        $code = $compiler->compile($schema, 'TenLevelsValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new TenLevelsValidator();
+        $validator->validate($this->buildNestedPayload($depth, 1));
+
+        self::assertTrue(class_exists('TenLevelsValidator', false));
+    }
+
+    /**
+     * CP-05 (stress): 20 levels must also work to verify the compiler has
+     * no practical nesting limit.
+     */
+    #[Test]
+    public function compile_twenty_levels_nested_schema(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $depth = 20;
+        $schema = $this->buildNestedSchema($depth);
+
+        $code = $compiler->compile($schema, 'TwentyLevelsValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new TwentyLevelsValidator();
+        $validator->validate($this->buildNestedPayload($depth, 7));
+
+        self::assertTrue(class_exists('TwentyLevelsValidator', false));
+    }
+
+    /**
+     * Build a schema nested \$depth levels deep. The outermost is an object
+     * with a single `nested` property which drills down \$depth-1 levels
+     * to a final `value: integer`.
+     */
+    private function buildNestedSchema(int $depth): Schema
+    {
+        $schema = new Schema(type: 'integer');
+        for ($i = 1; $i < $depth; $i++) {
+            $schema = new Schema(
+                type: 'object',
+                properties: ['nested' => $schema],
+            );
+        }
+
+        return $schema;
+    }
+
+    /**
+     * Build a payload matching {@see buildNestedSchema()} with \$depth levels
+     * and the given leaf value.
+     *
+     * For depth=1 the leaf is returned directly; for depth>=2 the leaf is
+     * wrapped in depth-1 levels of `['nested' => ...]`.
+     *
+     * @return array<string, mixed>|int
+     */
+    private function buildNestedPayload(int $depth, mixed $leafValue): array|int
+    {
+        $payload = $leafValue;
+        for ($i = 1; $i < $depth; $i++) {
+            $payload = ['nested' => $payload];
+        }
+
+        return $payload;
     }
 }

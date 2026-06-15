@@ -804,4 +804,98 @@ YAML;
 
         $this->assertSame('/{type}/info', $operation->path);
     }
+
+    /**
+     * RP-05: Path consisting only of a parameter `/{id}` (no static segments).
+     *
+     * The template compiles to regex `#^/(?P<id>[^/]+)$#`. A single-segment
+     * value like `/123` matches and the parameter is extracted as "123".
+     *
+     * The extracted value is observed through a `const: '123'` constraint:
+     * successful validation proves the parameter was extracted with the
+     * expected value.
+     */
+    #[Test]
+    public function rp_05_param_only_root_path_matches_single_segment_value(): void
+    {
+        $yaml = <<<YAML
+openapi: 3.2.0
+info:
+  title: RP-05 ID API
+  version: 1.0.0
+paths:
+  /{id}:
+    get:
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            const: '123'
+      responses:
+        '200':
+          description: OK
+YAML;
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build();
+
+        $operation = $validator->validateRequest(
+            $this->psrFactory->createServerRequest('GET', '/123'),
+        );
+
+        $this->assertSame('/{id}', $operation->path);
+        $this->assertSame('GET', $operation->method);
+    }
+
+    /**
+     * RP-05 negative: `GET /` (root, no segment for the parameter).
+     *
+     * The compiled regex `#^/(?P<id>[^/]+)$#` requires at least one
+     * non-slash character after the leading slash. An empty path value
+     * fails to match, and the top-level validator raises
+     * `BuilderException` ("Operation not found") because no candidate
+     * template matches.
+     */
+    #[Test]
+    public function rp_05_param_only_root_path_rejects_empty_value(): void
+    {
+        $yaml = <<<YAML
+openapi: 3.2.0
+info:
+  title: RP-05 ID API
+  version: 1.0.0
+paths:
+  /{id}:
+    get:
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+YAML;
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build();
+
+        $caught = null;
+
+        try {
+            $validator->validateRequest(
+                $this->psrFactory->createServerRequest('GET', '/'),
+            );
+            self::fail('Expected BuilderException when path parameter segment is empty');
+        } catch (BuilderException $exception) {
+            $caught = $exception;
+        }
+
+        self::assertInstanceOf(BuilderException::class, $caught);
+        self::assertStringContainsString('Operation not found', $caught->getMessage());
+        self::assertStringContainsString('GET /', $caught->getMessage());
+    }
 }

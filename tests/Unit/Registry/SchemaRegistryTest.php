@@ -361,6 +361,197 @@ final class SchemaRegistryTest extends TestCase
         }
     }
 
+    /**
+     * RG-02: Pre-release versions follow semver ordering rules.
+     *
+     * Per semver 2.0.0 §9-10, pre-release versions have lower precedence
+     * than the associated normal version: 1.0.0-alpha < 1.0.0-beta < 1.0.0.
+     * version_compare() in PHP follows the same semantics.
+     */
+    #[Test]
+    public function pre_release_versions_sorted_correctly(): void
+    {
+        $registry = new SchemaRegistry();
+        $docAlpha = $this->createDocumentWithTitle('alpha');
+        $docBeta = $this->createDocumentWithTitle('beta');
+        $docRc = $this->createDocumentWithTitle('rc');
+        $docStable = $this->createDocumentWithTitle('stable');
+
+        $registry = $registry
+            ->register('api', '2.0.0-rc.1', $docRc)
+            ->register('api', '1.0.0-alpha', $docAlpha)
+            ->register('api', '1.0.0', $docStable)
+            ->register('api', '1.0.0-beta.1', $docBeta);
+
+        $versions = $registry->getVersions('api');
+
+        self::assertSame(
+            ['1.0.0-alpha', '1.0.0-beta.1', '1.0.0', '2.0.0-rc.1'],
+            $versions,
+        );
+    }
+
+    /**
+     * RG-02: get('api') with no version returns the latest non-pre-release
+     * version (the highest semver), not the highest pre-release.
+     */
+    #[Test]
+    public function get_latest_returns_stable_release_over_pre_release(): void
+    {
+        $registry = new SchemaRegistry();
+        $docAlpha = $this->createDocumentWithTitle('alpha');
+        $docStable = $this->createDocumentWithTitle('stable');
+
+        $registry = $registry
+            ->register('api', '1.0.0-alpha', $docAlpha)
+            ->register('api', '1.0.0', $docStable);
+
+        $latest = $registry->get('api');
+
+        self::assertSame($docStable, $latest);
+        self::assertNotSame($docAlpha, $latest);
+    }
+
+    /**
+     * RG-02: When only pre-release versions are registered, get('api')
+     * returns the highest pre-release.
+     */
+    #[Test]
+    public function get_latest_returns_highest_pre_release_when_only_pre_releases_registered(): void
+    {
+        $registry = new SchemaRegistry();
+        $docAlpha = $this->createDocumentWithTitle('alpha');
+        $docBeta = $this->createDocumentWithTitle('beta');
+
+        $registry = $registry
+            ->register('api', '1.0.0-alpha', $docAlpha)
+            ->register('api', '1.0.0-beta.1', $docBeta);
+
+        $latest = $registry->get('api');
+
+        self::assertSame($docBeta, $latest);
+    }
+
+    /**
+     * RG-02: Specific pre-release version lookup works by explicit version.
+     */
+    #[Test]
+    public function get_specific_pre_release_version(): void
+    {
+        $registry = new SchemaRegistry();
+        $docAlpha = $this->createDocumentWithTitle('alpha');
+        $docRc = $this->createDocumentWithTitle('rc');
+
+        $registry = $registry
+            ->register('api', '1.0.0-alpha', $docAlpha)
+            ->register('api', '2.0.0-rc.1', $docRc);
+
+        self::assertSame($docAlpha, $registry->get('api', '1.0.0-alpha'));
+        self::assertSame($docRc, $registry->get('api', '2.0.0-rc.1'));
+    }
+
+    /**
+     * RG-02: Immutability — registering a pre-release does not mutate
+     * the original instance.
+     */
+    #[Test]
+    public function register_pre_release_returns_new_instance_and_preserves_original(): void
+    {
+        $registry = new SchemaRegistry();
+        $docAlpha = $this->createDocumentWithTitle('alpha');
+
+        $newRegistry = $registry->register('api', '1.0.0-alpha', $docAlpha);
+
+        self::assertNotSame($registry, $newRegistry);
+        self::assertFalse($registry->has('api', '1.0.0-alpha'));
+        self::assertTrue($newRegistry->has('api', '1.0.0-alpha'));
+    }
+
+    /**
+     * RG-02: Pre-release mixing with multiple stable versions.
+     */
+    #[Test]
+    public function pre_release_mixed_with_multiple_stable_versions(): void
+    {
+        $registry = new SchemaRegistry();
+        $doc1Alpha = $this->createDocumentWithTitle('1.0.0-alpha');
+        $doc1 = $this->createDocumentWithTitle('1.0.0');
+        $doc2Beta = $this->createDocumentWithTitle('2.0.0-beta');
+        $doc2 = $this->createDocumentWithTitle('2.0.0');
+
+        $registry = $registry
+            ->register('api', '2.0.0-beta', $doc2Beta)
+            ->register('api', '1.0.0-alpha', $doc1Alpha)
+            ->register('api', '2.0.0', $doc2)
+            ->register('api', '1.0.0', $doc1);
+
+        $versions = $registry->getVersions('api');
+
+        self::assertSame(
+            ['1.0.0-alpha', '1.0.0', '2.0.0-beta', '2.0.0'],
+            $versions,
+        );
+
+        self::assertSame($doc2, $registry->get('api'));
+        self::assertSame(4, $registry->countVersions('api'));
+    }
+
+    /**
+     * RG-03: countVersions returns 0 for a name that has never been
+     * registered, instead of throwing an exception.
+     */
+    #[Test]
+    public function count_versions_returns_zero_for_nonexistent_name(): void
+    {
+        $registry = new SchemaRegistry();
+
+        self::assertSame(0, $registry->countVersions('nonexistent'));
+    }
+
+    /**
+     * RG-03: countVersions returns 0 for a nonexistent name even when
+     * other schemas are registered.
+     */
+    #[Test]
+    public function count_versions_returns_zero_for_nonexistent_name_when_others_registered(): void
+    {
+        $registry = new SchemaRegistry();
+        $doc = $this->createDocument();
+
+        $registry = $registry
+            ->register('api', '1.0.0', $doc)
+            ->register('api', '2.0.0', $doc);
+
+        self::assertSame(2, $registry->countVersions('api'));
+        self::assertSame(0, $registry->countVersions('nonexistent'));
+    }
+
+    /**
+     * RG-03: getVersions returns an empty array (not null) for a
+     * nonexistent name.
+     */
+    #[Test]
+    public function get_versions_returns_empty_array_for_nonexistent_name(): void
+    {
+        $registry = new SchemaRegistry();
+
+        $versions = $registry->getVersions('nonexistent');
+
+        self::assertSame([], $versions);
+    }
+
+    /**
+     * RG-03: get('nonexistent') with no version returns null and does
+     * not throw.
+     */
+    #[Test]
+    public function get_returns_null_for_nonexistent_name_with_no_version(): void
+    {
+        $registry = new SchemaRegistry();
+
+        self::assertNull($registry->get('nonexistent'));
+    }
+
     private function createDocument(): OpenApiDocument
     {
         return new OpenApiDocument(

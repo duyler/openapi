@@ -11,6 +11,10 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
+use Duyler\OpenApi\Compiler\ValidatorCompiler;
+use ReflectionClass;
+
+use function array_key_exists;
 
 final class CompilationCacheTest extends TestCase
 {
@@ -418,5 +422,131 @@ final class CompilationCacheTest extends TestCase
         $key2 = $cache->generateKey($schema2);
 
         self::assertNotSame($key1, $key2);
+    }
+
+    /**
+     * CP-06: CompilationCache uses a hardcoded TTL of 86400 seconds (24h).
+     * Verify that set() passes this exact value to expiresAfter().
+     */
+    #[Test]
+    public function set_uses_hardcoded_ttl_of_86400_seconds(): void
+    {
+        $pool = $this->createMock(CacheItemPoolInterface::class);
+
+        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem
+            ->expects($this->once())
+            ->method('set')
+            ->with('<?php return true;')
+            ->willReturnSelf();
+        $cacheItem
+            ->expects($this->once())
+            ->method('expiresAfter')
+            ->with(86400)
+            ->willReturnSelf();
+
+        $pool
+            ->expects($this->once())
+            ->method('getItem')
+            ->willReturn($cacheItem);
+        $pool
+            ->expects($this->once())
+            ->method('save')
+            ->with($cacheItem);
+
+        $cache = new CompilationCache($pool);
+
+        $cache->set('test_hash', '<?php return true;');
+    }
+
+    /**
+     * CP-06: The TTL is exactly 86400 (24 hours), matching the constant
+     * DEFAULT_CACHE_TTL. This locks the value against accidental changes.
+     */
+    #[Test]
+    public function ttl_value_is_documented_as_86400_seconds(): void
+    {
+        $reflection = new ReflectionClass(CompilationCache::class);
+        $constants = $reflection->getConstants();
+
+        self::assertArrayHasKey('DEFAULT_CACHE_TTL', $constants);
+        self::assertSame(86400, $constants['DEFAULT_CACHE_TTL']);
+    }
+
+    /**
+     * CP-06 (end-to-end): After set() the same compiled code must be
+     * retrievable via get() on the next call. Verifies the round-trip.
+     */
+    #[Test]
+    public function round_trip_set_then_get_returns_stored_code(): void
+    {
+        $storage = [];
+
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $pool
+            ->method('getItem')
+            ->willReturnCallback(function (string $key) use (&$storage) {
+                $item = $this->createStub(CacheItemInterface::class);
+                $item->method('isHit')->willReturn(array_key_exists($key, $storage));
+                $item->method('get')->willReturn($storage[$key] ?? null);
+                $item->method('set')->willReturnCallback(function ($value) use ($key, &$storage, $item) {
+                    $storage[$key] = $value;
+
+                    return $item;
+                });
+                $item->method('expiresAfter')->willReturnSelf();
+
+                return $item;
+            });
+
+        $pool->method('save')->willReturn(true);
+
+        $cache = new CompilationCache($pool);
+        $code = '<?php readonly class Foo { public function validate(mixed $data): void {} }';
+
+        $cache->set('foo_hash', $code);
+
+        $retrieved = $cache->get('foo_hash');
+
+        self::assertSame($code, $retrieved);
+    }
+
+    /**
+     * CP-06: compileWithCache() round-trip — first call compiles and stores,
+     * second call returns the cached value unchanged.
+     */
+    #[Test]
+    public function compile_with_cache_round_trip_returns_cached_code_on_second_call(): void
+    {
+        $storage = [];
+
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $pool
+            ->method('getItem')
+            ->willReturnCallback(function (string $key) use (&$storage) {
+                $item = $this->createStub(CacheItemInterface::class);
+                $item->method('isHit')->willReturn(array_key_exists($key, $storage));
+                $item->method('get')->willReturn($storage[$key] ?? null);
+                $item->method('set')->willReturnCallback(function ($value) use ($key, &$storage, $item) {
+                    $storage[$key] = $value;
+
+                    return $item;
+                });
+                $item->method('expiresAfter')->willReturnSelf();
+
+                return $item;
+            });
+
+        $pool->method('save')->willReturn(true);
+
+        $cache = new CompilationCache($pool);
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $first = $compiler->compileWithCache($schema, 'CachedStringValidator', $cache);
+        $second = $compiler->compileWithCache($schema, 'CachedStringValidator', $cache);
+
+        self::assertSame($first, $second);
+        self::assertStringContainsString('is_string($data)', $first);
     }
 }
