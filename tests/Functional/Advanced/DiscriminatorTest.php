@@ -30,8 +30,10 @@ final class DiscriminatorTest extends AdvancedFunctionalTestCase
             'meow' => true,
         ]);
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/pet/simple', $operation->path);
     }
 
     #[Test]
@@ -43,8 +45,10 @@ final class DiscriminatorTest extends AdvancedFunctionalTestCase
             'bark' => true,
         ]);
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/pet/simple', $operation->path);
     }
 
     #[Test]
@@ -94,8 +98,10 @@ final class DiscriminatorTest extends AdvancedFunctionalTestCase
             'age' => 3,
         ]);
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/pet/allof', $operation->path);
     }
 
     #[Test]
@@ -107,8 +113,10 @@ final class DiscriminatorTest extends AdvancedFunctionalTestCase
             'bark' => true,
         ]);
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/pet/anyof', $operation->path);
     }
 
     #[Test]
@@ -128,8 +136,10 @@ final class DiscriminatorTest extends AdvancedFunctionalTestCase
             ],
         ]);
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/pet/array', $operation->path);
     }
 
     #[Test]
@@ -142,8 +152,10 @@ final class DiscriminatorTest extends AdvancedFunctionalTestCase
             'meow' => true,
         ]);
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/pet/explicit-mapping', $operation->path);
     }
 
     #[Test]
@@ -156,8 +168,10 @@ final class DiscriminatorTest extends AdvancedFunctionalTestCase
             'meow' => true,
         ]);
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/pet/implicit-mapping', $operation->path);
     }
 
     #[Test]
@@ -170,8 +184,10 @@ final class DiscriminatorTest extends AdvancedFunctionalTestCase
             'meow' => true,
         ]);
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/pet/mixed-mapping', $operation->path);
     }
 
     #[Test]
@@ -184,7 +200,9 @@ final class DiscriminatorTest extends AdvancedFunctionalTestCase
             'cute' => true,
         ]);
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/pet/inheritance', $operation->path);
     }
 }
