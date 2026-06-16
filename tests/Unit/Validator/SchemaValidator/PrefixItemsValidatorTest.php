@@ -4,19 +4,20 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
-use Duyler\OpenApi\Validator\SchemaValidator\PrefixItemsValidator;
-
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
-use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\SchemaValidator\PrefixItemsValidator;
+use Duyler\OpenApi\Validator\ValidatorPool;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
-use Duyler\OpenApi\Validator\Error\ValidationContext;
+use function sprintf;
 
 #[CoversClass(PrefixItemsValidator::class)]
 class PrefixItemsValidatorTest extends TestCase
@@ -24,6 +25,7 @@ class PrefixItemsValidatorTest extends TestCase
     private ValidatorPool $pool;
     private PrefixItemsValidator $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
@@ -41,9 +43,16 @@ class PrefixItemsValidatorTest extends TestCase
             prefixItems: [$schema1, $schema2, $schema3],
         );
 
-        $this->validator->validate(['hello', 42, true], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['hello', 42, true], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -58,9 +67,16 @@ class PrefixItemsValidatorTest extends TestCase
             items: $additionalSchema,
         );
 
-        $this->validator->validate(['hello', 42, 3.14, 2.71], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['hello', 42, 3.14, 2.71], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -105,9 +121,16 @@ class PrefixItemsValidatorTest extends TestCase
             prefixItems: [$schema1, $schema2, $schema3],
         );
 
-        $this->validator->validate(['hello', 42], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['hello', 42], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -119,9 +142,16 @@ class PrefixItemsValidatorTest extends TestCase
             prefixItems: [$schema1],
         );
 
-        $this->validator->validate('string value', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('string value', $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -133,9 +163,16 @@ class PrefixItemsValidatorTest extends TestCase
             prefixItems: [$schema1],
         );
 
-        $this->validator->validate(['key' => 'value'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['key' => 'value'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -143,9 +180,16 @@ class PrefixItemsValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'array');
 
-        $this->validator->validate([1, 2, 3], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([1, 2, 3], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -153,9 +197,16 @@ class PrefixItemsValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'array', prefixItems: []);
 
-        $this->validator->validate([1, 2, 3], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([1, 2, 3], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -167,9 +218,16 @@ class PrefixItemsValidatorTest extends TestCase
             prefixItems: [$schema1],
         );
 
-        $this->validator->validate([], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -181,9 +239,16 @@ class PrefixItemsValidatorTest extends TestCase
             prefixItems: [$prefixSchema1],
         );
 
-        $this->validator->validate(['hello', 42, true, 'extra'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['hello', 42, true, 'extra'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -278,9 +343,16 @@ class PrefixItemsValidatorTest extends TestCase
             items: $itemsSchema,
         );
 
-        $this->validator->validate(['a', 1, 'extra1', 'extra2'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['a', 1, 'extra1', 'extra2'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -294,9 +366,16 @@ class PrefixItemsValidatorTest extends TestCase
         );
 
         $context = ValidationContext::create($this->pool, nullableAsType: true);
-        $this->validator->validate([null, 42], $schema, $context);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([null, 42], $schema, $context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -311,9 +390,16 @@ class PrefixItemsValidatorTest extends TestCase
         );
 
         $context = ValidationContext::create($this->pool, nullableAsType: true);
-        $this->validator->validate(['hello', null, 'world'], $schema, $context);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['hello', null, 'world'], $schema, $context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -327,9 +413,16 @@ class PrefixItemsValidatorTest extends TestCase
         );
 
         $context = ValidationContext::create($this->pool, nullableAsType: true);
-        $this->validator->validate(['hello', 42], $schema, $context);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['hello', 42], $schema, $context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -343,9 +436,16 @@ class PrefixItemsValidatorTest extends TestCase
             prefixItems: [$schema1, $schema2],
         );
 
-        $this->validator->validate(['hello', ['value' => 'test']], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['hello', ['value' => 'test']], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]

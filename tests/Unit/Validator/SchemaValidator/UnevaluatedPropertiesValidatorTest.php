@@ -4,16 +4,19 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
-use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedPropertiesValidator;
-
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedPropertiesValidator;
+use Duyler\OpenApi\Validator\ValidatorPool;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use RuntimeException;
+
+use function sprintf;
 
 #[CoversClass(UnevaluatedPropertiesValidator::class)]
 class UnevaluatedPropertiesValidatorTest extends TestCase
@@ -21,6 +24,7 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
     private ValidatorPool $pool;
     private UnevaluatedPropertiesValidator $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
@@ -39,9 +43,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: true,
         );
 
-        $this->validator->validate(['name' => 'John', 'extra' => 'any data'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John', 'extra' => 'any data'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -69,9 +80,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: false,
         );
 
-        $this->validator->validate('string value', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('string value', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -85,9 +103,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate(['name' => 'John', 'extra' => 'data'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John', 'extra' => 'data'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -98,9 +123,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: false,
         );
 
-        $this->validator->validate([], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -115,9 +147,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: true,
         );
 
-        $this->validator->validate(['name' => 'John'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -132,9 +171,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: false,
         );
 
-        $this->validator->validate(['name' => 'John'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -149,9 +195,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: false,
         );
 
-        $this->validator->validate(['name' => 'John'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -170,9 +223,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: false,
         );
 
-        $this->validator->validate(['name' => 'John', 'num_1' => 42], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John', 'num_1' => 42], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -191,9 +251,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: false,
         );
 
-        $this->validator->validate(['name' => 'John', 'prop_test' => 'value'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John', 'prop_test' => 'value'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -212,9 +279,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: true,
         );
 
-        $this->validator->validate(['name' => 'John', 'prop_1' => 'val1', 'prop_2' => 'val2'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John', 'prop_1' => 'val1', 'prop_2' => 'val2'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -231,9 +305,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: true,
         );
 
-        $this->validator->validate(['str_test' => 'hello', 'num_42' => 123], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['str_test' => 'hello', 'num_42' => 123], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -251,9 +332,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: true,
         );
 
-        $this->validator->validate(['name' => 'John', 'extra' => 'value'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John', 'extra' => 'value'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -269,9 +357,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: true,
         );
 
-        $this->validator->validate(['name' => 'John', 'extra' => 'value'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John', 'extra' => 'value'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -286,9 +381,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: true,
         );
 
-        $this->validator->validate(['test_a' => 'val1', 'test_b' => 'val2'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['test_a' => 'val1', 'test_b' => 'val2'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -307,9 +409,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: false,
         );
 
-        $this->validator->validate(['name' => 'John', 0 => 'numeric_key', 1 => 'another_numeric'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John', 0 => 'numeric_key', 1 => 'another_numeric'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -326,9 +435,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
         );
 
         // 'extra' is unevaluated and should be validated against unevaluatedSchema
-        $this->validator->validate(['name' => 'John', 'extra' => 'value'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John', 'extra' => 'value'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -360,9 +476,16 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
         );
 
         // No ValidationContext provided — should use default
-        $this->validator->validate(['extra' => 'value'], $schema, null);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['extra' => 'value'], $schema, null);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -379,8 +502,15 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
         );
 
         // No unevaluated properties — schema validation not triggered
-        $this->validator->validate(['name' => 'John'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 }

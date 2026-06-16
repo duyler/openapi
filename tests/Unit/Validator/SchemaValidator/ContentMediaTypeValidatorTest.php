@@ -7,15 +7,20 @@ namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\SchemaValidator\ContentMediaTypeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\InvalidContentMediaTypeException;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+
+use function sprintf;
 
 #[CoversClass(ContentMediaTypeValidator::class)]
 class ContentMediaTypeValidatorTest extends TestCase
 {
     private ContentMediaTypeValidator $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->validator = new ContentMediaTypeValidator();
@@ -26,9 +31,15 @@ class ContentMediaTypeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string');
 
-        $this->validator->validate('any value', $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate('any value', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -36,9 +47,15 @@ class ContentMediaTypeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string', contentMediaType: 'application/json');
 
-        $this->validator->validate(123, $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate(123, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -46,9 +63,15 @@ class ContentMediaTypeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string', contentMediaType: 'application/json');
 
-        $this->validator->validate('{"key": "value"}', $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate('{"key": "value"}', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -76,9 +99,15 @@ class ContentMediaTypeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string', contentMediaType: 'application/xml');
 
-        $this->validator->validate('<root><item>test</item></root>', $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate('<root><item>test</item></root>', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -104,9 +133,15 @@ XML;
 
         $schema = new Schema(type: 'string', contentMediaType: 'application/xml');
 
-        $this->validator->validate($xxePayload, $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate($xxePayload, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -114,9 +149,15 @@ XML;
     {
         $schema = new Schema(type: 'string', contentMediaType: 'text/plain');
 
-        $this->validator->validate('any text content', $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate('any text content', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -134,9 +175,15 @@ XML;
     {
         $schema = new Schema(type: 'string', contentMediaType: 'text/html');
 
-        $this->validator->validate('<html><body>Hello</body></html>', $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate('<html><body>Hello</body></html>', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -154,9 +201,15 @@ XML;
     {
         $schema = new Schema(type: 'string', contentMediaType: 'application/pdf');
 
-        $this->validator->validate('%PDF-1.4 binary content', $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate('%PDF-1.4 binary content', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -174,9 +227,15 @@ XML;
     {
         $schema = new Schema(type: 'string', contentMediaType: 'application/octet-stream');
 
-        $this->validator->validate('binary data', $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate('binary data', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -194,9 +253,15 @@ XML;
     {
         $schema = new Schema(type: 'string', contentMediaType: 'image/png');
 
-        $this->validator->validate("\x89PNG\r\n\x1a\nbinary data", $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate("\x89PNG\r\n\x1a\nbinary data", $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -214,9 +279,15 @@ XML;
     {
         $schema = new Schema(type: 'string', contentMediaType: 'image/jpeg');
 
-        $this->validator->validate("\xFF\xD8\xFF\xE0binary data", $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate("\xFF\xD8\xFF\xE0binary data", $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -234,9 +305,15 @@ XML;
     {
         $schema = new Schema(type: 'string', contentMediaType: 'image/gif');
 
-        $this->validator->validate('GIF87abinary data', $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate('GIF87abinary data', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -244,9 +321,15 @@ XML;
     {
         $schema = new Schema(type: 'string', contentMediaType: 'image/gif');
 
-        $this->validator->validate('GIF89abinary data', $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate('GIF89abinary data', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -264,9 +347,15 @@ XML;
     {
         $schema = new Schema(type: 'string', contentMediaType: 'image/svg+xml');
 
-        $this->validator->validate('<svg xmlns="http://www.w3.org/2000/svg"><circle r="10"/></svg>', $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate('<svg xmlns="http://www.w3.org/2000/svg"><circle r="10"/></svg>', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -284,9 +373,15 @@ XML;
     {
         $schema = new Schema(type: 'string', contentMediaType: 'multipart/form-data');
 
-        $this->validator->validate("--boundary\r\nContent-Disposition: form-data; name=\"field\"\r\n\r\nvalue\r\n--boundary--", $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate("--boundary\r\nContent-Disposition: form-data; name=\"field\"\r\n\r\nvalue\r\n--boundary--", $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -304,9 +399,15 @@ XML;
     {
         $schema = new Schema(type: 'string', contentMediaType: 'application/x-www-form-urlencoded');
 
-        $this->validator->validate('key=value&foo=bar', $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate('key=value&foo=bar', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -314,9 +415,15 @@ XML;
     {
         $schema = new Schema(type: 'string', contentMediaType: 'application/x-www-form-urlencoded');
 
-        $this->validator->validate('', $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate('', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -334,9 +441,15 @@ XML;
     {
         $schema = new Schema(type: 'string', contentMediaType: 'text/xml');
 
-        $this->validator->validate('<root>content</root>', $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate('<root>content</root>', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -344,8 +457,14 @@ XML;
     {
         $schema = new Schema(type: 'string', contentMediaType: 'application/octet-stream');
 
-        $this->validator->validate('data', $schema);
+        $succeeded = false;
+        try {
+            $this->validator->validate('data', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 }

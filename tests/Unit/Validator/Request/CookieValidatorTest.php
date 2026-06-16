@@ -18,9 +18,13 @@ use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+
+use function sprintf;
 
 /** @internal */
 #[CoversClass(CookieValidator::class)]
@@ -28,6 +32,7 @@ final class CookieValidatorTest extends TestCase
 {
     private CookieValidator $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $pool = new ValidatorPool();
@@ -66,9 +71,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($cookies, $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($cookies, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -105,9 +116,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($cookies, $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($cookies, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -122,9 +139,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($cookies, $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($cookies, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -156,9 +179,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($cookies, $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($cookies, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -174,9 +203,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($cookies, $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($cookies, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -195,9 +230,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($cookies, $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($cookies, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -211,9 +252,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($cookies, $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($cookies, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -262,9 +309,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($cookies, $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($cookies, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -296,9 +349,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($cookies, $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($cookies, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -330,9 +389,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($cookies, $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($cookies, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -371,9 +436,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($cookies, $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($cookies, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -388,9 +459,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($cookies, $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($cookies, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -422,9 +499,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($cookies, $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($cookies, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -743,9 +826,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validateWithHeader($cookies, 'session=abc123', $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithHeader($cookies, 'session=abc123', $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -762,9 +851,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validateWithHeader($cookies, 'tags=a;tags=b;tags=c', $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithHeader($cookies, 'tags=a;tags=b;tags=c', $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -780,9 +875,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validateWithHeader($cookies, 'data=hello%20world', $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithHeader($cookies, 'data=hello%20world', $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -816,9 +917,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validateWithHeader($cookies, 'session=abc123', $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithHeader($cookies, 'session=abc123', $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -834,9 +941,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validateWithHeader($cookies, 'ids=1,2,3', $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithHeader($cookies, 'ids=1,2,3', $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -852,9 +965,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validateWithHeader($cookies, 'session=from_header', $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithHeader($cookies, 'session=from_header', $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -870,9 +989,15 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validateWithHeader($cookies, 'data=hello%20world', $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithHeader($cookies, 'data=hello%20world', $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -888,8 +1013,14 @@ final class CookieValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validateWithHeader($cookies, '', $parameterSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithHeader($cookies, '', $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 }

@@ -7,12 +7,16 @@ namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
 use Duyler\OpenApi\Validator\Exception\PatternMismatchError;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\PatternValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
-use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+
+use function sprintf;
 
 #[CoversClass(PatternValidator::class)]
 class PatternValidatorTest extends TestCase
@@ -20,6 +24,7 @@ class PatternValidatorTest extends TestCase
     private ValidatorPool $pool;
     private PatternValidator $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
@@ -31,9 +36,16 @@ class PatternValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string', pattern: '/^[a-z]+$/');
 
-        $this->validator->validate('hello', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('hello', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -51,9 +63,16 @@ class PatternValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'integer', pattern: '/^[0-9]+$/');
 
-        $this->validator->validate(123, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(123, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -61,9 +80,16 @@ class PatternValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string');
 
-        $this->validator->validate('any string', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('any string', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -71,9 +97,16 @@ class PatternValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string', pattern: '');
 
-        $this->validator->validate('any string', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('any string', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -81,9 +114,16 @@ class PatternValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string', pattern: '/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/');
 
-        $this->validator->validate('test@example.com', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('test@example.com', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -101,9 +141,16 @@ class PatternValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string', pattern: '/^\d+$/');
 
-        $this->validator->validate('12345', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('12345', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -121,9 +168,16 @@ class PatternValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string', pattern: '/^[\p{L}]+$/u');
 
-        $this->validator->validate('Привет', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('Привет', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -131,9 +185,16 @@ class PatternValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string', pattern: '/^.*$/');
 
-        $this->validator->validate('', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -161,9 +222,16 @@ class PatternValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string', pattern: '^[a-z]+$');
 
-        $this->validator->validate('hello', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('hello', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -181,9 +249,16 @@ class PatternValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string');
 
-        $this->validator->validate('any string', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('any string', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -203,9 +278,16 @@ class PatternValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string', pattern: 'path/to/resource');
 
-        $this->validator->validate('/some/path/to/resource/here', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('/some/path/to/resource/here', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -213,9 +295,16 @@ class PatternValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string', pattern: 'hello~world');
 
-        $this->validator->validate('say hello~world now', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('say hello~world now', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -223,9 +312,16 @@ class PatternValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string', pattern: 'section#anchor');
 
-        $this->validator->validate('page section#anchor end', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('page section#anchor end', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -233,9 +329,16 @@ class PatternValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string', pattern: 'path/~value#frag');
 
-        $this->validator->validate('url/path/~value#frag/end', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('url/path/~value#frag/end', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -254,9 +357,16 @@ class PatternValidatorTest extends TestCase
         // Pattern contains all 8 delimiter candidates (#~!|@%+;) AND /
         $schema = new Schema(type: 'string', pattern: '#~!|@%+;path/to/resource');
 
-        $this->validator->validate('prefix #~!|@%+;path/to/resource suffix', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('prefix #~!|@%+;path/to/resource suffix', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
