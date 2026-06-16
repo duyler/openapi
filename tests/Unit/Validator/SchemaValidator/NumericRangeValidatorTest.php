@@ -12,10 +12,12 @@ use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\MultipleOfKeywordError;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 use function sprintf;
 
@@ -27,6 +29,7 @@ class NumericRangeValidatorTest extends TestCase
     private ValidatorPool $pool;
     private NumericRangeValidator $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
@@ -38,9 +41,16 @@ class NumericRangeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'number', minimum: 5);
 
-        $this->validator->validate(10, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(10, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -48,9 +58,16 @@ class NumericRangeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'number', maximum: 10);
 
-        $this->validator->validate(5, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(5, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -58,9 +75,16 @@ class NumericRangeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'number', exclusiveMinimum: 5);
 
-        $this->validator->validate(6, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(6, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -68,9 +92,16 @@ class NumericRangeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'number', exclusiveMaximum: 10);
 
-        $this->validator->validate(9, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(9, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -78,9 +109,16 @@ class NumericRangeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'number', multipleOf: 5);
 
-        $this->validator->validate(10, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(10, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -138,9 +176,16 @@ class NumericRangeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string', minimum: 5);
 
-        $this->validator->validate('hello', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('hello', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -148,9 +193,16 @@ class NumericRangeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'integer', minimum: 1, maximum: 10);
 
-        $this->validator->validate(5, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(5, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -158,9 +210,16 @@ class NumericRangeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'number', minimum: 1.5, maximum: 10.5);
 
-        $this->validator->validate(5.5, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(5.5, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -168,10 +227,17 @@ class NumericRangeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'number', minimum: 0, maximum: 100);
 
-        $this->validator->validate(0, $schema);
-        $this->validator->validate(100, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(0, $schema);
+            $this->validator->validate(100, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -179,9 +245,16 @@ class NumericRangeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'number', multipleOf: 0.5);
 
-        $this->validator->validate(2.5, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(2.5, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -199,9 +272,16 @@ class NumericRangeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'number');
 
-        $this->validator->validate(42, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(42, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]

@@ -11,9 +11,11 @@ use Duyler\OpenApi\Validator\Exception\MaxContainsError;
 use Duyler\OpenApi\Validator\Exception\MinContainsError;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Throwable;
 
 use function sprintf;
@@ -24,6 +26,7 @@ class ContainsRangeValidatorTest extends TestCase
     private ValidatorPool $pool;
     private ContainsRangeValidator $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
@@ -40,9 +43,16 @@ class ContainsRangeValidatorTest extends TestCase
             minContains: 2,
         );
 
-        $this->validator->validate([1, 2, 15, 20, 3], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([1, 2, 15, 20, 3], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -55,9 +65,16 @@ class ContainsRangeValidatorTest extends TestCase
             maxContains: 2,
         );
 
-        $this->validator->validate([1, 2, 15, 20, 3], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([1, 2, 15, 20, 3], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -101,9 +118,16 @@ class ContainsRangeValidatorTest extends TestCase
             maxContains: 3,
         );
 
-        $this->validator->validate([1, 2, 10, 15, 20, 3], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([1, 2, 10, 15, 20, 3], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -116,9 +140,16 @@ class ContainsRangeValidatorTest extends TestCase
             minContains: 1,
         );
 
-        $this->validator->validate('string value', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('string value', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -129,9 +160,16 @@ class ContainsRangeValidatorTest extends TestCase
             minContains: 1,
         );
 
-        $this->validator->validate([1, 2, 3], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([1, 2, 3], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -142,9 +180,16 @@ class ContainsRangeValidatorTest extends TestCase
             minContains: 2,
         );
 
-        $this->validator->validate([1, 2, 3], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([1, 2, 3], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -155,9 +200,16 @@ class ContainsRangeValidatorTest extends TestCase
             maxContains: 2,
         );
 
-        $this->validator->validate([1, 2, 3], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([1, 2, 3], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -170,9 +222,16 @@ class ContainsRangeValidatorTest extends TestCase
             minContains: 0,
         );
 
-        $this->validator->validate([1, 2, 3, 4, 5], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([1, 2, 3, 4, 5], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -185,9 +244,16 @@ class ContainsRangeValidatorTest extends TestCase
             minContains: 2,
         );
 
-        $this->validator->validate(['hello', 123, 'world', 456], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['hello', 123, 'world', 456], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -200,9 +266,16 @@ class ContainsRangeValidatorTest extends TestCase
             minContains: 1,
         );
 
-        $this->validator->validate(['not-numeric', '123', 'also-not'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['not-numeric', '123', 'also-not'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -216,9 +289,16 @@ class ContainsRangeValidatorTest extends TestCase
             maxContains: 3,
         );
 
-        $this->validator->validate(['ab', 'hello', 42, 'world', 'x'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['ab', 'hello', 42, 'world', 'x'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
