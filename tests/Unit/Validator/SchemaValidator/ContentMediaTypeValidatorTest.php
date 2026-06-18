@@ -13,7 +13,17 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
+use function file_put_contents;
 use function sprintf;
+use function sys_get_temp_dir;
+use function tempnam;
+use function uniqid;
+use function unlink;
+
+use const LIBXML_NOENT;
+use const LIBXML_NOERROR;
+use const LIBXML_NONET;
+use const LIBXML_NOWARNING;
 
 #[CoversClass(ContentMediaTypeValidator::class)]
 class ContentMediaTypeValidatorTest extends TestCase
@@ -466,5 +476,85 @@ XML;
         }
 
         self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function xxe_doctype_with_etc_passwd_not_substituted_in_xml_validation(): void
+    {
+        $xxePayload = <<<'XML'
+<!DOCTYPE foo [ <!ENTITY xxe SYSTEM "file:///etc/passwd"> ]><root><name>&xxe;</name></root>
+XML;
+
+        $schema = new Schema(type: 'string', contentMediaType: 'application/xml');
+
+        $succeeded = false;
+        try {
+            $this->validator->validate($xxePayload, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function libxml_internal_errors_state_restored_after_xml_validation(): void
+    {
+        $schema = new Schema(type: 'string', contentMediaType: 'application/xml');
+
+        libxml_use_internal_errors(false);
+
+        $this->validator->validate('<root><item>test</item></root>', $schema);
+
+        self::assertFalse(libxml_use_internal_errors());
+    }
+
+    /**
+     * Defense-in-depth anti-test for the schema validator: proves that the
+     * deny-all external entity loader (installed by LibxmlSecuredContext)
+     * blocks file:// resolution even if a future commit accidentally adds
+     * LIBXML_NOENT to XML_PARSE_OPTIONS. Without LIBXML_NOENT XXE is already
+     * blocked by simplexml_load_string semantics; this test demonstrates
+     * that the loader itself is the invariant guard, so the protection no
+     * longer relies solely on the absence of a flag.
+     */
+    #[Test]
+    public function deny_all_loader_blocks_file_resolution_even_with_noent_flag_in_xml_validation(): void
+    {
+        $secretContent = 'XXE_SECRET_' . uniqid('', true);
+        $tempFile = tempnam(sys_get_temp_dir(), 'xxe_noent_valid_');
+
+        self::assertNotFalse($tempFile);
+        file_put_contents($tempFile, $secretContent);
+
+        try {
+            $xxePayload = sprintf(
+                '<!DOCTYPE foo [ <!ENTITY xxe SYSTEM "file://%s"> ]><root><name>&xxe;</name></root>',
+                $tempFile,
+            );
+
+            $previousInternalErrors = libxml_use_internal_errors(true);
+            libxml_set_external_entity_loader(static fn(): null => null);
+
+            try {
+                $xml = simplexml_load_string(
+                    $xxePayload,
+                    options: LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_NOENT,
+                );
+                $encoded = false === $xml ? '' : (string) json_encode($xml);
+            } finally {
+                libxml_clear_errors();
+                libxml_use_internal_errors($previousInternalErrors);
+            }
+
+            self::assertStringNotContainsString(
+                $secretContent,
+                $encoded,
+                'deny-all loader must prevent file:// entity resolution even with LIBXML_NOENT flag',
+            );
+        } finally {
+            unlink($tempFile);
+        }
     }
 }

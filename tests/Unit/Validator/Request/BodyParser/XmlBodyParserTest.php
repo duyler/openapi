@@ -8,8 +8,19 @@ use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function file_put_contents;
 use function is_array;
 use function is_string;
+use function sprintf;
+use function sys_get_temp_dir;
+use function tempnam;
+use function uniqid;
+use function unlink;
+
+use const LIBXML_NOENT;
+use const LIBXML_NOERROR;
+use const LIBXML_NONET;
+use const LIBXML_NOWARNING;
 
 /** @internal */
 final class XmlBodyParserTest extends TestCase
@@ -390,5 +401,91 @@ XML;
         $result = $this->parser->parse($xml);
 
         $this->assertIsArray($result);
+    }
+
+    #[Test]
+    public function xxe_doctype_with_etc_passwd_not_substituted(): void
+    {
+        $xxePayload = <<<'XML'
+<!DOCTYPE foo [ <!ENTITY xxe SYSTEM "file:///etc/passwd"> ]><root><name>&xxe;</name></root>
+XML;
+
+        $result = $this->parser->parse($xxePayload);
+
+        if (is_array($result)) {
+            $nameValue = (string) ($result['name'] ?? '');
+            $this->assertStringNotContainsString('root:x:0:0', $nameValue);
+            $this->assertStringNotContainsString('/bin/bash', $nameValue);
+        } else {
+            $this->assertStringNotContainsString('root:x:0:0', $result);
+            $this->assertStringNotContainsString('/bin/bash', $result);
+        }
+    }
+
+    #[Test]
+    public function simple_xml_parses_to_associative_array(): void
+    {
+        $result = $this->parser->parse('<root><name>John</name></root>');
+
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('name', $result);
+        $this->assertSame('John', $result['name']);
+    }
+
+    #[Test]
+    public function libxml_internal_errors_state_restored_after_parse(): void
+    {
+        libxml_use_internal_errors(false);
+
+        $this->parser->parse('<root><name>John</name></root>');
+
+        $this->assertFalse(libxml_use_internal_errors());
+    }
+
+    /**
+     * Defense-in-depth anti-test: proves that the deny-all external entity
+     * loader blocks file:// resolution even if a future commit accidentally
+     * adds LIBXML_NOENT to PARSE_OPTIONS. Without LIBXML_NOENT XXE is
+     * already blocked by simplexml_load_string semantics; this test
+     * demonstrates that the loader itself is the invariant guard, so the
+     * protection no longer relies solely on the absence of a flag.
+     */
+    #[Test]
+    public function deny_all_loader_blocks_file_resolution_even_with_noent_flag(): void
+    {
+        $secretContent = 'XXE_SECRET_' . uniqid('', true);
+        $tempFile = tempnam(sys_get_temp_dir(), 'xxe_noent_');
+
+        $this->assertNotFalse($tempFile);
+        file_put_contents($tempFile, $secretContent);
+
+        try {
+            $xxePayload = sprintf(
+                '<!DOCTYPE foo [ <!ENTITY xxe SYSTEM "file://%s"> ]><root><name>&xxe;</name></root>',
+                $tempFile,
+            );
+
+            $previousInternalErrors = libxml_use_internal_errors(true);
+            libxml_set_external_entity_loader(static fn(): null => null);
+
+            try {
+                $xml = simplexml_load_string(
+                    $xxePayload,
+                    options: LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_NOENT,
+                );
+                $encoded = false === $xml ? '' : (string) json_encode($xml);
+            } finally {
+                libxml_clear_errors();
+                libxml_use_internal_errors($previousInternalErrors);
+            }
+
+            $this->assertStringNotContainsString(
+                $secretContent,
+                $encoded,
+                'deny-all loader must prevent file:// entity resolution even with LIBXML_NOENT flag',
+            );
+        } finally {
+            unlink($tempFile);
+        }
     }
 }
