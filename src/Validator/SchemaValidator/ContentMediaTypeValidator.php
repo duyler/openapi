@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\LibxmlSecuredContext;
+use JsonException;
 use Override;
 use SimpleXMLElement;
 
@@ -15,13 +16,15 @@ use function is_string;
 use function preg_match;
 use function str_starts_with;
 
-use const JSON_ERROR_NONE;
 use const LIBXML_NOERROR;
 use const LIBXML_NONET;
 use const LIBXML_NOWARNING;
+use const JSON_THROW_ON_ERROR;
 
 final readonly class ContentMediaTypeValidator implements SchemaValidatorInterface
 {
+    private const int JSON_MAX_DEPTH = 128;
+
     private const array SUPPORTED_MEDIA_TYPES = [
         'application/json',
         'application/xml',
@@ -97,9 +100,13 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
             return false;
         }
 
-        json_decode($data);
+        try {
+            json_decode($data, associative: true, depth: self::JSON_MAX_DEPTH, flags: JSON_THROW_ON_ERROR);
 
-        return JSON_ERROR_NONE === json_last_error();
+            return true;
+        } catch (JsonException) {
+            return false;
+        }
     }
 
     private function isValidXml(string $data): bool

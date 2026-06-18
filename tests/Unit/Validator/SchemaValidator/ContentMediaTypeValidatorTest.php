@@ -15,6 +15,7 @@ use RuntimeException;
 
 use function file_put_contents;
 use function sprintf;
+use function str_repeat;
 use function sys_get_temp_dir;
 use function tempnam;
 use function uniqid;
@@ -102,6 +103,100 @@ class ContentMediaTypeValidatorTest extends TestCase
         $this->expectException(InvalidContentMediaTypeException::class);
 
         $this->validator->validate('', $schema);
+    }
+
+    /**
+     * Anti-test for EI-003: proves isValidJson is independent of the global
+     * json_last_error state. In long-running runtimes (Swoole coroutines,
+     * RoadRunner, FrankenPHP) the global error code is shared across requests
+     * and coroutines; an unrelated failed json_decode could otherwise corrupt
+     * the validator's verdict (false-positive "valid"). With JSON_THROW_ON_ERROR
+     * the check is atomic and immune to such pollution.
+     */
+    #[Test]
+    public function json_validation_is_independent_of_global_json_error_state(): void
+    {
+        $schema = new Schema(type: 'string', contentMediaType: 'application/json');
+
+        json_decode('this is garbage and definitely not valid json');
+
+        $succeeded = false;
+        try {
+            $this->validator->validate('{"valid":1}', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    /**
+     * Anti-test for EI-051: proves the depth limit blocks DoS payloads with
+     * deeply-nested JSON. Default json_decode depth is 512; the validator
+     * enforces 128, which rejects a payload of depth 200 with
+     * InvalidContentMediaTypeException. Without the limit the parser could
+     * stack-overflow or burn CPU on a malicious payload.
+     */
+    #[Test]
+    public function deeply_nested_json_above_max_depth_is_rejected(): void
+    {
+        $schema = new Schema(type: 'string', contentMediaType: 'application/json');
+
+        $depthExceedingPayload = str_repeat('{"a":', 200) . '1' . str_repeat('}', 200);
+
+        $this->expectException(InvalidContentMediaTypeException::class);
+
+        $this->validator->validate($depthExceedingPayload, $schema);
+    }
+
+    /**
+     * Boundary test for EI-051: proves JSON nested within the depth limit
+     * (depth 100, under the cap of 128) passes validation.
+     */
+    #[Test]
+    public function deeply_nested_json_within_max_depth_is_accepted(): void
+    {
+        $schema = new Schema(type: 'string', contentMediaType: 'application/json');
+
+        $depthWithinPayload = str_repeat('{"a":', 100) . '1' . str_repeat('}', 100);
+
+        $succeeded = false;
+        try {
+            $this->validator->validate($depthWithinPayload, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    /**
+     * Documents the exact depth cutoff: payloads nested at JSON_MAX_DEPTH - 1
+     * (127 levels) pass validation, while JSON_MAX_DEPTH (128 levels) is
+     * rejected. PHP's json_decode depth parameter has an off-by-one — depth=N
+     * permits nesting up to N-1. This test locks the boundary so a future
+     * change to the constant or to the depth parameter is immediately
+     * detected.
+     */
+    #[Test]
+    public function json_depth_boundary_is_enforced_at_max_depth_minus_one(): void
+    {
+        $schema = new Schema(type: 'string', contentMediaType: 'application/json');
+        $withinPayload = str_repeat('{"a":', 127) . '1' . str_repeat('}', 127);
+        $atCapPayload = str_repeat('{"a":', 128) . '1' . str_repeat('}', 128);
+
+        $succeededWithin = false;
+        try {
+            $this->validator->validate($withinPayload, $schema);
+            $succeededWithin = true;
+        } catch (InvalidContentMediaTypeException) {
+        }
+        self::assertTrue($succeededWithin, 'JSON nested at depth 127 (JSON_MAX_DEPTH - 1) must pass');
+
+        $this->expectException(InvalidContentMediaTypeException::class);
+        $this->validator->validate($atCapPayload, $schema);
     }
 
     #[Test]
