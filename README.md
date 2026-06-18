@@ -507,11 +507,18 @@ The registry is immutable: `register()` returns a new instance with the added sc
 
 The validator pool uses an LRU (Least Recently Used) cache to reuse validator instances. The default capacity is 128 entries. When the pool is full, the least recently used validator is evicted.
 
+By default the pool is **not thread-safe**. It is safe to share in prefork models where each worker has isolated state (PHP-FPM, RoadRunner, FrankenPHP non-threaded). In Swoole with coroutines or FrankenPHP with threaded workers, concurrent `getOrCreate()` calls race on the check-then-act sequence. Pass a lock object exposing `lock()`/`unlock()` methods to serialize access (for example `Swoole\Lock`). Without a lock the pool is racy under shared state.
+
+The `$factory` passed to `getOrCreate()` must be non-blocking (no I/O) and non-recursive (no nested `getOrCreate()` calls); the lock is held for the entire duration of `$factory`, so suspending or recursing inside it deadlocks.
+
 ```php
 use Duyler\OpenApi\Validator\ValidatorPool;
 
 $pool = new ValidatorPool();          // default: 128 entries
 $pool = new ValidatorPool(maxSize: 64); // custom capacity
+
+// Swoole / threaded runtimes: pass a lock to serialize access
+$pool = new ValidatorPool(maxSize: 128, lock: new \Swoole\Lock());
 
 // Validators are automatically reused and evicted when capacity is exceeded
 $validator = OpenApiValidatorBuilder::create()
@@ -1163,6 +1170,8 @@ printf("Memory delta: %d bytes\n", $after - $before);
 ### Long-Running Processes
 
 The validator instance is safe to reuse across requests in long-running processes (RoadRunner, FrankenPHP, Swoole). The internal `ValidatorPool` uses an LRU cache to reuse validator instances without manual cleanup. The pool has a default capacity of 128 entries and automatically evicts the least recently used entries when full.
+
+In prefork models (RoadRunner, FrankenPHP non-threaded, PHP-FPM) each worker holds an isolated pool and no extra configuration is needed. In Swoole with coroutines or FrankenPHP with threaded workers, the pool is shared between coroutines/threads; you must pass a lock object (for example `Swoole\Lock`) to the `ValidatorPool` constructor to serialize access. The `$factory` passed to `getOrCreate()` must be non-blocking and non-recursive, otherwise the pool deadlocks while the lock is held (see the [Validator Pool](#validator-pool) section).
 
 ```php
 // Build once at worker startup
