@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Format\String;
 
+use DateTime;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\String\TimeValidator;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -37,6 +38,13 @@ final class TimeValidatorTest extends TestCase
             'one second before midnight' => ['23:59:59'],
             'midnight with offset' => ['00:00:00+00:00'],
             'midnight Z' => ['00:00:00Z'],
+            'leap second at end of day' => ['23:59:60'],
+            'leap second with Z' => ['23:59:60Z'],
+            'leap second with fractional' => ['23:59:60.500'],
+            'leap second with max positive offset' => ['23:59:60+14:00'],
+            'max positive offset boundary' => ['10:30:00+14:00'],
+            'max negative offset boundary' => ['10:30:00-14:00'],
+            'offset hour 13 with max minute' => ['10:30:00+13:59'],
         ];
     }
 
@@ -54,13 +62,19 @@ final class TimeValidatorTest extends TestCase
         return [
             'hour 24' => ['24:00:00'],
             'minute 60' => ['10:60:00'],
-            'second 60' => ['10:30:60'],
+            'second 60 outside leap second' => ['10:30:60'],
             'random text' => ['invalid-time'],
             'date instead of time' => ['2024-01-01'],
             'time without seconds' => ['10:30'],
             'invalid timezone suffix' => ['10:30:00XYZ'],
             'letters in time' => ['aa:bb:cc'],
             'negative time' => ['-10:30:00'],
+            'offset exceeds plus fourteen hours' => ['10:30:00+15:00'],
+            'offset exceeds minus fourteen hours' => ['10:30:00-15:00'],
+            'offset minutes exceed fifty nine' => ['10:30:00+03:60'],
+            'positive boundary hour with non-zero minute' => ['10:30:00+14:01'],
+            'positive boundary hour with max minute' => ['10:30:00+14:59'],
+            'negative boundary hour with non-zero minute' => ['10:30:00-14:01'],
         ];
     }
 
@@ -112,5 +126,15 @@ final class TimeValidatorTest extends TestCase
         } catch (InvalidFormatException $exception) {
             $this->assertSame($invalidValue, $exception->value);
         }
+    }
+
+    #[Test]
+    public function validation_is_independent_from_global_state(): void
+    {
+        DateTime::createFromFormat('H:i:s', '99:99:99');
+
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('10:30:00Z');
     }
 }

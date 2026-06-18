@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Format\String;
 
+use DateTime;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\String\DateValidator;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -24,6 +25,7 @@ final class DateValidatorTest extends TestCase
     public function valid_date_format(): void
     {
         $this->expectNotToPerformAssertions();
+
         $this->validator->validate('2024-01-15');
         $this->validator->validate('2024-12-31');
         $this->validator->validate('2020-02-29');
@@ -34,6 +36,7 @@ final class DateValidatorTest extends TestCase
     {
         $this->expectException(InvalidFormatException::class);
         $this->expectExceptionMessage('Invalid date format');
+
         $this->validator->validate('2024/01/15');
     }
 
@@ -41,6 +44,7 @@ final class DateValidatorTest extends TestCase
     public function throw_error_for_impossible_date(): void
     {
         $this->expectException(InvalidFormatException::class);
+
         $this->validator->validate('2025-02-30');
     }
 
@@ -48,14 +52,24 @@ final class DateValidatorTest extends TestCase
     public function validate_leap_year(): void
     {
         $this->expectNotToPerformAssertions();
+
         $this->validator->validate('2024-02-29');
+    }
+
+    #[Test]
+    public function reject_feb_29_in_non_leap_year(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+
+        $this->validator->validate('2025-02-29');
     }
 
     #[Test]
     public function throw_error_for_invalid_month(): void
     {
         $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Invalid date value');
+        $this->expectExceptionMessage('Invalid date format');
+
         $this->validator->validate('2024-13-01');
     }
 
@@ -63,7 +77,8 @@ final class DateValidatorTest extends TestCase
     public function throw_error_for_invalid_day(): void
     {
         $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Invalid date value');
+        $this->expectExceptionMessage('Invalid date format');
+
         $this->validator->validate('2024-01-32');
     }
 
@@ -72,6 +87,25 @@ final class DateValidatorTest extends TestCase
     {
         $this->expectException(InvalidFormatException::class);
         $this->expectExceptionMessage('Value must be a string');
+
         $this->validator->validate(20240115);
+    }
+
+    #[Test]
+    public function reject_single_digit_month_or_day(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+
+        $this->validator->validate('2026-1-5');
+    }
+
+    #[Test]
+    public function validation_is_independent_from_global_state(): void
+    {
+        DateTime::createFromFormat('Y-m-d', '2026-13-99');
+
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('2026-01-15');
     }
 }
