@@ -428,6 +428,57 @@ class ArrayLengthValidatorTest extends TestCase
         $this->validator->validate([fopen('php://memory', 'r'), fopen('php://memory', 'r')], $schema);
     }
 
+    #[Test]
+    public function unique_items_rejects_single_resource_item(): void
+    {
+        $schema = new Schema(type: 'array', uniqueItems: true);
+
+        $this->expectException(InvalidDataTypeException::class);
+        $this->expectExceptionMessage('Resources are not valid JSON values');
+
+        $this->validator->validate([fopen('php://memory', 'r')], $schema);
+    }
+
+    #[Test]
+    public function unique_items_rejects_duplicate_null_values(): void
+    {
+        $schema = new Schema(type: 'array', uniqueItems: true);
+
+        $this->expectException(DuplicateItemsError::class);
+
+        $this->validator->validate([null, null], $schema);
+    }
+
+    #[Test]
+    public function unique_items_rejects_duplicate_boolean_values(): void
+    {
+        $schema = new Schema(type: 'array', uniqueItems: true);
+
+        $this->expectException(DuplicateItemsError::class);
+
+        $this->validator->validate([true, false, true], $schema);
+    }
+
+    #[Test]
+    public function unique_items_rejects_duplicate_sequential_arrays(): void
+    {
+        $schema = new Schema(type: 'array', uniqueItems: true);
+
+        $this->expectException(DuplicateItemsError::class);
+
+        $this->validator->validate([[1, 2], [1, 2]], $schema);
+    }
+
+    #[Test]
+    public function unique_items_accepts_distinct_sequential_arrays(): void
+    {
+        $schema = new Schema(type: 'array', uniqueItems: true);
+
+        $this->validator->validate([[1, 2], [2, 1]], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
     /**
      * Regression: arrays without resources must continue to pass uniqueItems.
      */

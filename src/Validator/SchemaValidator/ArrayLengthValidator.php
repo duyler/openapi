@@ -13,12 +13,19 @@ use Duyler\OpenApi\Validator\Exception\MinItemsError;
 use Duyler\OpenApi\Validator\SchemaValidator\Trait\LengthValidationTrait;
 use Override;
 
-use function array_key_exists;
+use JsonException;
+
 use function count;
 use function is_array;
+use function is_bool;
 use function is_float;
 use function is_int;
 use function is_resource;
+use function is_string;
+use function json_encode;
+use function serialize;
+
+use const JSON_THROW_ON_ERROR;
 
 final readonly class ArrayLengthValidator extends AbstractSchemaValidator
 {
@@ -57,70 +64,51 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator
     }
 
     /**
-     * Counts items in the array using JSON Schema draft 2020-12 §6.4.3 equality
-     * semantics: scalars of different JSON types (number, string, boolean) are
-     * never equal, while arrays/objects are compared by deep structural equality.
-     *
-     * The inspected values come from arbitrary JSON-decoded payloads, so every
-     * element is intentionally treated as `mixed` and dispatched to isSameItem,
-     * which re-establishes type narrowing per branch.
-     *
      * @param array<mixed> $data
-     * @psalm-suppress MixedAssignment
      */
     private function countUniqueItems(array $data): int
     {
-        /** @var list<mixed> $unique */
-        $unique = [];
+        $seen = [];
+        $count = 0;
 
+        /** @var mixed $item */
         foreach ($data as $item) {
-            $isDuplicate = false;
+            $key = $this->itemKey($item);
 
-            foreach ($unique as $kept) {
-                if ($this->isSameItem($item, $kept)) {
-                    $isDuplicate = true;
-                    break;
-                }
-            }
-
-            if (!$isDuplicate) {
-                $unique[] = $item;
+            if (false === isset($seen[$key])) {
+                $seen[$key] = true;
+                ++$count;
             }
         }
 
-        return count($unique);
+        return $count;
     }
 
-    /**
-     * JSON Schema draft 2020-12 §6.4.3 deep equality:
-     * - Scalars of different JSON types (number, string, boolean) are never
-     *   equal: `1 !== "1" !== true`.
-     * - Numbers (int and float) are equal when mathematically equal per JSON
-     *   Schema §4.2.3: `1 === 1.0` (both represent the JSON number one).
-     * - Arrays/objects use recursive structural comparison with the same
-     *   scalar rules applied to every leaf value.
-     */
-    private function isSameItem(mixed $a, mixed $b): bool
+    private function itemKey(mixed $item): string
     {
-        $this->ensureJsonCompatible($a);
-        $this->ensureJsonCompatible($b);
+        $this->ensureJsonCompatible($item);
 
-        if (is_array($a) && is_array($b)) {
-            return $this->arrayEqual($a, $b);
+        if (is_int($item) || is_float($item)) {
+            return 'n:' . (string) (float) $item;
         }
 
-        // JSON Schema §4.2.3: numbers are equal if mathematically equal.
-        // PHP's === distinguishes int from float (1 !== 1.0), but JSON Schema
-        // treats them as the same value. Compare numerically when both are
-        // numbers (int or float), preserving the distinction from "1" and true.
-        if ((is_int($a) || is_float($a)) && (is_int($b) || is_float($b))) {
-            return (float) $a === (float) $b;
+        if (null === $item) {
+            return 'null';
         }
 
-        // Strict comparison distinguishes remaining JSON types:
-        // 1 !== "1" !== true. Also returns false when one side is an
-        // array and the other is a scalar (mixed shapes are never equal).
-        return $a === $b;
+        if (is_bool($item)) {
+            return 'b:' . ($item ? '1' : '0');
+        }
+
+        if (is_string($item)) {
+            return 's:' . $item;
+        }
+
+        if (is_array($item)) {
+            return 'a:' . $this->encodeArrayKey($item);
+        }
+
+        return serialize($item);
     }
 
     private function ensureJsonCompatible(mixed $value): void
@@ -130,27 +118,12 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator
         }
     }
 
-    /**
-     * @param array<array-key, mixed> $a
-     * @param array<array-key, mixed> $b
-     * @psalm-suppress MixedAssignment
-     */
-    private function arrayEqual(array $a, array $b): bool
+    private function encodeArrayKey(array $item): string
     {
-        if (count($a) !== count($b)) {
-            return false;
+        try {
+            return json_encode($item, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return serialize($item);
         }
-
-        foreach ($a as $key => $value) {
-            if (!array_key_exists($key, $b)) {
-                return false;
-            }
-
-            if (!$this->isSameItem($value, $b[$key])) {
-                return false;
-            }
-        }
-
-        return true;
     }
 }

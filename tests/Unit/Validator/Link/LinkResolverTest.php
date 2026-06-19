@@ -447,4 +447,79 @@ class LinkResolverTest extends TestCase
 
         $this->assertSame(['target' => null], $result['parameters']);
     }
+
+    #[Test]
+    public function resolve_path_with_rfc6901_tilde_one_escape(): void
+    {
+        $link = new Link(
+            operationId: 'getUser',
+            parameters: ['path' => '$response.body#/foo~1bar'],
+        );
+
+        $context = new LinkContext(body: ['foo/bar' => 'escaped']);
+
+        $result = $this->resolver->resolve($link, $context);
+
+        $this->assertSame(['path' => 'escaped'], $result['parameters']);
+    }
+
+    #[Test]
+    public function resolve_path_with_rfc6901_tilde_zero_escape(): void
+    {
+        $link = new Link(
+            operationId: 'getUser',
+            parameters: ['path' => '$response.body#/foo~0bar'],
+        );
+
+        $context = new LinkContext(body: ['foo~bar' => 'escaped']);
+
+        $result = $this->resolver->resolve($link, $context);
+
+        $this->assertSame(['path' => 'escaped'], $result['parameters']);
+    }
+
+    #[Test]
+    public function resolve_path_with_rfc6901_tilde_zero_one_sequence(): void
+    {
+        $link = new Link(
+            operationId: 'getUser',
+            parameters: ['path' => '$response.body#/foo~01bar'],
+        );
+
+        $context = new LinkContext(body: ['foo~1bar' => 'escaped']);
+
+        $result = $this->resolver->resolve($link, $context);
+
+        $this->assertSame(['path' => 'escaped'], $result['parameters']);
+    }
+
+    #[Test]
+    public function resolve_path_with_rfc6901_escaped_slash_in_template(): void
+    {
+        $link = new Link(
+            operationId: 'getUser',
+            parameters: ['path' => '$response.body#/users~1{userId}'],
+        );
+
+        $context = new LinkContext(body: ['users/{userId}' => 'resolved']);
+
+        $result = $this->resolver->resolve($link, $context);
+
+        $this->assertSame(['path' => 'resolved'], $result['parameters']);
+    }
+
+    #[Test]
+    public function resolve_unescaped_slash_path_regression(): void
+    {
+        $link = new Link(
+            operationId: 'getAddress',
+            parameters: ['city' => '$response.body#/address/city'],
+        );
+
+        $context = new LinkContext(body: ['address' => ['city' => 'Moscow', 'street' => 'Tverskaya']]);
+
+        $result = $this->resolver->resolve($link, $context);
+
+        $this->assertSame(['city' => 'Moscow'], $result['parameters']);
+    }
 }

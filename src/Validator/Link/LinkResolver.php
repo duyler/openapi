@@ -101,6 +101,11 @@ final readonly class LinkResolver
         /** @var list<string> $segments */
         $segments = explode('/', trim($path, '/'));
 
+        $segments = array_map(
+            static fn(string $s): string => str_replace(['~1', '~0'], ['/', '~'], $s),
+            $segments,
+        );
+
         /** @var mixed $current */
         $current = $data;
 
