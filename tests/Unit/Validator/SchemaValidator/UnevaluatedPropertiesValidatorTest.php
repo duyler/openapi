@@ -513,4 +513,97 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
 
         self::assertSame(true, $succeeded);
     }
+
+    #[Test]
+    public function passes_when_additional_properties_schema_with_unevaluated_false(): void
+    {
+        $idSchema = new Schema(type: 'integer');
+        $additionalSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'id' => $idSchema,
+            ],
+            additionalProperties: $additionalSchema,
+            unevaluatedProperties: false,
+        );
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(['id' => 1, 'extra' => 'hello'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function passes_when_additional_properties_true_with_unevaluated_false(): void
+    {
+        $idSchema = new Schema(type: 'integer');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'id' => $idSchema,
+            ],
+            additionalProperties: true,
+            unevaluatedProperties: false,
+        );
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(['id' => 1, 'extra' => 'hello'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function throws_when_additional_properties_false_with_unevaluated_false(): void
+    {
+        $idSchema = new Schema(type: 'integer');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'id' => $idSchema,
+            ],
+            additionalProperties: false,
+            unevaluatedProperties: false,
+        );
+
+        $this->expectException(UnevaluatedPropertyError::class);
+
+        $this->validator->validate(['id' => 1, 'extra' => 'hello'], $schema);
+    }
+
+    #[Test]
+    public function passes_when_no_additional_properties_and_property_defined(): void
+    {
+        $idSchema = new Schema(type: 'integer');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'id' => $idSchema,
+            ],
+            unevaluatedProperties: false,
+        );
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(['id' => 1], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
 }

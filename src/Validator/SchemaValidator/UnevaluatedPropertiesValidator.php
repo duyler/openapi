@@ -74,6 +74,10 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
 
     private function getEvaluatedProperties(Schema $schema, array $data): array
     {
+        if (true === $schema->additionalProperties || $schema->additionalProperties instanceof Schema) {
+            return array_keys($data);
+        }
+
         $evaluated = [];
 
         if (null !== $schema->properties) {
