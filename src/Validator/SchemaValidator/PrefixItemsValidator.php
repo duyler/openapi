@@ -11,7 +11,6 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Override;
 
-use function array_slice;
 use function count;
 use function is_array;
 use function sprintf;
@@ -60,30 +59,6 @@ final readonly class PrefixItemsValidator extends AbstractSchemaValidator
                     sprintf('Item at index %d validation failed', $i),
                     previous: $e,
                 );
-            }
-        }
-
-        $remainingItems = array_slice($data, $count);
-
-        if ([] !== $remainingItems && null !== $schema->items) {
-            /** @var list<mixed> $remainingItems */
-            foreach ($remainingItems as $item) {
-                try {
-                    $allowNull = $schema->items->nullable && $nullableAsType;
-                    $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
-                    $remainingContext = $context ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
-                    $validator->validate($normalizedItem, $schema->items, $remainingContext);
-                } catch (InvalidDataTypeException $e) {
-                    throw new ValidationException(
-                        sprintf('Remaining item has invalid data type: %s', $e->getMessage()),
-                        previous: $e,
-                    );
-                } catch (ValidationException $e) {
-                    throw new ValidationException(
-                        'Remaining item validation failed',
-                        previous: $e,
-                    );
-                }
             }
         }
     }

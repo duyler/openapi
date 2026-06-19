@@ -95,19 +95,19 @@ class PrefixItemsValidatorTest extends TestCase
     }
 
     #[Test]
-    public function throw_error_for_invalid_additional_item(): void
+    public function prefixItems_does_not_validate_remaining_items(): void
     {
-        $prefixSchema1 = new Schema(type: 'string');
-        $additionalSchema = new Schema(type: 'integer');
+        $prefixSchema = new Schema(type: 'string');
+        $itemsSchema = new Schema(type: 'integer');
         $schema = new Schema(
             type: 'array',
-            prefixItems: [$prefixSchema1],
-            items: $additionalSchema,
+            prefixItems: [$prefixSchema],
+            items: $itemsSchema,
         );
 
-        $this->expectException(TypeMismatchError::class);
+        $this->validator->validate(['hello', 'world', 'extra'], $schema);
 
-        $this->validator->validate(['hello', 'world'], $schema);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -249,38 +249,6 @@ class PrefixItemsValidatorTest extends TestCase
         }
 
         self::assertSame(true, $succeeded);
-    }
-
-    #[Test]
-    public function throw_error_for_invalid_remaining_item(): void
-    {
-        $prefixSchema1 = new Schema(type: 'string');
-        $itemsSchema = new Schema(type: 'integer');
-        $schema = new Schema(
-            type: 'array',
-            prefixItems: [$prefixSchema1],
-            items: $itemsSchema,
-        );
-
-        $this->expectException(TypeMismatchError::class);
-
-        $this->validator->validate(['hello', 'not integer'], $schema);
-    }
-
-    #[Test]
-    public function throw_error_for_remaining_item_type_exception(): void
-    {
-        $prefixSchema1 = new Schema(type: 'string');
-        $itemsSchema = new Schema(type: 'string');
-        $schema = new Schema(
-            type: 'array',
-            prefixItems: [$prefixSchema1],
-            items: $itemsSchema,
-        );
-
-        $this->expectException(ValidationException::class);
-
-        $this->validator->validate(['hello', new stdClass()], $schema);
     }
 
     #[Test]
@@ -446,25 +414,6 @@ class PrefixItemsValidatorTest extends TestCase
         }
 
         self::assertSame(true, $succeeded);
-    }
-
-    #[Test]
-    public function throw_validation_exception_for_remaining_item_validation_failed(): void
-    {
-        $schema1 = new Schema(type: 'string');
-        $itemsSchema = new Schema(
-            not: new Schema(type: 'string'),
-        );
-        $schema = new Schema(
-            type: 'array',
-            prefixItems: [$schema1],
-            items: $itemsSchema,
-        );
-
-        $this->expectException(ValidationException::class);
-        $this->expectExceptionMessage('Remaining item validation failed');
-
-        $this->validator->validate(['hello', 'another_string'], $schema);
     }
 
     #[Test]
