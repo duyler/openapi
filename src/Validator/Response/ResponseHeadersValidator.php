@@ -129,7 +129,12 @@ final readonly class ResponseHeadersValidator
             return false;
         }
 
-        return (bool) $value;
+        throw new TypeMismatchError(
+            expected: 'boolean',
+            actual: 'string',
+            dataPath: $headerName,
+            schemaPath: '#/type',
+        );
     }
 
     private function coerceToArray(string $value, string $headerName): array

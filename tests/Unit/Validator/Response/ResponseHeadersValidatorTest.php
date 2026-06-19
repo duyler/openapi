@@ -1239,23 +1239,17 @@ final class ResponseHeadersValidatorTest extends TestCase
     }
 
     #[Test]
-    public function coerce_boolean_with_other_value(): void
+    public function coerce_boolean_header_unknown_value_throws_type_mismatch_error(): void
     {
-        $headers = ['X-Value' => 'other-value'];
+        $headers = ['X-Active' => 'maybe'];
         $headerSchemas = new Headers([
-            'X-Value' => new Header(
+            'X-Active' => new Header(
                 schema: new Schema(type: 'boolean'),
             ),
         ]);
 
-        $succeeded = false;
-        try {
-            $this->validator->validate($headers, $headerSchemas);
-            $succeeded = true;
-        } catch (ValidationException $e) {
-            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
-        }
+        $this->expectException(TypeMismatchError::class);
 
-        self::assertSame(true, $succeeded);
+        $this->validator->validate($headers, $headerSchemas);
     }
 }

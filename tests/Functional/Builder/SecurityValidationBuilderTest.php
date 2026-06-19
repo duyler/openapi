@@ -169,7 +169,7 @@ YAML;
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $errors[0]);
             $this->assertSame('apiKey', $errors[0]->params()['schemeName']);
             $this->assertSame('apiKey', $errors[0]->params()['schemeType']);
-            $this->assertSame('header "X-API-Key"', $errors[0]->params()['location']);
+            $this->assertSame('missing header parameter "X-API-Key"', $errors[0]->params()['location']);
         }
     }
 

@@ -110,7 +110,7 @@ final class SchemaHelperTest extends TestCase
     public function normalize_null_throws_exception(): void
     {
         $this->expectException(InvalidDataTypeException::class);
-        $this->expectExceptionMessage('Data must be array, int, string, float or bool, NULL given');
+        $this->expectExceptionMessage('Data must be array, int, string, float or bool, null given');
 
         SchemaValueNormalizer::normalize(null);
     }
@@ -119,7 +119,7 @@ final class SchemaHelperTest extends TestCase
     public function normalize_object_throws_exception(): void
     {
         $this->expectException(InvalidDataTypeException::class);
-        $this->expectExceptionMessage('Data must be array, int, string, float or bool, object given');
+        $this->expectExceptionMessage('Data must be array, int, string, float or bool, object (stdClass) given');
 
         SchemaValueNormalizer::normalize(new stdClass());
     }

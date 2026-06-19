@@ -537,7 +537,7 @@ YAML;
             $params = $error->params();
             $this->assertSame('CookieAuth', $params['schemeName']);
             $this->assertSame('apiKey', $params['schemeType']);
-            $this->assertSame('cookie "session_id"', $params['location']);
+            $this->assertSame('missing cookie parameter "session_id"', $params['location']);
         }
     }
 
@@ -566,7 +566,7 @@ YAML;
             $this->assertCount(1, $errors);
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $errors[0]);
             $this->assertSame(
-                'cookie "session_id"',
+                'empty cookie parameter "session_id"',
                 $errors[0]->params()['location'],
             );
         }
@@ -597,7 +597,7 @@ YAML;
             $this->assertCount(1, $errors);
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $errors[0]);
             $this->assertSame(
-                'cookie "session_id"',
+                'missing cookie parameter "session_id"',
                 $errors[0]->params()['location'],
             );
         }
