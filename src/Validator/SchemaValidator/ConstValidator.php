@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ConstError;
+use Duyler\OpenApi\Validator\Schema\JsonEquals;
 use Override;
 
 final readonly class ConstValidator extends AbstractSchemaValidator
@@ -18,7 +19,7 @@ final readonly class ConstValidator extends AbstractSchemaValidator
             return;
         }
 
-        if ($schema->const !== $data) {
+        if (false === JsonEquals::equals($schema->const, $data)) {
             $dataPath = $this->getDataPath($context);
             throw new ConstError(
                 expected: $schema->const,
