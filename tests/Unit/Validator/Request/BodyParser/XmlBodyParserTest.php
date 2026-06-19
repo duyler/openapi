@@ -210,6 +210,14 @@ XML;
     }
 
     #[Test]
+    public function three_or_more_empty_elements_collected_into_flat_numeric_array(): void
+    {
+        $result = $this->parser->parse('<list><item/><item/><item/></list>');
+
+        self::assertSame(['item' => [null, null, null]], $result);
+    }
+
+    #[Test]
     public function root_text_element_returned_as_string(): void
     {
         $result = $this->parser->parse('<a>text</a>');

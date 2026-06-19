@@ -78,7 +78,7 @@ final readonly class XmlBodyParser
             /** @var array<array-key, mixed>|string|null $existing */
             $existing = $result[$name];
 
-            if (false === is_array($existing) || false === isset($existing[0])) {
+            if (false === is_array($existing) || false === array_key_exists(0, $existing)) {
                 $existing = [$existing];
             }
 
