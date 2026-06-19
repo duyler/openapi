@@ -10,6 +10,7 @@ use Override;
 
 use function is_array;
 use function is_string;
+use function array_key_exists;
 
 final readonly class ResponseTypeCoercer extends AbstractCoercer
 {
@@ -75,7 +76,7 @@ final readonly class ResponseTypeCoercer extends AbstractCoercer
 
     private function coerceToObject(mixed $value, CoercionContext $context): mixed
     {
-        if (!is_array($value)) {
+        if (false === is_array($value)) {
             return $value;
         }
 
@@ -86,10 +87,10 @@ final readonly class ResponseTypeCoercer extends AbstractCoercer
         }
 
         /** @var array<string, mixed> $coerced */
-        $coerced = [];
+        $coerced = $value;
 
         foreach ($properties as $name => $propertySchema) {
-            if (!isset($value[$name])) {
+            if (false === array_key_exists($name, $value)) {
                 continue;
             }
 
@@ -106,10 +107,11 @@ final readonly class ResponseTypeCoercer extends AbstractCoercer
         return $coerced;
     }
 
-    private function coerceToArray(mixed $value, CoercionContext $context): array
+    private function coerceToArray(mixed $value, CoercionContext $context): array|int|string|float|bool|null
     {
-        if (!is_array($value)) {
-            return [];
+        if (false === is_array($value)) {
+            /** @var array|int|string|float|bool|null $value */
+            return $value;
         }
 
         $itemsSchema = $context->schema->items ?? null;

@@ -121,17 +121,17 @@ final class RequestBodyCoercerTest extends TestCase
     }
 
     #[Test]
-    public function coerce_array_items(): void
+    public function coerce_to_array_processes_items_request(): void
     {
         $schema = new Schema(
             type: 'array',
             items: new Schema(type: 'integer'),
         );
 
-        $input = ['1', '2', '3'];
+        $input = ['1', '2'];
         $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
 
-        $this->assertSame([1, 2, 3], $result);
+        $this->assertSame([1, 2], $result);
     }
 
     #[Test]
@@ -356,13 +356,13 @@ final class RequestBodyCoercerTest extends TestCase
     }
 
     #[Test]
-    public function return_empty_array_for_non_array_value_to_array(): void
+    public function coerce_to_array_returns_non_array_as_is_request(): void
     {
         $schema = new Schema(type: 'array');
 
-        $result = $this->coercer->coerce('not-an-array', new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce('hello', new CoercionContext(schema: $schema, enabled: true));
 
-        $this->assertSame([], $result);
+        $this->assertSame('hello', $result);
     }
 
     #[Test]
@@ -799,13 +799,41 @@ final class RequestBodyCoercerTest extends TestCase
     }
 
     #[Test]
-    public function coerce_non_array_to_array_returns_empty(): void
+    public function coerce_to_object_preserves_additional_properties_request(): void
     {
-        $schema = new Schema(type: 'array', items: new Schema(type: 'integer'));
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'id' => new Schema(type: 'integer'),
+            ],
+        );
 
-        $result = $this->coercer->coerce('not-array', new CoercionContext(schema: $schema, enabled: true));
+        $input = ['id' => '42', 'name' => 'Alice', 'email' => 'a@b.c'];
 
-        $this->assertSame([], $result);
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+
+        $this->assertSame(42, $result['id']);
+        $this->assertSame('Alice', $result['name']);
+        $this->assertSame('a@b.c', $result['email']);
+    }
+
+    #[Test]
+    public function coerce_to_object_preserves_null_property_value_request(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'age' => new Schema(type: 'integer', nullable: true),
+            ],
+        );
+
+        $result = $this->coercer->coerce(
+            ['age' => null],
+            new CoercionContext(schema: $schema, enabled: true, nullableAsType: true),
+        );
+
+        $this->assertArrayHasKey('age', $result);
+        $this->assertNull($result['age']);
     }
 
     #[Test]

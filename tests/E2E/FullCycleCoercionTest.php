@@ -189,4 +189,58 @@ YAML;
         self::assertSame('boolean', $caught->params()['expected']);
         self::assertSame('maybe', $caught->params()['actual']);
     }
+
+    #[Test]
+    public function with_coercion_non_array_body_rejected_as_type_mismatch_not_min_items(): void
+    {
+        $spec = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: Array Body Coercion API
+  version: 1.0.0
+paths:
+  /items:
+    post:
+      operationId: createItems
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+              minItems: 1
+      responses:
+        '200':
+          description: ack
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+YAML;
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($spec)
+            ->enableCoercion()
+            ->build();
+
+        $request = $this->factory->createServerRequest('POST', '/items')
+            ->withHeader('Content-Type', 'application/json')
+            ->withBody($this->factory->createStream('"hello"'));
+
+        $caught = null;
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected TypeMismatchError when non-array body "hello" is validated against type: array');
+        } catch (TypeMismatchError $e) {
+            $caught = $e;
+        }
+
+        self::assertNotNull($caught);
+        self::assertSame('array', $caught->params()['expected']);
+    }
 }

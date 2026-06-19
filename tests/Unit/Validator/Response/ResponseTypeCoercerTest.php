@@ -616,21 +616,20 @@ final class ResponseTypeCoercerTest extends TestCase
     }
 
     #[Test]
-    public function coerce_array_of_integers(): void
+    public function coerce_to_array_processes_items_response(): void
     {
         $schema = new Schema(
             type: 'array',
             items: new Schema(type: 'integer'),
         );
 
-        $input = ['1', '2', '3'];
+        $input = ['1', '2'];
 
         $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
 
-        $this->assertSame([1, 2, 3], $result);
+        $this->assertSame([1, 2], $result);
         $this->assertIsInt($result[0]);
         $this->assertIsInt($result[1]);
-        $this->assertIsInt($result[2]);
     }
 
     #[Test]
@@ -700,7 +699,7 @@ final class ResponseTypeCoercerTest extends TestCase
     }
 
     #[Test]
-    public function coerce_object_only_defined_properties(): void
+    public function coerce_object_only_defined_properties_get_coerced(): void
     {
         $schema = new Schema(
             type: 'object',
@@ -716,9 +715,8 @@ final class ResponseTypeCoercerTest extends TestCase
 
         $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
 
-        $this->assertArrayHasKey('age', $result);
-        $this->assertArrayNotHasKey('extra', $result);
         $this->assertSame(30, $result['age']);
+        $this->assertSame('value', $result['extra']);
     }
 
     public static function coerceToIntegerProvider(): array
@@ -987,13 +985,13 @@ final class ResponseTypeCoercerTest extends TestCase
     }
 
     #[Test]
-    public function coerce_non_array_to_array_returns_empty(): void
+    public function coerce_to_array_returns_non_array_as_is_response(): void
     {
         $schema = new Schema(type: 'array', items: new Schema(type: 'integer'));
 
-        $result = $this->coercer->coerce('not-array', new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce('hello', new CoercionContext(schema: $schema, enabled: true));
 
-        $this->assertSame([], $result);
+        $this->assertSame('hello', $result);
     }
 
     #[Test]
@@ -1009,21 +1007,41 @@ final class ResponseTypeCoercerTest extends TestCase
     }
 
     #[Test]
-    public function coerce_object_preserves_extra_properties(): void
+    public function coerce_to_object_preserves_additional_properties_response(): void
     {
         $schema = new Schema(
             type: 'object',
             properties: [
-                'age' => new Schema(type: 'integer'),
+                'id' => new Schema(type: 'integer'),
             ],
         );
 
-        $input = ['age' => '30', 'extra' => 'value'];
+        $input = ['id' => '42', 'name' => 'Alice', 'email' => 'a@b.c'];
 
         $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
 
-        $this->assertSame(30, $result['age']);
-        $this->assertArrayNotHasKey('extra', $result);
+        $this->assertSame(42, $result['id']);
+        $this->assertSame('Alice', $result['name']);
+        $this->assertSame('a@b.c', $result['email']);
+    }
+
+    #[Test]
+    public function coerce_to_object_preserves_null_property_value_response(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'age' => new Schema(type: 'integer', nullable: true),
+            ],
+        );
+
+        $result = $this->coercer->coerce(
+            ['age' => null],
+            new CoercionContext(schema: $schema, enabled: true, nullableAsType: true),
+        );
+
+        $this->assertArrayHasKey('age', $result);
+        $this->assertNull($result['age']);
     }
 
     #[Test]
