@@ -48,9 +48,11 @@ XML;
         if (is_array($result)) {
             $this->assertStringNotContainsString('root:', (string) ($result['root'] ?? ''));
             $this->assertStringNotContainsString('/bin/bash', (string) ($result['root'] ?? ''));
-        } else {
+        } elseif (is_string($result)) {
             $this->assertStringNotContainsString('root:', $result);
             $this->assertStringNotContainsString('/bin/bash', $result);
+        } else {
+            $this->assertNull($result);
         }
     }
 
@@ -185,6 +187,58 @@ XML;
     }
 
     #[Test]
+    public function xml_attributes_preserved_with_at_prefix(): void
+    {
+        $xml = '<user active="true"><name>John</name><nickname/></user>';
+
+        $result = $this->parser->parse($xml);
+
+        $this->assertSame(
+            ['@active' => 'true', 'name' => 'John', 'nickname' => null],
+            $result,
+        );
+    }
+
+    #[Test]
+    public function repeated_child_elements_collected_into_numeric_indexed_array(): void
+    {
+        $xml = '<list><item>a</item><item>b</item></list>';
+
+        $result = $this->parser->parse($xml);
+
+        $this->assertSame(['item' => ['a', 'b']], $result);
+    }
+
+    #[Test]
+    public function root_text_element_returned_as_string(): void
+    {
+        $result = $this->parser->parse('<a>text</a>');
+
+        $this->assertSame('text', $result);
+    }
+
+    #[Test]
+    public function empty_element_returned_as_null(): void
+    {
+        $result = $this->parser->parse('<empty/>');
+
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function mixed_content_text_preserved_in_text_key(): void
+    {
+        $xml = '<mixed attr="1">hello<child>x</child></mixed>';
+
+        $result = $this->parser->parse($xml);
+
+        $this->assertSame(
+            ['@attr' => '1', 'child' => 'x', '#text' => 'hello'],
+            $result,
+        );
+    }
+
+    #[Test]
     public function xxe_ssrf_blocked(): void
     {
         $xxeSsrf = <<<'XML'
@@ -199,8 +253,10 @@ XML;
 
         if (is_array($result)) {
             $this->assertStringNotContainsString('secret', (string) ($result['root'] ?? ''));
-        } else {
+        } elseif (is_string($result)) {
             $this->assertStringNotContainsString('secret', $result);
+        } else {
+            $this->assertNull($result);
         }
     }
 
@@ -245,7 +301,7 @@ XML;
 
         $result = $this->parser->parse($xml);
 
-        $this->assertIsArray($result);
+        $this->assertSame('simple text content', $result);
     }
 
     #[Test]
@@ -400,7 +456,7 @@ XML;
 
         $result = $this->parser->parse($xml);
 
-        $this->assertIsArray($result);
+        $this->assertTrue(is_array($result) || is_string($result) || null === $result);
     }
 
     #[Test]

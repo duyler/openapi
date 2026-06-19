@@ -228,11 +228,11 @@ YAML;
      * Negative: XXE entity must NOT be expanded — file contents must not leak.
      *
      * XmlBodyParser uses libxml without LIBXML_NOENT flag, so external
-     * entities are never substituted. The entity reference produces an
-     * array structure (not a string), causing TypeMismatchError with
-     * keyword 'type'. If XXE protection failed and the entity expanded
-     * to file content, the keyword would be 'maxLength' instead (string
-     * passes type check but exceeds maxLength: 0).
+     * entities are never substituted. The empty entity reference produces
+     * null (recursive parser converts empty elements to null), causing
+     * ValidationException from SchemaValueNormalizer. If XXE protection
+     * failed and the entity expanded to file content, the keyword would be
+     * 'maxLength' instead (string passes type check but exceeds maxLength: 0).
      */
     #[Test]
     public function xxe_attack_does_not_read_system_files(): void
@@ -275,6 +275,8 @@ YAML;
                 $validationSucceeded = true;
             } catch (AbstractValidationError $e) {
                 $errorKeyword = $e->keyword();
+                $errorMessage = $e->getMessage();
+            } catch (ValidationException $e) {
                 $errorMessage = $e->getMessage();
             }
 
