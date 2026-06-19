@@ -1169,9 +1169,27 @@ printf("Memory delta: %d bytes\n", $after - $before);
 
 ### Long-Running Processes
 
-The validator instance is safe to reuse across requests in long-running processes (RoadRunner, FrankenPHP, Swoole). The internal `ValidatorPool` uses an LRU cache to reuse validator instances without manual cleanup. The pool has a default capacity of 128 entries and automatically evicts the least recently used entries when full.
+The validator instance is safe to reuse across requests in long-running
+processes that use the **prefork execution model**: PHP-FPM, RoadRunner, and
+FrankenPHP in non-threaded mode. The internal `ValidatorPool` uses an LRU cache
+to reuse validator instances without manual cleanup. The pool has a default
+capacity of 128 entries and automatically evicts the least recently used entries
+when full.
 
-In prefork models (RoadRunner, FrankenPHP non-threaded, PHP-FPM) each worker holds an isolated pool and no extra configuration is needed. In Swoole with coroutines or FrankenPHP with threaded workers, the pool is shared between coroutines/threads; you must pass a lock object (for example `Swoole\Lock`) to the `ValidatorPool` constructor to serialize access. The `$factory` passed to `getOrCreate()` must be non-blocking and non-recursive, otherwise the pool deadlocks while the lock is held (see the [Validator Pool](#validator-pool) section).
+For **Swoole with coroutines** or **FrankenPHP threaded workers**, the validator
+requires additional concurrency protection:
+
+- Each coroutine or worker must use its own `ValidatorPool` instance, or you
+  must inject a lock (any object with `lock()` and `unlock()` methods, such as
+  `Swoole\Lock`) into the `ValidatorPool` constructor.
+- libxml global state (`libxml_use_internal_errors`, external entity loader) is
+  shared across coroutines. XML body parsing and `contentMediaType: application/xml`
+  validation may race on these globals.
+- `DateTime::getLastErrors()` and `json_last_error()` are also global. Prefer
+  code paths that use `JSON_THROW_ON_ERROR` and do not rely on these globals.
+
+The prefork model (one request per worker process, no shared mutable state) is
+the safest option and requires no extra configuration.
 
 ```php
 // Build once at worker startup
@@ -1180,7 +1198,7 @@ $validator = OpenApiValidatorBuilder::create()
     ->withCache($schemaCache)
     ->build();
 
-// Reuse across requests
+// Reuse across requests (prefork model only)
 while ($request = $worker->waitRequest()) {
     $operation = $validator->validateRequest($request);
     // ...
