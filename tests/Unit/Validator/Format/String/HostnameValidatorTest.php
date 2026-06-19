@@ -11,6 +11,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function str_repeat;
+
 #[CoversClass(HostnameValidator::class)]
 final class HostnameValidatorTest extends TestCase
 {
@@ -34,6 +36,8 @@ final class HostnameValidatorTest extends TestCase
             'single letter domain' => ['a.com'],
             'numeric tld' => ['example.123'],
             'max length hostname' => [str_repeat('a', 63) . '.' . str_repeat('b', 63) . '.' . str_repeat('c', 63) . '.com'],
+            'IDN german umlaut' => ['münchen.de'],
+            'IDN punycode pass-through' => ['xn--mnchen-3ya.de'],
         ];
     }
 
@@ -69,6 +73,68 @@ final class HostnameValidatorTest extends TestCase
         $this->expectException(InvalidFormatException::class);
 
         $this->validator->validate($value);
+    }
+
+    #[Test]
+    public function idn_hostname_passes_via_punycode_conversion(): void
+    {
+        $idnHostname = 'münchen.de';
+
+        $exception = null;
+
+        try {
+            $this->validator->validate($idnHostname);
+        } catch (InvalidFormatException $exception) {
+        }
+
+        $this->assertNull(
+            $exception,
+            'IDN hostname "münchen.de" must be accepted via idn_to_ascii punycode conversion per RFC 5891.',
+        );
+    }
+
+    #[Test]
+    public function leading_hyphen_hostname_rejected_with_descriptive_message(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid hostname format');
+
+        $this->validator->validate('-bad.example.com');
+    }
+
+    #[Test]
+    public function label_exceeding_63_chars_rejected(): void
+    {
+        $longLabel = str_repeat('a', 64) . '.com';
+
+        $exception = null;
+
+        try {
+            $this->validator->validate($longLabel);
+            $this->fail('Expected InvalidFormatException was not thrown');
+        } catch (InvalidFormatException $exception) {
+        }
+
+        $this->assertNotNull($exception);
+        $this->assertSame('hostname', $exception->format);
+    }
+
+    #[Test]
+    public function hostname_exceeding_253_chars_rejected(): void
+    {
+        $longHostname = str_repeat('a', 250) . '.com';
+
+        $exception = null;
+
+        try {
+            $this->validator->validate($longHostname);
+            $this->fail('Expected InvalidFormatException was not thrown');
+        } catch (InvalidFormatException $exception) {
+        }
+
+        $this->assertNotNull($exception);
+        $this->assertSame('hostname', $exception->format);
+        $this->assertStringContainsString('253', $exception->getMessage());
     }
 
     #[Test]
