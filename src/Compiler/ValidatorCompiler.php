@@ -59,6 +59,8 @@ final readonly class ValidatorCompiler
         string $className,
         ?CompilationCacheInterface $cache = null,
     ): string {
+        $schemaHash = null;
+
         if (null !== $cache) {
             $schemaHash = $cache->generateKey($schema);
             $cached = $cache->get($schemaHash);
@@ -70,8 +72,7 @@ final readonly class ValidatorCompiler
 
         $code = $this->compile($schema, $className);
 
-        if (null !== $cache) {
-            $schemaHash = $cache->generateKey($schema);
+        if (null !== $cache && null !== $schemaHash) {
             $cache->set($schemaHash, $code);
         }
 

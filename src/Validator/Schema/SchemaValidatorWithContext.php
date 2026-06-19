@@ -13,7 +13,9 @@ use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorMode;
+use WeakMap;
 
+use function assert;
 use function count;
 use function is_array;
 use function spl_object_id;
@@ -25,6 +27,9 @@ final class SchemaValidatorWithContext
     private PropertiesValidatorWithContext $propertiesValidator;
     private ItemsValidatorWithContext $itemsValidator;
 
+    /** @var WeakMap<Schema, Schema> */
+    private WeakMap $resolvedCache;
+
     public function __construct(
         private readonly OpenApiDocument $document,
         private readonly SchemaValidatorDependencies $dependencies,
@@ -34,6 +39,9 @@ final class SchemaValidatorWithContext
         $this->discriminatorValidator = new DiscriminatorValidator($this->dependencies, $this->configuration);
         $this->propertiesValidator = new PropertiesValidatorWithContext($this->document, $this->dependencies, $this->configuration);
         $this->itemsValidator = new ItemsValidatorWithContext($this->document, $this->dependencies, $this->configuration);
+        /** @var WeakMap<Schema, Schema> $resolvedCache */
+        $resolvedCache = new WeakMap();
+        $this->resolvedCache = $resolvedCache;
     }
 
     public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidatorMode $mode = null): void
@@ -139,6 +147,13 @@ final class SchemaValidatorWithContext
      */
     private function resolveCompositionRefs(Schema $schema, array $visited): Schema
     {
+        if (isset($this->resolvedCache[$schema])) {
+            $cached = $this->resolvedCache[$schema];
+            assert(null !== $cached);
+
+            return $cached;
+        }
+
         if (ValidationContext::MAX_DEPTH <= count($visited)) {
             throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
         }
@@ -146,6 +161,8 @@ final class SchemaValidatorWithContext
         $schemaId = spl_object_id($schema);
 
         if (isset($visited[$schemaId])) {
+            $this->resolvedCache[$schema] = $schema;
+
             return $schema;
         }
 
@@ -164,14 +181,20 @@ final class SchemaValidatorWithContext
             : $this->resolveCompositionArray($schema->oneOf, $visited);
 
         if ($allOf === $schema->allOf && $anyOf === $schema->anyOf && $oneOf === $schema->oneOf) {
+            $this->resolvedCache[$schema] = $schema;
+
             return $schema;
         }
 
-        return $schema->withOverrides(
+        $resolved = $schema->withOverrides(
             allOf: $allOf,
             anyOf: $anyOf,
             oneOf: $oneOf,
         );
+
+        $this->resolvedCache[$schema] = $resolved;
+
+        return $resolved;
     }
 
     /**

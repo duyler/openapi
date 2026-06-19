@@ -331,7 +331,7 @@ final class ValidatorCompilerTest extends TestCase
         $schema = new Schema(type: 'string');
 
         $cache
-            ->expects($this->exactly(2))
+            ->expects($this->once())
             ->method('generateKey')
             ->willReturn('cache_key');
 
