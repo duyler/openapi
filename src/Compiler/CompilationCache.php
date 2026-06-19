@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Compiler;
 
+use Duyler\OpenApi\Compiler\Exception\CompilationCacheException;
 use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Model\Xml;
@@ -12,7 +13,13 @@ use Psr\Cache\CacheItemPoolInterface;
 
 use WeakMap;
 
+use JsonException;
+
 use function is_string;
+use function json_encode;
+use function spl_object_id;
+
+use function sprintf;
 
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
@@ -21,6 +28,8 @@ use const JSON_UNESCAPED_UNICODE;
 final class CompilationCache implements CompilationCacheInterface
 {
     private const int DEFAULT_CACHE_TTL = 86400;
+
+    private const string CIRCULAR_REF_KEY = '__circular_ref__';
 
     /** @var WeakMap<Schema, string> */
     private WeakMap $hashCache;
@@ -75,16 +84,37 @@ final class CompilationCache implements CompilationCacheInterface
             return $this->hashCache[$schema];
         }
 
-        $data = $this->schemaToArray($schema);
-        $hash = hash('sha256', json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+        $data = $this->schemaToArray($schema, []);
 
+        try {
+            $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            throw new CompilationCacheException(
+                sprintf('Failed to encode schema for hash: %s', $e->getMessage()),
+                0,
+                $e,
+            );
+        }
+
+        $hash = hash('sha256', $json);
         $this->hashCache[$schema] = $hash;
 
         return $hash;
     }
 
-    private function schemaToArray(Schema $schema): array
+    /**
+     * @param array<int, true> $visited
+     */
+    private function schemaToArray(Schema $schema, array $visited): array
     {
+        $id = spl_object_id($schema);
+
+        if (isset($visited[$id])) {
+            return [self::CIRCULAR_REF_KEY => $id];
+        }
+
+        $visited[$id] = true;
+
         $data = [
             'ref' => $schema->ref,
             'refSummary' => $schema->refSummary,
@@ -116,52 +146,58 @@ final class CompilationCache implements CompilationCacheInterface
             'minProperties' => $schema->minProperties,
             'required' => $schema->required,
             'discriminator' => $this->discriminatorToArray($schema->discriminator),
-            'propertyNames' => $this->schemaToArrayOrNull($schema->propertyNames),
-            'unevaluatedProperties' => $this->additionalPropertiesToArray($schema->unevaluatedProperties),
-            'unevaluatedItems' => $this->schemaToArrayOrNull($schema->unevaluatedItems),
-            'contains' => $this->schemaToArrayOrNull($schema->contains),
+            'propertyNames' => $this->schemaToArrayOrNull($schema->propertyNames, $visited),
+            'unevaluatedProperties' => $this->additionalPropertiesToArray($schema->unevaluatedProperties, $visited),
+            'unevaluatedItems' => $this->schemaToArrayOrNull($schema->unevaluatedItems, $visited),
+            'contains' => $this->schemaToArrayOrNull($schema->contains, $visited),
             'minContains' => $schema->minContains,
             'maxContains' => $schema->maxContains,
-            'if' => $this->schemaToArrayOrNull($schema->if),
-            'then' => $this->schemaToArrayOrNull($schema->then),
-            'else' => $this->schemaToArrayOrNull($schema->else),
+            'if' => $this->schemaToArrayOrNull($schema->if, $visited),
+            'then' => $this->schemaToArrayOrNull($schema->then, $visited),
+            'else' => $this->schemaToArrayOrNull($schema->else, $visited),
             'example' => $schema->example,
             'examples' => $schema->examples,
             'contentEncoding' => $schema->contentEncoding,
             'contentMediaType' => $schema->contentMediaType,
-            'contentSchema' => $this->additionalPropertiesToArray($schema->contentSchema),
+            'contentSchema' => $this->additionalPropertiesToArray($schema->contentSchema, $visited),
             'jsonSchemaDialect' => $schema->jsonSchemaDialect,
             'xml' => $this->xmlToArray($schema->xml),
         ];
 
-        $data['allOf'] = $this->schemaListToArray($schema->allOf);
-        $data['anyOf'] = $this->schemaListToArray($schema->anyOf);
-        $data['oneOf'] = $this->schemaListToArray($schema->oneOf);
-        $data['not'] = $this->schemaToArrayOrNull($schema->not);
-        $data['properties'] = $this->schemaMapToArray($schema->properties);
-        $data['additionalProperties'] = $this->additionalPropertiesToArray($schema->additionalProperties);
-        $data['items'] = $this->schemaToArrayOrNull($schema->items);
-        $data['prefixItems'] = $this->schemaListToArray($schema->prefixItems);
-        $data['patternProperties'] = $this->schemaMapToArray($schema->patternProperties);
-        $data['dependentSchemas'] = $this->schemaMapToArray($schema->dependentSchemas);
+        $data['allOf'] = $this->schemaListToArray($schema->allOf, $visited);
+        $data['anyOf'] = $this->schemaListToArray($schema->anyOf, $visited);
+        $data['oneOf'] = $this->schemaListToArray($schema->oneOf, $visited);
+        $data['not'] = $this->schemaToArrayOrNull($schema->not, $visited);
+        $data['properties'] = $this->schemaMapToArray($schema->properties, $visited);
+        $data['additionalProperties'] = $this->additionalPropertiesToArray($schema->additionalProperties, $visited);
+        $data['items'] = $this->schemaToArrayOrNull($schema->items, $visited);
+        $data['prefixItems'] = $this->schemaListToArray($schema->prefixItems, $visited);
+        $data['patternProperties'] = $this->schemaMapToArray($schema->patternProperties, $visited);
+        $data['dependentSchemas'] = $this->schemaMapToArray($schema->dependentSchemas, $visited);
         $data['enum'] = $schema->enum;
 
         return $data;
     }
 
-    private function schemaToArrayOrNull(?Schema $schema): ?array
+    /**
+     * @param array<int, true> $visited
+     */
+    private function schemaToArrayOrNull(?Schema $schema, array $visited): ?array
     {
         if (null === $schema) {
             return null;
         }
 
-        return $this->schemaToArray($schema);
+        return $this->schemaToArray($schema, $visited);
     }
 
-    private function additionalPropertiesToArray(Schema|bool|null $value): array|bool|null
+    /**
+     * @param array<int, true> $visited
+     */
+    private function additionalPropertiesToArray(Schema|bool|null $value, array $visited): array|bool|null
     {
         if ($value instanceof Schema) {
-            return $this->schemaToArray($value);
+            return $this->schemaToArray($value, $visited);
         }
 
         return $value;
@@ -198,24 +234,26 @@ final class CompilationCache implements CompilationCacheInterface
 
     /**
      * @param list<Schema>|null $schemas
+     * @param array<int, true> $visited
      *
      * @return list<array>|null
      */
-    private function schemaListToArray(?array $schemas): ?array
+    private function schemaListToArray(?array $schemas, array $visited): ?array
     {
         if (null === $schemas) {
             return null;
         }
 
-        return array_map(fn(Schema $s): array => $this->schemaToArray($s), $schemas);
+        return array_map(fn(Schema $s): array => $this->schemaToArray($s, $visited), $schemas);
     }
 
     /**
      * @param array<string, Schema>|null $schemas
+     * @param array<int, true> $visited
      *
      * @return array<string, array>|null
      */
-    private function schemaMapToArray(?array $schemas): ?array
+    private function schemaMapToArray(?array $schemas, array $visited): ?array
     {
         if (null === $schemas) {
             return null;
@@ -224,7 +262,7 @@ final class CompilationCache implements CompilationCacheInterface
         $result = [];
 
         foreach ($schemas as $key => $schema) {
-            $result[$key] = $this->schemaToArray($schema);
+            $result[$key] = $this->schemaToArray($schema, $visited);
         }
 
         return $result;

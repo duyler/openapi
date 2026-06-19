@@ -5,16 +5,19 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Compiler;
 
 use Duyler\OpenApi\Compiler\CompilationCache;
+use Duyler\OpenApi\Compiler\Exception\CompilationCacheException;
+use Duyler\OpenApi\Compiler\ValidatorCompiler;
 use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\Schema;
+use JsonException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
-use Duyler\OpenApi\Compiler\ValidatorCompiler;
 use ReflectionClass;
 
 use function array_key_exists;
+use function strlen;
 
 final class CompilationCacheTest extends TestCase
 {
@@ -548,5 +551,94 @@ final class CompilationCacheTest extends TestCase
 
         self::assertSame($first, $second);
         self::assertStringContainsString('is_string($data)', $first);
+    }
+
+    /**
+     * EI-046: self-referential schema must not cause a stack overflow. The
+     * generated key must be a stable 64-character SHA-256 hash, and repeated
+     * calls for the same object must return the same value.
+     */
+    #[Test]
+    public function generateKey_handles_self_referential_schema(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = $this->createSelfReferentialSchema();
+
+        $key1 = $cache->generateKey($schema);
+
+        $freshCache = new CompilationCache($pool);
+        $key2 = $freshCache->generateKey($schema);
+
+        $hashPart = substr($key1, strlen('validator_compilation.'));
+
+        self::assertSame(64, strlen($hashPart));
+        self::assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $hashPart);
+        self::assertSame($key1, $key2);
+    }
+
+    /**
+     * EI-046: json_encode failures must be wrapped in a domain exception with
+     * the original JsonException available via getPrevious().
+     */
+    #[Test]
+    public function generateKey_wraps_json_exception_in_compilation_cache_exception(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(
+            type: 'string',
+            default: [fopen('php://memory', 'r')],
+            hasDefault: true,
+        );
+
+        $caught = null;
+
+        try {
+            $cache->generateKey($schema);
+        } catch (CompilationCacheException $e) {
+            $caught = $e;
+        }
+
+        self::assertNotNull($caught);
+        self::assertStringContainsString('Failed to encode schema for hash:', $caught->getMessage());
+
+        $previous = $caught->getPrevious();
+
+        self::assertInstanceOf(JsonException::class, $previous);
+    }
+
+    /**
+     * Documents a known limitation: cross-instance hash stability for cyclic
+     * schemas is NOT guaranteed because spl_object_id() is embedded in the
+     * __circular_ref__ marker. This test asserts the CURRENT behavior so that
+     * any future change (e.g., switching to path-based markers) explicitly
+     * breaks this test and forces a contract update.
+     *
+     * The same-instance stability is covered by generateKey_handles_self_referential_schema.
+     */
+    #[Test]
+    public function generateKey_cyclic_schema_different_instances_yields_different_hash(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema1 = $this->createSelfReferentialSchema();
+        $schema2 = $this->createSelfReferentialSchema();
+
+        $key1 = $cache->generateKey($schema1);
+        $key2 = $cache->generateKey($schema2);
+
+        self::assertNotSame($key1, $key2);
+    }
+
+    private function createSelfReferentialSchema(): Schema
+    {
+        $schema = new Schema(type: 'object');
+        $schema = $schema->withOverrides(properties: ['self' => &$schema]);
+
+        return $schema;
     }
 }

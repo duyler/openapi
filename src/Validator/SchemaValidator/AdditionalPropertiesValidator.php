@@ -6,11 +6,13 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 
 use function assert;
 use function is_array;
+use function sprintf;
 
 final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator
 {
@@ -54,8 +56,19 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
         $dataPath = $this->getDataPath($context);
 
         if (false === $schema->additionalProperties) {
+            $errors = [];
+
+            foreach ($additionalKeys as $key) {
+                $errors[] = new UnevaluatedPropertyError(
+                    dataPath: $dataPath,
+                    schemaPath: '/additionalProperties',
+                    propertyName: (string) $key,
+                );
+            }
+
             throw new ValidationException(
-                'Additional properties are not allowed: ' . implode(', ', $additionalKeys),
+                sprintf('Additional properties are not allowed: %s', implode(', ', $additionalKeys)),
+                errors: $errors,
             );
         }
 

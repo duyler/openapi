@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\DuplicateItemsError;
+use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MinItemsError;
 use Duyler\OpenApi\Validator\SchemaValidator\Trait\LengthValidationTrait;
@@ -17,6 +18,7 @@ use function count;
 use function is_array;
 use function is_float;
 use function is_int;
+use function is_resource;
 
 final readonly class ArrayLengthValidator extends AbstractSchemaValidator
 {
@@ -100,6 +102,9 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator
      */
     private function isSameItem(mixed $a, mixed $b): bool
     {
+        $this->ensureJsonCompatible($a);
+        $this->ensureJsonCompatible($b);
+
         if (is_array($a) && is_array($b)) {
             return $this->arrayEqual($a, $b);
         }
@@ -116,6 +121,13 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator
         // 1 !== "1" !== true. Also returns false when one side is an
         // array and the other is a scalar (mixed shapes are never equal).
         return $a === $b;
+    }
+
+    private function ensureJsonCompatible(mixed $value): void
+    {
+        if (is_resource($value)) {
+            throw new InvalidDataTypeException('Resources are not valid JSON values');
+        }
     }
 
     /**

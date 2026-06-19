@@ -8,6 +8,7 @@ use Duyler\OpenApi\Validator\SchemaValidator\ArrayLengthValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\DuplicateItemsError;
+use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MinItemsError;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -410,5 +411,33 @@ class ArrayLengthValidatorTest extends TestCase
         self::assertNotNull($caught, 'Expected DuplicateItemsError for duplicate array.');
         self::assertSame('uniqueItems', $caught->keyword());
         self::assertSame('/uniqueItems', $caught->schemaPath());
+    }
+
+    /**
+     * EI-052: resources are not valid JSON values and must be rejected by
+     * uniqueItems comparison before any later json_encode call.
+     */
+    #[Test]
+    public function unique_items_rejects_resource_items(): void
+    {
+        $schema = new Schema(type: 'array', uniqueItems: true);
+
+        $this->expectException(InvalidDataTypeException::class);
+        $this->expectExceptionMessage('Resources are not valid JSON values');
+
+        $this->validator->validate([fopen('php://memory', 'r'), fopen('php://memory', 'r')], $schema);
+    }
+
+    /**
+     * Regression: arrays without resources must continue to pass uniqueItems.
+     */
+    #[Test]
+    public function unique_items_accepts_valid_scalars_without_resources(): void
+    {
+        $schema = new Schema(type: 'array', uniqueItems: true);
+
+        $this->validator->validate([1, 2, 3], $schema);
+
+        $this->expectNotToPerformAssertions();
     }
 }
