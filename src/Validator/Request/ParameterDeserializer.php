@@ -141,10 +141,6 @@ final readonly class ParameterDeserializer
 
     private function deserializeDeepObject(mixed $value): array
     {
-        if (is_array($value)) {
-            return $value;
-        }
-
         if (is_string($value)) {
             try {
                 /** @var array<int|string, mixed>|int|string|float|bool|null $decoded */
