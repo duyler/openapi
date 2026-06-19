@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Validation;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Error\ValidationContext as ErrorValidationContext;
 use Duyler\OpenApi\Validator\EventDispatchingTrait;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
@@ -76,8 +77,15 @@ final readonly class SchemaValidatorAdapter
         $hasRef = $this->refResolver->schemaHasRef($schema);
 
         if (false === ($hasDiscriminator || $hasRef)) {
+            $context = ErrorValidationContext::create(
+                pool: $this->context->pool,
+                errorFormatter: $this->context->errorFormatter,
+                nullableAsType: $this->context->nullableAsType,
+                emptyArrayStrategy: $this->context->emptyArrayStrategy,
+            );
+
             /** @var array<array-key, mixed>|array-key $data */
-            $this->schemaValidator->validate($data, $schema);
+            $this->schemaValidator->validate($data, $schema, $context);
 
             return;
         }
