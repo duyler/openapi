@@ -78,7 +78,7 @@ final class TypeCoercerTest extends TestCase
     }
 
     #[Test]
-    public function coerce_string_to_integer_with_exponential_notation(): void
+    public function coerce_string_to_integer_with_exponential_notation_returns_string_as_is(): void
     {
         $param = new Parameter(
             name: 'test',
@@ -88,11 +88,12 @@ final class TypeCoercerTest extends TestCase
 
         $result = $this->coercer->coerce('1e10', $param, true);
 
-        $this->assertIsInt($result);
+        $this->assertSame('1e10', $result);
+        $this->assertIsString($result);
     }
 
     #[Test]
-    public function coerce_string_to_integer_with_hex_notation(): void
+    public function coerce_string_to_integer_with_hex_notation_returns_string_as_is(): void
     {
         $param = new Parameter(
             name: 'test',
@@ -102,11 +103,12 @@ final class TypeCoercerTest extends TestCase
 
         $result = $this->coercer->coerce('0x10', $param, true);
 
-        $this->assertIsInt($result);
+        $this->assertSame('0x10', $result);
+        $this->assertIsString($result);
     }
 
     #[Test]
-    public function coerce_empty_string_to_integer(): void
+    public function coerce_empty_string_to_integer_returns_string_as_is(): void
     {
         $param = new Parameter(
             name: 'test',
@@ -116,8 +118,8 @@ final class TypeCoercerTest extends TestCase
 
         $result = $this->coercer->coerce('', $param, true);
 
-        $this->assertSame(0, $result);
-        $this->assertIsInt($result);
+        $this->assertSame('', $result);
+        $this->assertIsString($result);
     }
 
     #[Test]
@@ -356,7 +358,7 @@ final class TypeCoercerTest extends TestCase
     }
 
     #[Test]
-    public function coerce_float_string_to_integer(): void
+    public function coerce_float_string_to_integer_returns_string_as_is(): void
     {
         $param = new Parameter(
             name: 'test',
@@ -366,8 +368,8 @@ final class TypeCoercerTest extends TestCase
 
         $result = $this->coercer->coerce('123.45', $param, true);
 
-        $this->assertSame(123, $result);
-        $this->assertIsInt($result);
+        $this->assertSame('123.45', $result);
+        $this->assertIsString($result);
     }
 
     #[Test]
@@ -399,7 +401,7 @@ final class TypeCoercerTest extends TestCase
     }
 
     #[Test]
-    public function return_coerced_value_when_union_type_matches_integer(): void
+    public function return_boolean_when_union_type_integer_fails_and_boolean_matches(): void
     {
         $param = new Parameter(
             name: 'test',
@@ -409,8 +411,7 @@ final class TypeCoercerTest extends TestCase
 
         $result = $this->coercer->coerce('not-a-number', $param, true);
 
-        $this->assertSame(0, $result);
-        $this->assertIsInt($result);
+        $this->assertTrue($result);
     }
 
     #[Test]
@@ -586,7 +587,7 @@ final class TypeCoercerTest extends TestCase
     }
 
     #[Test]
-    public function return_integer_when_union_type_integer_matches_string(): void
+    public function return_boolean_when_union_type_integer_fails_for_non_integer_string(): void
     {
         $param = new Parameter(
             name: 'test',
@@ -596,8 +597,7 @@ final class TypeCoercerTest extends TestCase
 
         $result = $this->coercer->coerce('abc', $param, true);
 
-        $this->assertSame(0, $result);
-        $this->assertIsInt($result);
+        $this->assertTrue($result);
     }
 
     #[Test]
@@ -858,7 +858,7 @@ final class TypeCoercerTest extends TestCase
     }
 
     #[Test]
-    public function coerce_non_strict_mode_returns_zero_for_invalid_number(): void
+    public function coerce_non_strict_mode_returns_value_as_is_for_invalid_number(): void
     {
         $param = new Parameter(
             name: 'test',
@@ -868,11 +868,11 @@ final class TypeCoercerTest extends TestCase
 
         $result = $this->coercer->coerce('not-a-number', $param, true, false);
 
-        $this->assertSame(0.0, $result);
+        $this->assertSame('not-a-number', $result);
     }
 
     #[Test]
-    public function coerce_non_strict_mode_returns_zero_for_invalid_integer(): void
+    public function coerce_non_strict_mode_returns_value_as_is_for_invalid_integer(): void
     {
         $param = new Parameter(
             name: 'test',
@@ -882,6 +882,6 @@ final class TypeCoercerTest extends TestCase
 
         $result = $this->coercer->coerce('not-a-number', $param, true, false);
 
-        $this->assertSame(0, $result);
+        $this->assertSame('not-a-number', $result);
     }
 }

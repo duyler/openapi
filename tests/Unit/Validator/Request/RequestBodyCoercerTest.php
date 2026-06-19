@@ -214,13 +214,13 @@ final class RequestBodyCoercerTest extends TestCase
     }
 
     #[Test]
-    public function coerce_non_strict_mode_returns_zero_for_invalid_number(): void
+    public function coerce_non_strict_mode_returns_value_as_is_for_invalid_number(): void
     {
         $schema = new Schema(type: 'number');
 
         $result = $this->coercer->coerce('not-a-number', new CoercionContext(schema: $schema, enabled: true, strict: false));
 
-        $this->assertSame(0.0, $result);
+        $this->assertSame('not-a-number', $result);
     }
 
     #[Test]
@@ -286,13 +286,14 @@ final class RequestBodyCoercerTest extends TestCase
     }
 
     #[Test]
-    public function coerce_float_to_integer(): void
+    public function coerce_float_to_integer_returns_float_as_is_when_fractional(): void
     {
         $schema = new Schema(type: 'integer');
 
         $result = $this->coercer->coerce(3.14, new CoercionContext(schema: $schema, enabled: true, strict: false));
 
-        $this->assertSame(3, $result);
+        $this->assertSame(3.14, $result);
+        $this->assertIsFloat($result);
     }
 
     #[Test]
@@ -450,7 +451,7 @@ final class RequestBodyCoercerTest extends TestCase
             'string integer' => ['42', 42],
             'string zero' => ['0', 0],
             'string negative' => ['-10', -10],
-            'float value' => [3.14, 3],
+            'float value fractional returns as is' => [3.14, 3.14],
             'bool true' => [true, 1],
             'bool false' => [false, 0],
             'already integer' => [99, 99],
@@ -459,7 +460,7 @@ final class RequestBodyCoercerTest extends TestCase
 
     #[DataProvider('coerceToIntegerProvider')]
     #[Test]
-    public function coerce_to_integer_with_data_provider(mixed $input, int $expected): void
+    public function coerce_to_integer_with_data_provider(mixed $input, mixed $expected): void
     {
         $schema = new Schema(type: 'integer');
 

@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Response;
 
 use Duyler\OpenApi\Schema\Model\Headers;
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Coercion\IntegerStringNormalizer;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Request\HeaderFinder;
@@ -15,8 +16,6 @@ use function array_filter;
 use function array_map;
 use function floatval;
 use function in_array;
-use function intval;
-use function is_numeric;
 use function strtolower;
 
 final readonly class ResponseHeadersValidator
@@ -81,16 +80,27 @@ final readonly class ResponseHeadersValidator
 
     private function coerceToInteger(string $value, string $headerName): int
     {
-        if (false === is_numeric($value)) {
+        if (1 !== preg_match('/^[+-]?\d+$/', $value)) {
             throw new TypeMismatchError(
-                'integer',
-                'string',
-                $headerName,
-                '#/type',
+                expected: 'integer',
+                actual: $value,
+                dataPath: $headerName,
+                schemaPath: '#/type',
             );
         }
 
-        return intval($value);
+        $coerced = (int) $value;
+
+        if ((string) $coerced !== IntegerStringNormalizer::canonicalize($value)) {
+            throw new TypeMismatchError(
+                expected: 'integer',
+                actual: $value,
+                dataPath: $headerName,
+                schemaPath: '#/type',
+            );
+        }
+
+        return $coerced;
     }
 
     private function coerceToNumber(string $value, string $headerName): float

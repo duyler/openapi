@@ -68,34 +68,36 @@ final class ResponseTypeCoercerTest extends TestCase
     }
 
     #[Test]
-    public function coerce_string_to_integer_with_exponential_notation(): void
+    public function coerce_string_to_integer_with_exponential_notation_returns_string_as_is(): void
     {
         $schema = new Schema(type: 'integer');
 
         $result = $this->coercer->coerce('1e10', new CoercionContext(schema: $schema, enabled: true));
 
-        $this->assertIsInt($result);
+        $this->assertSame('1e10', $result);
+        $this->assertIsString($result);
     }
 
     #[Test]
-    public function coerce_string_to_integer_with_hex_notation(): void
+    public function coerce_string_to_integer_with_hex_notation_returns_string_as_is(): void
     {
         $schema = new Schema(type: 'integer');
 
         $result = $this->coercer->coerce('0x10', new CoercionContext(schema: $schema, enabled: true));
 
-        $this->assertIsInt($result);
+        $this->assertSame('0x10', $result);
+        $this->assertIsString($result);
     }
 
     #[Test]
-    public function coerce_empty_string_to_integer(): void
+    public function coerce_empty_string_to_integer_returns_string_as_is(): void
     {
         $schema = new Schema(type: 'integer');
 
         $result = $this->coercer->coerce('', new CoercionContext(schema: $schema, enabled: true));
 
-        $this->assertSame(0, $result);
-        $this->assertIsInt($result);
+        $this->assertSame('', $result);
+        $this->assertIsString($result);
     }
 
     #[Test]
@@ -215,14 +217,14 @@ final class ResponseTypeCoercerTest extends TestCase
     }
 
     #[Test]
-    public function coerce_float_string_to_integer(): void
+    public function coerce_float_string_to_integer_returns_string_as_is(): void
     {
         $schema = new Schema(type: 'integer');
 
         $result = $this->coercer->coerce('123.45', new CoercionContext(schema: $schema, enabled: true));
 
-        $this->assertSame(123, $result);
-        $this->assertIsInt($result);
+        $this->assertSame('123.45', $result);
+        $this->assertIsString($result);
     }
 
     #[Test]
@@ -246,14 +248,13 @@ final class ResponseTypeCoercerTest extends TestCase
     }
 
     #[Test]
-    public function return_coerced_value_when_union_type_matches_integer(): void
+    public function return_string_when_first_union_type_integer_fails_and_boolean_matches(): void
     {
         $schema = new Schema(type: ['integer', 'boolean']);
 
         $result = $this->coercer->coerce('not-a-number', new CoercionContext(schema: $schema, enabled: true));
 
-        $this->assertSame(0, $result);
-        $this->assertIsInt($result);
+        $this->assertTrue($result);
     }
 
     #[Test]
@@ -381,14 +382,13 @@ final class ResponseTypeCoercerTest extends TestCase
     }
 
     #[Test]
-    public function return_integer_when_union_type_integer_matches_string(): void
+    public function return_boolean_when_union_type_integer_fails_for_non_integer_string(): void
     {
         $schema = new Schema(type: ['integer', 'boolean']);
 
         $result = $this->coercer->coerce('abc', new CoercionContext(schema: $schema, enabled: true));
 
-        $this->assertSame(0, $result);
-        $this->assertIsInt($result);
+        $this->assertTrue($result);
     }
 
     #[Test]
@@ -727,18 +727,17 @@ final class ResponseTypeCoercerTest extends TestCase
             'string integer' => ['42', 42],
             'string zero' => ['0', 0],
             'string negative' => ['-10', -10],
-            'float value' => [3.14, 3],
+            'float value fractional returns as is' => [3.14, 3.14],
             'float zero' => [0.0, 0],
             'bool true' => [true, 1],
             'bool false' => [false, 0],
-            'empty string' => ['', 0],
             'already integer' => [99, 99],
         ];
     }
 
     #[DataProvider('coerceToIntegerProvider')]
     #[Test]
-    public function coerce_to_integer_with_data_provider(mixed $input, int $expected): void
+    public function coerce_to_integer_with_data_provider(mixed $input, mixed $expected): void
     {
         $schema = new Schema(type: 'integer');
 
@@ -964,14 +963,14 @@ final class ResponseTypeCoercerTest extends TestCase
     }
 
     #[Test]
-    public function coerce_float_to_integer(): void
+    public function coerce_float_to_integer_returns_float_as_is_when_fractional(): void
     {
         $schema = new Schema(type: 'integer');
 
         $result = $this->coercer->coerce(42.5, new CoercionContext(schema: $schema, enabled: true));
 
-        $this->assertSame(42, $result);
-        $this->assertIsInt($result);
+        $this->assertSame(42.5, $result);
+        $this->assertIsFloat($result);
     }
 
     #[Test]

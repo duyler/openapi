@@ -934,11 +934,128 @@ final class ResponseHeadersValidatorTest extends TestCase
     }
 
     #[Test]
-    public function coerce_integer_with_float_value(): void
+    public function coerce_integer_with_float_value_throws_error(): void
     {
         $headers = ['X-Value' => '30.5'];
         $headerSchemas = new Headers([
             'X-Value' => new Header(
+                schema: new Schema(type: 'integer'),
+            ),
+        ]);
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate($headers, $headerSchemas);
+    }
+
+    #[Test]
+    public function coerce_integer_header_scientific_notation_throws_error(): void
+    {
+        $headers = ['X-Count' => '1e5'];
+        $headerSchemas = new Headers([
+            'X-Count' => new Header(
+                schema: new Schema(type: 'integer'),
+            ),
+        ]);
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate($headers, $headerSchemas);
+    }
+
+    #[Test]
+    public function coerce_integer_header_trailing_chars_throws_error(): void
+    {
+        $headers = ['X-Count' => '12abc'];
+        $headerSchemas = new Headers([
+            'X-Count' => new Header(
+                schema: new Schema(type: 'integer'),
+            ),
+        ]);
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate($headers, $headerSchemas);
+    }
+
+    #[Test]
+    public function coerce_integer_header_hex_notation_throws_error(): void
+    {
+        $headers = ['X-Count' => '0x10'];
+        $headerSchemas = new Headers([
+            'X-Count' => new Header(
+                schema: new Schema(type: 'integer'),
+            ),
+        ]);
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate($headers, $headerSchemas);
+    }
+
+    #[Test]
+    public function coerce_integer_header_empty_value_throws_error(): void
+    {
+        $headers = ['X-Count' => ''];
+        $headerSchemas = new Headers([
+            'X-Count' => new Header(
+                schema: new Schema(type: 'integer'),
+            ),
+        ]);
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate($headers, $headerSchemas);
+    }
+
+    #[Test]
+    public function coerce_integer_header_positive_signed_integer(): void
+    {
+        $headers = ['X-Count' => '+5'];
+        $headerSchemas = new Headers([
+            'X-Count' => new Header(
+                schema: new Schema(type: 'integer'),
+            ),
+        ]);
+
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function coerce_integer_header_negative_signed_integer(): void
+    {
+        $headers = ['X-Count' => '-5'];
+        $headerSchemas = new Headers([
+            'X-Count' => new Header(
+                schema: new Schema(type: 'integer'),
+            ),
+        ]);
+
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function coerce_integer_header_leading_zero_value(): void
+    {
+        $headers = ['X-Count' => '08'];
+        $headerSchemas = new Headers([
+            'X-Count' => new Header(
                 schema: new Schema(type: 'integer'),
             ),
         ]);
