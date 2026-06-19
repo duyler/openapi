@@ -11,15 +11,11 @@ use function preg_match;
 
 final readonly class UuidValidator extends AbstractStringFormatValidator
 {
-    /**
-     * RFC 4122 §4.1.7 nil UUID: the special UUID with all 128 bits set to
-     * zero. It has version nibble 0 and variant nibble 0, so the standard
-     * UUID_PATTERN (which requires version 1-5 and variant 8/9/a/b) does
-     * not match it. It is validated explicitly before applying the pattern.
-     */
     private const string NIL_UUID = '00000000-0000-0000-0000-000000000000';
 
-    private const string UUID_PATTERN = '/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/';
+    private const string MAX_UUID = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+
+    private const string UUID_PATTERN = '/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/';
 
     #[Override]
     protected function getFormatName(): string
@@ -30,7 +26,7 @@ final readonly class UuidValidator extends AbstractStringFormatValidator
     #[Override]
     protected function validateString(string $data): void
     {
-        if ($data === self::NIL_UUID) {
+        if (self::NIL_UUID === $data || self::MAX_UUID === $data) {
             return;
         }
 
