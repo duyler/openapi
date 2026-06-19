@@ -35,7 +35,7 @@ final class ValidationContext
         return new self(
             breadcrumbs: BreadcrumbManager::create(),
             pool: $pool,
-            errorFormatter: $errorFormatter ?? SimpleFormatter::shared(),
+            errorFormatter: $errorFormatter ?? new SimpleFormatter(),
             nullableAsType: $nullableAsType,
             emptyArrayStrategy: $emptyArrayStrategy,
             mode: $mode,

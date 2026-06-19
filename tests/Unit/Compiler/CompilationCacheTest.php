@@ -428,11 +428,11 @@ final class CompilationCacheTest extends TestCase
     }
 
     /**
-     * CP-06: CompilationCache uses a hardcoded TTL of 86400 seconds (24h).
-     * Verify that set() passes this exact value to expiresAfter().
+     * EI-064: CompilationCache uses a default TTL of 86400 seconds (24h).
+     * Verify that set() passes this value to expiresAfter() by default.
      */
     #[Test]
-    public function set_uses_hardcoded_ttl_of_86400_seconds(): void
+    public function set_uses_default_ttl_of_86400_seconds(): void
     {
         $pool = $this->createMock(CacheItemPoolInterface::class);
 
@@ -445,7 +445,7 @@ final class CompilationCacheTest extends TestCase
         $cacheItem
             ->expects($this->once())
             ->method('expiresAfter')
-            ->with(86400)
+            ->with(CompilationCache::DEFAULT_TTL)
             ->willReturnSelf();
 
         $pool
@@ -463,17 +463,50 @@ final class CompilationCacheTest extends TestCase
     }
 
     /**
-     * CP-06: The TTL is exactly 86400 (24 hours), matching the constant
-     * DEFAULT_CACHE_TTL. This locks the value against accidental changes.
+     * EI-064: Custom TTL passed to the constructor is used by set().
      */
     #[Test]
-    public function ttl_value_is_documented_as_86400_seconds(): void
+    public function set_uses_custom_ttl_from_constructor(): void
+    {
+        $pool = $this->createMock(CacheItemPoolInterface::class);
+
+        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem
+            ->expects($this->once())
+            ->method('set')
+            ->with('<?php return true;')
+            ->willReturnSelf();
+        $cacheItem
+            ->expects($this->once())
+            ->method('expiresAfter')
+            ->with(3600)
+            ->willReturnSelf();
+
+        $pool
+            ->expects($this->once())
+            ->method('getItem')
+            ->willReturn($cacheItem);
+        $pool
+            ->expects($this->once())
+            ->method('save')
+            ->with($cacheItem);
+
+        $cache = new CompilationCache($pool, ttl: 3600);
+
+        $cache->set('test_hash', '<?php return true;');
+    }
+
+    /**
+     * EI-064: The default TTL is publicly exposed as DEFAULT_TTL.
+     */
+    #[Test]
+    public function default_ttl_constant_is_public_and_equals_86400(): void
     {
         $reflection = new ReflectionClass(CompilationCache::class);
         $constants = $reflection->getConstants();
 
-        self::assertArrayHasKey('DEFAULT_CACHE_TTL', $constants);
-        self::assertSame(86400, $constants['DEFAULT_CACHE_TTL']);
+        self::assertArrayHasKey('DEFAULT_TTL', $constants);
+        self::assertSame(86400, $constants['DEFAULT_TTL']);
     }
 
     /**

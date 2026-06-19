@@ -12,6 +12,8 @@ use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 
+use ReflectionClass;
+
 use function count;
 
 #[CoversClass(StreamingContentParser::class)]
@@ -739,17 +741,93 @@ final class StreamingContentParserTest extends TestCase
     }
 
     #[Test]
-    public function parse_stream_json_seq_throws_on_line_exceeding_max_length(): void
+    public function parse_stream_json_seq_throws_on_record_exceeding_custom_max_record_length(): void
     {
-        $body = str_repeat('x', 1_048_577);
+        $body = str_repeat('x', 1025);
 
         $factory = new Psr17Factory();
         $stream = $factory->createStream($body);
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('exceeds maximum allowed length');
+        $parser = new StreamingContentParser(maxRecordLength: 1024);
 
-        $this->parser->parseStream($stream, 'application/json-seq');
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('JSON sequence record exceeds maximum allowed length of 1024 bytes');
+
+        $parser->parseStream($stream, 'application/json-seq');
+    }
+
+    #[Test]
+    public function parse_stream_json_seq_allows_record_at_default_max_record_length(): void
+    {
+        $record = str_repeat('x', 5 * 1024 * 1024); // 5 MB
+        $body = "\x1E" . $record . "\x1E";
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $result = $this->parser->parseStream($stream, 'application/json-seq');
+
+        self::assertCount(1, $result);
+    }
+
+    #[Test]
+    public function default_constructor_limits(): void
+    {
+        $reflection = new ReflectionClass($this->parser);
+
+        $maxLineLength = $reflection->getProperty('maxLineLength')->getValue($this->parser);
+        $maxRecordLength = $reflection->getProperty('maxRecordLength')->getValue($this->parser);
+
+        self::assertSame(1_048_576, $maxLineLength);
+        self::assertSame(10_485_760, $maxRecordLength);
+    }
+
+    #[Test]
+    public function parse_json_lines_strips_utf8_bom(): void
+    {
+        $body = "\xEF\xBB\xBF{\"id\":1}\n{\"id\":2}";
+
+        $result = $this->parser->parseJsonLines($body);
+
+        self::assertCount(2, $result);
+        self::assertSame(['id' => 1], $result[0]);
+        self::assertSame(['id' => 2], $result[1]);
+    }
+
+    #[Test]
+    public function parse_server_sent_events_strips_utf8_bom(): void
+    {
+        $body = "\xEF\xBB\xBFevent: msg\ndata: {}\n\n";
+
+        $result = $this->parser->parseServerSentEvents($body);
+
+        self::assertCount(1, $result);
+        self::assertSame('msg', $result[0]['event']);
+        self::assertSame([], $result[0]['data']);
+    }
+
+    #[Test]
+    public function parse_json_seq_strips_utf8_bom(): void
+    {
+        $body = "\xEF\xBB\xBF\x1E{\"id\":1}\x1E{\"id\":2}";
+
+        $result = $this->parser->parseJsonSeq($body);
+
+        self::assertCount(2, $result);
+        self::assertSame(['id' => 1], $result[0]);
+        self::assertSame(['id' => 2], $result[1]);
+    }
+
+    #[Test]
+    public function parse_json_lines_without_bom_keeps_behavior(): void
+    {
+        $body = "{\"id\":1}\n{\"id\":2}";
+
+        $result = $this->parser->parseJsonLines($body);
+
+        self::assertCount(2, $result);
+        self::assertSame(['id' => 1], $result[0]);
+        self::assertSame(['id' => 2], $result[1]);
     }
 
     #[Test]

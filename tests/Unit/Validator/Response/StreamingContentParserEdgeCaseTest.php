@@ -133,10 +133,12 @@ final class StreamingContentParserEdgeCaseTest extends TestCase
         $factory = new Psr17Factory();
         $stream = $factory->createStream($oversizeRecord);
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Stream line exceeds maximum allowed length of 1048576 bytes');
+        $parser = new StreamingContentParser(maxRecordLength: 1_048_576);
 
-        $this->parser->parseStream($stream, 'application/json-seq');
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('JSON sequence record exceeds maximum allowed length of 1048576 bytes');
+
+        $parser->parseStream($stream, 'application/json-seq');
     }
 
     #[Test]

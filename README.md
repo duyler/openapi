@@ -592,7 +592,11 @@ $compiler = new ValidatorCompiler();
 $code = $compiler->compileWithCache($schema, 'UserValidator', $compilationCache);
 ```
 
-`CompilationCache` uses a PSR-6 cache pool and generates a SHA-256 hash of the schema to use as the cache key. Cached entries expire after 24 hours (86400 seconds). This TTL is hardcoded and not configurable.
+`CompilationCache` uses a PSR-6 cache pool and generates a SHA-256 hash of the schema to use as the cache key. Cached entries expire after the configured TTL (default: 24 hours / 86400 seconds). Pass a custom TTL to the `CompilationCache` constructor to override:
+
+```php
+$compilationCache = new CompilationCache($pool, ttl: 3600); // 1-hour TTL
+```
 
 #### Compiler Limitations
 

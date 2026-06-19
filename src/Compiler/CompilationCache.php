@@ -27,7 +27,7 @@ use const JSON_UNESCAPED_UNICODE;
 
 final class CompilationCache implements CompilationCacheInterface
 {
-    private const int DEFAULT_CACHE_TTL = 86400;
+    public const int DEFAULT_TTL = 86400;
 
     private const string CIRCULAR_REF_KEY = '__circular_ref__';
 
@@ -37,6 +37,7 @@ final class CompilationCache implements CompilationCacheInterface
     public function __construct(
         private readonly CacheItemPoolInterface $pool,
         private readonly string $namespace = 'validator_compilation',
+        private readonly int $ttl = self::DEFAULT_TTL,
     ) {
         /** @var WeakMap<Schema, string> */
         $this->hashCache = new WeakMap();
@@ -65,7 +66,7 @@ final class CompilationCache implements CompilationCacheInterface
     {
         $item = $this->pool->getItem($schemaHash);
         $item->set($compiledCode);
-        $item->expiresAfter(self::DEFAULT_CACHE_TTL);
+        $item->expiresAfter($this->ttl);
 
         $this->pool->save($item);
     }

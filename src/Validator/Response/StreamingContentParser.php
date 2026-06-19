@@ -26,7 +26,9 @@ final readonly class StreamingContentParser
     private const string RECORD_SEPARATOR = "\x1E";
     private const int JSON_MAX_DEPTH = 512;
     private const int STREAM_CHUNK_SIZE = 8192;
-    private const int MAX_LINE_LENGTH = 1_048_576;
+    private const string UTF8_BOM = "\xEF\xBB\xBF";
+    private const int DEFAULT_MAX_LINE_LENGTH = 1_048_576;
+    private const int DEFAULT_MAX_RECORD_LENGTH = 10_485_760;
 
     /**
      * W3C Server-Sent Events default event type used when the event field is absent.
@@ -51,6 +53,8 @@ final readonly class StreamingContentParser
 
     public function __construct(
         private readonly LoggerInterface $logger = new NullLogger(),
+        private readonly int $maxLineLength = self::DEFAULT_MAX_LINE_LENGTH,
+        private readonly int $maxRecordLength = self::DEFAULT_MAX_RECORD_LENGTH,
     ) {}
 
     /**
@@ -92,6 +96,8 @@ final readonly class StreamingContentParser
      */
     public function parseJsonLines(string $body): array
     {
+        $body = $this->stripBom($body);
+
         $lines = preg_split('/\r?\n/', trim($body));
         assert(is_array($lines));
         /** @var list<array<int|string, mixed>|null> $items */
@@ -111,6 +117,8 @@ final readonly class StreamingContentParser
      */
     public function parseServerSentEvents(string $body): array
     {
+        $body = $this->stripBom($body);
+
         /** @var list<array<int|string, mixed>|null> $events */
         $events = [];
         $currentEvent = [];
@@ -158,6 +166,8 @@ final readonly class StreamingContentParser
      */
     public function parseJsonSeq(string $body): array
     {
+        $body = $this->stripBom($body);
+
         /** @var list<array<int|string, mixed>|null> $items */
         $items = [];
         $pos = 0;
@@ -184,6 +194,15 @@ final readonly class StreamingContentParser
         }
 
         return $items;
+    }
+
+    private function stripBom(string $body): string
+    {
+        if (str_starts_with($body, self::UTF8_BOM)) {
+            return substr($body, strlen(self::UTF8_BOM));
+        }
+
+        return $body;
     }
 
     /**
@@ -250,10 +269,10 @@ final readonly class StreamingContentParser
 
             $buffer .= $chunk;
 
-            if (strlen($buffer) > self::MAX_LINE_LENGTH) {
+            if (strlen($buffer) > $this->maxLineLength) {
                 throw new RuntimeException(sprintf(
                     'Stream line exceeds maximum allowed length of %d bytes',
-                    self::MAX_LINE_LENGTH,
+                    $this->maxLineLength,
                 ));
             }
 
@@ -291,10 +310,10 @@ final readonly class StreamingContentParser
 
             $buffer .= $chunk;
 
-            if (strlen($buffer) > self::MAX_LINE_LENGTH) {
+            if (strlen($buffer) > $this->maxLineLength) {
                 throw new RuntimeException(sprintf(
                     'Stream line exceeds maximum allowed length of %d bytes',
-                    self::MAX_LINE_LENGTH,
+                    $this->maxLineLength,
                 ));
             }
 
@@ -371,10 +390,10 @@ final readonly class StreamingContentParser
 
             $buffer .= $chunk;
 
-            if (strlen($buffer) > self::MAX_LINE_LENGTH) {
+            if (strlen($buffer) > $this->maxRecordLength) {
                 throw new RuntimeException(sprintf(
-                    'Stream line exceeds maximum allowed length of %d bytes',
-                    self::MAX_LINE_LENGTH,
+                    'JSON sequence record exceeds maximum allowed length of %d bytes',
+                    $this->maxRecordLength,
                 ));
             }
 

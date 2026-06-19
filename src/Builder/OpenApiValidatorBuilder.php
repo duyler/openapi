@@ -188,7 +188,7 @@ final readonly class OpenApiValidatorBuilder
 
         $pool = $this->config->pool ?? new ValidatorPool();
         $formatRegistry = $this->config->formatRegistry ?? BuiltinFormats::create();
-        $errorFormatter = $this->config->errorFormatter ?? SimpleFormatter::shared();
+        $errorFormatter = $this->config->errorFormatter ?? new SimpleFormatter();
         $pathRegexCache = new PathRegexCache();
         $regexValidator = new RegexValidator();
         $pathFinder = new PathFinder($document, $pathRegexCache);

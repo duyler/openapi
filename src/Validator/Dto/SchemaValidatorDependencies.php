@@ -39,7 +39,7 @@ final readonly class SchemaValidatorDependencies
         ?BodyParser $bodyParser = null,
     ) {
         $this->logger = $logger ?? new NullLogger();
-        $this->errorFormatter = $errorFormatter ?? SimpleFormatter::shared();
+        $this->errorFormatter = $errorFormatter ?? new SimpleFormatter();
         $this->formatRegistry = $formatRegistry ?? new FormatRegistry();
         $this->bodyParser = $bodyParser ?? new BodyParser(
             jsonParser: new JsonBodyParser(),

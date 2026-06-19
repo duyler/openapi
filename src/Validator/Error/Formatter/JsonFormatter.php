@@ -9,7 +9,6 @@ use Override;
 use ValueError;
 
 use function count;
-use function is_array;
 
 use const JSON_PRETTY_PRINT;
 use const JSON_UNESCAPED_SLASHES;
@@ -20,16 +19,7 @@ final readonly class JsonFormatter implements ErrorFormatterInterface
     #[Override]
     public function format(ValidationErrorInterface $error): string
     {
-        $data = [
-            'breadcrumb' => $error->dataPath(),
-            'message' => $error->message(),
-            'type' => $error->getType(),
-            'details' => $this->getDetails($error),
-        ];
-
-        if (null !== $error->suggestion()) {
-            $data['suggestion'] = $error->suggestion();
-        }
+        $data = $this->buildErrorData($error);
 
         $result = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
@@ -43,17 +33,14 @@ final readonly class JsonFormatter implements ErrorFormatterInterface
     #[Override]
     public function formatMultiple(array $errors): string
     {
-        $decodedErrors = [];
+        $errorsData = [];
+
         foreach ($errors as $error) {
-            $decoded = json_decode($this->format($error), true);
-            if (false === is_array($decoded)) {
-                throw new ValueError('Failed to decode formatted error to array');
-            }
-            $decodedErrors[] = $decoded;
+            $errorsData[] = $this->buildErrorData($error);
         }
 
         $data = [
-            'errors' => $decodedErrors,
+            'errors' => $errorsData,
             'count' => count($errors),
         ];
 
@@ -64,6 +51,25 @@ final readonly class JsonFormatter implements ErrorFormatterInterface
         }
 
         return $result;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildErrorData(ValidationErrorInterface $error): array
+    {
+        $data = [
+            'breadcrumb' => $error->dataPath(),
+            'message' => $error->message(),
+            'type' => $error->getType(),
+            'details' => $this->getDetails($error),
+        ];
+
+        if (null !== $error->suggestion()) {
+            $data['suggestion'] = $error->suggestion();
+        }
+
+        return $data;
     }
 
     /**
