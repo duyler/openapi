@@ -8,13 +8,20 @@ use Duyler\OpenApi\Compiler\Exception\UnsupportedKeywordException;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
+use InvalidArgumentException;
 use RuntimeException;
 
+use function addslashes;
 use function array_keys;
+use function array_pop;
 use function count;
+use function explode;
+use function implode;
 use function in_array;
 use function is_array;
+use function preg_match;
 use function sprintf;
+use function var_export;
 
 /**
  * @experimental
@@ -23,8 +30,12 @@ final readonly class ValidatorCompiler
 {
     private const int REF_COMPONENTS_SCHEMAS_PREFIX_LENGTH = 21;
 
+    private const string CLASS_NAME_PATTERN = '/^[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*$/';
+
     public function compile(Schema $schema, string $className): string
     {
+        $this->validateClassName($className);
+
         $unsupported = $this->detectUnsupportedKeywords($schema);
 
         if ([] !== $unsupported) {
@@ -67,11 +78,33 @@ final readonly class ValidatorCompiler
         return $code;
     }
 
+    private function validateClassName(string $className): void
+    {
+        $parts = explode('\\', $className);
+
+        foreach ($parts as $part) {
+            if (1 !== preg_match(self::CLASS_NAME_PATTERN, $part)) {
+                throw new InvalidArgumentException(
+                    sprintf('Invalid class name part: "%s"', $part),
+                );
+            }
+        }
+    }
+
     private function generateCode(Schema $schema, string $className): string
     {
+        $parts = explode('\\', $className);
+        $shortName = array_pop($parts);
+        $namespace = implode('\\', $parts);
+
         $code = "<?php\n\n";
         $code .= "declare(strict_types=1);\n\n";
-        $code .= sprintf("readonly class %s\n{\n", $className);
+
+        if ('' !== $namespace) {
+            $code .= sprintf("namespace %s;\n\n", $namespace);
+        }
+
+        $code .= sprintf("readonly class %s\n{\n", $shortName);
         $code .= '    public function validate(mixed $data): void' . "\n";
         $code .= "    {\n";
 
@@ -301,14 +334,13 @@ final readonly class ValidatorCompiler
         }
 
         $escapedVar = '$data' === $dataVar ? "\$data" : $dataVar;
-        $safeVarForError = str_replace("'", "\'", $dataVar);
+        $safeVarForError = addslashes($dataVar);
         $code = sprintf("        if (false === is_array(%s)) {\n", $escapedVar);
         $code .= sprintf("            throw new \\RuntimeException('Expected object for %s');\n", $safeVarForError);
         $code .= "        }\n\n";
 
         foreach ($schema->properties as $propertyName => $propertySchema) {
-            $propertyVar = sprintf('%s[\'%s\']', $dataVar, $propertyName);
-            $code .= $this->generatePropertyValidation($propertySchema, $propertyName, $propertyVar);
+            $code .= $this->generatePropertyValidation($propertySchema, (string) $propertyName, $dataVar);
         }
 
         if (null !== $schema->required && [] !== $schema->required) {
@@ -325,13 +357,16 @@ final readonly class ValidatorCompiler
     private function generatePropertyValidation(
         Schema $propertySchema,
         string $propertyName,
-        string $propertyVar,
+        string $dataVar,
     ): string {
         $code = '';
 
         if (null === $propertySchema->type) {
             return $code;
         }
+
+        $safePropertyName = var_export($propertyName, true);
+        $propertyVar = $dataVar . '[' . $safePropertyName . ']';
 
         $code .= sprintf("        if (isset(%s)) {\n", $propertyVar);
 
@@ -351,9 +386,12 @@ final readonly class ValidatorCompiler
     {
         $code = '';
         foreach ($required as $propertyName) {
-            $propertyNameStr = (string) $propertyName;
-            $code .= sprintf("        if (false === array_key_exists('%s', %s)) {\n", $propertyNameStr, $dataVar);
-            $code .= sprintf("            throw new \\RuntimeException('Required property missing: %s');\n", $propertyNameStr);
+            $safeName = var_export($propertyName, true);
+            $code .= sprintf("        if (false === array_key_exists(%s, %s)) {\n", $safeName, $dataVar);
+            $code .= sprintf(
+                "            throw new \\RuntimeException('Required property missing: %s');\n",
+                addslashes($propertyName),
+            );
             $code .= "        }\n";
         }
 
@@ -374,7 +412,7 @@ final readonly class ValidatorCompiler
             return '';
         }
 
-        $safeVarName = str_replace("'", "\'", $valueVar);
+        $safeVarName = addslashes($valueVar);
 
         if (1 === count($checks)) {
             $code = sprintf("        if (false === %s) {\n", $checks[0]);

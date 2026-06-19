@@ -12,6 +12,7 @@ use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -32,6 +33,8 @@ use DeepNestInvalidValidator;
 use DeepNestValidValidator;
 use TenLevelsValidator;
 use TwentyLevelsValidator;
+
+use const TOKEN_PARSE;
 
 final class ValidatorCompilerTest extends TestCase
 {
@@ -1705,6 +1708,267 @@ final class ValidatorCompilerTest extends TestCase
         $validator->validate($this->buildNestedPayload($depth, 7));
 
         self::assertTrue(class_exists('TwentyLevelsValidator', false));
+    }
+
+    /**
+     * EI-026 (Critical, security): property names come from untrusted JSON
+     * strings. A name containing an apostrophe (`it's`) previously produced
+     * `$data['it's']` in the generated code — a PHP syntax error and a
+     * potential code-injection vector. The compiler must now emit a valid
+     * single-quoted literal built via `var_export`, so the generated source
+     * parses cleanly.
+     */
+    #[Test]
+    public function compile_with_apostrophe_in_property_name_generates_parseable_php(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ["it's" => new Schema(type: 'string')],
+        );
+
+        $code = $compiler->compile($schema, 'ApostrophePropertyValidator');
+
+        token_get_all($code, TOKEN_PARSE);
+
+        $this->assertStringContainsString('$data[\'it\\\'s\']', $code);
+        $this->assertStringNotContainsString('$data[\'it\'s\']', $code);
+    }
+
+    /**
+     * EI-026 (Critical, security): the required-property check used to
+     * interpolate the property name into both the `array_key_exists` key
+     * argument and the exception message. With an apostrophe in the name
+     * this broke both the literal key and the message string. After the
+     * fix the key uses `var_export` and the message uses `addslashes`, so
+     * the generated source parses cleanly.
+     */
+    #[Test]
+    public function compile_with_apostrophe_in_required_property_generates_parseable_php(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ["it's" => new Schema(type: 'string')],
+            required: ["it's"],
+        );
+
+        $code = $compiler->compile($schema, 'ApostropheRequiredValidator');
+
+        token_get_all($code, TOKEN_PARSE);
+
+        $this->assertStringContainsString('array_key_exists(\'it\\\'s\'', $code);
+        $this->assertStringContainsString('Required property missing: it\\\'s', $code);
+    }
+
+    /**
+     * EI-026 (Critical, security): a deeply nested object with an apostrophe
+     * in a property name must still produce parseable PHP at every nesting
+     * level, because each level rebuilds the property access via
+     * `var_export`.
+     */
+    #[Test]
+    public function compile_with_apostrophe_in_nested_property_name_generates_parseable_php(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                "it's" => new Schema(
+                    type: 'object',
+                    properties: ["it's" => new Schema(type: 'string')],
+                ),
+            ],
+        );
+
+        $code = $compiler->compile($schema, 'NestedApostropheValidator');
+
+        token_get_all($code, TOKEN_PARSE);
+
+        $this->assertStringContainsString('$data[\'it\\\'s\'][\'it\\\'s\']', $code);
+    }
+
+    /**
+     * EI-027 (Major, security): a namespaced class name (`My\Validator`)
+     * previously produced `readonly class My\Validator` — a syntax error.
+     * The compiler must now split the name, emit a `namespace My;` block,
+     * and declare `readonly class Validator` using the short name.
+     */
+    #[Test]
+    public function compile_with_namespaced_class_name_generates_namespace_block(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $code = $compiler->compile($schema, 'My\\Validator');
+
+        token_get_all($code, TOKEN_PARSE);
+        $this->assertStringContainsString('namespace My;', $code);
+        $this->assertStringContainsString('readonly class Validator', $code);
+        $this->assertStringNotContainsString('readonly class My\\Validator', $code);
+    }
+
+    /**
+     * EI-027: a multi-segment namespace must be emitted verbatim between
+     * the `namespace` keyword and the `readonly class` declaration.
+     */
+    #[Test]
+    public function compile_with_deeply_namespaced_class_name_generates_full_namespace_block(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $code = $compiler->compile($schema, 'App\\Dto\\UserValidator');
+
+        token_get_all($code, TOKEN_PARSE);
+        $this->assertStringContainsString('namespace App\\Dto;', $code);
+        $this->assertStringContainsString('readonly class UserValidator', $code);
+    }
+
+    /**
+     * EI-027: a class name starting with a digit is not a valid PHP
+     * identifier and must be rejected before any code is generated.
+     */
+    #[Test]
+    public function compile_with_class_name_starting_with_digit_throws_invalid_argument_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid class name part: "123Bad"');
+
+        $compiler->compile($schema, '123Bad');
+    }
+
+    /**
+     * EI-027: an empty class name is not a valid PHP identifier (each
+     * namespace segment must match the identifier regex).
+     */
+    #[Test]
+    public function compile_with_empty_class_name_throws_invalid_argument_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $compiler->compile($schema, '');
+    }
+
+    /**
+     * EI-027: a single namespace segment that is not a valid identifier
+     * must be rejected, even when other segments are valid.
+     */
+    #[Test]
+    public function compile_with_namespace_segment_starting_with_digit_throws_invalid_argument_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid class name part: "1Bad"');
+
+        $compiler->compile($schema, 'My\\1Bad\\Validator');
+    }
+
+    /**
+     * EI-027: a leading backslash produces an empty first segment after
+     * `explode('\\', ...)`, which must be rejected — the compiler expects
+     * the canonical form without a leading FQN separator.
+     */
+    #[Test]
+    public function compile_with_leading_backslash_in_class_name_throws_invalid_argument_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $compiler->compile($schema, '\\Validator');
+    }
+
+    /**
+     * EI-027: a class name containing a character outside the identifier
+     * grammar (a hyphen) must be rejected.
+     */
+    #[Test]
+    public function compile_with_hyphen_in_class_name_throws_invalid_argument_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid class name part: "Bad-Name"');
+
+        $compiler->compile($schema, 'Bad-Name');
+    }
+
+    /**
+     * EI-027 (positive): a class name containing a leading underscore or
+     * digits after the first character is a legal PHP identifier and must
+     * pass validation without an exception.
+     */
+    #[Test]
+    public function compile_with_valid_underscore_class_name_succeeds(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $code = $compiler->compile($schema, 'Valid_Name123');
+
+        token_get_all($code, TOKEN_PARSE);
+        $this->assertStringContainsString('readonly class Valid_Name123', $code);
+    }
+
+    /**
+     * EI-027 (positive): a single underscore is a legal PHP identifier
+     * (used by some libraries as a placeholder class name).
+     */
+    #[Test]
+    public function compile_with_single_underscore_class_name_succeeds(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $code = $compiler->compile($schema, '_');
+
+        token_get_all($code, TOKEN_PARSE);
+        $this->assertStringContainsString('readonly class _', $code);
+    }
+
+    /**
+     * EI-027: class-name validation must run before ref resolution, so a
+     * caller cannot smuggle an invalid name through `compileWithRefResolution`.
+     */
+    #[Test]
+    public function compile_with_ref_resolution_rejects_invalid_class_name(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+        $document = new OpenApiDocument(
+            openapi: '3.2.0',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+        );
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $compiler->compileWithRefResolution($schema, '0Invalid', $document);
+    }
+
+    /**
+     * EI-027: class-name validation must run before cache lookup, so an
+     * invalid name cannot poison the cache key path.
+     */
+    #[Test]
+    public function compile_with_cache_rejects_invalid_class_name(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $compiler->compileWithCache($schema, '0Invalid');
     }
 
     /**
