@@ -35,6 +35,20 @@ final readonly class StreamingContentParser
      */
     private const string SSE_DEFAULT_EVENT_TYPE = 'message';
 
+    /**
+     * Line-splitting pattern covering all three line-ending variants allowed by
+     * WHATWG HTML SSE §8.1.1: CRLF, LF, and CR.
+     *
+     * @see https://html.spec.whatwg.org/multipage/server-sent-events.html#parsing-an-event-stream
+     */
+    private const string SSE_LINE_SPLIT_PATTERN = '/\r\n|\r|\n/';
+
+    /**
+     * Single U+0020 SPACE removed from the start of an SSE field value per
+     * WHATWG HTML SSE §8.2.6 (exactly one, never tabs or other whitespace).
+     */
+    private const string SSE_FIELD_SPACE = ' ';
+
     public function __construct(
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {}
@@ -101,7 +115,12 @@ final readonly class StreamingContentParser
         $events = [];
         $currentEvent = [];
 
-        foreach (explode("\n", $body) as $line) {
+        $lines = preg_split(self::SSE_LINE_SPLIT_PATTERN, $body);
+        if (false === $lines) {
+            return [];
+        }
+
+        foreach ($lines as $line) {
             if ('' === $line) {
                 if ([] !== $currentEvent) {
                     $events[] = $this->formatSseEvent($currentEvent);
@@ -117,7 +136,10 @@ final readonly class StreamingContentParser
             $colonPos = strpos($line, ':');
             if (false !== $colonPos) {
                 $field = substr($line, 0, $colonPos);
-                $value = ltrim(substr($line, $colonPos + 1));
+                $rawValue = substr($line, $colonPos + 1);
+                $value = str_starts_with($rawValue, self::SSE_FIELD_SPACE)
+                    ? substr($rawValue, 1)
+                    : $rawValue;
                 $this->applySseField($currentEvent, $field, $value);
             }
         }
@@ -276,7 +298,8 @@ final readonly class StreamingContentParser
                 ));
             }
 
-            $lines = explode("\n", $buffer);
+            $lines = preg_split(self::SSE_LINE_SPLIT_PATTERN, $buffer);
+            assert(is_array($lines));
 
             $buffer = array_pop($lines);
 
@@ -285,7 +308,10 @@ final readonly class StreamingContentParser
             }
         }
 
-        foreach (explode("\n", $buffer) as $line) {
+        $remainingLines = preg_split(self::SSE_LINE_SPLIT_PATTERN, $buffer);
+        assert(is_array($remainingLines));
+
+        foreach ($remainingLines as $line) {
             $this->processSseLine($line, $currentEvent, $events);
         }
 
@@ -319,7 +345,10 @@ final readonly class StreamingContentParser
 
         if (false !== $colonPos) {
             $field = substr($line, 0, $colonPos);
-            $value = ltrim(substr($line, $colonPos + 1));
+            $rawValue = substr($line, $colonPos + 1);
+            $value = str_starts_with($rawValue, self::SSE_FIELD_SPACE)
+                ? substr($rawValue, 1)
+                : $rawValue;
             $this->applySseField($currentEvent, $field, $value);
         }
     }
