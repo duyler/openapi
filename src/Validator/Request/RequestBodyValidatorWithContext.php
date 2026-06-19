@@ -95,7 +95,7 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
 
         $content = $requestBody->content->mediaTypes[$matchedSpecType];
 
-        $parsedBody = $this->dependencies->bodyParser->parse($body, $requestMediaType);
+        $parsedBody = $this->dependencies->bodyParser->parse($body, $requestMediaType, $contentType);
 
         if ($this->configuration->coercion && null !== $content->schema) {
             $schema = $content->schema;

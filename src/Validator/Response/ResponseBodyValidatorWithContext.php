@@ -81,7 +81,7 @@ final readonly class ResponseBodyValidatorWithContext
             return;
         }
 
-        $this->validateRegularContent($body, $mediaTypeSchema, $mediaType);
+        $this->validateRegularContent($body, $mediaTypeSchema, $mediaType, $contentType);
     }
 
     public function validateStream(
@@ -122,9 +122,10 @@ final readonly class ResponseBodyValidatorWithContext
         string $body,
         MediaType $mediaTypeSchema,
         string $mediaType,
+        string $contentType,
     ): void {
         /** @var array|int|string|float|bool|null $parsedBody */
-        $parsedBody = $this->dependencies->bodyParser->parse($body, $mediaType);
+        $parsedBody = $this->dependencies->bodyParser->parse($body, $mediaType, $contentType);
 
         if ($this->configuration->coercion && null !== $mediaTypeSchema->schema) {
             $coercionContext = new CoercionContext(

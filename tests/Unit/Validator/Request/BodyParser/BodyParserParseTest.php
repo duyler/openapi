@@ -98,8 +98,27 @@ final class BodyParserParseTest extends TestCase
     public function parse_multipart_returns_array(): void
     {
         $body = "--boundary\r\nContent-Disposition: form-data; name=\"field1\"\r\n\r\nvalue1\r\n--boundary--\r\n";
+        $result = $this->parser->parse($body, 'multipart/form-data', 'multipart/form-data; boundary=boundary');
+
+        $this->assertIsArray($result);
+        $this->assertCount(1, $result);
+    }
+
+    #[Test]
+    public function parse_multipart_without_content_type_uses_body_fallback(): void
+    {
+        $body = "--boundary\r\nContent-Disposition: form-data; name=\"field1\"\r\n\r\nvalue1\r\n--boundary--\r\n";
         $result = $this->parser->parse($body, 'multipart/form-data');
 
         $this->assertIsArray($result);
+        $this->assertCount(1, $result);
+    }
+
+    #[Test]
+    public function parse_backward_compatible_call_without_full_content_type(): void
+    {
+        $result = $this->parser->parse('{"key":"value"}', 'application/json');
+
+        $this->assertSame(['key' => 'value'], $result);
     }
 }
