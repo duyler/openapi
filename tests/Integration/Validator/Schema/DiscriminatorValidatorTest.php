@@ -433,7 +433,7 @@ YAML;
     }
 
     #[Test]
-    public function validate_without_mapping_using_title(): void
+    public function validate_without_mapping_uses_schema_name(): void
     {
         $catSchema = new Schema(
             title: 'cat',
@@ -468,7 +468,7 @@ YAML;
 
         $catData = [
             'name' => 'Fluffy',
-            'petType' => 'cat',
+            'petType' => 'Cat',
             'meow' => true,
         ];
 
@@ -476,12 +476,12 @@ YAML;
 
         $catWithoutMeow = [
             'name' => 'Fluffy',
-            'petType' => 'cat',
+            'petType' => 'Cat',
         ];
 
         try {
             $this->validator->validate($catWithoutMeow, $petSchema, $document);
-            $this->fail('Cat schema selected by title should require "meow"');
+            $this->fail('Cat schema selected by name should require "meow"');
         } catch (ValidationException $e) {
             $errors = $e->getErrors();
             $this->assertGreaterThan(0, count($errors));
@@ -618,13 +618,13 @@ YAML;
 
         $catData = [
             'name' => 'Fluffy',
-            'petType' => 'cat',
+            'petType' => 'Cat',
             'meow' => true,
         ];
 
         $dogData = [
             'name' => 'Rex',
-            'petType' => 'dog',
+            'petType' => 'Dog',
             'bark' => true,
         ];
 
@@ -633,7 +633,7 @@ YAML;
 
         $catWithBarkInsteadOfMeow = [
             'name' => 'Fluffy',
-            'petType' => 'cat',
+            'petType' => 'Cat',
             'bark' => true,
         ];
 
@@ -1642,16 +1642,7 @@ YAML;
 
         $errors = $caught->getErrors();
         $this->assertGreaterThan(0, count($errors));
-
-        $foundRequiredMeow = false;
-
-        foreach ($errors as $error) {
-            if ($error instanceof RequiredError && 'meow' === $error->params()['property']) {
-                $foundRequiredMeow = true;
-
-                break;
-            }
-        }
+        $foundRequiredMeow = array_any($errors, fn($error) => $error instanceof RequiredError && 'meow' === $error->params()['property']);
 
         $this->assertTrue(
             $foundRequiredMeow,
@@ -1722,16 +1713,7 @@ YAML;
 
         $errors = $caught->getErrors();
         $this->assertGreaterThan(0, count($errors));
-
-        $foundRequiredName = false;
-
-        foreach ($errors as $error) {
-            if ($error instanceof RequiredError && 'name' === $error->params()['property']) {
-                $foundRequiredName = true;
-
-                break;
-            }
-        }
+        $foundRequiredName = array_any($errors, fn($error) => $error instanceof RequiredError && 'name' === $error->params()['property']);
 
         $this->assertTrue(
             $foundRequiredName,
@@ -1875,16 +1857,7 @@ YAML;
 
         $errors = $caught->getErrors();
         $this->assertGreaterThan(0, count($errors));
-
-        $foundRequiredId = false;
-
-        foreach ($errors as $error) {
-            if ($error instanceof RequiredError && 'id' === $error->params()['property']) {
-                $foundRequiredId = true;
-
-                break;
-            }
-        }
+        $foundRequiredId = array_any($errors, fn($error) => $error instanceof RequiredError && 'id' === $error->params()['property']);
 
         $this->assertTrue(
             $foundRequiredId,

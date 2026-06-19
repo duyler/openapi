@@ -142,6 +142,9 @@ components:
     SimplePet:
       discriminator:
         propertyName: petType
+        mapping:
+          cat: '#/components/schemas/Cat'
+          dog: '#/components/schemas/Dog'
       oneOf:
         - $ref: '#/components/schemas/Cat'
         - $ref: '#/components/schemas/Dog'
@@ -231,6 +234,9 @@ components:
     AnyOfPet:
       discriminator:
         propertyName: petType
+        mapping:
+          cat: '#/components/schemas/Cat'
+          dog: '#/components/schemas/Dog'
       anyOf:
         - $ref: '#/components/schemas/Cat'
         - $ref: '#/components/schemas/Dog'
@@ -298,6 +304,9 @@ components:
     InheritancePet:
       discriminator:
         propertyName: type
+        mapping:
+          cat: '#/components/schemas/CatExtended'
+          kitten: '#/components/schemas/KittenExtended'
       oneOf:
         - $ref: '#/components/schemas/CatExtended'
         - $ref: '#/components/schemas/KittenExtended'

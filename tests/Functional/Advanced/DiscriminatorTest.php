@@ -163,8 +163,8 @@ final class DiscriminatorTest extends AdvancedFunctionalTestCase
     {
         $validator = $this->createValidator($this->specFile);
         $request = $this->createRequest('POST', '/pet/implicit-mapping', [
-            'type' => 'cat',
-            'petType' => 'cat',
+            'type' => 'Cat',
+            'petType' => 'Cat',
             'meow' => true,
         ]);
 

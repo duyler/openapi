@@ -92,14 +92,14 @@ final class OneOfDiscriminatorTest extends TestCase
 
         $catData = [
             'name' => 'Fluffy',
-            'petType' => 'cat',
+            'petType' => 'Cat',
         ];
 
         $validator->validate($catData, $petSchema);
 
         $dogData = [
             'name' => 'Rex',
-            'petType' => 'dog',
+            'petType' => 'Dog',
             'bark' => 'loud',
         ];
 
