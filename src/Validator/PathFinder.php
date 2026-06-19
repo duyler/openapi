@@ -8,6 +8,7 @@ use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Request\PathParser;
+use Duyler\OpenApi\Validator\Request\PathRegexCache;
 
 use function count;
 use function sprintf;
@@ -15,12 +16,21 @@ use function strtolower;
 use function strtoupper;
 use function usort;
 
+/**
+ * @internal PathFinder is an internal orchestration class; its constructor
+ *           signature is not part of the public API. Construct via
+ *           OpenApiValidatorBuilder, not directly.
+ */
 final readonly class PathFinder
 {
+    private readonly PathParser $pathParser;
+
     public function __construct(
         private readonly OpenApiDocument $document,
-        private readonly PathParser $pathParser = new PathParser(),
-    ) {}
+        PathRegexCache $pathRegexCache = new PathRegexCache(),
+    ) {
+        $this->pathParser = new PathParser($pathRegexCache);
+    }
 
     public function findOperation(string $requestPath, string $method): Operation
     {

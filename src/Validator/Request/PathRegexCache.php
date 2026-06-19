@@ -6,38 +6,78 @@ namespace Duyler\OpenApi\Validator\Request;
 
 use InvalidArgumentException;
 
+use function count;
 use function preg_match;
 use function preg_quote;
 use function preg_replace_callback;
 use function sprintf;
 use function str_replace;
-use function count;
 
+/**
+ * Instance-scoped LRU cache of compiled path-template regular expressions.
+ *
+ * Thread-safety: NOT thread-safe. In Swoole coroutines or threaded FrankenPHP,
+ * each worker/coroutine must own its own instance (the default in
+ * OpenApiValidatorBuilder — one PathRegexCache per built document).
+ */
 final class PathRegexCache
 {
+    private const int DEFAULT_MAX_SIZE = 256;
+
     private const string REGEX_DELIMITER = '#';
 
     private const string PLACEHOLDER_TOKEN_FORMAT = "\x01PH%d\x02";
 
     /** @var array<string, string> */
-    private static array $cache = [];
+    private array $cache = [];
 
-    public static function getOrCompute(string $template): string
+    /** @var array<string, true> */
+    private array $order = [];
+
+    private readonly int $maxSize;
+
+    /**
+     * @param int|null $maxSize Maximum entries before LRU eviction. Null falls back to DEFAULT_MAX_SIZE.
+     *
+     * @throws InvalidArgumentException when $maxSize is less than 1
+     */
+    public function __construct(?int $maxSize = null)
     {
-        if (isset(self::$cache[$template])) {
-            return self::$cache[$template];
+        $resolvedMaxSize = $maxSize ?? self::DEFAULT_MAX_SIZE;
+
+        if (1 > $resolvedMaxSize) {
+            throw new InvalidArgumentException(
+                sprintf('Max size must be at least 1, got %d', $resolvedMaxSize),
+            );
         }
 
-        $regex = self::buildRegex($template);
+        $this->maxSize = $resolvedMaxSize;
+    }
 
-        self::$cache[$template] = $regex;
+    public function getOrCompute(string $template): string
+    {
+        if (isset($this->cache[$template])) {
+            $this->touch($template);
+
+            return $this->cache[$template];
+        }
+
+        $regex = $this->buildRegex($template);
+        $this->cache[$template] = $regex;
+        $this->order[$template] = true;
+
+        if (count($this->cache) > $this->maxSize) {
+            $evictedKey = array_key_first($this->order);
+            unset($this->order[$evictedKey], $this->cache[$evictedKey]);
+        }
 
         return $regex;
     }
 
-    public static function clear(): void
+    public function clear(): void
     {
-        self::$cache = [];
+        $this->cache = [];
+        $this->order = [];
     }
 
     /**
@@ -56,7 +96,7 @@ final class PathRegexCache
      * @throws InvalidArgumentException when the template contains an invalid
      *     parameter name or an unsupported RFC 6570 operator
      */
-    private static function buildRegex(string $template): string
+    private function buildRegex(string $template): string
     {
         /** @var array<string, array{name: string, operator: string}> $placeholders */
         $placeholders = [];
@@ -98,5 +138,11 @@ final class PathRegexCache
         }
 
         return self::REGEX_DELIMITER . '^' . $escaped . '$' . self::REGEX_DELIMITER;
+    }
+
+    private function touch(string $key): void
+    {
+        unset($this->order[$key]);
+        $this->order[$key] = true;
     }
 }

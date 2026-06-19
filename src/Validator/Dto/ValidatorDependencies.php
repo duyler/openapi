@@ -9,7 +9,9 @@ use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Link\LinkResolver;
 use Duyler\OpenApi\Validator\PathFinder;
+use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\Validation\CallbackValidator;
 use Duyler\OpenApi\Validator\Validation\RequestValidationHandler;
 use Duyler\OpenApi\Validator\Validation\ResponseValidationHandler;
@@ -34,6 +36,8 @@ final readonly class ValidatorDependencies
         public readonly SchemaValidatorAdapter $schemaValidation,
         public readonly WebhookValidator $webhookValidation,
         public readonly CallbackValidator $callbackValidation,
+        public readonly PathRegexCache $pathRegexCache,
+        public readonly RegexValidator $regexValidator,
         public readonly ?SchemaCache $cache = null,
         public readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {}

@@ -14,6 +14,7 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Callback\CallbackValidator;
 use Duyler\OpenApi\Validator\Callback\Exception\UnknownCallbackException;
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
+use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Request\RequestValidatorInterface;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
@@ -30,7 +31,7 @@ final class CallbackValidatorTest extends TestCase
         $requestValidator = $this->createStub(RequestValidatorInterface::class);
         $requestValidator->method('validate');
 
-        $this->callbackValidator = new CallbackValidator($requestValidator);
+        $this->callbackValidator = new CallbackValidator($requestValidator, new PathRegexCache());
         $this->psrFactory = new Psr17Factory();
     }
 

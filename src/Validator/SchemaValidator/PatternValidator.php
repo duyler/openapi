@@ -8,7 +8,6 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
 use Duyler\OpenApi\Validator\Exception\PatternMismatchError;
-use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Override;
 
 use function assert;
@@ -23,7 +22,7 @@ final readonly class PatternValidator extends AbstractSchemaValidator
             return;
         }
 
-        $pattern = RegexValidator::normalize($schema->pattern);
+        $pattern = $this->regexValidator()->normalize($schema->pattern);
 
         assert('' !== $pattern);
 

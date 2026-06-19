@@ -48,6 +48,7 @@ final readonly class CallbackValidator
 
     public function __construct(
         private readonly RequestValidatorInterface $requestValidator,
+        private readonly PathRegexCache $pathRegexCache,
     ) {}
 
     public function validate(
@@ -222,7 +223,7 @@ final readonly class CallbackValidator
         }
 
         if (str_contains($expression, '{') && str_contains($expression, '}')) {
-            $regex = PathRegexCache::getOrCompute($expression);
+            $regex = $this->pathRegexCache->getOrCompute($expression);
 
             assert('' !== $regex);
 

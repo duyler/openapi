@@ -21,6 +21,7 @@ use Duyler\OpenApi\Validator\Request\HeadersValidator;
 use Duyler\OpenApi\Validator\Request\ParameterDeserializer;
 use Duyler\OpenApi\Validator\Request\PathParametersValidator;
 use Duyler\OpenApi\Validator\Request\PathParser;
+use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Request\QueryParametersValidator;
 use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Request\QueryStringValidator;
@@ -29,6 +30,7 @@ use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
@@ -58,6 +60,8 @@ final readonly class ValidationContext
         public readonly LoggerInterface $logger = new NullLogger(),
         public readonly ?EventDispatcherInterface $eventDispatcher = null,
         public readonly bool $strictFormats = false,
+        public readonly PathRegexCache $pathRegexCache = new PathRegexCache(),
+        public readonly RegexValidator $regexValidator = new RegexValidator(),
     ) {
         $this->statelessValidators = new StatelessValidatorRegistry(
             $this->pool,
@@ -65,6 +69,7 @@ final readonly class ValidationContext
             $this->reportDeprecated,
             $this->logger,
             $this->eventDispatcher,
+            $this->regexValidator,
         );
 
         $this->schemaValidatorDependencies = new SchemaValidatorDependencies(
@@ -117,10 +122,11 @@ final readonly class ValidationContext
             logger: $this->logger,
             reportDeprecated: $this->reportDeprecated,
             eventDispatcher: $this->eventDispatcher,
+            regexValidator: $this->regexValidator,
         );
 
         return new RequestValidator(
-            pathParser: new PathParser(),
+            pathParser: new PathParser($this->pathRegexCache),
             pathParamsValidator: new PathParametersValidator(
                 schemaValidator: $schemaValidator,
                 deserializer: $deserializer,

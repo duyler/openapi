@@ -7,7 +7,6 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
-use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Override;
 
 use function assert;
@@ -37,7 +36,7 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
                         continue;
                     }
 
-                    $normalizedPattern = RegexValidator::normalize($pattern);
+                    $normalizedPattern = $this->regexValidator()->normalize($pattern);
                     assert('' !== $normalizedPattern);
                     if (1 === preg_match($normalizedPattern, (string) $key)) {
                         return false;

@@ -29,7 +29,10 @@ final readonly class CallbackValidator
     ) {
         $this->eventDispatcher = $context->eventDispatcher;
         $this->logger = $context->logger;
-        $this->callbackValidator = new InnerCallbackValidator($context->requestValidator);
+        $this->callbackValidator = new InnerCallbackValidator(
+            $context->requestValidator,
+            $context->pathRegexCache,
+        );
         $this->securityValidator = new SecurityValidator();
     }
 

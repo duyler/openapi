@@ -8,6 +8,7 @@ use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\PathMismatchException;
 use Duyler\OpenApi\Validator\PathFinder;
 use Duyler\OpenApi\Validator\Request\PathParser;
+use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Server\ServerPathMatcher;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -60,7 +61,7 @@ final class PathFinderPerformanceTest extends TestCase
     #[Test]
     public function try_match_path_returns_null_on_mismatch(): void
     {
-        $parser = new PathParser();
+        $parser = new PathParser(new PathRegexCache());
 
         $result = $parser->tryMatchPath('/users/123/posts', '/users/{id}/posts/{postId}');
 
@@ -70,7 +71,7 @@ final class PathFinderPerformanceTest extends TestCase
     #[Test]
     public function try_match_path_returns_params_on_match(): void
     {
-        $parser = new PathParser();
+        $parser = new PathParser(new PathRegexCache());
 
         $result = $parser->tryMatchPath('/users/123/posts/456', '/users/{userId}/posts/{postId}');
 
@@ -80,7 +81,7 @@ final class PathFinderPerformanceTest extends TestCase
     #[Test]
     public function try_match_path_consistent_with_match_path(): void
     {
-        $parser = new PathParser();
+        $parser = new PathParser(new PathRegexCache());
 
         $matchingPath = '/users/42';
         $matchingTemplate = '/users/{id}';
@@ -94,7 +95,7 @@ final class PathFinderPerformanceTest extends TestCase
     #[Test]
     public function try_match_path_returns_null_where_match_path_throws(): void
     {
-        $parser = new PathParser();
+        $parser = new PathParser(new PathRegexCache());
 
         $mismatchPath = '/users/123/posts';
         $mismatchTemplate = '/users/{id}/posts/{postId}';
@@ -106,7 +107,7 @@ final class PathFinderPerformanceTest extends TestCase
     #[Test]
     public function try_match_path_no_exception_on_mismatch(): void
     {
-        $parser = new PathParser();
+        $parser = new PathParser(new PathRegexCache());
 
         $result = $parser->tryMatchPath('/users/123/posts', '/users/{id}/posts/{postId}');
 

@@ -254,7 +254,12 @@ final readonly class ValidatorCompiler
 
     private function generatePatternCheck(string $pattern): string
     {
-        $normalizedPattern = RegexValidator::normalize($pattern);
+        // Transient RegexValidator: compilation is a one-shot offline code-generation
+        // step, not part of the runtime validation hot path. The generated class is
+        // standalone and carries no runtime RegexValidator dependency, and reset()
+        // must not affect compilation output. A dedicated short-lived normalizer is
+        // therefore correct here (no shared-eviction benefit for single-shot use).
+        $normalizedPattern = new RegexValidator()->normalize($pattern);
         $escapedPattern = var_export($normalizedPattern, true);
         $code = sprintf("        if (false === preg_match(%s, (string) \$data)) {\n", $escapedPattern);
         $code .= "            throw new \\RuntimeException('Pattern validation failed');\n";

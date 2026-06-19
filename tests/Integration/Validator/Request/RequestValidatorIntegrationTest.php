@@ -16,6 +16,7 @@ use Duyler\OpenApi\Validator\Request\HeadersValidator;
 use Duyler\OpenApi\Validator\Request\ParameterDeserializer;
 use Duyler\OpenApi\Validator\Request\PathParametersValidator;
 use Duyler\OpenApi\Validator\Request\PathParser;
+use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Request\QueryParametersValidator;
 use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Request\QueryStringValidator;
@@ -43,7 +44,7 @@ final class RequestValidatorIntegrationTest extends TestCase
         $deserializer = new ParameterDeserializer();
         $coercer = new TypeCoercer();
 
-        $pathParser = new PathParser();
+        $pathParser = new PathParser(new PathRegexCache());
         $pathParamsValidator = new PathParametersValidator($schemaValidator, $deserializer, $coercer);
         $queryParser = new QueryParser();
         $queryParamsValidator = new QueryParametersValidator($schemaValidator, $deserializer, $coercer);

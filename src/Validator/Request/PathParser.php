@@ -11,6 +11,10 @@ use function assert;
 
 final readonly class PathParser
 {
+    public function __construct(
+        private readonly PathRegexCache $pathRegexCache,
+    ) {}
+
     /**
      * Match request path against template
      *
@@ -52,6 +56,6 @@ final readonly class PathParser
 
     private function templateToRegex(string $template): string
     {
-        return PathRegexCache::getOrCompute($template);
+        return $this->pathRegexCache->getOrCompute($template);
     }
 }
