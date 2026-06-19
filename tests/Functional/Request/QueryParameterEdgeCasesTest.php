@@ -1294,11 +1294,11 @@ YAML;
     /**
      * QP-07: Brackets in keys without `style: deepObject` — `?arr[0]=a`.
      *
-     * QueryParser uses `parse_str` for bracket keys (resolveGroup
-     * allScalar=false branch), producing `['arr' => ['a']]`. For a
-     * schema with `type: string`, ParameterDeserializer::deserializeForm
-     * implodes the single-element array to "a", which satisfies the
-     * `const: 'a'` constraint.
+     * QueryParser uses a segment-based parser (insertNested + assignSegments)
+     * for bracket keys (resolveGroup allScalar=false branch), producing
+     * `['arr' => ['a']]`. For a schema with `type: string`,
+     * ParameterDeserializer::deserializeForm implodes the single-element
+     * array to "a", which satisfies the `const: 'a'` constraint.
      *
      * This documents the actual behavior: bracket notation without
      * deepObject is parsed to array form, then collapsed by form-style
@@ -1429,9 +1429,10 @@ YAML;
     }
 
     /**
-     * QP-07 unit-level: QueryParser delegates bracket keys to parse_str,
-     * producing nested array structures. This complements the full-cycle
-     * test by verifying the parser behavior in isolation.
+     * QP-07 unit-level: QueryParser parses bracket keys via segment-based
+     * parser (insertNested + assignSegments), producing nested array
+     * structures. This complements the full-cycle test by verifying the
+     * parser behavior in isolation.
      */
     #[Test]
     public function qp_07_query_parser_bracket_key_produces_nested_array(): void

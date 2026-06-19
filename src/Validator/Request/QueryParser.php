@@ -10,7 +10,12 @@ use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
 use JsonException;
 
+use function array_key_last;
+use function array_slice;
 use function count;
+use function is_array;
+use function sprintf;
+use function substr_count;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -18,13 +23,17 @@ final readonly class QueryParser
 {
     private const int JSON_MAX_DEPTH = 512;
 
+    private const int MAX_NESTING_DEPTH = 64;
+
     /**
      * Parse query string into parameters.
      *
-     * Duplicate scalar keys (e.g. `tags=php&tags=go`) are collected into
-     * indexed arrays to comply with RFC 6570 form+explode semantics, since
-     * PHP 8.5 `parse_str` no longer performs this conversion and keeps only
-     * the last value as a scalar.
+     * Uses an explicit segment-based parser (insertNested + assignSegments) instead
+     * of parse_str because parse_str converts dots in keys to underscores
+     * (e.g. `user.name` becomes `user_name`) and keeps only the last value for
+     * duplicate scalar keys. This parser preserves key names literally and
+     * collects duplicate scalars into indexed arrays to match the structure
+     * produced by RFC 6570 form-style explode expansion.
      *
      * @return array<array-key, mixed>
      */
@@ -141,18 +150,113 @@ final readonly class QueryParser
             return 1 === count($values) ? $values[0] : $values;
         }
 
-        $rebuilt = [];
+        $tree = [];
         foreach ($groupPairs as $pair) {
-            $rebuilt[] = $pair['rawKey'] . '=' . $pair['rawValue'];
+            $tree = $this->insertNested($tree, $pair['decodedKey'], urldecode($pair['rawValue']));
         }
 
-        $parsed = [];
-        parse_str(implode('&', $rebuilt), $parsed);
-
         /** @var string|array<array-key, mixed> $value */
-        $value = $parsed[$baseKey] ?? '';
+        $value = $tree[$baseKey] ?? '';
 
         return $value;
+    }
+
+    /**
+     * Parse a key like "tags[a][b][]" into segments and assign value to a nested tree.
+     *
+     * The early substr_count bound prevents OOM via huge $rest reaching preg_match_all
+     * below — substr_count is O(n) and allocates nothing, while preg_match_all
+     * materializes the full match-set into memory before our depth guard can fire.
+     *
+     * @param array<array-key, mixed> $tree
+     * @return array<array-key, mixed>
+     */
+    private function insertNested(array $tree, string $key, string $value): array
+    {
+        if (1 !== preg_match('/^(?<root>[^\[]+)(?<rest>.*)$/', $key, $m)) {
+            return $tree;
+        }
+
+        /** @var string $rootName */
+        $rootName = $m['root'];
+        /** @var string $rest */
+        $rest = $m['rest'];
+
+        if ('' === $rest) {
+            $tree[$rootName] = $value;
+
+            return $tree;
+        }
+
+        if (substr_count($rest, '[') > self::MAX_NESTING_DEPTH) {
+            throw new InvalidParameterException(
+                $rootName,
+                sprintf('Maximum query parameter nesting depth of %d exceeded', self::MAX_NESTING_DEPTH),
+            );
+        }
+
+        $segments = [$rootName];
+        if (preg_match_all('/\[(?<key>[^\[\]]*)\]/', $rest, $bracketMatches) > 0) {
+            /** @var list<string> $bracketKeys */
+            $bracketKeys = $bracketMatches['key'];
+            foreach ($bracketKeys as $bk) {
+                $segments[] = $bk;
+            }
+        }
+
+        if (count($segments) > self::MAX_NESTING_DEPTH) {
+            throw new InvalidParameterException(
+                $rootName,
+                sprintf('Maximum query parameter nesting depth of %d exceeded', self::MAX_NESTING_DEPTH),
+            );
+        }
+
+        return $this->assignSegments($tree, $segments, $value);
+    }
+
+    /**
+     * Walk segments and assign value. Empty segment means numeric-indexed append.
+     *
+     * @param array<array-key, mixed> $node
+     * @param non-empty-list<string> $segments
+     * @return array<array-key, mixed>
+     */
+    private function assignSegments(array $node, array $segments, string $value): array
+    {
+        $segment = $segments[0];
+        /** @var list<string> $remaining */
+        $remaining = array_slice($segments, 1);
+
+        if ('' === $segment) {
+            if ([] === $remaining) {
+                $node[] = $value;
+
+                return $node;
+            }
+
+            $node[] = [];
+            $lastKey = array_key_last($node);
+            /** @var array<array-key, mixed> $child */
+            $child = $node[$lastKey];
+            $node[$lastKey] = $this->assignSegments($child, $remaining, $value);
+
+            return $node;
+        }
+
+        if ([] === $remaining) {
+            $node[$segment] = $value;
+
+            return $node;
+        }
+
+        if (false === is_array($node[$segment] ?? null)) {
+            $node[$segment] = [];
+        }
+        /** @var array<array-key, mixed> $child */
+        $child = $node[$segment];
+        $node[$segment] = $this->assignSegments($child, $remaining, $value);
+
+        return $node;
     }
 
     private function parseByMediaType(string $raw, string $mediaType, MediaType $mediaTypeObject, string $parameterName): mixed

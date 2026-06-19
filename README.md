@@ -951,8 +951,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | Exception | Description |
 |-----------|-------------|
 | `MissingParameterException` | Required parameter is missing from request |
-| `MissingRequestBodyException` | Request body is required but missing |
-| `EmptyBodyException` | Request body is empty |
+| `MissingRequestBodyException` | Request body is required but missing or empty |
 | `UnsupportedMediaTypeException` | Content-Type not supported by the operation |
 | `PathMismatchException` | Request path doesn't match any operation template |
 | `InvalidParameterException` | Parameter value is malformed or invalid |

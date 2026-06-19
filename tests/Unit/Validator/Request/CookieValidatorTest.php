@@ -547,7 +547,69 @@ final class CookieValidatorTest extends TestCase
     {
         $result = $this->validator->parseCookies('name=value;malformed;name2=value2');
 
-        $this->assertSame(['name' => 'value', 'name2' => 'value2'], $result);
+        $this->assertSame(['name' => 'value', 'malformed' => '', 'name2' => 'value2'], $result);
+    }
+
+    #[Test]
+    public function parse_cookies_preserves_flag_cookie_without_equals(): void
+    {
+        $result = $this->validator->parseCookies('sessionId=abc; flag');
+
+        $this->assertSame(['sessionId' => 'abc', 'flag' => ''], $result);
+    }
+
+    #[Test]
+    public function parse_cookies_with_only_flag_cookie(): void
+    {
+        $result = $this->validator->parseCookies('flag');
+
+        $this->assertSame(['flag' => ''], $result);
+    }
+
+    #[Test]
+    public function parse_cookies_skips_empty_pairs_between_double_semicolons(): void
+    {
+        $result = $this->validator->parseCookies('a=1;;b=2');
+
+        $this->assertSame(['a' => '1', 'b' => '2'], $result);
+    }
+
+    #[Test]
+    public function parse_cookies_splits_on_first_equals_only(): void
+    {
+        $result = $this->validator->parseCookies('key=val=ue');
+
+        $this->assertSame(['key' => 'val=ue'], $result);
+    }
+
+    #[Test]
+    public function parse_cookies_with_trailing_semicolon(): void
+    {
+        $result = $this->validator->parseCookies('a=1;');
+
+        $this->assertSame(['a' => '1'], $result);
+    }
+
+    #[Test]
+    public function parse_cookies_with_leading_semicolon(): void
+    {
+        $result = $this->validator->parseCookies(';a=1');
+
+        $this->assertSame(['a' => '1'], $result);
+    }
+
+    #[Test]
+    public function parse_cookies_flag_with_explode_helper(): void
+    {
+        $parameter = new Parameter(
+            name: 'flag',
+            in: 'cookie',
+            style: 'cookie',
+        );
+
+        $result = $this->validator->parseCookieStyle('flag', $parameter);
+
+        $this->assertSame('', $result);
     }
 
     #[Test]

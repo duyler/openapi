@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
-use Duyler\OpenApi\Validator\Exception\EmptyBodyException;
-
 use function strlen;
 
 use const JSON_THROW_ON_ERROR;
@@ -23,7 +21,7 @@ final readonly class JsonBodyParser
         }
 
         if ('' === trim($body)) {
-            throw new EmptyBodyException('Request body cannot be empty');
+            return null;
         }
 
         /** @var array|int|string|float|bool|null $decoded */

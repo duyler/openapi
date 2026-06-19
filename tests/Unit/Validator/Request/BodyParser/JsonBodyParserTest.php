@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Request\BodyParser;
 
-use Duyler\OpenApi\Validator\Exception\EmptyBodyException;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
 use JsonException;
 use PHPUnit\Framework\Attributes\Test;
@@ -30,24 +29,19 @@ final class JsonBodyParserTest extends TestCase
     }
 
     #[Test]
-    public function parse_empty_string_throws_exception(): void
+    public function parse_empty_string_returns_null(): void
     {
         $body = '';
 
-        $this->expectException(EmptyBodyException::class);
-        $this->expectExceptionMessage('Request body cannot be empty');
-
-        $this->parser->parse($body);
+        $this->assertNull($this->parser->parse($body));
     }
 
     #[Test]
-    public function parse_whitespace_only_throws_exception(): void
+    public function parse_whitespace_only_returns_null(): void
     {
         $body = '   ';
 
-        $this->expectException(EmptyBodyException::class);
-
-        $this->parser->parse($body);
+        $this->assertNull($this->parser->parse($body));
     }
 
     #[Test]
@@ -91,13 +85,11 @@ final class JsonBodyParserTest extends TestCase
     }
 
     #[Test]
-    public function parse_body_with_only_bom_throws_empty_body_exception(): void
+    public function parse_body_with_only_bom_returns_null(): void
     {
         $body = "\xEF\xBB\xBF";
 
-        $this->expectException(EmptyBodyException::class);
-
-        $this->parser->parse($body);
+        $this->assertNull($this->parser->parse($body));
     }
 
     #[Test]
@@ -108,5 +100,13 @@ final class JsonBodyParserTest extends TestCase
         $this->expectException(JsonException::class);
 
         $this->parser->parse($body);
+    }
+
+    #[Test]
+    public function parse_json_null_literal_returns_null(): void
+    {
+        $body = 'null';
+
+        $this->assertNull($this->parser->parse($body));
     }
 }

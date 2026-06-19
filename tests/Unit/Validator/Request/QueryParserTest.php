@@ -172,11 +172,100 @@ final class QueryParserTest extends TestCase
     }
 
     #[Test]
-    public function parse_mixed_scalar_and_bracket_keys_delegate_to_parse_str(): void
+    public function parse_skips_empty_pairs_between_double_ampersands(): void
+    {
+        $result = $this->parser->parse('a=1&&b=2');
+
+        $this->assertSame(['a' => '1', 'b' => '2'], $result);
+    }
+
+    #[Test]
+    public function parse_mixed_scalar_and_bracket_keys_overwrites_scalar_with_array(): void
     {
         $result = $this->parser->parse('tags=php&tags[]=go');
 
         $this->assertSame(['tags' => ['go']], $result);
+    }
+
+    #[Test]
+    public function parse_key_with_dot_preserves_literal_name(): void
+    {
+        $result = $this->parser->parse('user.name=John&user.age=30');
+
+        $this->assertSame(['user.name' => 'John', 'user.age' => '30'], $result);
+    }
+
+    #[Test]
+    public function parse_single_key_with_dot_preserves_literal_name(): void
+    {
+        $result = $this->parser->parse('user.name=John');
+
+        $this->assertSame(['user.name' => 'John'], $result);
+    }
+
+    #[Test]
+    public function parse_nested_key_with_dot_in_root_preserves_literal_name(): void
+    {
+        $result = $this->parser->parse('user.name[ext]=value');
+
+        $this->assertSame(['user.name' => ['ext' => 'value']], $result);
+    }
+
+    #[Test]
+    public function parse_scalar_and_bracket_with_dot_in_root_overwrites_scalar(): void
+    {
+        $result = $this->parser->parse('user.name=John&user.name[ext]=value');
+
+        $this->assertSame(['user.name' => ['ext' => 'value']], $result);
+    }
+
+    #[Test]
+    public function parse_bracket_append_with_named_subkey(): void
+    {
+        $result = $this->parser->parse('tags[][id]=1&tags[][id]=2');
+
+        $this->assertSame(
+            ['tags' => [['id' => '1'], ['id' => '2']]],
+            $result,
+        );
+    }
+
+    #[Test]
+    public function parse_bracket_append_with_multiple_named_subkeys(): void
+    {
+        $result = $this->parser->parse('items[][id]=1&items[][name]=foo');
+
+        $this->assertSame(
+            ['items' => [['id' => '1'], ['name' => 'foo']]],
+            $result,
+        );
+    }
+
+    #[Test]
+    public function parse_nested_key_at_max_depth_passes(): void
+    {
+        $key = 'a' . str_repeat('[b]', 63);
+
+        $result = $this->parser->parse($key . '=1');
+
+        $leaf = '1';
+        for ($i = 0; $i < 63; ++$i) {
+            $leaf = ['b' => $leaf];
+        }
+        $expected = ['a' => $leaf];
+
+        $this->assertSame($expected, $result);
+    }
+
+    #[Test]
+    public function parse_deeply_nested_key_above_max_depth_throws_exception(): void
+    {
+        $key = 'a' . str_repeat('[b]', 64);
+
+        $this->expectException(InvalidParameterException::class);
+        $this->expectExceptionMessage('Maximum query parameter nesting depth of 64 exceeded');
+
+        $this->parser->parse($key . '=1');
     }
 
     #[Test]
@@ -269,6 +358,20 @@ final class QueryParserTest extends TestCase
         $parameter = new Parameter(
             name: 'filter',
             in: 'querystring',
+        );
+
+        $result = $this->parser->parseQueryString('{"name":"John"}', $parameter);
+
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function parse_query_string_with_empty_media_types(): void
+    {
+        $parameter = new Parameter(
+            name: 'filter',
+            in: 'querystring',
+            content: new Content([]),
         );
 
         $result = $this->parser->parseQueryString('{"name":"John"}', $parameter);

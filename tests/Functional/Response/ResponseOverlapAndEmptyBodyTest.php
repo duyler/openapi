@@ -7,7 +7,6 @@ namespace Duyler\OpenApi\Test\Functional\Response;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
-use Duyler\OpenApi\Validator\Exception\EmptyBodyException;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\Exception\EnumError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
@@ -199,8 +198,11 @@ YAML;
 
         $response = $this->createJsonResponse(200, '');
 
-        $this->expectException(EmptyBodyException::class);
-        $validator->validateResponse($response, $operation);
+        $error = $this->catchSchemaError($validator, $response, $operation);
+
+        self::assertInstanceOf(TypeMismatchError::class, $error);
+        self::assertSame('type', $error->keyword());
+        self::assertSame('object', $error->params()['expected']);
     }
 
     #[Test]
@@ -210,8 +212,11 @@ YAML;
 
         $response = $this->createJsonResponse(200, "  \n\t ");
 
-        $this->expectException(EmptyBodyException::class);
-        $validator->validateResponse($response, $operation);
+        $error = $this->catchSchemaError($validator, $response, $operation);
+
+        self::assertInstanceOf(TypeMismatchError::class, $error);
+        self::assertSame('type', $error->keyword());
+        self::assertSame('object', $error->params()['expected']);
     }
 
     #[Test]
