@@ -258,6 +258,50 @@ class NumericRangeValidatorTest extends TestCase
     }
 
     #[Test]
+    public function validate_multiple_of_with_small_float_step(): void
+    {
+        $schema = new Schema(type: 'number', multipleOf: 0.1);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(0.3, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function throw_multiple_of_error_for_small_float_step_non_multiple(): void
+    {
+        $schema = new Schema(type: 'number', multipleOf: 0.1);
+
+        $this->expectException(MultipleOfKeywordError::class);
+
+        $this->validator->validate(0.35, $schema);
+    }
+
+    #[Test]
+    public function validate_large_float_multiple_of_small_step(): void
+    {
+        $schema = new Schema(type: 'number', multipleOf: 0.1);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(1e20, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
     public function throw_error_when_multiple_of_is_zero(): void
     {
         $schema = new Schema(type: 'number', multipleOf: 0.0);
@@ -265,6 +309,50 @@ class NumericRangeValidatorTest extends TestCase
         $this->expectException(MultipleOfKeywordError::class);
 
         $this->validator->validate(7, $schema);
+    }
+
+    #[Test]
+    public function throw_multiple_of_error_for_integer_non_multiple(): void
+    {
+        $schema = new Schema(type: 'integer', multipleOf: 3);
+
+        $this->expectException(MultipleOfKeywordError::class);
+
+        $this->validator->validate(10, $schema);
+    }
+
+    #[Test]
+    public function validate_negative_multiple_of(): void
+    {
+        $schema = new Schema(type: 'integer', multipleOf: -3);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(9, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function validate_whole_float_data_with_integer_multiple_of(): void
+    {
+        $schema = new Schema(type: 'number', multipleOf: 5);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(10.0, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]

@@ -11,12 +11,15 @@ use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\MultipleOfKeywordError;
 use Override;
 
+use function abs;
 use function is_float;
 use function is_int;
+use function max;
+use function round;
 
 final readonly class NumericRangeValidator extends AbstractSchemaValidator
 {
-    private const float FLOAT_COMPARISON_EPSILON = 1e-10;
+    private const float RELATIVE_EPSILON_FACTOR = 1e-9;
 
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -64,9 +67,16 @@ final readonly class NumericRangeValidator extends AbstractSchemaValidator
         }
 
         if (null !== $schema->multipleOf) {
-            $remainder = fmod($data, $schema->multipleOf);
+            if (0.0 === $schema->multipleOf) {
+                throw new MultipleOfKeywordError(
+                    multipleOf: $schema->multipleOf,
+                    value: $data,
+                    dataPath: $dataPath,
+                    schemaPath: '/multipleOf',
+                );
+            }
 
-            if (false === $this->isMultipleOfValid($remainder, $schema->multipleOf)) {
+            if (false === $this->isMultipleOf($data, $schema->multipleOf)) {
                 throw new MultipleOfKeywordError(
                     multipleOf: $schema->multipleOf,
                     value: $data,
@@ -77,8 +87,16 @@ final readonly class NumericRangeValidator extends AbstractSchemaValidator
         }
     }
 
-    private function isMultipleOfValid(float $remainder, float $multipleOf): bool
+    private function isMultipleOf(int|float $data, float $multipleOf): bool
     {
-        return abs($remainder) < self::FLOAT_COMPARISON_EPSILON || abs($remainder - $multipleOf) < self::FLOAT_COMPARISON_EPSILON;
+        if (is_int($data) && (float) (int) $multipleOf === $multipleOf) {
+            return 0 === ($data % (int) $multipleOf);
+        }
+
+        $quotient = (float) $data / $multipleOf;
+        $rounded = round($quotient);
+        $epsilon = self::RELATIVE_EPSILON_FACTOR * max(1.0, abs($quotient));
+
+        return abs($quotient - $rounded) < $epsilon;
     }
 }
