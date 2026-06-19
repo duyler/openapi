@@ -6,14 +6,18 @@ namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
+use JsonException;
 
 use function array_map;
 use function assert;
 use function is_array;
 use function is_string;
+use function json_decode;
 use function strlen;
 use function in_array;
 use function trim;
+
+use const JSON_THROW_ON_ERROR;
 
 final readonly class ParameterDeserializer
 {
@@ -40,6 +44,7 @@ final readonly class ParameterDeserializer
             'pipeDelimited' => $this->deserializePipeDelimited($normalized),
             'spaceDelimited' => $this->deserializeSpaceDelimited($normalized),
             'cookie' => $this->deserializeCookie($normalized, $param),
+            'deepObject' => $this->deserializeDeepObject($normalized),
             default => $normalized,
         };
     }
@@ -132,6 +137,27 @@ final readonly class ParameterDeserializer
         }
 
         return $this->splitBySeparator($value, ',');
+    }
+
+    private function deserializeDeepObject(mixed $value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            try {
+                /** @var array<int|string, mixed>|int|string|float|bool|null $decoded */
+                $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+
+                if (is_array($decoded)) {
+                    return $decoded;
+                }
+            } catch (JsonException) {
+            }
+        }
+
+        return (array) $value;
     }
 
     private function isArrayType(Parameter $param): bool
