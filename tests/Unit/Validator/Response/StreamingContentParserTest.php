@@ -759,7 +759,7 @@ final class StreamingContentParserTest extends TestCase
     #[Test]
     public function parse_stream_json_seq_allows_record_at_default_max_record_length(): void
     {
-        $record = str_repeat('x', 5 * 1024 * 1024); // 5 MB
+        $record = str_repeat('x', 1_572_864); // 1.5 MB — above old 1MB line limit, below new 10MB record limit
         $body = "\x1E" . $record . "\x1E";
 
         $factory = new Psr17Factory();
