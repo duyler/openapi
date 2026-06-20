@@ -10,12 +10,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Override;
 
-use function array_map;
-use function json_encode;
 use function microtime;
-use function range;
-
-use const JSON_THROW_ON_ERROR;
 
 final class MaliciousSchemaTest extends TestCase
 {
@@ -30,27 +25,17 @@ final class MaliciousSchemaTest extends TestCase
     #[Override]
     protected function setUp(): void
     {
-        $enumValues = array_map(
-            static fn(int $value) => "value_{$value}",
-            range(1, self::ENUM_VALUE_COUNT),
-        );
+        $enumJson = '';
 
-        $this->specWithHugeEnum = json_encode([
-            'openapi' => '3.2.0',
-            'info' => [
-                'title' => 'Malicious Schema Test API',
-                'version' => '1.0.0',
-            ],
-            'paths' => (object) [],
-            'components' => [
-                'schemas' => [
-                    'Choice' => [
-                        'type' => 'string',
-                        'enum' => $enumValues,
-                    ],
-                ],
-            ],
-        ], JSON_THROW_ON_ERROR);
+        for ($i = 1; $i <= self::ENUM_VALUE_COUNT; ++$i) {
+            if (1 !== $i) {
+                $enumJson .= ',';
+            }
+
+            $enumJson .= '"value_' . $i . '"';
+        }
+
+        $this->specWithHugeEnum = '{"openapi":"3.2.0","info":{"title":"Malicious Schema Test API","version":"1.0.0"},"paths":{},"components":{"schemas":{"Choice":{"type":"string","enum":[' . $enumJson . ']}}}}';
     }
 
     #[Test]
