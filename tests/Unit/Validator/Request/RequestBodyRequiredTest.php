@@ -15,6 +15,7 @@ use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
+use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Request\RequestBodyValidatorWithContext;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
@@ -42,7 +43,7 @@ final class RequestBodyRequiredTest extends TestCase
 
         $bodyParser = new BodyParser(
             jsonParser: new JsonBodyParser(),
-            formParser: new FormBodyParser(),
+            formParser: new FormBodyParser(new QueryParser()),
             multipartParser: new MultipartBodyParser(),
             textParser: new TextBodyParser(),
             xmlParser: new XmlBodyParser(),

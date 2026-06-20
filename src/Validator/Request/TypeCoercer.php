@@ -88,7 +88,7 @@ final readonly class TypeCoercer extends AbstractCoercer
             return match ($type) {
                 'integer' => $this->coerceToInteger($value, $strict),
                 'number' => $this->coerceToNumber($value, $strict),
-                'boolean' => $this->coerceToBoolean($value),
+                'boolean' => $this->coerceToBoolean($value, $strict),
                 default => $value,
             };
         }

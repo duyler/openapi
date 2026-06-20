@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Request;
 
 use Duyler\OpenApi\Validator\Exception\PathMismatchException;
 use Duyler\OpenApi\Validator\Request\PathParser;
+use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -16,7 +17,7 @@ final class PathParserTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->parser = new PathParser();
+        $this->parser = new PathParser(new PathRegexCache());
     }
 
     #[Test]

@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Benchmark;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Request\PathParser;
+use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
@@ -280,7 +281,7 @@ YAML;
             ->build()
             ->getDocument();
 
-        $pathParser = new PathParser();
+        $pathParser = new PathParser(new PathRegexCache());
 
         gc_collect_cycles();
         $memoryBefore = memory_get_usage();

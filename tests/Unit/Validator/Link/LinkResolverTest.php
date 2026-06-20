@@ -379,4 +379,147 @@ class LinkResolverTest extends TestCase
         $this->assertSame(200, $result['parameters']['status']);
         $this->assertSame('user', $result['parameters']['type']);
     }
+
+    #[Test]
+    public function resolve_deep_seven_level_nested_path_from_response_body(): void
+    {
+        $link = new Link(
+            operationId: 'getDeepValue',
+            parameters: ['target' => '$response.body#/a/b/c/d/e/f/g'],
+        );
+
+        $context = new LinkContext(body: [
+            'a' => ['b' => ['c' => ['d' => ['e' => ['f' => ['g' => 'deep_value']]]]]],
+        ]);
+
+        $result = $this->resolver->resolve($link, $context);
+
+        $this->assertSame('deep_value', $result['parameters']['target']);
+    }
+
+    #[Test]
+    public function resolve_intermediate_segment_of_deep_nested_path(): void
+    {
+        $link = new Link(
+            operationId: 'getIntermediate',
+            parameters: ['middle' => '$response.body#/a/b/c'],
+        );
+
+        $context = new LinkContext(body: [
+            'a' => ['b' => ['c' => ['d' => ['e' => ['f' => ['g' => 'deep_value']]]]]],
+        ]);
+
+        $result = $this->resolver->resolve($link, $context);
+
+        $this->assertSame(['d' => ['e' => ['f' => ['g' => 'deep_value']]]], $result['parameters']['middle']);
+    }
+
+    #[Test]
+    public function return_null_when_deep_path_segment_does_not_exist(): void
+    {
+        $link = new Link(
+            operationId: 'getMissing',
+            parameters: ['target' => '$response.body#/a/b/c/missing/deeper'],
+        );
+
+        $context = new LinkContext(body: [
+            'a' => ['b' => ['c' => ['d' => ['e' => ['f' => ['g' => 'deep_value']]]]]],
+        ]);
+
+        $result = $this->resolver->resolve($link, $context);
+
+        $this->assertSame(['target' => null], $result['parameters']);
+    }
+
+    #[Test]
+    public function return_null_when_deep_path_targets_non_array_intermediate(): void
+    {
+        $link = new Link(
+            operationId: 'getThroughScalar',
+            parameters: ['target' => '$response.body#/a/b/c/d/e/f/g'],
+        );
+
+        $context = new LinkContext(body: [
+            'a' => ['b' => ['c' => 'scalar_value']],
+        ]);
+
+        $result = $this->resolver->resolve($link, $context);
+
+        $this->assertSame(['target' => null], $result['parameters']);
+    }
+
+    #[Test]
+    public function resolve_path_with_rfc6901_tilde_one_escape(): void
+    {
+        $link = new Link(
+            operationId: 'getUser',
+            parameters: ['path' => '$response.body#/foo~1bar'],
+        );
+
+        $context = new LinkContext(body: ['foo/bar' => 'escaped']);
+
+        $result = $this->resolver->resolve($link, $context);
+
+        $this->assertSame(['path' => 'escaped'], $result['parameters']);
+    }
+
+    #[Test]
+    public function resolve_path_with_rfc6901_tilde_zero_escape(): void
+    {
+        $link = new Link(
+            operationId: 'getUser',
+            parameters: ['path' => '$response.body#/foo~0bar'],
+        );
+
+        $context = new LinkContext(body: ['foo~bar' => 'escaped']);
+
+        $result = $this->resolver->resolve($link, $context);
+
+        $this->assertSame(['path' => 'escaped'], $result['parameters']);
+    }
+
+    #[Test]
+    public function resolve_path_with_rfc6901_tilde_zero_one_sequence(): void
+    {
+        $link = new Link(
+            operationId: 'getUser',
+            parameters: ['path' => '$response.body#/foo~01bar'],
+        );
+
+        $context = new LinkContext(body: ['foo~1bar' => 'escaped']);
+
+        $result = $this->resolver->resolve($link, $context);
+
+        $this->assertSame(['path' => 'escaped'], $result['parameters']);
+    }
+
+    #[Test]
+    public function resolve_path_with_rfc6901_escaped_slash_in_template(): void
+    {
+        $link = new Link(
+            operationId: 'getUser',
+            parameters: ['path' => '$response.body#/users~1{userId}'],
+        );
+
+        $context = new LinkContext(body: ['users/{userId}' => 'resolved']);
+
+        $result = $this->resolver->resolve($link, $context);
+
+        $this->assertSame(['path' => 'resolved'], $result['parameters']);
+    }
+
+    #[Test]
+    public function resolve_unescaped_slash_path_regression(): void
+    {
+        $link = new Link(
+            operationId: 'getAddress',
+            parameters: ['city' => '$response.body#/address/city'],
+        );
+
+        $context = new LinkContext(body: ['address' => ['city' => 'Moscow', 'street' => 'Tverskaya']]);
+
+        $result = $this->resolver->resolve($link, $context);
+
+        $this->assertSame(['city' => 'Moscow'], $result['parameters']);
+    }
 }

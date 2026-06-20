@@ -6,11 +6,16 @@ namespace Duyler\OpenApi\Validator\Link;
 
 use Duyler\OpenApi\Schema\Model\Link;
 use Duyler\OpenApi\Schema\Model\Server;
+use Duyler\OpenApi\Validator\Exception\RefResolutionException;
 
 use function array_key_exists;
+use function array_is_list;
+use function count;
+use function ctype_digit;
 use function is_array;
 use function is_string;
 use function preg_match;
+use function sprintf;
 
 final readonly class LinkResolver
 {
@@ -96,10 +101,28 @@ final readonly class LinkResolver
         /** @var list<string> $segments */
         $segments = explode('/', trim($path, '/'));
 
+        $segments = array_map(
+            static fn(string $s): string => str_replace(['~1', '~0'], ['/', '~'], $s),
+            $segments,
+        );
+
         /** @var mixed $current */
         $current = $data;
 
         foreach ($segments as $segment) {
+            if (
+                is_array($current)
+                && array_is_list($current)
+                && ctype_digit($segment)
+                && (int) $segment >= count($current)
+            ) {
+                throw new RefResolutionException(sprintf(
+                    'Array index %s out of bounds (length %d)',
+                    $segment,
+                    count($current),
+                ));
+            }
+
             if (false === is_array($current) || false === array_key_exists($segment, $current)) {
                 return null;
             }

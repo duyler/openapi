@@ -9,6 +9,7 @@ use Override;
 
 use function base64_decode;
 use function base64_encode;
+use function strtr;
 
 final readonly class ByteValidator extends AbstractStringFormatValidator
 {
@@ -23,12 +24,16 @@ final readonly class ByteValidator extends AbstractStringFormatValidator
     {
         $decoded = base64_decode($data, true);
 
-        if (false === $decoded) {
-            throw new InvalidFormatException('byte', $data, 'Invalid base64 format');
+        if (false !== $decoded && base64_encode($decoded) === $data) {
+            return;
         }
 
-        if (base64_encode($decoded) !== $data) {
-            throw new InvalidFormatException('byte', $data, 'Invalid base64 encoding');
+        $urlSafeDecoded = base64_decode(strtr($data, '-_', '+/'), true);
+
+        if (false !== $urlSafeDecoded && strtr(base64_encode($urlSafeDecoded), '+/', '-_') === $data) {
+            return;
         }
+
+        throw new InvalidFormatException('byte', $data, 'Invalid base64 encoding (standard or url-safe)');
     }
 }

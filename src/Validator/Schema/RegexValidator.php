@@ -5,17 +5,53 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
+use InvalidArgumentException;
 
+use function count;
+use function sprintf;
 use function str_split;
 
+/**
+ * Instance-scoped regex pattern validator and LRU-cached normalizer.
+ *
+ * Thread-safety: NOT thread-safe. In Swoole coroutines or threaded FrankenPHP,
+ * each worker/coroutine must own its own instance (the default in
+ * OpenApiValidatorBuilder — one RegexValidator per built document).
+ */
 final class RegexValidator
 {
     private const string DELIMITER_CANDIDATES = '#~!|@%+;';
 
-    /** @var array<string, string> */
-    private static array $normalizeCache = [];
+    private const int DEFAULT_MAX_SIZE = 512;
 
-    public static function validate(string $pattern, ?string $fieldName = null): string
+    /** @var array<string, string> */
+    private array $normalizeCache = [];
+
+    /** @var array<string, true> */
+    private array $order = [];
+
+    private readonly int $maxSize;
+
+    /**
+     * @param int|null $maxSize Maximum normalized patterns retained before LRU eviction.
+     *                          Null falls back to DEFAULT_MAX_SIZE.
+     *
+     * @throws InvalidArgumentException when $maxSize is less than 1
+     */
+    public function __construct(?int $maxSize = null)
+    {
+        $resolvedMaxSize = $maxSize ?? self::DEFAULT_MAX_SIZE;
+
+        if (1 > $resolvedMaxSize) {
+            throw new InvalidArgumentException(
+                sprintf('Max size must be at least 1, got %d', $resolvedMaxSize),
+            );
+        }
+
+        $this->maxSize = $resolvedMaxSize;
+    }
+
+    public function validate(string $pattern, ?string $fieldName = null): string
     {
         $errorContext = new class {
             public string $message = '';
@@ -23,6 +59,7 @@ final class RegexValidator
 
         set_error_handler(function (int $errno, string $errstr) use ($errorContext): bool {
             $errorContext->message = $errstr;
+
             return true;
         });
 
@@ -48,36 +85,45 @@ final class RegexValidator
         return $pattern;
     }
 
-    public static function normalize(string $pattern): string
+    public function normalize(string $pattern): string
     {
-        if (isset(self::$normalizeCache[$pattern])) {
-            return self::$normalizeCache[$pattern];
+        if (isset($this->normalizeCache[$pattern])) {
+            $this->touch($pattern);
+
+            return $this->normalizeCache[$pattern];
         }
 
-        $normalized = self::doNormalize($pattern);
-        self::$normalizeCache[$pattern] = $normalized;
+        $normalized = $this->doNormalize($pattern);
+        $this->normalizeCache[$pattern] = $normalized;
+        $this->order[$pattern] = true;
+
+        if (count($this->normalizeCache) > $this->maxSize) {
+            $evictedKey = array_key_first($this->order);
+            unset($this->order[$evictedKey], $this->normalizeCache[$evictedKey]);
+        }
 
         return $normalized;
     }
 
-    public static function clearNormalizeCache(): void
+    public function clear(): void
     {
-        self::$normalizeCache = [];
+        $this->normalizeCache = [];
+        $this->order = [];
     }
 
-    private static function doNormalize(string $pattern): string
+    private function doNormalize(string $pattern): string
     {
-        if (self::hasDelimiters($pattern)) {
+        if ($this->hasDelimiters($pattern)) {
             return $pattern;
         }
 
-        $delimiter = self::selectDelimiter($pattern);
-        $escapedPattern = self::escapeDelimiter($pattern, $delimiter);
+        $delimiter = $this->selectDelimiter($pattern);
+        $escapedPattern = $this->escapeDelimiter($pattern, $delimiter);
 
         return $delimiter . $escapedPattern . $delimiter;
     }
 
-    private static function hasDelimiters(string $pattern): bool
+    private function hasDelimiters(string $pattern): bool
     {
         $firstChar = $pattern[0];
 
@@ -96,7 +142,7 @@ final class RegexValidator
         return '' === $modifiers || 1 === preg_match('/^[imsxADSUXJu]*$/', $modifiers);
     }
 
-    private static function selectDelimiter(string $pattern): string
+    private function selectDelimiter(string $pattern): string
     {
         foreach (str_split(self::DELIMITER_CANDIDATES) as $candidate) {
             if (false === str_contains($pattern, $candidate)) {
@@ -107,12 +153,18 @@ final class RegexValidator
         return '/';
     }
 
-    private static function escapeDelimiter(string $pattern, string $delimiter): string
+    private function escapeDelimiter(string $pattern, string $delimiter): string
     {
         if ('/' === $delimiter) {
             return str_replace('/', '\\/', $pattern);
         }
 
         return $pattern;
+    }
+
+    private function touch(string $key): void
+    {
+        unset($this->order[$key]);
+        $this->order[$key] = true;
     }
 }

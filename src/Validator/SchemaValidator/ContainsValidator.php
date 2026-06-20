@@ -8,6 +8,8 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\ContainsMatchError;
+use Duyler\OpenApi\Validator\Exception\MaxContainsError;
+use Duyler\OpenApi\Validator\Exception\MinContainsError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 
@@ -27,26 +29,51 @@ final readonly class ContainsValidator extends AbstractSchemaValidator
         }
 
         $nullableAsType = $context?->nullableAsType ?? true;
+        $dataPath = $this->getDataPath($context);
         $validator = $this->createSchemaValidator();
         $containsContext = $context ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
-        $hasMatch = false;
+
+        $matchCount = 0;
 
         foreach ($data as $item) {
             try {
                 /** @var array-key|array<array-key, mixed> $item */
                 $validator->validate($item, $schema->contains, $containsContext);
-                $hasMatch = true;
-                break;
+                ++$matchCount;
+
+                if (null !== $schema->maxContains && $matchCount > $schema->maxContains) {
+                    break;
+                }
             } catch (ValidationException|AbstractValidationError) {
                 continue;
             }
         }
 
-        if (false === $hasMatch) {
-            $dataPath = $this->getDataPath($context);
-            throw new ContainsMatchError(
+        $effectiveMinContains = $schema->minContains ?? 1;
+
+        if ($matchCount < $effectiveMinContains) {
+            if (0 === $matchCount && 1 === $effectiveMinContains) {
+                throw new ContainsMatchError(
+                    dataPath: $dataPath,
+                    schemaPath: '/contains',
+                );
+            }
+
+            throw new MinContainsError(
+                minContains: $effectiveMinContains,
+                actualCount: $matchCount,
                 dataPath: $dataPath,
-                schemaPath: '/contains',
+                schemaPath: '/minContains',
+            );
+        }
+
+        if (null !== $schema->maxContains && $matchCount > $schema->maxContains) {
+            // actualCount reports the detection threshold (maxContains + 1), not a full count — the loop above breaks early as a perf optimization once violation is certain.
+            throw new MaxContainsError(
+                maxContains: $schema->maxContains,
+                actualCount: $matchCount,
+                dataPath: $dataPath,
+                schemaPath: '/maxContains',
             );
         }
     }

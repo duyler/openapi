@@ -8,13 +8,20 @@ use Duyler\OpenApi\Compiler\Exception\UnsupportedKeywordException;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
+use InvalidArgumentException;
 use RuntimeException;
 
+use function addslashes;
 use function array_keys;
+use function array_pop;
 use function count;
+use function explode;
+use function implode;
 use function in_array;
 use function is_array;
+use function preg_match;
 use function sprintf;
+use function var_export;
 
 /**
  * @experimental
@@ -23,8 +30,12 @@ final readonly class ValidatorCompiler
 {
     private const int REF_COMPONENTS_SCHEMAS_PREFIX_LENGTH = 21;
 
+    private const string CLASS_NAME_PATTERN = '/^[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*$/';
+
     public function compile(Schema $schema, string $className): string
     {
+        $this->validateClassName($className);
+
         $unsupported = $this->detectUnsupportedKeywords($schema);
 
         if ([] !== $unsupported) {
@@ -48,6 +59,8 @@ final readonly class ValidatorCompiler
         string $className,
         ?CompilationCacheInterface $cache = null,
     ): string {
+        $schemaHash = null;
+
         if (null !== $cache) {
             $schemaHash = $cache->generateKey($schema);
             $cached = $cache->get($schemaHash);
@@ -59,19 +72,40 @@ final readonly class ValidatorCompiler
 
         $code = $this->compile($schema, $className);
 
-        if (null !== $cache) {
-            $schemaHash = $cache->generateKey($schema);
+        if (null !== $cache && null !== $schemaHash) {
             $cache->set($schemaHash, $code);
         }
 
         return $code;
     }
 
+    private function validateClassName(string $className): void
+    {
+        $parts = explode('\\', $className);
+
+        foreach ($parts as $part) {
+            if (1 !== preg_match(self::CLASS_NAME_PATTERN, $part)) {
+                throw new InvalidArgumentException(
+                    sprintf('Invalid class name part: "%s"', $part),
+                );
+            }
+        }
+    }
+
     private function generateCode(Schema $schema, string $className): string
     {
+        $parts = explode('\\', $className);
+        $shortName = array_pop($parts);
+        $namespace = implode('\\', $parts);
+
         $code = "<?php\n\n";
         $code .= "declare(strict_types=1);\n\n";
-        $code .= sprintf("readonly class %s\n{\n", $className);
+
+        if ('' !== $namespace) {
+            $code .= sprintf("namespace %s;\n\n", $namespace);
+        }
+
+        $code .= sprintf("readonly class %s\n{\n", $shortName);
         $code .= '    public function validate(mixed $data): void' . "\n";
         $code .= "    {\n";
 
@@ -221,7 +255,12 @@ final readonly class ValidatorCompiler
 
     private function generatePatternCheck(string $pattern): string
     {
-        $normalizedPattern = RegexValidator::normalize($pattern);
+        // Transient RegexValidator: compilation is a one-shot offline code-generation
+        // step, not part of the runtime validation hot path. The generated class is
+        // standalone and carries no runtime RegexValidator dependency, and reset()
+        // must not affect compilation output. A dedicated short-lived normalizer is
+        // therefore correct here (no shared-eviction benefit for single-shot use).
+        $normalizedPattern = new RegexValidator()->normalize($pattern);
         $escapedPattern = var_export($normalizedPattern, true);
         $code = sprintf("        if (false === preg_match(%s, (string) \$data)) {\n", $escapedPattern);
         $code .= "            throw new \\RuntimeException('Pattern validation failed');\n";
@@ -301,14 +340,13 @@ final readonly class ValidatorCompiler
         }
 
         $escapedVar = '$data' === $dataVar ? "\$data" : $dataVar;
-        $safeVarForError = str_replace("'", "\'", $dataVar);
+        $safeVarForError = addslashes($dataVar);
         $code = sprintf("        if (false === is_array(%s)) {\n", $escapedVar);
         $code .= sprintf("            throw new \\RuntimeException('Expected object for %s');\n", $safeVarForError);
         $code .= "        }\n\n";
 
         foreach ($schema->properties as $propertyName => $propertySchema) {
-            $propertyVar = sprintf('%s[\'%s\']', $dataVar, $propertyName);
-            $code .= $this->generatePropertyValidation($propertySchema, $propertyName, $propertyVar);
+            $code .= $this->generatePropertyValidation($propertySchema, (string) $propertyName, $dataVar);
         }
 
         if (null !== $schema->required && [] !== $schema->required) {
@@ -325,13 +363,16 @@ final readonly class ValidatorCompiler
     private function generatePropertyValidation(
         Schema $propertySchema,
         string $propertyName,
-        string $propertyVar,
+        string $dataVar,
     ): string {
         $code = '';
 
         if (null === $propertySchema->type) {
             return $code;
         }
+
+        $safePropertyName = var_export($propertyName, true);
+        $propertyVar = $dataVar . '[' . $safePropertyName . ']';
 
         $code .= sprintf("        if (isset(%s)) {\n", $propertyVar);
 
@@ -351,9 +392,12 @@ final readonly class ValidatorCompiler
     {
         $code = '';
         foreach ($required as $propertyName) {
-            $propertyNameStr = (string) $propertyName;
-            $code .= sprintf("        if (false === array_key_exists('%s', %s)) {\n", $propertyNameStr, $dataVar);
-            $code .= sprintf("            throw new \\RuntimeException('Required property missing: %s');\n", $propertyNameStr);
+            $safeName = var_export($propertyName, true);
+            $code .= sprintf("        if (false === array_key_exists(%s, %s)) {\n", $safeName, $dataVar);
+            $code .= sprintf(
+                "            throw new \\RuntimeException('Required property missing: %s');\n",
+                addslashes($propertyName),
+            );
             $code .= "        }\n";
         }
 
@@ -374,7 +418,7 @@ final readonly class ValidatorCompiler
             return '';
         }
 
-        $safeVarName = str_replace("'", "\'", $valueVar);
+        $safeVarName = addslashes($valueVar);
 
         if (1 === count($checks)) {
             $code = sprintf("        if (false === %s) {\n", $checks[0]);
@@ -415,8 +459,19 @@ final readonly class ValidatorCompiler
         }
 
         if (null !== $schema->uniqueItems && $schema->uniqueItems) {
-            $code .= "        if (count(\$data) !== count(array_unique(\$data, SORT_REGULAR))) {\n";
-            $code .= "            throw new \\RuntimeException('Array items must be unique');\n";
+            // JSON Schema draft 2020-12 §6.4.3 / §4.2.3 equality: items are
+            // duplicates when their JSON serializations match. This mirrors
+            // the runtime ArrayLengthValidator behaviour, including numeric
+            // equality across int/float (json_encode(1) === json_encode(1.0)
+            // === "1"), while keeping distinct JSON types separate
+            // (json_encode(1)="1", json_encode("1")='"1"', json_encode(true)="true").
+            $code .= "        \$__seen = [];\n";
+            $code .= "        foreach (\$data as \$__item) {\n";
+            $code .= "            \$__key = json_encode(\$__item, JSON_THROW_ON_ERROR);\n";
+            $code .= "            if (in_array(\$__key, \$__seen, true)) {\n";
+            $code .= "                throw new \\RuntimeException('Array items must be unique');\n";
+            $code .= "            }\n";
+            $code .= "            \$__seen[] = \$__key;\n";
             $code .= "        }\n\n";
         }
 
@@ -521,6 +576,11 @@ final readonly class ValidatorCompiler
             'then' => null !== $schema->then,
             'else' => null !== $schema->else,
             'patternProperties' => null !== $schema->patternProperties,
+            'format' => null !== $schema->format,
+            'minProperties' => null !== $schema->minProperties,
+            'maxProperties' => null !== $schema->maxProperties,
+            'additionalProperties' => $schema->additionalProperties instanceof Schema,
+            'prefixItems' => null !== $schema->prefixItems,
         ];
 
         $detected = array_keys(array_filter($keywordMap));

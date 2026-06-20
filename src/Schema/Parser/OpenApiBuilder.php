@@ -57,6 +57,8 @@ use function in_array;
 
 use function gettype;
 
+use function strtolower;
+
 use const FILTER_VALIDATE_URL;
 
 abstract class OpenApiBuilder implements SchemaParserInterface
@@ -353,6 +355,15 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
         $this->checkSchemaDeprecations($data);
 
+        $multipleOf = TypeHelper::asFloatOrNull($data['multipleOf'] ?? null);
+
+        if (null !== $multipleOf && $multipleOf <= 0.0) {
+            throw new InvalidSchemaException(sprintf(
+                'multipleOf MUST be strictly greater than 0, got %g',
+                $multipleOf,
+            ));
+        }
+
         return new Schema(
             ref: TypeHelper::asStringOrNull($data['$ref'] ?? null),
             refSummary: isset($data['$ref']) ? TypeHelper::asStringOrNull($data['summary'] ?? null) : null,
@@ -369,7 +380,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             nullable: (bool) ($data['nullable'] ?? false),
             const: $data['const'] ?? null,
             hasConst: array_key_exists('const', $data),
-            multipleOf: TypeHelper::asFloatOrNull($data['multipleOf'] ?? null),
+            multipleOf: $multipleOf,
             maximum: TypeHelper::asFloatOrNull($data['maximum'] ?? null),
             exclusiveMaximum: $this->resolveExclusiveMaximum($data),
             minimum: TypeHelper::asFloatOrNull($data['minimum'] ?? null),
@@ -604,7 +615,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
         $mediaTypes = [];
 
         foreach ($data as $mediaType => $content) {
-            $mediaTypes[$mediaType] = $this->buildMediaType(TypeHelper::asArray($content));
+            $mediaTypes[strtolower($mediaType)] = $this->buildMediaType(TypeHelper::asArray($content));
         }
 
         /** @var array<string, MediaType> $mediaTypes */

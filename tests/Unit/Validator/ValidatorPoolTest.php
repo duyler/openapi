@@ -8,7 +8,13 @@ use Duyler\OpenApi\Validator\ValidatorPool;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use stdClass;
+use Swoole\Coroutine;
+use Swoole\Coroutine\Channel;
+use Swoole\Lock;
+
+use function extension_loaded;
 
 final class ValidatorPoolTest extends TestCase
 {
@@ -102,6 +108,43 @@ final class ValidatorPoolTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         new ValidatorPool(-1);
+    }
+
+    #[Test]
+    public function constructor_throws_when_lock_misses_lock_method(): void
+    {
+        $lock = new class {
+            public function unlock(): void {}
+        };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Lock object must expose both lock() and unlock() methods');
+
+        new ValidatorPool(maxSize: 8, lock: $lock);
+    }
+
+    #[Test]
+    public function constructor_throws_when_lock_misses_unlock_method(): void
+    {
+        $lock = new class {
+            public function lock(): void {}
+        };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Lock object must expose both lock() and unlock() methods');
+
+        new ValidatorPool(maxSize: 8, lock: $lock);
+    }
+
+    #[Test]
+    public function constructor_throws_when_lock_misses_both_methods(): void
+    {
+        $lock = new class {};
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Lock object must expose both lock() and unlock() methods');
+
+        new ValidatorPool(maxSize: 8, lock: $lock);
     }
 
     #[Test]
@@ -304,5 +347,171 @@ final class ValidatorPoolTest extends TestCase
 
         self::assertSame($objects[2], $pool->getOrCreate('key_2', fn() => new stdClass()));
         self::assertNotSame($objects[0], $pool->getOrCreate('key_0', fn() => new stdClass()));
+    }
+
+    #[Test]
+    public function pool_without_lock_behaves_identically_to_explicit_null_lock(): void
+    {
+        $default = new ValidatorPool(maxSize: 8);
+        $explicit = new ValidatorPool(maxSize: 8, lock: null);
+
+        $callCountDefault = 0;
+        $callCountExplicit = 0;
+
+        $defaultFactory = function () use (&$callCountDefault) {
+            ++$callCountDefault;
+
+            return new stdClass();
+        };
+        $explicitFactory = function () use (&$callCountExplicit) {
+            ++$callCountExplicit;
+
+            return new stdClass();
+        };
+
+        $defaultFirst = $default->getOrCreate('k', $defaultFactory);
+        $defaultSecond = $default->getOrCreate('k', $defaultFactory);
+
+        $explicitFirst = $explicit->getOrCreate('k', $explicitFactory);
+        $explicitSecond = $explicit->getOrCreate('k', $explicitFactory);
+
+        self::assertSame($defaultFirst, $defaultSecond);
+        self::assertSame($explicitFirst, $explicitSecond);
+        self::assertSame(1, $callCountDefault);
+        self::assertSame(1, $callCountExplicit);
+    }
+
+    #[Test]
+    public function mock_lock_is_acquired_and_released_for_each_get_or_create_call(): void
+    {
+        $lock = $this->createCountingLock();
+        $pool = new ValidatorPool(maxSize: 8, lock: $lock);
+
+        $pool->getOrCreate('a', fn() => new stdClass());
+        $pool->getOrCreate('b', fn() => new stdClass());
+        $pool->getOrCreate('a', fn() => new stdClass());
+
+        self::assertSame(3, $lock->lockCount);
+        self::assertSame(3, $lock->unlockCount);
+    }
+
+    #[Test]
+    public function mock_lock_is_acquired_and_released_for_clear(): void
+    {
+        $lock = $this->createCountingLock();
+        $pool = new ValidatorPool(maxSize: 8, lock: $lock);
+
+        $pool->getOrCreate('a', fn() => new stdClass());
+        $pool->clear();
+
+        self::assertSame(2, $lock->lockCount);
+        self::assertSame(2, $lock->unlockCount);
+    }
+
+    #[Test]
+    public function mock_lock_is_released_when_factory_throws(): void
+    {
+        $lock = $this->createCountingLock();
+        $pool = new ValidatorPool(maxSize: 8, lock: $lock);
+
+        $factoryThrown = false;
+
+        try {
+            $pool->getOrCreate('k', static function (): stdClass {
+                throw new RuntimeException('factory failure');
+            });
+        } catch (RuntimeException) {
+            $factoryThrown = true;
+        }
+
+        self::assertTrue($factoryThrown, 'Factory exception must propagate through finally');
+        self::assertSame(1, $lock->lockCount);
+        self::assertSame(1, $lock->unlockCount);
+    }
+
+    #[Test]
+    public function mock_lock_is_released_when_factory_throws_on_clear_after_eviction(): void
+    {
+        $lock = $this->createCountingLock();
+        $pool = new ValidatorPool(maxSize: 1, lock: $lock);
+
+        $pool->getOrCreate('a', fn() => new stdClass());
+
+        $factoryThrown = false;
+
+        try {
+            $pool->getOrCreate('b', static function (): stdClass {
+                throw new RuntimeException('factory failure');
+            });
+        } catch (RuntimeException) {
+            $factoryThrown = true;
+        }
+
+        self::assertTrue($factoryThrown, 'Factory exception must propagate through finally');
+        self::assertSame(2, $lock->lockCount);
+        self::assertSame(2, $lock->unlockCount);
+    }
+
+    #[Test]
+    public function swoole_lock_serializes_concurrent_get_or_create_factory_called_once(): void
+    {
+        if (!extension_loaded('swoole')) {
+            self::markTestSkipped('Swoole extension not available');
+        }
+
+        $pool = new ValidatorPool(maxSize: 8, lock: new Lock());
+
+        $factoryCount = 0;
+        $instances = [];
+
+        \Swoole\Coroutine\run(static function () use ($pool, &$factoryCount, &$instances): void {
+            $channel = new Channel(2);
+
+            go(static function () use ($pool, &$factoryCount, &$instances, $channel): void {
+                $instances[] = $pool->getOrCreate(
+                    'shared',
+                    static function () use (&$factoryCount): stdClass {
+                        ++$factoryCount;
+                        Coroutine::sleep(0.005);
+
+                        return new stdClass();
+                    },
+                );
+                $channel->push(true);
+            });
+
+            go(static function () use ($pool, &$instances, $channel): void {
+                $instances[] = $pool->getOrCreate('shared', static function (): stdClass {
+                    return new stdClass();
+                });
+                $channel->push(true);
+            });
+
+            $channel->pop();
+            $channel->pop();
+        });
+
+        self::assertCount(2, $instances);
+        self::assertSame(1, $factoryCount, 'Factory must be invoked exactly once under lock');
+        self::assertSame($instances[0], $instances[1], 'Both coroutines must receive the same instance');
+    }
+
+    private function createCountingLock(): object
+    {
+        return new class {
+            public int $lockCount = 0;
+
+            public int $unlockCount = 0;
+
+            public function lock(): void
+            {
+                ++$this->lockCount;
+            }
+
+            public function unlock(): void
+            {
+                ++$this->unlockCount;
+            }
+        };
     }
 }

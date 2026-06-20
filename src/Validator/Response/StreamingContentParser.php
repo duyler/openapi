@@ -11,6 +11,7 @@ use Psr\Log\NullLogger;
 use RuntimeException;
 
 use function assert;
+use function ctype_digit;
 use function is_array;
 use function is_null;
 use function is_scalar;
@@ -25,10 +26,35 @@ final readonly class StreamingContentParser
     private const string RECORD_SEPARATOR = "\x1E";
     private const int JSON_MAX_DEPTH = 512;
     private const int STREAM_CHUNK_SIZE = 8192;
-    private const int MAX_LINE_LENGTH = 1_048_576;
+    private const string UTF8_BOM = "\xEF\xBB\xBF";
+    private const int DEFAULT_MAX_LINE_LENGTH = 1_048_576;
+    private const int DEFAULT_MAX_RECORD_LENGTH = 10_485_760;
+
+    /**
+     * W3C Server-Sent Events default event type used when the event field is absent.
+     *
+     * @see https://html.spec.whatwg.org/multipage/server-sent-events.html
+     */
+    private const string SSE_DEFAULT_EVENT_TYPE = 'message';
+
+    /**
+     * Line-splitting pattern covering all three line-ending variants allowed by
+     * WHATWG HTML SSE §8.1.1: CRLF, LF, and CR.
+     *
+     * @see https://html.spec.whatwg.org/multipage/server-sent-events.html#parsing-an-event-stream
+     */
+    private const string SSE_LINE_SPLIT_PATTERN = '/\r\n|\r|\n/';
+
+    /**
+     * Single U+0020 SPACE removed from the start of an SSE field value per
+     * WHATWG HTML SSE §8.2.6 (exactly one, never tabs or other whitespace).
+     */
+    private const string SSE_FIELD_SPACE = ' ';
 
     public function __construct(
         private readonly LoggerInterface $logger = new NullLogger(),
+        private readonly int $maxLineLength = self::DEFAULT_MAX_LINE_LENGTH,
+        private readonly int $maxRecordLength = self::DEFAULT_MAX_RECORD_LENGTH,
     ) {}
 
     /**
@@ -70,6 +96,8 @@ final readonly class StreamingContentParser
      */
     public function parseJsonLines(string $body): array
     {
+        $body = $this->stripBom($body);
+
         $lines = preg_split('/\r?\n/', trim($body));
         assert(is_array($lines));
         /** @var list<array<int|string, mixed>|null> $items */
@@ -89,11 +117,18 @@ final readonly class StreamingContentParser
      */
     public function parseServerSentEvents(string $body): array
     {
+        $body = $this->stripBom($body);
+
         /** @var list<array<int|string, mixed>|null> $events */
         $events = [];
         $currentEvent = [];
 
-        foreach (explode("\n", $body) as $line) {
+        $lines = preg_split(self::SSE_LINE_SPLIT_PATTERN, $body);
+        if (false === $lines) {
+            return [];
+        }
+
+        foreach ($lines as $line) {
             if ('' === $line) {
                 if ([] !== $currentEvent) {
                     $events[] = $this->formatSseEvent($currentEvent);
@@ -109,8 +144,11 @@ final readonly class StreamingContentParser
             $colonPos = strpos($line, ':');
             if (false !== $colonPos) {
                 $field = substr($line, 0, $colonPos);
-                $value = ltrim(substr($line, $colonPos + 1));
-                $currentEvent[$field] = $value;
+                $rawValue = substr($line, $colonPos + 1);
+                $value = str_starts_with($rawValue, self::SSE_FIELD_SPACE)
+                    ? substr($rawValue, 1)
+                    : $rawValue;
+                $this->applySseField($currentEvent, $field, $value);
             }
         }
 
@@ -128,6 +166,8 @@ final readonly class StreamingContentParser
      */
     public function parseJsonSeq(string $body): array
     {
+        $body = $this->stripBom($body);
+
         /** @var list<array<int|string, mixed>|null> $items */
         $items = [];
         $pos = 0;
@@ -154,6 +194,15 @@ final readonly class StreamingContentParser
         }
 
         return $items;
+    }
+
+    private function stripBom(string $body): string
+    {
+        if (str_starts_with($body, self::UTF8_BOM)) {
+            return substr($body, strlen(self::UTF8_BOM));
+        }
+
+        return $body;
     }
 
     /**
@@ -220,10 +269,10 @@ final readonly class StreamingContentParser
 
             $buffer .= $chunk;
 
-            if (strlen($buffer) > self::MAX_LINE_LENGTH) {
+            if (strlen($buffer) > $this->maxLineLength) {
                 throw new RuntimeException(sprintf(
                     'Stream line exceeds maximum allowed length of %d bytes',
-                    self::MAX_LINE_LENGTH,
+                    $this->maxLineLength,
                 ));
             }
 
@@ -261,14 +310,15 @@ final readonly class StreamingContentParser
 
             $buffer .= $chunk;
 
-            if (strlen($buffer) > self::MAX_LINE_LENGTH) {
+            if (strlen($buffer) > $this->maxLineLength) {
                 throw new RuntimeException(sprintf(
                     'Stream line exceeds maximum allowed length of %d bytes',
-                    self::MAX_LINE_LENGTH,
+                    $this->maxLineLength,
                 ));
             }
 
-            $lines = explode("\n", $buffer);
+            $lines = preg_split(self::SSE_LINE_SPLIT_PATTERN, $buffer);
+            assert(is_array($lines));
 
             $buffer = array_pop($lines);
 
@@ -277,7 +327,10 @@ final readonly class StreamingContentParser
             }
         }
 
-        foreach (explode("\n", $buffer) as $line) {
+        $remainingLines = preg_split(self::SSE_LINE_SPLIT_PATTERN, $buffer);
+        assert(is_array($remainingLines));
+
+        foreach ($remainingLines as $line) {
             $this->processSseLine($line, $currentEvent, $events);
         }
 
@@ -311,8 +364,11 @@ final readonly class StreamingContentParser
 
         if (false !== $colonPos) {
             $field = substr($line, 0, $colonPos);
-            $value = ltrim(substr($line, $colonPos + 1));
-            $currentEvent[$field] = $value;
+            $rawValue = substr($line, $colonPos + 1);
+            $value = str_starts_with($rawValue, self::SSE_FIELD_SPACE)
+                ? substr($rawValue, 1)
+                : $rawValue;
+            $this->applySseField($currentEvent, $field, $value);
         }
     }
 
@@ -334,10 +390,10 @@ final readonly class StreamingContentParser
 
             $buffer .= $chunk;
 
-            if (strlen($buffer) > self::MAX_LINE_LENGTH) {
+            if (strlen($buffer) > $this->maxRecordLength) {
                 throw new RuntimeException(sprintf(
-                    'Stream line exceeds maximum allowed length of %d bytes',
-                    self::MAX_LINE_LENGTH,
+                    'JSON sequence record exceeds maximum allowed length of %d bytes',
+                    $this->maxRecordLength,
                 ));
             }
 
@@ -356,6 +412,20 @@ final readonly class StreamingContentParser
     }
 
     /**
+     * @param array<string, string> $currentEvent
+     */
+    private function applySseField(array &$currentEvent, string $field, string $value): void
+    {
+        if ('data' === $field && isset($currentEvent['data']) && '' !== $currentEvent['data']) {
+            $currentEvent['data'] .= "\n" . $value;
+
+            return;
+        }
+
+        $currentEvent[$field] = $value;
+    }
+
+    /**
      * Format SSE event data
      *
      * @param array<string, string> $event
@@ -367,6 +437,8 @@ final readonly class StreamingContentParser
 
         if (isset($event['event'])) {
             $result['event'] = $event['event'];
+        } elseif (isset($event['data'])) {
+            $result['event'] = self::SSE_DEFAULT_EVENT_TYPE;
         }
         if (isset($event['data'])) {
             $dataValue = $event['data'];
@@ -384,6 +456,13 @@ final readonly class StreamingContentParser
         }
         if (isset($event['id'])) {
             $result['id'] = $event['id'];
+        }
+        if (isset($event['retry'])) {
+            /** @var mixed $retry */
+            $retry = $event['retry'];
+            if (ctype_digit((string) $retry)) {
+                $result['retry'] = (int) $retry;
+            }
         }
 
         return $result;

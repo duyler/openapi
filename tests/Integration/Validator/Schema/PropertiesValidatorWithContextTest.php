@@ -446,7 +446,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
         $validator = new PropertiesValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $data = [
-            'pet' => ['petType' => 'cat'],
+            'pet' => ['petType' => 'Cat'],
         ];
 
         $validator->validateWithContext($data, $schema, $this->context);

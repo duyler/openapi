@@ -82,6 +82,49 @@ final class JsonPointerValidatorTest extends TestCase
     }
 
     #[Test]
+    public function throw_error_for_invalid_escape_two_inside_segment(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid JSON Pointer format');
+
+        $this->validator->validate('/foo~2bar');
+    }
+
+    #[Test]
+    public function throw_error_for_invalid_escape_letter(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid JSON Pointer format');
+
+        $this->validator->validate('/foo~a');
+    }
+
+    #[Test]
+    public function throw_error_for_trailing_tilde(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid JSON Pointer format');
+
+        $this->validator->validate('/foo~');
+    }
+
+    #[Test]
+    public function valid_tilde_zero_escape_in_middle(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('/foo~0bar');
+    }
+
+    #[Test]
+    public function valid_tilde_one_escape_in_middle(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('/foo~1bar');
+    }
+
+    #[Test]
     public function throw_error_for_non_string(): void
     {
         $this->expectException(InvalidFormatException::class);

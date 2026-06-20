@@ -80,11 +80,6 @@
       <code><![CDATA[$item]]></code>
     </MixedAssignment>
   </file>
-  <file src="src/Validator/SchemaValidator/ContainsRangeValidator.php">
-    <MixedAssignment>
-      <code><![CDATA[$item]]></code>
-    </MixedAssignment>
-  </file>
   <file src="src/Validator/SchemaValidator/ContainsValidator.php">
     <MixedAssignment>
       <code><![CDATA[$item]]></code>
@@ -105,11 +100,6 @@
     <RedundantConditionGivenDocblockType>
       <code><![CDATA[is_string($propertyName)]]></code>
     </RedundantConditionGivenDocblockType>
-  </file>
-  <file src="src/Validator/SchemaValidator/PrefixItemsValidator.php">
-    <MixedAssignment>
-      <code><![CDATA[$item]]></code>
-    </MixedAssignment>
   </file>
   <file src="src/Validator/SchemaValidator/UnevaluatedItemsValidator.php">
     <MixedAssignment>

@@ -10,9 +10,10 @@ use function is_array;
 use function is_bool;
 use function is_float;
 use function is_int;
+use function is_object;
+use function is_resource;
 use function is_string;
 use function sprintf;
-use function gettype;
 
 final readonly class SchemaValueNormalizer
 {
@@ -33,9 +34,16 @@ final readonly class SchemaValueNormalizer
             return $value;
         }
 
+        $typeDescription = match (true) {
+            is_object($value) => 'object (' . $value::class . ')',
+            is_resource($value) => 'resource',
+            null === $value => 'null',
+            default => 'unknown',
+        };
+
         throw new InvalidDataTypeException(sprintf(
             'Data must be array, int, string, float or bool, %s given',
-            gettype($value),
+            $typeDescription,
         ));
     }
 }

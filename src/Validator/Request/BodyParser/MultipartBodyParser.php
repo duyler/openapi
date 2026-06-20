@@ -6,26 +6,29 @@ namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
 use function count;
 
+use const PREG_UNMATCHED_AS_NULL;
+
 final readonly class MultipartBodyParser
 {
-    private const int BODY_PREVIEW_LENGTH = 500;
+    private const string BOUNDARY_PATTERN = '/boundary=(?:"(?<quoted>[^"]+)"|(?<unquoted>[^\s;]+))/i';
 
     /**
      * @return list<array<array-key, mixed>>
      */
-    public function parse(string $body): array
+    public function parse(string $body, string $fullContentType = ''): array
     {
         if ('' === trim($body)) {
             return [];
         }
 
-        $parts = [];
-        $boundary = $this->extractBoundary($body);
+        $boundary = $this->extractBoundaryFromContentType($fullContentType)
+            ?? $this->inferBoundaryFromBody($body);
 
         if (null === $boundary) {
-            return $parts;
+            return [];
         }
 
+        $parts = [];
         $sections = explode('--' . $boundary, $body);
 
         foreach ($sections as $section) {
@@ -42,10 +45,19 @@ final readonly class MultipartBodyParser
         return $parts;
     }
 
-    private function extractBoundary(string $body): ?string
+    private function extractBoundaryFromContentType(string $contentType): ?string
     {
-        if (preg_match('/boundary="?([^"\s]+)"?/i', substr($body, 0, self::BODY_PREVIEW_LENGTH), $matches)) {
-            return $matches[1];
+        if (1 === preg_match(self::BOUNDARY_PATTERN, $contentType, $matches, PREG_UNMATCHED_AS_NULL)) {
+            return $matches['quoted'] ?? $matches['unquoted'];
+        }
+
+        return null;
+    }
+
+    private function inferBoundaryFromBody(string $body): ?string
+    {
+        if (1 === preg_match('/^--(?<boundary>[^\r\n]+)/', $body, $matches)) {
+            return $matches['boundary'];
         }
 
         return null;

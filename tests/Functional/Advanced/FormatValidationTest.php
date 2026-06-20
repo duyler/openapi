@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Functional\Advanced;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
+
+use function sprintf;
 
 final class FormatValidationTest extends AdvancedFunctionalTestCase
 {
@@ -25,8 +28,15 @@ final class FormatValidationTest extends AdvancedFunctionalTestCase
         $validator = $this->createValidator($this->specFile);
         $request = $this->psrFactory->createServerRequest('GET', '/formats/query?email=test@example.com');
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateRequest($request);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -45,8 +55,15 @@ final class FormatValidationTest extends AdvancedFunctionalTestCase
         $validator = $this->createValidator($this->specFile);
         $request = $this->psrFactory->createServerRequest('GET', '/formats/query?uuid=550e8400-e29b-41d4-a716-446655440000');
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateRequest($request);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -65,8 +82,15 @@ final class FormatValidationTest extends AdvancedFunctionalTestCase
         $validator = $this->createValidator($this->specFile);
         $request = $this->psrFactory->createServerRequest('GET', '/formats/query?uri=https://example.com/path?query=value');
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateRequest($request);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -85,8 +109,15 @@ final class FormatValidationTest extends AdvancedFunctionalTestCase
         $validator = $this->createValidator($this->specFile);
         $request = $this->psrFactory->createServerRequest('GET', '/formats/query?date=2024-01-01');
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateRequest($request);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -95,8 +126,15 @@ final class FormatValidationTest extends AdvancedFunctionalTestCase
         $validator = $this->createValidator($this->specFile);
         $request = $this->psrFactory->createServerRequest('GET', '/formats/query?time=12:30:45Z');
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateRequest($request);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -105,8 +143,15 @@ final class FormatValidationTest extends AdvancedFunctionalTestCase
         $validator = $this->createValidator($this->specFile);
         $request = $this->psrFactory->createServerRequest('GET', '/formats/query?hostname=example.com');
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateRequest($request);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -115,8 +160,15 @@ final class FormatValidationTest extends AdvancedFunctionalTestCase
         $validator = $this->createValidator($this->specFile);
         $request = $this->psrFactory->createServerRequest('GET', '/formats/query?ipv4=192.168.1.1');
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateRequest($request);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -125,8 +177,15 @@ final class FormatValidationTest extends AdvancedFunctionalTestCase
         $validator = $this->createValidator($this->specFile);
         $request = $this->psrFactory->createServerRequest('GET', '/formats/query?ipv6=2001:0db8:85a3:0000:0000:8a2e:0370:7334');
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateRequest($request);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -147,8 +206,15 @@ final class FormatValidationTest extends AdvancedFunctionalTestCase
             'password' => 'Secret123',
         ]);
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateRequest($request);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -162,8 +228,15 @@ final class FormatValidationTest extends AdvancedFunctionalTestCase
             'doubleValue' => 3.14159,
         ]);
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateRequest($request);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -177,8 +250,15 @@ final class FormatValidationTest extends AdvancedFunctionalTestCase
             'doubleValue' => 3.14159,
         ]);
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateRequest($request);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -192,8 +272,15 @@ final class FormatValidationTest extends AdvancedFunctionalTestCase
             'doubleValue' => 3.14159,
         ]);
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateRequest($request);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -214,8 +301,15 @@ final class FormatValidationTest extends AdvancedFunctionalTestCase
             'password' => 'Secret123',
         ]);
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateRequest($request);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -235,7 +329,14 @@ final class FormatValidationTest extends AdvancedFunctionalTestCase
             ],
         ]);
 
-        $validator->validateRequest($request);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateRequest($request);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 }

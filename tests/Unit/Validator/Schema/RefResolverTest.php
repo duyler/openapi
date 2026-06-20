@@ -12,6 +12,7 @@ use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
+use Duyler\OpenApi\Validator\Schema\ExternalRefResolverInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
@@ -1363,6 +1364,77 @@ final class RefResolverTest extends TestCase
 
         // clear() should be callable through the interface
         $this->resolver->clear();
+    }
+
+    #[Test]
+    public function throw_error_for_external_ref_with_deny_all_message(): void
+    {
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $this->expectException(UnresolvableRefException::class);
+        $this->expectExceptionMessage(
+            'Cannot resolve $ref "https://example.com/user.json": Only local refs (#/...) are supported; install an ExternalRefResolver for external refs',
+        );
+
+        $this->resolver->resolve("https://example.com/user.json", $document);
+    }
+
+    #[Test]
+    public function throw_error_for_relative_external_ref_without_resolver(): void
+    {
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $this->expectException(UnresolvableRefException::class);
+        $this->expectExceptionMessage(
+            'Cannot resolve $ref "./relative/path.json": Only local refs (#/...) are supported; install an ExternalRefResolver for external refs',
+        );
+
+        $this->resolver->resolve("./relative/path.json", $document);
+    }
+
+    #[Test]
+    public function throw_error_for_absolute_path_external_ref_without_resolver(): void
+    {
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $this->expectException(UnresolvableRefException::class);
+        $this->expectExceptionMessage(
+            'Cannot resolve $ref "/absolute/path.json": Only local refs (#/...) are supported; install an ExternalRefResolver for external refs',
+        );
+
+        $this->resolver->resolve("/absolute/path.json", $document);
+    }
+
+    #[Test]
+    public function resolve_external_ref_through_injected_resolver(): void
+    {
+        $externalSchema = new Schema(title: "ExternalUser");
+        $resolver = new RefResolver(new class ($externalSchema) implements ExternalRefResolverInterface {
+            public function __construct(private readonly Schema $schema) {}
+
+            public function resolve(string $ref): Schema
+            {
+                return $this->schema;
+            }
+        });
+
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+        );
+
+        $resolved = $resolver->resolve("https://example.com/user.json", $document);
+
+        $this->assertSame($externalSchema, $resolved);
     }
 
     private function createNestedSchemaChain(int $depth, string $leafValue): Schema

@@ -33,6 +33,10 @@ final class ByteValidatorTest extends TestCase
             'json payload' => [base64_encode('{"key":"value"}')],
             'padding with single equals' => ['SGVsbG8='],
             'padding with double equals' => ['SGVs'],
+            'url-safe with hyphen' => ['aGVsbG8-d29ybGQ='],
+            'url-safe with underscore' => ['aGVsbG8_d29ybGQ='],
+            'url-safe real bytes' => ['_78='],
+            'url-safe real bytes with both chars' => ['-_8='],
         ];
     }
 
@@ -53,6 +57,9 @@ final class ByteValidatorTest extends TestCase
             'incomplete base64' => ['SGVsbG8'],
             'invalid padding' => ['SGVsbG8= ='],
             'random symbols' => ['@@@!!!'],
+            'exclamation garbage' => ['!!!not-base64!!!'],
+            'whitespace inside valid-looking base64' => ["SGVs\nbG8="],
+            'url-safe without padding fails round trip' => ['aGVsbG8-d29ybGQ'],
         ];
     }
 
@@ -124,5 +131,57 @@ final class ByteValidatorTest extends TestCase
         $this->validator->validate($encoded);
 
         $this->assertSame($original, base64_decode($encoded));
+    }
+
+    #[Test]
+    public function url_safe_base64_with_hyphen_passes(): void
+    {
+        $original = 'hello>world';
+        $urlSafe = strtr(base64_encode($original), '+/', '-_');
+
+        $exception = null;
+
+        try {
+            $this->validator->validate($urlSafe);
+        } catch (InvalidFormatException $exception) {
+        }
+
+        $this->assertNull(
+            $exception,
+            'Url-safe base64 (RFC 4648 §5) must be accepted. Failed: ' . ($exception?->getMessage() ?? ''),
+        );
+    }
+
+    #[Test]
+    public function url_safe_base64_with_underscore_passes(): void
+    {
+        $bytes = pack('C*', 0xfb, 0xff);
+        $urlSafe = strtr(base64_encode($bytes), '+/', '-_');
+
+        $exception = null;
+
+        try {
+            $this->validator->validate($urlSafe);
+        } catch (InvalidFormatException $exception) {
+        }
+
+        $this->assertNull(
+            $exception,
+            'Url-safe base64 (RFC 4648 §5) with underscore must be accepted.',
+        );
+    }
+
+    #[Test]
+    public function invalid_base64_error_message_mentions_standards(): void
+    {
+        $invalid = '!!!not-base64!!!';
+
+        try {
+            $this->validator->validate($invalid);
+            $this->fail('Expected InvalidFormatException was not thrown');
+        } catch (InvalidFormatException $exception) {
+            $this->assertStringContainsString('standard', $exception->getMessage());
+            $this->assertStringContainsString('url-safe', $exception->getMessage());
+        }
     }
 }

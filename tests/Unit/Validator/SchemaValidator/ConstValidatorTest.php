@@ -157,4 +157,54 @@ class ConstValidatorTest extends TestCase
 
         $this->validator->validate(1, $schema);
     }
+
+    #[Test]
+    public function validate_int_const_matches_float_data(): void
+    {
+        $schema = new Schema(type: 'number', const: 1);
+
+        $this->validator->validate(1.0, $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_float_const_matches_int_data(): void
+    {
+        $schema = new Schema(type: 'number', const: 1.0);
+
+        $this->validator->validate(1, $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function throw_error_for_string_const_against_int_data(): void
+    {
+        $schema = new Schema(type: 'string', const: '1');
+
+        $this->expectException(ConstError::class);
+
+        $this->validator->validate(1, $schema);
+    }
+
+    #[Test]
+    public function throw_error_for_int_const_against_boolean_data(): void
+    {
+        $schema = new Schema(type: 'number', const: 1);
+
+        $this->expectException(ConstError::class);
+
+        $this->validator->validate(true, $schema);
+    }
+
+    #[Test]
+    public function validate_null_const_against_null_data(): void
+    {
+        $schema = new Schema(const: null, hasConst: true);
+
+        $this->validator->validate(null, $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
 }

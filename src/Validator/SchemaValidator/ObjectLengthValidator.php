@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MaxPropertiesError;
 use Duyler\OpenApi\Validator\Exception\MinPropertiesError;
@@ -21,7 +22,17 @@ final readonly class ObjectLengthValidator extends AbstractSchemaValidator
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
-        if (false === is_array($data) || ([] !== $data && array_is_list($data))) {
+        if (false === is_array($data)) {
+            return;
+        }
+
+        if ([] === $data) {
+            $strategy = $context?->emptyArrayStrategy ?? EmptyArrayStrategy::AllowBoth;
+
+            if (EmptyArrayStrategy::PreferArray === $strategy) {
+                return;
+            }
+        } elseif (array_is_list($data)) {
             return;
         }
 

@@ -5,30 +5,17 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\AbstractLogger;
-use Stringable;
+
+use function sprintf;
 
 final class StrictFormatsTest extends TestCase
 {
     #[Test]
-    public function strict_formats_logs_warning_for_unknown_format(): void
+    public function strict_formats_throws_invalid_format_exception_for_unknown_format(): void
     {
-        $collectedMessages = [];
-
-        $logger = new class ($collectedMessages) extends AbstractLogger {
-            /** @param list<string> $messages */
-            public function __construct(
-                private array &$messages,
-            ) {}
-
-            public function log($level, Stringable|string $message, array $context = []): void
-            {
-                $this->messages[] = (string) $message;
-            }
-        };
-
         $yaml = <<<YAML
 openapi: 3.1.0
 info:
@@ -45,42 +32,22 @@ components:
       required:
         - email
 YAML;
+
+        $this->expectException(InvalidFormatException::class);
 
         OpenApiValidatorBuilder::create()
             ->fromYamlString($yaml)
             ->enableStrictFormats()
-            ->withLogger($logger)
             ->build()
             ->validateSchema(
                 ['email' => 'test@example.com'],
                 '#/components/schemas/User',
             );
-
-        $hasWarning = array_any(
-            $collectedMessages,
-            fn(string $msg) => str_contains($msg, 'Unknown format "typo"'),
-        );
-
-        $this->assertTrue($hasWarning, 'Expected warning about unknown format "typo"');
     }
 
     #[Test]
-    public function non_strict_formats_does_not_log_warning(): void
+    public function strict_formats_exception_carries_format_and_value(): void
     {
-        $collectedMessages = [];
-
-        $logger = new class ($collectedMessages) extends AbstractLogger {
-            /** @param list<string> $messages */
-            public function __construct(
-                private array &$messages,
-            ) {}
-
-            public function log($level, Stringable|string $message, array $context = []): void
-            {
-                $this->messages[] = (string) $message;
-            }
-        };
-
         $yaml = <<<YAML
 openapi: 3.1.0
 info:
@@ -98,40 +65,66 @@ components:
         - email
 YAML;
 
-        OpenApiValidatorBuilder::create()
-            ->fromYamlString($yaml)
-            ->withLogger($logger)
-            ->build()
-            ->validateSchema(
-                ['email' => 'test@example.com'],
-                '#/components/schemas/User',
-            );
-
-        $hasFormatWarning = array_any(
-            $collectedMessages,
-            fn(string $msg) => str_contains($msg, 'Unknown format'),
-        );
-
-        $this->assertFalse($hasFormatWarning, 'Should not have warning without strict formats');
+        try {
+            OpenApiValidatorBuilder::create()
+                ->fromYamlString($yaml)
+                ->enableStrictFormats()
+                ->build()
+                ->validateSchema(
+                    ['email' => 'test@example.com'],
+                    '#/components/schemas/User',
+                );
+            $this->fail('Expected InvalidFormatException was not thrown');
+        } catch (InvalidFormatException $exception) {
+            $this->assertSame('typo', $exception->format);
+            $this->assertSame('test@example.com', $exception->value);
+        }
     }
 
     #[Test]
-    public function known_format_does_not_log_warning_in_strict_mode(): void
+    public function non_strict_formats_allows_unknown_format(): void
     {
-        $collectedMessages = [];
+        $yaml = <<<YAML
+openapi: 3.1.0
+info:
+  title: Test API
+  version: 1.0.0
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        email:
+          type: string
+          format: typo
+      required:
+        - email
+YAML;
 
-        $logger = new class ($collectedMessages) extends AbstractLogger {
-            /** @param list<string> $messages */
-            public function __construct(
-                private array &$messages,
-            ) {}
+        $passed = false;
 
-            public function log($level, Stringable|string $message, array $context = []): void
-            {
-                $this->messages[] = (string) $message;
-            }
-        };
+        try {
+            OpenApiValidatorBuilder::create()
+                ->fromYamlString($yaml)
+                ->build()
+                ->validateSchema(
+                    ['email' => 'test@example.com'],
+                    '#/components/schemas/User',
+                );
+            $passed = true;
+        } catch (InvalidFormatException $exception) {
+            $this->fail(sprintf(
+                'Unknown format should be skipped without strict mode, got: %s',
+                $exception->getMessage(),
+            ));
+        }
 
+        $this->assertTrue($passed, 'Validation should pass without strict formats');
+    }
+
+    #[Test]
+    public function known_format_does_not_throw_in_strict_mode(): void
+    {
         $yaml = <<<YAML
 openapi: 3.1.0
 info:
@@ -149,21 +142,25 @@ components:
         - email
 YAML;
 
-        OpenApiValidatorBuilder::create()
-            ->fromYamlString($yaml)
-            ->enableStrictFormats()
-            ->withLogger($logger)
-            ->build()
-            ->validateSchema(
-                ['email' => 'test@example.com'],
-                '#/components/schemas/User',
-            );
+        $passed = false;
 
-        $hasFormatWarning = array_any(
-            $collectedMessages,
-            fn(string $msg) => str_contains($msg, 'Unknown format'),
-        );
+        try {
+            OpenApiValidatorBuilder::create()
+                ->fromYamlString($yaml)
+                ->enableStrictFormats()
+                ->build()
+                ->validateSchema(
+                    ['email' => 'test@example.com'],
+                    '#/components/schemas/User',
+                );
+            $passed = true;
+        } catch (InvalidFormatException $exception) {
+            $this->fail(sprintf(
+                'Known format should not throw in strict mode, got: %s',
+                $exception->getMessage(),
+            ));
+        }
 
-        $this->assertFalse($hasFormatWarning, 'Known format should not produce warning');
+        $this->assertTrue($passed, 'Known format should pass in strict mode');
     }
 }

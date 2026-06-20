@@ -152,6 +152,227 @@ final class SecurityValidatorTest extends TestCase
     }
 
     #[Test]
+    public function api_key_in_query_with_empty_value_reports_empty_query_parameter_location(): void
+    {
+        // Arrange
+        $request = $this->factory->createServerRequest('GET', '/data?api_key=');
+        $securityRequirements = new SecurityRequirement([
+            ['apiKeyQuery' => []],
+        ]);
+        $securitySchemes = [
+            'apiKeyQuery' => new SecurityScheme(
+                type: 'apiKey',
+                in: 'query',
+                name: 'api_key',
+            ),
+        ];
+
+        // Act
+        try {
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            // Assert
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('apiKeyQuery', $error->params()['schemeName']);
+            $this->assertSame('apiKey', $error->params()['schemeType']);
+            $this->assertSame('empty query parameter "api_key"', $error->params()['location']);
+        }
+    }
+
+    #[Test]
+    public function api_key_in_query_with_missing_parameter_reports_missing_query_parameter_location(): void
+    {
+        // Arrange
+        $request = $this->factory->createServerRequest('GET', '/data');
+        $securityRequirements = new SecurityRequirement([
+            ['apiKeyQuery' => []],
+        ]);
+        $securitySchemes = [
+            'apiKeyQuery' => new SecurityScheme(
+                type: 'apiKey',
+                in: 'query',
+                name: 'api_key',
+            ),
+        ];
+
+        // Act
+        try {
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            // Assert
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('apiKeyQuery', $error->params()['schemeName']);
+            $this->assertSame('apiKey', $error->params()['schemeType']);
+            $this->assertSame('missing query parameter "api_key"', $error->params()['location']);
+        }
+    }
+
+    #[Test]
+    public function api_key_in_cookie_with_empty_value_reports_empty_cookie_parameter_location(): void
+    {
+        // Arrange
+        $request = $this->factory->createServerRequest('GET', '/data')
+            ->withCookieParams(['session' => '']);
+        $securityRequirements = new SecurityRequirement([
+            ['apiKeyCookie' => []],
+        ]);
+        $securitySchemes = [
+            'apiKeyCookie' => new SecurityScheme(
+                type: 'apiKey',
+                in: 'cookie',
+                name: 'session',
+            ),
+        ];
+
+        // Act
+        try {
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            // Assert
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('apiKeyCookie', $error->params()['schemeName']);
+            $this->assertSame('apiKey', $error->params()['schemeType']);
+            $this->assertSame('empty cookie parameter "session"', $error->params()['location']);
+        }
+    }
+
+    #[Test]
+    public function api_key_in_header_missing_psr7_distinguishes_via_missing_only(): void
+    {
+        // Arrange
+        $request = $this->factory->createServerRequest('GET', '/data');
+        $securityRequirements = new SecurityRequirement([
+            ['apiKeyHeader' => []],
+        ]);
+        $securitySchemes = [
+            'apiKeyHeader' => new SecurityScheme(
+                type: 'apiKey',
+                in: 'header',
+                name: 'X-API-Key',
+            ),
+        ];
+
+        // Act
+        try {
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            // Assert
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('apiKeyHeader', $error->params()['schemeName']);
+            $this->assertSame('apiKey', $error->params()['schemeType']);
+            $this->assertSame('missing header parameter "X-API-Key"', $error->params()['location']);
+        }
+    }
+
+    #[Test]
+    public function api_key_in_header_with_empty_value_psr7_limitation_yields_missing(): void
+    {
+        // Arrange
+        $request = $this->factory->createServerRequest('GET', '/data')
+            ->withHeader('X-API-Key', '');
+        $securityRequirements = new SecurityRequirement([
+            ['apiKeyHeader' => []],
+        ]);
+        $securitySchemes = [
+            'apiKeyHeader' => new SecurityScheme(
+                type: 'apiKey',
+                in: 'header',
+                name: 'X-API-Key',
+            ),
+        ];
+
+        // Act
+        try {
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            // Assert
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('missing header parameter "X-API-Key"', $error->params()['location']);
+        }
+    }
+
+    #[Test]
+    public function api_key_in_query_with_array_value_reports_missing(): void
+    {
+        // Arrange
+        $request = $this->factory->createServerRequest('GET', '/data?api_key[]=val');
+        $securityRequirements = new SecurityRequirement([
+            ['apiKeyQuery' => []],
+        ]);
+        $securitySchemes = [
+            'apiKeyQuery' => new SecurityScheme(
+                type: 'apiKey',
+                in: 'query',
+                name: 'api_key',
+            ),
+        ];
+
+        // Act
+        try {
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            // Assert
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('missing query parameter "api_key"', $error->params()['location']);
+        }
+    }
+
+    #[Test]
+    public function api_key_in_cookie_with_array_value_reports_missing(): void
+    {
+        // Arrange
+        $request = $this->factory->createServerRequest('GET', '/data')
+            ->withCookieParams(['session_token' => ['array_value']]);
+        $securityRequirements = new SecurityRequirement([
+            ['apiKeyCookie' => []],
+        ]);
+        $securitySchemes = [
+            'apiKeyCookie' => new SecurityScheme(
+                type: 'apiKey',
+                in: 'cookie',
+                name: 'session_token',
+            ),
+        ];
+
+        // Act
+        try {
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            // Assert
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('missing cookie parameter "session_token"', $error->params()['location']);
+        }
+    }
+
+    #[Test]
     public function api_key_in_header_with_valid_key_passes(): void
     {
         // Arrange

@@ -10,10 +10,13 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Override;
 
+use function fmod;
 use function is_array;
 use function is_bool;
 use function is_float;
+use function is_infinite;
 use function is_int;
+use function is_nan;
 use function is_string;
 use function gettype;
 
@@ -64,7 +67,11 @@ final readonly class TypeValidator extends AbstractSchemaValidator
         return match ($type) {
             'string' => is_string($data),
             'number' => is_float($data) || is_int($data),
-            'integer' => is_int($data),
+            'integer' => is_int($data)
+                || (is_float($data)
+                    && 0.0 === fmod($data, 1.0)
+                    && !is_infinite($data)
+                    && !is_nan($data)),
             'boolean' => is_bool($data),
             'null' => null === $data,
             'array' => $this->isArray($data, $strategy),

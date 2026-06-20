@@ -16,6 +16,7 @@ use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
+use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Response\ResponseBodyValidatorWithContext;
@@ -28,12 +29,17 @@ use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Schema\Model\Encoding;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
+use Override;
+use RuntimeException;
+
+use function sprintf;
 
 /** @internal */
 final class ResponseBodyValidatorWithContextTest extends TestCase
 {
     private ResponseBodyValidatorWithContext $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $pool = new ValidatorPool();
@@ -46,7 +52,7 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
         );
         $negotiator = new ContentTypeNegotiator();
         $jsonParser = new JsonBodyParser();
-        $formParser = new FormBodyParser();
+        $formParser = new FormBodyParser(new QueryParser());
         $multipartParser = new MultipartBodyParser();
         $textParser = new TextBodyParser();
         $xmlParser = new XmlBodyParser();
@@ -85,9 +91,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -96,9 +108,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
         $body = '{"id":123}';
         $contentType = 'application/json';
 
-        $this->validator->validate($body, $contentType, null);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, null);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -110,9 +128,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             'application/json' => new MediaType(),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -132,9 +156,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -153,9 +183,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -174,9 +210,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -195,9 +237,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -209,9 +257,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             'application/jsonl' => new MediaType(),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -230,9 +284,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -268,9 +328,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -284,9 +350,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -302,7 +374,7 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
         );
         $negotiator = new ContentTypeNegotiator();
         $jsonParser = new JsonBodyParser();
-        $formParser = new FormBodyParser();
+        $formParser = new FormBodyParser(new QueryParser());
         $multipartParser = new MultipartBodyParser();
         $textParser = new TextBodyParser();
         $xmlParser = new XmlBodyParser();
@@ -334,9 +406,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -358,9 +436,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -379,9 +463,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -395,9 +485,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -416,9 +512,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -438,9 +540,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -465,9 +573,15 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -488,8 +602,14 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($body, $contentType, $content);
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 }

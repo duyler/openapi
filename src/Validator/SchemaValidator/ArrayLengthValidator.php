@@ -7,15 +7,25 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\DuplicateItemsError;
+use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MinItemsError;
 use Duyler\OpenApi\Validator\SchemaValidator\Trait\LengthValidationTrait;
 use Override;
 
+use JsonException;
+
 use function count;
 use function is_array;
+use function is_bool;
+use function is_float;
+use function is_int;
+use function is_resource;
+use function is_string;
+use function json_encode;
+use function serialize;
 
-use const SORT_REGULAR;
+use const JSON_THROW_ON_ERROR;
 
 final readonly class ArrayLengthValidator extends AbstractSchemaValidator
 {
@@ -40,16 +50,80 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator
         );
 
         if ($schema->uniqueItems) {
-            $unique = array_unique($data, SORT_REGULAR);
+            $uniqueCount = $this->countUniqueItems($data);
 
-            if (count($unique) !== $count) {
+            if ($uniqueCount !== $count) {
                 throw new DuplicateItemsError(
                     expectedCount: $count,
-                    actualCount: count($unique),
+                    actualCount: $uniqueCount,
                     dataPath: $dataPath,
                     schemaPath: '/uniqueItems',
                 );
             }
+        }
+    }
+
+    /**
+     * @param array<mixed> $data
+     */
+    private function countUniqueItems(array $data): int
+    {
+        $seen = [];
+        $count = 0;
+
+        /** @var mixed $item */
+        foreach ($data as $item) {
+            $key = $this->itemKey($item);
+
+            if (false === isset($seen[$key])) {
+                $seen[$key] = true;
+                ++$count;
+            }
+        }
+
+        return $count;
+    }
+
+    private function itemKey(mixed $item): string
+    {
+        $this->ensureJsonCompatible($item);
+
+        if (is_int($item) || is_float($item)) {
+            return 'n:' . (string) (float) $item;
+        }
+
+        if (null === $item) {
+            return 'null';
+        }
+
+        if (is_bool($item)) {
+            return 'b:' . ($item ? '1' : '0');
+        }
+
+        if (is_string($item)) {
+            return 's:' . $item;
+        }
+
+        if (is_array($item)) {
+            return 'a:' . $this->encodeArrayKey($item);
+        }
+
+        return serialize($item);
+    }
+
+    private function ensureJsonCompatible(mixed $value): void
+    {
+        if (is_resource($value)) {
+            throw new InvalidDataTypeException('Resources are not valid JSON values');
+        }
+    }
+
+    private function encodeArrayKey(array $item): string
+    {
+        try {
+            return json_encode($item, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return serialize($item);
         }
     }
 }

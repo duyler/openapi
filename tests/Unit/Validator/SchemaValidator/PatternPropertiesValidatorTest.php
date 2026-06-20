@@ -11,9 +11,13 @@ use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+
+use function sprintf;
 
 #[CoversClass(PatternPropertiesValidator::class)]
 class PatternPropertiesValidatorTest extends TestCase
@@ -21,6 +25,7 @@ class PatternPropertiesValidatorTest extends TestCase
     private ValidatorPool $pool;
     private PatternPropertiesValidator $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
@@ -38,9 +43,16 @@ class PatternPropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate(['meta_info' => 'data'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['meta_info' => 'data'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -56,9 +68,16 @@ class PatternPropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate(['str_val' => 'hello', 'num_val' => 42], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['str_val' => 'hello', 'num_val' => 42], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -88,9 +107,16 @@ class PatternPropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate('string value', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('string value', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -98,9 +124,16 @@ class PatternPropertiesValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'object');
 
-        $this->validator->validate(['key' => 'value'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['key' => 'value'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -108,9 +141,16 @@ class PatternPropertiesValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'object', patternProperties: []);
 
-        $this->validator->validate(['key' => 'value'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['key' => 'value'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -124,9 +164,16 @@ class PatternPropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate(['other_key' => 'value', 'meta_info' => 'data'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['other_key' => 'value', 'meta_info' => 'data'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -140,9 +187,16 @@ class PatternPropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate(['key' => 'value'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['key' => 'value'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -156,9 +210,16 @@ class PatternPropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate([0 => 'value'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([0 => 'value'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -172,9 +233,16 @@ class PatternPropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate(['meta_info' => 'data'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['meta_info' => 'data'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -190,9 +258,16 @@ class PatternPropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate(['str_val' => 'hello', 'num_val' => 42], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['str_val' => 'hello', 'num_val' => 42], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -242,8 +317,15 @@ class PatternPropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate(['str_val' => 'hello', 'num_val' => 42], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['str_val' => 'hello', 'num_val' => 42], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 }

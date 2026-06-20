@@ -8,6 +8,7 @@ use Duyler\OpenApi\Validator\SchemaValidator\AdditionalPropertiesValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\MaxLengthError;
+use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -162,6 +163,59 @@ class AdditionalPropertiesValidatorTest extends TestCase
             'key2' => 'val2',
             'key3' => 'val3',
         ], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    /**
+     * EI-054: additionalProperties: false must produce one UnevaluatedPropertyError
+     * per forbidden property instead of an empty errors array.
+     */
+    #[Test]
+    public function reject_additional_when_false_returns_unevaluated_property_errors(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'id' => new Schema(type: 'integer'),
+            ],
+            additionalProperties: false,
+        );
+
+        $caught = null;
+
+        try {
+            $this->validator->validate(['id' => 1, 'extra1' => 'a', 'extra2' => 'b'], $schema);
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        self::assertNotNull($caught);
+
+        $errors = $caught->getErrors();
+
+        self::assertCount(2, $errors);
+        self::assertInstanceOf(UnevaluatedPropertyError::class, $errors[0]);
+        self::assertInstanceOf(UnevaluatedPropertyError::class, $errors[1]);
+        self::assertSame('extra1', $errors[0]->params()['propertyName']);
+        self::assertSame('extra2', $errors[1]->params()['propertyName']);
+    }
+
+    /**
+     * Regression: no extra properties must still pass when additionalProperties is false.
+     */
+    #[Test]
+    public function allow_no_additional_properties_when_additional_properties_false(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'id' => new Schema(type: 'integer'),
+            ],
+            additionalProperties: false,
+        );
+
+        $this->validator->validate(['id' => 1], $schema);
 
         $this->expectNotToPerformAssertions();
     }

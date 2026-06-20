@@ -12,18 +12,23 @@ use Duyler\OpenApi\Validator\Exception\MaximumError;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Response\ResponseHeadersValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Override;
+
+use function sprintf;
 
 /** @internal */
 final class ResponseHeadersValidatorTest extends TestCase
 {
     private ResponseHeadersValidator $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $pool = new ValidatorPool();
@@ -42,9 +47,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -57,9 +68,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -72,9 +89,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -120,9 +143,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -138,9 +167,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -153,9 +188,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -166,9 +207,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             'X-Optional' => new Header(required: false),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -181,9 +228,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -206,9 +259,15 @@ final class ResponseHeadersValidatorTest extends TestCase
     {
         $headers = ['X-Custom' => 'value'];
 
-        $this->validator->validate($headers, null);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, null);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -221,9 +280,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -238,9 +303,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             'X-Optional' => new Header(required: false),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -253,9 +324,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($numericArray, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($numericArray, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -268,9 +345,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -287,9 +370,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -353,9 +442,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -368,9 +463,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -398,9 +499,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -413,9 +520,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -428,9 +541,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -443,9 +562,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -458,9 +583,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -473,9 +604,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -488,9 +625,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -503,9 +646,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -518,9 +667,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -536,9 +691,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -554,9 +715,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -572,9 +739,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -590,9 +763,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -608,9 +787,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -626,9 +811,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -644,9 +835,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -659,9 +856,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -677,9 +880,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -692,9 +901,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -707,13 +922,19 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
-    public function coerce_integer_with_float_value(): void
+    public function coerce_integer_with_float_value_throws_error(): void
     {
         $headers = ['X-Value' => '30.5'];
         $headerSchemas = new Headers([
@@ -722,9 +943,132 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $this->expectException(TypeMismatchError::class);
 
-        $this->expectNotToPerformAssertions();
+        $this->validator->validate($headers, $headerSchemas);
+    }
+
+    #[Test]
+    public function coerce_integer_header_scientific_notation_throws_error(): void
+    {
+        $headers = ['X-Count' => '1e5'];
+        $headerSchemas = new Headers([
+            'X-Count' => new Header(
+                schema: new Schema(type: 'integer'),
+            ),
+        ]);
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate($headers, $headerSchemas);
+    }
+
+    #[Test]
+    public function coerce_integer_header_trailing_chars_throws_error(): void
+    {
+        $headers = ['X-Count' => '12abc'];
+        $headerSchemas = new Headers([
+            'X-Count' => new Header(
+                schema: new Schema(type: 'integer'),
+            ),
+        ]);
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate($headers, $headerSchemas);
+    }
+
+    #[Test]
+    public function coerce_integer_header_hex_notation_throws_error(): void
+    {
+        $headers = ['X-Count' => '0x10'];
+        $headerSchemas = new Headers([
+            'X-Count' => new Header(
+                schema: new Schema(type: 'integer'),
+            ),
+        ]);
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate($headers, $headerSchemas);
+    }
+
+    #[Test]
+    public function coerce_integer_header_empty_value_throws_error(): void
+    {
+        $headers = ['X-Count' => ''];
+        $headerSchemas = new Headers([
+            'X-Count' => new Header(
+                schema: new Schema(type: 'integer'),
+            ),
+        ]);
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate($headers, $headerSchemas);
+    }
+
+    #[Test]
+    public function coerce_integer_header_positive_signed_integer(): void
+    {
+        $headers = ['X-Count' => '+5'];
+        $headerSchemas = new Headers([
+            'X-Count' => new Header(
+                schema: new Schema(type: 'integer'),
+            ),
+        ]);
+
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function coerce_integer_header_negative_signed_integer(): void
+    {
+        $headers = ['X-Count' => '-5'];
+        $headerSchemas = new Headers([
+            'X-Count' => new Header(
+                schema: new Schema(type: 'integer'),
+            ),
+        ]);
+
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function coerce_integer_header_leading_zero_value(): void
+    {
+        $headers = ['X-Count' => '08'];
+        $headerSchemas = new Headers([
+            'X-Count' => new Header(
+                schema: new Schema(type: 'integer'),
+            ),
+        ]);
+
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -737,9 +1081,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -752,9 +1102,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -767,9 +1123,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -782,9 +1144,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -802,9 +1170,15 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -853,23 +1227,29 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $succeeded = false;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected header validation to pass, got: %s', $e->getMessage()));
+        }
 
-        $this->expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
-    public function coerce_boolean_with_other_value(): void
+    public function coerce_boolean_header_unknown_value_throws_type_mismatch_error(): void
     {
-        $headers = ['X-Value' => 'other-value'];
+        $headers = ['X-Active' => 'maybe'];
         $headerSchemas = new Headers([
-            'X-Value' => new Header(
+            'X-Active' => new Header(
                 schema: new Schema(type: 'boolean'),
             ),
         ]);
 
-        $this->validator->validate($headers, $headerSchemas);
+        $this->expectException(TypeMismatchError::class);
 
-        $this->expectNotToPerformAssertions();
+        $this->validator->validate($headers, $headerSchemas);
     }
 }

@@ -24,6 +24,6 @@ final readonly class QueryParametersValidator extends AbstractParameterValidator
     #[Override]
     protected function isRequired(Parameter $param, mixed $value): bool
     {
-        return $param->required && false === $param->allowEmptyValue;
+        return $param->required;
     }
 }

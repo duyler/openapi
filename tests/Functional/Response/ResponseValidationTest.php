@@ -17,12 +17,16 @@ use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use Override;
 use RuntimeException;
+
+use function sprintf;
 
 final class ResponseValidationTest extends TestCase
 {
     private Psr17Factory $psrFactory;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->psrFactory = new Psr17Factory();
@@ -45,8 +49,18 @@ final class ResponseValidationTest extends TestCase
                 'name' => 'John Doe',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/users/{userId}', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -66,8 +80,18 @@ final class ResponseValidationTest extends TestCase
                 'status' => 'created',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/users/{userId}', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(201, $response->getStatusCode());
     }
 
     #[Test]
@@ -86,8 +110,18 @@ final class ResponseValidationTest extends TestCase
                 'error' => 'Bad request',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/users/{userId}', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(400, $response->getStatusCode());
     }
 
     #[Test]
@@ -106,8 +140,18 @@ final class ResponseValidationTest extends TestCase
                 'error' => 'User not found',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/users/{userId}', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(404, $response->getStatusCode());
     }
 
     #[Test]
@@ -126,8 +170,18 @@ final class ResponseValidationTest extends TestCase
                 'error' => 'Server error',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/users/{userId}', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(500, $response->getStatusCode());
     }
 
     #[Test]
@@ -146,8 +200,18 @@ final class ResponseValidationTest extends TestCase
                 'id' => 'test-id',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/items/{itemId}', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -166,8 +230,18 @@ final class ResponseValidationTest extends TestCase
                 'error' => 'Not found',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/items/{itemId}', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(404, $response->getStatusCode());
     }
 
     #[Test]
@@ -186,8 +260,18 @@ final class ResponseValidationTest extends TestCase
                 'error' => 'Server error',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/items/{itemId}', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(500, $response->getStatusCode());
     }
 
     #[Test]
@@ -206,8 +290,18 @@ final class ResponseValidationTest extends TestCase
                 'status' => 'I am a teapot',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/unknown/{id}', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(418, $response->getStatusCode());
     }
 
     #[Test]
@@ -246,8 +340,18 @@ final class ResponseValidationTest extends TestCase
             ->withHeader('X-Rate-Limit', '100')
             ->withBody($this->psrFactory->createStream(json_encode(['id' => 'test'])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/headers/simple', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -266,8 +370,18 @@ final class ResponseValidationTest extends TestCase
             ->withHeader('Allow', 'GET, POST, PUT, DELETE')
             ->withBody($this->psrFactory->createStream(json_encode(['id' => 'test'])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/headers/array', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -284,8 +398,18 @@ final class ResponseValidationTest extends TestCase
             ->withHeader('Content-Type', 'application/json')
             ->withBody($this->psrFactory->createStream(json_encode(['id' => 'test'])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/headers/content-type', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -303,8 +427,18 @@ final class ResponseValidationTest extends TestCase
             ->withHeader('Content-Length', '15')
             ->withBody($this->psrFactory->createStream(json_encode(['id' => 'test'])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/headers/content-length', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -323,8 +457,18 @@ final class ResponseValidationTest extends TestCase
             ->withHeader('X-API-Version', '1.0.0')
             ->withBody($this->psrFactory->createStream(json_encode(['id' => 'test'])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/headers/custom-format', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -342,8 +486,18 @@ final class ResponseValidationTest extends TestCase
             ->withHeader('X-Required-Header', 'value')
             ->withBody($this->psrFactory->createStream(json_encode(['id' => 'test'])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/headers/optional-required', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -365,8 +519,18 @@ final class ResponseValidationTest extends TestCase
                 'booleanField' => true,
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/primitive', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -388,8 +552,18 @@ final class ResponseValidationTest extends TestCase
                 'uri' => 'https://example.com',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/formats', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -432,8 +606,18 @@ final class ResponseValidationTest extends TestCase
                 'nullableRequiredField' => 'value',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/nullable', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -459,8 +643,18 @@ final class ResponseValidationTest extends TestCase
                 ],
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/nested', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -484,8 +678,18 @@ final class ResponseValidationTest extends TestCase
                 ],
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/arrays', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -526,8 +730,18 @@ final class ResponseValidationTest extends TestCase
                 'description' => 'Optional description',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/required', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -568,8 +782,18 @@ final class ResponseValidationTest extends TestCase
                 'anotherField' => 123,
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/additional-properties', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -588,8 +812,18 @@ final class ResponseValidationTest extends TestCase
                 'value' => 'string-value',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/anyof', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -608,8 +842,18 @@ final class ResponseValidationTest extends TestCase
                 'value' => 42,
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/anyof', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -629,8 +873,18 @@ final class ResponseValidationTest extends TestCase
                 'name' => 'Test Name',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/allof', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -651,8 +905,18 @@ final class ResponseValidationTest extends TestCase
                 'age' => '30',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/form', $operation->path);
+        self::assertSame('POST', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -669,8 +933,18 @@ final class ResponseValidationTest extends TestCase
             ->withHeader('Content-Type', 'text/plain')
             ->withBody($this->psrFactory->createStream('Hello, World!'));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/text/plain', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -706,8 +980,18 @@ final class ResponseValidationTest extends TestCase
             ->withHeader('Content-Type', 'application/octet-stream')
             ->withBody($this->psrFactory->createStream('binary-data'));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/binary/octet', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -724,8 +1008,18 @@ final class ResponseValidationTest extends TestCase
             ->withHeader('Content-Type', 'image/png')
             ->withBody($this->psrFactory->createStream('image-data'));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/binary/image', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -961,8 +1255,18 @@ YAML;
                 'name' => 'John',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/test', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -1053,8 +1357,18 @@ YAML;
                 'name' => 'John',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/form', $operation->path);
+        self::assertSame('POST', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -1095,8 +1409,18 @@ YAML;
                 'age' => '20',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/form', $operation->path);
+        self::assertSame('POST', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -1186,8 +1510,18 @@ YAML;
                 ],
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/test', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -1229,8 +1563,18 @@ YAML;
                 'items' => ['1', '2', '3'],
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/test', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -1280,12 +1624,22 @@ YAML;
                 ],
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/test', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
-    public function body_json_coercion_integer_truncation_valid(): void
+    public function body_json_coercion_integer_truncation_rejected_in_strict_mode(): void
     {
         $yaml = <<<YAML
 openapi: 3.1.0
@@ -1321,8 +1675,8 @@ YAML;
                 'value' => '30.5',
             ])));
 
+        $this->expectException(TypeMismatchError::class);
         $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -1371,8 +1725,18 @@ YAML;
                 'bool4' => 'on',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/test', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -1412,8 +1776,18 @@ YAML;
                 'value' => '42',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/test', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -1435,8 +1809,18 @@ YAML;
                 ],
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/pet', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -1458,8 +1842,18 @@ YAML;
                 ],
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/pet', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -1568,8 +1962,18 @@ YAML;
                 'nullableRequiredField' => null,
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/nullable', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -1590,8 +1994,18 @@ YAML;
                 'nullableRequiredField' => 'value',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/nullable', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -1611,8 +2025,18 @@ YAML;
                 'nullableRequiredField' => 'value',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/nullable', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -1653,8 +2077,18 @@ YAML;
                 'nullableRequiredField' => 'value',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/nullable', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -1676,8 +2110,18 @@ YAML;
                 ],
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/nullable-nested', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -1696,7 +2140,17 @@ YAML;
                 'value1', null, 'value3',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected response validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+        self::assertSame('/nullable-array', $operation->path);
+        self::assertSame('GET', $operation->method);
+        self::assertSame(200, $response->getStatusCode());
     }
 }

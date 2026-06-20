@@ -7,6 +7,8 @@ namespace Duyler\OpenApi\Test\Unit\Validator;
 use Duyler\OpenApi\Validator\TypeGuarantor;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use TypeError;
+use stdClass;
 
 final class TypeGuarantorTest extends TestCase
 {
@@ -46,11 +48,37 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_string_when_null_and_nullable_as_type_false(): void
+    public function ensureValidType_returns_null_when_nullable_as_type_false(): void
     {
         $result = TypeGuarantor::ensureValidType(null, false);
 
-        self::assertSame('', $result);
+        self::assertNull($result);
+    }
+
+    #[Test]
+    public function ensureValidType_throws_type_error_for_object(): void
+    {
+        $value = new stdClass();
+
+        $this->expectException(TypeError::class);
+        $this->expectExceptionMessage('object (stdClass)');
+
+        TypeGuarantor::ensureValidType($value);
+    }
+
+    #[Test]
+    public function ensureValidType_throws_type_error_for_resource(): void
+    {
+        $resource = fopen('php://memory', 'r');
+
+        try {
+            $this->expectException(TypeError::class);
+            $this->expectExceptionMessage('resource');
+
+            TypeGuarantor::ensureValidType($resource);
+        } finally {
+            fclose($resource);
+        }
     }
 
     #[Test]

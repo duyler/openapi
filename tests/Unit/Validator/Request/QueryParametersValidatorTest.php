@@ -121,4 +121,61 @@ final class QueryParametersValidatorTest extends TestCase
 
         $this->validator->validate($queryParams, $parameterSchemas);
     }
+
+    #[Test]
+    public function required_with_allow_empty_value_absent_throws_missing_parameter(): void
+    {
+        $queryParams = [];
+        $parameterSchemas = [
+            new Parameter(
+                name: 'filter',
+                in: 'query',
+                required: true,
+                allowEmptyValue: true,
+                schema: new Schema(type: 'string'),
+            ),
+        ];
+
+        $this->expectException(MissingParameterException::class);
+
+        $this->validator->validate($queryParams, $parameterSchemas);
+    }
+
+    #[Test]
+    public function required_without_allow_empty_value_absent_throws_missing_parameter(): void
+    {
+        $queryParams = [];
+        $parameterSchemas = [
+            new Parameter(
+                name: 'filter',
+                in: 'query',
+                required: true,
+                allowEmptyValue: false,
+                schema: new Schema(type: 'string'),
+            ),
+        ];
+
+        $this->expectException(MissingParameterException::class);
+
+        $this->validator->validate($queryParams, $parameterSchemas);
+    }
+
+    #[Test]
+    public function optional_with_allow_empty_value_absent_passes(): void
+    {
+        $queryParams = [];
+        $parameterSchemas = [
+            new Parameter(
+                name: 'filter',
+                in: 'query',
+                required: false,
+                allowEmptyValue: true,
+                schema: new Schema(type: 'string'),
+            ),
+        ];
+
+        $this->validator->validate($queryParams, $parameterSchemas);
+
+        $this->expectNotToPerformAssertions();
+    }
 }

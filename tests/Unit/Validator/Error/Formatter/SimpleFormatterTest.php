@@ -19,9 +19,11 @@ class SimpleFormatterTest extends TestCase
     }
 
     #[Test]
-    public function shared_returns_same_instance(): void
+    public function new_instance_can_be_created(): void
     {
-        $this->assertSame(SimpleFormatter::shared(), SimpleFormatter::shared());
+        $formatter = new SimpleFormatter();
+
+        $this->assertInstanceOf(SimpleFormatter::class, $formatter);
     }
 
     #[Test]

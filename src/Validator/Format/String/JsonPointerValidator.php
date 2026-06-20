@@ -11,7 +11,7 @@ use function preg_match;
 
 final readonly class JsonPointerValidator extends AbstractStringFormatValidator
 {
-    private const string POINTER_PATTERN = '/^(?:\/(?:[^~\/]|~0|~1)*)*$/';
+    private const string POINTER_PATTERN = '/^(?:\/(?:[^~\/]|~[01])*)*$/';
 
     #[Override]
     protected function getFormatName(): string

@@ -46,7 +46,7 @@ abstract readonly class AbstractParameterValidator
             }
 
             $value = $this->deserializer->deserialize($value, $param);
-            $value = $this->coercer->coerce($value, $param, $this->coercion, false);
+            $value = $this->coercer->coerce($value, $param, $this->coercion, true);
 
             if (null !== $param->schema) {
                 $this->schemaValidator->validate($value, $param->schema);

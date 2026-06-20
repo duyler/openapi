@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Registry;
 
+use Duyler\OpenApi\Registry\Exception\VersionNotFoundException;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 
 use function count;
@@ -44,6 +45,26 @@ final readonly class SchemaRegistry
         }
 
         return $this->schemas[$name][$version] ?? null;
+    }
+
+    /**
+     * Returns the document for the given schema and version, or throws if missing.
+     *
+     * Use this method when a missing schema or version is a programming error that
+     * must fail fast. For graceful access (e.g. conditional presence checks), use
+     * {@see has()} followed by {@see get()}.
+     *
+     * @throws VersionNotFoundException When the schema name or the requested version is not registered.
+     */
+    public function getOrFail(string $name, ?string $version = null): OpenApiDocument
+    {
+        $document = $this->get($name, $version);
+
+        if (null === $document) {
+            throw new VersionNotFoundException($name, $version);
+        }
+
+        return $document;
     }
 
     public function has(string $name, ?string $version = null): bool

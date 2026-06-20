@@ -28,6 +28,7 @@ use Duyler\OpenApi\Validator\Request\HeadersValidator;
 use Duyler\OpenApi\Validator\Request\ParameterDeserializer;
 use Duyler\OpenApi\Validator\Request\PathParametersValidator;
 use Duyler\OpenApi\Validator\Request\PathParser;
+use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Request\QueryParametersValidator;
 use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Request\QueryStringValidator;
@@ -43,6 +44,7 @@ use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Webhook\Exception\UnknownWebhookException;
 use Duyler\OpenApi\Validator\Webhook\WebhookValidator;
 use Exception;
+use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
@@ -56,6 +58,7 @@ final class WebhookValidatorTest extends TestCase
 {
     private WebhookValidator $webhookValidator;
 
+    #[Override]
     protected function setUp(): void
     {
         $pool = new ValidatorPool();
@@ -63,14 +66,14 @@ final class WebhookValidatorTest extends TestCase
         $deserializer = new ParameterDeserializer();
         $coercer = new TypeCoercer();
 
-        $pathParser = new PathParser();
+        $pathParser = new PathParser(new PathRegexCache());
         $pathParamsValidator = new PathParametersValidator($schemaValidator, $deserializer, $coercer);
         $queryParser = new QueryParser();
         $queryParamsValidator = new QueryParametersValidator($schemaValidator, $deserializer, $coercer);
         $headersValidator = new HeadersValidator($schemaValidator, $deserializer, $coercer);
         $cookieValidator = new CookieValidator($schemaValidator, $deserializer, $coercer);
         $jsonParser = new JsonBodyParser();
-        $formParser = new FormBodyParser();
+        $formParser = new FormBodyParser(new QueryParser());
         $multipartParser = new MultipartBodyParser();
         $textParser = new TextBodyParser();
         $xmlParser = new XmlBodyParser();
@@ -158,9 +161,9 @@ final class WebhookValidatorTest extends TestCase
 
         $document = $this->createWebhookDocument();
 
-        $this->webhookValidator->validate($request, 'payment.updated', $document);
+        $operation = $this->webhookValidator->validate($request, 'payment.updated', $document);
 
-        $this->expectNotToPerformAssertions();
+        self::assertNotNull($operation->requestBody);
     }
 
     #[Test]
@@ -207,10 +210,11 @@ final class WebhookValidatorTest extends TestCase
 
         $document = $this->createWebhookDocument();
 
-        $this->webhookValidator->validate($request1, 'payment.updated', $document);
-        $this->webhookValidator->validate($request2, 'subscription.renewed', $document);
+        $paymentOperation = $this->webhookValidator->validate($request1, 'payment.updated', $document);
+        $subscriptionOperation = $this->webhookValidator->validate($request2, 'subscription.renewed', $document);
 
-        $this->expectNotToPerformAssertions();
+        self::assertNotNull($paymentOperation->requestBody);
+        self::assertNotNull($subscriptionOperation->requestBody);
     }
 
     #[Test]
@@ -274,9 +278,10 @@ final class WebhookValidatorTest extends TestCase
             ]),
         );
 
-        $this->webhookValidator->validate($request, 'payment.updated', $document);
+        $operation = $this->webhookValidator->validate($request, 'payment.updated', $document);
 
-        $this->expectNotToPerformAssertions();
+        self::assertNotNull($operation->parameters);
+        self::assertNotNull($operation->requestBody);
     }
 
     #[Test]
@@ -326,9 +331,10 @@ final class WebhookValidatorTest extends TestCase
             ]),
         );
 
-        $this->webhookValidator->validate($request, 'payment.updated', $document);
+        $operation = $this->webhookValidator->validate($request, 'payment.updated', $document);
 
-        $this->expectNotToPerformAssertions();
+        self::assertNotNull($operation->parameters);
+        self::assertNotNull($operation->requestBody);
     }
 
     #[Test]
@@ -368,9 +374,10 @@ final class WebhookValidatorTest extends TestCase
             ]),
         );
 
-        $this->webhookValidator->validate($request, 'payment.updated', $document);
+        $operation = $this->webhookValidator->validate($request, 'payment.updated', $document);
 
-        $this->expectNotToPerformAssertions();
+        self::assertNotNull($operation->requestBody);
+        self::assertTrue($operation->requestBody->required);
     }
 
     #[Test]
@@ -407,9 +414,9 @@ final class WebhookValidatorTest extends TestCase
             ]),
         );
 
-        $this->webhookValidator->validate($request, 'payment.updated', $document);
+        $operation = $this->webhookValidator->validate($request, 'payment.updated', $document);
 
-        $this->expectNotToPerformAssertions();
+        self::assertNotNull($operation->requestBody);
     }
 
     #[Test]
@@ -430,9 +437,10 @@ final class WebhookValidatorTest extends TestCase
             ]),
         );
 
-        $this->webhookValidator->validate($request, 'payment.deleted', $document);
+        $operation = $this->webhookValidator->validate($request, 'payment.deleted', $document);
 
-        $this->expectNotToPerformAssertions();
+        self::assertNull($operation->requestBody);
+        self::assertNull($operation->responses);
     }
 
     #[Test]
@@ -453,9 +461,9 @@ final class WebhookValidatorTest extends TestCase
             ]),
         );
 
-        $this->webhookValidator->validate($request, 'payment.options', $document);
+        $operation = $this->webhookValidator->validate($request, 'payment.options', $document);
 
-        $this->expectNotToPerformAssertions();
+        self::assertNull($operation->requestBody);
     }
 
     #[Test]
@@ -476,9 +484,9 @@ final class WebhookValidatorTest extends TestCase
             ]),
         );
 
-        $this->webhookValidator->validate($request, 'payment.head', $document);
+        $operation = $this->webhookValidator->validate($request, 'payment.head', $document);
 
-        $this->expectNotToPerformAssertions();
+        self::assertNull($operation->requestBody);
     }
 
     #[Test]
@@ -499,9 +507,9 @@ final class WebhookValidatorTest extends TestCase
             ]),
         );
 
-        $this->webhookValidator->validate($request, 'payment.trace', $document);
+        $operation = $this->webhookValidator->validate($request, 'payment.trace', $document);
 
-        $this->expectNotToPerformAssertions();
+        self::assertNull($operation->requestBody);
     }
 
     #[Test]

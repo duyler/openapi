@@ -19,7 +19,9 @@ use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Duyler\OpenApi\Validator\Link\LinkResolver;
 use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Validator\PathFinder;
+use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Dto\ValidatorDependencies;
 use Duyler\OpenApi\Validator\Validation\CallbackValidator;
@@ -186,8 +188,10 @@ final readonly class OpenApiValidatorBuilder
 
         $pool = $this->config->pool ?? new ValidatorPool();
         $formatRegistry = $this->config->formatRegistry ?? BuiltinFormats::create();
-        $errorFormatter = $this->config->errorFormatter ?? SimpleFormatter::shared();
-        $pathFinder = new PathFinder($document);
+        $errorFormatter = $this->config->errorFormatter ?? new SimpleFormatter();
+        $pathRegexCache = new PathRegexCache();
+        $regexValidator = new RegexValidator();
+        $pathFinder = new PathFinder($document, $pathRegexCache);
         $logger = $this->config->logger ?? new NullLogger();
         $refResolver = new RefResolver();
 
@@ -211,6 +215,8 @@ final readonly class OpenApiValidatorBuilder
             logger: $logger,
             eventDispatcher: $this->config->eventDispatcher,
             strictFormats: $strictFormats,
+            pathRegexCache: $pathRegexCache,
+            regexValidator: $regexValidator,
         );
 
         return new OpenApiValidator(
@@ -239,8 +245,10 @@ final readonly class OpenApiValidatorBuilder
                 ),
                 responseValidation: new ResponseValidationHandler($context),
                 schemaValidation: new SchemaValidatorAdapter($context),
-                webhookValidation: new WebhookValidator($context),
-                callbackValidation: new CallbackValidator($context),
+                webhookValidation: new WebhookValidator($context, $securityValidation),
+                callbackValidation: new CallbackValidator($context, $securityValidation),
+                pathRegexCache: $pathRegexCache,
+                regexValidator: $regexValidator,
                 cache: $this->config->cache,
                 eventDispatcher: $this->config->eventDispatcher,
             ),
