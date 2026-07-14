@@ -11,15 +11,23 @@ use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\JsonDepthLimit;
 use Duyler\OpenApi\Validator\Request\HeaderFinder;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use JsonException;
+
+use stdClass;
 
 use function array_filter;
 use function array_map;
 use function floatval;
 use function in_array;
+use function json_decode;
+
 use function strtolower;
+
+use const JSON_THROW_ON_ERROR;
 
 final readonly class ResponseHeadersValidator
 {
@@ -83,6 +91,10 @@ final readonly class ResponseHeadersValidator
 
         if ('array' === $type) {
             return $this->coerceToArray($value, $headerName);
+        }
+
+        if ('object' === $type) {
+            return $this->coerceToObject($value, $headerName);
         }
 
         return $value;
@@ -152,5 +164,34 @@ final readonly class ResponseHeadersValidator
         $items = array_filter(array_map(trim(...), explode(',', $value)));
 
         return array_values($items);
+    }
+
+    private function coerceToObject(string $value, string $headerName): array
+    {
+        if ('' === $value) {
+            return [];
+        }
+
+        try {
+            $decoded = json_decode($value, false, JsonDepthLimit::Untrusted->value, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            throw new TypeMismatchError(
+                expected: 'object',
+                actual: $value,
+                dataPath: $headerName,
+                schemaPath: '#/type',
+            );
+        }
+
+        if (!$decoded instanceof stdClass) {
+            throw new TypeMismatchError(
+                expected: 'object',
+                actual: $value,
+                dataPath: $headerName,
+                schemaPath: '#/type',
+            );
+        }
+
+        return (array) $decoded;
     }
 }

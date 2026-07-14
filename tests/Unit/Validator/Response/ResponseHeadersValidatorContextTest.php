@@ -103,17 +103,14 @@ YAML;
     }
 
     /**
-     * Known limitation: ResponseHeadersValidator::coerceValue has no branch for
-     * type "object", so an empty header value stays a string '' instead of being
-     * coerced into an empty object. EmptyArrayStrategy only applies to empty
-     * arrays, not strings. Therefore the acceptance criterion "PreferObject +
-     * empty header value + {type: object} => accept" cannot be fulfilled without
-     * a separate coercion change (out of scope for FU-004, which covers only
-     * context propagation). This test locks the current behavior and documents
-     * the limitation.
+     * ResponseHeadersValidator::coerceValue coerces an empty header value
+     * into an empty array when the schema type is "object", which lets
+     * EmptyArrayStrategy::PreferObject treat the empty array as an empty
+     * object. Therefore PreferObject + empty header value + {type: object}
+     * is accepted end-to-end.
      */
     #[Test]
-    public function prefer_object_strategy_empty_header_object_is_not_supported_by_current_coerce_value(): void
+    public function prefer_object_strategy_empty_header_object_is_supported_by_coerce_value(): void
     {
         $yaml = <<<YAML
 openapi: 3.0.3
@@ -146,8 +143,8 @@ YAML;
             ->withHeader('X-Meta', '')
             ->withBody($this->psrFactory->createStream('{}'));
 
-        $this->expectException(TypeMismatchError::class);
-
         $validator->validateResponse($response, $operation);
+
+        $this->expectNotToPerformAssertions();
     }
 }
