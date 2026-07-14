@@ -19,6 +19,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function count;
+
 final class QueryParameterEdgeCasesTest extends TestCase
 {
     private Psr17Factory $psrFactory;
@@ -1107,14 +1109,17 @@ YAML;
                 $this->psrFactory->createServerRequest('GET', '/search?color=black,red'),
             );
             self::fail('Expected EnumError for item value not in allowed enum');
-        } catch (EnumError $error) {
+        } catch (ValidationException $error) {
             $caught = $error;
         }
 
-        self::assertInstanceOf(EnumError::class, $caught);
-        self::assertSame('enum', $caught->keyword());
-        self::assertSame(['black', 'white'], $caught->params()['allowed']);
-        self::assertSame('red', $caught->params()['actual']);
+        $errors = $caught->getErrors();
+
+        self::assertGreaterThan(0, count($errors));
+        self::assertInstanceOf(EnumError::class, $errors[0]);
+        self::assertSame('enum', $errors[0]->keyword());
+        self::assertSame(['black', 'white'], $errors[0]->params()['allowed']);
+        self::assertSame('red', $errors[0]->params()['actual']);
     }
 
     /**

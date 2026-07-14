@@ -13,6 +13,9 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
+use function implode;
+use function is_array;
+
 abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterface
 {
     protected readonly LoggerInterface $logger;
@@ -37,6 +40,26 @@ abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterf
         }
 
         return $context->breadcrumbs->currentPath();
+    }
+
+    /**
+     * Normalise the OpenAPI `type` value to a single string for inclusion in
+     * `TypeMismatchError::expected`. Union types are joined with `|` to mirror
+     * the convention already used by TypeValidator.
+     *
+     * @param string|list<string>|null $type
+     */
+    protected function formatSchemaType(array|string|null $type, string $default = 'scalar'): string
+    {
+        if (null === $type) {
+            return $default;
+        }
+
+        if (is_array($type)) {
+            return implode('|', $type);
+        }
+
+        return $type;
     }
 
     protected function regexValidator(): RegexValidator

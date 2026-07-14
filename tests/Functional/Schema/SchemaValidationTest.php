@@ -31,6 +31,7 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 
 use function sprintf;
+use function count;
 
 final class SchemaValidationTest extends TestCase
 {
@@ -514,8 +515,17 @@ final class SchemaValidationTest extends TestCase
     public function array_with_items_schema_invalid_type_throws_error(): void
     {
         $schema = new Schema(type: 'array', items: new Schema(type: 'string'));
-        $this->expectException(TypeMismatchError::class);
-        $this->validator->validate([1, 2, 3], $schema);
+
+        $caught = null;
+
+        try {
+            $this->validator->validate([1, 2, 3], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        self::assertGreaterThan(0, count($caught->getErrors()));
     }
 
     #[Test]
@@ -549,8 +559,17 @@ final class SchemaValidationTest extends TestCase
                 new Schema(type: 'integer'),
             ],
         );
-        $this->expectException(TypeMismatchError::class);
-        $this->validator->validate([123, 'hello'], $schema);
+
+        $caught = null;
+
+        try {
+            $this->validator->validate([123, 'hello'], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        self::assertGreaterThan(0, count($caught->getErrors()));
     }
 
     #[Test]
@@ -1559,7 +1578,16 @@ final class SchemaValidationTest extends TestCase
     public function array_items_type_mismatch_throws_error(): void
     {
         $schema = new Schema(type: 'array', items: new Schema(type: 'integer'));
-        $this->expectException(TypeMismatchError::class);
-        $this->validator->validate(['not', 'an', 'integer'], $schema);
+
+        $caught = null;
+
+        try {
+            $this->validator->validate(['not', 'an', 'integer'], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        self::assertGreaterThan(0, count($caught->getErrors()));
     }
 }

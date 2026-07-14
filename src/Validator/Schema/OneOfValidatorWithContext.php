@@ -10,7 +10,9 @@ use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Exception\DiscriminatorDataError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
+use Duyler\OpenApi\Validator\Exception\OneOfError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 
 use function is_array;
@@ -53,12 +55,24 @@ final readonly class OneOfValidatorWithContext
             }
             throw new ValidationException(
                 'Discriminator validation failed: data must be an object',
+                errors: [
+                    new DiscriminatorDataError(
+                        dataPath: $context->breadcrumbs->currentPath(),
+                        schemaPath: '/oneOf',
+                    ),
+                ],
             );
         }
 
         if (false === is_array($data)) {
             throw new ValidationException(
                 'Discriminator validation failed: data must be an object',
+                errors: [
+                    new DiscriminatorDataError(
+                        dataPath: $context->breadcrumbs->currentPath(),
+                        schemaPath: '/oneOf',
+                    ),
+                ],
             );
         }
 
@@ -118,6 +132,12 @@ final readonly class OneOfValidatorWithContext
         if ($validCount > 1) {
             throw new ValidationException(
                 'Data matches multiple schemas, but should match exactly one',
+                errors: [
+                    new OneOfError(
+                        dataPath: $context->breadcrumbs->currentPath(),
+                        schemaPath: '/oneOf',
+                    ),
+                ],
             );
         }
     }

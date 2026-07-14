@@ -6,11 +6,15 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
+use Duyler\OpenApi\Validator\Exception\NestedValidationError;
+use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Override;
 
+use function gettype;
 use function is_array;
 use function sprintf;
 use function count;
@@ -55,14 +59,46 @@ final readonly class ItemsValidator extends AbstractSchemaValidator
                     $context->leaveBreadcrumb();
                 }
             } catch (InvalidDataTypeException $e) {
+                $dataPath = $this->getDataPath($context);
+
                 throw new ValidationException(
                     sprintf('Item at index %d has invalid data type: %s', $index, $e->getMessage()),
                     previous: $e,
+                    errors: [
+                        new TypeMismatchError(
+                            expected: $this->formatSchemaType($schema->items->type),
+                            actual: gettype($item),
+                            dataPath: $dataPath . '[' . $index . ']',
+                            schemaPath: '/items',
+                        ),
+                    ],
+                );
+            } catch (AbstractValidationError $e) {
+                $dataPath = $this->getDataPath($context);
+
+                throw new ValidationException(
+                    sprintf('Item at index %d validation failed: %s', $index, $e->getMessage()),
+                    previous: $e,
+                    errors: [$e],
                 );
             } catch (ValidationException $e) {
+                $dataPath = $this->getDataPath($context);
+                $errors = $e->getErrors();
+
+                if ([] === $errors) {
+                    $errors = [
+                        new NestedValidationError(
+                            dataPath: $dataPath . '[' . $index . ']',
+                            schemaPath: '/items',
+                            message: $e->getMessage(),
+                        ),
+                    ];
+                }
+
                 throw new ValidationException(
                     sprintf('Item at index %d validation failed', $index),
                     previous: $e,
+                    errors: $errors,
                 );
             }
         }

@@ -89,9 +89,19 @@ class PrefixItemsValidatorTest extends TestCase
             prefixItems: [$schema1, $schema2],
         );
 
-        $this->expectException(TypeMismatchError::class);
+        $caught = null;
 
-        $this->validator->validate(['hello', 'world'], $schema);
+        try {
+            $this->validator->validate(['hello', 'world'], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $errors = $caught->getErrors();
+
+        self::assertCount(1, $errors);
+        self::assertInstanceOf(TypeMismatchError::class, $errors[0]);
     }
 
     #[Test]
@@ -262,9 +272,19 @@ class PrefixItemsValidatorTest extends TestCase
             prefixItems: [$schema1, $schema2, $schema3],
         );
 
-        $this->expectException(TypeMismatchError::class);
+        $caught = null;
 
-        $this->validator->validate(['hello', 'not integer', true], $schema);
+        try {
+            $this->validator->validate(['hello', 'not integer', true], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $errors = $caught->getErrors();
+
+        self::assertCount(1, $errors);
+        self::assertInstanceOf(TypeMismatchError::class, $errors[0]);
     }
 
     #[Test]
@@ -278,9 +298,19 @@ class PrefixItemsValidatorTest extends TestCase
             prefixItems: [$schema1, $schema2, $schema3],
         );
 
-        $this->expectException(TypeMismatchError::class);
+        $caught = null;
 
-        $this->validator->validate(['hello', 42, 'not boolean'], $schema);
+        try {
+            $this->validator->validate(['hello', 42, 'not boolean'], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $errors = $caught->getErrors();
+
+        self::assertCount(1, $errors);
+        self::assertInstanceOf(TypeMismatchError::class, $errors[0]);
     }
 
     #[Test]
