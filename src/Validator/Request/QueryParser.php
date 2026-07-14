@@ -26,6 +26,8 @@ final readonly class QueryParser
 
     private const int MAX_NESTING_DEPTH = 64;
 
+    private const int MAX_QUERY_PAIRS = 1000;
+
     /**
      * Parse query string into parameters.
      *
@@ -42,6 +44,13 @@ final readonly class QueryParser
     {
         if ('' === $queryString) {
             return [];
+        }
+
+        if (substr_count($queryString, '&') + 1 > self::MAX_QUERY_PAIRS) {
+            throw new InvalidParameterException(
+                'query',
+                sprintf('Maximum query string pairs of %d exceeded', self::MAX_QUERY_PAIRS),
+            );
         }
 
         /** @var array<string, non-empty-list<array{rawKey: string, rawValue: string, decodedKey: string}>> $groups */

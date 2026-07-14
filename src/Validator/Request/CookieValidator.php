@@ -11,9 +11,12 @@ use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Override;
 
 use function is_string;
+use function substr_count;
 
 final readonly class CookieValidator extends AbstractParameterValidator
 {
+    private const int MAX_COOKIE_PAIRS = 100;
+
     /**
      * Parse Cookie header into name=>value pairs.
      *
@@ -27,6 +30,10 @@ final readonly class CookieValidator extends AbstractParameterValidator
     public function parseCookies(string $cookieHeader): array
     {
         if ('' === trim($cookieHeader)) {
+            return [];
+        }
+
+        if (substr_count($cookieHeader, ';') + 1 > self::MAX_COOKIE_PAIRS) {
             return [];
         }
 
@@ -158,6 +165,10 @@ final readonly class CookieValidator extends AbstractParameterValidator
 
     private function parseExplodedValues(string $cookieHeader, string $name): array
     {
+        if (substr_count($cookieHeader, ';') + 1 > self::MAX_COOKIE_PAIRS) {
+            return [];
+        }
+
         $values = [];
         $pairs = explode(';', $cookieHeader);
 
@@ -188,6 +199,10 @@ final readonly class CookieValidator extends AbstractParameterValidator
 
     private function hasMultipleCookies(string $cookieHeader, string $name): bool
     {
+        if (substr_count($cookieHeader, ';') + 1 > self::MAX_COOKIE_PAIRS) {
+            return false;
+        }
+
         $count = 0;
         $pairs = explode(';', $cookieHeader);
 
