@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\JsonDepthLimit;
 use Duyler\OpenApi\Validator\LibxmlSecuredContext;
 use JsonException;
 use Override;
@@ -23,7 +24,7 @@ use const JSON_THROW_ON_ERROR;
 
 final readonly class ContentMediaTypeValidator implements SchemaValidatorInterface
 {
-    private const int JSON_MAX_DEPTH = 128;
+    private const int JSON_MAX_DEPTH = JsonDepthLimit::Untrusted->value;
 
     private const array SUPPORTED_MEDIA_TYPES = [
         'application/json',

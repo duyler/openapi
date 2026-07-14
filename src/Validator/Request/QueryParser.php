@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
+use Duyler\OpenApi\Validator\JsonDepthLimit;
 use JsonException;
 
 use function array_key_last;
@@ -21,7 +22,7 @@ use const JSON_THROW_ON_ERROR;
 
 final readonly class QueryParser
 {
-    private const int JSON_MAX_DEPTH = 512;
+    private const int JSON_MAX_DEPTH = JsonDepthLimit::Trusted->value;
 
     private const int MAX_NESTING_DEPTH = 64;
 

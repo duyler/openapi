@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Response;
 
+use Duyler\OpenApi\Validator\JsonDepthLimit;
 use JsonException;
 use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface;
@@ -24,7 +25,7 @@ use const JSON_THROW_ON_ERROR;
 final readonly class StreamingContentParser
 {
     private const string RECORD_SEPARATOR = "\x1E";
-    private const int JSON_MAX_DEPTH = 512;
+    private const int JSON_MAX_DEPTH = JsonDepthLimit::Trusted->value;
     private const int STREAM_CHUNK_SIZE = 8192;
     private const string UTF8_BOM = "\xEF\xBB\xBF";
     private const int DEFAULT_MAX_LINE_LENGTH = 1_048_576;

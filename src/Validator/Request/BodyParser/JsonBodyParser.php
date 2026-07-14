@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
+use Duyler\OpenApi\Validator\JsonDepthLimit;
+
 use function strlen;
 
 use const JSON_THROW_ON_ERROR;
 
 final readonly class JsonBodyParser
 {
-    private const int JSON_MAX_DEPTH = 512;
+    private const int JSON_MAX_DEPTH = JsonDepthLimit::Trusted->value;
 
     private const string UTF8_BOM = "\xEF\xBB\xBF";
 
