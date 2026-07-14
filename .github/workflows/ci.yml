@@ -39,7 +39,7 @@ jobs:
         run: composer update --ignore-platform-reqs --prefer-dist --no-interaction --no-progress --optimize-autoloader --ansi
 
       - name: Run tests
-        run: php -d pcov.enabled=1 vendor/bin/phpunit --coverage-clover=coverage.xml --colors=always
+        run: php -d memory_limit=512M -d pcov.enabled=1 vendor/bin/phpunit --coverage-clover=coverage.xml --colors=always
 
       - name: Run PHP CS Fixer
         run: vendor/bin/php-cs-fixer check --diff -v
