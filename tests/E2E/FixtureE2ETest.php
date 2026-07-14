@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\E2E;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\EnumError;
 use Duyler\OpenApi\Validator\Exception\MaximumError;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
@@ -290,8 +291,16 @@ final class FixtureE2ETest extends TestCase
                 'int32_max' => 2147483648,
             ])));
 
-        $this->expectException(MaximumError::class);
-        $validator->validateRequest($request);
+        $caught = null;
+
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(MaximumError::class, $caught);
     }
 
     #[Test]

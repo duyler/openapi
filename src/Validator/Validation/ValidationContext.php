@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Validation;
 
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
@@ -21,6 +22,7 @@ use Duyler\OpenApi\Validator\Request\HeadersValidator;
 use Duyler\OpenApi\Validator\Request\ParameterDeserializer;
 use Duyler\OpenApi\Validator\Request\PathParametersValidator;
 use Duyler\OpenApi\Validator\Request\PathParser;
+use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Request\QueryParametersValidator;
 use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Request\QueryStringValidator;
@@ -29,6 +31,8 @@ use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\RegexValidator;
+use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -40,6 +44,7 @@ final readonly class ValidationContext
 {
     public readonly RequestValidator $requestValidator;
     public readonly ResponseValidatorWithContext $responseValidator;
+    public readonly SchemaValidatorWithContext $schemaValidatorWithContext;
     private readonly StatelessValidatorRegistry $statelessValidators;
     private readonly SchemaValidatorDependencies $schemaValidatorDependencies;
 
@@ -56,6 +61,8 @@ final readonly class ValidationContext
         public readonly LoggerInterface $logger = new NullLogger(),
         public readonly ?EventDispatcherInterface $eventDispatcher = null,
         public readonly bool $strictFormats = false,
+        public readonly PathRegexCache $pathRegexCache = new PathRegexCache(),
+        public readonly RegexValidator $regexValidator = new RegexValidator(),
     ) {
         $this->statelessValidators = new StatelessValidatorRegistry(
             $this->pool,
@@ -63,6 +70,7 @@ final readonly class ValidationContext
             $this->reportDeprecated,
             $this->logger,
             $this->eventDispatcher,
+            $this->regexValidator,
         );
 
         $this->schemaValidatorDependencies = new SchemaValidatorDependencies(
@@ -75,7 +83,7 @@ final readonly class ValidationContext
             formatRegistry: $this->formatRegistry,
             bodyParser: new BodyParser(
                 jsonParser: new JsonBodyParser(),
-                formParser: new FormBodyParser(),
+                formParser: new FormBodyParser(new QueryParser()),
                 multipartParser: new MultipartBodyParser(),
                 textParser: new TextBodyParser(),
                 xmlParser: new XmlBodyParser(),
@@ -84,6 +92,11 @@ final readonly class ValidationContext
 
         $this->requestValidator = $this->buildRequestValidator();
         $this->responseValidator = $this->buildResponseValidator();
+        $this->schemaValidatorWithContext = new SchemaValidatorWithContext(
+            $this->document,
+            $this->schemaValidatorDependencies,
+            $this->buildValidatorConfiguration(),
+        );
     }
 
     private function buildValidatorConfiguration(): ValidatorConfiguration
@@ -93,6 +106,7 @@ final readonly class ValidationContext
             nullableAsType: $this->nullableAsType,
             emptyArrayStrategy: $this->emptyArrayStrategy,
             reportDeprecated: $this->reportDeprecated,
+            strictFormats: $this->strictFormats,
         );
     }
 
@@ -109,38 +123,54 @@ final readonly class ValidationContext
             logger: $this->logger,
             reportDeprecated: $this->reportDeprecated,
             eventDispatcher: $this->eventDispatcher,
+            regexValidator: $this->regexValidator,
+        );
+
+        $parameterConfig = new ParameterValidationConfig(
+            nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
         );
 
         return new RequestValidator(
-            pathParser: new PathParser(),
+            pathParser: new PathParser($this->pathRegexCache),
             pathParamsValidator: new PathParametersValidator(
                 schemaValidator: $schemaValidator,
                 deserializer: $deserializer,
                 coercer: $coercer,
+                pool: $this->pool,
                 coercion: $this->coercion,
+                config: $parameterConfig,
             ),
             queryParser: $queryParser,
             queryParamsValidator: new QueryParametersValidator(
                 schemaValidator: $schemaValidator,
                 deserializer: $deserializer,
                 coercer: $coercer,
+                pool: $this->pool,
                 coercion: $this->coercion,
+                config: $parameterConfig,
             ),
             queryStringValidator: new QueryStringValidator(
                 queryParser: $queryParser,
                 schemaValidator: $schemaValidator,
+                pool: $this->pool,
+                config: $parameterConfig,
             ),
             headersValidator: new HeadersValidator(
                 schemaValidator: $schemaValidator,
                 deserializer: $deserializer,
                 coercer: $coercer,
+                pool: $this->pool,
                 coercion: $this->coercion,
+                config: $parameterConfig,
             ),
             cookieValidator: new CookieValidator(
                 schemaValidator: $schemaValidator,
                 deserializer: $deserializer,
                 coercer: $coercer,
+                pool: $this->pool,
                 coercion: $this->coercion,
+                config: $parameterConfig,
             ),
             bodyValidator: new RequestBodyValidatorWithContext(
                 document: $this->document,

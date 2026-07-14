@@ -92,7 +92,7 @@ final class AnyOfDiscriminatorTest extends TestCase
 
         $adminData = [
             'username' => 'admin',
-            'role' => 'admin',
+            'role' => 'Admin',
             'permissions' => ['read', 'write', 'delete'],
         ];
 
@@ -100,7 +100,7 @@ final class AnyOfDiscriminatorTest extends TestCase
 
         $userData = [
             'username' => 'user',
-            'role' => 'user',
+            'role' => 'User',
         ];
 
         $validator->validate($userData, $accountSchema);

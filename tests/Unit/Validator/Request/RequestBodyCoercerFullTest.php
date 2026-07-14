@@ -90,13 +90,13 @@ final class RequestBodyCoercerFullTest extends TestCase
     }
 
     #[Test]
-    public function coerce_to_integer_from_float(): void
+    public function coerce_to_integer_from_fractional_float_returns_float_as_is(): void
     {
         $schema = new Schema(type: 'integer');
 
         $result = $this->coercer->coerce(3.14, new CoercionContext(schema: $schema, enabled: true));
 
-        $this->assertSame(3, $result);
+        $this->assertSame(3.14, $result);
     }
 
     #[Test]

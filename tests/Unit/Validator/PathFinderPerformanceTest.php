@@ -8,6 +8,7 @@ use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\PathMismatchException;
 use Duyler\OpenApi\Validator\PathFinder;
 use Duyler\OpenApi\Validator\Request\PathParser;
+use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Server\ServerPathMatcher;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -58,9 +59,41 @@ final class PathFinderPerformanceTest extends TestCase
     }
 
     #[Test]
+    public function find_operation_among_1000_paths_under_one_millisecond(): void
+    {
+        $yamlParts = ["openapi: 3.1.0\ninfo:\n  title: Test API\n  version: 1.0.0\npaths:"];
+
+        for ($i = 0; $i < 1000; $i++) {
+            $yamlParts[] = sprintf(
+                "  /api/v1/resource%d/{id}:\n    get:\n      responses:\n        '200':\n          description: OK",
+                $i,
+            );
+        }
+
+        $yamlParts[] = "  /api/v1/users/{userId}/posts/{postId}:\n    get:\n      responses:\n        '200':\n          description: OK";
+
+        $yaml = implode("\n", $yamlParts);
+
+        $document = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build()
+            ->getDocument();
+
+        $finder = new PathFinder($document);
+
+        $start = microtime(true);
+        $operation = $finder->findOperation('/api/v1/users/123/posts/456', 'GET');
+        $duration = (microtime(true) - $start) * 1000.0;
+
+        $this->assertSame('/api/v1/users/{userId}/posts/{postId}', $operation->path);
+        $this->assertSame('GET', $operation->method);
+        $this->assertLessThan(1.0, $duration, '1000-path lookup should be under 1ms');
+    }
+
+    #[Test]
     public function try_match_path_returns_null_on_mismatch(): void
     {
-        $parser = new PathParser();
+        $parser = new PathParser(new PathRegexCache());
 
         $result = $parser->tryMatchPath('/users/123/posts', '/users/{id}/posts/{postId}');
 
@@ -70,7 +103,7 @@ final class PathFinderPerformanceTest extends TestCase
     #[Test]
     public function try_match_path_returns_params_on_match(): void
     {
-        $parser = new PathParser();
+        $parser = new PathParser(new PathRegexCache());
 
         $result = $parser->tryMatchPath('/users/123/posts/456', '/users/{userId}/posts/{postId}');
 
@@ -80,7 +113,7 @@ final class PathFinderPerformanceTest extends TestCase
     #[Test]
     public function try_match_path_consistent_with_match_path(): void
     {
-        $parser = new PathParser();
+        $parser = new PathParser(new PathRegexCache());
 
         $matchingPath = '/users/42';
         $matchingTemplate = '/users/{id}';
@@ -94,7 +127,7 @@ final class PathFinderPerformanceTest extends TestCase
     #[Test]
     public function try_match_path_returns_null_where_match_path_throws(): void
     {
-        $parser = new PathParser();
+        $parser = new PathParser(new PathRegexCache());
 
         $mismatchPath = '/users/123/posts';
         $mismatchTemplate = '/users/{id}/posts/{postId}';
@@ -106,7 +139,7 @@ final class PathFinderPerformanceTest extends TestCase
     #[Test]
     public function try_match_path_no_exception_on_mismatch(): void
     {
-        $parser = new PathParser();
+        $parser = new PathParser(new PathRegexCache());
 
         $result = $parser->tryMatchPath('/users/123/posts', '/users/{id}/posts/{postId}');
 
@@ -183,6 +216,40 @@ final class PathFinderPerformanceTest extends TestCase
         $timeWithStripping = microtime(true) - $start;
 
         $this->assertLessThan(0.15, $timeWithStripping, 'Path finding with server stripping for 100 routes over 50 iterations should be under 150ms');
+    }
+
+    #[Test]
+    public function literal_path_takes_priority_over_parameter_path(): void
+    {
+        $yaml = <<<YAML
+openapi: 3.1.0
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /users/me:
+    get:
+      responses:
+        '200':
+          description: OK
+  /users/{id}:
+    get:
+      responses:
+        '200':
+          description: OK
+YAML;
+
+        $document = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build()
+            ->getDocument();
+
+        $finder = new PathFinder($document);
+
+        $operation = $finder->findOperation('/users/me', 'GET');
+
+        $this->assertSame('/users/me', $operation->path);
+        $this->assertSame('GET', $operation->method);
     }
 
     #[Test]

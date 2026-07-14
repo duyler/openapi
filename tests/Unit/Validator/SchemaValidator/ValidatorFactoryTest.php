@@ -11,7 +11,6 @@ use Duyler\OpenApi\Validator\SchemaValidator\AllOfValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\AnyOfValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ArrayLengthValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ConstValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ContainsRangeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContainsValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContentEncodingValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContentMediaTypeValidator;
@@ -55,11 +54,11 @@ final class ValidatorFactoryTest extends TestCase
     }
 
     #[Test]
-    public function createAll_returns_30_validators(): void
+    public function createAll_returns_29_validators(): void
     {
         $validators = $this->factory->createAll();
 
-        self::assertCount(30, $validators);
+        self::assertCount(29, $validators);
     }
 
     #[Test]
@@ -97,7 +96,6 @@ final class ValidatorFactoryTest extends TestCase
             AnyOfValidator::class,
             ArrayLengthValidator::class,
             ConstValidator::class,
-            ContainsRangeValidator::class,
             ContainsValidator::class,
             ContentEncodingValidator::class,
             ContentMediaTypeValidator::class,
@@ -130,11 +128,11 @@ final class ValidatorFactoryTest extends TestCase
     }
 
     #[Test]
-    public function createStatelessList_returns_27_validators(): void
+    public function createStatelessList_returns_26_validators(): void
     {
         $validators = $this->factory->createStatelessList();
 
-        self::assertCount(27, $validators);
+        self::assertCount(26, $validators);
     }
 
     #[Test]
@@ -161,14 +159,7 @@ final class ValidatorFactoryTest extends TestCase
     public function createStatelessList_contains_type_and_format_validators(): void
     {
         $validators = $this->factory->createStatelessList();
-
-        $found = false;
-        foreach ($validators as $validator) {
-            if ($validator instanceof TypeValidator) {
-                $found = true;
-                break;
-            }
-        }
+        $found = array_any($validators, fn($validator) => $validator instanceof TypeValidator);
 
         self::assertTrue($found, 'TypeValidator should be in stateless list');
     }

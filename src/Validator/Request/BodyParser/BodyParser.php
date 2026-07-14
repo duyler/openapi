@@ -14,12 +14,15 @@ final readonly class BodyParser
         private readonly XmlBodyParser $xmlParser,
     ) {}
 
-    public function parse(string $body, string $mediaType): array|int|string|float|bool|null
-    {
+    public function parse(
+        string $body,
+        string $mediaType,
+        string $fullContentType = '',
+    ): array|int|string|float|bool|null {
         return match ($mediaType) {
             'application/json' => $this->jsonParser->parse($body),
             'application/x-www-form-urlencoded' => $this->formParser->parse($body),
-            'multipart/form-data' => $this->multipartParser->parse($body),
+            'multipart/form-data' => $this->multipartParser->parse($body, $fullContentType),
             'text/plain', 'text/html', 'text/csv' => $this->textParser->parse($body),
             'application/xml', 'text/xml' => $this->xmlParser->parse($body),
             default => $body,

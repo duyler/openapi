@@ -5,18 +5,35 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Override;
 
-use function count;
 use function is_string;
+use function substr_count;
 
 final readonly class CookieValidator extends AbstractParameterValidator
 {
+    private const int MAX_COOKIE_PAIRS = 100;
+
+    /**
+     * Parse Cookie header into name=>value pairs.
+     *
+     * Cookie pairs without `=` (e.g. flag-style cookies) are preserved with an
+     * empty string value rather than dropped, for tolerant parsing of malformed
+     * Cookie headers. Per RFC 6265 §4.1.1 cookie-pair should contain `=`, but
+     * real-world clients sometimes send valueless cookies.
+     *
+     * @return array<string, string>
+     */
     public function parseCookies(string $cookieHeader): array
     {
         if ('' === trim($cookieHeader)) {
+            return [];
+        }
+
+        if (substr_count($cookieHeader, ';') + 1 > self::MAX_COOKIE_PAIRS) {
             return [];
         }
 
@@ -24,10 +41,21 @@ final readonly class CookieValidator extends AbstractParameterValidator
         $pairs = explode(';', $cookieHeader);
 
         foreach ($pairs as $pair) {
-            $parts = explode('=', trim($pair), 2);
-            if (2 === count($parts)) {
-                $cookies[$parts[0]] = $parts[1];
+            $pair = trim($pair);
+            if ('' === $pair) {
+                continue;
             }
+
+            $equalsPos = strpos($pair, '=');
+
+            if (false === $equalsPos) {
+                $cookies[$pair] = '';
+                continue;
+            }
+
+            $name = substr($pair, 0, $equalsPos);
+            $value = substr($pair, $equalsPos + 1);
+            $cookies[$name] = $value;
         }
 
         return $cookies;
@@ -98,10 +126,15 @@ final readonly class CookieValidator extends AbstractParameterValidator
             }
 
             $value = $this->deserializer->deserialize($value, $param);
-            $value = $this->coercer->coerce($value, $param, $this->coercion, false);
+            $value = $this->coercer->coerce($value, $param, $this->coercion, true);
 
             if (null !== $param->schema) {
-                $this->schemaValidator->validate($value, $param->schema);
+                $context = ValidationContext::create(
+                    pool: $this->pool,
+                    nullableAsType: $this->config->nullableAsType,
+                    emptyArrayStrategy: $this->config->emptyArrayStrategy,
+                );
+                $this->schemaValidator->validate($value, $param->schema, $context);
             }
         }
     }
@@ -132,13 +165,27 @@ final readonly class CookieValidator extends AbstractParameterValidator
 
     private function parseExplodedValues(string $cookieHeader, string $name): array
     {
+        if (substr_count($cookieHeader, ';') + 1 > self::MAX_COOKIE_PAIRS) {
+            return [];
+        }
+
         $values = [];
         $pairs = explode(';', $cookieHeader);
 
         foreach ($pairs as $pair) {
-            $parts = explode('=', trim($pair), 2);
-            if (2 === count($parts) && $parts[0] === $name) {
-                $values[] = $this->decodeValue($parts[1]);
+            $pair = trim($pair);
+            if ('' === $pair) {
+                continue;
+            }
+
+            $equalsPos = strpos($pair, '=');
+            if (false === $equalsPos) {
+                continue;
+            }
+
+            $pairName = substr($pair, 0, $equalsPos);
+            if ($pairName === $name) {
+                $values[] = $this->decodeValue(substr($pair, $equalsPos + 1));
             }
         }
 
@@ -152,12 +199,25 @@ final readonly class CookieValidator extends AbstractParameterValidator
 
     private function hasMultipleCookies(string $cookieHeader, string $name): bool
     {
+        if (substr_count($cookieHeader, ';') + 1 > self::MAX_COOKIE_PAIRS) {
+            return false;
+        }
+
         $count = 0;
         $pairs = explode(';', $cookieHeader);
 
         foreach ($pairs as $pair) {
-            $parts = explode('=', trim($pair), 2);
-            if (2 === count($parts) && $parts[0] === $name) {
+            $pair = trim($pair);
+            if ('' === $pair) {
+                continue;
+            }
+
+            $equalsPos = strpos($pair, '=');
+            if (false === $equalsPos) {
+                continue;
+            }
+
+            if (substr($pair, 0, $equalsPos) === $name) {
                 ++$count;
                 if ($count > 1) {
                     return true;

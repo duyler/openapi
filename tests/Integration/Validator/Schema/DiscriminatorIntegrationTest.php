@@ -208,6 +208,10 @@ final class DiscriminatorIntegrationTest extends TestCase
             ],
             discriminator: new Discriminator(
                 propertyName: 'petType',
+                mapping: [
+                    'Cat' => '#/components/schemas/CatWithBase',
+                    'Dog' => '#/components/schemas/DogWithBase',
+                ],
             ),
         );
 

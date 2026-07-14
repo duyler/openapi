@@ -14,6 +14,8 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function sprintf;
+
 #[CoversClass(NotValidator::class)]
 class NotValidatorTest extends TestCase
 {
@@ -100,5 +102,194 @@ class NotValidatorTest extends TestCase
         $this->expectException(ValidationException::class);
 
         $this->validator->validate('hello', $schema);
+    }
+
+    #[Test]
+    public function not_with_nullable_true_on_outer_schema_allows_null(): void
+    {
+        $notSchema = new Schema(type: 'string');
+        $schema = new Schema(nullable: true, not: $notSchema);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(null, $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected null to pass with nullable outer schema, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function not_with_nullable_true_on_outer_schema_rejects_matching_string(): void
+    {
+        $notSchema = new Schema(type: 'string');
+        $schema = new Schema(nullable: true, not: $notSchema);
+
+        $caught = null;
+
+        try {
+            $this->validator->validate('hello', $schema);
+            self::fail('Expected ValidationException for string matching not-schema');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        self::assertInstanceOf(ValidationException::class, $caught);
+        self::assertSame('Data must NOT match the "not" schema', $caught->getMessage());
+    }
+
+    #[Test]
+    public function not_without_nullable_allows_null(): void
+    {
+        $notSchema = new Schema(type: 'string');
+        $schema = new Schema(not: $notSchema);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(null, $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected null to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function not_with_allof_rejects_data_matching_all_subschemas(): void
+    {
+        $notSchema = new Schema(
+            allOf: [
+                new Schema(
+                    type: 'object',
+                    required: ['a'],
+                    properties: ['a' => new Schema(type: 'string')],
+                ),
+                new Schema(
+                    type: 'object',
+                    required: ['b'],
+                    properties: ['b' => new Schema(type: 'integer')],
+                ),
+            ],
+        );
+        $schema = new Schema(not: $notSchema);
+
+        $caught = null;
+
+        try {
+            $this->validator->validate(['a' => 'x', 'b' => 1], $schema);
+            self::fail('Expected ValidationException for data matching all allOf sub-schemas');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        self::assertInstanceOf(ValidationException::class, $caught);
+        self::assertSame('Data must NOT match the "not" schema', $caught->getMessage());
+    }
+
+    #[Test]
+    public function not_with_allof_allows_data_not_matching_all_subschemas(): void
+    {
+        $notSchema = new Schema(
+            allOf: [
+                new Schema(
+                    type: 'object',
+                    required: ['a'],
+                    properties: ['a' => new Schema(type: 'string')],
+                ),
+                new Schema(
+                    type: 'object',
+                    required: ['b'],
+                    properties: ['b' => new Schema(type: 'integer')],
+                ),
+            ],
+        );
+        $schema = new Schema(not: $notSchema);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(['a' => 'x'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected data missing required property to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function not_with_oneof_rejects_data_matching_exactly_one_subschema(): void
+    {
+        $notSchema = new Schema(
+            oneOf: [
+                new Schema(type: 'string'),
+                new Schema(type: 'integer'),
+            ],
+        );
+        $schema = new Schema(not: $notSchema);
+
+        $caught = null;
+
+        try {
+            $this->validator->validate('hello', $schema);
+            self::fail('Expected ValidationException for data matching exactly one oneOf sub-schema');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        self::assertInstanceOf(ValidationException::class, $caught);
+        self::assertSame('Data must NOT match the "not" schema', $caught->getMessage());
+    }
+
+    #[Test]
+    public function not_with_oneof_allows_data_matching_neither_subschema(): void
+    {
+        $notSchema = new Schema(
+            oneOf: [
+                new Schema(type: 'string'),
+                new Schema(type: 'integer'),
+            ],
+        );
+        $schema = new Schema(not: $notSchema);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(true, $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected boolean data to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function not_failure_throws_validation_exception_with_expected_message(): void
+    {
+        $notSchema = new Schema(type: 'string');
+        $schema = new Schema(not: $notSchema);
+
+        $caught = null;
+
+        try {
+            $this->validator->validate('matches', $schema);
+            self::fail('Expected ValidationException when data matches not-schema');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $errors = $caught->getErrors();
+
+        self::assertInstanceOf(ValidationException::class, $caught);
+        self::assertSame('Data must NOT match the "not" schema', $caught->getMessage());
+        self::assertCount(1, $errors);
+        self::assertSame('not', $errors[0]->keyword());
+        self::assertSame('/not', $errors[0]->schemaPath());
     }
 }

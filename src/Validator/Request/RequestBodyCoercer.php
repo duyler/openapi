@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Dto\CoercionContext;
 
 use function is_array;
 use function is_string;
+use function array_key_exists;
 
 final readonly class RequestBodyCoercer extends AbstractCoercer
 {
@@ -66,7 +67,7 @@ final readonly class RequestBodyCoercer extends AbstractCoercer
             'string' => $this->coerceToString($value),
             'integer' => $this->coerceToInteger($value, $context->strict),
             'number' => $this->coerceToNumber($value, $context->strict),
-            'boolean' => $this->coerceToBoolean($value),
+            'boolean' => $this->coerceToBoolean($value, $context->strict),
             'object' => $this->coerceToObject($value, $context),
             'array' => $this->coerceToArray($value, $context),
             default => $value,
@@ -75,7 +76,7 @@ final readonly class RequestBodyCoercer extends AbstractCoercer
 
     private function coerceToObject(mixed $value, CoercionContext $context): mixed
     {
-        if (!is_array($value)) {
+        if (false === is_array($value)) {
             return $value;
         }
 
@@ -89,7 +90,7 @@ final readonly class RequestBodyCoercer extends AbstractCoercer
         $coerced = $value;
 
         foreach ($properties as $name => $propertySchema) {
-            if (!isset($value[$name])) {
+            if (false === array_key_exists($name, $value)) {
                 continue;
             }
 
@@ -106,10 +107,11 @@ final readonly class RequestBodyCoercer extends AbstractCoercer
         return $coerced;
     }
 
-    private function coerceToArray(mixed $value, CoercionContext $context): array
+    private function coerceToArray(mixed $value, CoercionContext $context): array|int|string|float|bool|null
     {
-        if (!is_array($value)) {
-            return [];
+        if (false === is_array($value)) {
+            /** @var array|int|string|float|bool|null $value */
+            return $value;
         }
 
         $itemsSchema = $context->schema->items ?? null;

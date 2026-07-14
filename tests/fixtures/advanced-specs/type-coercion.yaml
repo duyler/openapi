@@ -69,13 +69,14 @@ paths:
       responses:
         '200':
           description: Success
-  /request/number-operations:
-    post:
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NumberOperations'
+  /request/coercion-validation:
+    get:
+      parameters:
+        - name: age
+          in: query
+          schema:
+            type: integer
+            minimum: 18
       responses:
         '200':
           description: Success
@@ -185,17 +186,3 @@ components:
               type: array
               items:
                 type: string
-    NumberOperations:
-      type: object
-      required:
-        - floatValue
-        - intValue
-      properties:
-        floatValue:
-          type: number
-          minimum: 0.0
-          maximum: 100.0
-        intValue:
-          type: integer
-          minimum: 0
-          maximum: 100

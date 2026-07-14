@@ -196,4 +196,30 @@ class EnumValidatorTest extends TestCase
 
         $this->validator->validate('different', $schema);
     }
+
+    #[Test]
+    public function validate_int_enum_matches_float_data(): void
+    {
+        $schema = new Schema(
+            type: 'number',
+            enum: [1, 2, 3],
+        );
+
+        $this->validator->validate(1.0, $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_float_enum_matches_float_data(): void
+    {
+        $schema = new Schema(
+            type: 'number',
+            enum: [1.5, 2.5, 3.5],
+        );
+
+        $this->validator->validate(2.5, $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
 }

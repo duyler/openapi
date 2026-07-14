@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\AdditionalPropertiesValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Exception\AdditionalPropertyError;
 use Duyler\OpenApi\Validator\Exception\MaxLengthError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
@@ -162,6 +163,62 @@ class AdditionalPropertiesValidatorTest extends TestCase
             'key2' => 'val2',
             'key3' => 'val3',
         ], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    /**
+     * EI-054 + FU-006: additionalProperties: false must produce one AdditionalPropertyError
+     * per forbidden property instead of an empty errors array, and the keyword must be
+     * 'additionalProperties' (not 'unevaluatedProperties').
+     */
+    #[Test]
+    public function reject_additional_when_false_returns_additional_property_errors(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'id' => new Schema(type: 'integer'),
+            ],
+            additionalProperties: false,
+        );
+
+        $caught = null;
+
+        try {
+            $this->validator->validate(['id' => 1, 'extra1' => 'a', 'extra2' => 'b'], $schema);
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        self::assertNotNull($caught);
+
+        $errors = $caught->getErrors();
+
+        self::assertCount(2, $errors);
+        self::assertInstanceOf(AdditionalPropertyError::class, $errors[0]);
+        self::assertInstanceOf(AdditionalPropertyError::class, $errors[1]);
+        self::assertSame('additionalProperties', $errors[0]->keyword());
+        self::assertSame('additionalProperties', $errors[1]->keyword());
+        self::assertSame('extra1', $errors[0]->params()['propertyName']);
+        self::assertSame('extra2', $errors[1]->params()['propertyName']);
+    }
+
+    /**
+     * Regression: no extra properties must still pass when additionalProperties is false.
+     */
+    #[Test]
+    public function allow_no_additional_properties_when_additional_properties_false(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'id' => new Schema(type: 'integer'),
+            ],
+            additionalProperties: false,
+        );
+
+        $this->validator->validate(['id' => 1], $schema);
 
         $this->expectNotToPerformAssertions();
     }

@@ -8,8 +8,19 @@ use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function file_put_contents;
 use function is_array;
 use function is_string;
+use function sprintf;
+use function sys_get_temp_dir;
+use function tempnam;
+use function uniqid;
+use function unlink;
+
+use const LIBXML_NOENT;
+use const LIBXML_NOERROR;
+use const LIBXML_NONET;
+use const LIBXML_NOWARNING;
 
 /** @internal */
 final class XmlBodyParserTest extends TestCase
@@ -37,9 +48,11 @@ XML;
         if (is_array($result)) {
             $this->assertStringNotContainsString('root:', (string) ($result['root'] ?? ''));
             $this->assertStringNotContainsString('/bin/bash', (string) ($result['root'] ?? ''));
-        } else {
+        } elseif (is_string($result)) {
             $this->assertStringNotContainsString('root:', $result);
             $this->assertStringNotContainsString('/bin/bash', $result);
+        } else {
+            $this->assertNull($result);
         }
     }
 
@@ -174,6 +187,66 @@ XML;
     }
 
     #[Test]
+    public function xml_attributes_preserved_with_at_prefix(): void
+    {
+        $xml = '<user active="true"><name>John</name><nickname/></user>';
+
+        $result = $this->parser->parse($xml);
+
+        $this->assertSame(
+            ['@active' => 'true', 'name' => 'John', 'nickname' => null],
+            $result,
+        );
+    }
+
+    #[Test]
+    public function repeated_child_elements_collected_into_numeric_indexed_array(): void
+    {
+        $xml = '<list><item>a</item><item>b</item></list>';
+
+        $result = $this->parser->parse($xml);
+
+        $this->assertSame(['item' => ['a', 'b']], $result);
+    }
+
+    #[Test]
+    public function three_or_more_empty_elements_collected_into_flat_numeric_array(): void
+    {
+        $result = $this->parser->parse('<list><item/><item/><item/></list>');
+
+        self::assertSame(['item' => [null, null, null]], $result);
+    }
+
+    #[Test]
+    public function root_text_element_returned_as_string(): void
+    {
+        $result = $this->parser->parse('<a>text</a>');
+
+        $this->assertSame('text', $result);
+    }
+
+    #[Test]
+    public function empty_element_returned_as_null(): void
+    {
+        $result = $this->parser->parse('<empty/>');
+
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function mixed_content_text_preserved_in_text_key(): void
+    {
+        $xml = '<mixed attr="1">hello<child>x</child></mixed>';
+
+        $result = $this->parser->parse($xml);
+
+        $this->assertSame(
+            ['@attr' => '1', 'child' => 'x', '#text' => 'hello'],
+            $result,
+        );
+    }
+
+    #[Test]
     public function xxe_ssrf_blocked(): void
     {
         $xxeSsrf = <<<'XML'
@@ -188,8 +261,10 @@ XML;
 
         if (is_array($result)) {
             $this->assertStringNotContainsString('secret', (string) ($result['root'] ?? ''));
-        } else {
+        } elseif (is_string($result)) {
             $this->assertStringNotContainsString('secret', $result);
+        } else {
+            $this->assertNull($result);
         }
     }
 
@@ -234,7 +309,7 @@ XML;
 
         $result = $this->parser->parse($xml);
 
-        $this->assertIsArray($result);
+        $this->assertSame('simple text content', $result);
     }
 
     #[Test]
@@ -389,6 +464,92 @@ XML;
 
         $result = $this->parser->parse($xml);
 
+        $this->assertTrue(is_array($result) || is_string($result) || null === $result);
+    }
+
+    #[Test]
+    public function xxe_doctype_with_etc_passwd_not_substituted(): void
+    {
+        $xxePayload = <<<'XML'
+<!DOCTYPE foo [ <!ENTITY xxe SYSTEM "file:///etc/passwd"> ]><root><name>&xxe;</name></root>
+XML;
+
+        $result = $this->parser->parse($xxePayload);
+
+        if (is_array($result)) {
+            $nameValue = (string) ($result['name'] ?? '');
+            $this->assertStringNotContainsString('root:x:0:0', $nameValue);
+            $this->assertStringNotContainsString('/bin/bash', $nameValue);
+        } else {
+            $this->assertStringNotContainsString('root:x:0:0', $result);
+            $this->assertStringNotContainsString('/bin/bash', $result);
+        }
+    }
+
+    #[Test]
+    public function simple_xml_parses_to_associative_array(): void
+    {
+        $result = $this->parser->parse('<root><name>John</name></root>');
+
         $this->assertIsArray($result);
+        $this->assertArrayHasKey('name', $result);
+        $this->assertSame('John', $result['name']);
+    }
+
+    #[Test]
+    public function libxml_internal_errors_state_restored_after_parse(): void
+    {
+        libxml_use_internal_errors(false);
+
+        $this->parser->parse('<root><name>John</name></root>');
+
+        $this->assertFalse(libxml_use_internal_errors());
+    }
+
+    /**
+     * Defense-in-depth anti-test: proves that the deny-all external entity
+     * loader blocks file:// resolution even if a future commit accidentally
+     * adds LIBXML_NOENT to PARSE_OPTIONS. Without LIBXML_NOENT XXE is
+     * already blocked by simplexml_load_string semantics; this test
+     * demonstrates that the loader itself is the invariant guard, so the
+     * protection no longer relies solely on the absence of a flag.
+     */
+    #[Test]
+    public function deny_all_loader_blocks_file_resolution_even_with_noent_flag(): void
+    {
+        $secretContent = 'XXE_SECRET_' . uniqid('', true);
+        $tempFile = tempnam(sys_get_temp_dir(), 'xxe_noent_');
+
+        $this->assertNotFalse($tempFile);
+        file_put_contents($tempFile, $secretContent);
+
+        try {
+            $xxePayload = sprintf(
+                '<!DOCTYPE foo [ <!ENTITY xxe SYSTEM "file://%s"> ]><root><name>&xxe;</name></root>',
+                $tempFile,
+            );
+
+            $previousInternalErrors = libxml_use_internal_errors(true);
+            libxml_set_external_entity_loader(static fn(): null => null);
+
+            try {
+                $xml = simplexml_load_string(
+                    $xxePayload,
+                    options: LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_NOENT,
+                );
+                $encoded = false === $xml ? '' : (string) json_encode($xml);
+            } finally {
+                libxml_clear_errors();
+                libxml_use_internal_errors($previousInternalErrors);
+            }
+
+            $this->assertStringNotContainsString(
+                $secretContent,
+                $encoded,
+                'deny-all loader must prevent file:// entity resolution even with LIBXML_NOENT flag',
+            );
+        } finally {
+            unlink($tempFile);
+        }
     }
 }

@@ -918,6 +918,72 @@ final class OpenApiBuilderTest extends TestCase
     }
 
     #[Test]
+    public function multiple_of_zero_throws_invalid_schema_exception(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'Number' => [
+                        'type' => 'number',
+                        'multipleOf' => 0,
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('multipleOf MUST be strictly greater than 0, got 0');
+        $this->parser->parse($json);
+    }
+
+    #[Test]
+    public function multiple_of_negative_throws_invalid_schema_exception(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'Number' => [
+                        'type' => 'number',
+                        'multipleOf' => -1,
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('multipleOf MUST be strictly greater than 0, got -1');
+        $this->parser->parse($json);
+    }
+
+    #[Test]
+    public function multiple_of_positive_fraction_passes_parsing(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.1.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'Number' => [
+                        'type' => 'number',
+                        'multipleOf' => 0.5,
+                    ],
+                ],
+            ],
+        ]);
+
+        $document = $this->parser->parse($json);
+
+        $this->assertSame(0.5, $document->components->schemas['Number']->multipleOf);
+    }
+
+    #[Test]
     public function parameter_with_example_string(): void
     {
         $json = json_encode([

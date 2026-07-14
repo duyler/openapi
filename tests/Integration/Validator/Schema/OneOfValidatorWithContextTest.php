@@ -18,10 +18,13 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+
+use function sprintf;
 
 final class OneOfValidatorWithContextTest extends TestCase
 {
@@ -32,6 +35,7 @@ final class OneOfValidatorWithContextTest extends TestCase
     private ValidationContext $context;
     private StatelessValidatorRegistry $statelessValidators;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->refResolver = new RefResolver();
@@ -50,9 +54,15 @@ final class OneOfValidatorWithContextTest extends TestCase
     {
         $schema = new Schema(type: 'object');
 
-        $this->validator->validateWithContext(['name' => 'John'], $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext(['name' => 'John'], $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -93,9 +103,15 @@ final class OneOfValidatorWithContextTest extends TestCase
 
         $data = ['type' => 'user'];
 
-        $validator->validateWithContext($data, $schema, $this->context);
+        $succeeded = false;
+        try {
+            $validator->validateWithContext($data, $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -128,9 +144,15 @@ final class OneOfValidatorWithContextTest extends TestCase
 
         $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
 
-        $this->validator->validateWithContext(null, $schema, $nullableContext);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext(null, $schema, $nullableContext);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -159,9 +181,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext('test', $schema, $this->context, useDiscriminator: false);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext('test', $schema, $this->context, useDiscriminator: false);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -208,9 +236,15 @@ final class OneOfValidatorWithContextTest extends TestCase
 
         $validator = new OneOfValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
-        $validator->validateWithContext($data, $resolvedSchema, $this->context);
+        $succeeded = false;
+        try {
+            $validator->validateWithContext($data, $resolvedSchema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -239,9 +273,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext('test', $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext('test', $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -303,9 +343,15 @@ final class OneOfValidatorWithContextTest extends TestCase
 
         $data = ['name' => 'Fluffy'];
 
-        $validator->validateWithContext($data, $schema, $this->context);
+        $succeeded = false;
+        try {
+            $validator->validateWithContext($data, $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -325,9 +371,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext('test', $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext('test', $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -355,9 +407,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext('user@example.com', $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext('user@example.com', $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -370,9 +428,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext('hello', $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext('hello', $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -385,9 +449,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext('active', $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext('active', $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -402,9 +472,15 @@ final class OneOfValidatorWithContextTest extends TestCase
 
         $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
 
-        $this->validator->validateWithContext(null, $schema, $nullableContext);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext(null, $schema, $nullableContext);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -458,9 +534,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext(['name' => 'John'], $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext(['name' => 'John'], $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -478,9 +560,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext('hi', $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext('hi', $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -507,9 +595,15 @@ final class OneOfValidatorWithContextTest extends TestCase
 
         $data = ['phone' => '+1234567890'];
 
-        $this->validator->validateWithContext($data, $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext($data, $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -581,9 +675,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext(42, $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext(42, $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -636,9 +736,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext(['a', 'b'], $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext(['a', 'b'], $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -696,9 +802,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext('exact-value', $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext('exact-value', $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -751,9 +863,15 @@ final class OneOfValidatorWithContextTest extends TestCase
 
         $data = ['name' => 'John'];
 
-        $this->validator->validateWithContext($data, $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext($data, $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -766,9 +884,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext(5, $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext(5, $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -796,9 +920,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext(true, $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext(true, $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -813,9 +943,15 @@ final class OneOfValidatorWithContextTest extends TestCase
 
         $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
 
-        $this->validator->validateWithContext(null, $schema, $nullableContext);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext(null, $schema, $nullableContext);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -870,9 +1006,15 @@ final class OneOfValidatorWithContextTest extends TestCase
     ): void {
         $schema = new Schema(oneOf: $oneOf);
 
-        $this->validator->validateWithContext($data, $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext($data, $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     public static function noMatchProvider(): array
@@ -986,9 +1128,15 @@ final class OneOfValidatorWithContextTest extends TestCase
     ): void {
         $schema = new Schema(oneOf: $oneOf);
 
-        $this->validator->validateWithContext($data, $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext($data, $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -1105,9 +1253,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext('hello', $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext('hello', $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -1123,9 +1277,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext('hello', $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext('hello', $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -1147,9 +1307,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext(['level' => 'A'], $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext(['level' => 'A'], $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -1192,9 +1358,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext([1, 2, 3], $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext([1, 2, 3], $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -1209,9 +1381,15 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $this->validator->validateWithContext(true, $schema, $this->context);
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext(true, $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
 
-        self::expectNotToPerformAssertions();
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]

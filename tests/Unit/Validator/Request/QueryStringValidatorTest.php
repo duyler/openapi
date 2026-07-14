@@ -11,6 +11,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Request\QueryStringValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
@@ -170,9 +171,17 @@ final class QueryStringValidatorTest extends TestCase
 
         $queryString = '{"age":-5}';
 
-        $this->expectException(MinimumError::class);
+        $caught = null;
 
-        $this->validator->validate($queryString, [$parameter]);
+        try {
+            $this->validator->validate($queryString, [$parameter]);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $caught = $errors[0] ?? null;
+        }
+
+        self::assertInstanceOf(MinimumError::class, $caught);
     }
 
     #[Test]

@@ -30,8 +30,9 @@ final class RefResolver implements RefResolverInterface
 
     private WeakMap $cache;
 
-    public function __construct()
-    {
+    public function __construct(
+        private readonly ?ExternalRefResolverInterface $externalRefResolver = null,
+    ) {
         $this->cache = new WeakMap();
     }
 
@@ -167,9 +168,9 @@ final class RefResolver implements RefResolverInterface
 
         $resolved = $this->resolve($schema->ref, $document);
 
-        $title = null !== $schema->refSummary ? $schema->refSummary : $resolved->title;
+        $title = $schema->refSummary ?? $resolved->title;
 
-        $description = null !== $schema->refDescription ? $schema->refDescription : $resolved->description;
+        $description = $schema->refDescription ?? $resolved->description;
 
         return $resolved->withOverrides(
             title: $title,
@@ -416,6 +417,17 @@ final class RefResolver implements RefResolverInterface
             throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
         }
 
+        if (false === str_starts_with($ref, "#/")) {
+            if (null !== $this->externalRefResolver) {
+                return [$this->externalRefResolver->resolve($ref), $visited];
+            }
+
+            throw new UnresolvableRefException(
+                $ref,
+                "Only local refs (#/...) are supported; install an ExternalRefResolver for external refs",
+            );
+        }
+
         if (isset($visited[$ref])) {
             throw new UnresolvableRefException(
                 $ref,
@@ -432,13 +444,6 @@ final class RefResolver implements RefResolverInterface
             if (isset($cacheEntry[$ref])) {
                 return [$cacheEntry[$ref], $visited];
             }
-        }
-
-        if (false === str_starts_with($ref, "#/")) {
-            throw new UnresolvableRefException(
-                $ref,
-                "Only local refs (#/...) are supported",
-            );
         }
 
         $path = substr($ref, self::REF_ROOT_PREFIX_LENGTH);

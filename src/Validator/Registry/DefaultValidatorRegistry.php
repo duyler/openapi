@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Registry;
 
 use Duyler\OpenApi\Validator\Exception\UnknownValidatorException;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\SchemaValidator\ValidatorFactory;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -19,19 +20,17 @@ use function assert;
 
 final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterface
 {
-    public readonly FormatRegistry $formatRegistry;
-
     private readonly array $validators;
 
     public function __construct(
         private readonly ValidatorPool $pool,
-        FormatRegistry $formatRegistry,
+        public readonly FormatRegistry $formatRegistry,
         private readonly bool $strictFormats = false,
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly bool $reportDeprecated = false,
         private readonly ?EventDispatcherInterface $eventDispatcher = null,
+        private readonly RegexValidator $regexValidator = new RegexValidator(),
     ) {
-        $this->formatRegistry = $formatRegistry;
         $validators = $this->createValidators();
         foreach ($validators as $validator) {
             assert($validator instanceof SchemaValidatorInterface);
@@ -60,7 +59,7 @@ final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterf
 
     private function createValidators(): array
     {
-        return (new ValidatorFactory(
+        return new ValidatorFactory(
             $this->pool,
             $this->formatRegistry,
             $this->strictFormats,
@@ -68,6 +67,7 @@ final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterf
             $this->reportDeprecated,
             $this->eventDispatcher,
             $this,
-        ))->createAll();
+            $this->regexValidator,
+        )->createAll();
     }
 }

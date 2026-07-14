@@ -4,8 +4,14 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
+use Duyler\OpenApi\Validator\Request\QueryParser;
+
 final readonly class FormBodyParser
 {
+    public function __construct(
+        private QueryParser $queryParser,
+    ) {}
+
     /**
      * @return array<array-key, mixed>
      */
@@ -15,9 +21,6 @@ final readonly class FormBodyParser
             return [];
         }
 
-        $params = [];
-        parse_str($body, $params);
-
-        return $params;
+        return $this->queryParser->parse($body);
     }
 }

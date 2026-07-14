@@ -6,7 +6,9 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\ReadOnlyPropertyError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Exception\WriteOnlyPropertyError;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Override;
 
@@ -37,20 +39,38 @@ final readonly class ReadOnlyWriteOnlyValidator extends AbstractSchemaValidator
             }
 
             if (ValidatorMode::Request === $context->mode && $propertySchema->readOnly) {
+                $dataPath = $this->getDataPath($context);
+
                 throw new ValidationException(
                     sprintf(
                         'Property "%s" is read-only and must not be sent in a request',
                         $name,
                     ),
+                    errors: [
+                        new ReadOnlyPropertyError(
+                            dataPath: $dataPath,
+                            schemaPath: '/properties/' . $name . '/readOnly',
+                            propertyName: $name,
+                        ),
+                    ],
                 );
             }
 
             if (ValidatorMode::Response === $context->mode && $propertySchema->writeOnly) {
+                $dataPath = $this->getDataPath($context);
+
                 throw new ValidationException(
                     sprintf(
                         'Property "%s" is write-only and must not be received in a response',
                         $name,
                     ),
+                    errors: [
+                        new WriteOnlyPropertyError(
+                            dataPath: $dataPath,
+                            schemaPath: '/properties/' . $name . '/writeOnly',
+                            propertyName: $name,
+                        ),
+                    ],
                 );
             }
         }

@@ -11,13 +11,6 @@ use function sprintf;
 
 final class SimpleFormatter implements ErrorFormatterInterface
 {
-    private static ?self $shared = null;
-
-    public static function shared(): self
-    {
-        return self::$shared ??= new self();
-    }
-
     #[Override]
     public function format(ValidationErrorInterface $error): string
     {

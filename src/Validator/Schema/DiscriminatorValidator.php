@@ -16,10 +16,12 @@ use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 
 use function array_key_exists;
+use function assert;
+use function end;
+use function explode;
+use function gettype;
 use function is_array;
 use function is_string;
-use function assert;
-use function gettype;
 
 final readonly class DiscriminatorValidator
 {
@@ -150,12 +152,10 @@ final readonly class DiscriminatorValidator
                 continue;
             }
 
-            $refPath = $candidateSchema->ref;
+            $implicitName = $this->extractSchemaName($candidateSchema->ref);
 
-            $resolvedSchema = $this->dependencies->refResolver->resolve($refPath, $document);
-
-            if ($this->schemaMatchesValue($resolvedSchema, $value)) {
-                return $resolvedSchema;
+            if ($implicitName === $value) {
+                return $this->dependencies->refResolver->resolve($candidateSchema->ref, $document);
             }
         }
 
@@ -170,13 +170,11 @@ final readonly class DiscriminatorValidator
         );
     }
 
-    private function schemaMatchesValue(Schema $schema, string $value): bool
+    private function extractSchemaName(string $ref): string
     {
-        if (null !== $schema->title) {
-            return $schema->title === $value;
-        }
+        $parts = explode('/', $ref);
 
-        return false;
+        return end($parts);
     }
 
     private function validateAgainstSchema(

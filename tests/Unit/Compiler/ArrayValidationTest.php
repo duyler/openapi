@@ -8,6 +8,9 @@ use Duyler\OpenApi\Compiler\ValidatorCompiler;
 use Duyler\OpenApi\Schema\Model\Schema;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use UniqueItemsDistinctJsonTypesValidator;
+use UniqueItemsNumericEqualityValidator;
+use RuntimeException;
 
 final class ArrayValidationTest extends TestCase
 {
@@ -94,8 +97,15 @@ final class ArrayValidationTest extends TestCase
         $compiler = new ValidatorCompiler();
         $code = $compiler->compile($schema, 'UniqueItemsValidator');
 
-        self::assertStringContainsString('array_unique($data, SORT_REGULAR)', $code);
+        // The compiler emits a json_encode-based uniqueness check that
+        // honours JSON Schema §4.2.3 numeric equality (1 === 1.0) while
+        // keeping distinct JSON types separate. The legacy SORT_REGULAR
+        // approach was removed because PHP loose comparison collapsed
+        // 1 == "1" == true into false duplicates.
+        self::assertStringContainsString('json_encode', $code);
+        self::assertStringContainsString("JSON_THROW_ON_ERROR", $code);
         self::assertStringContainsString('Array items must be unique', $code);
+        self::assertStringNotContainsString('SORT_REGULAR', $code);
     }
 
     #[Test]
@@ -129,5 +139,65 @@ final class ArrayValidationTest extends TestCase
 
         self::assertStringContainsString('in_array($item', $code);
         self::assertStringContainsString('Invalid enum value in array', $code);
+    }
+
+    /**
+     * Regression for review finding on bugfix 18: the compiled validator
+     * must treat int 1 and float 1.0 as duplicates per JSON Schema §4.2.3,
+     * matching the runtime ArrayLengthValidator behaviour. The previous
+     * SORT_REGULAR-based compiled code relied on PHP loose comparison and
+     * also failed this case for a different reason (it was replaced by
+     * json_encode which collapses 1 and 1.0 to the same key "1").
+     */
+    #[Test]
+    public function compiled_validator_unique_items_detects_int_and_float_as_duplicate(): void
+    {
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(type: 'number'),
+            uniqueItems: true,
+        );
+
+        $compiler = new ValidatorCompiler();
+        $code = $compiler->compile($schema, 'UniqueItemsNumericEqualityValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new UniqueItemsNumericEqualityValidator();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Array items must be unique');
+
+        $validator->validate([1, 1.0]);
+    }
+
+    /**
+     * The compiled validator must keep distinct JSON types separate:
+     * int 1, string "1", and bool true are three distinct values per
+     * JSON Schema §6.4.3, and the json_encode-based check produces
+     * distinct keys ("1", '"1"', "true") for each.
+     */
+    #[Test]
+    public function compiled_validator_unique_items_keeps_distinct_json_types_separate(): void
+    {
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(type: ['integer', 'string', 'boolean']),
+            uniqueItems: true,
+        );
+
+        $compiler = new ValidatorCompiler();
+        $code = $compiler->compile($schema, 'UniqueItemsDistinctJsonTypesValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new UniqueItemsDistinctJsonTypesValidator();
+
+        // Must not throw: 1, "1", and true are distinct JSON values.
+        $validator->validate([1, '1', true]);
+
+        self::assertTrue(class_exists('UniqueItemsDistinctJsonTypesValidator', false));
     }
 }

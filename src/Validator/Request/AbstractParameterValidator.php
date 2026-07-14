@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
+use Duyler\OpenApi\Validator\ValidatorPool;
 
 abstract readonly class AbstractParameterValidator
 {
@@ -15,6 +18,8 @@ abstract readonly class AbstractParameterValidator
         protected readonly ParameterDeserializer $deserializer,
         protected readonly TypeCoercer $coercer,
         protected readonly bool $coercion = false,
+        protected readonly ValidatorPool $pool = new ValidatorPool(),
+        protected readonly ParameterValidationConfig $config = new ParameterValidationConfig(),
     ) {}
 
     public function validate(array $data, array $parameterSchemas): void
@@ -46,10 +51,15 @@ abstract readonly class AbstractParameterValidator
             }
 
             $value = $this->deserializer->deserialize($value, $param);
-            $value = $this->coercer->coerce($value, $param, $this->coercion, false);
+            $value = $this->coercer->coerce($value, $param, $this->coercion, true);
 
             if (null !== $param->schema) {
-                $this->schemaValidator->validate($value, $param->schema);
+                $context = ValidationContext::create(
+                    pool: $this->pool,
+                    nullableAsType: $this->config->nullableAsType,
+                    emptyArrayStrategy: $this->config->emptyArrayStrategy,
+                );
+                $this->schemaValidator->validate($value, $param->schema, $context);
             }
         }
     }

@@ -79,6 +79,50 @@ class JsonFormatterTest extends TestCase
     }
 
     #[Test]
+    public function format_multiple_errors_includes_suggestion_when_present(): void
+    {
+        $error = new MinLengthError(
+            minLength: 3,
+            actualLength: 2,
+            dataPath: '/name',
+            schemaPath: '/schema/minLength',
+        );
+
+        $formatted = $this->formatter->formatMultiple([$error]);
+        $decoded = json_decode($formatted, true);
+
+        $this->assertArrayHasKey('suggestion', $decoded['errors'][0]);
+    }
+
+    #[Test]
+    public function format_multiple_errors_omits_suggestion_when_absent(): void
+    {
+        $error = new class ('/age', '/schema/type') extends AbstractValidationError {
+            public function __construct(string $dataPath, string $schemaPath)
+            {
+                parent::__construct(
+                    message: 'Test error without suggestion',
+                    keyword: 'test',
+                    dataPath: $dataPath,
+                    schemaPath: $schemaPath,
+                    params: ['value' => 123],
+                    suggestion: null,
+                );
+            }
+
+            public function getType(): string
+            {
+                return 'test';
+            }
+        };
+
+        $formatted = $this->formatter->formatMultiple([$error]);
+        $decoded = json_decode($formatted, true);
+
+        $this->assertArrayNotHasKey('suggestion', $decoded['errors'][0]);
+    }
+
+    #[Test]
     public function produce_valid_json(): void
     {
         $error = new MinLengthError(

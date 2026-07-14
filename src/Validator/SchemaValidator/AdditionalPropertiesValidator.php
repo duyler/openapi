@@ -6,15 +6,20 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\AdditionalPropertyError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
-use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Override;
 
 use function assert;
+use function count;
 use function is_array;
+use function sprintf;
+use function is_string;
 
 final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator
 {
+    private const int MAX_ADDITIONAL_PROPERTY_ERRORS = 100;
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -37,7 +42,7 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
                         continue;
                     }
 
-                    $normalizedPattern = RegexValidator::normalize($pattern);
+                    $normalizedPattern = $this->regexValidator()->normalize($pattern);
                     assert('' !== $normalizedPattern);
                     if (1 === preg_match($normalizedPattern, (string) $key)) {
                         return false;
@@ -55,8 +60,45 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
         $dataPath = $this->getDataPath($context);
 
         if (false === $schema->additionalProperties) {
+            $errors = [];
+            $truncated = 0;
+
+            foreach ($additionalKeys as $key) {
+                if (count($errors) >= self::MAX_ADDITIONAL_PROPERTY_ERRORS) {
+                    $truncated = count($additionalKeys) - self::MAX_ADDITIONAL_PROPERTY_ERRORS;
+
+                    break;
+                }
+
+                $errors[] = new AdditionalPropertyError(
+                    dataPath: $dataPath,
+                    schemaPath: '/additionalProperties',
+                    propertyName: (string) $key,
+                );
+            }
+
+            if (0 !== $truncated) {
+                $errors[] = new AdditionalPropertyError(
+                    dataPath: $dataPath,
+                    schemaPath: '/additionalProperties',
+                    propertyName: sprintf('... and %d more additional properties', $truncated),
+                );
+            }
+
             throw new ValidationException(
-                'Additional properties are not allowed: ' . implode(', ', $additionalKeys),
+                sprintf(
+                    'Additional properties are not allowed: %s',
+                    implode(', ', array_map(
+                        static function (AdditionalPropertyError $error): string {
+                            $name = $error->params()['propertyName'];
+                            assert(is_string($name));
+
+                            return $name;
+                        },
+                        $errors,
+                    )),
+                ),
+                errors: $errors,
             );
         }
 

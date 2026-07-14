@@ -10,6 +10,7 @@ use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Psr\Http\Message\ServerRequestInterface;
 
+use function is_string;
 use function sprintf;
 use function str_starts_with;
 use function strtolower;
@@ -130,35 +131,53 @@ final readonly class SecurityValidator
         $location = $scheme->in ?? 'header';
         $name = $scheme->name ?? 'X-API-Key';
 
-        $credentialPresent = match ($location) {
-            'query' => $this->hasQueryParameter($request, $name),
-            'header' => '' !== $request->getHeaderLine($name),
-            'cookie' => $this->hasCookie($request, $name),
-            default => false,
+        /** @var string|null $value */
+        $value = match ($location) {
+            'query' => $this->findQueryCredential($request, $name),
+            'header' => $this->findHeaderCredential($request, $name),
+            'cookie' => $this->findCookieCredential($request, $name),
+            default => null,
         };
 
-        if ($credentialPresent) {
+        if (null !== $value && '' !== $value) {
             return null;
         }
+
+        $reason = null === $value
+            ? sprintf('missing %s parameter "%s"', $location, $name)
+            : sprintf('empty %s parameter "%s"', $location, $name);
 
         return new MissingSecurityCredentialsError(
             schemeName: $schemeName,
             schemeType: 'apiKey',
-            location: sprintf('%s "%s"', $location, $name),
+            location: $reason,
         );
     }
 
-    private function hasQueryParameter(ServerRequestInterface $request, string $name): bool
+    private function findQueryCredential(ServerRequestInterface $request, string $name): ?string
     {
         $params = $request->getQueryParams();
 
-        return isset($params[$name]) && '' !== $params[$name];
+        /** @var string|null $value */
+        $value = $params[$name] ?? null;
+
+        return is_string($value) ? $value : null;
     }
 
-    private function hasCookie(ServerRequestInterface $request, string $name): bool
+    private function findHeaderCredential(ServerRequestInterface $request, string $name): ?string
+    {
+        $value = $request->getHeaderLine($name);
+
+        return '' === $value ? null : $value;
+    }
+
+    private function findCookieCredential(ServerRequestInterface $request, string $name): ?string
     {
         $cookies = $request->getCookieParams();
 
-        return isset($cookies[$name]) && '' !== $cookies[$name];
+        /** @var string|null $value */
+        $value = $cookies[$name] ?? null;
+
+        return is_string($value) ? $value : null;
     }
 }

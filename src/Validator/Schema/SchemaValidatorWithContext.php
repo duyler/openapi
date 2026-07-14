@@ -10,18 +10,25 @@ use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorMode;
+use WeakMap;
 
+use function assert;
 use function count;
 use function is_array;
+use function spl_object_id;
 
 final class SchemaValidatorWithContext
 {
-    private OneOfValidatorWithContext $oneOfValidator;
-    private DiscriminatorValidator $discriminatorValidator;
-    private PropertiesValidatorWithContext $propertiesValidator;
-    private ItemsValidatorWithContext $itemsValidator;
+    private readonly OneOfValidatorWithContext $oneOfValidator;
+    private readonly DiscriminatorValidator $discriminatorValidator;
+    private readonly PropertiesValidatorWithContext $propertiesValidator;
+    private readonly ItemsValidatorWithContext $itemsValidator;
+
+    /** @var WeakMap<Schema, Schema> */
+    private WeakMap $resolvedCache;
 
     public function __construct(
         private readonly OpenApiDocument $document,
@@ -32,6 +39,9 @@ final class SchemaValidatorWithContext
         $this->discriminatorValidator = new DiscriminatorValidator($this->dependencies, $this->configuration);
         $this->propertiesValidator = new PropertiesValidatorWithContext($this->document, $this->dependencies, $this->configuration);
         $this->itemsValidator = new ItemsValidatorWithContext($this->document, $this->dependencies, $this->configuration);
+        /** @var WeakMap<Schema, Schema> $resolvedCache */
+        $resolvedCache = new WeakMap();
+        $this->resolvedCache = $resolvedCache;
     }
 
     public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidatorMode $mode = null): void
@@ -61,6 +71,7 @@ final class SchemaValidatorWithContext
     private function doValidate(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
     {
         $schema = $this->resolveRef($schema);
+        $schema = $this->resolveCompositionRefs($schema, []);
 
         if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
             $this->oneOfValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
@@ -79,6 +90,14 @@ final class SchemaValidatorWithContext
         }
 
         $this->validateInternal($data, $schema, $context);
+
+        // Stateless list excludes OneOfValidator (context-handled). For schemas
+        // without discriminator we still need to enforce oneOf: invoke the
+        // context-aware validator without discriminator routing so $ref inside
+        // oneOf subschemas resolves correctly through doValidate.
+        if (null === $schema->discriminator && null !== $schema->oneOf) {
+            $this->oneOfValidator->validateWithContext($data, $schema, $context, useDiscriminator: false);
+        }
 
         $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
     }
@@ -105,6 +124,129 @@ final class SchemaValidatorWithContext
         }
 
         return $this->dependencies->refResolver->resolveSchemaWithOverride($schema, $this->document);
+    }
+
+    /**
+     * Pre-resolves $ref in allOf/anyOf/oneOf subschemas so that stateless
+     * composition validators (which have no document context) see real
+     * constraints instead of opaque {$ref: '...'} stubs.
+     *
+     * oneOf/anyOf arrays are left untouched when the schema has a discriminator:
+     * DiscriminatorValidator relies on the raw $ref pointers in those arrays
+     * for implicit title-based mapping fallback.
+     *
+     * allOf is always resolved because discriminator selection happens before
+     * allOf merge and allOf never participates in discriminator mapping.
+     *
+     * Recurses into nested composition arrays to handle specs where a
+     * resolved subschema itself contains further composition with $ref.
+     *
+     * @param array<int, bool> $visited spl_object_id map to prevent infinite recursion
+     *
+     * @throws SchemaDepthExceededException if recursion exceeds MAX_DEPTH
+     */
+    private function resolveCompositionRefs(Schema $schema, array $visited): Schema
+    {
+        if (isset($this->resolvedCache[$schema])) {
+            $cached = $this->resolvedCache[$schema];
+            assert(null !== $cached);
+
+            return $cached;
+        }
+
+        if (ValidationContext::MAX_DEPTH <= count($visited)) {
+            throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
+        }
+
+        $schemaId = spl_object_id($schema);
+
+        if (isset($visited[$schemaId])) {
+            $this->resolvedCache[$schema] = $schema;
+
+            return $schema;
+        }
+
+        $visited[$schemaId] = true;
+
+        $allOf = $this->resolveCompositionArray($schema->allOf, $visited);
+
+        $hasDiscriminator = null !== $schema->discriminator;
+
+        $anyOf = $hasDiscriminator
+            ? $schema->anyOf
+            : $this->resolveCompositionArray($schema->anyOf, $visited);
+
+        $oneOf = $hasDiscriminator
+            ? $schema->oneOf
+            : $this->resolveCompositionArray($schema->oneOf, $visited);
+
+        if ($allOf === $schema->allOf && $anyOf === $schema->anyOf && $oneOf === $schema->oneOf) {
+            $this->resolvedCache[$schema] = $schema;
+
+            return $schema;
+        }
+
+        $resolved = $schema->withOverrides(
+            allOf: $allOf,
+            anyOf: $anyOf,
+            oneOf: $oneOf,
+        );
+
+        $this->resolvedCache[$schema] = $resolved;
+
+        return $resolved;
+    }
+
+    /**
+     * Resolves $ref in a single composition array and recurses into each
+     * subschema's own composition keywords.
+     *
+     * Subschemas whose resolved target carries a discriminator are left as
+     * $ref stubs: they must be validated via SchemaValidatorWithContext for
+     * discriminator routing, which stateless composition validators never do.
+     * Resolving them in place would expose discriminator + oneOf to stateless
+     * validators that cannot route by discriminator and would error out.
+     *
+     * @param list<Schema>|null      $schemas
+     * @param array<int, bool>       $visited
+     *
+     * @return list<Schema>|null
+     */
+    private function resolveCompositionArray(?array $schemas, array $visited): ?array
+    {
+        if (null === $schemas) {
+            return null;
+        }
+
+        $result = [];
+        $changed = false;
+
+        foreach ($schemas as $subSchema) {
+            $resolved = $subSchema;
+
+            if (null !== $subSchema->ref) {
+                $candidate = $this->dependencies->refResolver->resolveSchemaWithOverride(
+                    $subSchema,
+                    $this->document,
+                );
+
+                if (null === $candidate->discriminator) {
+                    $resolved = $candidate;
+                    $changed = true;
+                }
+            }
+
+            $recursivelyResolved = $this->resolveCompositionRefs($resolved, $visited);
+
+            if ($recursivelyResolved !== $resolved) {
+                $changed = true;
+                $resolved = $recursivelyResolved;
+            }
+
+            $result[] = $resolved;
+        }
+
+        return $changed ? $result : $schemas;
     }
 
     private function validateInternal(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context): void

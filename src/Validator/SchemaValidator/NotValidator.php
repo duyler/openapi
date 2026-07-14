@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
+use Duyler\OpenApi\Validator\Exception\NotValidationError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Override;
@@ -34,6 +35,12 @@ final readonly class NotValidator extends AbstractSchemaValidator
 
         throw new ValidationException(
             'Data must NOT match the "not" schema',
+            errors: [
+                new NotValidationError(
+                    dataPath: $this->getDataPath($context),
+                    schemaPath: '/not',
+                ),
+            ],
         );
     }
 }

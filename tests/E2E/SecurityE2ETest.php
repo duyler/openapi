@@ -5,19 +5,33 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\E2E;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
+use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\OpenApiValidator;
+use JsonException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Override;
 use Psr\Http\Message\ServerRequestInterface;
-use Throwable;
+
+use function file_put_contents;
+use function implode;
+use function json_encode;
+use function microtime;
+use function sprintf;
+use function str_repeat;
+use function sys_get_temp_dir;
+use function tempnam;
+use function uniqid;
+use function unlink;
 
 final class SecurityE2ETest extends TestCase
 {
-    private const REDOS_SPEC = <<<'YAML'
+    private const string REDOS_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: ReDoS Test API
@@ -43,7 +57,29 @@ paths:
           description: Valid
 YAML;
 
-    private const XML_SPEC = <<<'YAML'
+    private const string COOKIE_AUTH_SPEC = <<<'YAML'
+openapi: 3.1.0
+info:
+  title: Cookie Auth Test API
+  version: 1.0.0
+security:
+  - CookieAuth: []
+paths:
+  /protected:
+    get:
+      summary: Cookie-protected endpoint
+      responses:
+        '200':
+          description: Protected data
+components:
+  securitySchemes:
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: session_id
+YAML;
+
+    private const string XML_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: XXE Test API
@@ -63,6 +99,7 @@ paths:
                   type: string
                 value:
                   type: string
+                  maxLength: 0
               required:
                 - name
       responses:
@@ -70,7 +107,7 @@ paths:
           description: Accepted
 YAML;
 
-    private const DEEP_NESTING_SPEC = <<<'YAML'
+    private const string DEEP_NESTING_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: Deep Nesting Test API
@@ -93,7 +130,7 @@ paths:
           description: Accepted
 YAML;
 
-    private const CIRCULAR_REF_SPEC = <<<'YAML'
+    private const string CIRCULAR_REF_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: Circular Ref Test API
@@ -107,21 +144,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TreeNode'
+              $ref: '#/components/schemas/A'
       responses:
         '200':
           description: Accepted
 components:
   schemas:
-    TreeNode:
+    A:
       type: object
       properties:
         name:
           type: string
-        children:
-          type: array
-          items:
-            $ref: '#/components/schemas/TreeNode'
+        b:
+          $ref: '#/components/schemas/B'
+    B:
+      type: object
+      properties:
+        name:
+          type: string
+        a:
+          $ref: '#/components/schemas/A'
 YAML;
 
     private Psr17Factory $psrFactory;
@@ -132,6 +174,10 @@ YAML;
         $this->psrFactory = new Psr17Factory();
     }
 
+    /**
+     * Negative: pattern with catastrophic backtracking must not hang.
+     * PCRE backtrack limit triggers InvalidPatternException.
+     */
     #[Test]
     public function redos_pattern_does_not_hang_on_long_input(): void
     {
@@ -152,8 +198,11 @@ YAML;
         $this->assertLessThan(1.0, $elapsed, 'ReDoS-vulnerable pattern must complete within 1 second');
     }
 
+    /**
+     * Positive: matching input validates without exception.
+     */
     #[Test]
-    public function redos_pattern_with_matching_prefix_does_not_hang(): void
+    public function redos_pattern_with_matching_input_validates_successfully(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::REDOS_SPEC)
@@ -167,52 +216,150 @@ YAML;
                 'value' => $attackString,
             ])));
 
-        $elapsed = $this->measureTime($validator, $request);
+        $startTime = microtime(true);
+        $operation = $validator->validateRequest($request);
+        $elapsed = microtime(true) - $startTime;
 
-        $this->assertLessThan(1.0, $elapsed, 'ReDoS-vulnerable pattern with matching prefix must complete within 1 second');
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/validate', $operation->path);
+        $this->assertLessThan(1.0, $elapsed, 'Matching pattern must complete within 1 second');
     }
 
+    /**
+     * Negative: XXE entity must NOT be expanded — file contents must not leak.
+     *
+     * XmlBodyParser uses libxml without LIBXML_NOENT flag, so external
+     * entities are never substituted. The empty entity reference produces
+     * null (recursive parser converts empty elements to null), causing
+     * ValidationException from SchemaValueNormalizer. If XXE protection
+     * failed and the entity expanded to file content, the keyword would be
+     * 'maxLength' instead (string passes type check but exceeds maxLength: 0).
+     */
     #[Test]
     public function xxe_attack_does_not_read_system_files(): void
+    {
+        $secretContent = 'XXE_SECRET_' . uniqid('', true);
+        $tempFile = tempnam(sys_get_temp_dir(), 'xxe_test_');
+
+        if (false === $tempFile) {
+            self::fail('Failed to create temporary file for XXE test');
+        }
+
+        file_put_contents($tempFile, $secretContent);
+
+        try {
+            $validator = OpenApiValidatorBuilder::create()
+                ->fromYamlString(self::XML_SPEC)
+                ->build();
+
+            $xxePayload = sprintf(
+                '<?xml version="1.0" encoding="UTF-8"?>' . "\n"
+                . '<!DOCTYPE foo [' . "\n"
+                . '  <!ENTITY xxe SYSTEM "file://%s">' . "\n"
+                . ']>' . "\n"
+                . '<root><name>test</name><value>&xxe;</value></root>',
+                $tempFile,
+            );
+
+            $request = $this->psrFactory->createServerRequest('POST', '/xml-accept')
+                ->withHeader('Content-Type', 'application/xml')
+                ->withBody($this->psrFactory->createStream($xxePayload));
+
+            $startTime = microtime(true);
+
+            $validationSucceeded = false;
+            $errorKeyword = '';
+            $errorMessage = '';
+
+            try {
+                $validator->validateRequest($request);
+                $validationSucceeded = true;
+            } catch (AbstractValidationError $e) {
+                $errorKeyword = $e->keyword();
+                $errorMessage = $e->getMessage();
+            } catch (ValidationException $e) {
+                $errorMessage = $e->getMessage();
+            }
+
+            $elapsed = microtime(true) - $startTime;
+
+            $this->assertLessThan(1.0, $elapsed, 'XXE processing must complete within 1 second');
+
+            $this->assertStringNotContainsString(
+                $secretContent,
+                $errorMessage,
+                'XXE entity content must not be expanded into any output',
+            );
+
+            $this->assertNotSame(
+                'maxLength',
+                $errorKeyword,
+                'XXE entity was expanded into a string value (keyword=maxLength means '
+                . 'type check passed and value exceeded maxLength: 0 — entity content leaked)',
+            );
+        } finally {
+            unlink($tempFile);
+        }
+    }
+
+    /**
+     * Positive: valid XML without XXE entities validates successfully.
+     */
+    #[Test]
+    public function valid_xml_without_xxe_validates_successfully(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::XML_SPEC)
             ->build();
 
-        $xxePayload = <<<'XML'
+        $xml = <<<'XML'
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE foo [
-  <!ENTITY xxe SYSTEM "file:///nonexistent/xxe-test-file">
-]>
 <root>
-  <name>test</name>
-  <value>&xxe;</value>
+  <name>John</name>
 </root>
 XML;
 
         $request = $this->psrFactory->createServerRequest('POST', '/xml-accept')
             ->withHeader('Content-Type', 'application/xml')
-            ->withBody($this->psrFactory->createStream($xxePayload));
+            ->withBody($this->psrFactory->createStream($xml));
 
-        $exceptionCaught = false;
-        $startTime = microtime(true);
+        $operation = $validator->validateRequest($request);
 
-        try {
-            $validator->validateRequest($request);
-        } catch (ValidationException) {
-            $exceptionCaught = true;
-        } catch (Throwable) {
-            $exceptionCaught = true;
-        }
-
-        $elapsed = microtime(true) - $startTime;
-
-        $this->assertTrue($exceptionCaught, 'XXE payload must be rejected by the validator');
-        $this->assertLessThan(1.0, $elapsed, 'XXE processing must complete within 1 second');
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/xml-accept', $operation->path);
     }
 
+    /**
+     * Negative: a chain of 200+ $ref pointers must throw SchemaDepthExceededException.
+     *
+     * RefResolver tracks depth during ref resolution. When depth exceeds
+     * ValidationContext::MAX_DEPTH (64), SchemaDepthExceededException is thrown.
+     */
     #[Test]
-    public function deeply_nested_json_200_levels_does_not_crash(): void
+    public function deep_ref_chain_exceeds_max_depth(): void
+    {
+        $spec = $this->buildDeepRefChainSpec(200);
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($spec)
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('POST', '/test')
+            ->withHeader('Content-Type', 'application/json')
+            ->withBody($this->psrFactory->createStream('{"name":"test"}'));
+
+        $this->expectException(SchemaDepthExceededException::class);
+        $validator->validateRequest($request);
+    }
+
+    /**
+     * Negative: deeply nested JSON data (200+ levels) must fail-closed at the
+     * JSON parser stage via the Untrusted depth limit, completing in well
+     * under one second. Before FU-018 the parser used Trusted (512) and the
+     * validator accepted the deep payload — that was an open DoS vector.
+     */
+    #[Test]
+    public function deep_data_nesting_fail_closed_via_json_depth_limit(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::DEEP_NESTING_SPEC)
@@ -228,22 +375,35 @@ XML;
             ->withHeader('Content-Type', 'application/json')
             ->withBody($this->psrFactory->createStream(json_encode($payload)));
 
-        $completed = false;
         $startTime = microtime(true);
 
         try {
             $validator->validateRequest($request);
-            $completed = true;
-        } catch (SchemaDepthExceededException|ValidationException|Throwable) {
-            $completed = true;
+            self::fail('Expected JsonException for deep-nested payload exceeding Untrusted depth limit');
+        } catch (JsonException $e) {
+            $elapsed = microtime(true) - $startTime;
+
+            $this->assertStringContainsString('Maximum stack depth exceeded', $e->getMessage());
+            $this->assertLessThan(
+                1.0,
+                $elapsed,
+                'Deep-nested JSON must fail-closed within 1 second via the Untrusted depth limit',
+            );
         }
-
-        $elapsed = microtime(true) - $startTime;
-
-        $this->assertTrue($completed, 'Deeply nested JSON must complete without stack overflow');
-        $this->assertLessThan(1.0, $elapsed, 'Deeply nested JSON validation must complete within 1 second');
     }
 
+    /**
+     * Circular $ref (A→B→A) must not cause infinite recursion.
+     *
+     * No exception is expected here because the regular schema validator
+     * resolves only the top-level $ref once during request body validation
+     * setup and does not recurse into property-level $ref pointers.
+     * For discriminator-based schemas the context validator does recurse,
+     * but ValidationContext::MAX_DEPTH (64) and RefResolver's visited-ref
+     * tracking (UnresolvableRefException on direct circular chains) prevent
+     * infinite loops. This test confirms shallow data validates successfully
+     * without hanging.
+     */
     #[Test]
     public function circular_ref_schema_does_not_cause_infinite_recursion(): void
     {
@@ -253,26 +413,30 @@ XML;
             ->fromYamlString(self::CIRCULAR_REF_SPEC)
             ->build();
 
-        $tree = $this->buildDeepTree(100);
+        $data = [
+            'name' => 'root',
+            'b' => [
+                'name' => 'child',
+                'a' => ['name' => 'grandchild'],
+            ],
+        ];
 
         $request = $this->psrFactory->createServerRequest('POST', '/tree')
             ->withHeader('Content-Type', 'application/json')
-            ->withBody($this->psrFactory->createStream(json_encode($tree)));
+            ->withBody($this->psrFactory->createStream(json_encode($data)));
 
-        $completed = false;
-        try {
-            $validator->validateRequest($request);
-            $completed = true;
-        } catch (Throwable) {
-            $completed = true;
-        }
+        $operation = $validator->validateRequest($request);
 
         $elapsed = microtime(true) - $startTime;
 
-        $this->assertTrue($completed, 'Circular $ref schema must complete without hanging');
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/tree', $operation->path);
         $this->assertLessThan(1.0, $elapsed, 'Circular $ref schema validation must complete within 1 second');
     }
 
+    /**
+     * A schema with 1000 enum values must not cause timeout.
+     */
     #[Test]
     public function huge_enum_in_schema_does_not_cause_timeout(): void
     {
@@ -321,20 +485,161 @@ YAML;
                 'choice' => 'not_in_enum',
             ])));
 
-        $completed = false;
         try {
             $validator->validateRequest($request);
-            $completed = true;
-        } catch (Throwable) {
-            $completed = true;
+        } catch (ValidationException) {
+            // Expected: choice value is not in the enum
         }
 
         $elapsed = microtime(true) - $startTime;
 
-        $this->assertTrue($completed, 'Huge enum validation must complete without hanging');
         $this->assertLessThan(1.0, $elapsed, 'Huge enum schema must validate within 1 second');
     }
 
+    /**
+     * SE-06 Positive: apiKey in cookie with session_id present must pass
+     * security validation and return the matched operation. The cookie
+     * value extracted via PSR-7 must match the value supplied.
+     */
+    #[Test]
+    public function cookie_api_key_with_session_id_passes_security_validation(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::COOKIE_AUTH_SPEC)
+            ->enableSecurityValidation()
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/protected')
+            ->withCookieParams(['session_id' => 'abc123']);
+
+        $this->assertSame('abc123', $request->getCookieParams()['session_id']);
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('GET', $operation->method);
+        $this->assertSame('/protected', $operation->path);
+    }
+
+    /**
+     * SE-06 Negative: request without the session_id cookie must fail
+     * security validation with a MissingSecurityCredentialsError wrapped
+     * in ValidationException. The error must reference the cookie location
+     * and the expected cookie name.
+     */
+    #[Test]
+    public function cookie_api_key_without_session_id_throws_missing_credentials(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::COOKIE_AUTH_SPEC)
+            ->enableSecurityValidation()
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/protected');
+
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected ValidationException for missing session_id cookie');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+
+            $this->assertCount(1, $errors);
+
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+
+            $params = $error->params();
+            $this->assertSame('CookieAuth', $params['schemeName']);
+            $this->assertSame('apiKey', $params['schemeType']);
+            $this->assertSame('missing cookie parameter "session_id"', $params['location']);
+        }
+    }
+
+    /**
+     * SE-06 Negative: empty session_id cookie must fail security
+     * validation. The PSR-7 layer returns an empty string, which the
+     * security validator treats as missing.
+     */
+    #[Test]
+    public function cookie_api_key_with_empty_session_id_throws_missing_credentials(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::COOKIE_AUTH_SPEC)
+            ->enableSecurityValidation()
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/protected')
+            ->withCookieParams(['session_id' => '']);
+
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected ValidationException for empty session_id cookie');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+
+            $this->assertCount(1, $errors);
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $errors[0]);
+            $this->assertSame(
+                'empty cookie parameter "session_id"',
+                $errors[0]->params()['location'],
+            );
+        }
+    }
+
+    /**
+     * SE-06 Negative: cookie with a different name must not satisfy the
+     * security scheme. Only the cookie declared in the scheme (session_id)
+     * is accepted.
+     */
+    #[Test]
+    public function cookie_api_key_with_wrong_cookie_name_throws_missing_credentials(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::COOKIE_AUTH_SPEC)
+            ->enableSecurityValidation()
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/protected')
+            ->withCookieParams(['other_cookie' => 'abc123']);
+
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected ValidationException when cookie name does not match scheme');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+
+            $this->assertCount(1, $errors);
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $errors[0]);
+            $this->assertSame(
+                'missing cookie parameter "session_id"',
+                $errors[0]->params()['location'],
+            );
+        }
+    }
+
+    /**
+     * SE-06 Default: when enableSecurityValidation() is not called, a
+     * missing cookie must not trigger any security error. This proves the
+     * opt-in nature of security validation.
+     */
+    #[Test]
+    public function cookie_api_key_skipped_when_security_validation_disabled(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::COOKIE_AUTH_SPEC)
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/protected');
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('GET', $operation->method);
+        $this->assertSame('/protected', $operation->path);
+    }
+
+    /**
+     * Measures validation time, catching InvalidPatternException which is
+     * the expected exception when PCRE backtrack limit is triggered.
+     */
     private function measureTime(
         OpenApiValidator $validator,
         ServerRequestInterface $request,
@@ -343,23 +648,53 @@ YAML;
 
         try {
             $validator->validateRequest($request);
-        } catch (Throwable) {
-            return microtime(true) - $startTime;
+        } catch (InvalidPatternException) {
+            // Expected: PCRE backtrack limit prevents catastrophic backtracking
         }
 
         return microtime(true) - $startTime;
     }
 
-    private function buildDeepTree(int $depth): array
+    /**
+     * Generates an OpenAPI spec with a chain of $depth $ref pointers.
+     * N0 → N1 → N2 → … → N(depth-1) where the last schema is concrete.
+     */
+    private function buildDeepRefChainSpec(int $depth): string
     {
-        $node = ['name' => 'node_' . ($depth - 1), 'children' => []];
-        for ($i = $depth - 2; $i >= 0; --$i) {
-            $node = ['name' => 'node_' . $i, 'children' => [$node]];
+        $yaml = "openapi: 3.1.0\n"
+            . "info:\n"
+            . "  title: Deep Ref Chain Test\n"
+            . "  version: 1.0.0\n"
+            . "paths:\n"
+            . "  /test:\n"
+            . "    post:\n"
+            . "      requestBody:\n"
+            . "        required: true\n"
+            . "        content:\n"
+            . "          application/json:\n"
+            . "            schema:\n"
+            . '              $ref: "#/components/schemas/N0"' . "\n"
+            . "      responses:\n"
+            . "        '200':\n"
+            . "          description: OK\n"
+            . "components:\n"
+            . "  schemas:\n";
+
+        for ($i = 0; $i < $depth; ++$i) {
+            $next = $i + 1;
+
+            if ($i < $depth - 1) {
+                $yaml .= "    N{$i}:\n"
+                    . '      $ref: "#/components/schemas/N' . $next . '"' . "\n";
+            } else {
+                $yaml .= "    N{$i}:\n"
+                    . "      type: object\n"
+                    . "      properties:\n"
+                    . "        name:\n"
+                    . "          type: string\n";
+            }
         }
 
-        return [
-            'name' => 'root',
-            'children' => 0 === $depth ? [] : [$node],
-        ];
+        return $yaml;
     }
 }

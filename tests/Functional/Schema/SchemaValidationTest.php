@@ -28,12 +28,17 @@ use Duyler\OpenApi\Validator\Exception\OneOfError;
 use Duyler\OpenApi\Validator\Exception\PatternMismatchError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Override;
+
+use function sprintf;
+use function count;
 
 final class SchemaValidationTest extends TestCase
 {
     private ValidatorPool $pool;
     private SchemaValidator $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
@@ -44,8 +49,15 @@ final class SchemaValidationTest extends TestCase
     public function string_with_min_length_valid(): void
     {
         $schema = new Schema(type: 'string', minLength: 3);
-        $this->validator->validate('hello', $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate('hello', $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -60,8 +72,15 @@ final class SchemaValidationTest extends TestCase
     public function string_with_max_length_valid(): void
     {
         $schema = new Schema(type: 'string', maxLength: 10);
-        $this->validator->validate('hello', $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate('hello', $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -76,8 +95,15 @@ final class SchemaValidationTest extends TestCase
     public function string_with_pattern_valid(): void
     {
         $schema = new Schema(type: 'string', pattern: '^[a-z]+$');
-        $this->validator->validate('hello', $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate('hello', $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -92,8 +118,15 @@ final class SchemaValidationTest extends TestCase
     public function string_with_email_format_valid(): void
     {
         $schema = new Schema(type: 'string', format: 'email');
-        $this->validator->validate('test@example.com', $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate('test@example.com', $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -108,8 +141,15 @@ final class SchemaValidationTest extends TestCase
     public function string_with_uuid_format_valid(): void
     {
         $schema = new Schema(type: 'string', format: 'uuid');
-        $this->validator->validate('550e8400-e29b-41d4-a716-446655440000', $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate('550e8400-e29b-41d4-a716-446655440000', $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -124,8 +164,15 @@ final class SchemaValidationTest extends TestCase
     public function string_with_uri_format_valid(): void
     {
         $schema = new Schema(type: 'string', format: 'uri');
-        $this->validator->validate('https://example.com/path', $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate('https://example.com/path', $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -140,8 +187,15 @@ final class SchemaValidationTest extends TestCase
     public function number_with_minimum_valid(): void
     {
         $schema = new Schema(type: 'number', minimum: 10);
-        $this->validator->validate(15.5, $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(15.5, $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -156,8 +210,15 @@ final class SchemaValidationTest extends TestCase
     public function number_with_maximum_valid(): void
     {
         $schema = new Schema(type: 'number', maximum: 100);
-        $this->validator->validate(75.5, $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(75.5, $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -172,8 +233,15 @@ final class SchemaValidationTest extends TestCase
     public function number_with_exclusive_minimum_valid(): void
     {
         $schema = new Schema(type: 'number', exclusiveMinimum: 10);
-        $this->validator->validate(10.1, $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(10.1, $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -188,8 +256,15 @@ final class SchemaValidationTest extends TestCase
     public function number_with_exclusive_maximum_valid(): void
     {
         $schema = new Schema(type: 'number', exclusiveMaximum: 100);
-        $this->validator->validate(99.9, $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(99.9, $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -204,8 +279,15 @@ final class SchemaValidationTest extends TestCase
     public function number_with_multiple_of_valid(): void
     {
         $schema = new Schema(type: 'number', multipleOf: 5);
-        $this->validator->validate(15, $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(15, $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -220,8 +302,15 @@ final class SchemaValidationTest extends TestCase
     public function integer_with_minimum_valid(): void
     {
         $schema = new Schema(type: 'integer', minimum: 10);
-        $this->validator->validate(15, $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(15, $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -236,8 +325,15 @@ final class SchemaValidationTest extends TestCase
     public function integer_with_maximum_valid(): void
     {
         $schema = new Schema(type: 'integer', maximum: 100);
-        $this->validator->validate(75, $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(75, $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -252,8 +348,15 @@ final class SchemaValidationTest extends TestCase
     public function integer_with_multiple_of_valid(): void
     {
         $schema = new Schema(type: 'integer', multipleOf: 5);
-        $this->validator->validate(15, $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(15, $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -268,32 +371,60 @@ final class SchemaValidationTest extends TestCase
     public function boolean_true_valid(): void
     {
         $schema = new Schema(type: 'boolean');
-        $this->validator->validate(true, $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(true, $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
     public function boolean_false_valid(): void
     {
         $schema = new Schema(type: 'boolean');
-        $this->validator->validate(false, $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(false, $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
     public function nullable_boolean_with_null_valid(): void
     {
         $schema = new Schema(type: 'boolean', nullable: true);
-        $this->validator->validate(null, $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(null, $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
     public function null_type_valid(): void
     {
         $schema = new Schema(type: 'null');
-        $this->validator->validate(null, $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(null, $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -308,8 +439,15 @@ final class SchemaValidationTest extends TestCase
     public function array_with_min_items_valid(): void
     {
         $schema = new Schema(type: 'array', minItems: 2);
-        $this->validator->validate([1, 2, 3], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate([1, 2, 3], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -324,8 +462,15 @@ final class SchemaValidationTest extends TestCase
     public function array_with_max_items_valid(): void
     {
         $schema = new Schema(type: 'array', maxItems: 5);
-        $this->validator->validate([1, 2, 3], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate([1, 2, 3], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -340,24 +485,47 @@ final class SchemaValidationTest extends TestCase
     public function empty_array_valid(): void
     {
         $schema = new Schema(type: 'array');
-        $this->validator->validate([], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate([], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
     public function array_with_items_schema_valid(): void
     {
         $schema = new Schema(type: 'array', items: new Schema(type: 'string'));
-        $this->validator->validate(['a', 'b', 'c'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['a', 'b', 'c'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
     public function array_with_items_schema_invalid_type_throws_error(): void
     {
         $schema = new Schema(type: 'array', items: new Schema(type: 'string'));
-        $this->expectException(TypeMismatchError::class);
-        $this->validator->validate([1, 2, 3], $schema);
+
+        $caught = null;
+
+        try {
+            $this->validator->validate([1, 2, 3], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        self::assertGreaterThan(0, count($caught->getErrors()));
     }
 
     #[Test]
@@ -370,8 +538,15 @@ final class SchemaValidationTest extends TestCase
                 new Schema(type: 'integer'),
             ],
         );
-        $this->validator->validate(['hello', 42], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['hello', 42], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -384,16 +559,32 @@ final class SchemaValidationTest extends TestCase
                 new Schema(type: 'integer'),
             ],
         );
-        $this->expectException(TypeMismatchError::class);
-        $this->validator->validate([123, 'hello'], $schema);
+
+        $caught = null;
+
+        try {
+            $this->validator->validate([123, 'hello'], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        self::assertGreaterThan(0, count($caught->getErrors()));
     }
 
     #[Test]
     public function array_with_contains_matching_item_valid(): void
     {
         $schema = new Schema(type: 'array', contains: new Schema(type: 'integer'));
-        $this->validator->validate(['a', 42, 'b'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['a', 42, 'b'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -408,8 +599,15 @@ final class SchemaValidationTest extends TestCase
     public function array_with_unique_items_valid(): void
     {
         $schema = new Schema(type: 'array', uniqueItems: true);
-        $this->validator->validate([1, 2, 3], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate([1, 2, 3], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -428,8 +626,15 @@ final class SchemaValidationTest extends TestCase
             uniqueItems: true,
             items: new Schema(type: 'object'),
         );
-        $this->validator->validate([['id' => 1], ['id' => 2]], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate([['id' => 1], ['id' => 2]], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -440,8 +645,15 @@ final class SchemaValidationTest extends TestCase
             contains: new Schema(type: 'integer'),
             minContains: 2,
         );
-        $this->validator->validate([1, 2, 'a'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate([1, 2, 'a'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -464,8 +676,15 @@ final class SchemaValidationTest extends TestCase
             contains: new Schema(type: 'integer'),
             maxContains: 2,
         );
-        $this->validator->validate([1, 2, 'a'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate([1, 2, 'a'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -490,8 +709,15 @@ final class SchemaValidationTest extends TestCase
                 items: new Schema(type: 'integer'),
             ),
         );
-        $this->validator->validate([[1, 2], [3, 4]], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate([[1, 2], [3, 4]], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -509,8 +735,15 @@ final class SchemaValidationTest extends TestCase
                 ],
             ),
         );
-        $this->validator->validate([['tags' => ['a', 'b']], ['tags' => ['c']]], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate([['tags' => ['a', 'b']], ['tags' => ['c']]], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -524,8 +757,15 @@ final class SchemaValidationTest extends TestCase
             ],
             required: ['name', 'age'],
         );
-        $this->validator->validate(['name' => 'John', 'age' => 30], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['name' => 'John', 'age' => 30], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -554,8 +794,15 @@ final class SchemaValidationTest extends TestCase
             ],
             required: ['name'],
         );
-        $this->validator->validate(['name' => 'John'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['name' => 'John'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -568,8 +815,15 @@ final class SchemaValidationTest extends TestCase
             ],
             additionalProperties: true,
         );
-        $this->validator->validate(['name' => 'John', 'extra' => 'data'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['name' => 'John', 'extra' => 'data'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -596,8 +850,15 @@ final class SchemaValidationTest extends TestCase
             ],
             additionalProperties: new Schema(type: 'string'),
         );
-        $this->validator->validate(['name' => 'John', 'extra' => 'data'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['name' => 'John', 'extra' => 'data'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -623,8 +884,15 @@ final class SchemaValidationTest extends TestCase
                 '/^S_/' => new Schema(type: 'string'),
             ],
         );
-        $this->validator->validate(['S_1' => 'a', 'S_2' => 'b'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['S_1' => 'a', 'S_2' => 'b'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -634,8 +902,15 @@ final class SchemaValidationTest extends TestCase
             type: 'object',
             propertyNames: new Schema(type: 'string', pattern: '^[a-z_]+$'),
         );
-        $this->validator->validate(['name' => 'John', 'age' => 30], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['name' => 'John', 'age' => 30], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -653,8 +928,15 @@ final class SchemaValidationTest extends TestCase
     public function object_with_min_properties_valid(): void
     {
         $schema = new Schema(type: 'object', minProperties: 2);
-        $this->validator->validate(['a' => 1, 'b' => 2, 'c' => 3], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['a' => 1, 'b' => 2, 'c' => 3], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -669,8 +951,15 @@ final class SchemaValidationTest extends TestCase
     public function object_with_max_properties_valid(): void
     {
         $schema = new Schema(type: 'object', maxProperties: 5);
-        $this->validator->validate(['a' => 1, 'b' => 2, 'c' => 3], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['a' => 1, 'b' => 2, 'c' => 3], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -685,24 +974,45 @@ final class SchemaValidationTest extends TestCase
     public function empty_object_valid(): void
     {
         $schema = new Schema(type: 'object');
-        $this->validator->validate([], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate([], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
     public function empty_array_union_type_valid(): void
     {
         $schema = new Schema(type: ['array', 'object']);
-        $this->validator->validate([], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate([], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
     public function non_empty_list_as_array_valid(): void
     {
         $schema = new Schema(type: 'array');
-        $this->validator->validate([1, 2, 3], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate([1, 2, 3], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -717,8 +1027,15 @@ final class SchemaValidationTest extends TestCase
     public function non_empty_map_as_object_valid(): void
     {
         $schema = new Schema(type: 'object');
-        $this->validator->validate(['key' => 'value'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['key' => 'value'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -740,8 +1057,15 @@ final class SchemaValidationTest extends TestCase
             ],
             required: ['creditCard'],
         );
-        $this->validator->validate(['creditCard' => '1234'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['creditCard' => '1234'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -764,13 +1088,20 @@ final class SchemaValidationTest extends TestCase
                 ),
             ],
         );
-        $this->validator->validate([
-            'user' => [
-                'name' => 'John',
-                'address' => ['city' => 'NYC'],
-            ],
-        ], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate([
+                'user' => [
+                    'name' => 'John',
+                    'address' => ['city' => 'NYC'],
+                ],
+            ], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -789,14 +1120,21 @@ final class SchemaValidationTest extends TestCase
                 ),
             ],
         );
-        $this->validator->validate([
-            'name' => 'John',
-            'age' => 30,
-            'score' => 95.5,
-            'active' => true,
-            'tags' => ['a', 'b'],
-        ], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate([
+                'name' => 'John',
+                'age' => 30,
+                'score' => 95.5,
+                'active' => true,
+                'tags' => ['a', 'b'],
+            ], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -808,8 +1146,15 @@ final class SchemaValidationTest extends TestCase
                 new Schema(type: 'object', properties: ['age' => new Schema(type: 'integer')], required: ['age']),
             ],
         );
-        $this->validator->validate(['name' => 'John', 'age' => 30], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['name' => 'John', 'age' => 30], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -846,8 +1191,15 @@ final class SchemaValidationTest extends TestCase
                 ),
             ],
         );
-        $this->validator->validate(['name' => 'John', 'age' => 30, 'email' => 'test@test.com'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['name' => 'John', 'age' => 30, 'email' => 'test@test.com'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -859,8 +1211,15 @@ final class SchemaValidationTest extends TestCase
                 new Schema(type: 'integer'),
             ],
         );
-        $this->validator->validate('hello', $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate('hello', $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -872,8 +1231,15 @@ final class SchemaValidationTest extends TestCase
                 new Schema(type: 'integer'),
             ],
         );
-        $this->validator->validate(42, $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(42, $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -898,8 +1264,15 @@ final class SchemaValidationTest extends TestCase
                 new Schema(type: 'object', properties: ['type' => new Schema(const: 'admin')], required: ['type']),
             ],
         );
-        $this->validator->validate(['type' => 'user'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['type' => 'user'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -911,8 +1284,15 @@ final class SchemaValidationTest extends TestCase
                 new Schema(type: 'integer'),
             ],
         );
-        $this->validator->validate('hello', $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate('hello', $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -945,8 +1325,15 @@ final class SchemaValidationTest extends TestCase
     public function not_simple_valid(): void
     {
         $schema = new Schema(type: 'string', not: new Schema(const: 'forbidden'));
-        $this->validator->validate('allowed', $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate('allowed', $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -968,8 +1355,15 @@ final class SchemaValidationTest extends TestCase
                 required: ['secret'],
             ),
         );
-        $this->validator->validate(['public' => 'data'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['public' => 'data'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -989,8 +1383,15 @@ final class SchemaValidationTest extends TestCase
                 required: ['zipCode'],
             ),
         );
-        $this->validator->validate(['country' => 'US', 'zipCode' => '12345'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['country' => 'US', 'zipCode' => '12345'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -1010,8 +1411,15 @@ final class SchemaValidationTest extends TestCase
                 required: ['zipCode'],
             ),
         );
-        $this->validator->validate(['country' => 'CA'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['country' => 'CA'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -1036,8 +1444,15 @@ final class SchemaValidationTest extends TestCase
                 required: ['postalCode'],
             ),
         );
-        $this->validator->validate(['country' => 'CA', 'postalCode' => 'A1B2C3'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['country' => 'CA', 'postalCode' => 'A1B2C3'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -1052,8 +1467,15 @@ final class SchemaValidationTest extends TestCase
                 required: ['country'],
             ),
         );
-        $this->validator->validate(['country' => 'US'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['country' => 'US'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -1074,8 +1496,15 @@ final class SchemaValidationTest extends TestCase
                 ),
             ],
         );
-        $this->validator->validate(['name' => 'John', 'age' => 30], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['name' => 'John', 'age' => 30], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -1095,8 +1524,15 @@ final class SchemaValidationTest extends TestCase
                 ),
             ],
         );
-        $this->validator->validate(['type' => 'A'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['type' => 'A'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -1127,15 +1563,31 @@ final class SchemaValidationTest extends TestCase
                 ),
             ],
         );
-        $this->validator->validate(['type' => 'user', 'name' => 'John'], $schema);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+        try {
+            $this->validator->validate(['type' => 'user', 'name' => 'John'], $schema);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
     public function array_items_type_mismatch_throws_error(): void
     {
         $schema = new Schema(type: 'array', items: new Schema(type: 'integer'));
-        $this->expectException(TypeMismatchError::class);
-        $this->validator->validate(['not', 'an', 'integer'], $schema);
+
+        $caught = null;
+
+        try {
+            $this->validator->validate(['not', 'an', 'integer'], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        self::assertGreaterThan(0, count($caught->getErrors()));
     }
 }

@@ -1,0 +1,31 @@
+openapi: 3.2.0
+info:
+  title: Security Schemes API
+  version: 1.0.0
+security:
+  - bearerAuth: []
+paths:
+  /protected:
+    get:
+      summary: Bearer-protected endpoint
+      responses:
+        '200':
+          description: Authorized
+  /api-key-protected:
+    get:
+      summary: ApiKey-protected endpoint
+      security:
+        - apiKeyHeader: []
+      responses:
+        '200':
+          description: Authorized
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKeyHeader:
+      type: apiKey
+      in: header
+      name: X-API-Key

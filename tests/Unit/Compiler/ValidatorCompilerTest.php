@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Compiler;
 
 use Duyler\OpenApi\Compiler\CompilationCacheInterface;
+use Duyler\OpenApi\Compiler\Exception\UnsupportedKeywordException;
 use Duyler\OpenApi\Compiler\ValidatorCompiler;
 use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -27,6 +29,12 @@ use RejectExtraPropValidator;
 use UnionAcceptsIntegerValidator;
 use UnionAcceptsStringValidator;
 use UnionRejectsFloatValidator;
+use DeepNestInvalidValidator;
+use DeepNestValidValidator;
+use TenLevelsValidator;
+use TwentyLevelsValidator;
+
+use const TOKEN_PARSE;
 
 final class ValidatorCompilerTest extends TestCase
 {
@@ -246,7 +254,7 @@ final class ValidatorCompilerTest extends TestCase
         $this->assertStringContainsString('is_array($data)', $code);
         $this->assertStringContainsString('count($data) < 1', $code);
         $this->assertStringContainsString('count($data) > 10', $code);
-        $this->assertStringContainsString('array_unique', $code);
+        $this->assertStringContainsString('json_encode', $code);
     }
 
     #[Test]
@@ -268,20 +276,6 @@ final class ValidatorCompilerTest extends TestCase
         $this->assertStringContainsString("\$data['name']", $code);
         $this->assertStringContainsString("\$data['age']", $code);
         $this->assertStringContainsString("array_key_exists('name'", $code);
-    }
-
-    #[Test]
-    public function compile_schema_with_format_validators(): void
-    {
-        $compiler = new ValidatorCompiler();
-        $schema = new Schema(
-            type: 'string',
-            format: 'email',
-        );
-
-        $code = $compiler->compile($schema, 'FormatSchema');
-
-        $this->assertStringContainsString('is_string($data)', $code);
     }
 
     #[Test]
@@ -337,7 +331,7 @@ final class ValidatorCompilerTest extends TestCase
         $schema = new Schema(type: 'string');
 
         $cache
-            ->expects($this->exactly(2))
+            ->expects($this->once())
             ->method('generateKey')
             ->willReturn('cache_key');
 
@@ -570,7 +564,7 @@ final class ValidatorCompilerTest extends TestCase
 
         $this->assertStringContainsString('count($data) < 1', $code);
         $this->assertStringContainsString('count($data) > 10', $code);
-        $this->assertStringContainsString('array_unique', $code);
+        $this->assertStringContainsString('json_encode', $code);
     }
 
     #[Test]
@@ -980,15 +974,32 @@ final class ValidatorCompilerTest extends TestCase
     }
 
     #[Test]
-    public function compile_multiple_of_check_generates_fmod(): void
+    public function compile_multiple_of_check_uses_relative_epsilon_instead_of_fmod(): void
     {
         $compiler = new ValidatorCompiler();
         $schema = new Schema(type: 'number', multipleOf: 0.5);
 
         $code = $compiler->compile($schema, 'MultipleOfGeneratedValidator');
 
-        $this->assertStringContainsString('fmod', $code);
-        $this->assertStringContainsString('Value must be a multiple of', $code);
+        $this->assertStringContainsString('$quotient = (float) $data', $code);
+        $this->assertStringContainsString('$rounded = round($quotient)', $code);
+        $this->assertStringContainsString('$epsilon = 1.0E-9 * max(1.0, abs($quotient))', $code);
+        $this->assertStringNotContainsString('fmod((float) $data', $code);
+        $this->assertStringContainsString('Value must be a multiple of 0.5', $code);
+    }
+
+    #[Test]
+    public function compile_multiple_of_integer_uses_int_modulus_path(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'number', multipleOf: 2);
+
+        $code = $compiler->compile($schema, 'MultipleOfIntegerValidator');
+
+        $this->assertStringContainsString('if (is_int($data))', $code);
+        $this->assertStringContainsString('0 !== ($data % 2)', $code);
+        $this->assertStringContainsString('$quotient = (float) $data', $code);
+        $this->assertStringNotContainsString('fmod((float) $data', $code);
     }
 
     #[Test]
@@ -1206,5 +1217,811 @@ final class ValidatorCompilerTest extends TestCase
 
         $this->expectException(RuntimeException::class);
         $validator->validate(3.14);
+    }
+
+    #[Test]
+    public function compile_with_min_properties_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+            minProperties: 2,
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'MinPropertiesValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('minProperties', $caught->keywords);
+    }
+
+    #[Test]
+    public function compile_object_without_min_properties_succeeds(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+        );
+
+        $code = $compiler->compile($schema, 'NoMinPropertiesValidator');
+
+        $this->assertStringContainsString('readonly class NoMinPropertiesValidator', $code);
+        $this->assertStringNotContainsString('minProperties', $code);
+    }
+
+    #[Test]
+    public function compile_with_max_properties_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+            maxProperties: 5,
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'MaxPropertiesValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('maxProperties', $caught->keywords);
+    }
+
+    #[Test]
+    public function compile_object_without_max_properties_succeeds(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+        );
+
+        $code = $compiler->compile($schema, 'NoMaxPropertiesValidator');
+
+        $this->assertStringContainsString('readonly class NoMaxPropertiesValidator', $code);
+        $this->assertStringNotContainsString('maxProperties', $code);
+    }
+
+    #[Test]
+    public function compile_with_additional_properties_as_schema_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+            additionalProperties: new Schema(type: 'string'),
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'AdditionalPropertiesSchemaValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('additionalProperties', $caught->keywords);
+    }
+
+    #[Test]
+    public function compile_with_additional_properties_false_succeeds(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+            additionalProperties: false,
+        );
+
+        $code = $compiler->compile($schema, 'AdditionalPropertiesFalseValidator');
+
+        $this->assertStringContainsString('readonly class AdditionalPropertiesFalseValidator', $code);
+        $this->assertStringContainsString('Additional property not allowed', $code);
+    }
+
+    #[Test]
+    public function compile_with_additional_properties_true_succeeds(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+            additionalProperties: true,
+        );
+
+        $code = $compiler->compile($schema, 'AdditionalPropertiesTrueValidator');
+
+        $this->assertStringContainsString('readonly class AdditionalPropertiesTrueValidator', $code);
+        $this->assertStringNotContainsString('Additional property not allowed', $code);
+    }
+
+    #[Test]
+    public function compile_with_min_and_max_properties_throws_exception_with_both_keywords(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+            minProperties: 2,
+            maxProperties: 5,
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'MinMaxPropertiesValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('minProperties', $caught->keywords);
+        $this->assertContains('maxProperties', $caught->keywords);
+        $this->assertCount(2, $caught->keywords);
+    }
+
+    #[Test]
+    public function compile_with_min_properties_and_additional_properties_schema_lists_all_keywords(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+            minProperties: 1,
+            additionalProperties: new Schema(type: 'string'),
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'CombinedUnsupportedValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('minProperties', $caught->keywords);
+        $this->assertContains('additionalProperties', $caught->keywords);
+        $this->assertCount(2, $caught->keywords);
+    }
+
+    #[Test]
+    public function compile_unsupported_keyword_exception_message_contains_keyword_name(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+            minProperties: 3,
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'MessageCheckValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertStringContainsString('minProperties', $caught->getMessage());
+        $this->assertStringContainsString('Unsupported keywords', $caught->getMessage());
+    }
+
+    #[Test]
+    public function compile_nested_property_with_min_properties_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'address' => new Schema(
+                    type: 'object',
+                    properties: ['city' => new Schema(type: 'string')],
+                    minProperties: 2,
+                ),
+            ],
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'NestedMinPropertiesValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('minProperties', $caught->keywords);
+    }
+
+    #[Test]
+    public function compile_array_items_with_max_properties_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(
+                type: 'object',
+                properties: ['name' => new Schema(type: 'string')],
+                maxProperties: 3,
+            ),
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'ArrayItemsMaxPropertiesValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('maxProperties', $caught->keywords);
+    }
+
+    /**
+     * CP-04 (fail-closed): `prefixItems` is in the unsupported-keyword set,
+     * so `compile()` throws `UnsupportedKeywordException` instead of
+     * silently producing a validator that ignores positional items.
+     */
+    #[Test]
+    public function compile_schema_with_prefix_items_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [
+                new Schema(type: 'string'),
+                new Schema(type: 'integer'),
+            ],
+            items: new Schema(type: 'string'),
+            minItems: 2,
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'PrefixItemsValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('prefixItems', $caught->keywords);
+    }
+
+    /**
+     * CP-04 (no silent positional checks): Because `prefixItems` is
+     * rejected as unsupported, no positional `$data[N]` access can be
+     * emitted. The exception is thrown before code generation runs.
+     */
+    #[Test]
+    public function compile_schema_with_prefix_items_rejects_before_positional_checks(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [
+                new Schema(type: 'string'),
+                new Schema(type: 'integer'),
+                new Schema(type: 'boolean'),
+            ],
+            items: new Schema(type: 'string'),
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'PrefixItemsNoPositionalValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('prefixItems', $caught->keywords);
+    }
+
+    /**
+     * CP-04 (items does not bypass prefixItems rejection): When both
+     * `items` and `prefixItems` are present, the compiler rejects the
+     * schema — the homogeneous `items` schema alone cannot substitute for
+     * positional validation, so compilation never reaches `items` handling.
+     */
+    #[Test]
+    public function compile_schema_with_prefix_items_and_items_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [
+                new Schema(type: 'string'),
+                new Schema(type: 'integer'),
+            ],
+            items: new Schema(type: 'string'),
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'PrefixItemsStillValidatesItems');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('prefixItems', $caught->keywords);
+    }
+
+    /**
+     * CP-04 (prefixItems alone, without items): A schema with
+     * `prefixItems` and no `items` previously compiled to an empty
+     * `validate()` body that accepted any value. It is now rejected with
+     * `UnsupportedKeywordException` (fail-closed).
+     */
+    #[Test]
+    public function compile_schema_with_prefix_items_without_items_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [
+                new Schema(type: 'string'),
+                new Schema(type: 'integer'),
+            ],
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'PrefixItemsOnlyValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('prefixItems', $caught->keywords);
+    }
+
+    /**
+     * CP-04 (detection): `prefixItems` IS in the unsupported-keyword set,
+     * so the compiler reports it in `UnsupportedKeywordException::keywords`.
+     */
+    #[Test]
+    public function compile_schema_with_prefix_items_is_in_unsupported_keywords(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [new Schema(type: 'string')],
+            items: new Schema(type: 'string'),
+        );
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'PrefixItemsNotUnsupported');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertSame(['prefixItems'], $caught->keywords);
+    }
+
+    /**
+     * CP-05: A schema nested more than 10 levels deep must compile without
+     * a stack overflow and produce a working validator.
+     *
+     * We generate a 12-level schema (object -> nested object -> ...) and
+     * verify the compile step. Runtime execution is covered by the
+     * dedicated tests below.
+     */
+    #[Test]
+    public function compile_deeply_nested_schema_over_ten_levels(): void
+    {
+        $compiler = new ValidatorCompiler();
+
+        $depth = 12;
+        $schema = $this->buildNestedSchema($depth);
+
+        $code = $compiler->compile($schema, 'DeepNestValidator');
+
+        $this->assertStringContainsString('readonly class DeepNestValidator', $code);
+        // The 12-level schema must produce deeply nested $data['nested']
+        // references in the compiled code (at least one per level).
+        $this->assertGreaterThan(
+            $depth,
+            substr_count($code, "['nested']"),
+        );
+    }
+
+    /**
+     * CP-05 (positive execution): The compiled validator accepts a valid
+     * deeply-nested payload without stack overflow.
+     */
+    #[Test]
+    public function compile_deeply_nested_schema_validates_valid_payload(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $depth = 12;
+        $schema = $this->buildNestedSchema($depth);
+
+        $code = $compiler->compile($schema, 'DeepNestValidValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new DeepNestValidValidator();
+        $payload = $this->buildNestedPayload($depth, 42);
+
+        $validator->validate($payload);
+
+        self::assertTrue(class_exists('DeepNestValidValidator', false));
+    }
+
+    /**
+     * CP-05 (negative execution): The compiled validator rejects a payload
+     * with a type error at the deepest level.
+     */
+    #[Test]
+    public function compile_deeply_nested_schema_rejects_invalid_payload_at_depth(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $depth = 12;
+        $schema = $this->buildNestedSchema($depth);
+
+        $code = $compiler->compile($schema, 'DeepNestInvalidValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new DeepNestInvalidValidator();
+
+        // Wrong leaf type: string instead of integer.
+        $payload = $this->buildNestedPayload($depth, 'not-an-integer');
+
+        $this->expectException(RuntimeException::class);
+        $validator->validate($payload);
+    }
+
+    /**
+     * CP-05 (boundary): Exactly 10 levels must also work (boundary case).
+     */
+    #[Test]
+    public function compile_exactly_ten_levels_nested_schema(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $depth = 10;
+        $schema = $this->buildNestedSchema($depth);
+
+        $code = $compiler->compile($schema, 'TenLevelsValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new TenLevelsValidator();
+        $validator->validate($this->buildNestedPayload($depth, 1));
+
+        self::assertTrue(class_exists('TenLevelsValidator', false));
+    }
+
+    /**
+     * CP-05 (stress): 20 levels must also work to verify the compiler has
+     * no practical nesting limit.
+     */
+    #[Test]
+    public function compile_twenty_levels_nested_schema(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $depth = 20;
+        $schema = $this->buildNestedSchema($depth);
+
+        $code = $compiler->compile($schema, 'TwentyLevelsValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new TwentyLevelsValidator();
+        $validator->validate($this->buildNestedPayload($depth, 7));
+
+        self::assertTrue(class_exists('TwentyLevelsValidator', false));
+    }
+
+    /**
+     * EI-026 (Critical, security): property names come from untrusted JSON
+     * strings. A name containing an apostrophe (`it's`) previously produced
+     * `$data['it's']` in the generated code — a PHP syntax error and a
+     * potential code-injection vector. The compiler must now emit a valid
+     * single-quoted literal built via `var_export`, so the generated source
+     * parses cleanly.
+     */
+    #[Test]
+    public function compile_with_apostrophe_in_property_name_generates_parseable_php(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ["it's" => new Schema(type: 'string')],
+        );
+
+        $code = $compiler->compile($schema, 'ApostrophePropertyValidator');
+
+        token_get_all($code, TOKEN_PARSE);
+
+        $this->assertStringContainsString('$data[\'it\\\'s\']', $code);
+        $this->assertStringNotContainsString('$data[\'it\'s\']', $code);
+    }
+
+    /**
+     * EI-026 (Critical, security): the required-property check used to
+     * interpolate the property name into both the `array_key_exists` key
+     * argument and the exception message. With an apostrophe in the name
+     * this broke both the literal key and the message string. After the
+     * fix the key uses `var_export` and the message uses `addslashes`, so
+     * the generated source parses cleanly.
+     */
+    #[Test]
+    public function compile_with_apostrophe_in_required_property_generates_parseable_php(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: ["it's" => new Schema(type: 'string')],
+            required: ["it's"],
+        );
+
+        $code = $compiler->compile($schema, 'ApostropheRequiredValidator');
+
+        token_get_all($code, TOKEN_PARSE);
+
+        $this->assertStringContainsString('array_key_exists(\'it\\\'s\'', $code);
+        $this->assertStringContainsString('Required property missing: it\\\'s', $code);
+    }
+
+    /**
+     * EI-026 (Critical, security): a deeply nested object with an apostrophe
+     * in a property name must still produce parseable PHP at every nesting
+     * level, because each level rebuilds the property access via
+     * `var_export`.
+     */
+    #[Test]
+    public function compile_with_apostrophe_in_nested_property_name_generates_parseable_php(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                "it's" => new Schema(
+                    type: 'object',
+                    properties: ["it's" => new Schema(type: 'string')],
+                ),
+            ],
+        );
+
+        $code = $compiler->compile($schema, 'NestedApostropheValidator');
+
+        token_get_all($code, TOKEN_PARSE);
+
+        $this->assertStringContainsString('$data[\'it\\\'s\'][\'it\\\'s\']', $code);
+    }
+
+    /**
+     * EI-027 (Major, security): a namespaced class name (`My\Validator`)
+     * previously produced `readonly class My\Validator` — a syntax error.
+     * The compiler must now split the name, emit a `namespace My;` block,
+     * and declare `readonly class Validator` using the short name.
+     */
+    #[Test]
+    public function compile_with_namespaced_class_name_generates_namespace_block(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $code = $compiler->compile($schema, 'My\\Validator');
+
+        token_get_all($code, TOKEN_PARSE);
+        $this->assertStringContainsString('namespace My;', $code);
+        $this->assertStringContainsString('readonly class Validator', $code);
+        $this->assertStringNotContainsString('readonly class My\\Validator', $code);
+    }
+
+    /**
+     * EI-027: a multi-segment namespace must be emitted verbatim between
+     * the `namespace` keyword and the `readonly class` declaration.
+     */
+    #[Test]
+    public function compile_with_deeply_namespaced_class_name_generates_full_namespace_block(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $code = $compiler->compile($schema, 'App\\Dto\\UserValidator');
+
+        token_get_all($code, TOKEN_PARSE);
+        $this->assertStringContainsString('namespace App\\Dto;', $code);
+        $this->assertStringContainsString('readonly class UserValidator', $code);
+    }
+
+    /**
+     * EI-027: a class name starting with a digit is not a valid PHP
+     * identifier and must be rejected before any code is generated.
+     */
+    #[Test]
+    public function compile_with_class_name_starting_with_digit_throws_invalid_argument_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid class name part: "123Bad"');
+
+        $compiler->compile($schema, '123Bad');
+    }
+
+    /**
+     * EI-027: an empty class name is not a valid PHP identifier (each
+     * namespace segment must match the identifier regex).
+     */
+    #[Test]
+    public function compile_with_empty_class_name_throws_invalid_argument_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $compiler->compile($schema, '');
+    }
+
+    /**
+     * EI-027: a single namespace segment that is not a valid identifier
+     * must be rejected, even when other segments are valid.
+     */
+    #[Test]
+    public function compile_with_namespace_segment_starting_with_digit_throws_invalid_argument_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid class name part: "1Bad"');
+
+        $compiler->compile($schema, 'My\\1Bad\\Validator');
+    }
+
+    /**
+     * EI-027: a leading backslash produces an empty first segment after
+     * `explode('\\', ...)`, which must be rejected — the compiler expects
+     * the canonical form without a leading FQN separator.
+     */
+    #[Test]
+    public function compile_with_leading_backslash_in_class_name_throws_invalid_argument_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $compiler->compile($schema, '\\Validator');
+    }
+
+    /**
+     * EI-027: a class name containing a character outside the identifier
+     * grammar (a hyphen) must be rejected.
+     */
+    #[Test]
+    public function compile_with_hyphen_in_class_name_throws_invalid_argument_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid class name part: "Bad-Name"');
+
+        $compiler->compile($schema, 'Bad-Name');
+    }
+
+    /**
+     * EI-027 (positive): a class name containing a leading underscore or
+     * digits after the first character is a legal PHP identifier and must
+     * pass validation without an exception.
+     */
+    #[Test]
+    public function compile_with_valid_underscore_class_name_succeeds(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $code = $compiler->compile($schema, 'Valid_Name123');
+
+        token_get_all($code, TOKEN_PARSE);
+        $this->assertStringContainsString('readonly class Valid_Name123', $code);
+    }
+
+    /**
+     * EI-027 (positive): a single underscore is a legal PHP identifier
+     * (used by some libraries as a placeholder class name).
+     */
+    #[Test]
+    public function compile_with_single_underscore_class_name_succeeds(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $code = $compiler->compile($schema, '_');
+
+        token_get_all($code, TOKEN_PARSE);
+        $this->assertStringContainsString('readonly class _', $code);
+    }
+
+    /**
+     * EI-027: class-name validation must run before ref resolution, so a
+     * caller cannot smuggle an invalid name through `compileWithRefResolution`.
+     */
+    #[Test]
+    public function compile_with_ref_resolution_rejects_invalid_class_name(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+        $document = new OpenApiDocument(
+            openapi: '3.2.0',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+        );
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $compiler->compileWithRefResolution($schema, '0Invalid', $document);
+    }
+
+    /**
+     * EI-027: class-name validation must run before cache lookup, so an
+     * invalid name cannot poison the cache key path.
+     */
+    #[Test]
+    public function compile_with_cache_rejects_invalid_class_name(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $compiler->compileWithCache($schema, '0Invalid');
+    }
+
+    /**
+     * Build a schema nested \$depth levels deep. The outermost is an object
+     * with a single `nested` property which drills down \$depth-1 levels
+     * to a final `value: integer`.
+     */
+    private function buildNestedSchema(int $depth): Schema
+    {
+        $schema = new Schema(type: 'integer');
+        for ($i = 1; $i < $depth; $i++) {
+            $schema = new Schema(
+                type: 'object',
+                properties: ['nested' => $schema],
+            );
+        }
+
+        return $schema;
+    }
+
+    /**
+     * Build a payload matching {@see buildNestedSchema()} with \$depth levels
+     * and the given leaf value.
+     *
+     * For depth=1 the leaf is returned directly; for depth>=2 the leaf is
+     * wrapped in depth-1 levels of `['nested' => ...]`.
+     *
+     * @return array<string, mixed>|int
+     */
+    private function buildNestedPayload(int $depth, mixed $leafValue): array|int
+    {
+        $payload = $leafValue;
+        for ($i = 1; $i < $depth; $i++) {
+            $payload = ['nested' => $payload];
+        }
+
+        return $payload;
     }
 }

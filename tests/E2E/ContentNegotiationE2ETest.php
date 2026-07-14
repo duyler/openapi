@@ -6,14 +6,17 @@ namespace Duyler\OpenApi\Test\E2E;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Override;
 
+use function sprintf;
+
 final class ContentNegotiationE2ETest extends TestCase
 {
-    private const MULTI_CONTENT_TYPE_SPEC = <<<'YAML'
+    private const string MULTI_CONTENT_TYPE_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: Multi Content-Type API
@@ -96,7 +99,7 @@ paths:
                     type: string
 YAML;
 
-    private const NDJSON_SPEC = <<<'YAML'
+    private const string NDJSON_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: NDJSON Streaming API
@@ -121,7 +124,7 @@ paths:
                     type: string
 YAML;
 
-    private const SSE_SPEC = <<<'YAML'
+    private const string SSE_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: SSE Streaming API
@@ -209,6 +212,9 @@ YAML;
 
         $operation = $validator->validateRequest($request);
 
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/data', $operation->path);
+
         $response = $this->psrFactory->createResponse(201)
             ->withHeader('Content-Type', 'application/json')
             ->withBody($this->psrFactory->createStream(json_encode([
@@ -216,8 +222,16 @@ YAML;
                 'name' => 'test',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            $this->fail(sprintf('Expected JSON response to validate, got: %s', $e->getMessage()));
+        }
+
+        $this->assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -235,14 +249,25 @@ YAML;
 
         $operation = $validator->validateRequest($request);
 
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/data', $operation->path);
+
         $xmlResponse = '<?xml version="1.0"?><root><id>1</id><name>test</name></root>';
 
         $response = $this->psrFactory->createResponse(201)
             ->withHeader('Content-Type', 'application/xml')
             ->withBody($this->psrFactory->createStream($xmlResponse));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            $this->fail(sprintf('Expected XML response to validate, got: %s', $e->getMessage()));
+        }
+
+        $this->assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -260,14 +285,25 @@ YAML;
 
         $operation = $validator->validateRequest($request);
 
+        $this->assertSame('POST', $operation->method);
+        $this->assertSame('/data', $operation->path);
+
         $xmlResponse = '<?xml version="1.0"?><root><id>42</id><name>XML Item</name></root>';
 
         $response = $this->psrFactory->createResponse(201)
             ->withHeader('Content-Type', 'application/xml')
             ->withBody($this->psrFactory->createStream($xmlResponse));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            $this->fail(sprintf('Expected XML cycle to validate, got: %s', $e->getMessage()));
+        }
+
+        $this->assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -282,6 +318,9 @@ YAML;
 
         $operation = $validator->validateRequest($request);
 
+        $this->assertSame('GET', $operation->method);
+        $this->assertSame('/data/{id}', $operation->path);
+
         $response = $this->psrFactory->createResponse(200)
             ->withHeader('Content-Type', 'application/json')
             ->withBody($this->psrFactory->createStream(json_encode([
@@ -289,8 +328,16 @@ YAML;
                 'name' => 'Item 123',
             ])));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            $this->fail(sprintf('Expected JSON response to validate, got: %s', $e->getMessage()));
+        }
+
+        $this->assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -304,6 +351,9 @@ YAML;
 
         $operation = $validator->validateRequest($request);
 
+        $this->assertSame('GET', $operation->method);
+        $this->assertSame('/events', $operation->path);
+
         $ndjsonBody = implode("\n", [
             json_encode(['id' => 1, 'type' => 'click', 'payload' => 'button_a']),
             json_encode(['id' => 2, 'type' => 'scroll', 'payload' => 'page_down']),
@@ -314,8 +364,16 @@ YAML;
             ->withHeader('Content-Type', 'application/x-ndjson')
             ->withBody($this->psrFactory->createStream($ndjsonBody));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            $this->fail(sprintf('Expected NDJSON stream to validate, got: %s', $e->getMessage()));
+        }
+
+        $this->assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -338,8 +396,16 @@ YAML;
             ->withHeader('Content-Type', 'application/x-ndjson')
             ->withBody($this->psrFactory->createStream($ndjsonBody));
 
-        $this->expectException(TypeMismatchError::class);
-        $validator->validateResponse($response, $operation);
+        $caught = null;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            $this->fail('Expected ValidationException for invalid NDJSON chunk');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        $this->assertInstanceOf(TypeMismatchError::class, $caught);
     }
 
     #[Test]
@@ -353,6 +419,9 @@ YAML;
 
         $operation = $validator->validateRequest($request);
 
+        $this->assertSame('GET', $operation->method);
+        $this->assertSame('/notifications', $operation->path);
+
         $sseBody = "event: notification\ndata: {\"message\":\"You have mail\"}\n\n"
             . "event: notification\ndata: {\"message\":\"System update\"}\n\n";
 
@@ -360,8 +429,16 @@ YAML;
             ->withHeader('Content-Type', 'text/event-stream')
             ->withBody($this->psrFactory->createStream($sseBody));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            $this->fail(sprintf('Expected SSE stream to validate, got: %s', $e->getMessage()));
+        }
+
+        $this->assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -381,8 +458,16 @@ YAML;
             ->withHeader('Content-Type', 'text/event-stream')
             ->withBody($this->psrFactory->createStream($sseBody));
 
-        $this->expectException(TypeMismatchError::class);
-        $validator->validateResponse($response, $operation);
+        $caught = null;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            $this->fail('Expected ValidationException for invalid SSE event data');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        $this->assertInstanceOf(TypeMismatchError::class, $caught);
     }
 
     #[Test]
@@ -396,6 +481,9 @@ YAML;
 
         $operation = $validator->validateRequest($request);
 
+        $this->assertSame('GET', $operation->method);
+        $this->assertSame('/notifications', $operation->path);
+
         $sseBody = "event: notification\ndata: {\"message\":\"ping\"}\n\n"
             . ": this is a comment and should be ignored\n"
             . "event: notification\ndata: {\"message\":\"pong\"}\n\n";
@@ -404,7 +492,15 @@ YAML;
             ->withHeader('Content-Type', 'text/event-stream')
             ->withBody($this->psrFactory->createStream($sseBody));
 
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            $this->fail(sprintf('Expected SSE stream with comments to validate, got: %s', $e->getMessage()));
+        }
+
+        $this->assertSame(true, $succeeded);
     }
 }

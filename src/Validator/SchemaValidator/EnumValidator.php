@@ -7,9 +7,8 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\EnumError;
+use Duyler\OpenApi\Validator\Schema\JsonEquals;
 use Override;
-
-use function in_array;
 
 final readonly class EnumValidator extends AbstractSchemaValidator
 {
@@ -19,14 +18,20 @@ final readonly class EnumValidator extends AbstractSchemaValidator
         if (null === $schema->enum || [] === $schema->enum) {
             return;
         }
-        if (false === in_array($data, $schema->enum, true)) {
-            $dataPath = $this->getDataPath($context);
-            throw new EnumError(
-                allowedValues: $schema->enum,
-                actual: $data,
-                dataPath: $dataPath,
-                schemaPath: '/enum',
-            );
+
+        /** @var mixed $allowedValue */
+        foreach ($schema->enum as $allowedValue) {
+            if (JsonEquals::equals($allowedValue, $data)) {
+                return;
+            }
         }
+
+        $dataPath = $this->getDataPath($context);
+        throw new EnumError(
+            allowedValues: $schema->enum,
+            actual: $data,
+            dataPath: $dataPath,
+            schemaPath: '/enum',
+        );
     }
 }

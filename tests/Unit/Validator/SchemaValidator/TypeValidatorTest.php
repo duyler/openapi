@@ -7,12 +7,21 @@ namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\TypeValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\EmptyArrayStrategy;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+
+use function sprintf;
+
+use const INF;
+use const NAN;
 
 #[CoversClass(TypeValidator::class)]
 class TypeValidatorTest extends TestCase
@@ -20,6 +29,7 @@ class TypeValidatorTest extends TestCase
     private ValidatorPool $pool;
     private TypeValidator $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
@@ -31,9 +41,16 @@ class TypeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'string');
 
-        $this->validator->validate('hello', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('hello', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -41,9 +58,16 @@ class TypeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'number');
 
-        $this->validator->validate(3.14, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(3.14, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -51,9 +75,16 @@ class TypeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'number');
 
-        $this->validator->validate(42, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(42, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -61,9 +92,16 @@ class TypeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'integer');
 
-        $this->validator->validate(42, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(42, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -71,9 +109,16 @@ class TypeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'boolean');
 
-        $this->validator->validate(true, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(true, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -81,9 +126,16 @@ class TypeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'null');
 
-        $this->validator->validate(null, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(null, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -91,9 +143,16 @@ class TypeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'array');
 
-        $this->validator->validate([1, 2, 3], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([1, 2, 3], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -101,9 +160,16 @@ class TypeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'object');
 
-        $this->validator->validate(['name' => 'John'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -151,9 +217,16 @@ class TypeValidatorTest extends TestCase
     {
         $schema = new Schema(type: null);
 
-        $this->validator->validate('any value', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('any value', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -171,9 +244,16 @@ class TypeValidatorTest extends TestCase
     {
         $schema = new Schema(type: ['string', 'number']);
 
-        $this->validator->validate('hello', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('hello', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -181,9 +261,80 @@ class TypeValidatorTest extends TestCase
     {
         $schema = new Schema(type: ['string', 'number']);
 
-        $this->validator->validate(42, $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(42, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function validate_integer_type_with_whole_float(): void
+    {
+        $schema = new Schema(type: 'integer');
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(3.0, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function throw_type_mismatch_error_for_non_whole_float_as_integer(): void
+    {
+        $schema = new Schema(type: 'integer');
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate(3.14, $schema);
+    }
+
+    #[Test]
+    public function throw_type_mismatch_error_for_infinite_as_integer(): void
+    {
+        $schema = new Schema(type: 'integer');
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate(INF, $schema);
+    }
+
+    #[Test]
+    public function throw_type_mismatch_error_for_nan_as_integer(): void
+    {
+        $schema = new Schema(type: 'integer');
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate(NAN, $schema);
+    }
+
+    #[Test]
+    public function validate_union_integer_number_with_whole_float(): void
+    {
+        $schema = new Schema(type: ['integer', 'number']);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(1.0, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -204,5 +355,120 @@ class TypeValidatorTest extends TestCase
         $this->expectException(TypeMismatchError::class);
 
         $this->validator->validate('any value', $schema);
+    }
+
+    #[Test]
+    public function validate_nullable_string_allows_null(): void
+    {
+        $schema = new Schema(type: 'string', nullable: true);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(null, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function validate_array_type_with_empty_array_and_prefer_array_strategy(): void
+    {
+        $schema = new Schema(type: 'array');
+        $context = ValidationContext::create(
+            pool: $this->pool,
+            emptyArrayStrategy: EmptyArrayStrategy::PreferArray,
+        );
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate([], $schema, $context);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function throw_type_mismatch_error_for_empty_array_when_strategy_prefers_object(): void
+    {
+        $schema = new Schema(type: 'array');
+        $context = ValidationContext::create(
+            pool: $this->pool,
+            emptyArrayStrategy: EmptyArrayStrategy::PreferObject,
+        );
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate([], $schema, $context);
+    }
+
+    #[Test]
+    public function throw_type_mismatch_error_for_empty_array_when_strategy_rejects(): void
+    {
+        $schema = new Schema(type: 'array');
+        $context = ValidationContext::create(
+            pool: $this->pool,
+            emptyArrayStrategy: EmptyArrayStrategy::Reject,
+        );
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate([], $schema, $context);
+    }
+
+    #[Test]
+    public function validate_object_type_with_empty_array_and_prefer_object_strategy(): void
+    {
+        $schema = new Schema(type: 'object');
+        $context = ValidationContext::create(
+            pool: $this->pool,
+            emptyArrayStrategy: EmptyArrayStrategy::PreferObject,
+        );
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate([], $schema, $context);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function throw_type_mismatch_error_for_empty_array_as_object_when_strategy_prefers_array(): void
+    {
+        $schema = new Schema(type: 'object');
+        $context = ValidationContext::create(
+            pool: $this->pool,
+            emptyArrayStrategy: EmptyArrayStrategy::PreferArray,
+        );
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate([], $schema, $context);
+    }
+
+    #[Test]
+    public function throw_type_mismatch_error_for_empty_array_as_object_when_strategy_rejects(): void
+    {
+        $schema = new Schema(type: 'object');
+        $context = ValidationContext::create(
+            pool: $this->pool,
+            emptyArrayStrategy: EmptyArrayStrategy::Reject,
+        );
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate([], $schema, $context);
     }
 }

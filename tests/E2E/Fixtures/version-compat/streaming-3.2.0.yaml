@@ -1,0 +1,100 @@
+openapi: '3.2.0'
+info:
+  title: Streaming API
+  version: '1.0.0'
+paths:
+  /events:
+    get:
+      operationId: getEvents
+      responses:
+        '200':
+          description: Server-Sent Events stream
+          content:
+            text/event-stream:
+              itemSchema:
+                type: object
+                properties:
+                  event:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                      count:
+                        type: integer
+                required:
+                  - event
+                  - data
+  /logs:
+    get:
+      operationId: getLogs
+      responses:
+        '200':
+          description: JSON Lines log stream
+          content:
+            application/jsonl:
+              itemSchema:
+                type: object
+                properties:
+                  timestamp:
+                    type: string
+                    format: date-time
+                  level:
+                    type: string
+                    enum: [debug, info, warn, error]
+                  message:
+                    type: string
+                required:
+                  - timestamp
+                  - level
+                  - message
+  /records:
+    get:
+      operationId: getRecords
+      responses:
+        '200':
+          description: JSON Text Sequences (RFC 7464)
+          content:
+            application/json-seq:
+              itemSchema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  value:
+                    type: string
+                required:
+                  - id
+  /ndjson:
+    get:
+      operationId: getNdjson
+      responses:
+        '200':
+          description: Newline Delimited JSON
+          content:
+            application/x-ndjson:
+              itemSchema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  count:
+                    type: integer
+                required:
+                  - name
+  /stream-with-schema:
+    get:
+      operationId: getStreamWithSchema
+      responses:
+        '200':
+          description: Stream using schema instead of itemSchema
+          content:
+            application/jsonl:
+              schema:
+                type: object
+                properties:
+                  fallback:
+                    type: boolean
+                required:
+                  - fallback

@@ -6,11 +6,11 @@ namespace Duyler\OpenApi\Validator\Coercion;
 
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 
+use function fmod;
 use function is_array;
 use function is_bool;
 use function is_float;
 use function is_int;
-use function is_numeric;
 use function is_string;
 
 abstract readonly class AbstractCoercer
@@ -29,7 +29,7 @@ abstract readonly class AbstractCoercer
         };
     }
 
-    protected function coerceToBoolean(mixed $value): mixed
+    protected function coerceToBoolean(mixed $value, bool $strict = false): mixed
     {
         if (is_bool($value)) {
             return $value;
@@ -41,7 +41,14 @@ abstract readonly class AbstractCoercer
             return match ($lower) {
                 'true', '1', 'yes', 'on' => true,
                 'false', '0', 'no', 'off' => false,
-                default => (bool) $value,
+                default => $strict
+                    ? throw new TypeMismatchError(
+                        expected: 'boolean',
+                        actual: $value,
+                        dataPath: '',
+                        schemaPath: '/type',
+                    )
+                    : (bool) $value,
             };
         }
 
@@ -63,19 +70,32 @@ abstract readonly class AbstractCoercer
         }
 
         if (is_string($value)) {
-            if ($strict && (!is_numeric($value) || (string) (int) $value !== $value)) {
-                throw new TypeMismatchError(
-                    expected: 'integer',
-                    actual: $value,
-                    dataPath: '',
-                    schemaPath: '/type',
-                );
+            if (1 !== preg_match('/^[+-]?\d+$/', $value)) {
+                if ($strict) {
+                    throw new TypeMismatchError(
+                        expected: 'integer',
+                        actual: $value,
+                        dataPath: '',
+                        schemaPath: '/type',
+                    );
+                }
+
+                return $value;
             }
 
             $coerced = (int) $value;
 
-            if ((string) $coerced !== $value) {
-                return (int) $value;
+            if ((string) $coerced !== IntegerStringNormalizer::canonicalize($value)) {
+                if ($strict) {
+                    throw new TypeMismatchError(
+                        expected: 'integer',
+                        actual: $value,
+                        dataPath: '',
+                        schemaPath: '/type',
+                    );
+                }
+
+                return $value;
             }
 
             return $coerced;
@@ -91,7 +111,11 @@ abstract readonly class AbstractCoercer
                 );
             }
 
-            return (int) $value;
+            if (0.0 === fmod($value, 1.0)) {
+                return (int) $value;
+            }
+
+            return $value;
         }
 
         if (is_bool($value)) {
@@ -112,13 +136,17 @@ abstract readonly class AbstractCoercer
         }
 
         if (is_string($value)) {
-            if ($strict && !is_numeric($value)) {
-                throw new TypeMismatchError(
-                    expected: 'number',
-                    actual: $value,
-                    dataPath: '',
-                    schemaPath: '/type',
-                );
+            if (1 !== preg_match('/^[+-]?\d+(\.\d+)?([eE][+-]?\d+)?$/', $value)) {
+                if ($strict) {
+                    throw new TypeMismatchError(
+                        expected: 'number',
+                        actual: $value,
+                        dataPath: '',
+                        schemaPath: '/type',
+                    );
+                }
+
+                return $value;
             }
 
             return (float) $value;

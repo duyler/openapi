@@ -454,11 +454,21 @@ $registry = $registry
     ->register('api', '1.0.0', $documentV1)
     ->register('api', '2.0.0', $documentV2);
 
-// Get specific version
+// Get specific version (returns null if missing)
 $schema = $registry->get('api', '1.0.0');
 
-// Get latest version (sorted by semver)
+// Get latest version (sorted by semver, returns null if no versions)
 $schema = $registry->get('api');
+
+// Get specific version with fail-fast semantics
+// Throws VersionNotFoundException if the schema name or version is missing
+use Duyler\OpenApi\Registry\Exception\VersionNotFoundException;
+try {
+    $schema = $registry->getOrFail('api', '1.0.0');
+    $latest = $registry->getOrFail('api');
+} catch (VersionNotFoundException $e) {
+    // $e->getMessage() describes the missing name and version
+}
 
 // List all versions
 $versions = $registry->getVersions('api');
@@ -480,15 +490,35 @@ $apiVersions = $registry->countVersions('api'); // 2
 
 The registry is immutable: `register()` returns a new instance with the added schema.
 
+#### Design choices
+
+- **Registering an existing name+version overwrites the document silently.** This is intentional and enables immutable update patterns (for example, hot-reloading a spec in development, or replacing a placeholder document with a final one). Guard with `has()` if silent overwrite is undesirable for your use case:
+
+  ```php
+  if ($registry->has('api', '1.0.0')) {
+      throw new LogicException('Refusing to overwrite api 1.0.0');
+  }
+  $registry = $registry->register('api', '1.0.0', $document);
+  ```
+
+- **`get()` returns `null` for a missing schema or version** (mirrors the PSR-6 cache convention). Use `has()` to distinguish "missing" from "present" before calling `get()`, or use `getOrFail()` to fail fast with a `VersionNotFoundException` (extends `\RuntimeException`).
+
 ### Validator Pool
 
 The validator pool uses an LRU (Least Recently Used) cache to reuse validator instances. The default capacity is 128 entries. When the pool is full, the least recently used validator is evicted.
+
+By default the pool is **not thread-safe**. It is safe to share in prefork models where each worker has isolated state (PHP-FPM, RoadRunner, FrankenPHP non-threaded). In Swoole with coroutines or FrankenPHP with threaded workers, concurrent `getOrCreate()` calls race on the check-then-act sequence. Pass a lock object exposing `lock()`/`unlock()` methods to serialize access (for example `Swoole\Lock`). Without a lock the pool is racy under shared state.
+
+The `$factory` passed to `getOrCreate()` must be non-blocking (no I/O) and non-recursive (no nested `getOrCreate()` calls); the lock is held for the entire duration of `$factory`, so suspending or recursing inside it deadlocks.
 
 ```php
 use Duyler\OpenApi\Validator\ValidatorPool;
 
 $pool = new ValidatorPool();          // default: 128 entries
 $pool = new ValidatorPool(maxSize: 64); // custom capacity
+
+// Swoole / threaded runtimes: pass a lock to serialize access
+$pool = new ValidatorPool(maxSize: 128, lock: new \Swoole\Lock());
 
 // Validators are automatically reused and evicted when capacity is exceeded
 $validator = OpenApiValidatorBuilder::create()
@@ -562,11 +592,24 @@ $compiler = new ValidatorCompiler();
 $code = $compiler->compileWithCache($schema, 'UserValidator', $compilationCache);
 ```
 
-`CompilationCache` uses a PSR-6 cache pool and generates a SHA-256 hash of the schema to use as the cache key. Cached entries expire after 24 hours (86400 seconds). This TTL is hardcoded and not configurable.
+`CompilationCache` uses a PSR-6 cache pool and generates a SHA-256 hash of the schema to use as the cache key. Cached entries expire after the configured TTL (default: 24 hours / 86400 seconds). Pass a custom TTL to the `CompilationCache` constructor to override:
+
+```php
+$compilationCache = new CompilationCache($pool, ttl: 3600); // 1-hour TTL
+```
 
 #### Compiler Limitations
 
-The compiler does not support all JSON Schema keywords. If a schema uses unsupported keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `patternProperties`), the compiler throws `UnsupportedKeywordException`. See the Limitations section below for details.
+The compiler does not support all JSON Schema keywords. If a schema uses unsupported keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `patternProperties`, `format`, `minProperties`, `maxProperties`, `prefixItems`, or `additionalProperties` as a Schema — the bool `true`/`false` form is supported), the compiler throws `UnsupportedKeywordException`. See the Limitations section below for details.
+
+`prefixItems` is rejected with `UnsupportedKeywordException` during compilation — positional item validation is not generated. Use the runtime validator for `prefixItems` enforcement.
+
+For supported keywords, the generated code is numerically equivalent to the runtime validator for the integer/multipleOf edge cases that previously diverged:
+
+- `type: integer` accepts whole floats (`3.0`) per JSON Schema 2020-12 §4.2.3, and rejects non-whole floats (`3.14`, `Inf`, `NaN`).
+- `multipleOf` uses the integer modulus path (`%`) when both operands are integers, and falls back to a quotient-plus-relative-epsilon check (`1e-9 * max(1.0, abs($quotient))`) for float operands — matching `NumericRangeValidator::isMultipleOf` so large dividends (e.g. `1e20 / 0.1`) do not lose precision the way `fmod` does.
+
+Use the runtime validator when you need the typed error classes (`TypeMismatchError`, `MultipleOfKeywordError`, …); the compiler only emits generic `RuntimeException`.
 
 ## Configuration Options
 
@@ -888,7 +931,10 @@ All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schem
 | `RequiredError` | `required` | Required property is missing |
 | `MinPropertiesError` | `minProperties` | Object has fewer properties than required |
 | `MaxPropertiesError` | `maxProperties` | Object has more properties than allowed |
+| `AdditionalPropertyError` | `additionalProperties` | Additional property present despite additionalProperties: false |
 | `UnevaluatedPropertyError` | `unevaluatedProperties` | Property not allowed and not evaluated by any keyword |
+| `ReadOnlyPropertyError` | `readOnly` | Read-only property was sent in a request payload |
+| `WriteOnlyPropertyError` | `writeOnly` | Write-only property was returned in a response payload |
 
 #### Composition Errors
 
@@ -896,6 +942,8 @@ All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schem
 |------------|---------|-------------|
 | `OneOfError` | `oneOf` | Data matches multiple schemas (should match exactly one) |
 | `AnyOfError` | `anyOf` | Data doesn't match any of the schemas |
+| `NotValidationError` | `not` | Data matches the schema forbidden by `not` |
+| `DiscriminatorDataError` | `oneOf` | Discriminator validation received non-object data |
 
 #### Discriminator Errors
 
@@ -919,8 +967,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | Exception | Description |
 |-----------|-------------|
 | `MissingParameterException` | Required parameter is missing from request |
-| `MissingRequestBodyException` | Request body is required but missing |
-| `EmptyBodyException` | Request body is empty |
+| `MissingRequestBodyException` | Request body is required but missing or empty |
 | `UnsupportedMediaTypeException` | Content-Type not supported by the operation |
 | `PathMismatchException` | Request path doesn't match any operation template |
 | `InvalidParameterException` | Parameter value is malformed or invalid |
@@ -929,6 +976,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `RefResolutionException` | Failed to resolve `$ref` reference |
 | `SchemaDepthExceededException` | Maximum schema nesting depth exceeded |
 | `UnknownValidatorException` | Unknown validator type requested |
+| `VersionNotFoundException` | Requested schema name or version is not registered (thrown by `SchemaRegistry::getOrFail()`) |
 
 ### Error Formatters
 
@@ -1101,11 +1149,12 @@ The `ValidatorCompiler` generates standalone PHP classes with hardcoded validati
 Use compilation when:
 - The schema is stable and does not change at runtime
 - You need maximum throughput for hot-path validation
-- The schema uses only basic keywords (no `allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`)
+- The schema uses only basic keywords (no `allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `format`)
 
 Stick with runtime validation when:
 - The schema changes frequently or is user-defined
 - You need composition keywords (`allOf`, `anyOf`, `oneOf`)
+- You need format validation (`email`, `uuid`, `date-time`, etc.)
 - You need `$ref` resolution against an OpenAPI document (use `compileWithRefResolution()` instead)
 
 ### Coercion Impact
@@ -1135,7 +1184,27 @@ printf("Memory delta: %d bytes\n", $after - $before);
 
 ### Long-Running Processes
 
-The validator instance is safe to reuse across requests in long-running processes (RoadRunner, FrankenPHP, Swoole). The internal `ValidatorPool` uses an LRU cache to reuse validator instances without manual cleanup. The pool has a default capacity of 128 entries and automatically evicts the least recently used entries when full.
+The validator instance is safe to reuse across requests in long-running
+processes that use the **prefork execution model**: PHP-FPM, RoadRunner, and
+FrankenPHP in non-threaded mode. The internal `ValidatorPool` uses an LRU cache
+to reuse validator instances without manual cleanup. The pool has a default
+capacity of 128 entries and automatically evicts the least recently used entries
+when full.
+
+For **Swoole with coroutines** or **FrankenPHP threaded workers**, the validator
+requires additional concurrency protection:
+
+- Each coroutine or worker must use its own `ValidatorPool` instance, or you
+  must inject a lock (any object with `lock()` and `unlock()` methods, such as
+  `Swoole\Lock`) into the `ValidatorPool` constructor.
+- libxml global state (`libxml_use_internal_errors`, external entity loader) is
+  shared across coroutines. XML body parsing and `contentMediaType: application/xml`
+  validation may race on these globals.
+- `DateTime::getLastErrors()` and `json_last_error()` are also global. Prefer
+  code paths that use `JSON_THROW_ON_ERROR` and do not rely on these globals.
+
+The prefork model (one request per worker process, no shared mutable state) is
+the safest option and requires no extra configuration.
 
 ```php
 // Build once at worker startup
@@ -1144,7 +1213,7 @@ $validator = OpenApiValidatorBuilder::create()
     ->withCache($schemaCache)
     ->build();
 
-// Reuse across requests
+// Reuse across requests (prefork model only)
 while ($request = $worker->waitRequest()) {
     $operation = $validator->validateRequest($request);
     // ...
@@ -1268,7 +1337,7 @@ $validator->validateResponse($response, $operation);
 
 ### Server-Sent Events (SSE)
 
-The parser handles the standard SSE format with `event`, `data`, and `id` fields. Comments (lines starting with `:`) are ignored. The `data` field is automatically decoded from JSON when possible.
+The parser handles the standard SSE format with `event`, `data`, `id`, and `retry` fields. Comments (lines starting with `:`) are ignored. The `data` field is automatically decoded from JSON when possible. The `retry` field is the W3C reconnection time in integer milliseconds; non-numeric values are ignored. When an SSE event has `data:` but no `event:` field, the parser assigns the W3C default event type `'message'`.
 
 ```php
 $request = $factory->createServerRequest('GET', '/events');
@@ -1333,13 +1402,27 @@ The validator covers approximately 95% of JSON Schema draft 2020-12 keywords. Th
 
 The `ValidatorCompiler` is marked as `@experimental`. It supports a subset of JSON Schema keywords: `type`, `enum`, `const`, `minLength`, `maxLength`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`, `pattern`, `minItems`, `maxItems`, `uniqueItems`, `properties`, `required`, `additionalProperties`, `items`.
 
-The compiler does not support composition keywords (`allOf`, `anyOf`, `oneOf`, `not`), conditional keywords (`if`/`then`/`else`), or `patternProperties`. If any of these are present in a schema, `compile()` throws `UnsupportedKeywordException`.
+The compiler does not support composition keywords (`allOf`, `anyOf`, `oneOf`, `not`), conditional keywords (`if`/`then`/`else`), `patternProperties`, `format`, `minProperties`, `maxProperties`, `prefixItems`, or `additionalProperties` as a Schema (the bool `true`/`false` form is supported). If any of these are present in a schema, `compile()` throws `UnsupportedKeywordException`.
 
 Generated validators throw generic `RuntimeException` on failure rather than the typed error classes used by the runtime validator.
+
+### Content Negotiation
+
+Request body validation honours RFC 7231 §3.1.1.1 wildcard patterns declared in the OpenAPI specification. The most specific declaration wins:
+
+1. Exact match (e.g., `application/json`)
+2. Subtype wildcard (e.g., `application/*`)
+3. Universal wildcard (`*/*`)
+
+When a wildcard declaration matches, the request body is parsed according to the concrete `Content-Type` sent by the client, so a spec `application/*` with a request `Content-Type: application/json` is decoded as JSON. A request whose `Content-Type` does not match any declared media type is rejected with `UnsupportedMediaTypeException` (fail-closed).
+
+Response body validation does not expand wildcards: media type matching uses literal string comparison, and a response `Content-Type` that does not match a declared media type simply skips response body validation.
 
 ### Security Validation
 
 Security scheme validation is basic. The validator checks that required credentials are present in the request (headers, query parameters, or cookies) but does not verify their correctness or format. Token validation, signature checking, and OAuth flow handling are outside the scope of this library.
+
+> **Note:** Security scheme validation is invoked by `validateRequest()`, `validateWebhook()`, and `validateCallback()` when `enableSecurityValidation()` is enabled. If a security scheme is defined at the document or operation level, the validator checks that required credentials are present in the request. If `enableSecurityValidation()` is not called, security validation is skipped (default behavior).
 
 The following security scheme types are supported:
 

@@ -68,9 +68,19 @@ class ItemsValidatorTest extends TestCase
             items: $itemSchema,
         );
 
-        $this->expectException(MinLengthError::class);
+        $caught = null;
 
-        $this->validator->validate(['ab'], $schema);
+        try {
+            $this->validator->validate(['ab'], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $errors = $caught->getErrors();
+
+        self::assertCount(1, $errors);
+        self::assertInstanceOf(MinLengthError::class, $errors[0]);
     }
 
     #[Test]
@@ -134,9 +144,19 @@ class ItemsValidatorTest extends TestCase
             items: $itemSchema,
         );
 
-        $this->expectException(MaximumError::class);
+        $caught = null;
 
-        $this->validator->validate([10, 150, 30], $schema);
+        try {
+            $this->validator->validate([10, 150, 30], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $errors = $caught->getErrors();
+
+        self::assertCount(1, $errors);
+        self::assertInstanceOf(MaximumError::class, $errors[0]);
     }
 
     #[Test]

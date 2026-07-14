@@ -10,13 +10,17 @@ use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\SchemaValidator\PropertiesValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use stdClass;
 
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+
+use function sprintf;
 
 #[CoversClass(PropertiesValidator::class)]
 class PropertiesValidatorTest extends TestCase
@@ -24,6 +28,7 @@ class PropertiesValidatorTest extends TestCase
     private ValidatorPool $pool;
     private PropertiesValidator $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
@@ -43,9 +48,16 @@ class PropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate(['name' => 'John', 'age' => 30], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John', 'age' => 30], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -61,9 +73,16 @@ class PropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate(['name' => 'John'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -77,9 +96,19 @@ class PropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->expectException(MinLengthError::class);
+        $caught = null;
 
-        $this->validator->validate(['name' => 'John'], $schema);
+        try {
+            $this->validator->validate(['name' => 'John'], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $errors = $caught->getErrors();
+
+        self::assertCount(1, $errors);
+        self::assertInstanceOf(MinLengthError::class, $errors[0]);
     }
 
     #[Test]
@@ -93,9 +122,16 @@ class PropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate('string value', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('string value', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -103,9 +139,16 @@ class PropertiesValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'object');
 
-        $this->validator->validate(['name' => 'John'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -113,9 +156,16 @@ class PropertiesValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'object', properties: []);
 
-        $this->validator->validate(['name' => 'John'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -135,9 +185,16 @@ class PropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate(['address' => ['city' => 'NYC', 'zip' => '10001']], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['address' => ['city' => 'NYC', 'zip' => '10001']], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -153,14 +210,21 @@ class PropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate([
-            'name' => 'John',
-            'age' => 30,
-            'active' => true,
-            'score' => 95.5,
-        ], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([
+                'name' => 'John',
+                'age' => 30,
+                'active' => true,
+                'score' => 95.5,
+            ], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -180,9 +244,20 @@ class PropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->expectException(TypeMismatchError::class);
+        $caught = null;
 
-        $this->validator->validate(['address' => ['city' => 'NYC', 'zip' => '10001']], $schema);
+        try {
+            $this->validator->validate(['address' => ['city' => 'NYC', 'zip' => '10001']], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $errors = $caught->getErrors();
+
+        self::assertCount(1, $errors);
+        self::assertInstanceOf(TypeMismatchError::class, $errors[0]);
+        self::assertSame('type', $errors[0]->keyword());
     }
 
     #[Test]
@@ -212,9 +287,16 @@ class PropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate(['name' => 'John', 'extra' => 'any data'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['name' => 'John', 'extra' => 'any data'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -230,9 +312,16 @@ class PropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->validator->validate([], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -247,9 +336,17 @@ class PropertiesValidatorTest extends TestCase
         );
 
         $context = ValidationContext::create($this->pool, nullableAsType: true);
-        $this->validator->validate(['name' => null], $schema, $context);
 
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(['name' => null], $schema, $context);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -266,9 +363,17 @@ class PropertiesValidatorTest extends TestCase
         );
 
         $context = ValidationContext::create($this->pool, nullableAsType: true);
-        $this->validator->validate(['name' => null, 'age' => 30], $schema, $context);
 
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(['name' => null, 'age' => 30], $schema, $context);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -283,9 +388,17 @@ class PropertiesValidatorTest extends TestCase
         );
 
         $context = ValidationContext::create($this->pool, nullableAsType: true);
-        $this->validator->validate(['name' => 'John'], $schema, $context);
 
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(['name' => 'John'], $schema, $context);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -302,8 +415,16 @@ class PropertiesValidatorTest extends TestCase
         );
 
         $context = ValidationContext::create($this->pool, nullableAsType: true);
-        $this->validator->validate(['name' => null, 'age' => null], $schema, $context);
 
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(['name' => null, 'age' => null], $schema, $context);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 }

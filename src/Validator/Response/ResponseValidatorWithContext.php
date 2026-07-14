@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Response;
 
 use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Exception\UndefinedResponseException;
@@ -34,11 +35,19 @@ final readonly class ResponseValidatorWithContext
         $this->schemaValidator = new SchemaValidator(
             $this->dependencies->pool,
             $this->dependencies->formatRegistry,
+            strictFormats: $this->configuration->strictFormats,
             reportDeprecated: $this->configuration->reportDeprecated,
             logger: $this->dependencies->logger,
             eventDispatcher: $this->dependencies->eventDispatcher,
         );
-        $this->headersValidator = new ResponseHeadersValidator($this->schemaValidator);
+        $this->headersValidator = new ResponseHeadersValidator(
+            schemaValidator: $this->schemaValidator,
+            pool: $this->dependencies->pool,
+            config: new ParameterValidationConfig(
+                nullableAsType: $this->configuration->nullableAsType,
+                emptyArrayStrategy: $this->configuration->emptyArrayStrategy,
+            ),
+        );
         $this->bodyValidator = new ResponseBodyValidatorWithContext(
             document: $this->document,
             dependencies: $this->dependencies,

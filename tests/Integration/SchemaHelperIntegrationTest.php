@@ -18,7 +18,7 @@ final class SchemaHelperIntegrationTest extends TestCase
     public function exception_is_thrown_when_validating_invalid_type_through_validator(): void
     {
         $this->expectException(InvalidDataTypeException::class);
-        $this->expectExceptionMessage('Data must be array, int, string, float or bool, NULL given');
+        $this->expectExceptionMessage('Data must be array, int, string, float or bool, null given');
 
         SchemaValueNormalizer::normalize(null);
     }

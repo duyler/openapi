@@ -9,6 +9,7 @@ use Duyler\OpenApi\Event\ValidationStartedEvent;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
+use RuntimeException;
 
 final class ArrayDispatcherTest extends TestCase
 {
@@ -109,5 +110,86 @@ final class ArrayDispatcherTest extends TestCase
         $dispatcher->dispatch($event);
 
         self::assertSame(2, $callCount);
+    }
+
+    #[Test]
+    public function dispatch_propagates_runtime_exception_thrown_by_listener(): void
+    {
+        $listener = function (object $event): never {
+            throw new RuntimeException('listener failure');
+        };
+
+        $dispatcher = new ArrayDispatcher([
+            ValidationStartedEvent::class => [$listener],
+        ]);
+
+        $request = $this->createStub(ServerRequestInterface::class);
+        $event = new ValidationStartedEvent($request, '/test', 'GET');
+
+        $caught = null;
+        try {
+            $dispatcher->dispatch($event);
+        } catch (RuntimeException $e) {
+            $caught = $e;
+        }
+
+        self::assertNotNull($caught);
+        self::assertSame('listener failure', $caught->getMessage());
+    }
+
+    #[Test]
+    public function dispatch_stops_at_first_throwing_listener_and_does_not_call_subsequent(): void
+    {
+        $secondListenerCalled = false;
+        $firstListener = function (object $event): never {
+            throw new RuntimeException('first listener aborts');
+        };
+        $secondListener = function (object $event) use (&$secondListenerCalled): void {
+            $secondListenerCalled = true;
+        };
+
+        $dispatcher = new ArrayDispatcher([
+            ValidationStartedEvent::class => [$firstListener, $secondListener],
+        ]);
+
+        $request = $this->createStub(ServerRequestInterface::class);
+        $event = new ValidationStartedEvent($request, '/test', 'GET');
+
+        $caught = null;
+        try {
+            $dispatcher->dispatch($event);
+        } catch (RuntimeException $e) {
+            $caught = $e;
+        }
+
+        self::assertNotNull($caught);
+        self::assertSame('first listener aborts', $caught->getMessage());
+        self::assertFalse($secondListenerCalled);
+    }
+
+    #[Test]
+    public function dispatch_propagates_exception_with_original_message_and_code(): void
+    {
+        $listener = function (object $event): never {
+            throw new RuntimeException('custom message', 42);
+        };
+
+        $dispatcher = new ArrayDispatcher([
+            ValidationStartedEvent::class => [$listener],
+        ]);
+
+        $request = $this->createStub(ServerRequestInterface::class);
+        $event = new ValidationStartedEvent($request, '/test', 'GET');
+
+        $caught = null;
+        try {
+            $dispatcher->dispatch($event);
+        } catch (RuntimeException $e) {
+            $caught = $e;
+        }
+
+        self::assertNotNull($caught);
+        self::assertSame('custom message', $caught->getMessage());
+        self::assertSame(42, $caught->getCode());
     }
 }

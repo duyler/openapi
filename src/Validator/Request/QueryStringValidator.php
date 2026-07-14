@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
+use Duyler\OpenApi\Validator\ValidatorPool;
 
 use function assert;
 use function is_array;
@@ -21,6 +24,8 @@ final readonly class QueryStringValidator
     public function __construct(
         private readonly QueryParser $queryParser,
         private readonly SchemaValidatorInterface $schemaValidator,
+        private readonly ValidatorPool $pool = new ValidatorPool(),
+        private readonly ParameterValidationConfig $config = new ParameterValidationConfig(),
     ) {}
 
     public function validate(string $queryString, array $parameterSchemas): void
@@ -72,15 +77,6 @@ final readonly class QueryStringValidator
 
         /** @var array<array-key, mixed>|scalar|null $parsedValue */
         $parsedValue = $this->queryParser->parseQueryString($queryString, $parameter);
-
-        if (null === $parsedValue && $parameter->required) {
-            throw new MissingParameterException('querystring', $name);
-        }
-
-        if (null === $parsedValue) {
-            return;
-        }
-
         $this->validateValueAgainstSchema($parsedValue, $parameter);
     }
 
@@ -101,7 +97,12 @@ final readonly class QueryStringValidator
                     || is_bool($value)
                     || null === $value,
                 );
-                $this->schemaValidator->validate($value, $mediaTypeObject->schema);
+                $context = ValidationContext::create(
+                    pool: $this->pool,
+                    nullableAsType: $this->config->nullableAsType,
+                    emptyArrayStrategy: $this->config->emptyArrayStrategy,
+                );
+                $this->schemaValidator->validate($value, $mediaTypeObject->schema, $context);
             }
             return;
         }

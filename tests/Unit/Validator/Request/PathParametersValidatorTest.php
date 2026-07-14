@@ -17,9 +17,13 @@ use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+
+use function sprintf;
 
 /** @internal */
 #[CoversClass(PathParametersValidator::class)]
@@ -27,6 +31,7 @@ final class PathParametersValidatorTest extends TestCase
 {
     private PathParametersValidator $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $pool = new ValidatorPool();
@@ -50,9 +55,16 @@ final class PathParametersValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($params, $parameterSchemas);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate($params, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -86,9 +98,16 @@ final class PathParametersValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($params, $parameterSchemas);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate($params, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -103,9 +122,16 @@ final class PathParametersValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($params, $parameterSchemas);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate($params, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -127,9 +153,16 @@ final class PathParametersValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($params, $parameterSchemas);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate($params, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -145,9 +178,16 @@ final class PathParametersValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($params, $parameterSchemas);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate($params, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -163,9 +203,16 @@ final class PathParametersValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($params, $parameterSchemas);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate($params, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -199,9 +246,16 @@ final class PathParametersValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($params, $parameterSchemas);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate($params, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -216,9 +270,16 @@ final class PathParametersValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($params, $parameterSchemas);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate($params, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -246,9 +307,16 @@ final class PathParametersValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($params, $parameterSchemas);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate($params, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -270,9 +338,16 @@ final class PathParametersValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($params, $parameterSchemas);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate($params, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -324,9 +399,16 @@ final class PathParametersValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($params, $parameterSchemas);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate($params, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -360,9 +442,16 @@ final class PathParametersValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($params, $parameterSchemas);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate($params, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -396,9 +485,16 @@ final class PathParametersValidatorTest extends TestCase
             ),
         ];
 
-        $this->validator->validate($params, $parameterSchemas);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate($params, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]

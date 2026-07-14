@@ -91,6 +91,9 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
     {
         $this->dependencies->pool->clear();
         $this->dependencies->refResolver->clear();
+        $this->dependencies->pathRegexCache->clear();
+        $this->dependencies->regexValidator->clear();
+        libxml_clear_errors();
     }
 
     #[Override]

@@ -10,11 +10,15 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+
+use function sprintf;
 
 #[CoversClass(UnevaluatedItemsValidator::class)]
 class UnevaluatedItemsValidatorTest extends TestCase
@@ -22,6 +26,7 @@ class UnevaluatedItemsValidatorTest extends TestCase
     private ValidatorPool $pool;
     private UnevaluatedItemsValidator $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
@@ -40,9 +45,16 @@ class UnevaluatedItemsValidatorTest extends TestCase
             unevaluatedItems: $unevaluatedSchema,
         );
 
-        $this->validator->validate(['hello', 42, 'ab', 'cd'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['hello', 42, 'ab', 'cd'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -57,9 +69,16 @@ class UnevaluatedItemsValidatorTest extends TestCase
             unevaluatedItems: $unevaluatedSchema,
         );
 
-        $this->validator->validate(['hello', 42, 'extra', 'items'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['hello', 42, 'extra', 'items'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -88,9 +107,16 @@ class UnevaluatedItemsValidatorTest extends TestCase
             unevaluatedItems: $unevaluatedSchema,
         );
 
-        $this->validator->validate('string value', $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate('string value', $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -102,9 +128,16 @@ class UnevaluatedItemsValidatorTest extends TestCase
             prefixItems: [$prefixSchema1],
         );
 
-        $this->validator->validate(['hello', 42, 'extra'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['hello', 42, 'extra'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -118,9 +151,16 @@ class UnevaluatedItemsValidatorTest extends TestCase
             unevaluatedItems: $unevaluatedSchema,
         );
 
-        $this->validator->validate(['a', 'b', 'c'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['a', 'b', 'c'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -134,9 +174,16 @@ class UnevaluatedItemsValidatorTest extends TestCase
             unevaluatedItems: $unevaluatedSchema,
         );
 
-        $this->validator->validate([], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate([], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -151,9 +198,16 @@ class UnevaluatedItemsValidatorTest extends TestCase
             unevaluatedItems: $unevaluatedSchema,
         );
 
-        $this->validator->validate(['hello'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['hello'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -168,9 +222,16 @@ class UnevaluatedItemsValidatorTest extends TestCase
             unevaluatedItems: $unevaluatedSchema,
         );
 
-        $this->validator->validate(['hello', 42], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['hello', 42], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -182,9 +243,16 @@ class UnevaluatedItemsValidatorTest extends TestCase
             unevaluatedItems: $unevaluatedSchema,
         );
 
-        $this->validator->validate(['a', 'b', 'c'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['a', 'b', 'c'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -199,9 +267,17 @@ class UnevaluatedItemsValidatorTest extends TestCase
         );
 
         $context = ValidationContext::create($this->pool, nullableAsType: true);
-        $this->validator->validate(['hello', 42, 43], $schema, $context);
 
-        $this->expectNotToPerformAssertions();
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(['hello', 42, 43], $schema, $context);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -215,8 +291,15 @@ class UnevaluatedItemsValidatorTest extends TestCase
             unevaluatedItems: $unevaluatedSchema,
         );
 
-        $this->validator->validate(['a', 'b', 'c'], $schema);
+        $succeeded = false;
 
-        $this->expectNotToPerformAssertions();
+        try {
+            $this->validator->validate(['a', 'b', 'c'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 }

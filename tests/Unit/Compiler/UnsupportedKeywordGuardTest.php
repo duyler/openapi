@@ -203,4 +203,109 @@ final class UnsupportedKeywordGuardTest extends TestCase
             $this->assertStringContainsString('does not support', $e->getMessage());
         }
     }
+
+    #[Test]
+    public function compile_with_format_email_throws_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'string',
+            format: 'email',
+        );
+
+        try {
+            $compiler->compile($schema, 'EmailFormatSchema');
+            $this->fail('Expected UnsupportedKeywordException for format: email');
+        } catch (UnsupportedKeywordException $e) {
+            $this->assertContains('format', $e->keywords);
+            $this->assertStringContainsString('format', $e->getMessage());
+        }
+    }
+
+    #[Test]
+    public function compile_with_format_uuid_throws_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'string',
+            format: 'uuid',
+        );
+
+        try {
+            $compiler->compile($schema, 'UuidFormatSchema');
+            $this->fail('Expected UnsupportedKeywordException for format: uuid');
+        } catch (UnsupportedKeywordException $e) {
+            $this->assertContains('format', $e->keywords);
+            $this->assertStringContainsString('format', $e->getMessage());
+        }
+    }
+
+    #[Test]
+    public function compile_with_format_date_time_throws_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'string',
+            format: 'date-time',
+        );
+
+        try {
+            $compiler->compile($schema, 'DateTimeFormatSchema');
+            $this->fail('Expected UnsupportedKeywordException for format: date-time');
+        } catch (UnsupportedKeywordException $e) {
+            $this->assertContains('format', $e->keywords);
+            $this->assertStringContainsString('format', $e->getMessage());
+        }
+    }
+
+    #[Test]
+    public function compile_with_format_in_nested_property_throws_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'email' => new Schema(
+                    type: 'string',
+                    format: 'email',
+                ),
+            ],
+        );
+
+        try {
+            $compiler->compile($schema, 'NestedFormatSchema');
+            $this->fail('Expected UnsupportedKeywordException for nested format keyword');
+        } catch (UnsupportedKeywordException $e) {
+            $this->assertContains('format', $e->keywords);
+            $this->assertStringContainsString('format', $e->getMessage());
+        }
+    }
+
+    #[Test]
+    public function compile_string_schema_without_format_succeeds(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string');
+
+        $code = $compiler->compile($schema, 'StringWithoutFormatSchema');
+
+        $this->assertStringContainsString('is_string($data)', $code);
+    }
+
+    #[Test]
+    public function compile_object_schema_with_string_properties_without_format_succeeds(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string'),
+                'email' => new Schema(type: 'string'),
+            ],
+        );
+
+        $code = $compiler->compile($schema, 'ObjectWithoutFormatSchema');
+
+        $this->assertStringContainsString('readonly class ObjectWithoutFormatSchema', $code);
+    }
 }

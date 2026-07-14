@@ -23,14 +23,16 @@ final readonly class StatelessValidatorRegistry
         bool $reportDeprecated = false,
         LoggerInterface $logger = new NullLogger(),
         ?EventDispatcherInterface $eventDispatcher = null,
+        RegexValidator $regexValidator = new RegexValidator(),
     ) {
-        $this->validators = (new ValidatorFactory(
+        $this->validators = new ValidatorFactory(
             $pool,
             $formatRegistry,
             logger: $logger,
             reportDeprecated: $reportDeprecated,
             eventDispatcher: $eventDispatcher,
-        ))->createStatelessList();
+            regexValidator: $regexValidator,
+        )->createStatelessList();
     }
 
     /**
