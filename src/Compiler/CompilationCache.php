@@ -8,6 +8,7 @@ use Duyler\OpenApi\Compiler\Exception\CompilationCacheException;
 use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Model\Xml;
+use InvalidArgumentException;
 use Override;
 use Psr\Cache\CacheItemPoolInterface;
 
@@ -39,6 +40,12 @@ final class CompilationCache implements CompilationCacheInterface
         private readonly string $namespace = 'validator_compilation',
         private readonly int $ttl = self::DEFAULT_TTL,
     ) {
+        if ($ttl < 1) {
+            throw new InvalidArgumentException(
+                sprintf('TTL must be a positive integer, got %d.', $ttl),
+            );
+        }
+
         /** @var WeakMap<Schema, string> */
         $this->hashCache = new WeakMap();
     }
