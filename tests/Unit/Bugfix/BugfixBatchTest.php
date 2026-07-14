@@ -17,7 +17,7 @@ use Duyler\OpenApi\Schema\Model\Webhooks;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Exception\ConstError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
-use Duyler\OpenApi\Validator\Exception\MultipleOfKeywordError;
+use Duyler\OpenApi\Validator\Exception\InvalidMultipleOfSchemaException;
 use Duyler\OpenApi\Validator\Exception\UndefinedResponseException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
@@ -333,7 +333,7 @@ final class BugfixBatchTest extends TestCase
 
         $schema = new Schema(type: 'number', multipleOf: 0.0);
 
-        $this->expectException(MultipleOfKeywordError::class);
+        $this->expectException(InvalidMultipleOfSchemaException::class);
 
         $validator->validate(42, $schema);
     }

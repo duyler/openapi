@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\NumericRangeValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Exception\InvalidMultipleOfSchemaException;
 use Duyler\OpenApi\Validator\Exception\MaximumError;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\MultipleOfKeywordError;
@@ -306,7 +307,7 @@ class NumericRangeValidatorTest extends TestCase
     {
         $schema = new Schema(type: 'number', multipleOf: 0.0);
 
-        $this->expectException(MultipleOfKeywordError::class);
+        $this->expectException(InvalidMultipleOfSchemaException::class);
 
         $this->validator->validate(7, $schema);
     }

@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\InvalidMultipleOfSchemaException;
 use Duyler\OpenApi\Validator\Exception\MaximumError;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\MultipleOfKeywordError;
@@ -68,12 +69,7 @@ final readonly class NumericRangeValidator extends AbstractSchemaValidator
 
         if (null !== $schema->multipleOf) {
             if (0.0 === $schema->multipleOf) {
-                throw new MultipleOfKeywordError(
-                    multipleOf: $schema->multipleOf,
-                    value: $data,
-                    dataPath: $dataPath,
-                    schemaPath: '/multipleOf',
-                );
+                throw new InvalidMultipleOfSchemaException($schema->multipleOf);
             }
 
             if (false === $this->isMultipleOf($data, $schema->multipleOf)) {
