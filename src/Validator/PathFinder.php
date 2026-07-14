@@ -30,6 +30,7 @@ use function usort;
 final readonly class PathFinder
 {
     private const string PARAM_WILDCARD = '*';
+    private const string TEMPLATES_KEY = "\0__templates__\0";
 
     /** @var array<int|string, mixed> */
     private array $trie;
@@ -142,10 +143,10 @@ final readonly class PathFinder
     private function insertSegments(array $node, array $segments, int $depth, string $template, PathItem $pathItem): array
     {
         if ($depth === count($segments)) {
-            $templates = $node['__templates__'] ?? [];
+            $templates = $node[self::TEMPLATES_KEY] ?? [];
             assert(is_array($templates));
             $templates[] = ['template' => $template, 'item' => $pathItem];
-            $node['__templates__'] = $templates;
+            $node[self::TEMPLATES_KEY] = $templates;
 
             return $node;
         }
@@ -170,7 +171,7 @@ final readonly class PathFinder
     {
         if ($depth === count($segments)) {
             /** @var list<array{template: string, item: PathItem}> $templates */
-            $templates = $node['__templates__'] ?? [];
+            $templates = $node[self::TEMPLATES_KEY] ?? [];
 
             return $templates;
         }
