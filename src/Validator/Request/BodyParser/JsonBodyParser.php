@@ -12,7 +12,7 @@ use const JSON_THROW_ON_ERROR;
 
 final readonly class JsonBodyParser
 {
-    private const int JSON_MAX_DEPTH = JsonDepthLimit::Trusted->value;
+    private const int JSON_MAX_DEPTH = JsonDepthLimit::Untrusted->value;
 
     private const string UTF8_BOM = "\xEF\xBB\xBF";
 

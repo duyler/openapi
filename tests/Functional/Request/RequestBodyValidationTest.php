@@ -8,7 +8,6 @@ use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\MissingRequestBodyException;
-use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -438,7 +437,7 @@ XML;
     }
 
     #[Test]
-    public function deeply_nested_json_body_exceeding_max_depth_throws_schema_depth_exception(): void
+    public function deeply_nested_json_body_exceeding_untrusted_depth_throws_json_exception(): void
     {
         $depth = 200;
         $validator = OpenApiValidatorBuilder::create()
@@ -449,7 +448,8 @@ XML;
             ->withHeader('Content-Type', 'application/json')
             ->withBody($this->psrFactory->createStream($this->buildNestedBodyJson($depth)));
 
-        $this->expectException(SchemaDepthExceededException::class);
+        $this->expectException(JsonException::class);
+        $this->expectExceptionMessage('Maximum stack depth exceeded');
         $validator->validateRequest($request);
     }
 

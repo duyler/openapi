@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Validator\JsonDepthLimit;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use JsonException;
 
@@ -144,7 +145,7 @@ final readonly class ParameterDeserializer
         if (is_string($value)) {
             try {
                 /** @var array<int|string, mixed>|int|string|float|bool|null $decoded */
-                $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+                $decoded = json_decode($value, true, JsonDepthLimit::Untrusted->value, JSON_THROW_ON_ERROR);
 
                 if (is_array($decoded)) {
                     return $decoded;

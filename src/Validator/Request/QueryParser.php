@@ -22,7 +22,7 @@ use const JSON_THROW_ON_ERROR;
 
 final readonly class QueryParser
 {
-    private const int JSON_MAX_DEPTH = JsonDepthLimit::Trusted->value;
+    private const int JSON_MAX_DEPTH = JsonDepthLimit::Untrusted->value;
 
     private const int MAX_NESTING_DEPTH = 64;
 

@@ -11,6 +11,7 @@ use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\OpenApiValidator;
+use JsonException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -352,11 +353,13 @@ XML;
     }
 
     /**
-     * Positive: deeply nested JSON data (200+ levels) against a flat schema
-     * must complete without crash or stack overflow.
+     * Negative: deeply nested JSON data (200+ levels) must fail-closed at the
+     * JSON parser stage via the Untrusted depth limit, completing in well
+     * under one second. Before FU-018 the parser used Trusted (512) and the
+     * validator accepted the deep payload — that was an open DoS vector.
      */
     #[Test]
-    public function deep_data_nesting_completes_without_crash(): void
+    public function deep_data_nesting_fail_closed_via_json_depth_limit(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::DEEP_NESTING_SPEC)
@@ -373,10 +376,20 @@ XML;
             ->withBody($this->psrFactory->createStream(json_encode($payload)));
 
         $startTime = microtime(true);
-        $validator->validateRequest($request);
-        $elapsed = microtime(true) - $startTime;
 
-        $this->assertLessThan(1.0, $elapsed, 'Deeply nested JSON validation must complete within 1 second');
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected JsonException for deep-nested payload exceeding Untrusted depth limit');
+        } catch (JsonException $e) {
+            $elapsed = microtime(true) - $startTime;
+
+            $this->assertStringContainsString('Maximum stack depth exceeded', $e->getMessage());
+            $this->assertLessThan(
+                1.0,
+                $elapsed,
+                'Deep-nested JSON must fail-closed within 1 second via the Untrusted depth limit',
+            );
+        }
     }
 
     /**

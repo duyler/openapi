@@ -11,8 +11,11 @@ namespace Duyler\OpenApi\Validator;
  * which makes the rationale for the two distinct limits explicit at the type
  * level and prevents silent alignment to a value that is unsafe for one path.
  *
- * Untrusted (128): for user-controlled request bodies validated through
- * contentMediaType, where a deep payload is an inexpensive DoS vector.
+ * Untrusted (128): for attacker-controlled input — HTTP request bodies
+ * (JsonBodyParser), JSON-encoded query parameter values (QueryParser),
+ * deepObject query parameter values (ParameterDeserializer), and user-
+ * controlled content validated through contentMediaType, where a deep
+ * payload is an inexpensive DoS vector.
  * Trusted (512): for OpenAPI specifications and already-sanitised internal
  * data, where deep nesting is expected and the input is not attacker-controlled.
  */
