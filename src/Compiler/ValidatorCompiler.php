@@ -32,6 +32,13 @@ final readonly class ValidatorCompiler
 
     private const string CLASS_NAME_PATTERN = '/^[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*$/';
 
+    /**
+     * Relative epsilon factor used for the float-path of the multipleOf
+     * check. Mirrors NumericRangeValidator::RELATIVE_EPSILON_FACTOR so the
+     * compiled validator stays numerically equivalent to the runtime one.
+     */
+    private const float RELATIVE_EPSILON_FACTOR = 1e-9;
+
     public function compile(Schema $schema, string $className): string
     {
         $this->validateClassName($className);
@@ -282,11 +289,82 @@ final readonly class ValidatorCompiler
 
     private function generateMultipleOfCheck(float $multipleOf): string
     {
-        $multipleOfStr = var_export($multipleOf, true);
+        if (0.0 === $multipleOf) {
+            $errorMessage = var_export('multipleOf must be greater than 0', true);
 
-        $code = sprintf("        if (0.0 !== fmod((float) \$data, %s)) {\n", $multipleOfStr);
-        $code .= sprintf("            throw new \\RuntimeException('Value must be a multiple of %s');\n", $multipleOfStr);
-        $code .= "        }\n\n";
+            return sprintf("        throw new \\RuntimeException(%s);\n\n", $errorMessage);
+        }
+
+        $multipleOfStr = var_export($multipleOf, true);
+        $errorMessage = sprintf('Value must be a multiple of %s', $multipleOfStr);
+        $epsilonStr = var_export(self::RELATIVE_EPSILON_FACTOR, true);
+
+        if ((float) (int) $multipleOf === $multipleOf) {
+            $code = $this->generateIntegerMultipleOfCheck(
+                intMultipleOf: (int) $multipleOf,
+                floatMultipleOfStr: $multipleOfStr,
+                epsilonStr: $epsilonStr,
+                errorMessage: $errorMessage,
+            );
+        } else {
+            $code = $this->generateFloatMultipleOfCheck(
+                multipleOfStr: $multipleOfStr,
+                epsilonStr: $epsilonStr,
+                errorMessage: $errorMessage,
+            );
+        }
+
+        return $code . "\n";
+    }
+
+    /**
+     * Int-path: when multipleOf is a whole number, integer operands can use
+     * the exact `%` modulus. Whole floats fall back to the float-path
+     * because `(float) $data` may introduce rounding before the modulus.
+     */
+    private function generateIntegerMultipleOfCheck(
+        int $intMultipleOf,
+        string $floatMultipleOfStr,
+        string $epsilonStr,
+        string $errorMessage,
+    ): string {
+        $intMultipleOfStr = var_export($intMultipleOf, true);
+        $exportedMessage = var_export($errorMessage, true);
+
+        $code = "        if (is_int(\$data)) {\n";
+        $code .= sprintf("            if (0 !== (\$data %% %s)) {\n", $intMultipleOfStr);
+        $code .= sprintf("                throw new \\RuntimeException(%s);\n", $exportedMessage);
+        $code .= "            }\n";
+        $code .= "        } else {\n";
+        $code .= $this->buildFloatQuotientCheck($floatMultipleOfStr, $epsilonStr, $exportedMessage);
+        $code .= "        }\n";
+
+        return $code;
+    }
+
+    /**
+     * Float-path: quotient approach with a relative epsilon. Matches
+     * NumericRangeValidator::isMultipleOf float branch exactly, avoiding
+     * the precision-loss bug of fmod on large dividends.
+     */
+    private function generateFloatMultipleOfCheck(
+        string $multipleOfStr,
+        string $epsilonStr,
+        string $errorMessage,
+    ): string {
+        $exportedMessage = var_export($errorMessage, true);
+
+        return $this->buildFloatQuotientCheck($multipleOfStr, $epsilonStr, $exportedMessage);
+    }
+
+    private function buildFloatQuotientCheck(string $multipleOfStr, string $epsilonStr, string $exportedMessage): string
+    {
+        $code = sprintf("            \$quotient = (float) \$data / %s;\n", $multipleOfStr);
+        $code .= "            \$rounded = round(\$quotient);\n";
+        $code .= sprintf("            \$epsilon = %s * max(1.0, abs(\$quotient));\n", $epsilonStr);
+        $code .= "            if (abs(\$quotient - \$rounded) >= \$epsilon) {\n";
+        $code .= sprintf("                throw new \\RuntimeException(%s);\n", $exportedMessage);
+        $code .= "            }\n";
 
         return $code;
     }
@@ -313,7 +391,6 @@ final readonly class ValidatorCompiler
     {
         return match ($type) {
             'string' => 'is_string',
-            'integer' => 'is_int',
             'boolean' => 'is_bool',
             'array' => 'is_array',
             'object' => 'is_array',
@@ -325,7 +402,14 @@ final readonly class ValidatorCompiler
     private function buildTypeCheckExpression(string $type, string $variable): string
     {
         if ('number' === $type) {
-            return sprintf('(is_float(%s) || is_int(%s))', $variable, $variable);
+            return sprintf('(is_float(%1$s) || is_int(%1$s))', $variable);
+        }
+
+        if ('integer' === $type) {
+            return sprintf(
+                '(is_int(%1$s) || (is_float(%1$s) && 0.0 === fmod(%1$s, 1.0) && !is_infinite(%1$s) && !is_nan(%1$s)))',
+                $variable,
+            );
         }
 
         $function = $this->getTypeCheckFunction($type);

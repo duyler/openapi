@@ -974,15 +974,32 @@ final class ValidatorCompilerTest extends TestCase
     }
 
     #[Test]
-    public function compile_multiple_of_check_generates_fmod(): void
+    public function compile_multiple_of_check_uses_relative_epsilon_instead_of_fmod(): void
     {
         $compiler = new ValidatorCompiler();
         $schema = new Schema(type: 'number', multipleOf: 0.5);
 
         $code = $compiler->compile($schema, 'MultipleOfGeneratedValidator');
 
-        $this->assertStringContainsString('fmod', $code);
-        $this->assertStringContainsString('Value must be a multiple of', $code);
+        $this->assertStringContainsString('$quotient = (float) $data', $code);
+        $this->assertStringContainsString('$rounded = round($quotient)', $code);
+        $this->assertStringContainsString('$epsilon = 1.0E-9 * max(1.0, abs($quotient))', $code);
+        $this->assertStringNotContainsString('fmod((float) $data', $code);
+        $this->assertStringContainsString('Value must be a multiple of 0.5', $code);
+    }
+
+    #[Test]
+    public function compile_multiple_of_integer_uses_int_modulus_path(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'number', multipleOf: 2);
+
+        $code = $compiler->compile($schema, 'MultipleOfIntegerValidator');
+
+        $this->assertStringContainsString('if (is_int($data))', $code);
+        $this->assertStringContainsString('0 !== ($data % 2)', $code);
+        $this->assertStringContainsString('$quotient = (float) $data', $code);
+        $this->assertStringNotContainsString('fmod((float) $data', $code);
     }
 
     #[Test]
