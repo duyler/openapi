@@ -11,11 +11,14 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 
 use function assert;
+use function count;
 use function is_array;
 use function sprintf;
 
 final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator
 {
+    private const int MAX_ADDITIONAL_PROPERTY_ERRORS = 100;
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -57,12 +60,27 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
 
         if (false === $schema->additionalProperties) {
             $errors = [];
+            $truncated = 0;
 
             foreach ($additionalKeys as $key) {
+                if (count($errors) >= self::MAX_ADDITIONAL_PROPERTY_ERRORS) {
+                    $truncated = count($additionalKeys) - self::MAX_ADDITIONAL_PROPERTY_ERRORS;
+
+                    break;
+                }
+
                 $errors[] = new AdditionalPropertyError(
                     dataPath: $dataPath,
                     schemaPath: '/additionalProperties',
                     propertyName: (string) $key,
+                );
+            }
+
+            if (0 !== $truncated) {
+                $errors[] = new AdditionalPropertyError(
+                    dataPath: $dataPath,
+                    schemaPath: '/additionalProperties',
+                    propertyName: sprintf('... and %d more additional properties', $truncated),
                 );
             }
 
