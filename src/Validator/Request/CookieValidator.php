@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Override;
@@ -121,7 +122,12 @@ final readonly class CookieValidator extends AbstractParameterValidator
             $value = $this->coercer->coerce($value, $param, $this->coercion, true);
 
             if (null !== $param->schema) {
-                $this->schemaValidator->validate($value, $param->schema);
+                $context = ValidationContext::create(
+                    pool: $this->pool,
+                    nullableAsType: $this->config->nullableAsType,
+                    emptyArrayStrategy: $this->config->emptyArrayStrategy,
+                );
+                $this->schemaValidator->validate($value, $param->schema, $context);
             }
         }
     }

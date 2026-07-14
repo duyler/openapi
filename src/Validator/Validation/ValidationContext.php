@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Validation;
 
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
@@ -125,36 +126,51 @@ final readonly class ValidationContext
             regexValidator: $this->regexValidator,
         );
 
+        $parameterConfig = new ParameterValidationConfig(
+            nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
+        );
+
         return new RequestValidator(
             pathParser: new PathParser($this->pathRegexCache),
             pathParamsValidator: new PathParametersValidator(
                 schemaValidator: $schemaValidator,
                 deserializer: $deserializer,
                 coercer: $coercer,
+                pool: $this->pool,
                 coercion: $this->coercion,
+                config: $parameterConfig,
             ),
             queryParser: $queryParser,
             queryParamsValidator: new QueryParametersValidator(
                 schemaValidator: $schemaValidator,
                 deserializer: $deserializer,
                 coercer: $coercer,
+                pool: $this->pool,
                 coercion: $this->coercion,
+                config: $parameterConfig,
             ),
             queryStringValidator: new QueryStringValidator(
                 queryParser: $queryParser,
                 schemaValidator: $schemaValidator,
+                pool: $this->pool,
+                config: $parameterConfig,
             ),
             headersValidator: new HeadersValidator(
                 schemaValidator: $schemaValidator,
                 deserializer: $deserializer,
                 coercer: $coercer,
+                pool: $this->pool,
                 coercion: $this->coercion,
+                config: $parameterConfig,
             ),
             cookieValidator: new CookieValidator(
                 schemaValidator: $schemaValidator,
                 deserializer: $deserializer,
                 coercer: $coercer,
+                pool: $this->pool,
                 coercion: $this->coercion,
+                config: $parameterConfig,
             ),
             bodyValidator: new RequestBodyValidatorWithContext(
                 document: $this->document,

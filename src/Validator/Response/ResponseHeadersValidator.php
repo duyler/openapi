@@ -7,10 +7,13 @@ namespace Duyler\OpenApi\Validator\Response;
 use Duyler\OpenApi\Schema\Model\Headers;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Coercion\IntegerStringNormalizer;
+use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Request\HeaderFinder;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
+use Duyler\OpenApi\Validator\ValidatorPool;
 
 use function array_filter;
 use function array_map;
@@ -25,6 +28,8 @@ final readonly class ResponseHeadersValidator
 
     public function __construct(
         private readonly SchemaValidatorInterface $schemaValidator,
+        private readonly ValidatorPool $pool = new ValidatorPool(),
+        private readonly ParameterValidationConfig $config = new ParameterValidationConfig(),
         private readonly HeaderFinder $headerFinder = new HeaderFinder(),
     ) {}
 
@@ -46,7 +51,12 @@ final readonly class ResponseHeadersValidator
 
             if (null !== $value && null !== $header->schema) {
                 $coercedValue = $this->coerceValue($value, $header->schema, $name);
-                $this->schemaValidator->validate($coercedValue, $header->schema);
+                $context = ValidationContext::create(
+                    pool: $this->pool,
+                    nullableAsType: $this->config->nullableAsType,
+                    emptyArrayStrategy: $this->config->emptyArrayStrategy,
+                );
+                $this->schemaValidator->validate($coercedValue, $header->schema, $context);
             }
         }
     }
