@@ -14,6 +14,7 @@ use function assert;
 use function count;
 use function is_array;
 use function sprintf;
+use function is_string;
 
 final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator
 {
@@ -85,7 +86,18 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
             }
 
             throw new ValidationException(
-                sprintf('Additional properties are not allowed: %s', implode(', ', $additionalKeys)),
+                sprintf(
+                    'Additional properties are not allowed: %s',
+                    implode(', ', array_map(
+                        static function (AdditionalPropertyError $error): string {
+                            $name = $error->params()['propertyName'];
+                            assert(is_string($name));
+
+                            return $name;
+                        },
+                        $errors,
+                    )),
+                ),
                 errors: $errors,
             );
         }
