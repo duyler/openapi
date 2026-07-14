@@ -1418,8 +1418,8 @@ final class RefResolverTest extends TestCase
     public function resolve_external_ref_through_injected_resolver(): void
     {
         $externalSchema = new Schema(title: "ExternalUser");
-        $resolver = new RefResolver(new class ($externalSchema) implements ExternalRefResolverInterface {
-            public function __construct(private readonly Schema $schema) {}
+        $resolver = new RefResolver(new readonly class ($externalSchema) implements ExternalRefResolverInterface {
+            public function __construct(private Schema $schema) {}
 
             public function resolve(string $ref): Schema
             {

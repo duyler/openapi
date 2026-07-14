@@ -17,7 +17,7 @@ use function sprintf;
 
 final class FullCycleTest extends TestCase
 {
-    private const USER_API_SPEC = <<<'YAML'
+    private const string USER_API_SPEC = <<<'YAML'
 openapi: 3.2.0
 info:
   title: Full Cycle API

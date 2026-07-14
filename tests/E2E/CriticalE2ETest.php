@@ -18,7 +18,7 @@ use function sprintf;
 
 final class CriticalE2ETest extends TestCase
 {
-    private const PETSTORE_SPEC = <<<'YAML'
+    private const string PETSTORE_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: E2E Test API

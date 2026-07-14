@@ -344,6 +344,7 @@ final readonly class StreamingContentParser
             }
         }
 
+        /** @var string $buffer */
         $remainingLines = preg_split(self::SSE_LINE_SPLIT_PATTERN, $buffer);
         assert(is_array($remainingLines));
 

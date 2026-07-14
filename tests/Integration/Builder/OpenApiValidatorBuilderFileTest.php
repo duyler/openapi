@@ -24,7 +24,7 @@ final class OpenApiValidatorBuilderFileTest extends TestCase
 
     protected function tearDown(): void
     {
-        array_map('unlink', glob($this->tempDir . '/*') ?: []);
+        array_map(unlink(...), glob($this->tempDir . '/*') ?: []);
         rmdir($this->tempDir);
     }
 

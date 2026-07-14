@@ -95,9 +95,9 @@ final class ErrorFormatterTest extends TestCase
             schemaPath: '/schema/minLength',
         );
 
-        $simpleResult = (new SimpleFormatter())->formatMultiple([$error]);
-        $detailedResult = (new DetailedFormatter())->formatMultiple([$error]);
-        $jsonResult = (new JsonFormatter())->formatMultiple([$error]);
+        $simpleResult = new SimpleFormatter()->formatMultiple([$error]);
+        $detailedResult = new DetailedFormatter()->formatMultiple([$error]);
+        $jsonResult = new JsonFormatter()->formatMultiple([$error]);
 
         self::assertStringContainsString('/name', $simpleResult);
         self::assertStringContainsString('Error at /name', $detailedResult);

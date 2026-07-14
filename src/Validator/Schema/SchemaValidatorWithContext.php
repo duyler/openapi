@@ -22,10 +22,10 @@ use function spl_object_id;
 
 final class SchemaValidatorWithContext
 {
-    private OneOfValidatorWithContext $oneOfValidator;
-    private DiscriminatorValidator $discriminatorValidator;
-    private PropertiesValidatorWithContext $propertiesValidator;
-    private ItemsValidatorWithContext $itemsValidator;
+    private readonly OneOfValidatorWithContext $oneOfValidator;
+    private readonly DiscriminatorValidator $discriminatorValidator;
+    private readonly PropertiesValidatorWithContext $propertiesValidator;
+    private readonly ItemsValidatorWithContext $itemsValidator;
 
     /** @var WeakMap<Schema, Schema> */
     private WeakMap $resolvedCache;

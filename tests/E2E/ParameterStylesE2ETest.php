@@ -13,7 +13,7 @@ use Override;
 
 final class ParameterStylesE2ETest extends TestCase
 {
-    private const MATRIX_SPEC = <<<'YAML'
+    private const string MATRIX_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: Matrix Style Test API
@@ -43,7 +43,7 @@ paths:
                     type: string
 YAML;
 
-    private const LABEL_SPEC = <<<'YAML'
+    private const string LABEL_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: Label Style Test API
@@ -73,7 +73,7 @@ paths:
                     type: string
 YAML;
 
-    private const PIPE_DELIMITED_SPEC = <<<'YAML'
+    private const string PIPE_DELIMITED_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: PipeDelimited Style Test API
@@ -107,7 +107,7 @@ paths:
                       type: string
 YAML;
 
-    private const SPACE_DELIMITED_SPEC = <<<'YAML'
+    private const string SPACE_DELIMITED_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: SpaceDelimited Style Test API

@@ -535,23 +535,11 @@ final class MockLogger extends AbstractLogger
 
     public function hasInfoContaining(string $substring): bool
     {
-        foreach ($this->logs as $log) {
-            if ('info' === $log['level'] && str_contains($log['message'], $substring)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($this->logs, fn($log) => 'info' === $log['level'] && str_contains($log['message'], $substring));
     }
 
     public function hasWarningContaining(string $substring): bool
     {
-        foreach ($this->logs as $log) {
-            if ('warning' === $log['level'] && str_contains($log['message'], $substring)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($this->logs, fn($log) => 'warning' === $log['level'] && str_contains($log['message'], $substring));
     }
 }

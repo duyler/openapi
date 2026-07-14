@@ -297,16 +297,7 @@ YAML;
 
         $errors = $caught->getErrors();
         self::assertGreaterThan(0, count($errors));
-
-        $foundRequiredName = false;
-
-        foreach ($errors as $error) {
-            if ($error instanceof RequiredError && 'name' === $error->params()['property']) {
-                $foundRequiredName = true;
-
-                break;
-            }
-        }
+        $foundRequiredName = array_any($errors, fn($error) => $error instanceof RequiredError && 'name' === $error->params()['property']);
 
         self::assertTrue($foundRequiredName, 'Expected RequiredError for "name" from Base applied via $ref in allOf');
     }
@@ -601,16 +592,7 @@ YAML;
 
         $errors = $caught->getErrors();
         self::assertGreaterThan(0, count($errors));
-
-        $foundRequiredMeow = false;
-
-        foreach ($errors as $error) {
-            if ($error instanceof RequiredError && 'meow' === $error->params()['property']) {
-                $foundRequiredMeow = true;
-
-                break;
-            }
-        }
+        $foundRequiredMeow = array_any($errors, fn($error) => $error instanceof RequiredError && 'meow' === $error->params()['property']);
 
         self::assertTrue(
             $foundRequiredMeow,

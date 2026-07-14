@@ -14,7 +14,7 @@ use Override;
 
 final class SecurityValidationE2ETest extends TestCase
 {
-    private const BEARER_SPEC = <<<'YAML'
+    private const string BEARER_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: Bearer Auth API
@@ -36,7 +36,7 @@ components:
       bearerFormat: JWT
 YAML;
 
-    private const API_KEY_HEADER_SPEC = <<<'YAML'
+    private const string API_KEY_HEADER_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: API Key Header API
@@ -58,7 +58,7 @@ components:
       name: X-API-Key
 YAML;
 
-    private const API_KEY_QUERY_SPEC = <<<'YAML'
+    private const string API_KEY_QUERY_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: API Key Query API
@@ -80,7 +80,7 @@ components:
       name: api_key
 YAML;
 
-    private const API_KEY_COOKIE_SPEC = <<<'YAML'
+    private const string API_KEY_COOKIE_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: API Key Cookie API
@@ -102,7 +102,7 @@ components:
       name: session_token
 YAML;
 
-    private const OPERATION_LEVEL_SECURITY_SPEC = <<<'YAML'
+    private const string OPERATION_LEVEL_SECURITY_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: Operation Level Security API
@@ -129,7 +129,7 @@ components:
       scheme: bearer
 YAML;
 
-    private const NO_SECURITY_SPEC = <<<'YAML'
+    private const string NO_SECURITY_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: No Security API

@@ -168,9 +168,9 @@ final class RefResolver implements RefResolverInterface
 
         $resolved = $this->resolve($schema->ref, $document);
 
-        $title = null !== $schema->refSummary ? $schema->refSummary : $resolved->title;
+        $title = $schema->refSummary ?? $resolved->title;
 
-        $description = null !== $schema->refDescription ? $schema->refDescription : $resolved->description;
+        $description = $schema->refDescription ?? $resolved->description;
 
         return $resolved->withOverrides(
             title: $title,

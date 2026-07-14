@@ -14,11 +14,11 @@ use function microtime;
 
 final class MaliciousSchemaTest extends TestCase
 {
-    private const ENUM_VALUE_COUNT = 100000;
+    private const int ENUM_VALUE_COUNT = 100000;
 
-    private const EXISTING_ENUM_VALUE = 'value_50000';
+    private const string EXISTING_ENUM_VALUE = 'value_50000';
 
-    private const MAX_VALIDATION_SECONDS = 0.5;
+    private const float MAX_VALIDATION_SECONDS = 0.5;
 
     private string $specWithHugeEnum;
 
