@@ -4,13 +4,20 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
+use RuntimeException;
+
 use function count;
+use function sprintf;
+
+use function substr_count;
 
 use const PREG_UNMATCHED_AS_NULL;
 
 final readonly class MultipartBodyParser
 {
     private const string BOUNDARY_PATTERN = '/boundary=(?:"(?<quoted>[^"]+)"|(?<unquoted>[^\s;]+))/i';
+
+    private const int MAX_MULTIPART_PARTS = 1000;
 
     /**
      * @return list<array<array-key, mixed>>
@@ -28,8 +35,16 @@ final readonly class MultipartBodyParser
             return [];
         }
 
+        $delimiter = '--' . $boundary;
+
+        if (substr_count($body, $delimiter) + 1 > self::MAX_MULTIPART_PARTS) {
+            throw new RuntimeException(
+                sprintf('Maximum multipart parts of %d exceeded', self::MAX_MULTIPART_PARTS),
+            );
+        }
+
         $parts = [];
-        $sections = explode('--' . $boundary, $body);
+        $sections = explode($delimiter, $body);
 
         foreach ($sections as $section) {
             if ('' === trim($section) || '--' === trim($section)) {

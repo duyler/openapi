@@ -9,6 +9,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Coercion\IntegerStringNormalizer;
 use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\JsonDepthLimit;
@@ -21,9 +22,12 @@ use stdClass;
 
 use function array_filter;
 use function array_map;
+use function array_values;
 use function floatval;
 use function in_array;
 use function json_decode;
+use function sprintf;
+use function substr_count;
 
 use function strtolower;
 
@@ -33,6 +37,8 @@ final readonly class ResponseHeadersValidator
 {
     private const array TRUTHY_VALUES = ['true', '1', 'yes', 'on'];
     private const array FALSY_VALUES = ['false', '0', 'no', 'off'];
+
+    private const int MAX_HEADER_ARRAY_ITEMS = 1000;
 
     public function __construct(
         private readonly SchemaValidatorInterface $schemaValidator,
@@ -161,6 +167,13 @@ final readonly class ResponseHeadersValidator
 
     private function coerceToArray(string $value, string $headerName): array
     {
+        if (substr_count($value, ',') + 1 > self::MAX_HEADER_ARRAY_ITEMS) {
+            throw new InvalidParameterException(
+                $headerName,
+                sprintf('Maximum array items of %d exceeded', self::MAX_HEADER_ARRAY_ITEMS),
+            );
+        }
+
         $items = array_filter(array_map(trim(...), explode(',', $value)));
 
         return array_values($items);
