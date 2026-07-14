@@ -260,12 +260,20 @@ final readonly class StreamingContentParser
         /** @var list<array<int|string, mixed>|null> $items */
         $items = [];
         $buffer = '';
+        $bomStripped = false;
 
         while (!$stream->eof()) {
             $chunk = $stream->read(self::STREAM_CHUNK_SIZE);
 
             if ('' === $chunk) {
                 break;
+            }
+
+            if (false === $bomStripped) {
+                if (str_starts_with($chunk, self::UTF8_BOM)) {
+                    $chunk = substr($chunk, strlen(self::UTF8_BOM));
+                }
+                $bomStripped = true;
             }
 
             $buffer .= $chunk;
@@ -301,12 +309,20 @@ final readonly class StreamingContentParser
         $events = [];
         $buffer = '';
         $currentEvent = [];
+        $bomStripped = false;
 
         while (!$stream->eof()) {
             $chunk = $stream->read(self::STREAM_CHUNK_SIZE);
 
             if ('' === $chunk) {
                 break;
+            }
+
+            if (false === $bomStripped) {
+                if (str_starts_with($chunk, self::UTF8_BOM)) {
+                    $chunk = substr($chunk, strlen(self::UTF8_BOM));
+                }
+                $bomStripped = true;
             }
 
             $buffer .= $chunk;
@@ -381,12 +397,20 @@ final readonly class StreamingContentParser
         /** @var list<array<int|string, mixed>|null> $items */
         $items = [];
         $buffer = '';
+        $bomStripped = false;
 
         while (!$stream->eof()) {
             $chunk = $stream->read(self::STREAM_CHUNK_SIZE);
 
             if ('' === $chunk) {
                 break;
+            }
+
+            if (false === $bomStripped) {
+                if (str_starts_with($chunk, self::UTF8_BOM)) {
+                    $chunk = substr($chunk, strlen(self::UTF8_BOM));
+                }
+                $bomStripped = true;
             }
 
             $buffer .= $chunk;
