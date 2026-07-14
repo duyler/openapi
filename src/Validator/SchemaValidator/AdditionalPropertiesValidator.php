@@ -6,7 +6,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
-use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
+use Duyler\OpenApi\Validator\Exception\AdditionalPropertyError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 
@@ -59,7 +59,7 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
             $errors = [];
 
             foreach ($additionalKeys as $key) {
-                $errors[] = new UnevaluatedPropertyError(
+                $errors[] = new AdditionalPropertyError(
                     dataPath: $dataPath,
                     schemaPath: '/additionalProperties',
                     propertyName: (string) $key,

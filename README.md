@@ -931,6 +931,7 @@ All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schem
 | `RequiredError` | `required` | Required property is missing |
 | `MinPropertiesError` | `minProperties` | Object has fewer properties than required |
 | `MaxPropertiesError` | `maxProperties` | Object has more properties than allowed |
+| `AdditionalPropertyError` | `additionalProperties` | Additional property present despite additionalProperties: false |
 | `UnevaluatedPropertyError` | `unevaluatedProperties` | Property not allowed and not evaluated by any keyword |
 | `ReadOnlyPropertyError` | `readOnly` | Read-only property was sent in a request payload |
 | `WriteOnlyPropertyError` | `writeOnly` | Write-only property was returned in a response payload |

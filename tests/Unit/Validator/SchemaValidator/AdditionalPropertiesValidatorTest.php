@@ -7,8 +7,8 @@ namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\AdditionalPropertiesValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Exception\AdditionalPropertyError;
 use Duyler\OpenApi\Validator\Exception\MaxLengthError;
-use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -168,11 +168,12 @@ class AdditionalPropertiesValidatorTest extends TestCase
     }
 
     /**
-     * EI-054: additionalProperties: false must produce one UnevaluatedPropertyError
-     * per forbidden property instead of an empty errors array.
+     * EI-054 + FU-006: additionalProperties: false must produce one AdditionalPropertyError
+     * per forbidden property instead of an empty errors array, and the keyword must be
+     * 'additionalProperties' (not 'unevaluatedProperties').
      */
     #[Test]
-    public function reject_additional_when_false_returns_unevaluated_property_errors(): void
+    public function reject_additional_when_false_returns_additional_property_errors(): void
     {
         $schema = new Schema(
             type: 'object',
@@ -195,8 +196,10 @@ class AdditionalPropertiesValidatorTest extends TestCase
         $errors = $caught->getErrors();
 
         self::assertCount(2, $errors);
-        self::assertInstanceOf(UnevaluatedPropertyError::class, $errors[0]);
-        self::assertInstanceOf(UnevaluatedPropertyError::class, $errors[1]);
+        self::assertInstanceOf(AdditionalPropertyError::class, $errors[0]);
+        self::assertInstanceOf(AdditionalPropertyError::class, $errors[1]);
+        self::assertSame('additionalProperties', $errors[0]->keyword());
+        self::assertSame('additionalProperties', $errors[1]->keyword());
         self::assertSame('extra1', $errors[0]->params()['propertyName']);
         self::assertSame('extra2', $errors[1]->params()['propertyName']);
     }
