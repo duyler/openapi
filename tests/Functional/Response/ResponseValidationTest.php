@@ -708,8 +708,16 @@ final class ResponseValidationTest extends TestCase
                 'tags' => ['tag1', 'tag2', 'tag3', 'tag4', 'tag5', 'tag6'],
             ])));
 
-        $this->expectException(MaxItemsError::class);
-        $validator->validateResponse($response, $operation);
+        $caught = null;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(MaxItemsError::class, $caught);
     }
 
     #[Test]
@@ -1041,8 +1049,16 @@ final class ResponseValidationTest extends TestCase
                 'booleanField' => 'not-a-boolean',
             ])));
 
-        $this->expectException(TypeMismatchError::class);
-        $validator->validateResponse($response, $operation);
+        $caught = null;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(TypeMismatchError::class, $caught);
     }
 
     #[Test]
@@ -1082,8 +1098,16 @@ YAML;
                 'value' => 5,
             ])));
 
-        $this->expectException(MinimumError::class);
-        $validator->validateResponse($response, $operation);
+        $caught = null;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(MinimumError::class, $caught);
     }
 
     #[Test]
@@ -1123,8 +1147,16 @@ YAML;
                 'value' => 150,
             ])));
 
-        $this->expectException(MaximumError::class);
-        $validator->validateResponse($response, $operation);
+        $caught = null;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(MaximumError::class, $caught);
     }
 
     #[Test]
@@ -1164,8 +1196,16 @@ YAML;
                 'value' => 'abc',
             ])));
 
-        $this->expectException(MinLengthError::class);
-        $validator->validateResponse($response, $operation);
+        $caught = null;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(MinLengthError::class, $caught);
     }
 
     #[Test]
@@ -1205,8 +1245,16 @@ YAML;
                 'value' => 'this-is-a-very-long-string',
             ])));
 
-        $this->expectException(MaxLengthError::class);
-        $validator->validateResponse($response, $operation);
+        $caught = null;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(MaxLengthError::class, $caught);
     }
 
     #[Test]
@@ -1305,8 +1353,16 @@ YAML;
                 'age' => '30',
             ])));
 
-        $this->expectException(TypeMismatchError::class);
-        $validator->validateResponse($response, $operation);
+        $caught = null;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(TypeMismatchError::class, $caught);
     }
 
     #[Test]
@@ -1461,8 +1517,16 @@ YAML;
                 'age' => '15',
             ])));
 
-        $this->expectException(MinimumError::class);
-        $validator->validateResponse($response, $operation);
+        $caught = null;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(MinimumError::class, $caught);
     }
 
     #[Test]

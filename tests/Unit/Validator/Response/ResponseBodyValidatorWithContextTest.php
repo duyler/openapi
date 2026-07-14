@@ -9,6 +9,7 @@ use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
@@ -312,9 +313,16 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
             ),
         ]);
 
-        $this->expectException(TypeMismatchError::class);
+        $caught = null;
 
-        $this->validator->validate($body, $contentType, $content);
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(TypeMismatchError::class, $caught);
     }
 
     #[Test]

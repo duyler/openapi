@@ -942,6 +942,7 @@ All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schem
 |------------|---------|-------------|
 | `OneOfError` | `oneOf` | Data matches multiple schemas (should match exactly one) |
 | `AnyOfError` | `anyOf` | Data doesn't match any of the schemas |
+| `NotValidationError` | `not` | Data matches the schema forbidden by `not` |
 | `DiscriminatorDataError` | `oneOf` | Discriminator validation received non-object data |
 
 #### Discriminator Errors

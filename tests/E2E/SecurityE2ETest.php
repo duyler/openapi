@@ -30,7 +30,7 @@ use function unlink;
 
 final class SecurityE2ETest extends TestCase
 {
-    private const REDOS_SPEC = <<<'YAML'
+    private const string REDOS_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: ReDoS Test API
@@ -78,7 +78,7 @@ components:
       name: session_id
 YAML;
 
-    private const XML_SPEC = <<<'YAML'
+    private const string XML_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: XXE Test API
@@ -106,7 +106,7 @@ paths:
           description: Accepted
 YAML;
 
-    private const DEEP_NESTING_SPEC = <<<'YAML'
+    private const string DEEP_NESTING_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: Deep Nesting Test API
@@ -129,7 +129,7 @@ paths:
           description: Accepted
 YAML;
 
-    private const CIRCULAR_REF_SPEC = <<<'YAML'
+    private const string CIRCULAR_REF_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: Circular Ref Test API
@@ -474,7 +474,7 @@ YAML;
 
         try {
             $validator->validateRequest($request);
-        } catch (AbstractValidationError) {
+        } catch (ValidationException) {
             // Expected: choice value is not in the enum
         }
 

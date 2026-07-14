@@ -16,7 +16,7 @@ use function sprintf;
 
 final class ContentNegotiationE2ETest extends TestCase
 {
-    private const MULTI_CONTENT_TYPE_SPEC = <<<'YAML'
+    private const string MULTI_CONTENT_TYPE_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: Multi Content-Type API
@@ -99,7 +99,7 @@ paths:
                     type: string
 YAML;
 
-    private const NDJSON_SPEC = <<<'YAML'
+    private const string NDJSON_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: NDJSON Streaming API
@@ -124,7 +124,7 @@ paths:
                     type: string
 YAML;
 
-    private const SSE_SPEC = <<<'YAML'
+    private const string SSE_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: SSE Streaming API
@@ -396,8 +396,16 @@ YAML;
             ->withHeader('Content-Type', 'application/x-ndjson')
             ->withBody($this->psrFactory->createStream($ndjsonBody));
 
-        $this->expectException(TypeMismatchError::class);
-        $validator->validateResponse($response, $operation);
+        $caught = null;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            $this->fail('Expected ValidationException for invalid NDJSON chunk');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        $this->assertInstanceOf(TypeMismatchError::class, $caught);
     }
 
     #[Test]
@@ -450,8 +458,16 @@ YAML;
             ->withHeader('Content-Type', 'text/event-stream')
             ->withBody($this->psrFactory->createStream($sseBody));
 
-        $this->expectException(TypeMismatchError::class);
-        $validator->validateResponse($response, $operation);
+        $caught = null;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            $this->fail('Expected ValidationException for invalid SSE event data');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        $this->assertInstanceOf(TypeMismatchError::class, $caught);
     }
 
     #[Test]

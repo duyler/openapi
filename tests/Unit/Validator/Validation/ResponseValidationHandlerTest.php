@@ -141,7 +141,7 @@ YAML;
         $operation = new Operation('/users/{id}', 'GET');
 
         $this->expectException(Throwable::class);
-        $this->expectExceptionMessage('Expected type');
+        $this->expectExceptionMessage('validation failed');
 
         $this->validator->validateResponse($response, $operation);
     }

@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
@@ -56,11 +57,19 @@ final readonly class PropertiesValidator extends AbstractSchemaValidator
                 throw new ValidationException(
                     sprintf('Property "%s" has invalid data type: %s', $name, $e->getMessage()),
                     previous: $e,
+                    errors: [$e],
                 );
             } catch (ValidationException $e) {
                 throw new ValidationException(
                     sprintf('Property "%s" validation failed', $name),
                     previous: $e,
+                    errors: $e->getErrors(),
+                );
+            } catch (AbstractValidationError $e) {
+                throw new ValidationException(
+                    sprintf('Property "%s" validation failed', $name),
+                    previous: $e,
+                    errors: [$e],
                 );
             }
         }

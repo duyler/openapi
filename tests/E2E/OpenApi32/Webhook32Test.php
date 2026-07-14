@@ -263,11 +263,12 @@ YAML;
 
         try {
             $validator->validateWebhook($request, 'order.created');
-        } catch (EnumError $e) {
-            $caught = $e;
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
         }
 
         self::assertNotNull($caught, 'Invalid enum value must be rejected');
+        self::assertInstanceOf(EnumError::class, $caught);
         self::assertSame('enum', $caught->keyword());
         self::assertSame('unknown', $caught->params()['actual']);
     }

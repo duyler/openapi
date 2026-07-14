@@ -12,7 +12,8 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\DiscriminatorDataError;
-use Duyler\OpenApi\Validator\Exception\NestedValidationError;
+use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
+use Duyler\OpenApi\Validator\Exception\NotValidationError;
 use Duyler\OpenApi\Validator\Exception\OneOfError;
 use Duyler\OpenApi\Validator\Exception\ReadOnlyPropertyError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
@@ -374,9 +375,8 @@ final class ValidationExceptionErrorsTest extends TestCase
         $errors = $caught->getErrors();
 
         self::assertGreaterThan(0, count($errors));
-        self::assertInstanceOf(NestedValidationError::class, $errors[0]);
-        self::assertSame('schema', $errors[0]->keyword());
-        self::assertSame('/dependentSchemas/trigger', $errors[0]->schemaPath());
+        self::assertInstanceOf(InvalidDataTypeException::class, $errors[0]);
+        self::assertSame('invalid', $errors[0]->keyword());
         self::assertNotEmpty($errors[0]->message());
     }
 
@@ -431,9 +431,8 @@ final class ValidationExceptionErrorsTest extends TestCase
         $errors = $caught->getErrors();
 
         self::assertGreaterThan(0, count($errors));
-        self::assertInstanceOf(NestedValidationError::class, $errors[0]);
-        self::assertSame('schema', $errors[0]->keyword());
-        self::assertSame('/dependentSchemas/trigger', $errors[0]->schemaPath());
+        self::assertInstanceOf(NotValidationError::class, $errors[0]);
+        self::assertSame('not', $errors[0]->keyword());
         self::assertNotEmpty($errors[0]->message());
     }
 
@@ -460,10 +459,8 @@ final class ValidationExceptionErrorsTest extends TestCase
         $errors = $caught->getErrors();
 
         self::assertGreaterThan(0, count($errors));
-        self::assertInstanceOf(NestedValidationError::class, $errors[0]);
-        self::assertSame('schema', $errors[0]->keyword());
-        self::assertSame('/items', $errors[0]->schemaPath());
-        self::assertStringContainsString('[0]', $errors[0]->dataPath());
+        self::assertInstanceOf(NotValidationError::class, $errors[0]);
+        self::assertSame('not', $errors[0]->keyword());
         self::assertNotEmpty($errors[0]->message());
     }
 
@@ -492,10 +489,8 @@ final class ValidationExceptionErrorsTest extends TestCase
         $errors = $caught->getErrors();
 
         self::assertGreaterThan(0, count($errors));
-        self::assertInstanceOf(NestedValidationError::class, $errors[0]);
-        self::assertSame('schema', $errors[0]->keyword());
-        self::assertSame('/prefixItems/0', $errors[0]->schemaPath());
-        self::assertStringContainsString('[0]', $errors[0]->dataPath());
+        self::assertInstanceOf(NotValidationError::class, $errors[0]);
+        self::assertSame('not', $errors[0]->keyword());
         self::assertNotEmpty($errors[0]->message());
     }
 

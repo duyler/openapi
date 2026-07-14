@@ -284,8 +284,12 @@ class NotValidatorTest extends TestCase
             $caught = $e;
         }
 
+        $errors = $caught->getErrors();
+
         self::assertInstanceOf(ValidationException::class, $caught);
         self::assertSame('Data must NOT match the "not" schema', $caught->getMessage());
-        self::assertSame([], $caught->getErrors());
+        self::assertCount(1, $errors);
+        self::assertSame('not', $errors[0]->keyword());
+        self::assertSame('/not', $errors[0]->schemaPath());
     }
 }

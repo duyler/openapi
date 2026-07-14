@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Functional\Response;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\EnumError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -71,7 +72,9 @@ final class StreamingEdgeCaseTest extends TestCase
         try {
             $validator->validateResponse($response, $operation);
             $this->fail('Expected EnumError was not thrown for invalid enum value at third stream item');
-        } catch (EnumError $error) {
+        } catch (ValidationException $ex) {
+            $error = $ex->getErrors()[0] ?? null;
+            $this->assertInstanceOf(EnumError::class, $error);
             $this->assertSame('enum', $error->keyword());
             $this->assertSame('/level', $error->dataPath());
             $this->assertSame('unexpected', $error->params()['actual']);
@@ -99,7 +102,9 @@ final class StreamingEdgeCaseTest extends TestCase
         try {
             $validator->validateResponse($response, $operation);
             $this->fail('Expected EnumError was not thrown for invalid enum value at first stream item');
-        } catch (EnumError $error) {
+        } catch (ValidationException $ex) {
+            $error = $ex->getErrors()[0] ?? null;
+            $this->assertInstanceOf(EnumError::class, $error);
             $this->assertSame('/level', $error->dataPath());
             $this->assertSame('not-allowed', $error->params()['actual']);
             $this->assertSame(['debug', 'info', 'warn', 'error'], $error->params()['allowed']);
@@ -160,7 +165,9 @@ final class StreamingEdgeCaseTest extends TestCase
         try {
             $validator->validateResponse($response, $operation);
             $this->fail('Expected TypeMismatchError was not thrown for invalid integer type at second SSE event');
-        } catch (TypeMismatchError $error) {
+        } catch (ValidationException $ex) {
+            $error = $ex->getErrors()[0] ?? null;
+            $this->assertInstanceOf(TypeMismatchError::class, $error);
             $this->assertSame('type', $error->keyword());
             $this->assertSame('/data/count', $error->dataPath());
             $this->assertSame('integer', $error->params()['expected']);

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Integration;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Operation;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Override;
@@ -151,8 +151,8 @@ YAML;
         try {
             $validator->validateRequest($failingRequest);
             self::fail('First request must fail validation with empty name');
-        } catch (AbstractValidationError $e) {
-            $this->assertSame('/name', $e->dataPath());
+        } catch (ValidationException $e) {
+            $this->assertSame('/name', $e->getErrors()[0]->dataPath());
         }
 
         $validRequest = $this->factory
@@ -186,8 +186,8 @@ YAML;
         try {
             $validator->validateRequest($firstFailing);
             self::fail('First request must fail validation with empty name');
-        } catch (AbstractValidationError $e) {
-            $this->assertSame('/name', $e->dataPath());
+        } catch (ValidationException $e) {
+            $this->assertSame('/name', $e->getErrors()[0]->dataPath());
         }
 
         $secondFailing = $this->factory
@@ -198,10 +198,10 @@ YAML;
         try {
             $validator->validateRequest($secondFailing);
             self::fail('Second request must fail validation with empty title');
-        } catch (AbstractValidationError $e) {
+        } catch (ValidationException $e) {
             $this->assertSame(
                 '/title',
-                $e->dataPath(),
+                $e->getErrors()[0]->dataPath(),
                 'Second request error must reference /title, not /name from the previous request',
             );
         }
@@ -314,8 +314,8 @@ YAML;
         try {
             $validator->validateRequest($itemsInvalid);
             self::fail('Empty title must fail minLength validation');
-        } catch (AbstractValidationError $e) {
-            $this->assertSame('/title', $e->dataPath());
+        } catch (ValidationException $e) {
+            $this->assertSame('/title', $e->getErrors()[0]->dataPath());
         }
 
         $operation3 = $validator->validateRequest(
@@ -333,8 +333,8 @@ YAML;
         try {
             $validator->validateRequest($usersInvalid);
             self::fail('Empty name must fail minLength validation');
-        } catch (AbstractValidationError $e) {
-            $this->assertSame('/name', $e->dataPath());
+        } catch (ValidationException $e) {
+            $this->assertSame('/name', $e->getErrors()[0]->dataPath());
         }
 
         $operation5 = $validator->validateRequest(

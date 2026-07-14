@@ -22,7 +22,7 @@ use Override;
 
 final class NegativeE2ETest extends TestCase
 {
-    private const QUERY_PARAMS_SPEC = <<<'YAML'
+    private const string QUERY_PARAMS_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: Negative Test API
@@ -54,7 +54,7 @@ paths:
           description: Search results
 YAML;
 
-    private const HEADERS_SPEC = <<<'YAML'
+    private const string HEADERS_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: Headers Test API
@@ -85,7 +85,7 @@ paths:
           description: Secure data
 YAML;
 
-    private const BODY_LIMITS_SPEC = <<<'YAML'
+    private const string BODY_LIMITS_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: Body Limits Test API
@@ -127,7 +127,7 @@ paths:
           description: Created
 YAML;
 
-    private const RESPONSE_VALIDATION_SPEC = <<<'YAML'
+    private const string RESPONSE_VALIDATION_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: Response Validation API
@@ -171,7 +171,7 @@ paths:
                 additionalProperties: false
 YAML;
 
-    private const CONTENT_TYPE_SPEC = <<<'YAML'
+    private const string CONTENT_TYPE_SPEC = <<<'YAML'
 openapi: 3.1.0
 info:
   title: Content Type Test API
@@ -360,8 +360,16 @@ YAML;
                 'description' => 'Valid description',
             ])));
 
-        $this->expectException(MaxLengthError::class);
-        $validator->validateRequest($request);
+        $caught = null;
+
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(MaxLengthError::class, $caught);
     }
 
     #[Test]
@@ -381,8 +389,16 @@ YAML;
                 'tags' => $tags,
             ])));
 
-        $this->expectException(AbstractValidationError::class);
-        $validator->validateRequest($request);
+        $caught = null;
+
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(AbstractValidationError::class, $caught);
     }
 
     #[Test]
@@ -405,8 +421,16 @@ YAML;
                 'metadata' => $metadata,
             ])));
 
-        $this->expectException(MaxPropertiesError::class);
-        $validator->validateRequest($request);
+        $caught = null;
+
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(MaxPropertiesError::class, $caught);
     }
 
     #[Test]
@@ -540,7 +564,15 @@ YAML;
                 'email' => 'john@example.com',
             ])));
 
-        $this->expectException(TypeMismatchError::class);
-        $validator->validateResponse($response, $operation);
+        $caught = null;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(TypeMismatchError::class, $caught);
     }
 }

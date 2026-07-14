@@ -295,10 +295,18 @@ YAML;
         OpenApiValidatorInterface $validator,
         ResponseInterface $response,
         Operation $operation,
-    ): AbstractValidationError|ValidationException {
+    ): AbstractValidationError {
         try {
             $validator->validateResponse($response, $operation);
-        } catch (AbstractValidationError|ValidationException $e) {
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+
+            if ([] === $errors) {
+                self::fail('ValidationException has no structured errors');
+            }
+
+            return $errors[0];
+        } catch (AbstractValidationError $e) {
             return $e;
         }
 

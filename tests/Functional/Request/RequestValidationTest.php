@@ -998,8 +998,16 @@ YAML;
                 'tags' => ['tag1', 'tag2', 'tag3', 'tag4', 'tag5', 'tag6'],
             ])));
 
-        $this->expectException(MaxItemsError::class);
-        $validator->validateRequest($request);
+        $caught = null;
+
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(MaxItemsError::class, $caught);
     }
 
     #[Test]
@@ -1084,8 +1092,16 @@ YAML;
                 'title' => 'abc',
             ])));
 
-        $this->expectException(MinLengthError::class);
-        $validator->validateRequest($request);
+        $caught = null;
+
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(MinLengthError::class, $caught);
     }
 
     #[Test]
@@ -1170,8 +1186,16 @@ YAML;
                 'price' => -10,
             ])));
 
-        $this->expectException(MinimumError::class);
-        $validator->validateRequest($request);
+        $caught = null;
+
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(MinimumError::class, $caught);
     }
 
     #[Test]
@@ -1212,7 +1236,15 @@ YAML;
                 'price' => 1500,
             ])));
 
-        $this->expectException(MaximumError::class);
-        $validator->validateRequest($request);
+        $caught = null;
+
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(MaximumError::class, $caught);
     }
 }

@@ -125,11 +125,13 @@ YAML;
 
         try {
             $validator->validateSchema($data, '#/components/schemas/User');
-        } catch (TypeMismatchError $e) {
-            $caught = $e;
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $caught = $errors[0] ?? null;
         }
 
-        self::assertNotNull($caught, 'Type mismatch must be caught even with dialect set');
+        self::assertInstanceOf(TypeMismatchError::class, $caught, 'Type mismatch must be caught even with dialect set');
         self::assertSame('type', $caught->keyword());
         self::assertSame('string', $caught->params()['expected']);
     }

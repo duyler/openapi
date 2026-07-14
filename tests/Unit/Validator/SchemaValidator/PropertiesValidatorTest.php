@@ -96,9 +96,19 @@ class PropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->expectException(MinLengthError::class);
+        $caught = null;
 
-        $this->validator->validate(['name' => 'John'], $schema);
+        try {
+            $this->validator->validate(['name' => 'John'], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $errors = $caught->getErrors();
+
+        self::assertCount(1, $errors);
+        self::assertInstanceOf(MinLengthError::class, $errors[0]);
     }
 
     #[Test]
@@ -234,9 +244,20 @@ class PropertiesValidatorTest extends TestCase
             ],
         );
 
-        $this->expectException(TypeMismatchError::class);
+        $caught = null;
 
-        $this->validator->validate(['address' => ['city' => 'NYC', 'zip' => '10001']], $schema);
+        try {
+            $this->validator->validate(['address' => ['city' => 'NYC', 'zip' => '10001']], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $errors = $caught->getErrors();
+
+        self::assertCount(1, $errors);
+        self::assertInstanceOf(TypeMismatchError::class, $errors[0]);
+        self::assertSame('type', $errors[0]->keyword());
     }
 
     #[Test]

@@ -92,9 +92,18 @@ YAML;
     {
         $data = ['name' => 123];
 
-        $this->expectException(TypeMismatchError::class);
+        $caught = null;
 
-        $this->validator->validateSchema($data, '#/components/schemas/User');
+        try {
+            $this->validator->validateSchema($data, '#/components/schemas/User');
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $caught = $errors[0] ?? null;
+        }
+
+        self::assertInstanceOf(TypeMismatchError::class, $caught);
+        self::assertSame('type', $caught->keyword());
     }
 
     #[Test]

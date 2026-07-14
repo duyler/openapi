@@ -361,8 +361,16 @@ final class OpenApiVersionCompatibilityTest extends TestCase
             'amount' => 99.99,
         ]);
 
-        $this->expectException(EnumError::class);
-        $validator->validateWebhook($request, 'payment.updated');
+        $caught = null;
+
+        try {
+            $validator->validateWebhook($request, 'payment.updated');
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(EnumError::class, $caught);
     }
 
     #[Test]
@@ -494,8 +502,16 @@ final class OpenApiVersionCompatibilityTest extends TestCase
             ->withHeader('Content-Type', 'application/jsonl')
             ->withBody($this->psrFactory->createStream($body));
 
-        $this->expectException(EnumError::class);
-        $validator->validateResponse($response, $operation);
+        $caught = null;
+
+        try {
+            $validator->validateResponse($response, $operation);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(EnumError::class, $caught);
     }
 
     #[Test]
@@ -713,12 +729,6 @@ final class OpenApiVersionCompatibilityTest extends TestCase
      */
     private function recordsContain(array $messages, string $needle): bool
     {
-        foreach ($messages as $message) {
-            if (str_contains($message, $needle)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($messages, fn($message) => str_contains((string) $message, $needle));
     }
 }

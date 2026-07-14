@@ -218,8 +218,16 @@ YAML;
             '/items/abc?filters[a][b]=value',
         );
 
-        $this->expectException(TypeMismatchError::class);
-        $validator->validateRequest($request);
+        $caught = null;
+
+        try {
+            $validator->validateRequest($request);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e->getErrors()[0] ?? null;
+        }
+
+        self::assertInstanceOf(TypeMismatchError::class, $caught);
     }
 
     #[Test]
