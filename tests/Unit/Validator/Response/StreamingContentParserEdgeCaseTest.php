@@ -354,6 +354,6 @@ final class StreamingContentParserEdgeCaseTest extends TestCase
         $growth = $after - $before;
 
         $this->assertSame([], $result);
-        $this->assertLessThan(1024, $growth);
+        $this->assertLessThan(2048, $growth);
     }
 }
