@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 
+use function in_array;
 use function is_array;
 use function is_bool;
 use function is_float;
@@ -45,5 +46,21 @@ final readonly class SchemaValueNormalizer
             'Data must be array, int, string, float or bool, %s given',
             $typeDescription,
         ));
+    }
+
+    /**
+     * Returns true when type is an array that permits null via OAS 3.1 type-array
+     * syntax, e.g. type: [string, null]. Both PHP null (YAML ~) and the string
+     * 'null' (explicit JSON null marker) are accepted, matching TypeHelper::asTypeOrNull.
+     *
+     * @param string|array<int, string|null>|null $type
+     */
+    public static function typeIncludesNull(string|array|null $type): bool
+    {
+        if (!is_array($type)) {
+            return false;
+        }
+
+        return in_array('null', $type, true) || in_array(null, $type, true);
     }
 }
