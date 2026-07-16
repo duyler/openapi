@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\FormatValidator;
+use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -131,6 +134,74 @@ class FormatValidatorTest extends TestCase
         self::assertSame('double', $caught->params()['format']);
     }
 
+    #[Test]
+    public function validates_format_when_type_array_has_null_first(): void
+    {
+        $formatValidator = $this->createFormatValidator();
+
+        $schema = new Schema(
+            type: [null, 'string'],
+            format: 'email',
+        );
+
+        $formatValidator->validate('user@example.com', $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function skips_format_validation_when_data_is_null_and_type_includes_null(): void
+    {
+        $formatValidator = $this->createFormatValidator();
+
+        $schema = new Schema(
+            type: [null, 'string'],
+            format: 'email',
+        );
+
+        $formatValidator->validate(null, $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function rejects_invalid_format_when_type_array_has_null_first(): void
+    {
+        $formatValidator = $this->createFormatValidator();
+
+        $schema = new Schema(
+            type: [null, 'string'],
+            format: 'email',
+        );
+
+        $caught = null;
+
+        try {
+            $formatValidator->validate('not-an-email', $schema);
+            self::fail('Expected InvalidFormatException when type array has null first');
+        } catch (InvalidFormatException $e) {
+            $caught = $e;
+        }
+
+        self::assertInstanceOf(InvalidFormatException::class, $caught);
+        self::assertSame('email', $caught->format);
+    }
+
+    #[Test]
+    public function skips_when_type_array_has_no_string_type(): void
+    {
+        $formatValidator = $this->createFormatValidator();
+
+        $schema = new Schema(
+            type: [null],
+            format: 'email',
+        );
+
+        $formatValidator->validate('x', $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
     /**
      * @return array<string, array{string, string, mixed}>
      */
@@ -177,6 +248,14 @@ class FormatValidatorTest extends TestCase
             'float' => ['float', 'number', 42],
             'double' => ['double', 'number', 7],
         ];
+    }
+
+    private function createFormatValidator(): FormatValidator
+    {
+        return new FormatValidator(
+            new ValidatorPool(),
+            BuiltinFormats::create(),
+        );
     }
 
     private function buildSpec(string $type, string $format): string
