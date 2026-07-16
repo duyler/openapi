@@ -99,7 +99,8 @@ final readonly class OneOfValidatorWithContext
             }
 
             try {
-                $allowNull = $subSchema->nullable && $context->nullableAsType;
+                $allowNull = $context->nullableAsType && ($subSchema->nullable
+                    || SchemaValueNormalizer::typeIncludesNull($subSchema->type));
                 $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
                 $validator = new SchemaValidatorWithContext($this->document, $this->dependencies, $this->configuration);
                 $validator->validateWithContext($normalizedData, $subSchema, $context);
