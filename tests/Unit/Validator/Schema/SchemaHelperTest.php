@@ -155,4 +155,64 @@ final class SchemaHelperTest extends TestCase
 
         SchemaValueNormalizer::normalize(new DateTime());
     }
+
+    #[Test]
+    public function type_includes_null_returns_false_for_string_type(): void
+    {
+        $type = 'string';
+
+        $result = SchemaValueNormalizer::typeIncludesNull($type);
+
+        self::assertFalse($result);
+    }
+
+    #[Test]
+    public function type_includes_null_returns_false_for_null_type(): void
+    {
+        $type = null;
+
+        $result = SchemaValueNormalizer::typeIncludesNull($type);
+
+        self::assertFalse($result);
+    }
+
+    #[Test]
+    public function type_includes_null_returns_false_for_array_without_null(): void
+    {
+        $type = ['string', 'integer'];
+
+        $result = SchemaValueNormalizer::typeIncludesNull($type);
+
+        self::assertFalse($result);
+    }
+
+    #[Test]
+    public function type_includes_null_returns_true_for_array_with_string_null(): void
+    {
+        $type = ['string', 'null'];
+
+        $result = SchemaValueNormalizer::typeIncludesNull($type);
+
+        self::assertTrue($result);
+    }
+
+    #[Test]
+    public function type_includes_null_returns_true_for_array_with_php_null(): void
+    {
+        $type = ['string', null];
+
+        $result = SchemaValueNormalizer::typeIncludesNull($type);
+
+        self::assertTrue($result);
+    }
+
+    #[Test]
+    public function type_includes_null_returns_true_for_array_with_only_null(): void
+    {
+        $type = ['null'];
+
+        $result = SchemaValueNormalizer::typeIncludesNull($type);
+
+        self::assertTrue($result);
+    }
 }

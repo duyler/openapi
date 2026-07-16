@@ -37,7 +37,8 @@ final readonly class DependentSchemasValidator extends AbstractSchemaValidator
         foreach ($schema->dependentSchemas as $propertyName => $dependentSchema) {
             if (array_key_exists($propertyName, $data)) {
                 try {
-                    $allowNull = $dependentSchema->nullable && $nullableAsType;
+                    $allowNull = $nullableAsType && ($dependentSchema->nullable
+                        || SchemaValueNormalizer::typeIncludesNull($dependentSchema->type));
                     $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
                     $validator = $this->createSchemaValidator();
                     $validator->validate($normalizedData, $dependentSchema, $context);

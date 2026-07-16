@@ -42,7 +42,8 @@ final readonly class PropertiesValidatorWithContext
             }
 
             try {
-                $allowNull = $propertySchema->nullable && $context->nullableAsType;
+                $allowNull = $context->nullableAsType && ($propertySchema->nullable
+                    || SchemaValueNormalizer::typeIncludesNull($propertySchema->type));
                 $value = SchemaValueNormalizer::normalize($data[$name], $allowNull);
 
                 $context->enterBreadcrumb($name);

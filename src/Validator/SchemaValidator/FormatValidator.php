@@ -14,6 +14,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 use function is_array;
+use function is_string;
 use function sprintf;
 
 final readonly class FormatValidator implements SchemaValidatorInterface
@@ -32,7 +33,20 @@ final readonly class FormatValidator implements SchemaValidatorInterface
             return;
         }
 
-        $type = is_array($schema->type) ? $schema->type[0] : $schema->type;
+        if (null === $data) {
+            return;
+        }
+
+        if (is_array($schema->type)) {
+            $type = $this->firstStringType($schema->type);
+
+            if (null === $type) {
+                return;
+            }
+        } else {
+            $type = $schema->type;
+        }
+
         $formatValidator = $this->formatRegistry->getValidator($type, $schema->format);
 
         if (null === $formatValidator) {
@@ -48,5 +62,19 @@ final readonly class FormatValidator implements SchemaValidatorInterface
         }
 
         $formatValidator->validate($data);
+    }
+
+    /**
+     * @param list<string|null> $types
+     */
+    private function firstStringType(array $types): ?string
+    {
+        foreach ($types as $type) {
+            if (is_string($type)) {
+                return $type;
+            }
+        }
+
+        return null;
     }
 }

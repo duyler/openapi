@@ -47,7 +47,8 @@ final readonly class ItemsValidatorWithContext
                 $context->enterBreadcrumbIndex($index);
 
                 try {
-                    $allowNull = $itemSchema->nullable && $context->nullableAsType;
+                    $allowNull = $context->nullableAsType && ($itemSchema->nullable
+                        || SchemaValueNormalizer::typeIncludesNull($itemSchema->type));
                     $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
                     $validator = new SchemaValidatorWithContext($this->document, $this->dependencies, $this->configuration);
                     $validator->validateWithContext($normalizedItem, $itemSchema, $context, $useDiscriminator);

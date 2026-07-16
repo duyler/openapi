@@ -22,7 +22,8 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator
         }
 
         $nullableAsType = $context?->nullableAsType ?? true;
-        $allowNull = $schema->if->nullable && $nullableAsType;
+        $allowNull = $nullableAsType && ($schema->if->nullable
+            || SchemaValueNormalizer::typeIncludesNull($schema->if->type));
         $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
         $ifValid = true;
         try {

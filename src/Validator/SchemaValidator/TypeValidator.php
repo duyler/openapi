@@ -10,6 +10,7 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Override;
 
+use function array_filter;
 use function fmod;
 use function is_array;
 use function is_bool;
@@ -40,9 +41,18 @@ final readonly class TypeValidator extends AbstractSchemaValidator
         $emptyArrayStrategy = $context?->emptyArrayStrategy ?? EmptyArrayStrategy::AllowBoth;
 
         if (is_array($schema->type)) {
-            if (false === $this->isValidUnionType($data, $schema->type, $emptyArrayStrategy)) {
+            $types = $schema->type;
+
+            if (false === $nullableAsType) {
+                $types = array_filter(
+                    $schema->type,
+                    static fn(?string $t): bool => 'null' !== $t,
+                );
+            }
+
+            if (false === $this->isValidUnionType($data, $types, $emptyArrayStrategy)) {
                 throw new TypeMismatchError(
-                    expected: implode('|', $schema->type),
+                    expected: implode('|', $types),
                     actual: gettype($data),
                     dataPath: $dataPath,
                     schemaPath: '/type',
@@ -81,11 +91,11 @@ final readonly class TypeValidator extends AbstractSchemaValidator
     }
 
     /**
-     * @param array<int, string> $types
+     * @param array<int, string|null> $types
      */
     private function isValidUnionType(mixed $data, array $types, EmptyArrayStrategy $strategy): bool
     {
-        return array_any($types, fn($type) => $this->isValidType($data, $type, $strategy));
+        return array_any($types, fn($type) => null !== $type && $this->isValidType($data, $type, $strategy));
     }
 
     private function isArray(mixed $data, EmptyArrayStrategy $strategy): bool

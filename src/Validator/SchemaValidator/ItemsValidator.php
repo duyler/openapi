@@ -44,7 +44,8 @@ final readonly class ItemsValidator extends AbstractSchemaValidator
             $nullableAsType = $context?->nullableAsType ?? true;
 
             try {
-                $allowNull = $schema->items->nullable && $nullableAsType;
+                $allowNull = $nullableAsType && ($schema->items->nullable
+                    || SchemaValueNormalizer::typeIncludesNull($schema->items->type));
                 $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
 
                 if (null === $context) {

@@ -471,4 +471,51 @@ class TypeValidatorTest extends TestCase
 
         $this->validator->validate([], $schema, $context);
     }
+
+    #[Test]
+    public function rejects_null_when_type_array_contains_null_and_nullable_as_type_disabled(): void
+    {
+        $schema = new Schema(type: ['string', 'null']);
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: false);
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate(null, $schema, $context);
+    }
+
+    #[Test]
+    public function accepts_string_when_type_array_contains_null_and_nullable_as_type_disabled(): void
+    {
+        $schema = new Schema(type: ['string', 'null']);
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: false);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate('hello', $schema, $context);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function accepts_null_when_type_array_contains_null_with_default_nullable_as_type(): void
+    {
+        $schema = new Schema(type: ['string', 'null']);
+        $context = ValidationContext::create(pool: $this->pool, nullableAsType: true);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(null, $schema, $context);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
 }

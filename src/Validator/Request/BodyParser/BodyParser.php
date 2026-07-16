@@ -6,6 +6,8 @@ namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
 final readonly class BodyParser
 {
+    private const string JSON_API_MEDIA_TYPE = 'application/vnd.api+json';
+
     public function __construct(
         private readonly JsonBodyParser $jsonParser,
         private readonly FormBodyParser $formParser,
@@ -20,7 +22,7 @@ final readonly class BodyParser
         string $fullContentType = '',
     ): array|int|string|float|bool|null {
         return match ($mediaType) {
-            'application/json' => $this->jsonParser->parse($body),
+            'application/json', self::JSON_API_MEDIA_TYPE => $this->jsonParser->parse($body),
             'application/x-www-form-urlencoded' => $this->formParser->parse($body),
             'multipart/form-data' => $this->multipartParser->parse($body, $fullContentType),
             'text/plain', 'text/html', 'text/csv' => $this->textParser->parse($body),

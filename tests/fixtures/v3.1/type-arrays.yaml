@@ -1,0 +1,161 @@
+openapi: 3.1.0
+info:
+  title: OpenAPI 3.1 Type Arrays API
+  version: 1.0.0
+  description: Test API for OpenAPI 3.1 type array syntax (replacing nullable keyword)
+paths:
+  /nullable-primitives:
+    get:
+      summary: Get nullable primitive types
+      operationId: getNullablePrimitives
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nullableString:
+                    type: [string, "null"]
+                  nullableNumber:
+                    type: [number, "null"]
+                  nullableInteger:
+                    type: [integer, "null"]
+                  nullableBoolean:
+                    type: [boolean, "null"]
+                required:
+                  - nullableString
+  /nullable-complex:
+    get:
+      summary: Get nullable complex types
+      operationId: getNullableComplex
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nullableArray:
+                    type: [array, "null"]
+                    items:
+                      type: string
+                  nullableObject:
+                    type: [object, "null"]
+                    properties:
+                      name:
+                        type: string
+  /multiple-types:
+    get:
+      summary: Get multiple type unions
+      operationId: getMultipleTypes
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stringOrNumber:
+                    type: [string, number]
+                  stringOrNumberOrNull:
+                    type: [string, number, "null"]
+                  stringOrInteger:
+                    type: [string, integer]
+  /nested-nullable:
+    get:
+      summary: Get nested objects with nullable fields
+      operationId: getNestedNullable
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      email:
+                        type: [string, "null"]
+                      phone:
+                        type: [string, "null"]
+                    required:
+                      - id
+                      - name
+  /array-items-nullable:
+    get:
+      summary: Get array with nullable items
+      operationId: getArrayItemsNullable
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: [string, "null"]
+  /request-body:
+    post:
+      summary: Create resource with nullable fields
+      operationId: createResource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: [string, "null"]
+                age:
+                  type: [integer, "null"]
+              required:
+                - name
+      responses:
+        '201':
+          description: Created
+  /backward-compatible:
+    get:
+      summary: Test backward compatibility with nullable keyword
+      operationId: getBackwardCompatible
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  oldStyle:
+                    type: string
+                    nullable: true
+                  newStyle:
+                    type: [string, "null"]
+components:
+  schemas:
+    NullableUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: [string, "null"]
+        metadata:
+          type: [object, "null"]
+      required:
+        - id
+        - name
