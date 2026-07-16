@@ -31,7 +31,8 @@ abstract readonly class AbstractCompositionalValidator extends AbstractSchemaVal
 
         foreach ($schemas as $subSchema) {
             try {
-                $allowNull = $subSchema->nullable && $nullableAsType;
+                $allowNull = $nullableAsType && ($subSchema->nullable
+                    || SchemaValueNormalizer::typeIncludesNull($subSchema->type));
                 $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
                 $validator = $this->createSchemaValidator();
                 $validator->validate($normalizedData, $subSchema, $context);
