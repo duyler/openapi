@@ -16,10 +16,11 @@ use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
+use JsonException;
 
 /**
- * RB-08: vendor-specific media type (application/vnd.api+json) — characterization
- * tests that document how the validator handles JSON:API content negotiation.
+ * RB-08: vendor-specific media type (application/vnd.api+json) — JSON:API body
+ * parsing and content negotiation.
  *
  * RB-09: optional request body (required: false) — verifies the validator does
  * not raise MissingRequestBodyException when the spec marks the body as optional
@@ -164,7 +165,7 @@ YAML;
     }
 
     #[Test]
-    public function vendor_media_type_with_string_schema_accepts_json_body_as_raw_string(): void
+    public function vendor_media_type_with_string_schema_rejects_json_object_as_type_mismatch(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::VENDOR_MEDIA_TYPE_STRING_SCHEMA_SPEC)
@@ -172,13 +173,29 @@ YAML;
 
         $request = $this->createVendorRequest('{"data":"payload"}');
 
-        $operation = $validator->validateRequest($request);
+        $thrown = null;
 
-        $this->assertOperationMatches($operation, 'POST', '/resource');
+        try {
+            $validator->validateRequest($request);
+        } catch (TypeMismatchError $error) {
+            $thrown = $error;
+        }
+
+        self::assertNotNull(
+            $thrown,
+            'Vendor media type body must be parsed as JSON; an object payload must raise '
+            . 'TypeMismatchError against a string schema.',
+        );
+        self::assertSame('string', $thrown->params()['expected']);
+        self::assertContains(
+            $thrown->params()['actual'],
+            ['array', 'object'],
+            'Parsed JSON object must be reported as array or object, not raw string.',
+        );
     }
 
     #[Test]
-    public function vendor_media_type_with_object_schema_rejects_json_body_as_type_mismatch(): void
+    public function vendor_media_type_with_object_schema_accepts_valid_json(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::VENDOR_MEDIA_TYPE_OBJECT_SCHEMA_SPEC)
@@ -186,12 +203,13 @@ YAML;
 
         $request = $this->createVendorRequest('{"name":"John Doe"}');
 
-        $this->expectException(TypeMismatchError::class);
-        $validator->validateRequest($request);
+        $operation = $validator->validateRequest($request);
+
+        $this->assertOperationMatches($operation, 'POST', '/resource');
     }
 
     #[Test]
-    public function vendor_media_type_with_object_schema_rejects_malformed_json_as_type_mismatch(): void
+    public function vendor_media_type_with_object_schema_rejects_malformed_json(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::VENDOR_MEDIA_TYPE_OBJECT_SCHEMA_SPEC)
@@ -199,7 +217,7 @@ YAML;
 
         $request = $this->createVendorRequest('not a json object at all');
 
-        $this->expectException(TypeMismatchError::class);
+        $this->expectException(JsonException::class);
         $validator->validateRequest($request);
     }
 
@@ -227,21 +245,9 @@ YAML;
 
         $request = $this->createVendorRequest('{"name":"John Doe"}');
 
-        $thrown = null;
+        $operation = $validator->validateRequest($request);
 
-        try {
-            $validator->validateRequest($request);
-        } catch (TypeMismatchError $error) {
-            $thrown = $error;
-        }
-
-        self::assertNotNull(
-            $thrown,
-            'Vendor media type must route to vendor schema, where the body is parsed as a raw string '
-            . 'and TypeMismatchError is raised against the object schema.',
-        );
-        self::assertSame('object', $thrown->params()['expected']);
-        self::assertSame('string', $thrown->params()['actual']);
+        $this->assertOperationMatches($operation, 'POST', '/resource');
     }
 
     #[Test]
