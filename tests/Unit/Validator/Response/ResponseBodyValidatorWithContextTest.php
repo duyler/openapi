@@ -620,4 +620,126 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
 
         self::assertSame(true, $succeeded);
     }
+
+    /**
+     * P-020: RFC 7231 §3.1.1.1 allows wildcards in media types. A response
+     * Content-Type of `application/json` MUST be validated against a spec
+     * declaring `application/*` so wildcard handling is symmetric with
+     * RequestBodyValidatorWithContext.
+     */
+    #[Test]
+    public function wildcard_application_matches_json_response(): void
+    {
+        $body = '{"id":123,"name":"John"}';
+        $contentType = 'application/json';
+        $content = new Content([
+            'application/*' => new MediaType(
+                schema: new Schema(
+                    type: 'object',
+                    properties: [
+                        'id' => new Schema(type: 'integer'),
+                        'name' => new Schema(type: 'string'),
+                    ],
+                    required: ['id', 'name'],
+                ),
+            ),
+        ]);
+
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected wildcard match to validate, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function universal_wildcard_matches_any_response(): void
+    {
+        $body = '{"id":123}';
+        $contentType = 'application/json';
+        $content = new Content([
+            '*/*' => new MediaType(
+                schema: new Schema(
+                    type: 'object',
+                    properties: ['id' => new Schema(type: 'integer')],
+                    required: ['id'],
+                ),
+            ),
+        ]);
+
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected universal wildcard to validate, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function exact_match_preferred_over_wildcard(): void
+    {
+        $body = '{"id":123}';
+        $contentType = 'application/json';
+        $exactSchema = new Schema(
+            type: 'object',
+            properties: ['id' => new Schema(type: 'integer')],
+            required: ['id'],
+        );
+        $wildcardSchema = new Schema(
+            type: 'object',
+            properties: ['forbidden' => new Schema(type: 'string')],
+            required: ['forbidden'],
+        );
+        $content = new Content([
+            'application/*' => new MediaType(schema: $wildcardSchema),
+            'application/json' => new MediaType(schema: $exactSchema),
+            'application/xml' => new MediaType(schema: $wildcardSchema),
+        ]);
+
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf(
+                'Exact schema must win over wildcard; got ValidationException: %s',
+                $e->getMessage(),
+            ));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function non_matching_content_type_skips_validation(): void
+    {
+        $body = '{"id":123}';
+        $contentType = 'application/json';
+        $content = new Content([
+            'application/xml' => new MediaType(
+                schema: new Schema(
+                    type: 'object',
+                    properties: ['name' => new Schema(type: 'string')],
+                    required: ['name'],
+                ),
+            ),
+        ]);
+
+        $succeeded = false;
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected non-matching content type to skip validation, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
 }

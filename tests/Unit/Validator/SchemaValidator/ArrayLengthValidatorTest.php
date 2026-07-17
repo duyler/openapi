@@ -20,6 +20,8 @@ use PHPUnit\Framework\TestCase;
 
 use function sprintf;
 
+use const NAN;
+
 #[CoversClass(ArrayLengthValidator::class)]
 class ArrayLengthValidatorTest extends TestCase
 {
@@ -490,5 +492,41 @@ class ArrayLengthValidatorTest extends TestCase
         $this->validator->validate([1, 2, 3], $schema);
 
         $this->expectNotToPerformAssertions();
+    }
+
+    /**
+     * P-007: JSON Schema 2020-12 §4.2.2 — NaN must NOT compare equal to NaN.
+     * Previously `(string)(float) NAN === 'NAN'` produced a duplicate key
+     * so two NaNs were treated as duplicates. Per spec, two NaN values are
+     * distinct and the array MUST pass uniqueItems.
+     */
+    #[Test]
+    public function nan_values_treated_as_unique_in_unique_items(): void
+    {
+        $schema = new Schema(type: 'array', uniqueItems: true);
+
+        $this->validator->validate([NAN, NAN], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function nan_and_number_treated_as_distinct_in_unique_items(): void
+    {
+        $schema = new Schema(type: 'array', uniqueItems: true);
+
+        $this->validator->validate([NAN, 1.0], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function duplicates_still_detected_when_no_nan(): void
+    {
+        $schema = new Schema(type: 'array', uniqueItems: true);
+
+        $this->expectException(DuplicateItemsError::class);
+
+        $this->validator->validate([1.0, 1.0], $schema);
     }
 }

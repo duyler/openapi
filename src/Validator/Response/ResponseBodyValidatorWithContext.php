@@ -16,11 +16,14 @@ use Duyler\OpenApi\Validator\Example\ExampleValidator;
 use Duyler\OpenApi\Validator\Example\ValidatesExamplesTrait;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
+use Duyler\OpenApi\Validator\Request\MediaTypeMatcher;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\TypeGuarantor;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Psr\Http\Message\StreamInterface;
+
+use function array_keys;
 
 final readonly class ResponseBodyValidatorWithContext
 {
@@ -75,7 +78,8 @@ final readonly class ResponseBodyValidatorWithContext
         }
 
         $mediaType = $this->negotiator->getMediaType($contentType);
-        $mediaTypeSchema = $content->mediaTypes[$mediaType] ?? null;
+        $mediaTypeKey = MediaTypeMatcher::findMatch($mediaType, array_keys($content->mediaTypes));
+        $mediaTypeSchema = null === $mediaTypeKey ? null : $content->mediaTypes[$mediaTypeKey];
 
         if (null === $mediaTypeSchema) {
             return;
@@ -100,7 +104,8 @@ final readonly class ResponseBodyValidatorWithContext
         }
 
         $mediaType = $this->negotiator->getMediaType($contentType);
-        $mediaTypeSchema = $content->mediaTypes[$mediaType] ?? null;
+        $mediaTypeKey = MediaTypeMatcher::findMatch($mediaType, array_keys($content->mediaTypes));
+        $mediaTypeSchema = null === $mediaTypeKey ? null : $content->mediaTypes[$mediaTypeKey];
 
         if (null === $mediaTypeSchema) {
             return;

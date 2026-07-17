@@ -19,6 +19,8 @@ use function is_string;
 use function str_starts_with;
 use function substr_count;
 
+use function assert;
+
 use const LIBXML_NOERROR;
 use const LIBXML_NONET;
 use const LIBXML_NOWARNING;
@@ -174,7 +176,16 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
 
     private function isValidMultipartFormData(string $data): bool
     {
-        return 1 === $this->pregExecutor->match('/^--[^\r\n]+/', $data);
+        $matches = [];
+        if (1 !== $this->pregExecutor->match('/^--(?<boundary>[^\r\n]+)/', $data, $matches)) {
+            return false;
+        }
+
+        $boundary = $matches['boundary'] ?? '';
+        assert(is_string($boundary));
+        $closingBoundary = '--' . $boundary . '--';
+
+        return 1 === $this->pregExecutor->match('/' . preg_quote($closingBoundary, '/') . '\s*$/', $data);
     }
 
     private function isValidUrlEncoded(string $data): bool

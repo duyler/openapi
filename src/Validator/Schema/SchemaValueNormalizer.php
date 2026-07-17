@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
+use stdClass;
 
+use function get_object_vars;
 use function in_array;
 use function is_array;
 use function is_bool;
@@ -19,7 +21,13 @@ use function sprintf;
 final readonly class SchemaValueNormalizer
 {
     /**
-     * Normalize data to match SchemaValidatorInterface requirements
+     * Normalize data to match SchemaValidatorInterface requirements.
+     *
+     * `\stdClass` is normalized to its public-property view via
+     * get_object_vars() so consumers using `json_decode` without the
+     * associative flag (or plain object casts) do not need an extra
+     * conversion step. Only `\stdClass` is supported — arbitrary objects
+     * still trigger InvalidDataTypeException.
      *
      * @throws InvalidDataTypeException if value is not one of supported types
      *
@@ -33,6 +41,13 @@ final readonly class SchemaValueNormalizer
 
         if (is_array($value) || is_int($value) || is_string($value) || is_float($value) || is_bool($value)) {
             return $value;
+        }
+
+        if ($value instanceof stdClass) {
+            /** @var array<int|string, mixed> $normalized */
+            $normalized = get_object_vars($value);
+
+            return $normalized;
         }
 
         $typeDescription = match (true) {

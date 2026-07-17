@@ -23,6 +23,10 @@ final readonly class PropertyNamesValidator extends AbstractSchemaValidator
             return;
         }
 
+        if (array_is_list($data)) {
+            return;
+        }
+
         if (null !== $schema->propertyNames->pattern && '' !== $schema->propertyNames->pattern) {
             $regexValidator = $this->regexValidator();
             $regexValidator->validate(

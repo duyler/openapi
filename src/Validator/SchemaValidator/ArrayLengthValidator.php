@@ -15,14 +15,17 @@ use Override;
 
 use JsonException;
 
+use function bin2hex;
 use function count;
 use function is_array;
 use function is_bool;
 use function is_float;
 use function is_int;
+use function is_nan;
 use function is_resource;
 use function is_string;
 use function json_encode;
+use function random_bytes;
 use function serialize;
 
 use const JSON_THROW_ON_ERROR;
@@ -87,6 +90,10 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator
     private function itemKey(mixed $item): string
     {
         $this->ensureJsonCompatible($item);
+
+        if (is_float($item) && is_nan($item)) {
+            return 'n:nan:' . bin2hex(random_bytes(8));
+        }
 
         if (is_int($item) || is_float($item)) {
             return 'n:' . (string) (float) $item;

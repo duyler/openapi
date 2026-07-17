@@ -499,6 +499,57 @@ XML;
         $this->validator->validate('not multipart', $schema);
     }
 
+    /**
+     * P-013: RFC 7578 §4 requires both an opening boundary (`--boundary`)
+     * and a closing boundary (`--boundary--`) at the end. A payload with
+     * only an opening boundary MUST be rejected.
+     */
+    #[Test]
+    public function rejects_only_opening_boundary(): void
+    {
+        $schema = new Schema(type: 'string', contentMediaType: 'multipart/form-data');
+
+        $this->expectException(InvalidContentMediaTypeException::class);
+
+        $this->validator->validate("--boundary\r\nContent-Disposition: form-data; name=\"field\"\r\n\r\nvalue", $schema);
+    }
+
+    #[Test]
+    public function rejects_random_dash_prefix_string_without_closing_boundary(): void
+    {
+        $schema = new Schema(type: 'string', contentMediaType: 'multipart/form-data');
+
+        $this->expectException(InvalidContentMediaTypeException::class);
+
+        $this->validator->validate('--foobar random text without closing boundary', $schema);
+    }
+
+    #[Test]
+    public function rejects_mismatched_closing_boundary(): void
+    {
+        $schema = new Schema(type: 'string', contentMediaType: 'multipart/form-data');
+
+        $this->expectException(InvalidContentMediaTypeException::class);
+
+        $this->validator->validate("--abc\r\nbody\r\n--xyz--", $schema);
+    }
+
+    #[Test]
+    public function accepts_well_formed_multipart_with_matching_closing_boundary(): void
+    {
+        $schema = new Schema(type: 'string', contentMediaType: 'multipart/form-data');
+
+        $succeeded = false;
+        try {
+            $this->validator->validate("--MYBOUNDARY\r\nContent-Disposition: form-data; name=\"x\"\r\n\r\nv\r\n--MYBOUNDARY--\r\n", $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected well-formed multipart to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
     #[Test]
     public function validate_valid_url_encoded(): void
     {

@@ -24,7 +24,7 @@ final readonly class HeaderFinder
 
             if (strtolower($key) === strtolower($name)) {
                 if (is_array($value)) {
-                    return implode(', ', array_map(strval(...), $value));
+                    return implode(',', array_map(strval(...), $value));
                 }
 
                 if (is_string($value)) {

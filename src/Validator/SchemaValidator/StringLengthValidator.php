@@ -17,6 +17,8 @@ final readonly class StringLengthValidator extends AbstractSchemaValidator
 {
     use LengthValidationTrait;
 
+    private const string JSON_ENCODING = 'UTF-8';
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -25,7 +27,7 @@ final readonly class StringLengthValidator extends AbstractSchemaValidator
         }
 
         $dataPath = $this->getDataPath($context);
-        $length = mb_strlen($data);
+        $length = mb_strlen($data, self::JSON_ENCODING);
 
         $this->validateLength(
             actual: $length,
