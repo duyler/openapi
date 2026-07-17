@@ -18,20 +18,21 @@ use Duyler\OpenApi\Validator\Format\String\RelativeJsonPointerValidator;
 use Duyler\OpenApi\Validator\Format\String\TimeValidator;
 use Duyler\OpenApi\Validator\Format\String\UriValidator;
 use Duyler\OpenApi\Validator\Format\String\UuidValidator;
+use Duyler\OpenApi\Validator\PregExecutor;
 
 final class BuiltinFormats
 {
-    public static function create(): FormatRegistry
+    public static function create(PregExecutor $pregExecutor = new PregExecutor()): FormatRegistry
     {
         $registry = new FormatRegistry();
 
         $registry = $registry->registerFormat('string', 'date-time', new DateTimeValidator());
         $registry = $registry->registerFormat('string', 'date', new DateValidator());
         $registry = $registry->registerFormat('string', 'time', new TimeValidator());
-        $registry = $registry->registerFormat('string', 'email', new EmailValidator());
-        $registry = $registry->registerFormat('string', 'uri', new UriValidator());
+        $registry = $registry->registerFormat('string', 'email', new EmailValidator($pregExecutor));
+        $registry = $registry->registerFormat('string', 'uri', new UriValidator($pregExecutor));
         $registry = $registry->registerFormat('string', 'uuid', new UuidValidator());
-        $registry = $registry->registerFormat('string', 'hostname', new HostnameValidator());
+        $registry = $registry->registerFormat('string', 'hostname', new HostnameValidator($pregExecutor));
         $registry = $registry->registerFormat('string', 'ipv4', new Ipv4Validator());
         $registry = $registry->registerFormat('string', 'ipv6', new Ipv6Validator());
         $registry = $registry->registerFormat('string', 'byte', new ByteValidator());

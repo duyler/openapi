@@ -26,7 +26,7 @@ final readonly class PatternValidator extends AbstractSchemaValidator
 
         assert('' !== $pattern);
 
-        $result = @preg_match($pattern, $data);
+        $result = $this->pregExecutor()->match($pattern, $data);
 
         if (false === $result) {
             throw new InvalidPatternException(

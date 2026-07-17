@@ -96,7 +96,7 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
 
                     $normalizedPattern = $this->regexValidator()->normalize($pattern);
                     assert('' !== $normalizedPattern);
-                    if (1 === preg_match($normalizedPattern, $propertyName)) {
+                    if (1 === $this->pregExecutor()->match($normalizedPattern, $propertyName)) {
                         $evaluated[] = $propertyName;
                     }
                 }

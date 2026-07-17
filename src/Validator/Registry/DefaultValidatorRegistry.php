@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Registry;
 
 use Duyler\OpenApi\Validator\Exception\UnknownValidatorException;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\SchemaValidator\ValidatorFactory;
@@ -30,6 +31,7 @@ final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterf
         private readonly bool $reportDeprecated = false,
         private readonly ?EventDispatcherInterface $eventDispatcher = null,
         private readonly RegexValidator $regexValidator = new RegexValidator(),
+        private readonly PregExecutor $pregExecutor = new PregExecutor(),
     ) {
         $this->validators = new ValidatorFactory(
             $this->pool,
@@ -40,6 +42,7 @@ final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterf
             $this->eventDispatcher,
             $this,
             $this->regexValidator,
+            $this->pregExecutor,
         )->createAll();
     }
 

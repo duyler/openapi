@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Override;
 
 use function filter_var;
-use function preg_match;
 use function sprintf;
 use function strlen;
 
@@ -20,6 +20,10 @@ final readonly class EmailValidator extends AbstractStringFormatValidator
 
     private const int MAX_EMAIL = 254;
 
+    public function __construct(
+        private readonly PregExecutor $pregExecutor = new PregExecutor(),
+    ) {}
+
     #[Override]
     protected function getFormatName(): string
     {
@@ -29,7 +33,7 @@ final readonly class EmailValidator extends AbstractStringFormatValidator
     #[Override]
     protected function validateString(string $data): void
     {
-        if (1 !== preg_match(self::EMAIL_PATTERN, $data)) {
+        if (1 !== $this->pregExecutor->match(self::EMAIL_PATTERN, $data)) {
             throw new InvalidFormatException('email', $data, 'Invalid email format');
         }
 

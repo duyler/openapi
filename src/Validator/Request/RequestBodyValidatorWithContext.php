@@ -14,6 +14,7 @@ use Duyler\OpenApi\Validator\Exception\MissingRequestBodyException;
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
 use Duyler\OpenApi\Validator\Example\ExampleValidator;
 use Duyler\OpenApi\Validator\Example\ValidatesExamplesTrait;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\TypeGuarantor;
@@ -34,8 +35,10 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
         private readonly OpenApiDocument $document,
         private readonly SchemaValidatorDependencies $dependencies,
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
+        ?PregExecutor $pregExecutor = null,
     ) {
-        $this->negotiator = new ContentTypeNegotiator();
+        $resolvedPregExecutor = $pregExecutor ?? new PregExecutor($this->configuration->maxRegexBacktracks);
+        $this->negotiator = new ContentTypeNegotiator($resolvedPregExecutor);
         $this->exampleValidator = new ExampleValidator();
 
         $this->regularSchemaValidator = new SchemaValidator(
@@ -45,6 +48,7 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
             reportDeprecated: $this->configuration->reportDeprecated,
             logger: $this->dependencies->logger,
             eventDispatcher: $this->dependencies->eventDispatcher,
+            pregExecutor: $resolvedPregExecutor,
         );
 
         $this->contextSchemaValidator = new SchemaValidatorWithContext(

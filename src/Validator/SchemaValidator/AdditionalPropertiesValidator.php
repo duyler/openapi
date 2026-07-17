@@ -44,7 +44,7 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
 
                     $normalizedPattern = $this->regexValidator()->normalize($pattern);
                     assert('' !== $normalizedPattern);
-                    if (1 === preg_match($normalizedPattern, (string) $key)) {
+                    if (1 === $this->pregExecutor()->match($normalizedPattern, (string) $key)) {
                         return false;
                     }
                 }

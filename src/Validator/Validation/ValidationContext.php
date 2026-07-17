@@ -11,6 +11,7 @@ use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
@@ -66,6 +67,8 @@ final readonly class ValidationContext
         public readonly int $maxJsonBodyBytes = ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES,
         public readonly int $maxMultipartBodyBytes = ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES,
         public readonly bool $strictStreaming = false,
+        public readonly int $maxRegexBacktracks = PregExecutor::DEFAULT_MAX_BACKTRACKS,
+        public readonly PregExecutor $pregExecutor = new PregExecutor(),
     ) {
         $this->statelessValidators = new StatelessValidatorRegistry(
             $this->pool,
@@ -74,6 +77,7 @@ final readonly class ValidationContext
             $this->logger,
             $this->eventDispatcher,
             $this->regexValidator,
+            $this->pregExecutor,
         );
 
         $this->schemaValidatorDependencies = new SchemaValidatorDependencies(
@@ -113,6 +117,7 @@ final readonly class ValidationContext
             maxJsonBodyBytes: $this->maxJsonBodyBytes,
             maxMultipartBodyBytes: $this->maxMultipartBodyBytes,
             strictStreaming: $this->strictStreaming,
+            maxRegexBacktracks: $this->maxRegexBacktracks,
         );
     }
 
@@ -130,6 +135,7 @@ final readonly class ValidationContext
             reportDeprecated: $this->reportDeprecated,
             eventDispatcher: $this->eventDispatcher,
             regexValidator: $this->regexValidator,
+            pregExecutor: $this->pregExecutor,
         );
 
         $parameterConfig = new ParameterValidationConfig(
@@ -182,6 +188,7 @@ final readonly class ValidationContext
                 document: $this->document,
                 dependencies: $this->schemaValidatorDependencies,
                 configuration: $this->buildValidatorConfiguration(),
+                pregExecutor: $this->pregExecutor,
             ),
         );
     }
@@ -192,6 +199,7 @@ final readonly class ValidationContext
             document: $this->document,
             dependencies: $this->schemaValidatorDependencies,
             configuration: $this->buildValidatorConfiguration(),
+            pregExecutor: $this->pregExecutor,
         );
     }
 }

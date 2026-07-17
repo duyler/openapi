@@ -52,7 +52,7 @@ final readonly class PatternPropertiesValidator extends AbstractSchemaValidator
                 $normalizedPattern = $regexValidator->normalize($pattern);
                 assert('' !== $normalizedPattern);
 
-                $result = preg_match($normalizedPattern, $propertyName);
+                $result = $this->pregExecutor()->match($normalizedPattern, $propertyName);
 
                 if (false !== $result && 1 === $result) {
                     /** @var array-key|array<array-key, mixed> $propertyValue */

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\SchemaValidator\ValidatorFactory;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -24,6 +25,7 @@ final readonly class StatelessValidatorRegistry
         LoggerInterface $logger = new NullLogger(),
         ?EventDispatcherInterface $eventDispatcher = null,
         RegexValidator $regexValidator = new RegexValidator(),
+        PregExecutor $pregExecutor = new PregExecutor(),
     ) {
         $this->validators = new ValidatorFactory(
             $pool,
@@ -32,6 +34,7 @@ final readonly class StatelessValidatorRegistry
             reportDeprecated: $reportDeprecated,
             eventDispatcher: $eventDispatcher,
             regexValidator: $regexValidator,
+            pregExecutor: $pregExecutor,
         )->createStatelessList();
     }
 

@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Registry\DefaultValidatorRegistry;
 use Duyler\OpenApi\Validator\Registry\ValidatorRegistryInterface;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
@@ -22,7 +23,7 @@ final class SchemaValidator implements SchemaValidatorInterface
 {
     private ?ValidatorRegistryInterface $cachedRegistry = null;
 
-    public function __construct(private readonly ValidatorPool $pool, public readonly FormatRegistry $formatRegistry, private readonly ?ValidatorRegistryInterface $registry = null, private readonly bool $strictFormats = false, private readonly LoggerInterface $logger = new NullLogger(), private readonly bool $reportDeprecated = false, private readonly ?EventDispatcherInterface $eventDispatcher = null, private readonly RegexValidator $regexValidator = new RegexValidator()) {}
+    public function __construct(private readonly ValidatorPool $pool, public readonly FormatRegistry $formatRegistry, private readonly ?ValidatorRegistryInterface $registry = null, private readonly bool $strictFormats = false, private readonly LoggerInterface $logger = new NullLogger(), private readonly bool $reportDeprecated = false, private readonly ?EventDispatcherInterface $eventDispatcher = null, private readonly RegexValidator $regexValidator = new RegexValidator(), private readonly PregExecutor $pregExecutor = new PregExecutor()) {}
 
     #[Override]
     public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
@@ -42,6 +43,7 @@ final class SchemaValidator implements SchemaValidatorInterface
                 $this->reportDeprecated,
                 $this->eventDispatcher,
                 regexValidator: $this->regexValidator,
+                pregExecutor: $this->pregExecutor,
             );
 
             foreach ($registry->getAllValidators() as $validator) {

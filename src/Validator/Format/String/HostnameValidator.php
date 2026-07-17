@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Override;
 
 use function explode;
 use function function_exists;
 use function idn_to_ascii;
-use function preg_match;
 use function sprintf;
 use function str_ends_with;
 use function str_starts_with;
@@ -27,6 +27,10 @@ final readonly class HostnameValidator extends AbstractStringFormatValidator
 
     private const int MAX_LABEL_LENGTH = 63;
 
+    public function __construct(
+        private readonly PregExecutor $pregExecutor = new PregExecutor(),
+    ) {}
+
     #[Override]
     protected function getFormatName(): string
     {
@@ -42,7 +46,7 @@ final readonly class HostnameValidator extends AbstractStringFormatValidator
 
         $normalized = $this->toAscii($data);
 
-        if (1 !== preg_match(self::HOSTNAME_PATTERN, $normalized)) {
+        if (1 !== $this->pregExecutor->match(self::HOSTNAME_PATTERN, $normalized)) {
             throw new InvalidFormatException('hostname', $data, 'Invalid hostname format');
         }
 

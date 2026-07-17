@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Registry\ValidatorRegistryInterface;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -29,6 +30,7 @@ abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterf
         protected readonly ?EventDispatcherInterface $eventDispatcher = null,
         private readonly ?ValidatorRegistryInterface $registry = null,
         private readonly RegexValidator $regexValidator = new RegexValidator(),
+        private readonly PregExecutor $pregExecutor = new PregExecutor(),
     ) {
         $this->logger = $logger ?? new NullLogger();
     }
@@ -67,6 +69,11 @@ abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterf
         return $this->regexValidator;
     }
 
+    protected function pregExecutor(): PregExecutor
+    {
+        return $this->pregExecutor;
+    }
+
     protected function createSchemaValidator(): SchemaValidator
     {
         return new SchemaValidator(
@@ -78,6 +85,7 @@ abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterf
             reportDeprecated: $this->reportDeprecated,
             eventDispatcher: $this->eventDispatcher,
             regexValidator: $this->regexValidator,
+            pregExecutor: $this->pregExecutor,
         );
     }
 }

@@ -19,6 +19,7 @@ use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Duyler\OpenApi\Validator\Link\LinkResolver;
 use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Validator\PathFinder;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
@@ -234,12 +235,28 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(strictStreaming: false));
     }
 
+    /**
+     * Override the defensive pcre.backtrack_limit applied to every preg_match
+     * call routed through the PregExecutor wrapper. Lowering this cap below the
+     * PHP default (1_000_000) bounds the worst-case CPU cost of catastrophic
+     * regular expressions on attacker-controlled input such as JSON-Schema
+     * "pattern" fields.
+     *
+     * @return self New builder instance with the regex backtracking cap applied
+     */
+    public function withMaxRegexBacktracks(int $maxBacktracks): self
+    {
+        return $this->with(new BuilderConfig(maxRegexBacktracks: $maxBacktracks));
+    }
+
     public function build(): OpenApiValidatorInterface
     {
         $document = $this->loadSpec();
 
+        $maxRegexBacktracks = $this->config->maxRegexBacktracks ?? ValidatorConfiguration::DEFAULT_MAX_REGEX_BACKTRACKS;
+        $pregExecutor = new PregExecutor($maxRegexBacktracks);
         $pool = $this->config->pool ?? new ValidatorPool();
-        $formatRegistry = $this->config->formatRegistry ?? BuiltinFormats::create();
+        $formatRegistry = $this->config->formatRegistry ?? BuiltinFormats::create($pregExecutor);
         $errorFormatter = $this->config->errorFormatter ?? new SimpleFormatter();
         $pathRegexCache = new PathRegexCache();
         $regexValidator = new RegexValidator();
@@ -275,6 +292,8 @@ final readonly class OpenApiValidatorBuilder
             maxJsonBodyBytes: $maxJsonBodyBytes,
             maxMultipartBodyBytes: $maxMultipartBodyBytes,
             strictStreaming: $strictStreaming,
+            maxRegexBacktracks: $maxRegexBacktracks,
+            pregExecutor: $pregExecutor,
         );
 
         return new OpenApiValidator(
@@ -289,6 +308,7 @@ final readonly class OpenApiValidatorBuilder
                 maxJsonBodyBytes: $maxJsonBodyBytes,
                 maxMultipartBodyBytes: $maxMultipartBodyBytes,
                 strictStreaming: $strictStreaming,
+                maxRegexBacktracks: $maxRegexBacktracks,
             ),
             dependencies: new ValidatorDependencies(
                 pool: $pool,

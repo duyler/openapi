@@ -8,14 +8,16 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\JsonDepthLimit;
 use Duyler\OpenApi\Validator\LibxmlSecuredContext;
+use Duyler\OpenApi\Validator\PregExecutor;
 use JsonException;
 use Override;
 use SimpleXMLElement;
 
+use function explode;
 use function in_array;
 use function is_string;
-use function preg_match;
 use function str_starts_with;
+use function substr_count;
 
 use const LIBXML_NOERROR;
 use const LIBXML_NONET;
@@ -26,23 +28,29 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
 {
     private const int JSON_MAX_DEPTH = JsonDepthLimit::Untrusted->value;
 
+    private const int MAX_URLENCODED_PAIRS = 1000;
+
     private const array SUPPORTED_MEDIA_TYPES = [
         'application/json',
         'application/xml',
         'text/plain',
         'text/html',
         'text/xml',
+        'image/svg+xml',
+        'multipart/form-data',
         'application/pdf',
         'application/octet-stream',
         'image/png',
         'image/jpeg',
         'image/gif',
-        'image/svg+xml',
-        'multipart/form-data',
         'application/x-www-form-urlencoded',
     ];
 
     private const int XML_PARSE_OPTIONS = LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING;
+
+    public function __construct(
+        private readonly PregExecutor $pregExecutor = new PregExecutor(),
+    ) {}
 
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -136,7 +144,7 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
             return false;
         }
 
-        return 1 === preg_match('/<[a-zA-Z][^>]*>/', $data);
+        return 1 === $this->pregExecutor->match('/<[a-zA-Z][^>]*>/', $data);
     }
 
     private function isValidPdf(string $data): bool
@@ -166,7 +174,7 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
 
     private function isValidMultipartFormData(string $data): bool
     {
-        return 1 === preg_match('/^--[^\r\n]+/', $data);
+        return 1 === $this->pregExecutor->match('/^--[^\r\n]+/', $data);
     }
 
     private function isValidUrlEncoded(string $data): bool
@@ -175,7 +183,10 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
             return true;
         }
 
-        return 1 === preg_match('/^[^&=]+=[^&]*(&[^&=]+=[^&]*)*$/', $data);
+        if (self::MAX_URLENCODED_PAIRS < substr_count($data, '&') + 1) {
+            return false;
+        }
+        return array_all(explode('&', $data), fn($pair) => !(1 !== $this->pregExecutor->match('/^[^&=]+(?:=[^&]*)?$/', $pair)));
     }
 
     private function isRecognizedMediaType(string $mediaType): bool
