@@ -9,7 +9,7 @@ use LogicException;
 use Override;
 
 /**
- * Exposes OpenApiBuilder::buildSchema() for callers that need to construct a
+ * Exposes SchemaBuilder::buildSchema() for callers that need to construct a
  * Schema from already-parsed data without going through the full
  * parse+buildDocument pipeline. Used by FileExternalRefResolver to convert
  * YAML/JSON payloads loaded from external files into Schema instances.
@@ -23,7 +23,7 @@ final class ExternalSchemaBuilder extends OpenApiBuilder
      */
     public function buildSchemaFromData(mixed $data): Schema
     {
-        return $this->buildSchema($data);
+        return $this->context->schemaBuilder->buildSchema($data);
     }
 
     #[Override]
