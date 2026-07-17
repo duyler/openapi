@@ -730,8 +730,8 @@ final class RefResolver implements RefResolverInterface
         if (isset($visited[$ref])) {
             throw new UnresolvableRefException(
                 $ref,
-                "Circular reference detected: "
-                    . $this->formatCircularPath($visited, $ref),
+                'Circular reference detected',
+                internalTrace: $this->formatCircularPath($visited, $ref),
             );
         }
 

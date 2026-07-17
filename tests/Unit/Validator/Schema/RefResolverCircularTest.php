@@ -95,7 +95,7 @@ final class RefResolverCircularTest extends TestCase
     }
 
     #[Test]
-    public function error_message_contains_full_path(): void
+    public function internal_trace_contains_full_path_but_message_does_not(): void
     {
         $schemaA = new Schema(ref: '#/components/schemas/B');
         $schemaB = new Schema(ref: '#/components/schemas/C');
@@ -110,10 +110,15 @@ final class RefResolverCircularTest extends TestCase
             $this->resolver->resolve('#/components/schemas/A', $document);
             $this->fail('Expected UnresolvableRefException was not thrown');
         } catch (UnresolvableRefException $e) {
-            self::assertStringContainsString('#/components/schemas/A', $e->reason);
-            self::assertStringContainsString('#/components/schemas/B', $e->reason);
-            self::assertStringContainsString('#/components/schemas/C', $e->reason);
-            self::assertStringContainsString(' -> ', $e->reason);
+            self::assertSame('Circular reference detected', $e->reason);
+            self::assertStringNotContainsString('#/components/schemas/B', $e->getMessage());
+            self::assertStringNotContainsString('#/components/schemas/C', $e->getMessage());
+            self::assertStringNotContainsString(' -> ', $e->getMessage());
+            self::assertNotNull($e->internalTrace);
+            self::assertStringContainsString('#/components/schemas/A', $e->internalTrace);
+            self::assertStringContainsString('#/components/schemas/B', $e->internalTrace);
+            self::assertStringContainsString('#/components/schemas/C', $e->internalTrace);
+            self::assertStringContainsString(' -> ', $e->internalTrace);
         }
     }
 

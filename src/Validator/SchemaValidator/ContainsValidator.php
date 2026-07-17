@@ -10,6 +10,7 @@ use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\ContainsMatchError;
 use Duyler\OpenApi\Validator\Exception\MaxContainsError;
 use Duyler\OpenApi\Validator\Exception\MinContainsError;
+use Duyler\OpenApi\Validator\Exception\TooManyContainsValidationsError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 
@@ -17,6 +18,8 @@ use function is_array;
 
 final readonly class ContainsValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    private const int MAX_CONTAINS_VALIDATIONS = 10000;
+
     #[Override]
     public function isApplicable(Schema $schema): bool
     {
@@ -42,6 +45,13 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
         $matchCount = 0;
 
         foreach ($data as $item) {
+            if (self::MAX_CONTAINS_VALIDATIONS <= $matchCount) {
+                throw new TooManyContainsValidationsError(
+                    max: self::MAX_CONTAINS_VALIDATIONS,
+                    dataPath: $dataPath,
+                );
+            }
+
             try {
                 /** @var array-key|array<array-key, mixed> $item */
                 $validator->validate($item, $schema->contains, $containsContext);

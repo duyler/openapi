@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Response;
 
 use Duyler\OpenApi\Validator\Exception\MalformedStreamRecordException;
 use Duyler\OpenApi\Validator\JsonDepthLimit;
+use Duyler\OpenApi\Validator\Util\LogContextSanitizer;
 use Generator;
 use JsonException;
 use Psr\Http\Message\StreamInterface;
@@ -18,9 +19,6 @@ use function ctype_digit;
 use function is_array;
 use function is_null;
 use function is_scalar;
-use function mb_strlen;
-use function mb_substr;
-use function preg_replace;
 use function sprintf;
 use function strlen;
 use function trim;
@@ -261,20 +259,7 @@ final readonly class StreamingContentParser
 
     private function truncateForLog(string $record): string
     {
-        if (mb_strlen($record, 'UTF-8') <= self::LOG_RECORD_TRUNCATE_LENGTH) {
-            return $this->sanitizeForLog($record);
-        }
-
-        return $this->sanitizeForLog(
-            mb_substr($record, 0, self::LOG_RECORD_TRUNCATE_LENGTH, 'UTF-8'),
-        );
-    }
-
-    private function sanitizeForLog(string $value): string
-    {
-        $sanitized = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '?', $value);
-
-        return $sanitized ?? '?';
+        return LogContextSanitizer::truncate($record, self::LOG_RECORD_TRUNCATE_LENGTH);
     }
 
     /**

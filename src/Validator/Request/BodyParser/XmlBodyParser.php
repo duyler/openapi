@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
+use Duyler\OpenApi\Validator\Exception\BodyTooLargeException;
 use Duyler\OpenApi\Validator\LibxmlSecuredContext;
 use SimpleXMLElement;
 use ValueError;
@@ -11,6 +12,7 @@ use ValueError;
 use function array_key_exists;
 use function assert;
 use function is_array;
+use function strlen;
 
 use const LIBXML_NOERROR;
 use const LIBXML_NONET;
@@ -19,12 +21,26 @@ use const LIBXML_NOWARNING;
 final readonly class XmlBodyParser
 {
     private const int PARSE_OPTIONS = LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING;
+    private const int DEFAULT_MAX_XML_BYTES = 1_048_576;
+
+    public function __construct(
+        private readonly int $maxXmlBytes = self::DEFAULT_MAX_XML_BYTES,
+    ) {}
 
     /**
      * @return array<array-key, mixed>|string|null
      */
     public function parse(string $body): array|string|null
     {
+        $length = strlen($body);
+
+        if ($this->maxXmlBytes < $length) {
+            throw new BodyTooLargeException(
+                actualBytes: $length,
+                maxBytes: $this->maxXmlBytes,
+            );
+        }
+
         if ('' === trim($body)) {
             return '';
         }

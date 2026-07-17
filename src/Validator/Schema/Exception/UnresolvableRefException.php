@@ -17,6 +17,7 @@ final class UnresolvableRefException extends RuntimeException
         public readonly string $reason,
         int $code = 0,
         ?Throwable $previous = null,
+        public readonly ?string $internalTrace = null,
     ) {
         $message = sprintf(
             'Cannot resolve $ref "%s": %s',

@@ -822,10 +822,14 @@ final class ValidationMiddleware implements MiddlewareInterface
                 ], JSON_PRETTY_PRINT),
             );
         } catch (Throwable $e) {
+            $message = $e instanceof ValidationException
+                ? 'Validation failed'
+                : 'Internal validation error';
+
             return new Response(
                 status: 400,
                 headers: ['Content-Type' => 'application/json'],
-                body: json_encode(['error' => $e->getMessage()], JSON_PRETTY_PRINT),
+                body: json_encode(['error' => $message], JSON_PRETTY_PRINT),
             );
         }
 
