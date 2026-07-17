@@ -18,7 +18,6 @@
     },
     "require": {
         "php": "^8.4",
-        "nyholm/psr7": "^1.8",
         "psr/cache": "^3.0",
         "psr/event-dispatcher": "^1.0",
         "psr/http-message": "^2.0",
@@ -30,9 +29,16 @@
         "friendsofphp/php-cs-fixer": "^3.80",
         "vimeo/psalm": "^6.10",
         "rector/rector": "^2.0",
-        "infection/infection": "^0.32"
+        "infection/infection": "^0.32",
+        "nyholm/psr7": "^1.8"
     },
-    "minimum-stability": "dev",
+    "suggest": {
+        "nyholm/psr7": "PSR-7 implementation used in tests; use any PSR-7 implementation in production",
+        "psr/http-server-middleware": "Required if you implement the PSR-15 middleware example from README",
+        "symfony/cache": "PSR-6 cache implementation for SchemaCache",
+        "symfony/event-dispatcher": "PSR-14 event dispatcher implementation"
+    },
+    "minimum-stability": "stable",
     "prefer-stable": true,
     "autoload": {
         "psr-4": {

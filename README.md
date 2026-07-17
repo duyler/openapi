@@ -13,7 +13,7 @@ OpenAPI 3.2 validator for PHP 8.4+
 
 - **Full OpenAPI 3.2 Support** - Complete implementation of OpenAPI 3.2 specification
 - **JSON Schema Validation** - Full JSON Schema draft 2020-12 validation with 25+ validators
-- **PSR-7 Integration** - PSR-7 HTTP message validation (requires nyholm/psr7)
+- **PSR-7 Integration** - PSR-7 HTTP message validation (works with any PSR-7 implementation)
 - **Request Validation** - Validate path parameters, query parameters, headers, cookies, and request body
 - **Response Validation** - Validate status codes, headers, and response bodies
 - **Multiple Content Types** - Support for JSON, form-data, multipart, text, and XML
@@ -135,7 +135,7 @@ $validator = OpenApiValidatorBuilder::create()
 
 ### PSR-7 Integration
 
-The validator uses `nyholm/psr7` as the PSR-7 implementation:
+The validator works with any PSR-7 implementation. The examples in this README use `nyholm/psr7` (installed as a dev dependency); substitute your preferred implementation (Guzzle PSR-7, Laminas Diactoros) in production:
 
 ```php
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -730,6 +730,8 @@ $validator = OpenApiValidatorBuilder::create()
 ```
 
 ## PSR-15 Middleware
+
+> **Note:** The middleware below is an example snippet, not a class shipped with this package. Copy it into your project and adapt it to your framework. The PSR-15 interfaces (`psr/http-server-middleware`) are required by your framework, not by this library.
 
 Wrap the validator in a PSR-15 middleware to validate incoming requests before they reach your handlers. On validation failure, the middleware returns a `400 Bad Request` response with error details.
 
@@ -1508,7 +1510,7 @@ The following scheme types are not supported and will produce an error when enco
 ## Requirements
 
 - **PHP 8.4 or higher** - Uses modern PHP features (readonly classes, match expressions, etc.)
-- **PSR-7 HTTP message** - `psr/http-message ^2.0` (required: `nyholm/psr7 ^1.8`)
+- **PSR-7 HTTP message** - `psr/http-message ^2.0`. Use any PSR-7 implementation (`nyholm/psr7`, `guzzle/psr7`, `laminas/laminas-diactoros`).
 - **PSR-6 cache** - `psr/cache ^3.0` (e.g., `symfony/cache`, `cache/cache`)
 - **PSR-14 events** - `psr/event-dispatcher ^1.0` (e.g., `symfony/event-dispatcher`)
 - **PSR-3 logging** - `psr/log ^3.0` (included, optional to use via `withLogger()`)
