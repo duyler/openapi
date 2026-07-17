@@ -35,6 +35,7 @@ final readonly class BuilderConfig
         public readonly ?int $maxMultipartBodyBytes = null,
         public readonly ?bool $strictStreaming = null,
         public readonly ?int $maxRegexBacktracks = null,
+        public readonly ?bool $strictCallbackRuntimeTemplate = null,
     ) {}
 
     public function merge(self $overrides): self
@@ -60,6 +61,7 @@ final readonly class BuilderConfig
             maxMultipartBodyBytes: $overrides->maxMultipartBodyBytes ?? $this->maxMultipartBodyBytes,
             strictStreaming: $overrides->strictStreaming ?? $this->strictStreaming,
             maxRegexBacktracks: $overrides->maxRegexBacktracks ?? $this->maxRegexBacktracks,
+            strictCallbackRuntimeTemplate: $overrides->strictCallbackRuntimeTemplate ?? $this->strictCallbackRuntimeTemplate,
         );
     }
 }

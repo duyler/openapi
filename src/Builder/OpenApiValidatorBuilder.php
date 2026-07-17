@@ -36,6 +36,7 @@ use Exception;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
 
 use function sprintf;
 
@@ -249,6 +250,25 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(maxRegexBacktracks: $maxBacktracks));
     }
 
+    /**
+     * Enable strict callback runtime template resolution.
+     *
+     * When enabled, callback expressions that use runtime templates such as
+     * `{$request.body#/callback_url}` throw an
+     * {@see UnresolvableCallbackPathException}
+     * instead of being treated as wildcards that accept any URL. This prevents
+     * attacker-controlled runtime templates from bypassing path validation
+     * while still passing declared security checks on the callback pathItem.
+     *
+     * Off by default for backward compatibility with existing callback specs.
+     *
+     * @return self New builder instance with strict callback runtime template enabled
+     */
+    public function enableStrictCallbackRuntimeTemplate(): self
+    {
+        return $this->with(new BuilderConfig(strictCallbackRuntimeTemplate: true));
+    }
+
     public function build(): OpenApiValidatorInterface
     {
         $document = $this->loadSpec();
@@ -273,6 +293,7 @@ final readonly class OpenApiValidatorBuilder
         $maxJsonBodyBytes = $this->config->maxJsonBodyBytes ?? ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES;
         $maxMultipartBodyBytes = $this->config->maxMultipartBodyBytes ?? ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES;
         $strictStreaming = $this->config->strictStreaming ?? false;
+        $strictCallbackRuntimeTemplate = $this->config->strictCallbackRuntimeTemplate ?? false;
 
         $context = new ValidationContext(
             document: $document,
@@ -327,7 +348,7 @@ final readonly class OpenApiValidatorBuilder
                 responseValidation: new ResponseValidationHandler($context),
                 schemaValidation: new SchemaValidatorAdapter($context),
                 webhookValidation: new WebhookValidator($context, $securityValidation),
-                callbackValidation: new CallbackValidator($context, $securityValidation),
+                callbackValidation: new CallbackValidator($context, $securityValidation, $strictCallbackRuntimeTemplate),
                 pathRegexCache: $pathRegexCache,
                 regexValidator: $regexValidator,
                 cache: $this->config->cache,

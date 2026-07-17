@@ -194,6 +194,21 @@ $validator = OpenApiValidatorBuilder::create()
 $operation = $validator->validateCallback($request, 'myCallback');
 ```
 
+> **Security caveat**: Callback runtime expressions like `{$request.body#/callback_url}`
+> reference the original triggering request body and cannot be resolved by the
+> validator, so path validation is bypassed (any URL is accepted as a wildcard).
+> When the runtime template is attacker-controlled, declared security checks on
+> the callback pathItem still pass against an arbitrary URL. Use
+> `enableStrictCallbackRuntimeTemplate()` to fail-closed on unresolvable runtime
+> expressions and throw `UnresolvableCallbackPathException` instead:
+
+```php
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->enableStrictCallbackRuntimeTemplate()
+    ->build();
+```
+
 ### Link Resolution
 
 Resolve OpenAPI Link parameters from response data:
@@ -635,6 +650,7 @@ Use the runtime validator when you need the typed error classes (`TypeMismatchEr
 | `enableStrictFormats()` | Reject unknown format values instead of skipping | `false` |
 | `enableReportDeprecated()` | Log deprecated schema elements via PSR-3 logger | `true` |
 | `enableServerPathResolution()` | Strip server base path from request path before matching | `false` |
+| `enableStrictCallbackRuntimeTemplate()` | Fail-closed on callback runtime expressions like `{$request.body#/callback_url}` instead of treating them as wildcards | `false` |
 
 Deprecated reporting is enabled by default. Without a PSR-3 logger, deprecation warnings go to `NullLogger` and produce no output. There is no `disableReportDeprecated()` method; to suppress deprecation warnings, simply omit the logger (the default behavior).
 
@@ -974,6 +990,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `InvalidPatternException` | Invalid regex pattern in schema definition |
 | `UndefinedResponseException` | Response status code not defined in spec |
 | `RefResolutionException` | Failed to resolve `$ref` reference |
+| `UnresolvableCallbackPathException` | Callback runtime template (e.g. `{$request.body#/callback_url}`) cannot be resolved in strict mode |
 | `SchemaDepthExceededException` | Maximum schema nesting depth exceeded |
 | `UnknownValidatorException` | Unknown validator type requested |
 | `VersionNotFoundException` | Requested schema name or version is not registered (thrown by `SchemaRegistry::getOrFail()`) |

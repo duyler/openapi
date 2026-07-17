@@ -10,9 +10,11 @@ use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Callback\Exception\UnknownCallbackException;
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
+use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Request\RequestValidatorInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 
 use function array_key_exists;
 use function assert;
@@ -49,6 +51,7 @@ final readonly class CallbackValidator
     public function __construct(
         private readonly RequestValidatorInterface $requestValidator,
         private readonly PathRegexCache $pathRegexCache,
+        private readonly bool $strictCallbackRuntimeTemplate = false,
     ) {}
 
     public function validate(
@@ -192,6 +195,16 @@ final readonly class CallbackValidator
      * are treated as wildcards that accept any URL. The request path itself
      * is returned as the template.
      *
+     * Security caveat: when the runtime template is attacker-controlled (for
+     * example `{$request.body#/callback_url}` on a request whose body is
+     * user-supplied), wildcard path validation allows the request to target
+     * any URL while still passing declared security checks. Callers that
+     * cannot guarantee the expression source is trusted should enable strict
+     * callback runtime template mode via
+     * {@see OpenApiValidatorBuilder::enableStrictCallbackRuntimeTemplate()},
+     * which makes this method throw {@see UnresolvableCallbackPathException}
+     * instead of accepting the wildcard.
+     *
      * Full URL expressions (e.g. "https://example.com/webhook") are parsed
      * and their path component is compared against the request path. When
      * matched, the parsed path is returned as the template.
@@ -209,6 +222,10 @@ final readonly class CallbackValidator
     private function resolvePathTemplate(string $expression, string $requestPath): ?string
     {
         if (str_contains($expression, '{$')) {
+            if ($this->strictCallbackRuntimeTemplate) {
+                throw new UnresolvableCallbackPathException($expression);
+            }
+
             return $requestPath;
         }
 

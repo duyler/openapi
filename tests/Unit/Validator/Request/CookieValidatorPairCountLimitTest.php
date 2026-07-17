@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
 use Duyler\OpenApi\Validator\Request\CookieValidator;
 use Duyler\OpenApi\Validator\Request\ParameterDeserializer;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
@@ -51,7 +52,7 @@ final class CookieValidatorPairCountLimitTest extends TestCase
     }
 
     #[Test]
-    public function returns_empty_for_excessive_cookies(): void
+    public function throws_for_excessive_cookies(): void
     {
         $pairs = [];
         for ($i = 0; $i < 101; ++$i) {
@@ -59,9 +60,10 @@ final class CookieValidatorPairCountLimitTest extends TestCase
         }
         $cookieHeader = implode('; ', $pairs);
 
-        $result = $this->validator->parseCookies($cookieHeader);
+        $this->expectException(InvalidParameterException::class);
+        $this->expectExceptionMessage('Maximum cookie pairs of 100 exceeded');
 
-        self::assertSame([], $result);
+        $this->validator->parseCookies($cookieHeader);
     }
 
     #[Test]
@@ -81,7 +83,7 @@ final class CookieValidatorPairCountLimitTest extends TestCase
     }
 
     #[Test]
-    public function parse_cookie_style_exploded_returns_null_when_pair_count_exceeded(): void
+    public function parse_cookie_style_exploded_throws_when_pair_count_exceeded(): void
     {
         $parameter = new Parameter(
             name: 'tag',
@@ -95,9 +97,10 @@ final class CookieValidatorPairCountLimitTest extends TestCase
         }
         $cookieHeader = implode('; ', $pairs);
 
-        $result = $this->validator->parseCookieStyle($cookieHeader, $parameter);
+        $this->expectException(InvalidParameterException::class);
+        $this->expectExceptionMessage('Maximum cookie pairs of 100 exceeded');
 
-        self::assertNull($result);
+        $this->validator->parseCookieStyle($cookieHeader, $parameter);
     }
 
     #[Test]
