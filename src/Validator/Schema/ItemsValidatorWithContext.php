@@ -51,8 +51,8 @@ final readonly class ItemsValidatorWithContext
 
                 try {
                     $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
-                    $validator = new SchemaValidatorWithContext($this->document, $this->dependencies, $this->configuration);
-                    $validator->validateWithContext($normalizedItem, $itemSchema, $context, $useDiscriminator);
+                    $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
+                    $rootValidator->validateWithContext($normalizedItem, $itemSchema, $context, $useDiscriminator);
                 } finally {
                     $context->leaveBreadcrumb();
                 }

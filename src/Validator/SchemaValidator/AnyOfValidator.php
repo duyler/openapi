@@ -9,8 +9,14 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 
-final readonly class AnyOfValidator extends AbstractCompositionalValidator
+final readonly class AnyOfValidator extends AbstractCompositionalValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->anyOf && [] !== $schema->anyOf;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

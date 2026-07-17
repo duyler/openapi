@@ -13,11 +13,17 @@ use function is_array;
 use function is_string;
 use function sprintf;
 
-final readonly class FormatValidator implements SchemaValidatorInterface
+final readonly class FormatValidator implements KeywordApplicable
 {
     public function __construct(
         private readonly ValidatorDependencies $dependencies,
     ) {}
+
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->format && null !== $schema->type;
+    }
 
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

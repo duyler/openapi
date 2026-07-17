@@ -20,11 +20,15 @@ use function assert;
 
 final readonly class OneOfValidatorWithContext
 {
+    private readonly DiscriminatorValidator $discriminatorValidator;
+
     public function __construct(
         private readonly OpenApiDocument $document,
         private readonly SchemaValidatorDependencies $dependencies,
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
-    ) {}
+    ) {
+        $this->discriminatorValidator = new DiscriminatorValidator($this->dependencies, $this->configuration);
+    }
 
     public function validateWithContext(
         mixed $data,
@@ -76,10 +80,9 @@ final readonly class OneOfValidatorWithContext
             );
         }
 
-        $discriminatorValidator = new DiscriminatorValidator($this->dependencies, $this->configuration);
         $dataPath = $context->breadcrumbs->currentPath();
 
-        $discriminatorValidator->validate($data, $schema, $this->document, $dataPath);
+        $this->discriminatorValidator->validate($data, $schema, $this->document, $dataPath);
     }
 
     private function hasNullableSchema(array $oneOf): bool
@@ -102,8 +105,8 @@ final readonly class OneOfValidatorWithContext
                 $allowNull = $context->nullableAsType && ($subSchema->nullable
                     || SchemaValueNormalizer::typeIncludesNull($subSchema->type));
                 $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
-                $validator = new SchemaValidatorWithContext($this->document, $this->dependencies, $this->configuration);
-                $validator->validateWithContext($normalizedData, $subSchema, $context);
+                $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
+                $rootValidator->validateWithContext($normalizedData, $subSchema, $context);
                 ++$validCount;
             } catch (AbstractValidationError $e) {
                 $abstractErrors[] = $e;

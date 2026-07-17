@@ -12,8 +12,14 @@ use function assert;
 use function is_array;
 use function is_string;
 
-final readonly class PatternPropertiesValidator extends AbstractSchemaValidator
+final readonly class PatternPropertiesValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->patternProperties && [] !== $schema->patternProperties;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

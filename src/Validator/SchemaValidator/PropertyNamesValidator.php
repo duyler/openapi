@@ -10,8 +10,14 @@ use Override;
 
 use function is_array;
 
-final readonly class PropertyNamesValidator extends AbstractSchemaValidator
+final readonly class PropertyNamesValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->propertyNames;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

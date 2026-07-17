@@ -16,9 +16,15 @@ use function is_array;
 use function sprintf;
 use function is_string;
 
-final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator
+final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
     private const int MAX_ADDITIONAL_PROPERTY_ERRORS = 100;
+
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->additionalProperties;
+    }
 
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

@@ -50,8 +50,8 @@ final readonly class PropertiesValidatorWithContext
                 $context->enterBreadcrumb($name);
 
                 try {
-                    $validator = new SchemaValidatorWithContext($this->document, $this->dependencies, $this->configuration);
-                    $validator->validateWithContext($value, $propertySchema, $context, $useDiscriminator);
+                    $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
+                    $rootValidator->validateWithContext($value, $propertySchema, $context, $useDiscriminator);
                 } finally {
                     $context->leaveBreadcrumb();
                 }

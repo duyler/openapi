@@ -36,12 +36,24 @@ final class RefResolver implements RefResolverInterface
 
     private WeakMap $cache;
 
+    /** @var WeakMap<Schema, WeakMap<OpenApiDocument, bool>> */
+    private WeakMap $hasDiscriminatorCache;
+
+    /** @var WeakMap<Schema, bool> */
+    private WeakMap $hasRefCache;
+
     private readonly FileExternalRefResolver $builtinFileResolver;
 
     public function __construct(
         private readonly ?ExternalRefResolverInterface $externalRefResolver = null,
     ) {
         $this->cache = new WeakMap();
+        /** @var WeakMap<Schema, WeakMap<OpenApiDocument, bool>> $hasDiscriminatorCache */
+        $hasDiscriminatorCache = new WeakMap();
+        $this->hasDiscriminatorCache = $hasDiscriminatorCache;
+        /** @var WeakMap<Schema, bool> $hasRefCache */
+        $hasRefCache = new WeakMap();
+        $this->hasRefCache = $hasRefCache;
         $this->builtinFileResolver = new FileExternalRefResolver();
     }
 
@@ -49,6 +61,12 @@ final class RefResolver implements RefResolverInterface
     public function clear(): void
     {
         $this->cache = new WeakMap();
+        /** @var WeakMap<Schema, WeakMap<OpenApiDocument, bool>> $hasDiscriminatorCache */
+        $hasDiscriminatorCache = new WeakMap();
+        $this->hasDiscriminatorCache = $hasDiscriminatorCache;
+        /** @var WeakMap<Schema, bool> $hasRefCache */
+        $hasRefCache = new WeakMap();
+        $this->hasRefCache = $hasRefCache;
     }
 
     #[Override]
@@ -169,9 +187,26 @@ final class RefResolver implements RefResolverInterface
         OpenApiDocument $document,
         int $depth = 0,
     ): bool {
+        if (isset($this->hasDiscriminatorCache[$schema])) {
+            /** @var WeakMap<OpenApiDocument, bool> $docCache */
+            $docCache = $this->hasDiscriminatorCache[$schema];
+        } else {
+            /** @var WeakMap<OpenApiDocument, bool> $docCache */
+            $docCache = new WeakMap();
+            $this->hasDiscriminatorCache[$schema] = $docCache;
+        }
+
+        if (isset($docCache[$document])) {
+            /** @var bool $cached */
+            $cached = $docCache[$document];
+
+            return $cached;
+        }
+
         /** @var WeakMap<Schema, true> $visited */
         $visited = new WeakMap();
         [$has,] = $this->doSchemaHasDiscriminator($schema, $document, $visited, $depth);
+        $docCache[$document] = $has;
 
         return $has;
     }
@@ -179,9 +214,17 @@ final class RefResolver implements RefResolverInterface
     #[Override]
     public function schemaHasRef(Schema $schema, int $depth = 0): bool
     {
+        if (isset($this->hasRefCache[$schema])) {
+            /** @var bool $cached */
+            $cached = $this->hasRefCache[$schema];
+
+            return $cached;
+        }
+
         /** @var WeakMap<Schema, true> $visited */
         $visited = new WeakMap();
         [$has,] = $this->doSchemaHasRef($schema, $visited, $depth);
+        $this->hasRefCache[$schema] = $has;
 
         return $has;
     }

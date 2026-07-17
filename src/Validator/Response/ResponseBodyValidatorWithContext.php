@@ -48,9 +48,8 @@ final readonly class ResponseBodyValidatorWithContext
         );
         $this->exampleValidator = new ExampleValidator();
 
-        $this->contextSchemaValidator = new SchemaValidatorWithContext(
+        $this->contextSchemaValidator = $this->dependencies->rootSchemaValidator(
             $this->document,
-            $this->dependencies,
             $this->configuration,
         );
     }

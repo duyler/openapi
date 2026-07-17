@@ -17,7 +17,10 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
+use WeakMap;
 
+use function array_filter;
+use function array_values;
 use function assert;
 
 /**
@@ -30,7 +33,24 @@ final class SchemaValidator implements SchemaValidatorInterface
 {
     private ?ValidatorRegistryInterface $cachedRegistry = null;
 
-    public function __construct(private readonly ValidatorPool $pool, public readonly FormatRegistry $formatRegistry, private readonly ?ValidatorRegistryInterface $registry = null, private readonly bool $strictFormats = false, private readonly LoggerInterface $logger = new NullLogger(), private readonly bool $reportDeprecated = false, private readonly ?EventDispatcherInterface $eventDispatcher = null, private readonly RegexValidator $regexValidator = new RegexValidator(), private readonly PregExecutor $pregExecutor = new PregExecutor()) {}
+    /** @var WeakMap<Schema, list<SchemaValidatorInterface>> */
+    private WeakMap $applicableValidators;
+
+    public function __construct(
+        private readonly ValidatorPool $pool,
+        public readonly FormatRegistry $formatRegistry,
+        private readonly ?ValidatorRegistryInterface $registry = null,
+        private readonly bool $strictFormats = false,
+        private readonly LoggerInterface $logger = new NullLogger(),
+        private readonly bool $reportDeprecated = false,
+        private readonly ?EventDispatcherInterface $eventDispatcher = null,
+        private readonly RegexValidator $regexValidator = new RegexValidator(),
+        private readonly PregExecutor $pregExecutor = new PregExecutor(),
+    ) {
+        /** @var WeakMap<Schema, list<SchemaValidatorInterface>> $applicableValidators */
+        $applicableValidators = new WeakMap();
+        $this->applicableValidators = $applicableValidators;
+    }
 
     #[Override]
     public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
@@ -42,23 +62,52 @@ final class SchemaValidator implements SchemaValidatorInterface
         $context->incrementDepth();
 
         try {
-            $registry = $this->registry ?? $this->cachedRegistry ??= new DefaultValidatorRegistry(
-                $this->pool,
-                $this->formatRegistry,
-                $this->strictFormats,
-                $this->logger,
-                $this->reportDeprecated,
-                $this->eventDispatcher,
-                regexValidator: $this->regexValidator,
-                pregExecutor: $this->pregExecutor,
-            );
+            if (isset($this->applicableValidators[$schema])) {
+                /** @var list<SchemaValidatorInterface> $validators */
+                $validators = $this->applicableValidators[$schema];
+            } else {
+                $validators = $this->computeApplicableValidators($schema);
+                $this->applicableValidators[$schema] = $validators;
+            }
 
-            foreach ($registry->getAllValidators() as $validator) {
+            foreach ($validators as $validator) {
                 assert($validator instanceof SchemaValidatorInterface);
                 $validator->validate($data, $schema, $context);
             }
         } finally {
             $context->decrementDepth();
         }
+    }
+
+    private function getRegistry(): ValidatorRegistryInterface
+    {
+        return $this->registry ?? $this->cachedRegistry ??= new DefaultValidatorRegistry(
+            $this->pool,
+            $this->formatRegistry,
+            $this->strictFormats,
+            $this->logger,
+            $this->reportDeprecated,
+            $this->eventDispatcher,
+            regexValidator: $this->regexValidator,
+            pregExecutor: $this->pregExecutor,
+        );
+    }
+
+    /**
+     * @return list<SchemaValidatorInterface>
+     */
+    private function computeApplicableValidators(Schema $schema): array
+    {
+        $all = $this->getRegistry()->getAllValidators();
+
+        /** @var list<SchemaValidatorInterface> $filtered */
+        $filtered = array_values(array_filter(
+            $all,
+            static function (SchemaValidatorInterface $v) use ($schema): bool {
+                return !$v instanceof KeywordApplicable || $v->isApplicable($schema);
+            },
+        ));
+
+        return $filtered;
     }
 }

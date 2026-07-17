@@ -20,8 +20,14 @@ use function gettype;
 use function is_array;
 use function sprintf;
 
-final readonly class DependentSchemasValidator extends AbstractSchemaValidator
+final readonly class DependentSchemasValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->dependentSchemas && [] !== $schema->dependentSchemas;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

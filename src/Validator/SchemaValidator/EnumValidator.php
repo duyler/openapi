@@ -10,8 +10,14 @@ use Duyler\OpenApi\Validator\Exception\EnumError;
 use Duyler\OpenApi\Validator\Schema\JsonEquals;
 use Override;
 
-final readonly class EnumValidator extends AbstractSchemaValidator
+final readonly class EnumValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->enum && [] !== $schema->enum;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

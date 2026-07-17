@@ -25,7 +25,7 @@ use const LIBXML_NONET;
 use const LIBXML_NOWARNING;
 use const JSON_THROW_ON_ERROR;
 
-final readonly class ContentMediaTypeValidator implements SchemaValidatorInterface
+final readonly class ContentMediaTypeValidator implements KeywordApplicable
 {
     private const int JSON_MAX_DEPTH = JsonDepthLimit::Untrusted->value;
 
@@ -52,6 +52,12 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
     public function __construct(
         private readonly ValidatorDependencies $dependencies,
     ) {}
+
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->contentMediaType;
+    }
 
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

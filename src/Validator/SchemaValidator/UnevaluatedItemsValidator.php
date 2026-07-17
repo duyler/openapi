@@ -14,8 +14,14 @@ use function is_array;
 
 use const PHP_INT_MAX;
 
-final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator
+final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->unevaluatedItems;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

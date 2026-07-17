@@ -38,9 +38,8 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
         $this->negotiator = new ContentTypeNegotiator($resolvedPregExecutor);
         $this->exampleValidator = new ExampleValidator();
 
-        $this->contextSchemaValidator = new SchemaValidatorWithContext(
+        $this->contextSchemaValidator = $this->dependencies->rootSchemaValidator(
             $this->document,
-            $this->dependencies,
             $this->configuration,
         );
         $this->coercer = new RequestBodyCoercer();

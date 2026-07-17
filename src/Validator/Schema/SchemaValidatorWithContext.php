@@ -13,9 +13,13 @@ use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\SchemaValidator\KeywordApplicable;
+use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use WeakMap;
 
+use function array_filter;
+use function array_values;
 use function assert;
 use function count;
 use function is_array;
@@ -30,6 +34,9 @@ final class SchemaValidatorWithContext
     /** @var WeakMap<Schema, Schema> */
     private WeakMap $resolvedCache;
 
+    /** @var WeakMap<Schema, list<SchemaValidatorInterface>> */
+    private WeakMap $applicableStatelessValidators;
+
     public function __construct(
         private readonly OpenApiDocument $document,
         private readonly SchemaValidatorDependencies $dependencies,
@@ -42,6 +49,9 @@ final class SchemaValidatorWithContext
         /** @var WeakMap<Schema, Schema> $resolvedCache */
         $resolvedCache = new WeakMap();
         $this->resolvedCache = $resolvedCache;
+        /** @var WeakMap<Schema, list<SchemaValidatorInterface>> $applicableStatelessValidators */
+        $applicableStatelessValidators = new WeakMap();
+        $this->applicableStatelessValidators = $applicableStatelessValidators;
     }
 
     public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidatorMode $mode = null): void
@@ -253,7 +263,15 @@ final class SchemaValidatorWithContext
     {
         $errors = [];
 
-        foreach ($this->dependencies->statelessValidators->getValidators() as $validator) {
+        if (isset($this->applicableStatelessValidators[$schema])) {
+            /** @var list<SchemaValidatorInterface> $validators */
+            $validators = $this->applicableStatelessValidators[$schema];
+        } else {
+            $validators = $this->computeApplicableStatelessValidators($schema);
+            $this->applicableStatelessValidators[$schema] = $validators;
+        }
+
+        foreach ($validators as $validator) {
             try {
                 $validator->validate($data, $schema, $context);
             } catch (InvalidFormatException $e) {
@@ -269,5 +287,23 @@ final class SchemaValidatorWithContext
                 errors: $errors,
             );
         }
+    }
+
+    /**
+     * @return list<SchemaValidatorInterface>
+     */
+    private function computeApplicableStatelessValidators(Schema $schema): array
+    {
+        $all = $this->dependencies->statelessValidators->getValidators();
+
+        /** @var list<SchemaValidatorInterface> $filtered */
+        $filtered = array_values(array_filter(
+            $all,
+            static function (SchemaValidatorInterface $v) use ($schema): bool {
+                return !$v instanceof KeywordApplicable || $v->isApplicable($schema);
+            },
+        ));
+
+        return $filtered;
     }
 }

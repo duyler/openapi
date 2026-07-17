@@ -104,6 +104,12 @@ final readonly class CookieValidator extends AbstractParameterValidator
 
     public function validateWithHeader(array $data, string $cookieHeader, array $parameterSchemas): void
     {
+        $context = ValidationContext::create(
+            pool: $this->pool,
+            nullableAsType: $this->config->nullableAsType,
+            emptyArrayStrategy: $this->config->emptyArrayStrategy,
+        );
+
         foreach ($parameterSchemas as $param) {
             if (false === $param instanceof Parameter) {
                 continue;
@@ -131,11 +137,6 @@ final readonly class CookieValidator extends AbstractParameterValidator
             $value = $this->coercer->coerce($value, $param, $this->coercion, true);
 
             if (null !== $param->schema) {
-                $context = ValidationContext::create(
-                    pool: $this->pool,
-                    nullableAsType: $this->config->nullableAsType,
-                    emptyArrayStrategy: $this->config->emptyArrayStrategy,
-                );
                 $this->schemaValidator->validate($value, $param->schema, $context);
             }
         }

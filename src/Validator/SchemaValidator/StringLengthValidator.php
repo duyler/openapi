@@ -13,11 +13,17 @@ use Override;
 
 use function is_string;
 
-final readonly class StringLengthValidator extends AbstractSchemaValidator
+final readonly class StringLengthValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
     use LengthValidationTrait;
 
     private const string JSON_ENCODING = 'UTF-8';
+
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->minLength || null !== $schema->maxLength;
+    }
 
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

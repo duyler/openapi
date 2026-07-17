@@ -30,9 +30,17 @@ use function serialize;
 
 use const JSON_THROW_ON_ERROR;
 
-final readonly class ArrayLengthValidator extends AbstractSchemaValidator
+final readonly class ArrayLengthValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
     use LengthValidationTrait;
+
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->minItems
+            || null !== $schema->maxItems
+            || true === $schema->uniqueItems;
+    }
 
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

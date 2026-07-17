@@ -98,16 +98,6 @@ abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterf
 
     protected function createSchemaValidator(): SchemaValidator
     {
-        return new SchemaValidator(
-            pool: $this->dependencies->pool,
-            formatRegistry: $this->dependencies->formatRegistry,
-            registry: $this->dependencies->registry,
-            strictFormats: $this->dependencies->strictFormats,
-            logger: $this->dependencies->logger,
-            reportDeprecated: $this->dependencies->reportDeprecated,
-            eventDispatcher: $this->dependencies->eventDispatcher,
-            regexValidator: $this->dependencies->regexValidator,
-            pregExecutor: $this->dependencies->pregExecutor,
-        );
+        return $this->dependencies->rootSchemaValidator();
     }
 }

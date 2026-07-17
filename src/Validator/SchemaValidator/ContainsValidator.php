@@ -15,8 +15,14 @@ use Override;
 
 use function is_array;
 
-final readonly class ContainsValidator extends AbstractSchemaValidator
+final readonly class ContainsValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->contains;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

@@ -24,13 +24,23 @@ use function round;
 use function sprintf;
 use function assert;
 
-final readonly class NumericRangeValidator extends AbstractSchemaValidator
+final readonly class NumericRangeValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
     private const float RELATIVE_EPSILON_FACTOR = 1e-9;
 
     private const float LARGE_QUOTIENT_THRESHOLD = 1e15;
 
     private const int BCMATH_SCALE = 20;
+
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->minimum
+            || null !== $schema->maximum
+            || null !== $schema->exclusiveMinimum
+            || null !== $schema->exclusiveMaximum
+            || null !== $schema->multipleOf;
+    }
 
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

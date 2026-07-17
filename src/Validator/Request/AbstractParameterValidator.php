@@ -26,6 +26,12 @@ abstract readonly class AbstractParameterValidator
     {
         $location = $this->getLocation();
 
+        $context = ValidationContext::create(
+            pool: $this->pool,
+            nullableAsType: $this->config->nullableAsType,
+            emptyArrayStrategy: $this->config->emptyArrayStrategy,
+        );
+
         foreach ($parameterSchemas as $param) {
             if (false === $param instanceof Parameter) {
                 continue;
@@ -54,11 +60,6 @@ abstract readonly class AbstractParameterValidator
             $value = $this->coercer->coerce($value, $param, $this->coercion, true);
 
             if (null !== $param->schema) {
-                $context = ValidationContext::create(
-                    pool: $this->pool,
-                    nullableAsType: $this->config->nullableAsType,
-                    emptyArrayStrategy: $this->config->emptyArrayStrategy,
-                );
                 $this->schemaValidator->validate($value, $param->schema, $context);
             }
         }

@@ -186,13 +186,13 @@ final readonly class DiscriminatorValidator
         string $dataPath,
     ): void {
         /** @var array<array-key, mixed> $data */
-        $validator = new SchemaValidatorWithContext($document, $this->dependencies, $this->configuration);
+        $rootValidator = $this->dependencies->rootSchemaValidator($document, $this->configuration);
         $context = ValidationContext::create(
             $this->dependencies->pool,
             $this->dependencies->errorFormatter,
             $this->configuration->nullableAsType,
             $this->configuration->emptyArrayStrategy,
         );
-        $validator->validateWithContext($data, $schema, $context, useDiscriminator: false);
+        $rootValidator->validateWithContext($data, $schema, $context, useDiscriminator: false);
     }
 }

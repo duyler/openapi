@@ -10,8 +10,14 @@ use Duyler\OpenApi\Validator\Exception\ConstError;
 use Duyler\OpenApi\Validator\Schema\JsonEquals;
 use Override;
 
-final readonly class ConstValidator extends AbstractSchemaValidator
+final readonly class ConstValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return $schema->hasConst || null !== $schema->const;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

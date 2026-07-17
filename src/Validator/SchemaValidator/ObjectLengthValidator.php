@@ -15,9 +15,15 @@ use Override;
 use function count;
 use function is_array;
 
-final readonly class ObjectLengthValidator extends AbstractSchemaValidator
+final readonly class ObjectLengthValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
     use LengthValidationTrait;
+
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->minProperties || null !== $schema->maxProperties;
+    }
 
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void

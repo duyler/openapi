@@ -13,8 +13,14 @@ use Override;
 use function array_key_exists;
 use function is_array;
 
-final readonly class RequiredValidator extends AbstractSchemaValidator
+final readonly class RequiredValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->required && [] !== $schema->required;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

@@ -11,8 +11,14 @@ use Override;
 
 use function count;
 
-final readonly class AllOfValidator extends AbstractCompositionalValidator
+final readonly class AllOfValidator extends AbstractCompositionalValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->allOf && [] !== $schema->allOf;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

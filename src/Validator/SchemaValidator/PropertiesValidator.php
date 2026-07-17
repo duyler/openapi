@@ -17,8 +17,14 @@ use function array_key_exists;
 use function is_array;
 use function sprintf;
 
-final readonly class PropertiesValidator extends AbstractSchemaValidator
+final readonly class PropertiesValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->properties && [] !== $schema->properties;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

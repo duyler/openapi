@@ -98,9 +98,8 @@ final readonly class ValidationContext
             ),
         );
 
-        $this->schemaValidatorWithContext = new SchemaValidatorWithContext(
+        $this->schemaValidatorWithContext = $this->schemaValidatorDependencies->rootSchemaValidator(
             $this->document,
-            $this->schemaValidatorDependencies,
             $this->buildValidatorConfiguration(),
         );
         $this->requestValidator = $this->buildRequestValidator();
