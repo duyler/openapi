@@ -136,9 +136,7 @@ final readonly class StreamingContentParser
         $currentEvent = [];
 
         $lines = preg_split(self::SSE_LINE_SPLIT_PATTERN, $body);
-        if (false === $lines) {
-            return [];
-        }
+        assert(is_array($lines));
 
         foreach ($lines as $line) {
             [$currentEvent, $events] = $this->processSseLine($line, $currentEvent, $events);
