@@ -53,15 +53,10 @@ final readonly class RequestValidationHandler
             callback: function () use ($request, $requestPath, $matchedPath, $method): Operation {
                 $operation = $this->pathFinder->findOperation($matchedPath, $method);
 
-                $pathItem = $this->context->document->paths?->paths[$operation->path] ?? null;
-                if (null === $pathItem) {
-                    throw new BuilderException(sprintf('Path not found: %s', $operation->path));
-                }
-
-                $op = PathItemHelper::getOperation($pathItem, $method);
+                $op = $operation->schemaOperation;
                 if (null === $op) {
                     throw new BuilderException(
-                        sprintf('Method not found: %s %s', $method, $operation->path),
+                        sprintf('Operation schema unavailable: %s %s', $method, $operation->path),
                     );
                 }
 

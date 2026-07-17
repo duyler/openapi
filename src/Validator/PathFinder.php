@@ -11,7 +11,6 @@ use Duyler\OpenApi\Validator\Request\PathParser;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 
 use function array_key_exists;
-use function array_keys;
 use function assert;
 use function count;
 use function is_array;
@@ -64,15 +63,25 @@ final readonly class PathFinder
             );
         }
 
-        if (1 === count($candidates)) {
-            return $candidates[0];
+        [$operation, $pathParameters] = 1 === count($candidates)
+            ? $candidates[0]
+            : $this->prioritizeCandidates($candidates);
+
+        if ([] === $pathParameters) {
+            return $operation;
         }
 
-        return $this->prioritizeCandidates($candidates);
+        return new Operation(
+            path: $operation->path,
+            method: $operation->method,
+            operationId: $operation->operationId,
+            pathParameters: $pathParameters,
+            schemaOperation: $operation->schemaOperation,
+        );
     }
 
     /**
-     * @return array<int, Operation>
+     * @return array<int, array{0: Operation, 1: array<string, string>}>
      */
     private function findCandidates(string $requestPath, string $method): array
     {
@@ -93,14 +102,17 @@ final readonly class PathFinder
         );
 
         foreach ($matches as ['template' => $template, 'item' => $pathItem]) {
+            $pathParameters = $this->pathParser->tryMatchPath($requestPath, $template);
+            if (null === $pathParameters) {
+                continue;
+            }
+
             $operation = $this->getOperation($pathItem, $method, $template);
             if (null === $operation) {
                 continue;
             }
 
-            if (null !== $this->pathParser->tryMatchPath($requestPath, $template)) {
-                $candidates[] = $operation;
-            }
+            $candidates[] = [$operation, $pathParameters];
         }
 
         return $candidates;
@@ -202,11 +214,23 @@ final readonly class PathFinder
     }
 
     /**
-     * @param array<int, Operation> $candidates
+     * @param array<int, array{0: Operation, 1: array<string, string>}> $candidates
+     *
+     * @return array{0: Operation, 1: array<string, string>}
      */
-    private function prioritizeCandidates(array $candidates): Operation
+    private function prioritizeCandidates(array $candidates): array
     {
-        usort($candidates, fn(Operation $a, Operation $b): int => $a->countPlaceholders() <=> $b->countPlaceholders());
+        usort(
+            $candidates,
+            function (array $a, array $b): int {
+                /** @var Operation $operationA */
+                $operationA = $a[0];
+                /** @var Operation $operationB */
+                $operationB = $b[0];
+
+                return $operationA->countPlaceholders() <=> $operationB->countPlaceholders();
+            },
+        );
 
         return $candidates[0];
     }
@@ -218,13 +242,23 @@ final readonly class PathFinder
         $op = $pathItem->getOperation($normalizedMethod);
 
         if (null !== $op) {
-            return new Operation($pathPattern, $method);
+            return new Operation(
+                path: $pathPattern,
+                method: $method,
+                operationId: $op->operationId,
+                schemaOperation: $op,
+            );
         }
 
         if (null !== $pathItem->additionalOperations) {
-            foreach (array_keys($pathItem->additionalOperations) as $opMethod) {
+            foreach ($pathItem->additionalOperations as $opMethod => $additionalOp) {
                 if (strtolower($opMethod) === $normalizedMethod) {
-                    return new Operation($pathPattern, $method);
+                    return new Operation(
+                        path: $pathPattern,
+                        method: $method,
+                        operationId: $additionalOp->operationId,
+                        schemaOperation: $additionalOp,
+                    );
                 }
             }
         }

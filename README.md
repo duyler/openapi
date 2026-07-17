@@ -69,6 +69,12 @@ class UserService
     public function handleRequest(ServerRequestInterface $request): void
     {
         $operation = $this->validator->validateRequest($request);
+        // $operation->path             template path, e.g. "/users/{id}"
+        // $operation->method           matched HTTP method
+        // $operation->operationId      operationId from the spec (nullable)
+        // $operation->pathParameters   resolved values, e.g. ['id' => '42']
+        // $operation->schemaOperation  Schema\Model\Operation reference (nullable)
+        $userId = $operation->pathParameters['id'] ?? null;
         // ...
     }
 }
@@ -87,6 +93,15 @@ The interface exposes the following methods:
 | `resolveLink(string $linkName, array $responseData): ResolvedLink` | Resolve link parameters from response data (response body only) |
 | `resolveLinkWithContext(string $linkName, LinkContext $context): ResolvedLink` | Resolve link parameters with full Runtime Expression support ($request.*, $response.body/header/query, $url, $method, $statusCode) |
 | `reset(): void` | Reset validator state for reuse |
+
+The returned `Operation` DTO is a `final readonly` value object. Beyond the
+matched `path` (template form, e.g. `/users/{id}`) and `method`, it carries
+resolved `pathParameters` (raw `array<string, string>` keyed by placeholder
+name), `operationId` (nullable, populated when the spec declares one), and
+`schemaOperation` (nullable reference to the matched
+`Duyler\OpenApi\Schema\Model\Operation` for direct access to `requestBody`,
+`responses`, `security`, etc.). All newly added fields have defaults, so
+`new Operation('/users', 'GET')` and existing call sites keep working.
 
 ## Usage
 
