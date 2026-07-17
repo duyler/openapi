@@ -27,7 +27,7 @@ final readonly class RequestValidationHandler
     private readonly ServerPathMatcher $serverPathMatcher;
 
     public function __construct(
-        private readonly ValidationContext $context,
+        private readonly ValidatorDependencies $context,
         private readonly PathFinder $pathFinder,
         private readonly bool $securityValidation = false,
         private readonly bool $serverPathResolution = false,

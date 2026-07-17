@@ -25,7 +25,7 @@ final readonly class SchemaValidatorAdapter
     private readonly RefResolver $refResolver;
 
     public function __construct(
-        private readonly ValidationContext $context,
+        private readonly ValidatorDependencies $context,
     ) {
         $this->eventDispatcher = $context->eventDispatcher;
         $this->logger = $context->logger;

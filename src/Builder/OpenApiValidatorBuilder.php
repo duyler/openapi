@@ -29,7 +29,7 @@ use Duyler\OpenApi\Validator\Validation\CallbackValidator;
 use Duyler\OpenApi\Validator\Validation\RequestValidationHandler;
 use Duyler\OpenApi\Validator\Validation\ResponseValidationHandler;
 use Duyler\OpenApi\Validator\Validation\SchemaValidatorAdapter;
-use Duyler\OpenApi\Validator\Validation\ValidationContext;
+use Duyler\OpenApi\Validator\Validation\ValidatorDependencies as ValidationAssembler;
 use Duyler\OpenApi\Validator\Validation\WebhookValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Exception;
@@ -295,7 +295,7 @@ final readonly class OpenApiValidatorBuilder
         $strictStreaming = $this->config->strictStreaming ?? false;
         $strictCallbackRuntimeTemplate = $this->config->strictCallbackRuntimeTemplate ?? false;
 
-        $context = new ValidationContext(
+        $context = new ValidationAssembler(
             document: $document,
             pool: $pool,
             formatRegistry: $formatRegistry,

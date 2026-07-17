@@ -24,7 +24,7 @@ final readonly class WebhookValidator
     private readonly SecurityValidator $securityValidator;
 
     public function __construct(
-        private readonly ValidationContext $context,
+        private readonly ValidatorDependencies $context,
         private readonly bool $securityValidation = false,
     ) {
         $this->eventDispatcher = $context->eventDispatcher;

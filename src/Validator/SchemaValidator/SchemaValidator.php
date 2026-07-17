@@ -31,7 +31,7 @@ use function assert;
  */
 final class SchemaValidator implements SchemaValidatorInterface
 {
-    private ?ValidatorRegistryInterface $cachedRegistry = null;
+    private readonly ValidatorRegistryInterface $effectiveRegistry;
 
     /** @var WeakMap<Schema, list<SchemaValidatorInterface>> */
     private WeakMap $applicableValidators;
@@ -39,7 +39,7 @@ final class SchemaValidator implements SchemaValidatorInterface
     public function __construct(
         private readonly ValidatorPool $pool,
         public readonly FormatRegistry $formatRegistry,
-        private readonly ?ValidatorRegistryInterface $registry = null,
+        ?ValidatorRegistryInterface $registry = null,
         private readonly bool $strictFormats = false,
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly bool $reportDeprecated = false,
@@ -47,6 +47,17 @@ final class SchemaValidator implements SchemaValidatorInterface
         private readonly RegexValidator $regexValidator = new RegexValidator(),
         private readonly PregExecutor $pregExecutor = new PregExecutor(),
     ) {
+        $this->effectiveRegistry = $registry ?? new DefaultValidatorRegistry(
+            $this->pool,
+            $this->formatRegistry,
+            $this->strictFormats,
+            $this->logger,
+            $this->reportDeprecated,
+            $this->eventDispatcher,
+            regexValidator: $this->regexValidator,
+            pregExecutor: $this->pregExecutor,
+        );
+
         /** @var WeakMap<Schema, list<SchemaValidatorInterface>> $applicableValidators */
         $applicableValidators = new WeakMap();
         $this->applicableValidators = $applicableValidators;
@@ -81,16 +92,7 @@ final class SchemaValidator implements SchemaValidatorInterface
 
     private function getRegistry(): ValidatorRegistryInterface
     {
-        return $this->registry ?? $this->cachedRegistry ??= new DefaultValidatorRegistry(
-            $this->pool,
-            $this->formatRegistry,
-            $this->strictFormats,
-            $this->logger,
-            $this->reportDeprecated,
-            $this->eventDispatcher,
-            regexValidator: $this->regexValidator,
-            pregExecutor: $this->pregExecutor,
-        );
+        return $this->effectiveRegistry;
     }
 
     /**

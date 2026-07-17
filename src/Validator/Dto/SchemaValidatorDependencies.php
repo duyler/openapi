@@ -61,7 +61,7 @@ final class SchemaValidatorDependencies
 
     /**
      * Shared top-level validator bound to a document. First-call-wins on
-     * configuration: within one Validation\ValidationContext both are constant.
+     * configuration: within one Validation\ValidatorDependencies both are constant.
      * Per-request state lives in Error\ValidationContext, passed by argument.
      */
     public function rootSchemaValidator(

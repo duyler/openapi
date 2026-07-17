@@ -11,6 +11,20 @@ use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
+/**
+ * Per-validation mutable state: breadcrumb stack (dataPath assembly) and
+ * recursion depth counter (MAX_DEPTH DoS guard).
+ *
+ * Concurrency contract (P-062): one instance per validate() entry-point
+ * call. The instance MUST NOT be stored as a property on a shared
+ * validator — it is passed as a method argument through the recursion
+ * chain. Under prefork (PHP-FPM, RoadRunner) each request implicitly
+ * gets a fresh call stack. Under shared-validator runtimes (Swoole
+ * coroutines, FrankenPHP threaded workers) the same validator instance
+ * handles many sequential requests, but each validate() call creates a
+ * fresh context — coroutine A and coroutine B never observe each
+ * other's breadcrumbs or depth.
+ */
 final class ValidationContext
 {
     public const int MAX_DEPTH = 64;

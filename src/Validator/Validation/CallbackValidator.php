@@ -24,7 +24,7 @@ final readonly class CallbackValidator
     private readonly SecurityValidator $securityValidator;
 
     public function __construct(
-        private readonly ValidationContext $context,
+        private readonly ValidatorDependencies $context,
         private readonly bool $securityValidation = false,
         private readonly bool $strictCallbackRuntimeTemplate = false,
     ) {
