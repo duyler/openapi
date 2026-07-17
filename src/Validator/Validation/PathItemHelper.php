@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Validation;
 
-use Duyler\OpenApi\Schema\Model\Operation as OperationModel;
+use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\Model\PathItem;
 
 final readonly class PathItemHelper
 {
-    public static function getOperation(PathItem $pathItem, string $method): ?OperationModel
+    public static function getOperation(PathItem $pathItem, string $method): ?Operation
     {
         $method = strtolower($method);
 

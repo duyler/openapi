@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Error\Formatter;
 
 use Duyler\OpenApi\Validator\Exception\ValidationErrorInterface;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 
 use function sprintf;
@@ -27,11 +28,15 @@ final class SimpleFormatter implements ErrorFormatterInterface
     #[Override]
     public function formatMultiple(array $errors): string
     {
-        $lines = array_map(
+        return implode("\n", array_map(
             $this->format(...),
             $errors,
-        );
+        ));
+    }
 
-        return implode("\n", $lines);
+    #[Override]
+    public function formatException(ValidationException $exception): string
+    {
+        return $this->formatMultiple($exception->getErrors());
     }
 }

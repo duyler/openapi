@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Response;
 
+use Duyler\OpenApi\Validator\Exception\MalformedStreamRecordException;
 use Duyler\OpenApi\Validator\JsonDepthLimit;
+use Duyler\OpenApi\Validator\Util\LogContextSanitizer;
+use Generator;
 use JsonException;
 use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface;
@@ -25,11 +28,12 @@ use const JSON_THROW_ON_ERROR;
 final readonly class StreamingContentParser
 {
     private const string RECORD_SEPARATOR = "\x1E";
-    private const int JSON_MAX_DEPTH = JsonDepthLimit::Trusted->value;
+    private const int JSON_MAX_DEPTH = JsonDepthLimit::Untrusted->value;
     private const int STREAM_CHUNK_SIZE = 8192;
     private const string UTF8_BOM = "\xEF\xBB\xBF";
     private const int DEFAULT_MAX_LINE_LENGTH = 1_048_576;
     private const int DEFAULT_MAX_RECORD_LENGTH = 10_485_760;
+    private const int LOG_RECORD_TRUNCATE_LENGTH = 256;
 
     /**
      * W3C Server-Sent Events default event type used when the event field is absent.
@@ -47,6 +51,11 @@ final readonly class StreamingContentParser
     private const string SSE_LINE_SPLIT_PATTERN = '/\r\n|\r|\n/';
 
     /**
+     * Line-splitting pattern for NDJSON streams: tolerant CRLF or LF.
+     */
+    private const string NDJSON_LINE_SPLIT_PATTERN = '/\r?\n/';
+
+    /**
      * Single U+0020 SPACE removed from the start of an SSE field value per
      * WHATWG HTML SSE §8.2.6 (exactly one, never tabs or other whitespace).
      */
@@ -56,6 +65,7 @@ final readonly class StreamingContentParser
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly int $maxLineLength = self::DEFAULT_MAX_LINE_LENGTH,
         private readonly int $maxRecordLength = self::DEFAULT_MAX_RECORD_LENGTH,
+        private readonly bool $strictStreaming = false,
     ) {}
 
     /**
@@ -99,13 +109,13 @@ final readonly class StreamingContentParser
     {
         $body = $this->stripBom($body);
 
-        $lines = preg_split('/\r?\n/', trim($body));
+        $lines = preg_split(self::NDJSON_LINE_SPLIT_PATTERN, trim($body));
         assert(is_array($lines));
         /** @var list<array<int|string, mixed>|null> $items */
         $items = [];
 
         foreach ($lines as $line) {
-            $this->appendJsonLine($items, $line);
+            $items = $this->appendJsonLine($items, $line);
         }
 
         return $items;
@@ -122,35 +132,14 @@ final readonly class StreamingContentParser
 
         /** @var list<array<int|string, mixed>|null> $events */
         $events = [];
+        /** @var array<string, string> $currentEvent */
         $currentEvent = [];
 
         $lines = preg_split(self::SSE_LINE_SPLIT_PATTERN, $body);
-        if (false === $lines) {
-            return [];
-        }
+        assert(is_array($lines));
 
         foreach ($lines as $line) {
-            if ('' === $line) {
-                if ([] !== $currentEvent) {
-                    $events[] = $this->formatSseEvent($currentEvent);
-                    $currentEvent = [];
-                }
-                continue;
-            }
-
-            if (str_starts_with($line, ':')) {
-                continue;
-            }
-
-            $colonPos = strpos($line, ':');
-            if (false !== $colonPos) {
-                $field = substr($line, 0, $colonPos);
-                $rawValue = substr($line, $colonPos + 1);
-                $value = str_starts_with($rawValue, self::SSE_FIELD_SPACE)
-                    ? substr($rawValue, 1)
-                    : $rawValue;
-                $this->applySseField($currentEvent, $field, $value);
-            }
+            [$currentEvent, $events] = $this->processSseLine($line, $currentEvent, $events);
         }
 
         if ([] !== $currentEvent) {
@@ -188,7 +177,7 @@ final readonly class StreamingContentParser
             $json = trim($json);
 
             if ('' !== $json) {
-                $this->appendJsonSeqItem($items, $json);
+                $items = $this->appendJsonSeqItem($items, $json);
             }
 
             $pos = $endPos;
@@ -208,11 +197,13 @@ final readonly class StreamingContentParser
 
     /**
      * @param list<array<int|string, mixed>|null> $items
+     *
+     * @return list<array<int|string, mixed>|null>
      */
-    private function appendJsonLine(array &$items, string $line): void
+    private function appendJsonLine(array $items, string $line): array
     {
         if ('' === trim($line)) {
-            return;
+            return $items;
         }
 
         try {
@@ -220,23 +211,30 @@ final readonly class StreamingContentParser
             $decoded = json_decode($line, true, self::JSON_MAX_DEPTH, JSON_THROW_ON_ERROR);
             $items[] = $decoded;
         } catch (JsonException $exception) {
+            if ($this->strictStreaming) {
+                throw new MalformedStreamRecordException($line, $exception);
+            }
             $this->logger->warning('Failed to parse JSON line in NDJSON stream', [
-                'line' => $line,
+                'line' => $this->truncateForLog($line),
                 'exception' => $exception,
             ]);
             $items[] = null;
         }
+
+        return $items;
     }
 
     /**
      * @param list<array<int|string, mixed>|null> $items
+     *
+     * @return list<array<int|string, mixed>|null>
      */
-    private function appendJsonSeqItem(array &$items, string $json): void
+    private function appendJsonSeqItem(array $items, string $json): array
     {
         $json = trim($json);
 
         if ('' === $json) {
-            return;
+            return $items;
         }
 
         try {
@@ -244,21 +242,39 @@ final readonly class StreamingContentParser
             $decoded = json_decode($json, true, self::JSON_MAX_DEPTH, JSON_THROW_ON_ERROR);
             $items[] = $decoded;
         } catch (JsonException $exception) {
+            if ($this->strictStreaming) {
+                throw new MalformedStreamRecordException($json, $exception);
+            }
             $this->logger->warning('Failed to parse JSON sequence item', [
-                'json' => $json,
+                'json' => $this->truncateForLog($json),
                 'exception' => $exception,
             ]);
             $items[] = null;
         }
+
+        return $items;
+    }
+
+    private function truncateForLog(string $record): string
+    {
+        return LogContextSanitizer::truncate($record, self::LOG_RECORD_TRUNCATE_LENGTH);
     }
 
     /**
-     * @return list<array<int|string, mixed>|null>
+     * Chunked line reader shared by NDJSON and SSE stream parsers.
+     *
+     * Reads the stream in fixed-size chunks, strips UTF-8 BOM from the first
+     * chunk, enforces the per-line length cap, and yields each complete line
+     * using the supplied split pattern. After the stream is exhausted, yields
+     * the remaining buffer once (empty string when the stream ends on a line
+     * terminator).
+     *
+     * @param non-empty-string $splitPattern
+     *
+     * @return Generator<int, string, void, void>
      */
-    private function parseJsonLinesFromStream(StreamInterface $stream): array
+    private function readStreamInLines(StreamInterface $stream, string $splitPattern): Generator
     {
-        /** @var list<array<int|string, mixed>|null> $items */
-        $items = [];
         $buffer = '';
         $bomStripped = false;
 
@@ -270,9 +286,7 @@ final readonly class StreamingContentParser
             }
 
             if (false === $bomStripped) {
-                if (str_starts_with($chunk, self::UTF8_BOM)) {
-                    $chunk = substr($chunk, strlen(self::UTF8_BOM));
-                }
+                $chunk = $this->stripBom($chunk);
                 $bomStripped = true;
             }
 
@@ -285,17 +299,31 @@ final readonly class StreamingContentParser
                 ));
             }
 
-            $lines = preg_split('/\r?\n/', $buffer);
+            $lines = preg_split($splitPattern, $buffer);
             assert(is_array($lines));
 
+            /** @var string $buffer */
             $buffer = array_pop($lines);
 
             foreach ($lines as $line) {
-                $this->appendJsonLine($items, $line);
+                yield $line;
             }
         }
 
-        $this->appendJsonLine($items, $buffer);
+        yield $buffer;
+    }
+
+    /**
+     * @return list<array<int|string, mixed>|null>
+     */
+    private function parseJsonLinesFromStream(StreamInterface $stream): array
+    {
+        /** @var list<array<int|string, mixed>|null> $items */
+        $items = [];
+
+        foreach ($this->readStreamInLines($stream, self::NDJSON_LINE_SPLIT_PATTERN) as $line) {
+            $items = $this->appendJsonLine($items, $line);
+        }
 
         return $items;
     }
@@ -307,49 +335,11 @@ final readonly class StreamingContentParser
     {
         /** @var list<array<int|string, mixed>|null> $events */
         $events = [];
-        $buffer = '';
+        /** @var array<string, string> $currentEvent */
         $currentEvent = [];
-        $bomStripped = false;
 
-        while (!$stream->eof()) {
-            $chunk = $stream->read(self::STREAM_CHUNK_SIZE);
-
-            if ('' === $chunk) {
-                break;
-            }
-
-            if (false === $bomStripped) {
-                if (str_starts_with($chunk, self::UTF8_BOM)) {
-                    $chunk = substr($chunk, strlen(self::UTF8_BOM));
-                }
-                $bomStripped = true;
-            }
-
-            $buffer .= $chunk;
-
-            if (strlen($buffer) > $this->maxLineLength) {
-                throw new RuntimeException(sprintf(
-                    'Stream line exceeds maximum allowed length of %d bytes',
-                    $this->maxLineLength,
-                ));
-            }
-
-            $lines = preg_split(self::SSE_LINE_SPLIT_PATTERN, $buffer);
-            assert(is_array($lines));
-
-            $buffer = array_pop($lines);
-
-            foreach ($lines as $line) {
-                $this->processSseLine($line, $currentEvent, $events);
-            }
-        }
-
-        /** @var string $buffer */
-        $remainingLines = preg_split(self::SSE_LINE_SPLIT_PATTERN, $buffer);
-        assert(is_array($remainingLines));
-
-        foreach ($remainingLines as $line) {
-            $this->processSseLine($line, $currentEvent, $events);
+        foreach ($this->readStreamInLines($stream, self::SSE_LINE_SPLIT_PATTERN) as $line) {
+            [$currentEvent, $events] = $this->processSseLine($line, $currentEvent, $events);
         }
 
         if ([] !== $currentEvent) {
@@ -360,22 +350,25 @@ final readonly class StreamingContentParser
     }
 
     /**
-     * @param array<string, string> $currentEvent
+     * @param array<string, string>          $currentEvent
      * @param list<array<int|string, mixed>|null> $events
+     *
+     * @return array{0: array<string, string>, 1: list<array<int|string, mixed>|null>}
      */
-    private function processSseLine(string $line, array &$currentEvent, array &$events): void
+    private function processSseLine(string $line, array $currentEvent, array $events): array
     {
         if ('' === $line) {
             if ([] !== $currentEvent) {
                 $events[] = $this->formatSseEvent($currentEvent);
-                $currentEvent = [];
+
+                return [[], $events];
             }
 
-            return;
+            return [$currentEvent, $events];
         }
 
         if (str_starts_with($line, ':')) {
-            return;
+            return [$currentEvent, $events];
         }
 
         $colonPos = strpos($line, ':');
@@ -386,8 +379,11 @@ final readonly class StreamingContentParser
             $value = str_starts_with($rawValue, self::SSE_FIELD_SPACE)
                 ? substr($rawValue, 1)
                 : $rawValue;
-            $this->applySseField($currentEvent, $field, $value);
+
+            return [$this->applySseField($currentEvent, $field, $value), $events];
         }
+
+        return [$this->applySseField($currentEvent, $line, ''), $events];
     }
 
     /**
@@ -408,9 +404,7 @@ final readonly class StreamingContentParser
             }
 
             if (false === $bomStripped) {
-                if (str_starts_with($chunk, self::UTF8_BOM)) {
-                    $chunk = substr($chunk, strlen(self::UTF8_BOM));
-                }
+                $chunk = $this->stripBom($chunk);
                 $bomStripped = true;
             }
 
@@ -428,33 +422,38 @@ final readonly class StreamingContentParser
             $buffer = array_pop($records);
 
             foreach ($records as $record) {
-                $this->appendJsonSeqItem($items, $record);
+                $items = $this->appendJsonSeqItem($items, $record);
             }
         }
 
-        $this->appendJsonSeqItem($items, $buffer);
+        $items = $this->appendJsonSeqItem($items, $buffer);
 
         return $items;
     }
 
     /**
      * @param array<string, string> $currentEvent
+     *
+     * @return array<string, string>
      */
-    private function applySseField(array &$currentEvent, string $field, string $value): void
+    private function applySseField(array $currentEvent, string $field, string $value): array
     {
         if ('data' === $field && isset($currentEvent['data']) && '' !== $currentEvent['data']) {
             $currentEvent['data'] .= "\n" . $value;
 
-            return;
+            return $currentEvent;
         }
 
         $currentEvent[$field] = $value;
+
+        return $currentEvent;
     }
 
     /**
      * Format SSE event data
      *
      * @param array<string, string> $event
+     *
      * @return array<int|string, mixed>
      */
     private function formatSseEvent(array $event): array
@@ -473,8 +472,11 @@ final readonly class StreamingContentParser
                 assert(is_array($decoded) || is_null($decoded) || is_scalar($decoded));
                 $dataValue = $decoded;
             } catch (JsonException $exception) {
+                if ($this->strictStreaming) {
+                    throw new MalformedStreamRecordException($event['data'], $exception);
+                }
                 $this->logger->warning('Failed to parse SSE event data as JSON, using raw value', [
-                    'data' => $event['data'],
+                    'data' => $this->truncateForLog($event['data']),
                     'exception' => $exception,
                 ]);
             }

@@ -8,19 +8,26 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\NestedValidationError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
+use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
-use function gettype;
 use function is_array;
 use function sprintf;
 use function count;
 
-final readonly class ItemsValidator extends AbstractSchemaValidator
+final readonly class ItemsValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->items;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -34,6 +41,9 @@ final readonly class ItemsValidator extends AbstractSchemaValidator
 
         $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
         $validator = $this->createSchemaValidator();
+        $nullableAsType = $context?->nullableAsType ?? true;
+        $allowNull = $nullableAsType && ($schema->items->nullable
+            || SchemaValueNormalizer::typeIncludesNull($schema->items->type));
 
         foreach ($data as $index => $item) {
             /** @var int $index */
@@ -41,15 +51,11 @@ final readonly class ItemsValidator extends AbstractSchemaValidator
                 continue;
             }
 
-            $nullableAsType = $context?->nullableAsType ?? true;
-
             try {
-                $allowNull = $nullableAsType && ($schema->items->nullable
-                    || SchemaValueNormalizer::typeIncludesNull($schema->items->type));
                 $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
 
                 if (null === $context) {
-                    $context = ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
+                    $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
                 }
 
                 $context->enterBreadcrumbIndex($index);
@@ -68,12 +74,14 @@ final readonly class ItemsValidator extends AbstractSchemaValidator
                     errors: [
                         new TypeMismatchError(
                             expected: $this->formatSchemaType($schema->items->type),
-                            actual: gettype($item),
+                            actual: TypeFormatter::format($item),
                             dataPath: $dataPath . '[' . $index . ']',
                             schemaPath: '/items',
                         ),
                     ],
                 );
+            } catch (InvalidFormatException $e) {
+                throw $e;
             } catch (AbstractValidationError $e) {
                 $dataPath = $this->getDataPath($context);
 

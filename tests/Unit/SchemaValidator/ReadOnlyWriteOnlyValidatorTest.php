@@ -11,6 +11,7 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\ReadOnlyWriteOnlyValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
@@ -28,7 +29,7 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
     #[Test]
     public function read_only_property_in_request_throws_exception(): void
     {
-        $validator = new ReadOnlyWriteOnlyValidator($this->pool, BuiltinFormats::create());
+        $validator = new ReadOnlyWriteOnlyValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'object',
             properties: [
@@ -55,7 +56,7 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
     #[Test]
     public function write_only_property_in_response_throws_exception(): void
     {
-        $validator = new ReadOnlyWriteOnlyValidator($this->pool, BuiltinFormats::create());
+        $validator = new ReadOnlyWriteOnlyValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'object',
             properties: [
@@ -82,7 +83,7 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
     #[Test]
     public function read_only_property_in_response_is_allowed(): void
     {
-        $validator = new ReadOnlyWriteOnlyValidator($this->pool, BuiltinFormats::create());
+        $validator = new ReadOnlyWriteOnlyValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'object',
             properties: [
@@ -108,7 +109,7 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
     #[Test]
     public function write_only_property_in_request_is_allowed(): void
     {
-        $validator = new ReadOnlyWriteOnlyValidator($this->pool, BuiltinFormats::create());
+        $validator = new ReadOnlyWriteOnlyValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'object',
             properties: [
@@ -134,7 +135,7 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
     #[Test]
     public function no_mode_skips_validation(): void
     {
-        $validator = new ReadOnlyWriteOnlyValidator($this->pool, BuiltinFormats::create());
+        $validator = new ReadOnlyWriteOnlyValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'object',
             properties: [
@@ -152,7 +153,7 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
     #[Test]
     public function read_only_property_absent_in_request_succeeds(): void
     {
-        $validator = new ReadOnlyWriteOnlyValidator($this->pool, BuiltinFormats::create());
+        $validator = new ReadOnlyWriteOnlyValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'object',
             properties: [
@@ -178,7 +179,7 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
     #[Test]
     public function non_object_data_skips_validation(): void
     {
-        $validator = new ReadOnlyWriteOnlyValidator($this->pool, BuiltinFormats::create());
+        $validator = new ReadOnlyWriteOnlyValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'string',
             readOnly: true,
@@ -199,7 +200,7 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
     #[Test]
     public function schema_without_properties_skips_validation(): void
     {
-        $validator = new ReadOnlyWriteOnlyValidator($this->pool, BuiltinFormats::create());
+        $validator = new ReadOnlyWriteOnlyValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(type: 'object');
 
         $context = new ValidationContext(
@@ -217,7 +218,7 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
     #[Test]
     public function combined_read_write_properties_in_correct_contexts(): void
     {
-        $validator = new ReadOnlyWriteOnlyValidator($this->pool, BuiltinFormats::create());
+        $validator = new ReadOnlyWriteOnlyValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'object',
             properties: [

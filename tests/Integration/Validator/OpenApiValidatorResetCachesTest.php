@@ -99,8 +99,6 @@ YAML;
         $factory = new Psr17Factory();
         $request = $factory->createServerRequest('GET', '/users/abc-123');
 
-        // validateRequest triggers PatternValidator on the userId path parameter,
-        // which calls RegexValidator::normalize for the declared pattern.
         $this->validator->validateRequest($request);
 
         $this->validator->reset();

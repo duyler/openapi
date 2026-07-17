@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\FormatValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -34,7 +35,7 @@ final class FormatValidatorIntegrationTest extends TestCase
             type: 'string',
             format: 'date-time',
         );
-        $validator = new FormatValidator($this->pool, $this->registry);
+        $validator = new FormatValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: $this->registry));
 
         $this->expectNotToPerformAssertions();
         $validator->validate('2024-01-15T10:30:00Z', $schema);
@@ -47,7 +48,7 @@ final class FormatValidatorIntegrationTest extends TestCase
             type: 'string',
             format: 'email',
         );
-        $validator = new FormatValidator($this->pool, $this->registry);
+        $validator = new FormatValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: $this->registry));
 
         $this->expectNotToPerformAssertions();
         $validator->validate('test@example.com', $schema);
@@ -70,7 +71,7 @@ final class FormatValidatorIntegrationTest extends TestCase
             type: 'string',
             format: 'custom',
         );
-        $validator = new FormatValidator($this->pool, $registry);
+        $validator = new FormatValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: $registry));
 
         $this->expectNotToPerformAssertions();
         $validator->validate('custom-value', $schema);
@@ -83,7 +84,7 @@ final class FormatValidatorIntegrationTest extends TestCase
             type: 'string',
             format: 'unknown-format',
         );
-        $validator = new FormatValidator($this->pool, $this->registry);
+        $validator = new FormatValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: $this->registry));
 
         $this->expectNotToPerformAssertions();
         $validator->validate('any-value', $schema);
@@ -106,7 +107,7 @@ final class FormatValidatorIntegrationTest extends TestCase
             type: 'string',
             format: 'email',
         );
-        $validator = new FormatValidator($this->pool, $registry);
+        $validator = new FormatValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: $registry));
 
         $this->expectNotToPerformAssertions();
         $validator->validate('custom-email@example.com', $schema);

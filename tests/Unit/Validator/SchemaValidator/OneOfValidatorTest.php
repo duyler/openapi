@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\SchemaValidator\OneOfValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\OneOfError;
@@ -26,7 +27,7 @@ class OneOfValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new OneOfValidator($this->pool, BuiltinFormats::create());
+        $this->validator = new OneOfValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]
@@ -235,5 +236,38 @@ class OneOfValidatorTest extends TestCase
         $this->expectExceptionMessage('Exactly one of the schemas must match, but none did');
 
         $this->validator->validate(null, $schema, $context);
+    }
+
+    #[Test]
+    public function oneOf_throws_when_multiple_nullable_schemas_match_null(): void
+    {
+        $schema = new Schema(
+            oneOf: [
+                new Schema(type: 'string', nullable: true),
+                new Schema(type: 'integer', nullable: true),
+            ],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $this->expectException(OneOfError::class);
+
+        $this->validator->validate(null, $schema, $context);
+    }
+
+    #[Test]
+    public function oneOf_passes_when_single_nullable_schema_matches_null(): void
+    {
+        $schema = new Schema(
+            oneOf: [
+                new Schema(type: 'string', nullable: true),
+                new Schema(type: 'integer'),
+            ],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate(null, $schema, $context);
+
+        $this->expectNotToPerformAssertions();
     }
 }

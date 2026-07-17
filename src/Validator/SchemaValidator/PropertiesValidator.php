@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Override;
@@ -16,8 +17,14 @@ use function array_key_exists;
 use function is_array;
 use function sprintf;
 
-final readonly class PropertiesValidator extends AbstractSchemaValidator
+final readonly class PropertiesValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->properties && [] !== $schema->properties;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -44,7 +51,7 @@ final readonly class PropertiesValidator extends AbstractSchemaValidator
                 $value = SchemaValueNormalizer::normalize($data[$name], $allowNull);
 
                 if (null === $context) {
-                    $context = ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
+                    $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
                 }
 
                 $context->enterBreadcrumb($name);
@@ -66,6 +73,8 @@ final readonly class PropertiesValidator extends AbstractSchemaValidator
                     previous: $e,
                     errors: $e->getErrors(),
                 );
+            } catch (InvalidFormatException $e) {
+                throw $e;
             } catch (AbstractValidationError $e) {
                 throw new ValidationException(
                     sprintf('Property "%s" validation failed', $name),

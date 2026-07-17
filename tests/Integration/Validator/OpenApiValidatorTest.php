@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Integration\Validator;
 
-use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\StreamStubHelper;
+use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\OpenApiValidator;
 use PHPUnit\Framework\Attributes\Test;
@@ -21,6 +22,8 @@ use const PHP_URL_QUERY;
 
 final class OpenApiValidatorTest extends TestCase
 {
+    use StreamStubHelper;
+
     private const string SIMPLE_YAML = <<<YAML
 openapi: 3.0.3
 info:
@@ -106,7 +109,7 @@ YAML;
     #[Test]
     public function throw_error_for_unknown_path(): void
     {
-        $this->expectException(BuilderException::class);
+        $this->expectException(OperationNotFoundException::class);
         $this->expectExceptionMessage('Operation not found: GET /unknown');
 
         $this->validator->validateRequest(
@@ -117,7 +120,7 @@ YAML;
     #[Test]
     public function throw_error_for_unknown_method(): void
     {
-        $this->expectException(BuilderException::class);
+        $this->expectException(OperationNotFoundException::class);
         $this->expectExceptionMessage('Operation not found: DELETE /users');
 
         $this->validator->validateRequest(
@@ -167,7 +170,7 @@ YAML;
         $request = $this->createMockServerRequest('GET', '/unknown/path');
         $validator = $this->createValidator();
 
-        $this->expectException(BuilderException::class);
+        $this->expectException(OperationNotFoundException::class);
         $this->expectExceptionMessage('Operation not found: GET /unknown/path');
 
         $validator->validateRequest($request);
@@ -214,6 +217,7 @@ YAML;
     {
         $stream = $this->createStub(StreamInterface::class);
         $stream->method('__toString')->willReturn($content);
+        $this->configureReadableStream($stream, $content);
 
         return $stream;
     }

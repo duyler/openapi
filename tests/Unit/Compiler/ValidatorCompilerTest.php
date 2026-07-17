@@ -1627,8 +1627,6 @@ final class ValidatorCompilerTest extends TestCase
         $code = $compiler->compile($schema, 'DeepNestValidator');
 
         $this->assertStringContainsString('readonly class DeepNestValidator', $code);
-        // The 12-level schema must produce deeply nested $data['nested']
-        // references in the compiled code (at least one per level).
         $this->assertGreaterThan(
             $depth,
             substr_count($code, "['nested']"),
@@ -1677,7 +1675,6 @@ final class ValidatorCompilerTest extends TestCase
 
         $validator = new DeepNestInvalidValidator();
 
-        // Wrong leaf type: string instead of integer.
         $payload = $this->buildNestedPayload($depth, 'not-an-integer');
 
         $this->expectException(RuntimeException::class);

@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\E2E;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\EnumError;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Override;
@@ -65,10 +66,12 @@ final class MaliciousSchemaTest extends TestCase
 
         try {
             $validator->validateSchema('not_in_enum', '#/components/schemas/Choice');
-            $this->fail('Expected EnumError for value not in huge enum');
-        } catch (EnumError $error) {
+            $this->fail('Expected ValidationException containing EnumError for value not in huge enum');
+        } catch (ValidationException $exception) {
+            $error = $exception->getErrors()[0] ?? null;
             $elapsed = microtime(true) - $startTime;
 
+            $this->assertInstanceOf(EnumError::class, $error);
             $this->assertSame('enum', $error->keyword());
             $this->assertSame('not_in_enum', $error->params()['actual']);
             $this->assertLessThan(self::MAX_VALIDATION_SECONDS, $elapsed, 'Huge enum negative validation must complete within reasonable time');

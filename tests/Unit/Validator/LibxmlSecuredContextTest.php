@@ -100,4 +100,57 @@ final class LibxmlSecuredContextTest extends TestCase
             unlink($tempFile);
         }
     }
+
+    #[Test]
+    public function restores_external_entity_loader_after_run(): void
+    {
+        $myLoader = static fn(?string $publicId, ?string $systemId): ?string => '/resolved/' . $systemId;
+        $previousLoader = libxml_get_external_entity_loader();
+
+        libxml_set_external_entity_loader($myLoader);
+
+        try {
+            LibxmlSecuredContext::run(static fn(): ?object => simplexml_load_string('<a/>'));
+
+            self::assertSame(
+                $myLoader,
+                libxml_get_external_entity_loader(),
+                'LibxmlSecuredContext::run() must restore the external entity loader that was active before it was called',
+            );
+        } finally {
+            libxml_set_external_entity_loader($previousLoader);
+            libxml_clear_errors();
+        }
+    }
+
+    #[Test]
+    public function clears_internal_errors_but_not_external(): void
+    {
+        $myLoader = static fn(?string $publicId, ?string $systemId): ?string => '/resolved/' . $systemId;
+        $previousLoader = libxml_get_external_entity_loader();
+        $previousInternalErrors = libxml_use_internal_errors(true);
+
+        libxml_set_external_entity_loader($myLoader);
+
+        try {
+            LibxmlSecuredContext::run(static function (): void {
+                simplexml_load_string('<invalid');
+            });
+
+            self::assertSame(
+                [],
+                libxml_get_errors(),
+                'Errors generated inside run() must be cleared by the finally block',
+            );
+            self::assertSame(
+                $myLoader,
+                libxml_get_external_entity_loader(),
+                'External entity loader is external process state and must survive run()',
+            );
+        } finally {
+            libxml_set_external_entity_loader($previousLoader);
+            libxml_clear_errors();
+            libxml_use_internal_errors($previousInternalErrors);
+        }
+    }
 }

@@ -7,7 +7,16 @@ namespace Duyler\OpenApi\Validator\Exception;
 use Exception;
 use Throwable;
 
-final class ValidationException extends Exception
+/**
+ * Thrown when request, response, or schema validation fails.
+ *
+ * Subclasses MUST preserve the contract of getErrors() returning
+ * array<int, ValidationErrorInterface> so consumers can iterate the
+ * typed error list uniformly.
+ *
+ * @api Public API: consumers may subclass to attach domain context.
+ */
+class ValidationException extends Exception
 {
     /**
      * @param array<int, ValidationErrorInterface> $errors

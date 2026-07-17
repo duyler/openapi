@@ -11,9 +11,9 @@ OpenAPI 3.2 validator for PHP 8.4+
 
 ## Features
 
-- **Full OpenAPI 3.2 Support** - Complete implementation of OpenAPI 3.2 specification
+- **OpenAPI 3.2 Support** - JSON Schema draft 2020-12 validation with known limitations (see Limitations)
 - **JSON Schema Validation** - Full JSON Schema draft 2020-12 validation with 25+ validators
-- **PSR-7 Integration** - PSR-7 HTTP message validation (requires nyholm/psr7)
+- **PSR-7 Integration** - PSR-7 HTTP message validation (works with any PSR-7 implementation)
 - **Request Validation** - Validate path parameters, query parameters, headers, cookies, and request body
 - **Response Validation** - Validate status codes, headers, and response bodies
 - **Multiple Content Types** - Support for JSON, form-data, multipart, text, and XML
@@ -27,7 +27,7 @@ OpenAPI 3.2 validator for PHP 8.4+
 - **Webhooks Support** - Validate incoming webhook requests
 - **Streaming Validation** - Validate NDJSON, SSE, and JSON Text Sequences responses
 - **Schema Registry** - Manage multiple schema versions
-- **Validator Compilation** - Generate optimized validator code
+- **Validator Compilation** (experimental) - Generate optimized validator code for basic schemas (see Limitations)
 
 ## Installation
 
@@ -69,6 +69,12 @@ class UserService
     public function handleRequest(ServerRequestInterface $request): void
     {
         $operation = $this->validator->validateRequest($request);
+        // $operation->path             template path, e.g. "/users/{id}"
+        // $operation->method           matched HTTP method
+        // $operation->operationId      operationId from the spec (nullable)
+        // $operation->pathParameters   resolved values, e.g. ['id' => '42']
+        // $operation->schemaOperation  Schema\Model\Operation reference (nullable)
+        $userId = $operation->pathParameters['id'] ?? null;
         // ...
     }
 }
@@ -84,9 +90,18 @@ The interface exposes the following methods:
 | `getFormattedErrors(ValidationException $e): string` | Format validation errors as string |
 | `validateWebhook(ServerRequestInterface $request, string $name): Operation` | Validate webhook request |
 | `validateCallback(ServerRequestInterface $request, string $name): Operation` | Validate callback request |
-| `resolveLink(string $linkName, array $responseData): array` | Resolve link parameters from response data (body only) |
-| `resolveLinkWithContext(string $linkName, LinkContext $context): array` | Resolve link parameters with full Runtime Expression support ($response.body/header/query, $url, $method, $statusCode) |
+| `resolveLink(string $linkName, array $responseData): ResolvedLink` | Resolve link parameters from response data (response body only) |
+| `resolveLinkWithContext(string $linkName, LinkContext $context): ResolvedLink` | Resolve link parameters with full Runtime Expression support ($request.*, $response.body/header/query, $url, $method, $statusCode) |
 | `reset(): void` | Reset validator state for reuse |
+
+The returned `Operation` DTO is a `final readonly` value object. Beyond the
+matched `path` (template form, e.g. `/users/{id}`) and `method`, it carries
+resolved `pathParameters` (raw `array<string, string>` keyed by placeholder
+name), `operationId` (nullable, populated when the spec declares one), and
+`schemaOperation` (nullable reference to the matched
+`Duyler\OpenApi\Schema\Model\Operation` for direct access to `requestBody`,
+`responses`, `security`, etc.). All newly added fields have defaults, so
+`new Operation('/users', 'GET')` and existing call sites keep working.
 
 ## Usage
 
@@ -118,9 +133,58 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
+### External `$ref` Resolution
+
+The validator supports external `$ref` references for `file://` URIs and
+relative-path refs by default. The builtin `FileExternalRefResolver` loads
+the referenced YAML/JSON file, follows an optional JSON Pointer fragment
+(e.g. `components/user.yaml#/UserSchema`), and returns the referenced schema.
+
+```yaml
+# openapi.yaml
+components:
+  schemas:
+    User:
+      $ref: 'components/user.yaml#/UserSchema'
+```
+
+Network schemes (`http://`, `https://`, `ftp://`, `ftps://`) are **denied by
+default** to prevent SSRF. When the builtin resolver encounters a denied
+scheme it throws `ExternalRefSecurityException` (surfaced by `RefResolver`
+as `UnresolvableRefException`). To enable network resolution, inject a custom
+`ExternalRefResolverInterface` implementation:
+
+```php
+use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\ExternalRefResolverInterface;
+
+final class MyHttpExternalRefResolver implements ExternalRefResolverInterface
+{
+    public function resolve(string $ref): \Duyler\OpenApi\Schema\Model\Schema
+    {
+        // fetch $ref over HTTP, return Schema
+    }
+}
+
+$refResolver = new RefResolver(new MyHttpExternalRefResolver());
+```
+
+The resolver also supports an optional `allowedRoot` to defend against
+`../../../etc/passwd` style path traversal and symlink escapes:
+
+```php
+use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
+
+$resolver = new FileExternalRefResolver(allowedRoot: '/var/specs');
+```
+
+When `allowedRoot` is configured, the resolver resolves both the requested
+path and the root via `realpath()` and refuses any reference whose real
+location is not a descendant of the root.
+
 ### PSR-7 Integration
 
-The validator uses `nyholm/psr7` as the PSR-7 implementation:
+The validator works with any PSR-7 implementation. The examples in this README use `nyholm/psr7` (installed as a dev dependency); substitute your preferred implementation (Guzzle PSR-7, Laminas Diactoros) in production:
 
 ```php
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -194,15 +258,35 @@ $validator = OpenApiValidatorBuilder::create()
 $operation = $validator->validateCallback($request, 'myCallback');
 ```
 
+> **Security caveat**: Callback runtime expressions like `{$request.body#/callback_url}`
+> reference the original triggering request body and cannot be resolved by the
+> validator, so path validation is bypassed (any URL is accepted as a wildcard).
+> When the runtime template is attacker-controlled, declared security checks on
+> the callback pathItem still pass against an arbitrary URL. Use
+> `enableStrictCallbackRuntimeTemplate()` to fail-closed on unresolvable runtime
+> expressions and throw `UnresolvableCallbackPathException` instead:
+
+```php
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->enableStrictCallbackRuntimeTemplate()
+    ->build();
+```
+
 ### Link Resolution
 
-Resolve OpenAPI Link parameters from response data:
+Resolve OpenAPI Link parameters from response data. Both methods return a
+`ResolvedLink` DTO exposing resolved `parameters`, `requestBody`, and the
+optional `server` override declared by the link.
 
 ```php
 use Duyler\OpenApi\Validator\Link\LinkContext;
 
 // Simple resolution (response body only)
 $result = $validator->resolveLink('GetUserById', ['id' => 42, 'name' => 'John']);
+$result->parameters;   // array<string, mixed>
+$result->requestBody;  // mixed
+$result->server;       // Server|null
 
 // Full resolution with Runtime Expression support
 $context = new LinkContext(
@@ -212,11 +296,37 @@ $context = new LinkContext(
     url: 'https://api.example.com/users/42',
     method: 'GET',
     statusCode: 200,
+    pathParams: ['userId' => 42],
+    requestHeaders: ['X-Request-Id' => 'req-789'],
+    requestBody: ['extra' => 'payload'],
 );
 $result = $validator->resolveLinkWithContext('GetUserById', $context);
 ```
 
-`resolveLink()` only resolves `$response.body` expressions. Use `resolveLinkWithContext()` for full Runtime Expression support: `$response.body`, `$response.header`, `$response.query`, `$url`, `$method`, and `$statusCode`. Note that `$request.body` and `$request.query` expressions are not supported.
+`resolveLink()` populates only the response body context, so it can resolve
+`$response.body` expressions. Use `resolveLinkWithContext()` to supply the
+full request and response state and unlock all OpenAPI 3.2 §6.19.2 runtime
+expressions:
+
+| Expression | Resolves from LinkContext |
+|------------|---------------------------|
+| `$url` | `url` |
+| `$method` | `method` |
+| `$statusCode` | `statusCode` |
+| `$request.path.{name}` | `pathParams[{name}]` |
+| `$request.query.{name}` | `queryParams[{name}]` |
+| `$request.header.{name}` | `requestHeaders[{name}]` (case-insensitive, RFC 9110) |
+| `$request.body` | `requestBody` (whole value) |
+| `$request.body#/{pointer}` | `requestBody` navigated by JSON Pointer |
+| `$response.body` | `body` (whole value) |
+| `$response.body#/{pointer}` | `body` navigated by JSON Pointer |
+| `$response.header` | `headers` (whole map) |
+| `$response.header[.{name}|#/{name}]` | `headers` by name or JSON Pointer |
+| `$response.query` | `queryParams` (whole map) |
+| `$response.query[.{name}|#/{name}]` | `queryParams` by name or JSON Pointer |
+
+Unsupported expressions are returned as the literal string so callers can
+distinguish them from values that legitimately resolve to null.
 
 ## Advanced Usage
 
@@ -423,36 +533,29 @@ Available events:
 
 Manage multiple API versions:
 
-> **Warning:** `getDocument()` is a method of the concrete `OpenApiValidator` class, not the `OpenApiValidatorInterface`. If you type-hint the interface, this method is unavailable and will cause a runtime error. Type-hint the concrete class directly or perform an `instanceof` check before calling it.
-
 ```php
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Registry\SchemaRegistry;
-use LogicException;
 
 // Load multiple versions
 $validatorV1 = OpenApiValidatorBuilder::create()
     ->fromYamlFile('api-v1.yaml')
     ->build();
-if (!($validatorV1 instanceof OpenApiValidator)) {
-    throw new LogicException('Validator must be an instance of OpenApiValidator to access getDocument()');
-}
 $documentV1 = $validatorV1->getDocument();
 
 $validatorV2 = OpenApiValidatorBuilder::create()
     ->fromYamlFile('api-v2.yaml')
     ->build();
-if (!($validatorV2 instanceof OpenApiValidator)) {
-    throw new LogicException('Validator must be an instance of OpenApiValidator to access getDocument()');
-}
 $documentV2 = $validatorV2->getDocument();
 
-// Register schemas
+// Register schemas (throws on duplicate name+version)
 $registry = new SchemaRegistry();
 $registry = $registry
     ->register('api', '1.0.0', $documentV1)
     ->register('api', '2.0.0', $documentV2);
+
+// Replace an existing entry explicitly (hot-reload, immutable replacement)
+$registry = $registry->registerOrReplace('api', '1.0.0', $reloadedDocumentV1);
 
 // Get specific version (returns null if missing)
 $schema = $registry->get('api', '1.0.0');
@@ -484,24 +587,25 @@ $names = $registry->getNames();
 // ['api']
 
 // Count schemas and versions
-$total = $registry->count();                // 1
-$apiVersions = $registry->countVersions('api'); // 2
+$totalNames   = $registry->countNames();   // 1 — distinct names
+$totalSchemas = $registry->countSchemas(); // 2 — total name+version pairs
+$apiVersions  = $registry->countVersions('api'); // 2
 ```
 
-The registry is immutable: `register()` returns a new instance with the added schema.
+The registry is immutable: `register()` and `registerOrReplace()` return a new
+instance with the added schema.
 
-#### Design choices
+`register()` is the fail-safe default: it throws
+`SchemaAlreadyRegisteredException` (extends `\RuntimeException`) when the
+`name+version` pair is already present, preventing accidental silent data loss.
+Use `registerOrReplace()` to opt into explicit overwrite semantics when you
+need immutable replacement patterns such as hot-reloading a spec in development
+or replacing a placeholder document with a final one.
 
-- **Registering an existing name+version overwrites the document silently.** This is intentional and enables immutable update patterns (for example, hot-reloading a spec in development, or replacing a placeholder document with a final one). Guard with `has()` if silent overwrite is undesirable for your use case:
-
-  ```php
-  if ($registry->has('api', '1.0.0')) {
-      throw new LogicException('Refusing to overwrite api 1.0.0');
-  }
-  $registry = $registry->register('api', '1.0.0', $document);
-  ```
-
-- **`get()` returns `null` for a missing schema or version** (mirrors the PSR-6 cache convention). Use `has()` to distinguish "missing" from "present" before calling `get()`, or use `getOrFail()` to fail fast with a `VersionNotFoundException` (extends `\RuntimeException`).
+- **`get()` returns `null` for a missing schema or version** (mirrors the PSR-6
+  cache convention). Use `has()` to distinguish "missing" from "present" before
+  calling `get()`, or use `getOrFail()` to fail fast with a
+  `VersionNotFoundException` (extends `\RuntimeException`).
 
 ### Validator Pool
 
@@ -635,6 +739,7 @@ Use the runtime validator when you need the typed error classes (`TypeMismatchEr
 | `enableStrictFormats()` | Reject unknown format values instead of skipping | `false` |
 | `enableReportDeprecated()` | Log deprecated schema elements via PSR-3 logger | `true` |
 | `enableServerPathResolution()` | Strip server base path from request path before matching | `false` |
+| `enableStrictCallbackRuntimeTemplate()` | Fail-closed on callback runtime expressions like `{$request.body#/callback_url}` instead of treating them as wildcards | `false` |
 
 Deprecated reporting is enabled by default. Without a PSR-3 logger, deprecation warnings go to `NullLogger` and produce no output. There is no `disableReportDeprecated()` method; to suppress deprecation warnings, simply omit the logger (the default behavior).
 
@@ -679,6 +784,8 @@ $validator = OpenApiValidatorBuilder::create()
 
 ## PSR-15 Middleware
 
+> **Note:** The middleware below is an example snippet, not a class shipped with this package. Copy it into your project and adapt it to your framework. The PSR-15 interfaces (`psr/http-server-middleware`) are required by your framework, not by this library.
+
 Wrap the validator in a PSR-15 middleware to validate incoming requests before they reach your handlers. On validation failure, the middleware returns a `400 Bad Request` response with error details.
 
 ```php
@@ -715,10 +822,14 @@ final class ValidationMiddleware implements MiddlewareInterface
                 ], JSON_PRETTY_PRINT),
             );
         } catch (Throwable $e) {
+            $message = $e instanceof ValidationException
+                ? 'Validation failed'
+                : 'Internal validation error';
+
             return new Response(
                 status: 400,
                 headers: ['Content-Type' => 'application/json'],
-                body: json_encode(['error' => $e->getMessage()], JSON_PRETTY_PRINT),
+                body: json_encode(['error' => $message], JSON_PRETTY_PRINT),
             );
         }
 
@@ -876,7 +987,9 @@ try {
 
 ### Validation Error Reference
 
-All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schemaPath()`, `keyword()`, `message()`, `params()`, `suggestion()`, and `getType()` methods. The `getType()` method returns the validation keyword that triggered the error (e.g., `'type'`, `'minLength'`, `'format'`).
+All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schemaPath()`, `keyword()`, `message()`, `params()`, and `suggestion()` methods.
+
+> Note: The `getType()` method is deprecated in favor of `keyword()` and will be removed in 2.0. Both return the same validation keyword (e.g., `'type'`, `'minLength'`, `'format'`). Use `keyword()` in new code.
 
 #### Type and Value Errors
 
@@ -889,7 +1002,7 @@ All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schem
 
 #### Format Validation Errors
 
-`InvalidFormatException` extends `RuntimeException` and implements `ValidationErrorInterface` directly (without extending `AbstractValidationError`). It is thrown by format validators rather than the schema validator.
+`InvalidFormatException` extends `AbstractValidationError` and is thrown by format validators rather than the schema validator.
 
 | Error Type | Keyword | Description |
 |------------|---------|-------------|
@@ -970,13 +1083,17 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `MissingRequestBodyException` | Request body is required but missing or empty |
 | `UnsupportedMediaTypeException` | Content-Type not supported by the operation |
 | `PathMismatchException` | Request path doesn't match any operation template |
+| `OperationNotFoundException` | Request path or method does not match any operation in the specification (thrown by `PathFinder::findOperation()` and `validateRequest()`) |
 | `InvalidParameterException` | Parameter value is malformed or invalid |
 | `InvalidPatternException` | Invalid regex pattern in schema definition |
 | `UndefinedResponseException` | Response status code not defined in spec |
 | `RefResolutionException` | Failed to resolve `$ref` reference |
+| `UnresolvableCallbackPathException` | Callback runtime template (e.g. `{$request.body#/callback_url}`) cannot be resolved in strict mode |
+| `ExternalRefSecurityException` | External `$ref` violates builtin resolver security policy (denied scheme, path traversal outside the allowed root). Surfaced by `RefResolver` as `UnresolvableRefException` |
 | `SchemaDepthExceededException` | Maximum schema nesting depth exceeded |
 | `UnknownValidatorException` | Unknown validator type requested |
 | `VersionNotFoundException` | Requested schema name or version is not registered (thrown by `SchemaRegistry::getOrFail()`) |
+| `SchemaAlreadyRegisteredException` | Schema name+version pair is already registered (thrown by `SchemaRegistry::register()`; use `registerOrReplace()` for explicit overwrite) |
 
 ### Error Formatters
 
@@ -991,6 +1108,21 @@ use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
 
 // JSON formatter for API responses
 use Duyler\OpenApi\Validator\Error\Formatter\JsonFormatter;
+```
+
+To format a `ValidationException` without holding a reference to the validator, call `ErrorFormatterInterface::formatException()` directly. This is the canonical replacement for `OpenApiValidatorInterface::getFormattedErrors()` (deprecated, removed in 2.0):
+
+```php
+use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
+
+$formatter = new SimpleFormatter();
+
+try {
+    $operation = $validator->validateRequest($request);
+} catch (ValidationException $e) {
+    echo $formatter->formatException($e);
+}
 ```
 
 ## Built-in Format Validators
@@ -1058,6 +1190,13 @@ $validator = OpenApiValidatorBuilder::create()
 
 ### Migration Examples
 
+> **Warning:** Migration from `league/openapi-psr7-validator` requires rewriting your routing layer.
+> `league` provided `OperationAddress` + `PathParams` utilities; `duyler/openapi` returns a simpler
+> `Operation(path, method)` DTO with a `pathParameters` map. You must extract path parameters
+> yourself (or wait for the planned `Operation` DTO expansion). Additionally, coercion is **opt-in**
+> here (`enableCoercion()`), whereas `league` had it enabled by default — this is a behavioral
+> breaking change for migrants.
+
 #### Before (league/openapi-psr7-validator)
 
 ```php
@@ -1109,7 +1248,7 @@ The following measurements come from the test suite benchmarks run on a standard
 | Path scanning | 100 routes, 50 iterations | < 100 ms total | < 1 MB growth |
 | Full request+response cycle | 2 properties, email format | - | < 50 KB |
 
-These numbers represent upper bounds enforced by assertions in `tests/Benchmark/PerformanceBenchmarkTest.php`. Real-world performance is typically better.
+These numbers represent upper bounds enforced by assertions in `tests/Benchmark/PerformanceBenchmarkTest.php`. They are not reproducible benchmarks: there is no environment spec, no warm-up / iteration protocol, and no comparison against `league/openapi-psr7-validator`. Actual performance depends on hardware, PHP version, opcache, and schema complexity. For production sizing, run [PHPBench](https://phpbench.readthedocs.io/) against your own schemas.
 
 ### Caching
 
@@ -1128,6 +1267,11 @@ $validator = OpenApiValidatorBuilder::create()
     ->withCache($schemaCache)
     ->build();
 ```
+
+`SchemaCache` uses a PSR-6 cache pool keyed by a SHA-256 hash of the spec
+content (file path + mtime + size, or raw content for string-loaded specs) to
+resist cache-poisoning collisions. `CompilationCache` uses the same SHA-256
+keying scheme.
 
 For compiled validators, use `CompilationCache` to avoid regenerating PHP code:
 
@@ -1438,7 +1582,7 @@ The following scheme types are not supported and will produce an error when enco
 ## Requirements
 
 - **PHP 8.4 or higher** - Uses modern PHP features (readonly classes, match expressions, etc.)
-- **PSR-7 HTTP message** - `psr/http-message ^2.0` (required: `nyholm/psr7 ^1.8`)
+- **PSR-7 HTTP message** - `psr/http-message ^2.0`. Use any PSR-7 implementation (`nyholm/psr7`, `guzzle/psr7`, `laminas/laminas-diactoros`).
 - **PSR-6 cache** - `psr/cache ^3.0` (e.g., `symfony/cache`, `cache/cache`)
 - **PSR-14 events** - `psr/event-dispatcher ^1.0` (e.g., `symfony/event-dispatcher`)
 - **PSR-3 logging** - `psr/log ^3.0` (included, optional to use via `withLogger()`)

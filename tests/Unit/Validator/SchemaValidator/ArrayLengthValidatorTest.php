@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\SchemaValidator\ArrayLengthValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\DuplicateItemsError;
@@ -20,6 +21,8 @@ use PHPUnit\Framework\TestCase;
 
 use function sprintf;
 
+use const NAN;
+
 #[CoversClass(ArrayLengthValidator::class)]
 class ArrayLengthValidatorTest extends TestCase
 {
@@ -29,7 +32,7 @@ class ArrayLengthValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new ArrayLengthValidator($this->pool, BuiltinFormats::create());
+        $this->validator = new ArrayLengthValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]
@@ -258,10 +261,6 @@ class ArrayLengthValidatorTest extends TestCase
     #[Test]
     public function unique_items_treats_distinct_scalar_json_types_as_unique(): void
     {
-        // JSON Schema draft 2020-12 §6.4.3: items of different JSON types
-        // (number, string, boolean) are never equal. Previously this array
-        // was wrongly rejected because PHP loose comparison (SORT_REGULAR)
-        // collapsed 1 == "1" == true into duplicates.
         $schema = new Schema(type: 'array', uniqueItems: true);
 
         $succeeded = false;
@@ -490,5 +489,41 @@ class ArrayLengthValidatorTest extends TestCase
         $this->validator->validate([1, 2, 3], $schema);
 
         $this->expectNotToPerformAssertions();
+    }
+
+    /**
+     * P-007: JSON Schema 2020-12 §4.2.2 — NaN must NOT compare equal to NaN.
+     * Previously `(string)(float) NAN === 'NAN'` produced a duplicate key
+     * so two NaNs were treated as duplicates. Per spec, two NaN values are
+     * distinct and the array MUST pass uniqueItems.
+     */
+    #[Test]
+    public function nan_values_treated_as_unique_in_unique_items(): void
+    {
+        $schema = new Schema(type: 'array', uniqueItems: true);
+
+        $this->validator->validate([NAN, NAN], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function nan_and_number_treated_as_distinct_in_unique_items(): void
+    {
+        $schema = new Schema(type: 'array', uniqueItems: true);
+
+        $this->validator->validate([NAN, 1.0], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function duplicates_still_detected_when_no_nan(): void
+    {
+        $schema = new Schema(type: 'array', uniqueItems: true);
+
+        $this->expectException(DuplicateItemsError::class);
+
+        $this->validator->validate([1.0, 1.0], $schema);
     }
 }

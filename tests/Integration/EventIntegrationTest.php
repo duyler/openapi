@@ -9,6 +9,7 @@ use Duyler\OpenApi\Event\ArrayDispatcher;
 use Duyler\OpenApi\Event\ValidationErrorEvent;
 use Duyler\OpenApi\Event\ValidationFinishedEvent;
 use Duyler\OpenApi\Event\ValidationStartedEvent;
+use Duyler\OpenApi\Test\Support\StreamStubHelper;
 use Exception;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -18,6 +19,8 @@ use Psr\Http\Message\UriInterface;
 
 final class EventIntegrationTest extends TestCase
 {
+    use StreamStubHelper;
+
     #[Test]
     public function validation_started_event_dispatched(): void
     {
@@ -202,6 +205,8 @@ final class EventIntegrationTest extends TestCase
         $stream
             ->method('__toString')
             ->willReturn($body);
+
+        $this->configureReadableStream($stream, $body);
 
         $request
             ->method('getBody')

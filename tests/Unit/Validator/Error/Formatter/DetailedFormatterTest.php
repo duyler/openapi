@@ -376,13 +376,13 @@ class DetailedFormatterTest extends TestCase
             'max_contains' => [
                 new MaxContainsError(
                     maxContains: 3,
-                    actualCount: 5,
+                    minDetectedCount: 5,
                     dataPath: '/items',
                     schemaPath: '/maxContains',
                 ),
                 'maxContains',
                 '/items',
-                'Array has 5 matching items, but maximum contains is 3',
+                'Array has at least 5 matching items (detection stopped at threshold), but maximum contains is 3',
                 'Ensure array has at most 3 matching items',
                 true,
             ],

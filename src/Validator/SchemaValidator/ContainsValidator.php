@@ -10,13 +10,22 @@ use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\ContainsMatchError;
 use Duyler\OpenApi\Validator\Exception\MaxContainsError;
 use Duyler\OpenApi\Validator\Exception\MinContainsError;
+use Duyler\OpenApi\Validator\Exception\TooManyContainsValidationsError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 
 use function is_array;
 
-final readonly class ContainsValidator extends AbstractSchemaValidator
+final readonly class ContainsValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    private const int MAX_CONTAINS_VALIDATIONS = 10000;
+
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->contains;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -31,11 +40,18 @@ final readonly class ContainsValidator extends AbstractSchemaValidator
         $nullableAsType = $context?->nullableAsType ?? true;
         $dataPath = $this->getDataPath($context);
         $validator = $this->createSchemaValidator();
-        $containsContext = $context ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
+        $containsContext = $context ?? ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
 
         $matchCount = 0;
 
         foreach ($data as $item) {
+            if (self::MAX_CONTAINS_VALIDATIONS <= $matchCount) {
+                throw new TooManyContainsValidationsError(
+                    max: self::MAX_CONTAINS_VALIDATIONS,
+                    dataPath: $dataPath,
+                );
+            }
+
             try {
                 /** @var array-key|array<array-key, mixed> $item */
                 $validator->validate($item, $schema->contains, $containsContext);
@@ -68,10 +84,9 @@ final readonly class ContainsValidator extends AbstractSchemaValidator
         }
 
         if (null !== $schema->maxContains && $matchCount > $schema->maxContains) {
-            // actualCount reports the detection threshold (maxContains + 1), not a full count — the loop above breaks early as a perf optimization once violation is certain.
             throw new MaxContainsError(
                 maxContains: $schema->maxContains,
-                actualCount: $matchCount,
+                minDetectedCount: $matchCount,
                 dataPath: $dataPath,
                 schemaPath: '/maxContains',
             );

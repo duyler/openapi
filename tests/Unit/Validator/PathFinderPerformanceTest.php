@@ -201,14 +201,13 @@ final class PathFinderPerformanceTest extends TestCase
             ->getDocument();
 
         $finder = new PathFinder($document);
-        $matcher = new ServerPathMatcher();
-        $servers = $document->servers->servers;
+        $matcher = new ServerPathMatcher($document->servers->servers);
 
         $start = microtime(true);
 
         for ($i = 0; $i < 50; $i++) {
             $requestPath = sprintf('/v1/resource%d/123', $i % 100);
-            $match = $matcher->matchPath($servers, $requestPath);
+            $match = $matcher->matchPath($requestPath);
             $matchedPath = null !== $match ? $match->strippedPath : $requestPath;
             $finder->findOperation($matchedPath, 'GET');
         }
@@ -272,15 +271,14 @@ YAML;
             ->getDocument();
 
         $finder = new PathFinder($document);
-        $matcher = new ServerPathMatcher();
-        $servers = $document->servers->servers;
+        $matcher = new ServerPathMatcher($document->servers->servers);
 
         gc_collect_cycles();
         $memoryBefore = memory_get_usage();
 
         for ($i = 0; $i < 50; $i++) {
             $requestPath = sprintf('/v1/resource%d/123', $i % 50);
-            $match = $matcher->matchPath($servers, $requestPath);
+            $match = $matcher->matchPath($requestPath);
             $matchedPath = null !== $match ? $match->strippedPath : $requestPath;
             $finder->findOperation($matchedPath, 'GET');
         }

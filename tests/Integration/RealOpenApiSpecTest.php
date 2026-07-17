@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Integration;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\StreamStubHelper;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
@@ -17,6 +18,8 @@ use Psr\Http\Message\UriInterface;
 /** @internal */
 final class RealOpenApiSpecTest extends TestCase
 {
+    use StreamStubHelper;
+
     private object $petstoreValidator;
     private object $ecommerceValidator;
 
@@ -157,6 +160,7 @@ final class RealOpenApiSpecTest extends TestCase
 
         $bodyMock = $this->createStub(StreamInterface::class);
         $bodyMock->method('__toString')->willReturn($body);
+        $this->configureReadableStream($bodyMock, $body);
         $request->method('getBody')->willReturn($bodyMock);
 
         return $request;
@@ -175,6 +179,7 @@ final class RealOpenApiSpecTest extends TestCase
 
         $bodyMock = $this->createStub(StreamInterface::class);
         $bodyMock->method('__toString')->willReturn($body);
+        $this->configureReadableStream($bodyMock, $body);
         $response->method('getBody')->willReturn($bodyMock);
 
         return $response;

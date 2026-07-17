@@ -13,8 +13,14 @@ use Override;
 use function assert;
 use function is_string;
 
-final readonly class PatternValidator extends AbstractSchemaValidator
+final readonly class PatternValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->pattern && '' !== $schema->pattern;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -26,7 +32,7 @@ final readonly class PatternValidator extends AbstractSchemaValidator
 
         assert('' !== $pattern);
 
-        $result = @preg_match($pattern, $data);
+        $result = $this->pregExecutor()->match($pattern, $data);
 
         if (false === $result) {
             throw new InvalidPatternException(

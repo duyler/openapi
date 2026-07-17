@@ -14,8 +14,14 @@ use function array_filter;
 use function is_array;
 use function is_string;
 
-final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValidator
+final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->unevaluatedProperties;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -41,7 +47,7 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
                 $value = $data[$propertyName];
 
                 if (null === $context) {
-                    $context = ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
+                    $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
                 }
 
                 $context->enterBreadcrumb($propertyName);
@@ -96,7 +102,7 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
 
                     $normalizedPattern = $this->regexValidator()->normalize($pattern);
                     assert('' !== $normalizedPattern);
-                    if (1 === preg_match($normalizedPattern, $propertyName)) {
+                    if (1 === $this->pregExecutor()->match($normalizedPattern, $propertyName)) {
                         $evaluated[] = $propertyName;
                     }
                 }

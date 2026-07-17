@@ -177,6 +177,13 @@ YAML;
 
         try {
             $validator->validateRequest($request);
+        } catch (ValidationException $exception) {
+            foreach ($exception->getErrors() as $error) {
+                if ($error instanceof TypeMismatchError) {
+                    $thrown = $error;
+                    break;
+                }
+            }
         } catch (TypeMismatchError $error) {
             $thrown = $error;
         }
@@ -427,7 +434,6 @@ YAML;
             ->withBody($this->factory->createStream($body));
     }
 
-    // Helper duplicated in MultipartUploadTest for test isolation.
     private function assertOperationMatches(Operation $operation, string $method, string $path): void
     {
         self::assertSame($method, $operation->method);

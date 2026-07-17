@@ -54,8 +54,6 @@ final class DiscriminatorValidatorTest extends TestCase
     #[Test]
     public function implicit_mapping_without_title_selects_schema_by_ref_name(): void
     {
-        // Arrange: Cat/Dog schemas have NO title; per OAS 3.2 the discriminator
-        // value must match the schema name extracted from the $ref last segment.
         $catSchema = new Schema(
             type: 'object',
             required: ['petType', 'name'],
@@ -96,7 +94,6 @@ final class DiscriminatorValidatorTest extends TestCase
 
         $catData = ['petType' => 'Cat', 'name' => 'Tom'];
 
-        // Act.
         $exception = null;
 
         try {
@@ -105,18 +102,12 @@ final class DiscriminatorValidatorTest extends TestCase
             $exception = $e;
         }
 
-        // Assert: implicit mapping by schema name 'Cat' (NOT title).
-        // Anti-test: on the old schemaMatchesValue-by-title code this throws
-        // UnknownDiscriminatorValueException because Cat has no title.
         $this->assertNull($exception, 'Implicit mapping must select Cat by $ref name even without title');
     }
 
     #[Test]
     public function implicit_mapping_ignores_title_when_title_differs_from_name(): void
     {
-        // Arrange: Cat schema has title 'My Cat Schema' which does NOT match
-        // discriminator value 'Cat'. Per OAS 3.2 implicit mapping uses the
-        // schema name (last $ref segment), title is ignored entirely.
         $catSchema = new Schema(
             title: 'My Cat Schema',
             type: 'object',
@@ -147,7 +138,6 @@ final class DiscriminatorValidatorTest extends TestCase
 
         $catData = ['petType' => 'Cat', 'name' => 'Tom'];
 
-        // Act.
         $exception = null;
 
         try {
@@ -156,18 +146,12 @@ final class DiscriminatorValidatorTest extends TestCase
             $exception = $e;
         }
 
-        // Assert: passes because mapping is by name 'Cat', title ignored.
-        // Anti-test: on old code matching by title, value 'Cat' !== title
-        // 'My Cat Schema' → UnknownDiscriminatorValueException.
         $this->assertNull($exception, 'Implicit mapping must ignore title and match by schema name');
     }
 
     #[Test]
     public function explicit_mapping_takes_priority_over_implicit_name_match(): void
     {
-        // Arrange: explicit mapping 'kitten' → Cat. Discriminator value 'kitten'
-        // is NOT equal to schema name 'Cat', so implicit mapping would miss;
-        // explicit mapping must win.
         $catSchema = new Schema(
             type: 'object',
             required: ['petType', 'name'],
@@ -200,7 +184,6 @@ final class DiscriminatorValidatorTest extends TestCase
 
         $kittenData = ['petType' => 'kitten', 'name' => 'Tom'];
 
-        // Act.
         $exception = null;
 
         try {
@@ -209,14 +192,12 @@ final class DiscriminatorValidatorTest extends TestCase
             $exception = $e;
         }
 
-        // Assert: explicit mapping resolves 'kitten' → Cat schema.
         $this->assertNull($exception, 'Explicit mapping must take priority over implicit name match');
     }
 
     #[Test]
     public function unknown_discriminator_value_throws_exception(): void
     {
-        // Arrange: 'Bird' is neither an explicit mapping key nor a schema name.
         $catSchema = new Schema(
             type: 'object',
             required: ['petType', 'name'],
@@ -255,21 +236,15 @@ final class DiscriminatorValidatorTest extends TestCase
             ),
         );
 
-        // Assert.
         $this->expectException(UnknownDiscriminatorValueException::class);
         $this->expectExceptionMessage('Unknown discriminator value "Bird"');
 
-        // Act.
         $this->validator->validate(['petType' => 'Bird'], $petSchema, $document);
     }
 
     #[Test]
     public function parent_required_property_enforced_after_child_match(): void
     {
-        // Arrange: parent Pet declares required ['petType']; child Cat declares
-        // required ['meow']. Data has petType='Cat' (child selected) but omits
-        // 'meow' → child-required error (EI-013 invariant: discriminator does
-        // NOT disable parent+child validation).
         $catSchema = new Schema(
             type: 'object',
             required: ['petType', 'name', 'meow'],
@@ -302,12 +277,10 @@ final class DiscriminatorValidatorTest extends TestCase
 
         $catWithoutMeow = ['petType' => 'Cat', 'name' => 'Tom'];
 
-        // Act.
         try {
             $this->validator->validate($catWithoutMeow, $petSchema, $document);
             $this->fail('Cat schema selected via implicit name mapping should enforce its required fields');
         } catch (ValidationException $e) {
-            // Assert: child-required 'meow' surfaces as a required-keyword error.
             $errors = $e->getErrors();
             $this->assertGreaterThan(0, count($errors));
             $this->assertSame('required', $errors[0]->keyword());
@@ -318,8 +291,6 @@ final class DiscriminatorValidatorTest extends TestCase
     #[Test]
     public function default_mapping_used_when_no_explicit_or_implicit_match(): void
     {
-        // Arrange: discriminator.defaultMapping kicks in when neither explicit
-        // mapping nor implicit schema-name match resolves the value.
         $defaultSchema = new Schema(
             type: 'object',
             required: ['petType', 'name'],
@@ -349,7 +320,6 @@ final class DiscriminatorValidatorTest extends TestCase
 
         $unknownData = ['petType' => 'unknown', 'name' => 'Tom'];
 
-        // Act.
         $exception = null;
 
         try {
@@ -358,15 +328,12 @@ final class DiscriminatorValidatorTest extends TestCase
             $exception = $e;
         }
 
-        // Assert: 'unknown' resolves to Default via defaultMapping.
         $this->assertNull($exception, 'defaultMapping must resolve unknown values when no explicit/implicit match exists');
     }
 
     #[Test]
     public function inline_schema_without_ref_in_oneOf_is_skipped_during_implicit_mapping(): void
     {
-        // Arrange: first candidate is an inline schema (no $ref) which MUST be
-        // skipped; second candidate Cat matches implicitly by schema name.
         $catSchema = new Schema(
             type: 'object',
             required: ['petType', 'name'],
@@ -397,7 +364,6 @@ final class DiscriminatorValidatorTest extends TestCase
 
         $catData = ['petType' => 'Cat', 'name' => 'Tom'];
 
-        // Act.
         $exception = null;
 
         try {
@@ -406,7 +372,155 @@ final class DiscriminatorValidatorTest extends TestCase
             $exception = $e;
         }
 
-        // Assert: inline schema skipped (no $ref), Cat selected by name.
         $this->assertNull($exception, 'Inline schema without $ref must be skipped during implicit mapping');
+    }
+
+    #[Test]
+    public function discriminator_with_allOf_ref_resolves_correctly(): void
+    {
+        $catSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $dogSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            discriminator: new Discriminator(propertyName: 'petType'),
+            allOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+                new Schema(ref: '#/components/schemas/Dog'),
+            ],
+        );
+
+        $document = new OpenApiDocument(
+            '3.2.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                    'Dog' => $dogSchema,
+                ],
+            ),
+        );
+
+        $catData = ['petType' => 'Cat'];
+
+        $exception = null;
+
+        try {
+            $this->validator->validate($catData, $petSchema, $document);
+        } catch (Throwable $e) {
+            $exception = $e;
+        }
+
+        $this->assertNull($exception, 'Discriminator must resolve $refs inside allOf composition');
+    }
+
+    #[Test]
+    public function discriminator_with_allOf_and_nested_oneOf(): void
+    {
+        $catSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $dogSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            discriminator: new Discriminator(propertyName: 'petType'),
+            allOf: [
+                new Schema(
+                    oneOf: [
+                        new Schema(ref: '#/components/schemas/Cat'),
+                        new Schema(ref: '#/components/schemas/Dog'),
+                    ],
+                ),
+            ],
+        );
+
+        $document = new OpenApiDocument(
+            '3.2.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                    'Dog' => $dogSchema,
+                ],
+            ),
+        );
+
+        $catData = ['petType' => 'Cat'];
+
+        $exception = null;
+
+        try {
+            $this->validator->validate($catData, $petSchema, $document);
+        } catch (Throwable $e) {
+            $exception = $e;
+        }
+
+        $this->assertNull($exception, 'Discriminator must recurse through allOf into nested oneOf');
+    }
+
+    #[Test]
+    public function discriminator_with_allOf_unknown_value_throws_unknown_exception(): void
+    {
+        $catSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            discriminator: new Discriminator(propertyName: 'petType'),
+            allOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+            ],
+        );
+
+        $document = new OpenApiDocument(
+            '3.2.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                ],
+            ),
+        );
+
+        $this->expectException(UnknownDiscriminatorValueException::class);
+        $this->expectExceptionMessage('Unknown discriminator value "Bird"');
+
+        $this->validator->validate(['petType' => 'Bird'], $petSchema, $document);
     }
 }

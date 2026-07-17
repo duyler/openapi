@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\SchemaValidator\AllOfValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -15,6 +16,9 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
+use function array_map;
+use function count;
+
 #[CoversClass(AllOfValidator::class)]
 class AllOfValidatorTest extends TestCase
 {
@@ -24,7 +28,7 @@ class AllOfValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new AllOfValidator($this->pool, BuiltinFormats::create());
+        $this->validator = new AllOfValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]
@@ -192,5 +196,45 @@ class AllOfValidatorTest extends TestCase
         ], $schema);
 
         $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function allOf_propagates_nested_validation_exceptions(): void
+    {
+        $schema = new Schema(
+            allOf: [
+                new Schema(type: 'object', required: ['name']),
+                new Schema(type: 'object', required: ['email']),
+            ],
+        );
+
+        try {
+            $this->validator->validate(['age' => 30], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+
+            self::assertGreaterThanOrEqual(2, count($errors));
+            $messages = array_map(static fn($error) => $error->message(), $errors);
+            $messagesConcat = implode("\n", $messages);
+            self::assertStringContainsString('name', $messagesConcat);
+            self::assertStringContainsString('email', $messagesConcat);
+        }
+    }
+
+    #[Test]
+    public function allOf_propagates_invalid_data_type_errors(): void
+    {
+        $schema = new Schema(
+            allOf: [new Schema(type: 'string')],
+        );
+
+        try {
+            $this->validator->validate(['array'], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            self::assertGreaterThan(0, count($errors));
+        }
     }
 }

@@ -10,13 +10,35 @@ use Duyler\OpenApi\Validator\Exception\EnumError;
 use Duyler\OpenApi\Validator\Schema\JsonEquals;
 use Override;
 
-final readonly class EnumValidator extends AbstractSchemaValidator
+final readonly class EnumValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    private readonly EnumScalarCache $scalarCache;
+
+    public function __construct(ValidatorDependencies $dependencies)
+    {
+        parent::__construct($dependencies);
+        $this->scalarCache = new EnumScalarCache();
+    }
+
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->enum && [] !== $schema->enum;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
         if (null === $schema->enum || [] === $schema->enum) {
             return;
+        }
+
+        if ($this->scalarCache->isScalarLookupEligible($schema, $data)) {
+            if ($this->scalarCache->contains($schema, $data)) {
+                return;
+            }
+
+            throw $this->enumError($data, $schema, $context);
         }
 
         /** @var mixed $allowedValue */
@@ -26,11 +48,15 @@ final readonly class EnumValidator extends AbstractSchemaValidator
             }
         }
 
-        $dataPath = $this->getDataPath($context);
-        throw new EnumError(
-            allowedValues: $schema->enum,
+        throw $this->enumError($data, $schema, $context);
+    }
+
+    private function enumError(mixed $data, Schema $schema, ?ValidationContext $context): EnumError
+    {
+        return new EnumError(
+            allowedValues: $schema->enum ?? [],
             actual: $data,
-            dataPath: $dataPath,
+            dataPath: $this->getDataPath($context),
             schemaPath: '/enum',
         );
     }

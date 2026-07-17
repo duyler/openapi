@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Functional\Request;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Override;
@@ -454,8 +455,10 @@ YAML;
 
         try {
             $validator->validateRequest($request);
-            $this->fail('Expected TypeMismatchError because multipart parsed body is a list, not an object');
-        } catch (TypeMismatchError $error) {
+            $this->fail('Expected ValidationException because multipart parsed body is a list, not an object');
+        } catch (ValidationException $exception) {
+            $error = $exception->getErrors()[0];
+            $this->assertInstanceOf(TypeMismatchError::class, $error);
             $this->assertSame('object', $error->params()['expected']);
             $this->assertSame('array', $error->params()['actual']);
             $this->assertSame('type', $error->keyword());

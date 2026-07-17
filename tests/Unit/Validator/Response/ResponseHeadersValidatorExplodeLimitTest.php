@@ -35,7 +35,6 @@ final class ResponseHeadersValidatorExplodeLimitTest extends TestCase
     #[Test]
     public function large_array_items_rejected(): void
     {
-        // MAX_HEADER_ARRAY_ITEMS = 1000 → 1000 commas splits into 1001 items.
         $value = 'a' . str_repeat(',a', 1000);
 
         $headers = ['X-Tags' => $value];
@@ -56,7 +55,6 @@ final class ResponseHeadersValidatorExplodeLimitTest extends TestCase
     #[Test]
     public function normal_array_items_accepted(): void
     {
-        // 3 items — well under the 1000 cap.
         $headers = ['X-Tags' => 'a,b,c'];
         $headerSchemas = new Headers([
             'X-Tags' => new Header(

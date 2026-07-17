@@ -4,9 +4,26 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Serializer\SchemaToArrayConverter;
 use JsonSerializable;
 use Override;
 
+/**
+ * OpenAPI 3.2 / JSON Schema 2020-12 schema object.
+ *
+ * The historical facade keeps flat promoted properties so the 35+ existing
+ * consumers (validators, compiler, ref resolver, tests) keep working. The
+ * 56-field enumeration that used to live in jsonSerialize, in
+ * CompilationCache::schemaToArray and in OpenApiBuilder::buildSchema now lives
+ * exactly once in {@see SchemaFieldMetadata}, consumed by
+ * {@see SchemaToArrayConverter} and {@see SchemaFromArrayConverter}.
+ *
+ * Sub-DTO accessors ({@see stringConstraints()}, {@see numericConstraints()},
+ * {@see arrayConstraints()}, {@see objectConstraints()},
+ * {@see compositionConstraints()}) expose the same fields as typed value
+ * objects for new code and for downstream tasks that migrate consumers off the
+ * flat API. They are derived lazily and never mutate the facade.
+ */
 final readonly class Schema implements JsonSerializable
 {
     /**
@@ -227,234 +244,153 @@ final readonly class Schema implements JsonSerializable
         );
     }
 
+    /**
+     * Returns the string-constraint sub-DTO grouping minLength / maxLength /
+     * pattern. Returns null when no string constraint is declared.
+     *
+     * `format` is intentionally not grouped here: it is shared between string
+     * and numeric schemas and stays on the top-level facade.
+     */
+    public function stringConstraints(): ?StringConstraints
+    {
+        if (null === $this->minLength && null === $this->maxLength && null === $this->pattern) {
+            return null;
+        }
+
+        return new StringConstraints(
+            maxLength: $this->maxLength,
+            minLength: $this->minLength,
+            pattern: $this->pattern,
+        );
+    }
+
+    /**
+     * Returns the numeric-constraint sub-DTO grouping multipleOf / minimum /
+     * maximum / exclusiveMinimum / exclusiveMaximum, or null when none are
+     * declared.
+     */
+    public function numericConstraints(): ?NumericConstraints
+    {
+        if (
+            null === $this->multipleOf
+            && null === $this->maximum
+            && null === $this->exclusiveMaximum
+            && null === $this->minimum
+            && null === $this->exclusiveMinimum
+        ) {
+            return null;
+        }
+
+        return new NumericConstraints(
+            multipleOf: $this->multipleOf,
+            maximum: $this->maximum,
+            exclusiveMaximum: $this->exclusiveMaximum,
+            minimum: $this->minimum,
+            exclusiveMinimum: $this->exclusiveMinimum,
+        );
+    }
+
+    /**
+     * Returns the array-constraint sub-DTO grouping items / prefixItems /
+     * minItems / maxItems / uniqueItems / contains / minContains / maxContains
+     * / unevaluatedItems, or null when none are declared.
+     */
+    public function arrayConstraints(): ?ArrayConstraints
+    {
+        if (
+            null === $this->items
+            && null === $this->prefixItems
+            && null === $this->minItems
+            && null === $this->maxItems
+            && null === $this->uniqueItems
+            && null === $this->contains
+            && null === $this->minContains
+            && null === $this->maxContains
+            && null === $this->unevaluatedItems
+        ) {
+            return null;
+        }
+
+        return new ArrayConstraints(
+            items: $this->items,
+            prefixItems: $this->prefixItems,
+            minItems: $this->minItems,
+            maxItems: $this->maxItems,
+            uniqueItems: $this->uniqueItems,
+            contains: $this->contains,
+            minContains: $this->minContains,
+            maxContains: $this->maxContains,
+            unevaluatedItems: $this->unevaluatedItems,
+        );
+    }
+
+    /**
+     * Returns the object-constraint sub-DTO grouping properties / required /
+     * minProperties / maxProperties / additionalProperties /
+     * unevaluatedProperties / patternProperties / dependentSchemas /
+     * propertyNames, or null when none are declared.
+     */
+    public function objectConstraints(): ?ObjectConstraints
+    {
+        if (
+            null === $this->properties
+            && null === $this->required
+            && null === $this->minProperties
+            && null === $this->maxProperties
+            && null === $this->additionalProperties
+            && null === $this->unevaluatedProperties
+            && null === $this->patternProperties
+            && null === $this->dependentSchemas
+            && null === $this->propertyNames
+        ) {
+            return null;
+        }
+
+        return new ObjectConstraints(
+            properties: $this->properties,
+            required: $this->required,
+            minProperties: $this->minProperties,
+            maxProperties: $this->maxProperties,
+            additionalProperties: $this->additionalProperties,
+            unevaluatedProperties: $this->unevaluatedProperties,
+            patternProperties: $this->patternProperties,
+            dependentSchemas: $this->dependentSchemas,
+            propertyNames: $this->propertyNames,
+        );
+    }
+
+    /**
+     * Returns the composition sub-DTO grouping allOf / anyOf / oneOf / not /
+     * if / then / else, or null when none are declared.
+     */
+    public function compositionConstraints(): ?CompositionConstraints
+    {
+        if (
+            null === $this->allOf
+            && null === $this->anyOf
+            && null === $this->oneOf
+            && null === $this->not
+            && null === $this->if
+            && null === $this->then
+            && null === $this->else
+        ) {
+            return null;
+        }
+
+        return new CompositionConstraints(
+            allOf: $this->allOf,
+            anyOf: $this->anyOf,
+            oneOf: $this->oneOf,
+            not: $this->not,
+            if: $this->if,
+            then: $this->then,
+            else: $this->else,
+        );
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
-        if (null !== $this->ref) {
-            $data = ['$ref' => $this->ref];
-
-            if (null !== $this->refSummary) {
-                $data['summary'] = $this->refSummary;
-            }
-
-            if (null !== $this->refDescription) {
-                $data['description'] = $this->refDescription;
-            }
-
-            return $data;
-        }
-
-        /** @var array<string, mixed> $data */
-        $data = [];
-
-        if (null !== $this->title) {
-            $data['title'] = $this->title;
-        }
-
-        if (null !== $this->description) {
-            $data['description'] = $this->description;
-        }
-
-        if ($this->hasDefault) {
-            $data['default'] = $this->default;
-        }
-
-        if ($this->deprecated) {
-            $data['deprecated'] = $this->deprecated;
-        }
-
-        if ($this->readOnly) {
-            $data['readOnly'] = $this->readOnly;
-        }
-
-        if ($this->writeOnly) {
-            $data['writeOnly'] = $this->writeOnly;
-        }
-
-        if (null !== $this->type) {
-            $data['type'] = $this->type;
-        }
-
-        if ($this->nullable) {
-            $data['nullable'] = $this->nullable;
-        }
-
-        if ($this->hasConst) {
-            $data['const'] = $this->const;
-        }
-
-        if (null !== $this->multipleOf) {
-            $data['multipleOf'] = $this->multipleOf;
-        }
-
-        if (null !== $this->maximum) {
-            $data['maximum'] = $this->maximum;
-        }
-
-        if (null !== $this->exclusiveMaximum) {
-            $data['exclusiveMaximum'] = $this->exclusiveMaximum;
-        }
-
-        if (null !== $this->minimum) {
-            $data['minimum'] = $this->minimum;
-        }
-
-        if (null !== $this->exclusiveMinimum) {
-            $data['exclusiveMinimum'] = $this->exclusiveMinimum;
-        }
-
-        if (null !== $this->maxLength) {
-            $data['maxLength'] = $this->maxLength;
-        }
-
-        if (null !== $this->minLength) {
-            $data['minLength'] = $this->minLength;
-        }
-
-        if (null !== $this->pattern) {
-            $data['pattern'] = $this->pattern;
-        }
-
-        if (null !== $this->maxItems) {
-            $data['maxItems'] = $this->maxItems;
-        }
-
-        if (null !== $this->minItems) {
-            $data['minItems'] = $this->minItems;
-        }
-
-        if (null !== $this->uniqueItems) {
-            $data['uniqueItems'] = $this->uniqueItems;
-        }
-
-        if (null !== $this->maxProperties) {
-            $data['maxProperties'] = $this->maxProperties;
-        }
-
-        if (null !== $this->minProperties) {
-            $data['minProperties'] = $this->minProperties;
-        }
-
-        if (null !== $this->required) {
-            $data['required'] = $this->required;
-        }
-
-        if (null !== $this->allOf) {
-            $data['allOf'] = $this->allOf;
-        }
-
-        if (null !== $this->anyOf) {
-            $data['anyOf'] = $this->anyOf;
-        }
-
-        if (null !== $this->oneOf) {
-            $data['oneOf'] = $this->oneOf;
-        }
-
-        if (null !== $this->not) {
-            $data['not'] = $this->not;
-        }
-
-        if (null !== $this->discriminator) {
-            $data['discriminator'] = $this->discriminator;
-        }
-
-        if (null !== $this->properties) {
-            $data['properties'] = $this->properties;
-        }
-
-        if (null !== $this->additionalProperties) {
-            $data['additionalProperties'] = $this->additionalProperties;
-        }
-
-        if (null !== $this->unevaluatedProperties) {
-            $data['unevaluatedProperties'] = $this->unevaluatedProperties;
-        }
-
-        if (null !== $this->items) {
-            $data['items'] = $this->items;
-        }
-
-        if (null !== $this->prefixItems) {
-            $data['prefixItems'] = $this->prefixItems;
-        }
-
-        if (null !== $this->contains) {
-            $data['contains'] = $this->contains;
-        }
-
-        if (null !== $this->minContains) {
-            $data['minContains'] = $this->minContains;
-        }
-
-        if (null !== $this->maxContains) {
-            $data['maxContains'] = $this->maxContains;
-        }
-
-        if (null !== $this->patternProperties) {
-            $data['patternProperties'] = $this->patternProperties;
-        }
-
-        if (null !== $this->propertyNames) {
-            $data['propertyNames'] = $this->propertyNames;
-        }
-
-        if (null !== $this->dependentSchemas) {
-            $data['dependentSchemas'] = $this->dependentSchemas;
-        }
-
-        if (null !== $this->if) {
-            $data['if'] = $this->if;
-        }
-
-        if (null !== $this->then) {
-            $data['then'] = $this->then;
-        }
-
-        if (null !== $this->else) {
-            $data['else'] = $this->else;
-        }
-
-        if (null !== $this->unevaluatedItems) {
-            $data['unevaluatedItems'] = $this->unevaluatedItems;
-        }
-
-        if (null !== $this->example) {
-            $data['example'] = $this->example;
-        }
-
-        if (null !== $this->examples) {
-            $data['examples'] = $this->examples;
-        }
-
-        if (null !== $this->enum) {
-            $data['enum'] = $this->enum;
-        }
-
-        if (null !== $this->format) {
-            $data['format'] = $this->format;
-        }
-
-        if (null !== $this->contentEncoding) {
-            $data['contentEncoding'] = $this->contentEncoding;
-        }
-
-        if (null !== $this->contentMediaType) {
-            $data['contentMediaType'] = $this->contentMediaType;
-        }
-
-        if (null !== $this->contentSchema) {
-            $data['contentSchema'] = $this->contentSchema;
-        }
-
-        if (null !== $this->jsonSchemaDialect) {
-            $data['$schema'] = $this->jsonSchemaDialect;
-        }
-
-        if (null !== $this->xml) {
-            $data['xml'] = $this->xml;
-        }
-
-        return $data;
+        return new SchemaToArrayConverter()->toWireArray($this);
     }
 }

@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Exception;
 
 use InvalidArgumentException;
-use Duyler\OpenApi\Validator\Exception\ValidationErrorInterface as IValidationErrorInterface;
 use Override;
 use Throwable;
 
-final class InvalidDataTypeException extends InvalidArgumentException implements IValidationErrorInterface
+final class InvalidDataTypeException extends InvalidArgumentException implements ValidationErrorInterface
 {
     public readonly string $type;
 

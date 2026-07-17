@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\E2E;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
@@ -235,7 +236,14 @@ YAML;
         $caught = null;
         try {
             $validator->validateRequest($request);
-            self::fail('Expected TypeMismatchError when non-array body "hello" is validated against type: array');
+            self::fail('Expected ValidationException when non-array body "hello" is validated against type: array');
+        } catch (ValidationException $exception) {
+            foreach ($exception->getErrors() as $error) {
+                if ($error instanceof TypeMismatchError) {
+                    $caught = $error;
+                    break;
+                }
+            }
         } catch (TypeMismatchError $e) {
             $caught = $e;
         }

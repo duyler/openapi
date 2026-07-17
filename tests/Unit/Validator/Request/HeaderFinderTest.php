@@ -33,7 +33,33 @@ final class HeaderFinderTest extends TestCase
         $headers = ['Accept' => ['application/json', 'application/xml']];
         $result = $this->finder->find($headers, 'Accept');
 
-        $this->assertSame('application/json, application/xml', $result);
+        self::assertSame('application/json,application/xml', $result);
+    }
+
+    /**
+     * P-015: RFC 9110 §5.2 — multiple field lines with the same name are
+     * equivalent to a single line whose values are joined by a comma
+     * WITHOUT a space, so the merged value round-trips correctly through
+     * simple/pipeDelimited style explode which splits on the bare comma.
+     */
+    #[Test]
+    public function merges_multi_value_headers_with_comma_no_space(): void
+    {
+        $headers = ['x-foo' => ['a', 'b']];
+
+        $result = $this->finder->find($headers, 'x-foo');
+
+        self::assertSame('a,b', $result);
+    }
+
+    #[Test]
+    public function preserves_single_value_header(): void
+    {
+        $headers = ['x-foo' => 'a'];
+
+        $result = $this->finder->find($headers, 'x-foo');
+
+        self::assertSame('a', $result);
     }
 
     #[Test]

@@ -30,6 +30,12 @@ final readonly class QueryStringValidator
 
     public function validate(string $queryString, array $parameterSchemas): void
     {
+        $context = ValidationContext::create(
+            pool: $this->pool,
+            nullableAsType: $this->config->nullableAsType,
+            emptyArrayStrategy: $this->config->emptyArrayStrategy,
+        );
+
         foreach ($parameterSchemas as $param) {
             if (false === $param instanceof Parameter) {
                 continue;
@@ -40,7 +46,7 @@ final readonly class QueryStringValidator
             }
 
             $this->validateParameter($param);
-            $this->validateQueryStringParameter($queryString, $param);
+            $this->validateQueryStringParameter($queryString, $param, $context);
         }
     }
 
@@ -63,12 +69,10 @@ final readonly class QueryStringValidator
         }
     }
 
-    private function validateQueryStringParameter(string $queryString, Parameter $parameter): void
+    private function validateQueryStringParameter(string $queryString, Parameter $parameter, ValidationContext $context): void
     {
-        $name = $parameter->name ?? 'unknown';
-
         if ('' === $queryString && $parameter->required) {
-            throw new MissingParameterException('querystring', $name);
+            throw new MissingParameterException('querystring', $parameter->name ?? 'unknown');
         }
 
         if ('' === $queryString) {
@@ -77,10 +81,10 @@ final readonly class QueryStringValidator
 
         /** @var array<array-key, mixed>|scalar|null $parsedValue */
         $parsedValue = $this->queryParser->parseQueryString($queryString, $parameter);
-        $this->validateValueAgainstSchema($parsedValue, $parameter);
+        $this->validateValueAgainstSchema($parsedValue, $parameter, $context);
     }
 
-    private function validateValueAgainstSchema(mixed $value, Parameter $parameter): void
+    private function validateValueAgainstSchema(mixed $value, Parameter $parameter, ValidationContext $context): void
     {
         $content = $parameter->content;
         if (null === $content) {
@@ -96,11 +100,6 @@ final readonly class QueryStringValidator
                     || is_float($value)
                     || is_bool($value)
                     || null === $value,
-                );
-                $context = ValidationContext::create(
-                    pool: $this->pool,
-                    nullableAsType: $this->config->nullableAsType,
-                    emptyArrayStrategy: $this->config->emptyArrayStrategy,
                 );
                 $this->schemaValidator->validate($value, $mediaTypeObject->schema, $context);
             }

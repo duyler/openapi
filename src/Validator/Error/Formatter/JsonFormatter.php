@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Error\Formatter;
 
 use Duyler\OpenApi\Validator\Exception\ValidationErrorInterface;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 use ValueError;
 
@@ -19,9 +20,10 @@ final readonly class JsonFormatter implements ErrorFormatterInterface
     #[Override]
     public function format(ValidationErrorInterface $error): string
     {
-        $data = $this->buildErrorData($error);
-
-        $result = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $result = json_encode(
+            $this->buildErrorData($error),
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+        );
 
         if (false === $result) {
             throw new ValueError('Failed to encode error data to JSON');
@@ -39,18 +41,25 @@ final readonly class JsonFormatter implements ErrorFormatterInterface
             $errorsData[] = $this->buildErrorData($error);
         }
 
-        $data = [
-            'errors' => $errorsData,
-            'count' => count($errors),
-        ];
-
-        $result = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $result = json_encode(
+            [
+                'errors' => $errorsData,
+                'count' => count($errors),
+            ],
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+        );
 
         if (false === $result) {
             throw new ValueError('Failed to encode error data to JSON');
         }
 
         return $result;
+    }
+
+    #[Override]
+    public function formatException(ValidationException $exception): string
+    {
+        return $this->formatMultiple($exception->getErrors());
     }
 
     /**
@@ -61,8 +70,8 @@ final readonly class JsonFormatter implements ErrorFormatterInterface
         $data = [
             'breadcrumb' => $error->dataPath(),
             'message' => $error->message(),
-            'type' => $error->getType(),
-            'details' => $this->getDetails($error),
+            'type' => $error->keyword(),
+            'details' => $error->params(),
         ];
 
         if (null !== $error->suggestion()) {
@@ -70,13 +79,5 @@ final readonly class JsonFormatter implements ErrorFormatterInterface
         }
 
         return $data;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function getDetails(ValidationErrorInterface $error): array
-    {
-        return $error->params();
     }
 }

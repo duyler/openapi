@@ -11,8 +11,18 @@ use Override;
 use function base64_decode;
 use function is_string;
 
-final readonly class ContentEncodingValidator implements SchemaValidatorInterface
+final readonly class ContentEncodingValidator implements KeywordApplicable
 {
+    public function __construct(
+        private readonly ValidatorDependencies $dependencies,
+    ) {}
+
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->contentEncoding;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

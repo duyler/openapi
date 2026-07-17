@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Response;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\StreamStubHelper;
 use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -17,6 +18,8 @@ use Psr\Http\Message\UriInterface;
 #[CoversClass(ResponseValidatorWithContext::class)]
 final class ResponseValidatorWithContextPerformanceTest extends TestCase
 {
+    use StreamStubHelper;
+
     #[Test]
     public function repeated_validate_does_not_create_redundant_objects(): void
     {
@@ -70,12 +73,11 @@ YAML;
             ),
         );
 
-        $response = $this->createPsr7Response(201, '{"id": 1, "name": "John"}');
-
         gc_collect_cycles();
         $memoryBefore = memory_get_usage();
 
         for ($i = 0; $i < 50; $i++) {
+            $response = $this->createPsr7Response(201, '{"id": 1, "name": "John"}');
             $validator->validateResponse($response, $operation);
         }
 
@@ -118,12 +120,12 @@ YAML;
             ->build();
 
         $operation = $validator->validateRequest($this->createPsr7Request('/items', 'GET'));
-        $response = $this->createPsr7Response(200, '[{"id": 1, "name": "Item"}]');
 
         $iterations = 100;
         $start = microtime(true);
 
         for ($i = 0; $i < $iterations; $i++) {
+            $response = $this->createPsr7Response(200, '[{"id": 1, "name": "Item"}]');
             $validator->validateResponse($response, $operation);
         }
 
@@ -164,6 +166,7 @@ YAML;
 
         $stream = $this->createStub(StreamInterface::class);
         $stream->method('__toString')->willReturn($body);
+        $this->configureReadableStream($stream, $body);
 
         $request->method('getBody')->willReturn($stream);
 
@@ -190,6 +193,7 @@ YAML;
 
         $stream = $this->createStub(StreamInterface::class);
         $stream->method('__toString')->willReturn($body);
+        $this->configureReadableStream($stream, $body);
 
         $response->method('getBody')->willReturn($stream);
 

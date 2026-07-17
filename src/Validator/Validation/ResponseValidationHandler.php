@@ -21,7 +21,7 @@ final readonly class ResponseValidationHandler
     private readonly LoggerInterface $logger;
 
     public function __construct(
-        private readonly ValidationContext $context,
+        private readonly ValidatorDependencies $context,
     ) {
         $this->eventDispatcher = $context->eventDispatcher;
         $this->logger = $context->logger;

@@ -28,6 +28,17 @@ final class PathRegexCache
 
     private const string PLACEHOLDER_TOKEN_FORMAT = "\x01PH%d\x02";
 
+    /**
+     * RFC 6570 §2.3 varname character classes.
+     * `varname = varchar *( ["."] varchar )` — the dot is a legal character
+     * inside a variable name (not a separator), so it must be allowed in the
+     * trailing character class. The leading class excludes the dot because a
+     * varname cannot start with one.
+     */
+    private const string VARNAME_FIRST_CHAR_CLASS = 'a-zA-Z_\x80-\xff';
+
+    private const string VARNAME_TAIL_CHAR_CLASS = 'a-zA-Z0-9_.\x80-\xff';
+
     /** @var array<string, string> */
     private array $cache = [];
 
@@ -88,8 +99,11 @@ final class PathRegexCache
      * template are escaped via `preg_quote` to prevent regex meta-characters
      * (`.`, `+`, `(`, ...) from being interpreted as regex syntax, which would
      * otherwise allow path-based ACL bypass (e.g. `/v1.0/users` matching
-     * `/v1X0/users`). Parameter names are validated as legal PHP regex group
-     * names; unsupported RFC 6570 operators are rejected fail-fast.
+     * `/v1X0/users`). Variable names follow RFC 6570 §2.3, which permits the
+     * dot inside a name (e.g. `{user.id}`); because PCRE forbids dots in named
+     * subpatterns, the dot is replaced with an underscore when emitting the
+     * capturing group name. Unsupported RFC 6570 operators are rejected
+     * fail-fast.
      *
      * @return string Fully-delimited regular expression (`#^...$#`)
      *
@@ -100,8 +114,13 @@ final class PathRegexCache
     {
         /** @var array<string, array{name: string, operator: string}> $placeholders */
         $placeholders = [];
+        $pattern = sprintf(
+            '/\{(?<operator>[+#.\/;?&]?)(?<name>[%s][%s]*)\}/',
+            self::VARNAME_FIRST_CHAR_CLASS,
+            self::VARNAME_TAIL_CHAR_CLASS,
+        );
         $templated = preg_replace_callback(
-            '/\{(?<operator>[+#.\/;?&]?)(?<name>[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*)\}/',
+            $pattern,
             static function (array $m) use (&$placeholders): string {
                 $operator = $m['operator'];
                 $name = $m['name'];
@@ -131,9 +150,10 @@ final class PathRegexCache
         $escaped = preg_quote($templated, self::REGEX_DELIMITER);
 
         foreach ($placeholders as $token => $info) {
+            $groupName = str_replace('.', '_', $info['name']);
             $pattern = '+' === $info['operator']
-                ? '(?P<' . $info['name'] . '>[^?\#]+)'
-                : '(?P<' . $info['name'] . '>[^/]+)';
+                ? '(?P<' . $groupName . '>[^?\#]+)'
+                : '(?P<' . $groupName . '>[^/]+)';
             $escaped = str_replace($token, $pattern, $escaped);
         }
 

@@ -12,6 +12,7 @@ use Duyler\OpenApi\Validator\Dto\ValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Link\LinkContext;
+use Duyler\OpenApi\Validator\Link\ResolvedLink;
 use InvalidArgumentException;
 use Override;
 use Psr\Http\Message\ResponseInterface;
@@ -27,6 +28,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         private readonly ValidatorDependencies $dependencies,
     ) {}
 
+    #[Override]
     public function getDocument(): OpenApiDocument
     {
         return $this->document;
@@ -93,7 +95,6 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         $this->dependencies->refResolver->clear();
         $this->dependencies->pathRegexCache->clear();
         $this->dependencies->regexValidator->clear();
-        libxml_clear_errors();
     }
 
     #[Override]
@@ -114,9 +115,11 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
      * Limitation: this method only resolves component-level links
      * (defined under components/links). Operation-level links defined
      * inline within a response's links property are not supported.
+     *
+     * @param array<string, mixed> $responseData Response body data to extract values from
      */
     #[Override]
-    public function resolveLink(string $linkName, array $responseData): array
+    public function resolveLink(string $linkName, array $responseData): ResolvedLink
     {
         $context = new LinkContext(body: $responseData);
 
@@ -131,7 +134,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
      * inline within a response's links property are not supported.
      */
     #[Override]
-    public function resolveLinkWithContext(string $linkName, LinkContext $context): array
+    public function resolveLinkWithContext(string $linkName, LinkContext $context): ResolvedLink
     {
         $links = $this->document->components?->links ?? [];
 

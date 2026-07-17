@@ -17,6 +17,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
+use RuntimeException;
 
 /**
  * @internal
@@ -128,7 +129,8 @@ final class RefResolverTest extends TestCase
 
         $this->expectException(UnresolvableRefException::class);
         $this->expectExceptionMessage(
-            'Cannot resolve $ref "http://example.com/schema": Only local refs',
+            'Cannot resolve $ref "http://example.com/schema": External ref not resolved. '
+            . 'Builtin FileExternalRefResolver supports file://',
         );
 
         $this->resolver->resolve("http://example.com/schema", $document);
@@ -905,7 +907,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->assertSame(
-            "https://api.example.com/schemas/../common/types.yaml",
+            "https://api.example.com/common/types.yaml",
             $combined,
         );
     }
@@ -1362,7 +1364,6 @@ final class RefResolverTest extends TestCase
     {
         $this->assertInstanceOf(RefResolverInterface::class, $this->resolver);
 
-        // clear() should be callable through the interface
         $this->resolver->clear();
     }
 
@@ -1376,40 +1377,37 @@ final class RefResolverTest extends TestCase
 
         $this->expectException(UnresolvableRefException::class);
         $this->expectExceptionMessage(
-            'Cannot resolve $ref "https://example.com/user.json": Only local refs (#/...) are supported; install an ExternalRefResolver for external refs',
+            'Cannot resolve $ref "https://example.com/user.json": External ref not resolved. '
+            . 'Builtin FileExternalRefResolver supports file://',
         );
 
         $this->resolver->resolve("https://example.com/user.json", $document);
     }
 
     #[Test]
-    public function throw_error_for_relative_external_ref_without_resolver(): void
+    public function throw_error_for_relative_external_ref_with_missing_file(): void
     {
         $document = new OpenApiDocument(
             "3.1.0",
             new InfoObject("Test API", "1.0.0"),
         );
 
-        $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "./relative/path.json": Only local refs (#/...) are supported; install an ExternalRefResolver for external refs',
-        );
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('External ref file not found');
 
         $this->resolver->resolve("./relative/path.json", $document);
     }
 
     #[Test]
-    public function throw_error_for_absolute_path_external_ref_without_resolver(): void
+    public function throw_error_for_absolute_path_external_ref_with_missing_file(): void
     {
         $document = new OpenApiDocument(
             "3.1.0",
             new InfoObject("Test API", "1.0.0"),
         );
 
-        $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "/absolute/path.json": Only local refs (#/...) are supported; install an ExternalRefResolver for external refs',
-        );
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('External ref file not found');
 
         $this->resolver->resolve("/absolute/path.json", $document);
     }

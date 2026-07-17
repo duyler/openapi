@@ -31,6 +31,11 @@ final readonly class BuilderConfig
         public readonly ?bool $serverPathResolution = null,
         public readonly ?bool $strictFormats = null,
         public readonly ?bool $reportDeprecated = null,
+        public readonly ?int $maxJsonBodyBytes = null,
+        public readonly ?int $maxMultipartBodyBytes = null,
+        public readonly ?bool $strictStreaming = null,
+        public readonly ?int $maxRegexBacktracks = null,
+        public readonly ?bool $strictCallbackRuntimeTemplate = null,
     ) {}
 
     public function merge(self $overrides): self
@@ -52,6 +57,11 @@ final readonly class BuilderConfig
             serverPathResolution: $overrides->serverPathResolution ?? $this->serverPathResolution,
             strictFormats: $overrides->strictFormats ?? $this->strictFormats,
             reportDeprecated: $overrides->reportDeprecated ?? $this->reportDeprecated,
+            maxJsonBodyBytes: $overrides->maxJsonBodyBytes ?? $this->maxJsonBodyBytes,
+            maxMultipartBodyBytes: $overrides->maxMultipartBodyBytes ?? $this->maxMultipartBodyBytes,
+            strictStreaming: $overrides->strictStreaming ?? $this->strictStreaming,
+            maxRegexBacktracks: $overrides->maxRegexBacktracks ?? $this->maxRegexBacktracks,
+            strictCallbackRuntimeTemplate: $overrides->strictCallbackRuntimeTemplate ?? $this->strictCallbackRuntimeTemplate,
         );
     }
 }

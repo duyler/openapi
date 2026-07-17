@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Benchmark;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\StreamStubHelper;
 use Duyler\OpenApi\Validator\Request\PathParser;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use PHPUnit\Framework\Attributes\Test;
@@ -18,6 +19,8 @@ use function sprintf;
 
 final class PerformanceBenchmarkTest extends TestCase
 {
+    use StreamStubHelper;
+
     #[Test]
     public function object_allocations_per_request(): void
     {
@@ -354,6 +357,8 @@ YAML;
             ->method('__toString')
             ->willReturn($body);
 
+        $this->configureReadableStream($stream, $body);
+
         $request
             ->method('getBody')
             ->willReturn($stream);
@@ -391,6 +396,8 @@ YAML;
         $stream
             ->method('__toString')
             ->willReturn($body);
+
+        $this->configureReadableStream($stream, $body);
 
         $response
             ->method('getBody')

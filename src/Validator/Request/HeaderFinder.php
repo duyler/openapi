@@ -17,7 +17,6 @@ final readonly class HeaderFinder
      */
     public function find(array $headers, string $name): ?string
     {
-        /** @var array<array-key, string|array<array-key, string>> $headers */
         foreach ($headers as $key => $value) {
             if (false === is_string($key)) {
                 continue;
@@ -25,9 +24,7 @@ final readonly class HeaderFinder
 
             if (strtolower($key) === strtolower($name)) {
                 if (is_array($value)) {
-                    $stringValue = implode(', ', array_map(strval(...), $value));
-
-                    return $stringValue;
+                    return implode(',', array_map(strval(...), $value));
                 }
 
                 if (is_string($value)) {

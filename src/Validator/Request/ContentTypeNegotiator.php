@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
+use Duyler\OpenApi\Validator\PregExecutor;
 
 use InvalidArgumentException;
 
 use function count;
 use function explode;
-use function preg_match;
 use function sprintf;
 use function strtolower;
 use function substr_count;
@@ -19,6 +19,10 @@ use function trim;
 final readonly class ContentTypeNegotiator
 {
     private const int MAX_CONTENT_TYPE_PARAMS = 20;
+
+    public function __construct(
+        private readonly PregExecutor $pregExecutor = new PregExecutor(),
+    ) {}
 
     public function getMediaType(string $contentType): string
     {
@@ -52,7 +56,7 @@ final readonly class ContentTypeNegotiator
         for ($i = 1, $total = count($parts); $i < $total; ++$i) {
             $param = trim($parts[$i]);
 
-            if (1 === preg_match('/^q\s*=\s*(?<value>\d+(?:\.\d+)?)$/i', $param, $matches)) {
+            if (1 === $this->pregExecutor->match('/^q\s*=\s*(?<value>\d+(?:\.\d+)?)$/i', $param, $matches)) {
                 return (float) $matches['value'];
             }
         }

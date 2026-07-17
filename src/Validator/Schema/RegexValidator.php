@@ -53,12 +53,10 @@ final class RegexValidator
 
     public function validate(string $pattern, ?string $fieldName = null): string
     {
-        $errorContext = new class {
-            public string $message = '';
-        };
+        $errorMessage = '';
 
-        set_error_handler(function (int $errno, string $errstr) use ($errorContext): bool {
-            $errorContext->message = $errstr;
+        set_error_handler(function (int $errno, string $errstr) use (&$errorMessage): bool {
+            $errorMessage = $errstr;
 
             return true;
         });
@@ -75,7 +73,7 @@ final class RegexValidator
             if (false === $testResult) {
                 throw new InvalidPatternException(
                     pattern: $pattern,
-                    reason: '' !== $errorContext->message ? $errorContext->message : 'Unknown regex error',
+                    reason: '' !== $errorMessage ? $errorMessage : 'Unknown regex error',
                 );
             }
         } finally {

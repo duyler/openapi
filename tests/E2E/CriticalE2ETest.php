@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\E2E;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\MissingRequestBodyException;
+use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
@@ -186,7 +187,7 @@ YAML;
     }
 
     #[Test]
-    public function unknown_path_throws_builder_exception(): void
+    public function unknown_path_throws_operation_not_found(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::PETSTORE_SPEC)
@@ -194,12 +195,12 @@ YAML;
 
         $request = $this->psrFactory->createServerRequest('GET', '/unknown-path');
 
-        $this->expectException(BuilderException::class);
+        $this->expectException(OperationNotFoundException::class);
         $validator->validateRequest($request);
     }
 
     #[Test]
-    public function wrong_http_method_throws_builder_exception(): void
+    public function wrong_http_method_throws_operation_not_found(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::PETSTORE_SPEC)
@@ -207,7 +208,7 @@ YAML;
 
         $request = $this->psrFactory->createServerRequest('DELETE', '/pets');
 
-        $this->expectException(BuilderException::class);
+        $this->expectException(OperationNotFoundException::class);
         $validator->validateRequest($request);
     }
 

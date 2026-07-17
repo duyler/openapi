@@ -19,6 +19,7 @@ use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Duyler\OpenApi\Validator\Link\LinkResolver;
 use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Validator\PathFinder;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
@@ -28,13 +29,14 @@ use Duyler\OpenApi\Validator\Validation\CallbackValidator;
 use Duyler\OpenApi\Validator\Validation\RequestValidationHandler;
 use Duyler\OpenApi\Validator\Validation\ResponseValidationHandler;
 use Duyler\OpenApi\Validator\Validation\SchemaValidatorAdapter;
-use Duyler\OpenApi\Validator\Validation\ValidationContext;
+use Duyler\OpenApi\Validator\Validation\ValidatorDependencies as ValidationAssembler;
 use Duyler\OpenApi\Validator\Validation\WebhookValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Exception;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
 
 use function sprintf;
 
@@ -182,12 +184,99 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(reportDeprecated: true));
     }
 
+    /**
+     * Override the maximum allowed size, in bytes, for non-multipart request
+     * and response bodies (JSON, XML, text). Bodies larger than this cap are
+     * rejected before being fully materialised in memory.
+     *
+     * @return self New builder instance with the JSON body cap applied
+     */
+    public function withMaxJsonBodySize(int $maxBytes): self
+    {
+        return $this->with(new BuilderConfig(maxJsonBodyBytes: $maxBytes));
+    }
+
+    /**
+     * Override the maximum allowed size, in bytes, for multipart request and
+     * response bodies. multipart payloads typically carry larger uploads, so
+     * the cap is kept independent from the JSON cap.
+     *
+     * @return self New builder instance with the multipart body cap applied
+     */
+    public function withMaxMultipartBodySize(int $maxBytes): self
+    {
+        return $this->with(new BuilderConfig(maxMultipartBodyBytes: $maxBytes));
+    }
+
+    /**
+     * Enable strict streaming mode.
+     *
+     * When enabled, malformed JSON records in NDJSON, SSE, and JSON Text
+     * Sequence streams raise a MalformedStreamRecordException instead of being
+     * logged and skipped. This is an opt-in behaviour and remains disabled by
+     * default for backward compatibility.
+     *
+     * @return self New builder instance with strict streaming enabled
+     */
+    public function enableStrictStreaming(): self
+    {
+        return $this->with(new BuilderConfig(strictStreaming: true));
+    }
+
+    /**
+     * Disable strict streaming mode.
+     *
+     * Restores the default fail-open behaviour where malformed JSON records
+     * are logged and skipped rather than raised.
+     *
+     * @return self New builder instance with strict streaming disabled
+     */
+    public function disableStrictStreaming(): self
+    {
+        return $this->with(new BuilderConfig(strictStreaming: false));
+    }
+
+    /**
+     * Override the defensive pcre.backtrack_limit applied to every preg_match
+     * call routed through the PregExecutor wrapper. Lowering this cap below the
+     * PHP default (1_000_000) bounds the worst-case CPU cost of catastrophic
+     * regular expressions on attacker-controlled input such as JSON-Schema
+     * "pattern" fields.
+     *
+     * @return self New builder instance with the regex backtracking cap applied
+     */
+    public function withMaxRegexBacktracks(int $maxBacktracks): self
+    {
+        return $this->with(new BuilderConfig(maxRegexBacktracks: $maxBacktracks));
+    }
+
+    /**
+     * Enable strict callback runtime template resolution.
+     *
+     * When enabled, callback expressions that use runtime templates such as
+     * `{$request.body#/callback_url}` throw an
+     * {@see UnresolvableCallbackPathException}
+     * instead of being treated as wildcards that accept any URL. This prevents
+     * attacker-controlled runtime templates from bypassing path validation
+     * while still passing declared security checks on the callback pathItem.
+     *
+     * Off by default for backward compatibility with existing callback specs.
+     *
+     * @return self New builder instance with strict callback runtime template enabled
+     */
+    public function enableStrictCallbackRuntimeTemplate(): self
+    {
+        return $this->with(new BuilderConfig(strictCallbackRuntimeTemplate: true));
+    }
+
     public function build(): OpenApiValidatorInterface
     {
         $document = $this->loadSpec();
 
+        $maxRegexBacktracks = $this->config->maxRegexBacktracks ?? ValidatorConfiguration::DEFAULT_MAX_REGEX_BACKTRACKS;
+        $pregExecutor = new PregExecutor($maxRegexBacktracks);
         $pool = $this->config->pool ?? new ValidatorPool();
-        $formatRegistry = $this->config->formatRegistry ?? BuiltinFormats::create();
+        $formatRegistry = $this->config->formatRegistry ?? BuiltinFormats::create($pregExecutor);
         $errorFormatter = $this->config->errorFormatter ?? new SimpleFormatter();
         $pathRegexCache = new PathRegexCache();
         $regexValidator = new RegexValidator();
@@ -201,8 +290,12 @@ final readonly class OpenApiValidatorBuilder
         $securityValidation = $this->config->securityValidation ?? false;
         $strictFormats = $this->config->strictFormats ?? false;
         $reportDeprecated = $this->config->reportDeprecated ?? true;
+        $maxJsonBodyBytes = $this->config->maxJsonBodyBytes ?? ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES;
+        $maxMultipartBodyBytes = $this->config->maxMultipartBodyBytes ?? ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES;
+        $strictStreaming = $this->config->strictStreaming ?? false;
+        $strictCallbackRuntimeTemplate = $this->config->strictCallbackRuntimeTemplate ?? false;
 
-        $context = new ValidationContext(
+        $context = new ValidationAssembler(
             document: $document,
             pool: $pool,
             formatRegistry: $formatRegistry,
@@ -217,6 +310,11 @@ final readonly class OpenApiValidatorBuilder
             strictFormats: $strictFormats,
             pathRegexCache: $pathRegexCache,
             regexValidator: $regexValidator,
+            maxJsonBodyBytes: $maxJsonBodyBytes,
+            maxMultipartBodyBytes: $maxMultipartBodyBytes,
+            strictStreaming: $strictStreaming,
+            maxRegexBacktracks: $maxRegexBacktracks,
+            pregExecutor: $pregExecutor,
         );
 
         return new OpenApiValidator(
@@ -228,6 +326,10 @@ final readonly class OpenApiValidatorBuilder
                 securityValidation: $securityValidation,
                 strictFormats: $strictFormats,
                 reportDeprecated: $reportDeprecated,
+                maxJsonBodyBytes: $maxJsonBodyBytes,
+                maxMultipartBodyBytes: $maxMultipartBodyBytes,
+                strictStreaming: $strictStreaming,
+                maxRegexBacktracks: $maxRegexBacktracks,
             ),
             dependencies: new ValidatorDependencies(
                 pool: $pool,
@@ -246,7 +348,7 @@ final readonly class OpenApiValidatorBuilder
                 responseValidation: new ResponseValidationHandler($context),
                 schemaValidation: new SchemaValidatorAdapter($context),
                 webhookValidation: new WebhookValidator($context, $securityValidation),
-                callbackValidation: new CallbackValidator($context, $securityValidation),
+                callbackValidation: new CallbackValidator($context, $securityValidation, $strictCallbackRuntimeTemplate),
                 pathRegexCache: $pathRegexCache,
                 regexValidator: $regexValidator,
                 cache: $this->config->cache,
@@ -366,14 +468,21 @@ final readonly class OpenApiValidatorBuilder
         $realPath = realpath($path);
 
         if (false === $realPath) {
-            return self::CACHE_KEY_FILE_PREFIX . hash('xxh64', $path);
+            return self::CACHE_KEY_FILE_PREFIX . hash('sha256', $path);
         }
 
-        return self::CACHE_KEY_FILE_PREFIX . hash('xxh64', $realPath);
+        $mtime = filemtime($realPath);
+        $size = filesize($realPath);
+
+        if (false === $mtime || false === $size) {
+            return self::CACHE_KEY_FILE_PREFIX . hash('sha256', $realPath);
+        }
+
+        return self::CACHE_KEY_FILE_PREFIX . hash('sha256', $realPath . '|' . $mtime . '|' . $size);
     }
 
     private function generateCacheKeyFromString(string $content): string
     {
-        return self::CACHE_KEY_CONTENT_PREFIX . hash('xxh64', $content);
+        return self::CACHE_KEY_CONTENT_PREFIX . hash('sha256', $content);
     }
 }

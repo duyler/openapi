@@ -1128,4 +1128,49 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame($expected, $result);
         self::assertSame('  indented text', $result[0]['data']);
     }
+
+    /**
+     * P-003: WHATWG HTML §9.2.4 step 8 — a line without a U+003A COLON
+     * creates a field whose name is the whole line and whose value is the
+     * empty string. The compact form `data\n\n` must dispatch a default
+     * `message` event with empty data.
+     */
+    #[Test]
+    public function processes_sse_line_without_colon_as_field_with_empty_value(): void
+    {
+        $result = $this->parser->parseServerSentEvents("data\n\n");
+
+        self::assertCount(1, $result);
+        self::assertSame('', $result[0]['data']);
+        self::assertSame('message', $result[0]['event']);
+    }
+
+    /**
+     * P-003: Multiple no-colon lines in the same event accumulate as separate
+     * fields with empty values per WHATWG HTML §9.2.4 step 8.
+     */
+    #[Test]
+    public function processes_multiple_no_colon_fields(): void
+    {
+        $result = $this->parser->parseServerSentEvents("data\nevent\n\n");
+
+        self::assertCount(1, $result);
+        self::assertSame('', $result[0]['data']);
+        self::assertSame('', $result[0]['event']);
+    }
+
+    /**
+     * P-003: A no-colon `data` line followed by a regular `data: value` line
+     * behaves identically to `data:\ndata: value` — the empty value is
+     * replaced by the next `data` field, matching the existing accumulator
+     * semantics of `applySseField`.
+     */
+    #[Test]
+    public function no_colon_field_followed_by_normal_field_dispatches_correctly(): void
+    {
+        $result = $this->parser->parseServerSentEvents("data\ndata: hello\n\n");
+
+        self::assertCount(1, $result);
+        self::assertSame('hello', $result[0]['data']);
+    }
 }

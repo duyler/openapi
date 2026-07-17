@@ -38,8 +38,6 @@ final readonly class FloatDoubleValidator implements FormatValidatorInterface
             );
         }
 
-        // INF, -INF and NAN are float in PHP but cannot be serialized as JSON
-        // per RFC 8259 §6, so they must not validate as float/double format.
         if (is_infinite($data) || is_nan($data)) {
             throw new InvalidFormatException(
                 $this->format,

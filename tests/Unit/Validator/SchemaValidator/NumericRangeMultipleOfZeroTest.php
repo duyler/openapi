@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Exception\InvalidMultipleOfSchemaException;
 use Duyler\OpenApi\Validator\Exception\MultipleOfKeywordError;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\NumericRangeValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -24,7 +25,7 @@ class NumericRangeMultipleOfZeroTest extends TestCase
     #[Override]
     protected function setUp(): void
     {
-        $this->validator = new NumericRangeValidator(new ValidatorPool(), BuiltinFormats::create());
+        $this->validator = new NumericRangeValidator(new ValidatorDependencies(pool: new ValidatorPool(), formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]

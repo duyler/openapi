@@ -7,7 +7,9 @@ namespace Duyler\OpenApi\Cache;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Psr\Cache\CacheItemPoolInterface;
 
-use function assert;
+use RuntimeException;
+
+use function sprintf;
 
 final readonly class SchemaCache
 {
@@ -45,10 +47,14 @@ final readonly class SchemaCache
             return null;
         }
 
-        $document = $value;
-        assert($document instanceof OpenApiDocument);
+        if (false === $value instanceof OpenApiDocument) {
+            throw new RuntimeException(sprintf(
+                'Cached value for key "%s" is not an OpenApiDocument instance',
+                $key,
+            ));
+        }
 
-        return $document;
+        return $value;
     }
 
     public function set(string $key, OpenApiDocument $document): void

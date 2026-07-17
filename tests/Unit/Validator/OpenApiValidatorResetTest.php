@@ -9,7 +9,7 @@ use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
-use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
+use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\Validation\SchemaValidatorAdapter;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
@@ -72,7 +72,7 @@ YAML;
 
         $schemaValidator = self::readSchemaValidator($validator);
 
-        $this->assertInstanceOf(SchemaValidator::class, $schemaValidator);
+        $this->assertInstanceOf(SchemaValidatorWithContext::class, $schemaValidator);
     }
 
     #[Test]
@@ -88,7 +88,7 @@ YAML;
 
         $schemaValidatorAfter = self::readSchemaValidator($validator);
 
-        $this->assertSame($schemaValidatorBefore, $schemaValidatorAfter, 'SchemaValidator should be the same instance after validateSchema() call');
+        $this->assertSame($schemaValidatorBefore, $schemaValidatorAfter, 'SchemaValidatorWithContext should be the same instance after validateSchema() call');
     }
 
     #[Test]
@@ -229,7 +229,7 @@ YAML;
 
         $schemaValidatorAfter = self::readSchemaValidator($validator);
 
-        $this->assertSame($schemaValidatorBefore, $schemaValidatorAfter, 'SchemaValidator should remain the same instance after reset()');
+        $this->assertSame($schemaValidatorBefore, $schemaValidatorAfter, 'SchemaValidatorWithContext should remain the same instance after reset()');
     }
 
     #[Test]
@@ -274,14 +274,14 @@ YAML;
 
         $this->assertInstanceOf(OpenApiValidatorInterface::class, $validator);
 
-        // reset() should be callable through the interface
         $validator->reset();
     }
 
-    private static function readSchemaValidator(OpenApiValidator $validator): SchemaValidator
+    private static function readSchemaValidator(OpenApiValidator $validator): SchemaValidatorWithContext
     {
         $schemaValidation = self::readDependenciesProperty($validator, 'schemaValidation');
+        $context = self::readProperty($schemaValidation, SchemaValidatorAdapter::class, 'context');
 
-        return self::readProperty($schemaValidation, SchemaValidatorAdapter::class, 'schemaValidator');
+        return $context->schemaValidatorWithContext;
     }
 }

@@ -47,10 +47,7 @@ final readonly class TypedCacheDecorator
             return null;
         }
 
-        /** @var object */
-        $result = $value;
-
-        return $result;
+        return $value;
     }
 
     public function set(string $key, object $value): void

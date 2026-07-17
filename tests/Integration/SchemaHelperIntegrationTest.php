@@ -33,7 +33,6 @@ final class SchemaHelperIntegrationTest extends TestCase
 
         self::assertNotNull($validator->getDocument());
 
-        // Test that valid data types can be normalized
         $arrayData = ['name' => 'test'];
         $intData = 42;
         $stringData = 'test';
@@ -50,23 +49,30 @@ final class SchemaHelperIntegrationTest extends TestCase
     #[Test]
     public function invalid_types_in_real_scenario_throw_meaningful_exceptions(): void
     {
-        $object = new stdClass();
         $datetime = new DateTime();
 
-        // Test object
-        try {
-            SchemaValueNormalizer::normalize($object);
-            $this->fail('Expected InvalidDataTypeException for object');
-        } catch (InvalidDataTypeException $e) {
-            self::assertStringContainsString('object', $e->getMessage());
-        }
-
-        // Test DateTime
         try {
             SchemaValueNormalizer::normalize($datetime);
             $this->fail('Expected InvalidDataTypeException for DateTime');
         } catch (InvalidDataTypeException $e) {
             self::assertStringContainsString('object', $e->getMessage());
         }
+    }
+
+    /**
+     * P-010: stdClass is now normalized to its property-view array, matching
+     * TypeCoercer::normalizeValue. Consumers using json_decode without the
+     * associative flag no longer need a manual conversion step.
+     */
+    #[Test]
+    public function stdClass_is_normalized_to_array_in_real_scenario(): void
+    {
+        $object = new stdClass();
+        $object->name = 'Fido';
+        $object->age = 3;
+
+        $result = SchemaValueNormalizer::normalize($object);
+
+        self::assertSame(['name' => 'Fido', 'age' => 3], $result);
     }
 }

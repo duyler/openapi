@@ -18,7 +18,6 @@ use Duyler\OpenApi\Validator\Exception\RequiredError;
 
 final class RealWorldScenariosTest extends FunctionalTestCase
 {
-    // Pagination scenarios
     #[Test]
     public function pagination_with_valid_parameters(): void
     {
@@ -97,7 +96,6 @@ final class RealWorldScenariosTest extends FunctionalTestCase
         );
     }
 
-    // Filtering scenarios
     #[Test]
     public function filtering_with_valid_enum(): void
     {
@@ -174,7 +172,6 @@ final class RealWorldScenariosTest extends FunctionalTestCase
         );
     }
 
-    // Sorting scenarios
     #[Test]
     public function sorting_with_valid_parameters(): void
     {
@@ -203,7 +200,6 @@ final class RealWorldScenariosTest extends FunctionalTestCase
         );
     }
 
-    // Search scenarios
     #[Test]
     public function search_with_valid_query(): void
     {
@@ -253,7 +249,6 @@ final class RealWorldScenariosTest extends FunctionalTestCase
         );
     }
 
-    // CRUD operations
     #[Test]
     public function create_user_with_valid_data(): void
     {
@@ -324,7 +319,6 @@ final class RealWorldScenariosTest extends FunctionalTestCase
         );
         $context = $this->createContext(new SimpleFormatter());
 
-        // Email validation throws InvalidFormatException directly, not caught by validation
         $this->expectException(InvalidFormatException::class);
         $this->createValidator()->validateWithContext(
             ['email' => 'not-an-email'],

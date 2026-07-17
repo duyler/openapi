@@ -11,6 +11,7 @@ use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Override;
 
 use function is_string;
+use function sprintf;
 use function substr_count;
 
 final readonly class CookieValidator extends AbstractParameterValidator
@@ -18,8 +19,6 @@ final readonly class CookieValidator extends AbstractParameterValidator
     private const int MAX_COOKIE_PAIRS = 100;
 
     /**
-     * Parse Cookie header into name=>value pairs.
-     *
      * Cookie pairs without `=` (e.g. flag-style cookies) are preserved with an
      * empty string value rather than dropped, for tolerant parsing of malformed
      * Cookie headers. Per RFC 6265 §4.1.1 cookie-pair should contain `=`, but
@@ -33,8 +32,11 @@ final readonly class CookieValidator extends AbstractParameterValidator
             return [];
         }
 
-        if (substr_count($cookieHeader, ';') + 1 > self::MAX_COOKIE_PAIRS) {
-            return [];
+        if (self::MAX_COOKIE_PAIRS < substr_count($cookieHeader, ';') + 1) {
+            throw new InvalidParameterException(
+                'cookie',
+                sprintf('Maximum cookie pairs of %d exceeded', self::MAX_COOKIE_PAIRS),
+            );
         }
 
         $cookies = [];
@@ -102,6 +104,12 @@ final readonly class CookieValidator extends AbstractParameterValidator
 
     public function validateWithHeader(array $data, string $cookieHeader, array $parameterSchemas): void
     {
+        $context = ValidationContext::create(
+            pool: $this->pool,
+            nullableAsType: $this->config->nullableAsType,
+            emptyArrayStrategy: $this->config->emptyArrayStrategy,
+        );
+
         foreach ($parameterSchemas as $param) {
             if (false === $param instanceof Parameter) {
                 continue;
@@ -129,11 +137,6 @@ final readonly class CookieValidator extends AbstractParameterValidator
             $value = $this->coercer->coerce($value, $param, $this->coercion, true);
 
             if (null !== $param->schema) {
-                $context = ValidationContext::create(
-                    pool: $this->pool,
-                    nullableAsType: $this->config->nullableAsType,
-                    emptyArrayStrategy: $this->config->emptyArrayStrategy,
-                );
                 $this->schemaValidator->validate($value, $param->schema, $context);
             }
         }
@@ -165,8 +168,11 @@ final readonly class CookieValidator extends AbstractParameterValidator
 
     private function parseExplodedValues(string $cookieHeader, string $name): array
     {
-        if (substr_count($cookieHeader, ';') + 1 > self::MAX_COOKIE_PAIRS) {
-            return [];
+        if (self::MAX_COOKIE_PAIRS < substr_count($cookieHeader, ';') + 1) {
+            throw new InvalidParameterException(
+                'cookie',
+                sprintf('Maximum cookie pairs of %d exceeded', self::MAX_COOKIE_PAIRS),
+            );
         }
 
         $values = [];
@@ -199,8 +205,11 @@ final readonly class CookieValidator extends AbstractParameterValidator
 
     private function hasMultipleCookies(string $cookieHeader, string $name): bool
     {
-        if (substr_count($cookieHeader, ';') + 1 > self::MAX_COOKIE_PAIRS) {
-            return false;
+        if (self::MAX_COOKIE_PAIRS < substr_count($cookieHeader, ';') + 1) {
+            throw new InvalidParameterException(
+                'cookie',
+                sprintf('Maximum cookie pairs of %d exceeded', self::MAX_COOKIE_PAIRS),
+            );
         }
 
         $count = 0;

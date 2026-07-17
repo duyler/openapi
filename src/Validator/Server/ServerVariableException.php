@@ -6,12 +6,4 @@ namespace Duyler\OpenApi\Validator\Server;
 
 use RuntimeException;
 
-use Throwable;
-
-final class ServerVariableException extends RuntimeException
-{
-    public function __construct(string $message, int $code = 0, ?Throwable $previous = null)
-    {
-        parent::__construct($message, $code, $previous);
-    }
-}
+final class ServerVariableException extends RuntimeException {}

@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
 use Duyler\OpenApi\Validator\Exception\PatternMismatchError;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\PatternValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -28,7 +29,7 @@ class PatternValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new PatternValidator($this->pool, BuiltinFormats::create());
+        $this->validator = new PatternValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]
@@ -354,7 +355,6 @@ class PatternValidatorTest extends TestCase
     #[Test]
     public function validate_pattern_with_all_delimiter_candidates_and_slash(): void
     {
-        // Pattern contains all 8 delimiter candidates (#~!|@%+;) AND /
         $schema = new Schema(type: 'string', pattern: '#~!|@%+;path/to/resource');
 
         $succeeded = false;

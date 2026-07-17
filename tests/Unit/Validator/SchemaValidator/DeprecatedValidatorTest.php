@@ -9,6 +9,7 @@ use Duyler\OpenApi\Event\ArrayDispatcher;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\SchemaValidator\DeprecatedValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -38,12 +39,7 @@ class DeprecatedValidatorTest extends TestCase
             ],
         ]);
 
-        $validator = new DeprecatedValidator(
-            pool: $this->pool,
-            formatRegistry: BuiltinFormats::create(),
-            reportDeprecated: true,
-            eventDispatcher: $dispatcher,
-        );
+        $validator = new DeprecatedValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create(), reportDeprecated: true, eventDispatcher: $dispatcher));
 
         $oldFieldSchema = new Schema(type: 'string', deprecated: true);
         $schema = new Schema(
@@ -74,12 +70,7 @@ class DeprecatedValidatorTest extends TestCase
             ],
         ]);
 
-        $validator = new DeprecatedValidator(
-            pool: $this->pool,
-            formatRegistry: BuiltinFormats::create(),
-            reportDeprecated: false,
-            eventDispatcher: $dispatcher,
-        );
+        $validator = new DeprecatedValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create(), reportDeprecated: false, eventDispatcher: $dispatcher));
 
         $oldFieldSchema = new Schema(type: 'string', deprecated: true);
         $schema = new Schema(
@@ -107,12 +98,7 @@ class DeprecatedValidatorTest extends TestCase
             ],
         ]);
 
-        $validator = new DeprecatedValidator(
-            pool: $this->pool,
-            formatRegistry: BuiltinFormats::create(),
-            reportDeprecated: true,
-            eventDispatcher: $dispatcher,
-        );
+        $validator = new DeprecatedValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create(), reportDeprecated: true, eventDispatcher: $dispatcher));
 
         $oldFieldSchema = new Schema(type: 'string', deprecated: true);
         $schema = new Schema(
@@ -141,12 +127,7 @@ class DeprecatedValidatorTest extends TestCase
             ],
         ]);
 
-        $validator = new DeprecatedValidator(
-            pool: $this->pool,
-            formatRegistry: BuiltinFormats::create(),
-            reportDeprecated: true,
-            eventDispatcher: $dispatcher,
-        );
+        $validator = new DeprecatedValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create(), reportDeprecated: true, eventDispatcher: $dispatcher));
 
         $oldFieldSchema = new Schema(type: 'string', deprecated: true);
         $schema = new Schema(
@@ -174,12 +155,7 @@ class DeprecatedValidatorTest extends TestCase
             ],
         ]);
 
-        $validator = new DeprecatedValidator(
-            pool: $this->pool,
-            formatRegistry: BuiltinFormats::create(),
-            reportDeprecated: true,
-            eventDispatcher: $dispatcher,
-        );
+        $validator = new DeprecatedValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create(), reportDeprecated: true, eventDispatcher: $dispatcher));
 
         $schema = new Schema(
             type: 'object',
@@ -210,12 +186,7 @@ class DeprecatedValidatorTest extends TestCase
             ],
         ]);
 
-        $validator = new DeprecatedValidator(
-            pool: $this->pool,
-            formatRegistry: BuiltinFormats::create(),
-            reportDeprecated: true,
-            eventDispatcher: $dispatcher,
-        );
+        $validator = new DeprecatedValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create(), reportDeprecated: true, eventDispatcher: $dispatcher));
 
         $schema = new Schema(
             type: 'object',
@@ -242,12 +213,7 @@ class DeprecatedValidatorTest extends TestCase
             ],
         ]);
 
-        $validator = new DeprecatedValidator(
-            pool: $this->pool,
-            formatRegistry: BuiltinFormats::create(),
-            reportDeprecated: true,
-            eventDispatcher: $dispatcher,
-        );
+        $validator = new DeprecatedValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create(), reportDeprecated: true, eventDispatcher: $dispatcher));
 
         $schema = new Schema(
             type: 'string',
@@ -274,12 +240,7 @@ class DeprecatedValidatorTest extends TestCase
             ],
         ]);
 
-        $validator = new DeprecatedValidator(
-            pool: $this->pool,
-            formatRegistry: BuiltinFormats::create(),
-            reportDeprecated: true,
-            eventDispatcher: $dispatcher,
-        );
+        $validator = new DeprecatedValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create(), reportDeprecated: true, eventDispatcher: $dispatcher));
 
         $schema = new Schema(
             type: 'object',
@@ -300,11 +261,7 @@ class DeprecatedValidatorTest extends TestCase
     #[Test]
     public function no_dispatcher_no_exception(): void
     {
-        $validator = new DeprecatedValidator(
-            pool: $this->pool,
-            formatRegistry: BuiltinFormats::create(),
-            reportDeprecated: true,
-        );
+        $validator = new DeprecatedValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create(), reportDeprecated: true));
 
         $schema = new Schema(
             type: 'object',
@@ -331,12 +288,7 @@ class DeprecatedValidatorTest extends TestCase
             ],
         ]);
 
-        $validator = new DeprecatedValidator(
-            pool: $this->pool,
-            formatRegistry: BuiltinFormats::create(),
-            reportDeprecated: true,
-            eventDispatcher: $dispatcher,
-        );
+        $validator = new DeprecatedValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create(), reportDeprecated: true, eventDispatcher: $dispatcher));
 
         $schema = new Schema(
             ref: '#/components/schemas/User',
@@ -365,12 +317,7 @@ class DeprecatedValidatorTest extends TestCase
             ],
         ]);
 
-        $validator = new DeprecatedValidator(
-            pool: $this->pool,
-            formatRegistry: BuiltinFormats::create(),
-            reportDeprecated: true,
-            eventDispatcher: $dispatcher,
-        );
+        $validator = new DeprecatedValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create(), reportDeprecated: true, eventDispatcher: $dispatcher));
 
         $schema = new Schema(
             type: 'object',

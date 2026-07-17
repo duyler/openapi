@@ -94,7 +94,6 @@ YAML;
         $request = $this->psrFactory->createServerRequest('GET', '/resource');
         $operation = $validator->validateRequest($request);
 
-        // createResponse() bypasses the 100..599 range check enforced by withStatus().
         $response = $this->psrFactory->createResponse(0)
             ->withHeader('Content-Type', 'application/json')
             ->withBody($this->psrFactory->createStream('{"status":"ok"}'));
@@ -104,8 +103,6 @@ YAML;
             self::fail('Expected UndefinedResponseException for status code 0');
         } catch (UndefinedResponseException $e) {
             self::assertSame(0, $e->statusCode);
-            // Symfony YAML normalises "200" to the integer 200 in array keys,
-            // so we assert against the numeric value regardless of type.
             self::assertContains(200, $e->definedResponses);
             self::assertStringContainsString('"0"', $e->getMessage());
         }
@@ -158,8 +155,6 @@ YAML;
 
         $validator->validateResponse($response, $operation);
 
-        // Range match is the behaviour we are locking in; reaching this line
-        // without an exception is the success criterion.
         self::assertSame(102, $response->getStatusCode());
     }
 
@@ -260,7 +255,6 @@ YAML;
             ));
         } catch (UndefinedResponseException $e) {
             self::assertSame($statusCode, $e->statusCode);
-            // The spec declares only "200" (Symfony YAML casts to int 200).
             self::assertContains(200, $e->definedResponses);
         }
     }

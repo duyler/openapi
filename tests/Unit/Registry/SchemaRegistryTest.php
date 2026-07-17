@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Registry;
 
+use Duyler\OpenApi\Registry\Exception\SchemaAlreadyRegisteredException;
 use Duyler\OpenApi\Registry\Exception\VersionNotFoundException;
 use Duyler\OpenApi\Registry\SchemaRegistry;
 use Duyler\OpenApi\Schema\Model\InfoObject;
@@ -131,7 +132,7 @@ final class SchemaRegistryTest extends TestCase
     }
 
     #[Test]
-    public function count_returns_number_of_schemas(): void
+    public function count_names_returns_distinct_names_count(): void
     {
         $registry = new SchemaRegistry();
         $doc = $this->createDocument();
@@ -141,7 +142,22 @@ final class SchemaRegistryTest extends TestCase
             ->register('schema2', '1.0.0', $doc)
             ->register('schema3', '1.0.0', $doc);
 
-        self::assertSame(3, $registry->count());
+        self::assertSame(3, $registry->countNames());
+    }
+
+    #[Test]
+    public function count_schemas_returns_total_pairs(): void
+    {
+        $registry = new SchemaRegistry();
+        $doc = $this->createDocument();
+
+        $registry = $registry
+            ->register('api', '1.0.0', $doc)
+            ->register('api', '2.0.0', $doc)
+            ->register('web', '1.0.0', $doc);
+
+        self::assertSame(2, $registry->countNames());
+        self::assertSame(3, $registry->countSchemas());
     }
 
     #[Test]
@@ -200,14 +216,47 @@ final class SchemaRegistryTest extends TestCase
     }
 
     #[Test]
-    public function register_same_version_overwrites_document(): void
+    public function register_throws_on_duplicate_name_version(): void
     {
         $registry = new SchemaRegistry();
         $docV1 = $this->createDocumentWithTitle('First API');
         $docV2 = $this->createDocumentWithTitle('Second API');
 
         $registry = $registry->register('api', '1.0.0', $docV1);
-        $registry = $registry->register('api', '1.0.0', $docV2);
+
+        $this->expectException(SchemaAlreadyRegisteredException::class);
+        $this->expectExceptionMessage('Schema "api" version "1.0.0" is already registered');
+
+        $registry->register('api', '1.0.0', $docV2);
+    }
+
+    #[Test]
+    public function schema_already_registered_exception_exposes_name_and_version(): void
+    {
+        $registry = new SchemaRegistry();
+        $doc = $this->createDocument();
+
+        $registry = $registry->register('api', '1.0.0', $doc);
+
+        try {
+            $registry->register('api', '1.0.0', $doc);
+            self::fail('Expected SchemaAlreadyRegisteredException to be thrown');
+        } catch (SchemaAlreadyRegisteredException $exception) {
+            self::assertSame('api', $exception->name);
+            self::assertSame('1.0.0', $exception->version);
+            self::assertInstanceOf(RuntimeException::class, $exception);
+        }
+    }
+
+    #[Test]
+    public function register_or_replace_overwrites_silently(): void
+    {
+        $registry = new SchemaRegistry();
+        $docV1 = $this->createDocumentWithTitle('First API');
+        $docV2 = $this->createDocumentWithTitle('Second API');
+
+        $registry = $registry->registerOrReplace('api', '1.0.0', $docV1);
+        $registry = $registry->registerOrReplace('api', '1.0.0', $docV2);
 
         $retrieved = $registry->get('api', '1.0.0');
 
@@ -216,7 +265,7 @@ final class SchemaRegistryTest extends TestCase
     }
 
     #[Test]
-    public function overwrite_preserves_other_versions(): void
+    public function register_or_replace_preserves_other_versions(): void
     {
         $registry = new SchemaRegistry();
         $docV1Original = $this->createDocumentWithTitle('API v1 original');
@@ -226,7 +275,7 @@ final class SchemaRegistryTest extends TestCase
         $registry = $registry
             ->register('api', '1.0.0', $docV1Original)
             ->register('api', '2.0.0', $docV2)
-            ->register('api', '1.0.0', $docV1Overwrite);
+            ->registerOrReplace('api', '1.0.0', $docV1Overwrite);
 
         $retrievedV1 = $registry->get('api', '1.0.0');
         $retrievedV2 = $registry->get('api', '2.0.0');
@@ -239,20 +288,36 @@ final class SchemaRegistryTest extends TestCase
     }
 
     #[Test]
-    public function overwrite_does_not_mutate_original_instance(): void
+    public function register_or_replace_does_not_mutate_original_instance(): void
     {
         $registry = new SchemaRegistry();
         $docV1 = $this->createDocumentWithTitle('First');
         $docV2 = $this->createDocumentWithTitle('Second');
 
         $registryV1 = $registry->register('api', '1.0.0', $docV1);
-        $registryV2 = $registryV1->register('api', '1.0.0', $docV2);
+        $registryV2 = $registryV1->registerOrReplace('api', '1.0.0', $docV2);
 
         $originalAfterOverwrite = $registryV1->get('api', '1.0.0');
         $newAfterOverwrite = $registryV2->get('api', '1.0.0');
 
         self::assertSame($docV1, $originalAfterOverwrite);
         self::assertSame($docV2, $newAfterOverwrite);
+    }
+
+    #[Test]
+    public function register_is_chainable_like_before(): void
+    {
+        $registry = new SchemaRegistry();
+        $doc = $this->createDocument();
+
+        $newRegistry = $registry
+            ->register('api', '1.0.0', $doc)
+            ->register('api', '2.0.0', $doc)
+            ->register('web', '1.0.0', $doc);
+
+        self::assertNotSame($registry, $newRegistry);
+        self::assertSame(['api', 'web'], $newRegistry->getNames());
+        self::assertSame(['1.0.0', '2.0.0'], $newRegistry->getVersions('api'));
     }
 
     #[Test]

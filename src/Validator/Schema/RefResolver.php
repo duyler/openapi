@@ -11,6 +11,7 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Schema\Exception\ExternalRefSecurityException;
 use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
 use Override;
 use WeakMap;
@@ -18,28 +19,59 @@ use WeakMap;
 use Generator;
 
 use function array_key_exists;
-use function dirname;
 use function is_array;
 use function is_object;
 use function str_starts_with;
+use function strlen;
+use function strpos;
+use function strrpos;
+use function substr;
 use function count;
+use function is_int;
+use function is_string;
 
 final class RefResolver implements RefResolverInterface
 {
     private const int REF_ROOT_PREFIX_LENGTH = 2;
 
+    /** @var WeakMap<OpenApiDocument, RefCache> */
     private WeakMap $cache;
+
+    /** @var WeakMap<Schema, WeakMap<OpenApiDocument, bool>> */
+    private WeakMap $hasDiscriminatorCache;
+
+    /** @var WeakMap<Schema, bool> */
+    private WeakMap $hasRefCache;
+
+    private readonly FileExternalRefResolver $builtinFileResolver;
 
     public function __construct(
         private readonly ?ExternalRefResolverInterface $externalRefResolver = null,
     ) {
-        $this->cache = new WeakMap();
+        /** @var WeakMap<OpenApiDocument, RefCache> $cache */
+        $cache = new WeakMap();
+        $this->cache = $cache;
+        /** @var WeakMap<Schema, WeakMap<OpenApiDocument, bool>> $hasDiscriminatorCache */
+        $hasDiscriminatorCache = new WeakMap();
+        $this->hasDiscriminatorCache = $hasDiscriminatorCache;
+        /** @var WeakMap<Schema, bool> $hasRefCache */
+        $hasRefCache = new WeakMap();
+        $this->hasRefCache = $hasRefCache;
+        $this->builtinFileResolver = new FileExternalRefResolver();
     }
 
     #[Override]
     public function clear(): void
     {
-        $this->cache = new WeakMap();
+        /** @var WeakMap<OpenApiDocument, RefCache> $cache */
+        $cache = new WeakMap();
+        $this->cache = $cache;
+        /** @var WeakMap<Schema, WeakMap<OpenApiDocument, bool>> $hasDiscriminatorCache */
+        $hasDiscriminatorCache = new WeakMap();
+        $this->hasDiscriminatorCache = $hasDiscriminatorCache;
+        /** @var WeakMap<Schema, bool> $hasRefCache */
+        $hasRefCache = new WeakMap();
+        $this->hasRefCache = $hasRefCache;
     }
 
     #[Override]
@@ -67,9 +99,25 @@ final class RefResolver implements RefResolverInterface
     #[Override]
     public function combineUris(string $baseUri, string $relativeRef): string
     {
-        $basePath = dirname($baseUri);
+        if ('' === $relativeRef) {
+            return $baseUri;
+        }
 
-        return $basePath . "/" . $relativeRef;
+        $relative = parse_url($relativeRef);
+        if (false === $relative) {
+            return $relativeRef;
+        }
+
+        if (isset($relative['scheme'])) {
+            return $relativeRef;
+        }
+
+        $base = parse_url($baseUri);
+        if (false === $base) {
+            return $baseUri;
+        }
+
+        return $this->resolveRelativeAgainstBase($base, $relative, $baseUri);
     }
 
     /**
@@ -144,7 +192,26 @@ final class RefResolver implements RefResolverInterface
         OpenApiDocument $document,
         int $depth = 0,
     ): bool {
-        [$has,] = $this->doSchemaHasDiscriminator($schema, $document, [], $depth);
+        if (isset($this->hasDiscriminatorCache[$schema])) {
+            /** @var WeakMap<OpenApiDocument, bool> $docCache */
+            $docCache = $this->hasDiscriminatorCache[$schema];
+        } else {
+            /** @var WeakMap<OpenApiDocument, bool> $docCache */
+            $docCache = new WeakMap();
+            $this->hasDiscriminatorCache[$schema] = $docCache;
+        }
+
+        if (isset($docCache[$document])) {
+            /** @var bool $cached */
+            $cached = $docCache[$document];
+
+            return $cached;
+        }
+
+        /** @var WeakMap<Schema, true> $visited */
+        $visited = new WeakMap();
+        [$has,] = $this->doSchemaHasDiscriminator($schema, $document, $visited, $depth);
+        $docCache[$document] = $has;
 
         return $has;
     }
@@ -152,7 +219,17 @@ final class RefResolver implements RefResolverInterface
     #[Override]
     public function schemaHasRef(Schema $schema, int $depth = 0): bool
     {
-        [$has,] = $this->doSchemaHasRef($schema, [], $depth);
+        if (isset($this->hasRefCache[$schema])) {
+            /** @var bool $cached */
+            $cached = $this->hasRefCache[$schema];
+
+            return $cached;
+        }
+
+        /** @var WeakMap<Schema, true> $visited */
+        $visited = new WeakMap();
+        [$has,] = $this->doSchemaHasRef($schema, $visited, $depth);
+        $this->hasRefCache[$schema] = $has;
 
         return $has;
     }
@@ -189,10 +266,7 @@ final class RefResolver implements RefResolverInterface
 
         $resolved = $this->resolveParameter($parameter->ref, $document);
 
-        $description = $resolved->description;
-        if (null !== $parameter->refDescription) {
-            $description = $parameter->refDescription;
-        }
+        $description = $parameter->refDescription ?? $resolved->description;
 
         return new Parameter(
             ref: null,
@@ -225,15 +299,9 @@ final class RefResolver implements RefResolverInterface
 
         $resolved = $this->resolveResponse($response->ref, $document);
 
-        $summary = $resolved->summary;
-        if (null !== $response->refSummary) {
-            $summary = $response->refSummary;
-        }
+        $summary = $response->refSummary ?? $resolved->summary;
 
-        $description = $resolved->description;
-        if (null !== $response->refDescription) {
-            $description = $response->refDescription;
-        }
+        $description = $response->refDescription ?? $resolved->description;
 
         return new Response(
             ref: null,
@@ -248,29 +316,258 @@ final class RefResolver implements RefResolverInterface
     }
 
     /**
-     * @param array<int, bool> $visited
+     * @param array<string, int|string|null> $base
+     * @param array<string, int|string|null> $relative
+     */
+    private function resolveRelativeAgainstBase(array $base, array $relative, string $baseUri): string
+    {
+        $hadAuthority = isset($base['host']) || $this->baseUriHadAuthority($baseUri);
+
+        if (isset($relative['host'])) {
+            $base['host'] = $relative['host'];
+            unset($base['user'], $base['pass'], $base['port']);
+            $relativePathValue = $relative['path'] ?? '';
+            $relativePath = is_string($relativePathValue) ? $relativePathValue : '';
+            $base['path'] = $this->removeDotSegments($relativePath);
+            $base = $this->replaceQueryAndFragment($base, $relative);
+            return $this->buildUri($base, true);
+        }
+
+        $basePathValue = $base['path'] ?? '';
+        $basePath = is_string($basePathValue) ? $basePathValue : '';
+        $relativePathValue = $relative['path'] ?? '';
+        $relativePath = is_string($relativePathValue) ? $relativePathValue : '';
+
+        if ('' === $relativePath) {
+            if (isset($relative['query'])) {
+                $base['query'] = $relative['query'];
+            }
+            $base = $this->applyFragment($base, $relative);
+            return $this->buildUri($base, $hadAuthority);
+        }
+
+        $base['path'] = $this->removeDotSegments($this->mergePaths($basePath, $relativePath));
+        $base = $this->replaceQueryAndFragment($base, $relative);
+
+        return $this->buildUri($base, $hadAuthority);
+    }
+
+    private function baseUriHadAuthority(string $baseUri): bool
+    {
+        $schemeEnd = strpos($baseUri, '://');
+        return false !== $schemeEnd;
+    }
+
+    /**
+     * @param array<string, int|string|null> $base
+     * @param array<string, int|string|null> $relative
+     *
+     * @return array<string, int|string|null>
+     */
+    private function replaceQueryAndFragment(array $base, array $relative): array
+    {
+        if (isset($relative['query'])) {
+            $base['query'] = $relative['query'];
+        } else {
+            unset($base['query']);
+        }
+
+        return $this->applyFragment($base, $relative);
+    }
+
+    /**
+     * @param array<string, int|string|null> $base
+     * @param array<string, int|string|null> $relative
+     *
+     * @return array<string, int|string|null>
+     */
+    private function applyFragment(array $base, array $relative): array
+    {
+        unset($base['fragment']);
+        if (isset($relative['fragment'])) {
+            $base['fragment'] = $relative['fragment'];
+        }
+
+        return $base;
+    }
+
+    /**
+     * RFC 3986 §5.2.3 merge paths.
+     */
+    private function mergePaths(string $basePath, string $relativePath): string
+    {
+        if (str_starts_with($relativePath, '/')) {
+            return $relativePath;
+        }
+
+        if ('' === $basePath) {
+            return $relativePath;
+        }
+
+        $lastSlash = strrpos($basePath, '/');
+        if (false === $lastSlash) {
+            return $relativePath;
+        }
+
+        return substr($basePath, 0, $lastSlash + 1) . $relativePath;
+    }
+
+    /**
+     * RFC 3986 §5.2.4 remove dot segments.
+     */
+    private function removeDotSegments(string $path): string
+    {
+        $input = $path;
+        $output = '';
+
+        while ('' !== $input) {
+            if (str_starts_with($input, '../')) {
+                $input = substr($input, 3);
+                continue;
+            }
+
+            if (str_starts_with($input, './')) {
+                $input = substr($input, 2);
+                continue;
+            }
+
+            if (str_starts_with($input, '/./')) {
+                $input = '/' . substr($input, 3);
+                continue;
+            }
+
+            if ('/.' === $input) {
+                $input = '/';
+                continue;
+            }
+
+            if (str_starts_with($input, '/../')) {
+                $input = '/' . substr($input, 4);
+                $output = $this->removeLastSegment($output);
+                continue;
+            }
+
+            if ('/..' === $input) {
+                $input = '/';
+                $output = $this->removeLastSegment($output);
+                continue;
+            }
+
+            if ('.' === $input || '..' === $input) {
+                $input = '';
+                continue;
+            }
+
+            $moveOffset = $this->findNextSlashOffset($input);
+            $output .= substr($input, 0, $moveOffset);
+            $input = substr($input, $moveOffset);
+        }
+
+        return $output;
+    }
+
+    private function removeLastSegment(string $output): string
+    {
+        $lastSlash = strrpos($output, '/');
+        if (false === $lastSlash) {
+            return '';
+        }
+
+        return substr($output, 0, $lastSlash);
+    }
+
+    private function findNextSlashOffset(string $input): int
+    {
+        $nextSlash = strpos($input, '/', 1);
+        if (false === $nextSlash) {
+            return strlen($input);
+        }
+
+        return $nextSlash;
+    }
+
+    /**
+     * @param array<string, int|string|null> $parts
+     */
+    private function buildUri(array $parts, bool $forceAuthority = false): string
+    {
+        $uri = '';
+
+        $scheme = is_string($parts['scheme'] ?? null) ? $parts['scheme'] : null;
+        if (null !== $scheme) {
+            $uri .= $scheme . ':';
+        }
+
+        $hasHost = isset($parts['host']) && is_string($parts['host']);
+        $hostValue = $parts['host'] ?? null;
+        $host = is_string($hostValue) ? $hostValue : '';
+
+        if ($hasHost || $forceAuthority) {
+            $uri .= '//';
+            $userValue = $parts['user'] ?? null;
+            $user = is_string($userValue) ? $userValue : null;
+            $passValue = $parts['pass'] ?? null;
+            $pass = is_string($passValue) ? $passValue : null;
+            if (null !== $user) {
+                $uri .= $user;
+                if (null !== $pass) {
+                    $uri .= ':' . $pass;
+                }
+                $uri .= '@';
+            }
+            if ($hasHost) {
+                $uri .= $host;
+            }
+            $portValue = $parts['port'] ?? null;
+            $port = is_int($portValue) ? $portValue : null;
+            if (null !== $port) {
+                $uri .= ':' . $port;
+            }
+        }
+
+        $pathValue = $parts['path'] ?? null;
+        $path = is_string($pathValue) ? $pathValue : null;
+        if (null !== $path) {
+            $uri .= $path;
+        }
+
+        $queryValue = $parts['query'] ?? null;
+        $query = is_string($queryValue) ? $queryValue : null;
+        if (null !== $query) {
+            $uri .= '?' . $query;
+        }
+
+        $fragmentValue = $parts['fragment'] ?? null;
+        $fragment = is_string($fragmentValue) ? $fragmentValue : null;
+        if (null !== $fragment) {
+            $uri .= '#' . $fragment;
+        }
+
+        return $uri;
+    }
+
+    /**
+     * @param WeakMap<Schema, true> $visited
      *
      * @throws SchemaDepthExceededException
      *
-     * @return array{bool, array<int, bool>}
+     * @return array{bool, WeakMap<Schema, true>}
      */
     private function doSchemaHasDiscriminator(
         Schema $schema,
         OpenApiDocument $document,
-        array $visited,
+        WeakMap $visited,
         int $depth,
     ): array {
         if ($depth >= ValidationContext::MAX_DEPTH) {
             throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
         }
 
-        $schemaId = spl_object_id($schema);
-
-        if (isset($visited[$schemaId])) {
+        if ($visited->offsetExists($schema)) {
             return [false, $visited];
         }
 
-        $visited[$schemaId] = true;
+        $visited[$schema] = true;
 
         if (null !== $schema->ref) {
             return $this->checkRefForDiscriminator(
@@ -302,14 +599,14 @@ final class RefResolver implements RefResolverInterface
     }
 
     /**
-     * @param array<int, bool> $visited
+     * @param WeakMap<Schema, true> $visited
      *
-     * @return array{bool, array<int, bool>}
+     * @return array{bool, WeakMap<Schema, true>}
      */
     private function checkRefForDiscriminator(
         string $ref,
         OpenApiDocument $document,
-        array $visited,
+        WeakMap $visited,
         int $depth,
     ): array {
         try {
@@ -327,25 +624,23 @@ final class RefResolver implements RefResolverInterface
     }
 
     /**
-     * @param array<int, bool> $visited
+     * @param WeakMap<Schema, true> $visited
      *
      * @throws SchemaDepthExceededException
      *
-     * @return array{bool, array<int, bool>}
+     * @return array{bool, WeakMap<Schema, true>}
      */
-    private function doSchemaHasRef(Schema $schema, array $visited, int $depth): array
+    private function doSchemaHasRef(Schema $schema, WeakMap $visited, int $depth): array
     {
         if ($depth >= ValidationContext::MAX_DEPTH) {
             throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
         }
 
-        $schemaId = spl_object_id($schema);
-
-        if (isset($visited[$schemaId])) {
+        if ($visited->offsetExists($schema)) {
             return [false, $visited];
         }
 
-        $visited[$schemaId] = true;
+        $visited[$schema] = true;
 
         if (null !== $schema->ref) {
             return [true, $visited];
@@ -418,31 +713,35 @@ final class RefResolver implements RefResolverInterface
         }
 
         if (false === str_starts_with($ref, "#/")) {
-            if (null !== $this->externalRefResolver) {
-                return [$this->externalRefResolver->resolve($ref), $visited];
+            try {
+                $resolver = $this->externalRefResolver ?? $this->builtinFileResolver;
+                return [$resolver->resolve($ref), $visited];
+            } catch (ExternalRefSecurityException $e) {
+                throw new UnresolvableRefException(
+                    $ref,
+                    'External ref not resolved. Builtin FileExternalRefResolver supports file:// '
+                    . 'scheme only. For http(s):// or ftp:// refs, inject a custom '
+                    . 'ExternalRefResolverInterface implementation.',
+                    previous: $e,
+                );
             }
-
-            throw new UnresolvableRefException(
-                $ref,
-                "Only local refs (#/...) are supported; install an ExternalRefResolver for external refs",
-            );
         }
 
         if (isset($visited[$ref])) {
             throw new UnresolvableRefException(
                 $ref,
-                "Circular reference detected: "
-                    . $this->formatCircularPath($visited, $ref),
+                'Circular reference detected',
+                internalTrace: $this->formatCircularPath($visited, $ref),
             );
         }
 
         $visited[$ref] = true;
 
         if (isset($this->cache[$document])) {
-            /** @var array<string, Schema|Parameter|Response> */
-            $cacheEntry = $this->cache[$document];
-            if (isset($cacheEntry[$ref])) {
-                return [$cacheEntry[$ref], $visited];
+            /** @var RefCache $existing */
+            $existing = $this->cache[$document];
+            if (isset($existing->map[$ref])) {
+                return [$existing->map[$ref], $visited];
             }
         }
 
@@ -459,10 +758,14 @@ final class RefResolver implements RefResolverInterface
             return $this->resolveRef($result->ref, $document, $visited, $depth + 1);
         }
 
-        /** @var array<string, Schema|Parameter|Response> */
-        $cacheArray = $this->cache[$document] ?? [];
-        $cacheArray[$ref] = $result;
-        $this->cache[$document] = $cacheArray;
+        if (isset($this->cache[$document])) {
+            /** @var RefCache $refCache */
+            $refCache = $this->cache[$document];
+        } else {
+            $refCache = new RefCache();
+            $this->cache[$document] = $refCache;
+        }
+        $refCache->map[$ref] = $result;
 
         return [$result, $visited];
     }

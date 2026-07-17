@@ -71,7 +71,6 @@ final class QueryParametersValidatorTest extends TestCase
     #[Test]
     public function validate_array_param(): void
     {
-        // When explode=true, query parser returns array
         $queryParams = ['tags' => ['php', 'javascript']];
         $parameterSchemas = [
             new Parameter(

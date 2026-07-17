@@ -7,7 +7,6 @@ namespace Duyler\OpenApi\Test\Functional\Builder;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
-use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Override;
@@ -233,8 +232,9 @@ YAML;
 
         try {
             $validator->validateRequest($request);
-            $this->fail('Expected TypeMismatchError because PreferArray treats [] as array, not object');
-        } catch (TypeMismatchError $error) {
+            $this->fail('Expected ValidationException because PreferArray treats [] as array, not object');
+        } catch (ValidationException $exception) {
+            $error = $exception->getErrors()[0];
             $this->assertSame('object', $error->params()['expected']);
             $this->assertSame('array', $error->params()['actual']);
             $this->assertSame('type', $error->keyword());
@@ -252,8 +252,9 @@ YAML;
 
         try {
             $validator->validateRequest($request);
-            $this->fail('Expected TypeMismatchError because PreferObject treats [] as object, not array');
-        } catch (TypeMismatchError $error) {
+            $this->fail('Expected ValidationException because PreferObject treats [] as object, not array');
+        } catch (ValidationException $exception) {
+            $error = $exception->getErrors()[0];
             $this->assertSame('array', $error->params()['expected']);
             $this->assertSame('array', $error->params()['actual']);
             $this->assertSame('type', $error->keyword());
@@ -271,8 +272,9 @@ YAML;
 
         try {
             $validator->validateRequest($request);
-            $this->fail('Expected TypeMismatchError because Reject strategy forbids empty arrays');
-        } catch (TypeMismatchError $error) {
+            $this->fail('Expected ValidationException because Reject strategy forbids empty arrays');
+        } catch (ValidationException $exception) {
+            $error = $exception->getErrors()[0];
             $this->assertSame('object', $error->params()['expected']);
             $this->assertSame('array', $error->params()['actual']);
             $this->assertSame('type', $error->keyword());

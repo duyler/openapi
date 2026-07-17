@@ -253,7 +253,6 @@ final class PathRegexCacheTest extends TestCase
 
         $cache->getOrCompute('/a/{x}');
 
-        // Second insert evicts the first; cache stays at 1.
         $cache->getOrCompute('/b/{x}');
 
         self::assertSame(1, $this->cacheSize($cache));
@@ -289,7 +288,6 @@ final class PathRegexCacheTest extends TestCase
         $cache->getOrCompute('/a/{x}');
         $cache->getOrCompute('/b/{x}');
         $cache->getOrCompute('/c/{x}');
-        // Touch '/a/{x}' so '/b/{x}' becomes the LRU victim.
         $cache->getOrCompute('/a/{x}');
         $cache->getOrCompute('/d/{x}');
 
@@ -324,7 +322,6 @@ final class PathRegexCacheTest extends TestCase
 
         $cache->getOrCompute('/a/{x}');
         $cache->getOrCompute('/b/{x}');
-        // Access '/a/{x}' — '/b/{x}' is now LRU.
         $cache->getOrCompute('/a/{x}');
         $cache->getOrCompute('/c/{x}');
 
@@ -362,6 +359,67 @@ final class PathRegexCacheTest extends TestCase
 
         self::assertSame(1, $this->cacheSize($cache));
         self::assertSame(['/b/{x}'], $this->cacheKeys($cache));
+    }
+
+    /**
+     * P-008: RFC 6570 §2.3 permits the dot inside a variable name, so
+     * `/users/{user.id}` must compile without throwing.
+     */
+    #[Test]
+    public function accepts_dot_in_path_parameter_name(): void
+    {
+        $regex = $this->cache->getOrCompute('/users/{user.id}');
+
+        self::assertSame(1, preg_match($regex, '/users/42'));
+        self::assertSame(0, preg_match($regex, '/users/42/details'));
+    }
+
+    /**
+     * P-008: The captured value is accessible via a named group. PCRE forbids
+     * the dot in subpattern names, so the group name is the varname with dots
+     * replaced by underscores.
+     */
+    #[Test]
+    public function extracts_dot_dotted_parameter_value(): void
+    {
+        $regex = $this->cache->getOrCompute('/users/{user.id}');
+
+        $matches = [];
+        preg_match($regex, '/users/42', $matches);
+
+        self::assertSame('42', $matches['user_id']);
+    }
+
+    /**
+     * P-008: Dotted varnames must also work with the RFC 6570 Level 2
+     * reserved-expansion operator `{+name}`.
+     */
+    #[Test]
+    public function accepts_dot_in_reserved_expansion_varname(): void
+    {
+        $regex = $this->cache->getOrCompute('/assets/{+asset.id}');
+
+        $matches = [];
+        preg_match($regex, '/assets/img/logo.png', $matches);
+
+        self::assertSame(1, preg_match($regex, '/assets/img/logo.png'));
+        self::assertSame('img/logo.png', $matches['asset_id']);
+    }
+
+    /**
+     * P-008: Multiple dotted varnames in the same template must capture
+     * independently into distinct underscore-named groups.
+     */
+    #[Test]
+    public function multiple_dot_dotted_placeholders_capture_independently(): void
+    {
+        $regex = $this->cache->getOrCompute('/{api.version}/users/{user.id}');
+
+        $matches = [];
+        preg_match($regex, '/v1/users/42', $matches);
+
+        self::assertSame('v1', $matches['api_version']);
+        self::assertSame('42', $matches['user_id']);
     }
 
     /**

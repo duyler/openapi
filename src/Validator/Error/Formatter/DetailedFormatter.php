@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Error\Formatter;
 
 use Duyler\OpenApi\Validator\Exception\ValidationErrorInterface;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 
 use function is_scalar;
@@ -15,13 +16,11 @@ final readonly class DetailedFormatter implements ErrorFormatterInterface
     #[Override]
     public function format(ValidationErrorInterface $error): string
     {
-        $breadcrumb = $error->dataPath();
-        $message = $error->message();
         $details = $this->getDetails($error);
         $suggestion = $error->suggestion();
 
-        $output = sprintf("Error at %s:\n", $breadcrumb);
-        $output .= sprintf("  Message: %s\n", $message);
+        $output = sprintf("Error at %s:\n", $error->dataPath());
+        $output .= sprintf("  Message: %s\n", $error->message());
 
         if ([] !== $details) {
             $output .= "  Details:\n";
@@ -46,6 +45,12 @@ final readonly class DetailedFormatter implements ErrorFormatterInterface
         );
 
         return implode("\n\n", $formattedErrors);
+    }
+
+    #[Override]
+    public function formatException(ValidationException $exception): string
+    {
+        return $this->formatMultiple($exception->getErrors());
     }
 
     /**

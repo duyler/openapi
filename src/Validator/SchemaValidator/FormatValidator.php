@@ -7,24 +7,23 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
-use Duyler\OpenApi\Validator\Format\FormatRegistry;
-use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
 use function is_array;
 use function is_string;
 use function sprintf;
 
-final readonly class FormatValidator implements SchemaValidatorInterface
+final readonly class FormatValidator implements KeywordApplicable
 {
     public function __construct(
-        private readonly ValidatorPool $pool,
-        private readonly FormatRegistry $formatRegistry,
-        private readonly bool $strictFormats = false,
-        private readonly LoggerInterface $logger = new NullLogger(),
+        private readonly ValidatorDependencies $dependencies,
     ) {}
+
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->format && null !== $schema->type;
+    }
 
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -47,10 +46,10 @@ final readonly class FormatValidator implements SchemaValidatorInterface
             $type = $schema->type;
         }
 
-        $formatValidator = $this->formatRegistry->getValidator($type, $schema->format);
+        $formatValidator = $this->dependencies->formatRegistry->getValidator($type, $schema->format);
 
         if (null === $formatValidator) {
-            if ($this->strictFormats) {
+            if ($this->dependencies->strictFormats) {
                 throw new InvalidFormatException(
                     $schema->format,
                     $data,

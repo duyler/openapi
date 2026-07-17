@@ -12,6 +12,7 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\DiscriminatorMismatchException;
 use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -27,7 +28,17 @@ final readonly class ItemsValidatorWithContext
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
     ) {}
 
-    public function validateWithContext(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
+    public function validateWithContext(array $data, Schema $schema, ValidationContext $context): void
+    {
+        $this->validate($data, $schema, $context, true);
+    }
+
+    public function validateWithContextIgnoringDiscriminator(array $data, Schema $schema, ValidationContext $context): void
+    {
+        $this->validate($data, $schema, $context, false);
+    }
+
+    private function validate(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
     {
         if (null === $schema->items) {
             return;
@@ -36,6 +47,8 @@ final readonly class ItemsValidatorWithContext
         $errors = [];
         $itemSchema = $schema->items;
         $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
+        $allowNull = $context->nullableAsType && ($itemSchema->nullable
+            || SchemaValueNormalizer::typeIncludesNull($itemSchema->type));
 
         foreach ($data as $index => $item) {
             /** @var int $index */
@@ -47,16 +60,19 @@ final readonly class ItemsValidatorWithContext
                 $context->enterBreadcrumbIndex($index);
 
                 try {
-                    $allowNull = $context->nullableAsType && ($itemSchema->nullable
-                        || SchemaValueNormalizer::typeIncludesNull($itemSchema->type));
                     $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
-                    $validator = new SchemaValidatorWithContext($this->document, $this->dependencies, $this->configuration);
-                    $validator->validateWithContext($normalizedItem, $itemSchema, $context, $useDiscriminator);
+                    $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
+                    if ($useDiscriminator) {
+                        $rootValidator->validateWithContext($normalizedItem, $itemSchema, $context);
+                    } else {
+                        $rootValidator->validateWithContextIgnoringDiscriminator($normalizedItem, $itemSchema, $context);
+                    }
                 } finally {
                     $context->leaveBreadcrumb();
                 }
             } catch (DiscriminatorMismatchException|
                 InvalidDiscriminatorValueException|
+                InvalidFormatException|
                 MissingDiscriminatorPropertyException|
                 UnknownDiscriminatorValueException $e
             ) {
@@ -66,7 +82,7 @@ final readonly class ItemsValidatorWithContext
             }
         }
 
-        if (count($errors) > 0) {
+        if ([] !== $errors) {
             throw new ValidationException(
                 sprintf('Items validation failed at %s', $context->breadcrumbs->currentPath()),
                 errors: $errors,

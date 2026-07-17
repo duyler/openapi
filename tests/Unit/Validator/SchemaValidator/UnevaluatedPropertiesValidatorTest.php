@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedPropertiesValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -28,7 +29,7 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new UnevaluatedPropertiesValidator($this->pool, BuiltinFormats::create());
+        $this->validator = new UnevaluatedPropertiesValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]
@@ -434,7 +435,6 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: $unevaluatedSchema,
         );
 
-        // 'extra' is unevaluated and should be validated against unevaluatedSchema
         $succeeded = false;
 
         try {
@@ -462,7 +462,6 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
 
         $this->expectException(TypeMismatchError::class);
 
-        // 'extra' is unevaluated and 'string' does not match integer schema
         $this->validator->validate(['name' => 'John', 'extra' => 'not_an_integer'], $schema);
     }
 
@@ -475,7 +474,6 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: $unevaluatedSchema,
         );
 
-        // No ValidationContext provided — should use default
         $succeeded = false;
 
         try {
@@ -501,7 +499,6 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: $unevaluatedSchema,
         );
 
-        // No unevaluated properties — schema validation not triggered
         $succeeded = false;
 
         try {

@@ -152,7 +152,6 @@ class JsonFormatterTest extends TestCase
 
         $formatted = $this->formatter->format($error);
 
-        // Pretty printed JSON should contain newlines
         $this->assertStringContainsString("\n", $formatted);
     }
 
@@ -170,7 +169,6 @@ class JsonFormatterTest extends TestCase
         $formatted = $this->formatter->format($error);
         $decoded = json_decode($formatted, true);
 
-        // TypeMismatchError should still have a default suggestion
         $this->assertArrayHasKey('suggestion', $decoded);
     }
 

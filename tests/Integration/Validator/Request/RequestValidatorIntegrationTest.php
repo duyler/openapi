@@ -11,6 +11,7 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Parameters;
 use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Test\Support\StreamStubHelper;
 use Duyler\OpenApi\Validator\Request\CookieValidator;
 use Duyler\OpenApi\Validator\Request\HeadersValidator;
 use Duyler\OpenApi\Validator\Request\ParameterDeserializer;
@@ -35,6 +36,8 @@ use Psr\Http\Message\UriInterface;
 /** @internal */
 final class RequestValidatorIntegrationTest extends TestCase
 {
+    use StreamStubHelper;
+
     private RequestValidator $validator;
 
     protected function setUp(): void
@@ -185,6 +188,7 @@ final class RequestValidatorIntegrationTest extends TestCase
 
         $bodyMock = $this->createStub(StreamInterface::class);
         $bodyMock->method('__toString')->willReturn($body);
+        $this->configureReadableStream($bodyMock, $body);
         $request->method('getBody')->willReturn($bodyMock);
 
         return $request;

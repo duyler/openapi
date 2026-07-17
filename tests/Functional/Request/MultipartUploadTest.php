@@ -346,7 +346,6 @@ YAML;
             ->build();
     }
 
-    // Helper duplicated in RequestBodyMediaTypeTest for test isolation.
     private function assertOperationMatches(Operation $operation, string $method, string $path): void
     {
         self::assertSame($method, $operation->method);
@@ -359,6 +358,12 @@ YAML;
     ): AbstractValidationError {
         try {
             $validator->validateRequest($request);
+        } catch (ValidationException $exception) {
+            foreach ($exception->getErrors() as $error) {
+                if ($error instanceof AbstractValidationError) {
+                    return $error;
+                }
+            }
         } catch (AbstractValidationError $error) {
             return $error;
         }

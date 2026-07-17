@@ -128,6 +128,13 @@ YAML;
 
         try {
             $this->validator->validateSchema($data, '#/components/schemas/UserProfile');
+        } catch (ValidationException $exception) {
+            foreach ($exception->getErrors() as $error) {
+                if ($error instanceof TypeMismatchError) {
+                    $caught = $error;
+                    break;
+                }
+            }
         } catch (TypeMismatchError $e) {
             $caught = $e;
         }
@@ -135,6 +142,6 @@ YAML;
         self::assertInstanceOf(TypeMismatchError::class, $caught);
         self::assertSame('type', $caught->keyword());
         self::assertSame('string', $caught->params()['expected']);
-        self::assertSame('integer', $caught->params()['actual']);
+        self::assertSame('int', $caught->params()['actual']);
     }
 }

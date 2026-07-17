@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\SchemaValidator\PropertyNamesValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
@@ -26,7 +27,7 @@ class PropertyNamesValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new PropertyNamesValidator($this->pool, BuiltinFormats::create());
+        $this->validator = new PropertyNamesValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]
@@ -164,5 +165,53 @@ class PropertyNamesValidatorTest extends TestCase
         $this->expectExceptionMessage('Invalid regex pattern "#[invalid#":');
 
         $this->validator->validate(['name' => 'value'], $schema);
+    }
+
+    /**
+     * P-005: JSON Schema 2020-12 §6.5.4 — propertyNames applies only to
+     * object instances. PHP integer-keyed lists (array_is_list === true)
+     * MUST NOT be validated, otherwise a `type: string` constraint would
+     * reject every list as a false-positive TypeMismatchError.
+     */
+    #[Test]
+    public function does_not_validate_integer_keys_for_lists(): void
+    {
+        $nameSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'array',
+            propertyNames: $nameSchema,
+        );
+
+        $this->validator->validate([1, 2, 3], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validates_string_keys_for_objects(): void
+    {
+        $nameSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'object',
+            propertyNames: $nameSchema,
+        );
+
+        $this->validator->validate(['a' => 1], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function rejects_invalid_string_key_for_object_with_pattern(): void
+    {
+        $nameSchema = new Schema(type: 'string', pattern: '/^[a-z]+$/');
+        $schema = new Schema(
+            type: 'object',
+            propertyNames: $nameSchema,
+        );
+
+        $this->expectException(PatternMismatchError::class);
+
+        $this->validator->validate(['1invalid' => 1], $schema);
     }
 }

@@ -10,8 +10,14 @@ use Override;
 
 use function is_array;
 
-final readonly class PropertyNamesValidator extends AbstractSchemaValidator
+final readonly class PropertyNamesValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->propertyNames;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
@@ -23,6 +29,10 @@ final readonly class PropertyNamesValidator extends AbstractSchemaValidator
             return;
         }
 
+        if (array_is_list($data)) {
+            return;
+        }
+
         if (null !== $schema->propertyNames->pattern && '' !== $schema->propertyNames->pattern) {
             $regexValidator = $this->regexValidator();
             $regexValidator->validate(
@@ -31,8 +41,9 @@ final readonly class PropertyNamesValidator extends AbstractSchemaValidator
             );
         }
 
+        $validator = $this->createSchemaValidator();
+
         foreach (array_keys($data) as $propertyName) {
-            $validator = $this->createSchemaValidator();
             $validator->validate($propertyName, $schema->propertyNames, $context);
         }
     }

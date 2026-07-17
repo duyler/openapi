@@ -11,6 +11,7 @@ use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
@@ -40,7 +41,7 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-final readonly class ValidationContext
+final readonly class ValidatorDependencies
 {
     public readonly RequestValidator $requestValidator;
     public readonly ResponseValidatorWithContext $responseValidator;
@@ -63,14 +64,21 @@ final readonly class ValidationContext
         public readonly bool $strictFormats = false,
         public readonly PathRegexCache $pathRegexCache = new PathRegexCache(),
         public readonly RegexValidator $regexValidator = new RegexValidator(),
+        public readonly int $maxJsonBodyBytes = ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES,
+        public readonly int $maxMultipartBodyBytes = ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES,
+        public readonly bool $strictStreaming = false,
+        public readonly int $maxRegexBacktracks = PregExecutor::DEFAULT_MAX_BACKTRACKS,
+        public readonly PregExecutor $pregExecutor = new PregExecutor(),
     ) {
         $this->statelessValidators = new StatelessValidatorRegistry(
             $this->pool,
             $this->formatRegistry,
+            $this->strictFormats,
             $this->reportDeprecated,
             $this->logger,
             $this->eventDispatcher,
             $this->regexValidator,
+            $this->pregExecutor,
         );
 
         $this->schemaValidatorDependencies = new SchemaValidatorDependencies(
@@ -90,13 +98,12 @@ final readonly class ValidationContext
             ),
         );
 
-        $this->requestValidator = $this->buildRequestValidator();
-        $this->responseValidator = $this->buildResponseValidator();
-        $this->schemaValidatorWithContext = new SchemaValidatorWithContext(
+        $this->schemaValidatorWithContext = $this->schemaValidatorDependencies->rootSchemaValidator(
             $this->document,
-            $this->schemaValidatorDependencies,
             $this->buildValidatorConfiguration(),
         );
+        $this->requestValidator = $this->buildRequestValidator();
+        $this->responseValidator = $this->buildResponseValidator();
     }
 
     private function buildValidatorConfiguration(): ValidatorConfiguration
@@ -107,6 +114,10 @@ final readonly class ValidationContext
             emptyArrayStrategy: $this->emptyArrayStrategy,
             reportDeprecated: $this->reportDeprecated,
             strictFormats: $this->strictFormats,
+            maxJsonBodyBytes: $this->maxJsonBodyBytes,
+            maxMultipartBodyBytes: $this->maxMultipartBodyBytes,
+            strictStreaming: $this->strictStreaming,
+            maxRegexBacktracks: $this->maxRegexBacktracks,
         );
     }
 
@@ -124,6 +135,7 @@ final readonly class ValidationContext
             reportDeprecated: $this->reportDeprecated,
             eventDispatcher: $this->eventDispatcher,
             regexValidator: $this->regexValidator,
+            pregExecutor: $this->pregExecutor,
         );
 
         $parameterConfig = new ParameterValidationConfig(
@@ -176,6 +188,7 @@ final readonly class ValidationContext
                 document: $this->document,
                 dependencies: $this->schemaValidatorDependencies,
                 configuration: $this->buildValidatorConfiguration(),
+                pregExecutor: $this->pregExecutor,
             ),
         );
     }
@@ -186,6 +199,7 @@ final readonly class ValidationContext
             document: $this->document,
             dependencies: $this->schemaValidatorDependencies,
             configuration: $this->buildValidatorConfiguration(),
+            pregExecutor: $this->pregExecutor,
         );
     }
 }

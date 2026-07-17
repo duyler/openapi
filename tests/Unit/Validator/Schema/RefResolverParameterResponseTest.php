@@ -200,7 +200,7 @@ final class RefResolverParameterResponseTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage('Only local refs');
+        $this->expectExceptionMessage('External ref not resolved. Builtin FileExternalRefResolver');
 
         $this->resolver->resolveParameter('https://example.com/parameters.yaml', $document);
     }
@@ -214,7 +214,7 @@ final class RefResolverParameterResponseTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage('Only local refs');
+        $this->expectExceptionMessage('External ref not resolved. Builtin FileExternalRefResolver');
 
         $this->resolver->resolveResponse('https://example.com/responses.yaml', $document);
     }

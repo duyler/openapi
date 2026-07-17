@@ -27,7 +27,7 @@ final readonly class RequestValidationHandler
     private readonly ServerPathMatcher $serverPathMatcher;
 
     public function __construct(
-        private readonly ValidationContext $context,
+        private readonly ValidatorDependencies $context,
         private readonly PathFinder $pathFinder,
         private readonly bool $securityValidation = false,
         private readonly bool $serverPathResolution = false,
@@ -35,7 +35,9 @@ final readonly class RequestValidationHandler
         $this->eventDispatcher = $context->eventDispatcher;
         $this->logger = $context->logger;
         $this->securityValidator = new SecurityValidator();
-        $this->serverPathMatcher = new ServerPathMatcher();
+        $this->serverPathMatcher = new ServerPathMatcher(
+            $context->document->servers?->servers ?? [],
+        );
     }
 
     public function validate(ServerRequestInterface $request): Operation
@@ -53,15 +55,10 @@ final readonly class RequestValidationHandler
             callback: function () use ($request, $requestPath, $matchedPath, $method): Operation {
                 $operation = $this->pathFinder->findOperation($matchedPath, $method);
 
-                $pathItem = $this->context->document->paths?->paths[$operation->path] ?? null;
-                if (null === $pathItem) {
-                    throw new BuilderException(sprintf('Path not found: %s', $operation->path));
-                }
-
-                $op = PathItemHelper::getOperation($pathItem, $method);
+                $op = $operation->schemaOperation;
                 if (null === $op) {
                     throw new BuilderException(
-                        sprintf('Method not found: %s %s', $method, $operation->path),
+                        sprintf('Operation schema unavailable: %s %s', $method, $operation->path),
                     );
                 }
 
@@ -99,8 +96,7 @@ final readonly class RequestValidationHandler
             return $requestPath;
         }
 
-        $servers = $this->context->document->servers?->servers ?? [];
-        $match = $this->serverPathMatcher->matchPath($servers, $requestPath);
+        $match = $this->serverPathMatcher->matchPath($requestPath);
 
         if (null !== $match) {
             return $match->strippedPath;

@@ -16,9 +16,15 @@ use function is_array;
 use function sprintf;
 use function is_string;
 
-final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator
+final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
     private const int MAX_ADDITIONAL_PROPERTY_ERRORS = 100;
+
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->additionalProperties;
+    }
 
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -36,15 +42,26 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
 
         $patternProperties = $schema->patternProperties ?? [];
         if ([] !== $patternProperties && [] !== $additionalKeys) {
-            $additionalKeys = array_values(array_filter($additionalKeys, function (int|string $key) use ($patternProperties): bool {
-                foreach (array_keys($patternProperties) as $pattern) {
-                    if ('' === $pattern) {
-                        continue;
-                    }
+            /** @var array<string, non-empty-string> $normalizedPatterns */
+            $normalizedPatterns = [];
 
-                    $normalizedPattern = $this->regexValidator()->normalize($pattern);
-                    assert('' !== $normalizedPattern);
-                    if (1 === preg_match($normalizedPattern, (string) $key)) {
+            foreach (array_keys($patternProperties) as $pattern) {
+                if ('' === $pattern) {
+                    continue;
+                }
+
+                $normalized = $this->regexValidator()->normalize($pattern);
+                assert('' !== $normalized);
+                $normalizedPatterns[$pattern] = $normalized;
+            }
+
+            $pregExecutor = $this->pregExecutor();
+
+            $additionalKeys = array_values(array_filter($additionalKeys, static function (int|string $key) use ($normalizedPatterns, $pregExecutor): bool {
+                $keyString = (string) $key;
+
+                foreach ($normalizedPatterns as $normalizedPattern) {
+                    if (1 === $pregExecutor->match($normalizedPattern, $keyString)) {
                         return false;
                     }
                 }
@@ -111,7 +128,7 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
                 $value = $data[$key];
 
                 if (null === $context) {
-                    $context = ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
+                    $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
                 }
 
                 $context->enterBreadcrumb((string) $key);

@@ -511,12 +511,10 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $validator = new PropertiesValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
-        // Arrange: объект с discriminator property, содержащим неизвестное значение
         $data = [
             'pet' => ['petType' => 'bird', 'name' => 'Tweety'],
         ];
 
-        // Act & Assert: неизвестный mapping value должен вызвать исключение
         $this->expectException(UnknownDiscriminatorValueException::class);
 
         $validator->validateWithContext($data, $schema, $this->context);
@@ -567,12 +565,10 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $validator = new PropertiesValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
-        // Arrange: объект без discriminator property
         $data = [
             'pet' => ['name' => 'Fluffy'],
         ];
 
-        // Act & Assert: отсутствие discriminator property должно вызвать исключение
         $this->expectException(MissingDiscriminatorPropertyException::class);
 
         $validator->validateWithContext($data, $schema, $this->context);

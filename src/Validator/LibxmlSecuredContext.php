@@ -18,10 +18,12 @@ final readonly class LibxmlSecuredContext
      *
      * Installs a deny-all external entity loader (so SYSTEM/PUBLIC references
      * cannot resolve file://, http://, or any other scheme), enables internal
-     * error buffering, and guarantees that the previous libxml configuration
-     * is restored in finally — even if the work throws. This encapsulation
-     * is mandatory for long-running runtimes (RoadRunner, FrankenPHP, Swoole)
-     * where libxml state is shared across requests and coroutines.
+     * error buffering, and restores both libxml_use_internal_errors and the
+     * previous external entity loader in finally — even if the work throws.
+     * This encapsulation is mandatory for long-running runtimes (RoadRunner,
+     * FrankenPHP, Swoole) where libxml state is shared across requests and
+     * coroutines, so adjacent XML parsing must not be left with a deny-all
+     * loader after this helper returns.
      *
      * The work closure is responsible only for the actual parsing call,
      * including the LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING flags
@@ -38,6 +40,7 @@ final readonly class LibxmlSecuredContext
     public static function run(Closure $work): mixed
     {
         $previousInternalErrors = libxml_use_internal_errors(true);
+        $previousLoader = libxml_get_external_entity_loader();
         libxml_set_external_entity_loader(static fn(): null => null);
 
         try {
@@ -45,6 +48,7 @@ final readonly class LibxmlSecuredContext
         } finally {
             libxml_clear_errors();
             libxml_use_internal_errors($previousInternalErrors);
+            libxml_set_external_entity_loader($previousLoader);
         }
     }
 }

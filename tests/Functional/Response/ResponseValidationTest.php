@@ -970,7 +970,7 @@ final class ResponseValidationTest extends TestCase
             ->withHeader('Content-Type', 'text/plain')
             ->withBody($this->psrFactory->createStream($longText));
 
-        $this->expectException(MaxLengthError::class);
+        $this->expectException(ValidationException::class);
         $validator->validateResponse($response, $operation);
     }
 

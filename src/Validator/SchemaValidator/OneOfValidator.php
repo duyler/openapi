@@ -10,22 +10,19 @@ use Duyler\OpenApi\Validator\Exception\OneOfError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 
-final readonly class OneOfValidator extends AbstractCompositionalValidator
+final readonly class OneOfValidator extends AbstractCompositionalValidator implements KeywordApplicable
 {
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->oneOf && [] !== $schema->oneOf;
+    }
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
         if (null === $schema->oneOf) {
             return;
-        }
-
-        $nullableAsType = $context?->nullableAsType ?? true;
-
-        if (null === $data && $nullableAsType) {
-            $hasNullableSchema = array_any($schema->oneOf, fn($subSchema) => $subSchema->nullable);
-            if ($hasNullableSchema) {
-                return;
-            }
         }
 
         $result = $this->validateSchemas($schema->oneOf, $data, $context, 'oneOf');

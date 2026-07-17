@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request;
 
-use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -32,11 +31,5 @@ final readonly class HeadersValidator extends AbstractParameterValidator
     protected function findParameter(array $data, string $name): mixed
     {
         return $this->headerFinder->find($data, $name);
-    }
-
-    #[Override]
-    protected function isRequired(Parameter $param, mixed $value): bool
-    {
-        return $param->required;
     }
 }

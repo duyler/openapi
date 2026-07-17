@@ -19,6 +19,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use RuntimeException;
+use WeakMap;
 
 use function spl_object_id;
 use function sprintf;
@@ -97,11 +98,11 @@ final class SchemaValidatorWithContextCacheTest extends TestCase
         );
 
         $resolve = new ReflectionMethod($validator, 'resolveCompositionRefs');
-        $firstResolved = $resolve->invoke($validator, $schema, []);
+        $firstResolved = $resolve->invoke($validator, $schema, new WeakMap());
         $firstId = spl_object_id($firstResolved);
 
         for ($i = 0; $i < 999; ++$i) {
-            $resolved = $resolve->invoke($validator, $schema, []);
+            $resolved = $resolve->invoke($validator, $schema, new WeakMap());
 
             $this->assertSame($firstId, spl_object_id($resolved));
         }
@@ -144,7 +145,6 @@ final class SchemaValidatorWithContextCacheTest extends TestCase
         try {
             $validator->validate(['any' => 'data'], $schema);
         } catch (SchemaDepthExceededException) {
-            // Controlled depth guard is acceptable; the goal is to avoid stack overflow.
         } catch (RuntimeException $e) {
             self::fail(sprintf('Expected no stack overflow, got: %s', $e->getMessage()));
         }

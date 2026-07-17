@@ -347,9 +347,6 @@ YAML;
             ->fromYamlString(self::ONEOF_WITH_REF_SPEC)
             ->build();
 
-        // "ab" fails minLength:3 of StringValue AND 5 fails minimum:10 of NumberValue.
-        // Without bugfix-10, both $ref subschemas would pass trivially → OneOfError.
-        // With bugfix-10, both fail → ValidationException (none matched).
         $caught = null;
 
         try {
@@ -387,7 +384,6 @@ YAML;
             ->fromYamlString(self::ANYOF_WITH_REF_SPEC)
             ->build();
 
-        // "abc" fails minLength:5 but matches pattern ^[a-z]+$ → passes anyOf.
         $succeeded = false;
 
         try {
@@ -407,7 +403,6 @@ YAML;
             ->fromYamlString(self::ANYOF_WITH_REF_SPEC)
             ->build();
 
-        // 123 fails both MinLengthConstraint (not string) and PatternConstraint (not string).
         $caught = null;
 
         try {
@@ -474,7 +469,6 @@ YAML;
             ->fromYamlString(self::NESTED_ALLOF_IN_ONEOF_SPEC)
             ->build();
 
-        // "yellow" is not in enum [red, green, blue] from BaseShape → neither Circle nor Square matches.
         $invalidData = [
             'color' => 'yellow',
             'radius' => 5.0,
@@ -501,7 +495,6 @@ YAML;
             ->fromYamlString(self::NESTED_ALLOF_IN_ONEOF_SPEC)
             ->build();
 
-        // Missing "color" from BaseShape → neither Circle nor Square allOf matches.
         $missingColorData = [
             'radius' => 5.0,
         ];
@@ -575,7 +568,6 @@ YAML;
             ->fromYamlString(self::DISCRIMINATOR_MAPPING_WITH_REF_SPEC)
             ->build();
 
-        // petType=cat routes via mapping to Cat schema → Cat requires "meow".
         $catWithoutMeow = [
             'petType' => 'cat',
         ];

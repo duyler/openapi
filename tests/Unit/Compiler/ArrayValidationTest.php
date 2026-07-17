@@ -97,11 +97,6 @@ final class ArrayValidationTest extends TestCase
         $compiler = new ValidatorCompiler();
         $code = $compiler->compile($schema, 'UniqueItemsValidator');
 
-        // The compiler emits a json_encode-based uniqueness check that
-        // honours JSON Schema §4.2.3 numeric equality (1 === 1.0) while
-        // keeping distinct JSON types separate. The legacy SORT_REGULAR
-        // approach was removed because PHP loose comparison collapsed
-        // 1 == "1" == true into false duplicates.
         self::assertStringContainsString('json_encode', $code);
         self::assertStringContainsString("JSON_THROW_ON_ERROR", $code);
         self::assertStringContainsString('Array items must be unique', $code);
@@ -195,7 +190,6 @@ final class ArrayValidationTest extends TestCase
 
         $validator = new UniqueItemsDistinctJsonTypesValidator();
 
-        // Must not throw: 1, "1", and true are distinct JSON values.
         $validator->validate([1, '1', true]);
 
         self::assertTrue(class_exists('UniqueItemsDistinctJsonTypesValidator', false));

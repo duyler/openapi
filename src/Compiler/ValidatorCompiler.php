@@ -12,8 +12,11 @@ use InvalidArgumentException;
 use RuntimeException;
 
 use function addslashes;
+use function array_filter;
 use function array_keys;
+use function array_map;
 use function array_pop;
+use function array_values;
 use function count;
 use function explode;
 use function implode;
@@ -112,6 +115,7 @@ final readonly class ValidatorCompiler
             $code .= sprintf("namespace %s;\n\n", $namespace);
         }
 
+        $code .= "use Duyler\\OpenApi\\Validator\\TypeFormatter;\n\n";
         $code .= sprintf("readonly class %s\n{\n", $shortName);
         $code .= '    public function validate(mixed $data): void' . "\n";
         $code .= "    {\n";
@@ -158,8 +162,14 @@ final readonly class ValidatorCompiler
     {
         $code = '';
 
-        /** @var array<string> $types */
-        $types = is_array($type) ? $type : [$type];
+        /** @var array<string|null> $rawTypes */
+        $rawTypes = is_array($type) ? $type : [$type];
+
+        /** @var list<string> $types */
+        $types = array_values(array_filter(
+            $rawTypes,
+            static fn(mixed $t): bool => null !== $t,
+        ));
 
         $checks = [];
         foreach ($types as $t) {
@@ -170,11 +180,15 @@ final readonly class ValidatorCompiler
             return '';
         }
 
+        $escapedTypes = array_map(
+            static fn(string $t): string => var_export($t, true),
+            $types,
+        );
+        $typesString = implode(" . '|' . ", $escapedTypes);
+
         if (1 === count($checks)) {
             $code .= sprintf("        if (false === %s) {\n", $checks[0]);
-
-            $typesString = implode('|', $types);
-            $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected %s but got ' . gettype(\$data));\n", $typesString);
+            $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected ' . %s . ' but got ' . TypeFormatter::format(\$data));\n", $typesString);
             $code .= "        }\n\n";
 
             return $code;
@@ -182,9 +196,7 @@ final readonly class ValidatorCompiler
 
         $condition = implode(' || ', $checks);
         $code .= sprintf("        if (false === (%s)) {\n", $condition);
-
-        $typesString = implode('|', $types);
-        $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected %s but got ' . gettype(\$data));\n", $typesString);
+        $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected ' . %s . ' but got ' . TypeFormatter::format(\$data));\n", $typesString);
         $code .= "        }\n\n";
 
         return $code;
@@ -262,11 +274,6 @@ final readonly class ValidatorCompiler
 
     private function generatePatternCheck(string $pattern): string
     {
-        // Transient RegexValidator: compilation is a one-shot offline code-generation
-        // step, not part of the runtime validation hot path. The generated class is
-        // standalone and carries no runtime RegexValidator dependency, and reset()
-        // must not affect compilation output. A dedicated short-lived normalizer is
-        // therefore correct here (no shared-eviction benefit for single-shot use).
         $normalizedPattern = new RegexValidator()->normalize($pattern);
         $escapedPattern = var_export($normalizedPattern, true);
         $code = sprintf("        if (false === preg_match(%s, (string) \$data)) {\n", $escapedPattern);
@@ -423,9 +430,8 @@ final readonly class ValidatorCompiler
             return '';
         }
 
-        $escapedVar = '$data' === $dataVar ? "\$data" : $dataVar;
         $safeVarForError = addslashes($dataVar);
-        $code = sprintf("        if (false === is_array(%s)) {\n", $escapedVar);
+        $code = sprintf("        if (false === is_array(%s)) {\n", $dataVar);
         $code .= sprintf("            throw new \\RuntimeException('Expected object for %s');\n", $safeVarForError);
         $code .= "        }\n\n";
 
@@ -490,8 +496,15 @@ final readonly class ValidatorCompiler
 
     private function generateTypeCheckForValue(string|array $type, string $valueVar): string
     {
-        /** @var array<string> $types */
-        $types = is_array($type) ? $type : [$type];
+        /** @var array<string|null> $rawTypes */
+        $rawTypes = is_array($type) ? $type : [$type];
+
+        /** @var list<string> $types */
+        $types = array_values(array_filter(
+            $rawTypes,
+            static fn(mixed $t): bool => null !== $t,
+        ));
+
         $checks = [];
 
         foreach ($types as $t) {
@@ -542,13 +555,7 @@ final readonly class ValidatorCompiler
             $code .= "        }\n\n";
         }
 
-        if (null !== $schema->uniqueItems && $schema->uniqueItems) {
-            // JSON Schema draft 2020-12 §6.4.3 / §4.2.3 equality: items are
-            // duplicates when their JSON serializations match. This mirrors
-            // the runtime ArrayLengthValidator behaviour, including numeric
-            // equality across int/float (json_encode(1) === json_encode(1.0)
-            // === "1"), while keeping distinct JSON types separate
-            // (json_encode(1)="1", json_encode("1")='"1"', json_encode(true)="true").
+        if (true === $schema->uniqueItems) {
             $code .= "        \$__seen = [];\n";
             $code .= "        foreach (\$data as \$__item) {\n";
             $code .= "            \$__key = json_encode(\$__item, JSON_THROW_ON_ERROR);\n";

@@ -8,41 +8,40 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\JsonDepthLimit;
 use Duyler\OpenApi\Validator\LibxmlSecuredContext;
+use Duyler\OpenApi\Validator\SchemaValidator\Enum\ContentMediaType;
 use JsonException;
 use Override;
 use SimpleXMLElement;
 
-use function in_array;
+use function explode;
 use function is_string;
-use function preg_match;
 use function str_starts_with;
+use function substr_count;
+
+use function assert;
 
 use const LIBXML_NOERROR;
 use const LIBXML_NONET;
 use const LIBXML_NOWARNING;
 use const JSON_THROW_ON_ERROR;
 
-final readonly class ContentMediaTypeValidator implements SchemaValidatorInterface
+final readonly class ContentMediaTypeValidator implements KeywordApplicable
 {
     private const int JSON_MAX_DEPTH = JsonDepthLimit::Untrusted->value;
 
-    private const array SUPPORTED_MEDIA_TYPES = [
-        'application/json',
-        'application/xml',
-        'text/plain',
-        'text/html',
-        'text/xml',
-        'application/pdf',
-        'application/octet-stream',
-        'image/png',
-        'image/jpeg',
-        'image/gif',
-        'image/svg+xml',
-        'multipart/form-data',
-        'application/x-www-form-urlencoded',
-    ];
+    private const int MAX_URLENCODED_PAIRS = 1000;
 
     private const int XML_PARSE_OPTIONS = LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING;
+
+    public function __construct(
+        private readonly ValidatorDependencies $dependencies,
+    ) {}
+
+    #[Override]
+    public function isApplicable(Schema $schema): bool
+    {
+        return null !== $schema->contentMediaType;
+    }
 
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
@@ -76,7 +75,7 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
     {
         $isValid = match ($expectedMediaType) {
             'application/json' => $this->isValidJson($data),
-            'application/xml', 'text/xml' => $this->isValidXml($data),
+            'application/xml', 'text/xml', 'image/svg+xml' => $this->isValidXml($data),
             'text/plain' => $this->isValidTextPlain($data),
             'text/html' => $this->isValidHtml($data),
             'application/pdf' => $this->isValidPdf($data),
@@ -84,7 +83,6 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
             'image/png' => $this->isValidPng($data),
             'image/jpeg' => $this->isValidJpeg($data),
             'image/gif' => $this->isValidGif($data),
-            'image/svg+xml' => $this->isValidSvg($data),
             'multipart/form-data' => $this->isValidMultipartFormData($data),
             'application/x-www-form-urlencoded' => $this->isValidUrlEncoded($data),
             default => $this->isRecognizedMediaType($expectedMediaType),
@@ -137,7 +135,7 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
             return false;
         }
 
-        return 1 === preg_match('/<[a-zA-Z][^>]*>/', $data);
+        return 1 === $this->dependencies->pregExecutor->match('/<[a-zA-Z][^>]*>/', $data);
     }
 
     private function isValidPdf(string $data): bool
@@ -165,14 +163,18 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
         return str_starts_with($data, 'GIF87a') || str_starts_with($data, 'GIF89a');
     }
 
-    private function isValidSvg(string $data): bool
-    {
-        return $this->isValidXml($data);
-    }
-
     private function isValidMultipartFormData(string $data): bool
     {
-        return 1 === preg_match('/^--[^\r\n]+/', $data);
+        $matches = [];
+        if (1 !== $this->dependencies->pregExecutor->match('/^--(?<boundary>[^\r\n]+)/', $data, $matches)) {
+            return false;
+        }
+
+        $boundary = $matches['boundary'] ?? '';
+        assert(is_string($boundary));
+        $closingBoundary = '--' . $boundary . '--';
+
+        return 1 === $this->dependencies->pregExecutor->match('/' . preg_quote($closingBoundary, '/') . '\s*$/', $data);
     }
 
     private function isValidUrlEncoded(string $data): bool
@@ -181,11 +183,14 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
             return true;
         }
 
-        return 1 === preg_match('/^[^&=]+=[^&]*(&[^&=]+=[^&]*)*$/', $data);
+        if (self::MAX_URLENCODED_PAIRS < substr_count($data, '&') + 1) {
+            return false;
+        }
+        return array_all(explode('&', $data), fn($pair) => !(1 !== $this->dependencies->pregExecutor->match('/^[^&=]+(?:=[^&]*)?$/', $pair)));
     }
 
     private function isRecognizedMediaType(string $mediaType): bool
     {
-        return in_array($mediaType, self::SUPPORTED_MEDIA_TYPES, true);
+        return null !== ContentMediaType::tryFrom($mediaType);
     }
 }

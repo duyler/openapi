@@ -1,0 +1,13 @@
+OrderSchema:
+  type: object
+  required:
+    - orderId
+    - userId
+  properties:
+    orderId:
+      type: string
+    userId:
+      type: integer
+    total:
+      type: number
+      format: float

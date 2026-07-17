@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Functional\Request;
 
-use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\ConstError;
 use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MinItemsError;
+use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\Exception\PatternMismatchError;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
@@ -328,12 +328,12 @@ YAML;
 
         try {
             $validator->validateRequest($request);
-            self::fail('Expected BuilderException when decoded slash creates extra path segments');
-        } catch (BuilderException $exception) {
+            self::fail('Expected OperationNotFoundException when decoded slash creates extra path segments');
+        } catch (OperationNotFoundException $exception) {
             $caught = $exception;
         }
 
-        self::assertInstanceOf(BuilderException::class, $caught);
+        self::assertInstanceOf(OperationNotFoundException::class, $caught);
         self::assertStringContainsString('Operation not found', $caught->getMessage());
     }
 
@@ -373,12 +373,12 @@ YAML;
 
         try {
             $validator->validateRequest($request);
-            self::fail('Expected BuilderException for empty segment in required path parameter');
-        } catch (BuilderException $exception) {
+            self::fail('Expected OperationNotFoundException for empty segment in required path parameter');
+        } catch (OperationNotFoundException $exception) {
             $caught = $exception;
         }
 
-        self::assertInstanceOf(BuilderException::class, $caught);
+        self::assertInstanceOf(OperationNotFoundException::class, $caught);
         self::assertStringContainsString('Operation not found', $caught->getMessage());
     }
 
@@ -855,8 +855,8 @@ YAML;
      * The compiled regex `#^/(?P<id>[^/]+)$#` requires at least one
      * non-slash character after the leading slash. An empty path value
      * fails to match, and the top-level validator raises
-     * `BuilderException` ("Operation not found") because no candidate
-     * template matches.
+     * `OperationNotFoundException` ("Operation not found") because no
+     * candidate template matches.
      */
     #[Test]
     public function rp_05_param_only_root_path_rejects_empty_value(): void
@@ -889,12 +889,12 @@ YAML;
             $validator->validateRequest(
                 $this->psrFactory->createServerRequest('GET', '/'),
             );
-            self::fail('Expected BuilderException when path parameter segment is empty');
-        } catch (BuilderException $exception) {
+            self::fail('Expected OperationNotFoundException when path parameter segment is empty');
+        } catch (OperationNotFoundException $exception) {
             $caught = $exception;
         }
 
-        self::assertInstanceOf(BuilderException::class, $caught);
+        self::assertInstanceOf(OperationNotFoundException::class, $caught);
         self::assertStringContainsString('Operation not found', $caught->getMessage());
         self::assertStringContainsString('GET /', $caught->getMessage());
     }

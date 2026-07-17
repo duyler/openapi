@@ -12,7 +12,7 @@ use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Validation\RequestValidationHandler;
 use Duyler\OpenApi\Validator\Validation\ResponseValidationHandler;
-use Duyler\OpenApi\Validator\Validation\ValidationContext;
+use Duyler\OpenApi\Validator\Validation\ValidatorDependencies;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -143,7 +143,7 @@ YAML;
     {
         $requestValidation = self::readDependenciesProperty($validator, 'requestValidation');
         $context = self::readProperty($requestValidation, RequestValidationHandler::class, 'context');
-        $requestValidator = self::readProperty($context, ValidationContext::class, 'requestValidator');
+        $requestValidator = self::readProperty($context, ValidatorDependencies::class, 'requestValidator');
         $bodyValidator = self::readProperty($requestValidator, RequestValidator::class, 'bodyValidator');
         $dependencies = self::readProperty($bodyValidator, RequestBodyValidatorWithContext::class, 'dependencies');
 
@@ -154,7 +154,7 @@ YAML;
     {
         $responseValidation = self::readDependenciesProperty($validator, 'responseValidation');
         $context = self::readProperty($responseValidation, ResponseValidationHandler::class, 'context');
-        $responseValidator = self::readProperty($context, ValidationContext::class, 'responseValidator');
+        $responseValidator = self::readProperty($context, ValidatorDependencies::class, 'responseValidator');
         $dependencies = self::readProperty($responseValidator, ResponseValidatorWithContext::class, 'dependencies');
 
         return self::readProperty($dependencies, SchemaValidatorDependencies::class, 'refResolver');

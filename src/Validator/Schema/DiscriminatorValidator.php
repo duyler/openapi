@@ -14,12 +14,13 @@ use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\TypeFormatter;
+
+use LogicException;
 
 use function array_key_exists;
-use function assert;
 use function end;
 use function explode;
-use function gettype;
 use function is_array;
 use function is_string;
 
@@ -58,8 +59,8 @@ final readonly class DiscriminatorValidator
         OpenApiDocument $document,
         string $dataPath,
     ): void {
-        $propertyName = $discriminator->propertyName;
-        assert(null !== $propertyName);
+        $propertyName = $discriminator->propertyName
+            ?? throw new LogicException('Discriminator property name must be set when calling validateWithPropertyName');
         $value = $this->extractValue($data, $propertyName, $dataPath);
         $targetSchema = $this->resolveSchema($value, $discriminator, $schema, $document, $dataPath);
 
@@ -95,7 +96,7 @@ final readonly class DiscriminatorValidator
         if (false === is_array($data)) {
             throw new DiscriminatorMismatchException(
                 expectedType: 'object',
-                actualType: gettype($data),
+                actualType: TypeFormatter::format($data),
                 propertyName: $propertyName,
                 dataPath: $dataPath,
             );
@@ -114,7 +115,7 @@ final readonly class DiscriminatorValidator
             throw new InvalidDiscriminatorValueException(
                 propertyName: $propertyName,
                 expectedType: 'string',
-                actualType: gettype($value),
+                actualType: TypeFormatter::format($value),
                 dataPath: $this->buildPath($dataPath, $propertyName),
             );
         }
@@ -145,17 +146,19 @@ final readonly class DiscriminatorValidator
         OpenApiDocument $document,
         string $dataPath,
     ): Schema {
-        $schemas = $schema->oneOf ?? $schema->anyOf ?? [];
+        $schemas = $schema->oneOf ?? $schema->anyOf ?? $schema->allOf ?? [];
 
         foreach ($schemas as $candidateSchema) {
-            if (null === $candidateSchema->ref) {
-                continue;
+            if (null !== $candidateSchema->ref) {
+                $implicitName = $this->extractSchemaName($candidateSchema->ref);
+
+                if ($implicitName === $value) {
+                    return $this->dependencies->refResolver->resolve($candidateSchema->ref, $document);
+                }
             }
 
-            $implicitName = $this->extractSchemaName($candidateSchema->ref);
-
-            if ($implicitName === $value) {
-                return $this->dependencies->refResolver->resolve($candidateSchema->ref, $document);
+            if (null !== $candidateSchema->oneOf || null !== $candidateSchema->anyOf || null !== $candidateSchema->allOf) {
+                return $this->findMatchingSchema($value, $discriminator, $candidateSchema, $document, $dataPath);
             }
         }
 
@@ -184,13 +187,13 @@ final readonly class DiscriminatorValidator
         string $dataPath,
     ): void {
         /** @var array<array-key, mixed> $data */
-        $validator = new SchemaValidatorWithContext($document, $this->dependencies, $this->configuration);
+        $rootValidator = $this->dependencies->rootSchemaValidator($document, $this->configuration);
         $context = ValidationContext::create(
             $this->dependencies->pool,
             $this->dependencies->errorFormatter,
             $this->configuration->nullableAsType,
             $this->configuration->emptyArrayStrategy,
         );
-        $validator->validateWithContext($data, $schema, $context, useDiscriminator: false);
+        $rootValidator->validateWithContextIgnoringDiscriminator($data, $schema, $context);
     }
 }

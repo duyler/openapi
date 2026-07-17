@@ -7,19 +7,17 @@ namespace Duyler\OpenApi\Validator;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\Request\PathParser;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 
 use function array_key_exists;
-use function array_keys;
 use function assert;
 use function count;
 use function is_array;
-use function sprintf;
 use function str_ends_with;
 use function str_starts_with;
 use function strtolower;
-use function strtoupper;
 use function usort;
 
 /**
@@ -31,6 +29,7 @@ final readonly class PathFinder
 {
     private const string PARAM_WILDCARD = '*';
     private const string TEMPLATES_KEY = "\0__templates__\0";
+    private const int MAX_TRIE_DEPTH = 32;
 
     /** @var array<int|string, mixed> */
     private array $trie;
@@ -59,48 +58,50 @@ final readonly class PathFinder
         $candidates = $this->findCandidates($requestPath, $method);
 
         if ([] === $candidates) {
-            throw new BuilderException(
-                sprintf('Operation not found: %s %s', strtoupper($method), $requestPath),
-            );
+            throw new OperationNotFoundException($requestPath, $method);
         }
 
-        if (1 === count($candidates)) {
-            return $candidates[0];
+        [$operation, $pathParameters] = 1 === count($candidates)
+            ? $candidates[0]
+            : $this->prioritizeCandidates($candidates);
+
+        if ([] === $pathParameters) {
+            return $operation;
         }
 
-        return $this->prioritizeCandidates($candidates);
+        return new Operation(
+            path: $operation->path,
+            method: $operation->method,
+            operationId: $operation->operationId,
+            pathParameters: $pathParameters,
+            schemaOperation: $operation->schemaOperation,
+        );
     }
 
     /**
-     * @return array<int, Operation>
+     * @return array<int, array{0: Operation, 1: array<string, string>}>
      */
     private function findCandidates(string $requestPath, string $method): array
     {
         $candidates = [];
         $segments = explode('/', trim($requestPath, '/'));
-        $matches = $this->lookupTrie($this->trie, $segments, 0);
+        $matches = [];
+        $this->lookupTrie($this->trie, $segments, 0, $matches);
 
-        usort(
-            $matches,
-            function (array $a, array $b): int {
-                /** @var string $templateA */
-                $templateA = $a['template'];
-                /** @var string $templateB */
-                $templateB = $b['template'];
-
-                return $this->templateOrder[$templateA] <=> $this->templateOrder[$templateB];
-            },
-        );
+        usort($matches, $this->compareTemplateOrder(...));
 
         foreach ($matches as ['template' => $template, 'item' => $pathItem]) {
+            $pathParameters = $this->pathParser->tryMatchPath($requestPath, $template);
+            if (null === $pathParameters) {
+                continue;
+            }
+
             $operation = $this->getOperation($pathItem, $method, $template);
             if (null === $operation) {
                 continue;
             }
 
-            if (null !== $this->pathParser->tryMatchPath($requestPath, $template)) {
-                $candidates[] = $operation;
-            }
+            $candidates[] = [$operation, $pathParameters];
         }
 
         return $candidates;
@@ -162,38 +163,70 @@ final readonly class PathFinder
     }
 
     /**
+     * Collect-into-shared-array recursion: appends every template match
+     * reachable from $node into $results by reference, avoiding the
+     * K copy-on-write allocations that the previous spread-merge form
+     * produced on paths traversing K wildcard nodes.
+     *
      * @param array<int|string, mixed> $node
      * @param list<string>             $segments
-     *
-     * @return list<array{template: string, item: PathItem}>
+     * @param int<0, max>              $depth
+     * @param list<array{template: string, item: PathItem}> $results
      */
-    private function lookupTrie(array $node, array $segments, int $depth): array
+    private function lookupTrie(array $node, array $segments, int $depth, array &$results): void
     {
+        if ($depth >= self::MAX_TRIE_DEPTH) {
+            return;
+        }
+
         if ($depth === count($segments)) {
             /** @var list<array{template: string, item: PathItem}> $templates */
             $templates = $node[self::TEMPLATES_KEY] ?? [];
+            foreach ($templates as $template) {
+                $results[] = $template;
+            }
 
-            return $templates;
+            return;
         }
 
         $segment = $segments[$depth];
-        $candidates = [];
 
         if (array_key_exists($segment, $node)) {
             /** @var mixed $child */
             $child = $node[$segment];
             assert(is_array($child));
-            $candidates = [...$candidates, ...$this->lookupTrie($child, $segments, $depth + 1)];
+            $this->lookupTrie($child, $segments, $depth + 1, $results);
         }
 
         if (array_key_exists(self::PARAM_WILDCARD, $node)) {
             /** @var mixed $child */
             $child = $node[self::PARAM_WILDCARD];
             assert(is_array($child));
-            $candidates = [...$candidates, ...$this->lookupTrie($child, $segments, $depth + 1)];
+            $this->lookupTrie($child, $segments, $depth + 1, $results);
         }
+    }
 
-        return $candidates;
+    /**
+     * @param array{template: string, item: PathItem} $a
+     * @param array{template: string, item: PathItem} $b
+     */
+    private function compareTemplateOrder(array $a, array $b): int
+    {
+        /** @var string $templateA */
+        $templateA = $a['template'];
+        /** @var string $templateB */
+        $templateB = $b['template'];
+
+        return $this->templateOrder[$templateA] <=> $this->templateOrder[$templateB];
+    }
+
+    /**
+     * @param array{0: Operation, 1: array<string, string>} $a
+     * @param array{0: Operation, 1: array<string, string>} $b
+     */
+    private function compareByPlaceholderCount(array $a, array $b): int
+    {
+        return $a[0]->countPlaceholders() <=> $b[0]->countPlaceholders();
     }
 
     private function isParameter(string $segment): bool
@@ -202,11 +235,13 @@ final readonly class PathFinder
     }
 
     /**
-     * @param array<int, Operation> $candidates
+     * @param array<int, array{0: Operation, 1: array<string, string>}> $candidates
+     *
+     * @return array{0: Operation, 1: array<string, string>}
      */
-    private function prioritizeCandidates(array $candidates): Operation
+    private function prioritizeCandidates(array $candidates): array
     {
-        usort($candidates, fn(Operation $a, Operation $b): int => $a->countPlaceholders() <=> $b->countPlaceholders());
+        usort($candidates, $this->compareByPlaceholderCount(...));
 
         return $candidates[0];
     }
@@ -218,13 +253,23 @@ final readonly class PathFinder
         $op = $pathItem->getOperation($normalizedMethod);
 
         if (null !== $op) {
-            return new Operation($pathPattern, $method);
+            return new Operation(
+                path: $pathPattern,
+                method: $method,
+                operationId: $op->operationId,
+                schemaOperation: $op,
+            );
         }
 
         if (null !== $pathItem->additionalOperations) {
-            foreach (array_keys($pathItem->additionalOperations) as $opMethod) {
+            foreach ($pathItem->additionalOperations as $opMethod => $additionalOp) {
                 if (strtolower($opMethod) === $normalizedMethod) {
-                    return new Operation($pathPattern, $method);
+                    return new Operation(
+                        path: $pathPattern,
+                        method: $method,
+                        operationId: $additionalOp->operationId,
+                        schemaOperation: $additionalOp,
+                    );
                 }
             }
         }

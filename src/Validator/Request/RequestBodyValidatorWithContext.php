@@ -9,13 +9,12 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
-use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MissingRequestBodyException;
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
 use Duyler\OpenApi\Validator\Example\ExampleValidator;
 use Duyler\OpenApi\Validator\Example\ValidatesExamplesTrait;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
-use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\TypeGuarantor;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Override;
@@ -24,7 +23,6 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
 {
     use ValidatesExamplesTrait;
 
-    private SchemaValidator $regularSchemaValidator;
     private SchemaValidatorWithContext $contextSchemaValidator;
     private RequestBodyCoercer $coercer;
     private readonly ContentTypeNegotiator $negotiator;
@@ -34,23 +32,14 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
         private readonly OpenApiDocument $document,
         private readonly SchemaValidatorDependencies $dependencies,
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
+        ?PregExecutor $pregExecutor = null,
     ) {
-        $this->negotiator = new ContentTypeNegotiator();
+        $resolvedPregExecutor = $pregExecutor ?? new PregExecutor($this->configuration->maxRegexBacktracks);
+        $this->negotiator = new ContentTypeNegotiator($resolvedPregExecutor);
         $this->exampleValidator = new ExampleValidator();
-        $effectiveFormatRegistry = $this->dependencies->formatRegistry;
 
-        $this->regularSchemaValidator = new SchemaValidator(
-            $this->dependencies->pool,
-            $effectiveFormatRegistry,
-            strictFormats: $this->configuration->strictFormats,
-            reportDeprecated: $this->configuration->reportDeprecated,
-            logger: $this->dependencies->logger,
-            eventDispatcher: $this->dependencies->eventDispatcher,
-        );
-
-        $this->contextSchemaValidator = new SchemaValidatorWithContext(
+        $this->contextSchemaValidator = $this->dependencies->rootSchemaValidator(
             $this->document,
-            $this->dependencies,
             $this->configuration,
         );
         $this->coercer = new RequestBodyCoercer();
@@ -121,29 +110,6 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
 
             if (null !== $schema->ref) {
                 $schema = $this->dependencies->refResolver->resolve($schema->ref, $this->document);
-            }
-
-            $hasDiscriminator = null !== $schema->discriminator
-                || $this->dependencies->refResolver->schemaHasDiscriminator($schema, $this->document);
-
-            if (false === $hasDiscriminator) {
-                $context = ValidationContext::create(
-                    $this->dependencies->pool,
-                    $this->dependencies->errorFormatter,
-                    $this->configuration->nullableAsType,
-                    $this->configuration->emptyArrayStrategy,
-                    ValidatorMode::Request,
-                );
-                $this->regularSchemaValidator->validate($parsedBody, $schema, $context);
-
-                $this->dispatchExampleWarnings(
-                    $parsedBody,
-                    $content,
-                    $this->exampleValidator,
-                    $this->dependencies->eventDispatcher,
-                );
-
-                return;
             }
 
             $this->contextSchemaValidator->validate($parsedBody, $schema, ValidatorMode::Request);

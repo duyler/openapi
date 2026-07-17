@@ -50,7 +50,7 @@ YAML;
 
         $result = $validator->resolveLink('UserAddress', ['id' => 42]);
 
-        $this->assertSame(42, $result['parameters']['userId']);
+        $this->assertSame(42, $result->parameters['userId']);
     }
 
     #[Test]
@@ -82,11 +82,11 @@ YAML;
 
         $result = $validator->resolveLinkWithContext('UserAddress', $context);
 
-        $this->assertSame(42, $result['parameters']['userId']);
-        $this->assertSame('req-123', $result['parameters']['requestId']);
-        $this->assertSame('https://api.example.com/users', $result['parameters']['source']);
-        $this->assertSame('GET', $result['parameters']['method']);
-        $this->assertSame(200, $result['parameters']['status']);
+        $this->assertSame(42, $result->parameters['userId']);
+        $this->assertSame('req-123', $result->parameters['requestId']);
+        $this->assertSame('https://api.example.com/users', $result->parameters['source']);
+        $this->assertSame('GET', $result->parameters['method']);
+        $this->assertSame(200, $result->parameters['status']);
     }
 
     #[Test]
@@ -111,6 +111,6 @@ YAML;
         $result = $validator->resolveLink('UserAddress', ['id' => 99]);
         $contextResult = $validator->resolveLinkWithContext('UserAddress', new LinkContext(body: ['id' => 99]));
 
-        $this->assertSame($result['parameters']['userId'], $contextResult['parameters']['userId']);
+        $this->assertSame($result->parameters['userId'], $contextResult->parameters['userId']);
     }
 }

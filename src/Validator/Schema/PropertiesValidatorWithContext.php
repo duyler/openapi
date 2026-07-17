@@ -12,12 +12,12 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\DiscriminatorMismatchException;
 use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 
 use function array_key_exists;
-use function count;
 use function sprintf;
 
 final readonly class PropertiesValidatorWithContext
@@ -28,7 +28,17 @@ final readonly class PropertiesValidatorWithContext
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
     ) {}
 
-    public function validateWithContext(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
+    public function validateWithContext(array $data, Schema $schema, ValidationContext $context): void
+    {
+        $this->validate($data, $schema, $context, true);
+    }
+
+    public function validateWithContextIgnoringDiscriminator(array $data, Schema $schema, ValidationContext $context): void
+    {
+        $this->validate($data, $schema, $context, false);
+    }
+
+    private function validate(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
     {
         if (null === $schema->properties || [] === $schema->properties) {
             return;
@@ -49,13 +59,18 @@ final readonly class PropertiesValidatorWithContext
                 $context->enterBreadcrumb($name);
 
                 try {
-                    $validator = new SchemaValidatorWithContext($this->document, $this->dependencies, $this->configuration);
-                    $validator->validateWithContext($value, $propertySchema, $context, $useDiscriminator);
+                    $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
+                    if ($useDiscriminator) {
+                        $rootValidator->validateWithContext($value, $propertySchema, $context);
+                    } else {
+                        $rootValidator->validateWithContextIgnoringDiscriminator($value, $propertySchema, $context);
+                    }
                 } finally {
                     $context->leaveBreadcrumb();
                 }
             } catch (DiscriminatorMismatchException|
                 InvalidDiscriminatorValueException|
+                InvalidFormatException|
                 MissingDiscriminatorPropertyException|
                 UnknownDiscriminatorValueException $e
             ) {
@@ -65,7 +80,7 @@ final readonly class PropertiesValidatorWithContext
             }
         }
 
-        if (count($errors) > 0) {
+        if ([] !== $errors) {
             throw new ValidationException(
                 sprintf('Properties validation failed at %s', $context->breadcrumbs->currentPath()),
                 errors: $errors,

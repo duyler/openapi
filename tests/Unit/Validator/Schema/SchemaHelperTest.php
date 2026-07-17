@@ -115,13 +115,49 @@ final class SchemaHelperTest extends TestCase
         SchemaValueNormalizer::normalize(null);
     }
 
+    /**
+     * P-010: `\stdClass` is normalized to its public-property view via
+     * get_object_vars(), matching TypeCoercer::normalizeValue. This lets
+     * consumers using `json_decode` without the associative flag (or plain
+     * object casts) reach the validator without manual conversion.
+     */
     #[Test]
-    public function normalize_object_throws_exception(): void
+    public function normalizes_stdClass_to_array(): void
     {
-        $this->expectException(InvalidDataTypeException::class);
-        $this->expectExceptionMessage('Data must be array, int, string, float or bool, object (stdClass) given');
+        $input = new stdClass();
+        $input->a = 1;
+        $input->b = [1, 2];
 
-        SchemaValueNormalizer::normalize(new stdClass());
+        $result = SchemaValueNormalizer::normalize($input);
+
+        self::assertSame(['a' => 1, 'b' => [1, 2]], $result);
+    }
+
+    #[Test]
+    public function normalizes_empty_stdClass_to_empty_array(): void
+    {
+        $result = SchemaValueNormalizer::normalize(new stdClass());
+
+        self::assertSame([], $result);
+    }
+
+    /**
+     * Documents the top-level-only limitation: nested stdClass instances
+     * inside the normalized array are NOT recursively converted. Consumers
+     * needing deep conversion must call normalize themselves.
+     */
+    #[Test]
+    public function normalizes_stdClass_only_at_top_level(): void
+    {
+        $inner = new stdClass();
+        $inner->inner = 1;
+
+        $outer = new stdClass();
+        $outer->outer = $inner;
+
+        $result = SchemaValueNormalizer::normalize($outer);
+
+        self::assertSame(['outer' => $inner], $result);
     }
 
     #[Test]

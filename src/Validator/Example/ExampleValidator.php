@@ -25,8 +25,10 @@ final readonly class ExampleValidator
             return [];
         }
 
+        $encodedData = is_array($data) ? json_encode($data) : null;
+
         foreach ($examples as $example) {
-            if ($this->matchesExample($data, $example)) {
+            if ($this->matchesExample($data, $example, $encodedData)) {
                 return [];
             }
         }
@@ -59,8 +61,10 @@ final readonly class ExampleValidator
             return [];
         }
 
+        $encodedData = is_array($data) ? json_encode($data) : null;
+
         foreach ($examples as $example) {
-            if ($this->matchesExample($data, $example)) {
+            if ($this->matchesExample($data, $example, $encodedData)) {
                 return [];
             }
         }
@@ -140,19 +144,22 @@ final readonly class ExampleValidator
         return $target;
     }
 
-    private function matchesExample(mixed $data, mixed $example): bool
-    {
+    private function matchesExample(
+        mixed $data,
+        mixed $example,
+        string|false|null $encodedData = null,
+    ): bool {
         if ($data === $example) {
             return true;
         }
 
-        if (is_array($data) && is_array($example)) {
-            $dataEncoded = json_encode($data);
-            $exampleEncoded = json_encode($example);
-
-            return false !== $dataEncoded && $dataEncoded === $exampleEncoded;
+        if (false === is_array($data) || false === is_array($example)) {
+            return false;
         }
 
-        return false;
+        $encodedData ??= json_encode($data);
+        $exampleEncoded = json_encode($example);
+
+        return false !== $encodedData && $encodedData === $exampleEncoded;
     }
 }

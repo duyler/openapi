@@ -5,34 +5,35 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Link;
 
 use Duyler\OpenApi\Schema\Model\Link;
-use Duyler\OpenApi\Schema\Model\Server;
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
 
 use function array_key_exists;
 use function array_is_list;
+use function array_map;
 use function count;
 use function ctype_digit;
+use function explode;
+use function implode;
 use function is_array;
 use function is_string;
 use function preg_match;
 use function sprintf;
+use function str_replace;
+use function strtolower;
+use function strval;
+use function trim;
 
 final readonly class LinkResolver
 {
-    /**
-     * @return array{parameters: array<string, mixed>, requestBody: mixed, server: Server|null}
-     */
-    public function resolve(Link $link, LinkContext $context): array
+    public function resolve(Link $link, LinkContext $context): ResolvedLink
     {
         $parameters = $this->resolveParameters($link->parameters, $context);
-        $requestBody = $this->resolveValue($link->requestBody, $context);
-        $server = $link->server;
 
-        return [
-            'parameters' => $parameters,
-            'requestBody' => $requestBody,
-            'server' => $server,
-        ];
+        return new ResolvedLink(
+            parameters: $parameters,
+            requestBody: $this->resolveValue($link->requestBody, $context),
+            server: $link->server,
+        );
     }
 
     /**
@@ -62,47 +63,134 @@ final readonly class LinkResolver
             return $expression;
         }
 
-        if ('$url' === $expression) {
-            return $context->url;
-        }
-
-        if ('$method' === $expression) {
-            return $context->method;
-        }
-
-        if ('$statusCode' === $expression) {
-            return $context->statusCode;
-        }
-
-        if (1 !== preg_match('/^\$response\.(?<source>body|header|query)(?:#(?<path>\/.+))?$/', $expression, $matches)) {
-            return $expression;
-        }
-
-        $source = $matches['source'];
-        $path = $matches['path'] ?? null;
-
-        return match ($source) {
-            'body' => $this->extractByPath($context->body, $path),
-            'header' => $this->extractByPath($context->headers, $path),
-            'query' => $this->extractByPath($context->queryParams, $path),
-            default => $expression,
+        return match (true) {
+            '$url' === $expression => $context->url,
+            '$method' === $expression => $context->method,
+            '$statusCode' === $expression => $context->statusCode,
+            default => $this->resolveRuntimeExpression($expression, $context),
         };
     }
 
     /**
-     * @param array<string|int, mixed> $data
+     * Resolves OpenAPI 3.2 §6.19.2 runtime expressions of two syntactic forms:
+     *  - Named form:   `$<scope>.<path|query|header>.<name>`
+     *  - Pointer form: `$<scope>.<body|header|query>[#/pointer]`
+     *
+     * Returns the literal expression unchanged when neither form matches, so
+     * unsupported expressions stay distinguishable from values that
+     * legitimately resolve to null.
      */
-    private function extractByPath(array $data, ?string $path): mixed
+    private function resolveRuntimeExpression(string $expression, LinkContext $context): mixed
+    {
+        if (1 === preg_match(
+            '/^\$(?<scope>request|response)\.(?<source>path|query|header)\.(?<name>[a-zA-Z0-9_.\-]+)$/',
+            $expression,
+            $matches,
+        )) {
+            return $this->resolveNamedExpression(
+                $matches['scope'],
+                $matches['source'],
+                $matches['name'],
+                $context,
+            );
+        }
+
+        if (1 === preg_match(
+            '/^\$(?<scope>request|response)\.(?<source>body|header|query)(?:#(?<path>\/.+))?$/',
+            $expression,
+            $matches,
+        )) {
+            return $this->resolvePointerExpression(
+                $matches['scope'],
+                $matches['source'],
+                $matches['path'] ?? null,
+                $context,
+            );
+        }
+
+        return $expression;
+    }
+
+    private function resolveNamedExpression(
+        string $scope,
+        string $source,
+        string $name,
+        LinkContext $context,
+    ): mixed {
+        return match (true) {
+            'request' === $scope && 'path' === $source => $context->pathParams[$name] ?? null,
+            'request' === $scope && 'query' === $source => $context->queryParams[$name] ?? null,
+            'request' === $scope && 'header' === $source => $this->lookupHeader($context->requestHeaders, $name),
+            'response' === $scope && 'query' === $source => $context->queryParams[$name] ?? null,
+            'response' === $scope && 'header' === $source => $this->lookupHeader($context->headers, $name),
+            default => null,
+        };
+    }
+
+    private function resolvePointerExpression(
+        string $scope,
+        string $source,
+        ?string $path,
+        LinkContext $context,
+    ): mixed {
+        return $this->extractByPath(
+            $this->resolvePointerData($scope, $source, $context),
+            $path,
+        );
+    }
+
+    private function resolvePointerData(string $scope, string $source, LinkContext $context): mixed
+    {
+        return match (true) {
+            'request' === $scope && 'body' === $source => $context->requestBody,
+            'request' === $scope && 'header' === $source => $context->requestHeaders,
+            'request' === $scope && 'query' === $source => $context->queryParams,
+            'response' === $scope && 'body' === $source => $context->body,
+            'response' === $scope && 'header' === $source => $context->headers,
+            'response' === $scope && 'query' === $source => $context->queryParams,
+            default => null,
+        };
+    }
+
+    /**
+     * Performs RFC 9110 case-insensitive lookup of a header value by name.
+     *
+     * @param array<string, string|list<string>> $headers
+     */
+    private function lookupHeader(array $headers, string $name): ?string
+    {
+        $needle = strtolower($name);
+
+        foreach ($headers as $key => $value) {
+            if (strtolower($key) !== $needle) {
+                continue;
+            }
+
+            if (is_array($value)) {
+                return implode(',', array_map(strval(...), $value));
+            }
+
+            return $value;
+        }
+
+        return null;
+    }
+
+    private function extractByPath(mixed $data, ?string $path): mixed
     {
         if (null === $path || '' === $path) {
             return $data;
+        }
+
+        if (false === is_array($data)) {
+            return null;
         }
 
         /** @var list<string> $segments */
         $segments = explode('/', trim($path, '/'));
 
         $segments = array_map(
-            static fn(string $s): string => str_replace(['~1', '~0'], ['/', '~'], $s),
+            static fn(string $segment): string => str_replace(['~1', '~0'], ['/', '~'], $segment),
             $segments,
         );
 

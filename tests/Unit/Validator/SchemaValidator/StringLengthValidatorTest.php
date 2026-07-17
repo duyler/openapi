@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\SchemaValidator\StringLengthValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\MaxLengthError;
@@ -27,7 +28,7 @@ class StringLengthValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new StringLengthValidator($this->pool, BuiltinFormats::create());
+        $this->validator = new StringLengthValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]
@@ -238,5 +239,55 @@ class StringLengthValidatorTest extends TestCase
         self::assertSame('/minLength', $caught->schemaPath());
         self::assertSame(2, $caught->params()['minLength']);
         self::assertSame(1, $caught->params()['actual']);
+    }
+
+    /**
+     * P-011: JSON is always UTF-8 per RFC 8259 §8.1; the validator MUST
+     * count Unicode code points independent of any host application
+     * mb_internal_encoding override (e.g., ASCII) that would otherwise
+     * fall back to byte counting.
+     */
+    #[Test]
+    public function counts_multibyte_utf8_under_overridden_internal_encoding(): void
+    {
+        $previousEncoding = mb_internal_encoding();
+        mb_internal_encoding('ASCII');
+
+        try {
+            $schema = new Schema(type: 'string', maxLength: 1);
+
+            $succeeded = false;
+
+            try {
+                $this->validator->validate('é', $schema);
+                $succeeded = true;
+            } catch (MaxLengthError $e) {
+                self::fail(sprintf(
+                    'Expected "é" (1 UTF-8 codepoint) to pass maxLength:1 even under ASCII internal encoding, got: %s',
+                    $e->getMessage(),
+                ));
+            }
+
+            self::assertSame(true, $succeeded);
+        } finally {
+            mb_internal_encoding($previousEncoding);
+        }
+    }
+
+    #[Test]
+    public function counts_emoji_as_single_codepoint_under_ascii_internal_encoding(): void
+    {
+        $previousEncoding = mb_internal_encoding();
+        mb_internal_encoding('ASCII');
+
+        try {
+            $schema = new Schema(type: 'string', maxLength: 1);
+
+            $this->validator->validate('👍', $schema);
+
+            $this->expectNotToPerformAssertions();
+        } finally {
+            mb_internal_encoding($previousEncoding);
+        }
     }
 }

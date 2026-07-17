@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\E2E;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
 use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
@@ -277,6 +278,9 @@ YAML;
             } catch (AbstractValidationError $e) {
                 $errorKeyword = $e->keyword();
                 $errorMessage = $e->getMessage();
+            } catch (InvalidDataTypeException $e) {
+                $errorKeyword = 'type';
+                $errorMessage = $e->getMessage();
             } catch (ValidationException $e) {
                 $errorMessage = $e->getMessage();
             }
@@ -488,7 +492,6 @@ YAML;
         try {
             $validator->validateRequest($request);
         } catch (ValidationException) {
-            // Expected: choice value is not in the enum
         }
 
         $elapsed = microtime(true) - $startTime;
@@ -649,7 +652,6 @@ YAML;
         try {
             $validator->validateRequest($request);
         } catch (InvalidPatternException) {
-            // Expected: PCRE backtrack limit prevents catastrophic backtracking
         }
 
         return microtime(true) - $startTime;

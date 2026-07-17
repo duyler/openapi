@@ -10,6 +10,7 @@ use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\FormatValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -89,7 +90,7 @@ class FormatValidatorTest extends TestCase
         self::assertSame('email', $caught->format);
         self::assertSame('email', $caught->params()['format']);
         self::assertSame('not-an-email', $caught->params()['value']);
-        self::assertSame('format', $caught->getType());
+        self::assertSame('format', $caught->keyword());
         self::assertSame('', $caught->dataPath());
     }
 
@@ -252,10 +253,7 @@ class FormatValidatorTest extends TestCase
 
     private function createFormatValidator(): FormatValidator
     {
-        return new FormatValidator(
-            new ValidatorPool(),
-            BuiltinFormats::create(),
-        );
+        return new FormatValidator(new ValidatorDependencies(pool: new ValidatorPool(), formatRegistry: BuiltinFormats::create()));
     }
 
     private function buildSpec(string $type, string $format): string

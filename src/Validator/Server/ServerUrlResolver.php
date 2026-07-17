@@ -5,31 +5,39 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Server;
 
 use Duyler\OpenApi\Schema\Model\Server;
+use Duyler\OpenApi\Validator\Server\Dto\ServerVariableOverride;
 
-use function sprintf;
 use function array_key_exists;
 use function is_array;
 use function is_string;
+use function sprintf;
 
 final readonly class ServerUrlResolver
 {
     /**
+     * RFC 6570 §2.3 variable-name character class for server URL templates.
+     * The dot is a legal character inside a variable name (e.g.
+     * `https://api.example.com/{api.version}`).
+     */
+    private const string VARNAME_PATTERN = '[a-zA-Z0-9_.]+';
+
+    /**
      * Resolves a server URL template by substituting variables with provided values.
      *
      * @param Server $server The server definition containing URL template and default variables
-     * @param array<string, string> $variableOverrides Optional overrides for server variables
+     * @param ServerVariableOverride ...$overrides Optional overrides for server variables
      *
      * @return string The resolved URL with all variables substituted
      *
      * @throws ServerVariableException If a required variable is missing
      */
-    public function resolve(Server $server, array $variableOverrides = []): string
+    public function resolve(Server $server, ServerVariableOverride ...$overrides): string
     {
         $url = $server->url;
-        $variables = $this->mergeVariables($server, $variableOverrides);
+        $variables = $this->mergeVariables($server, $overrides);
 
         $result = preg_replace_callback(
-            '/\{(\w+)\}/',
+            '/\{(' . self::VARNAME_PATTERN . ')\}/',
             function (array $matches) use ($variables, $server): string {
                 $variableName = $matches[1];
 
@@ -62,26 +70,24 @@ final readonly class ServerUrlResolver
      */
     public function extractVariableNames(Server $server): array
     {
-        preg_match_all('/\{(\w+)\}/', $server->url, $matches);
+        preg_match_all('/\{(' . self::VARNAME_PATTERN . ')\}/', $server->url, $matches);
 
-        /** @var list<string> $result */
-        $result = $matches[1];
-
-        return $result;
+        /** @var list<string> */
+        return $matches[1];
     }
 
     /**
      * Validates that all template variables in the server URL have corresponding values.
      *
      * @param Server $server The server definition
-     * @param array<string, string> $variableOverrides Optional overrides for server variables
+     * @param ServerVariableOverride ...$overrides Optional overrides for server variables
      *
      * @throws ServerVariableException If a variable is missing a value
      */
-    public function validateVariables(Server $server, array $variableOverrides = []): void
+    public function validateVariables(Server $server, ServerVariableOverride ...$overrides): void
     {
         $variableNames = $this->extractVariableNames($server);
-        $variables = $this->mergeVariables($server, $variableOverrides);
+        $variables = $this->mergeVariables($server, $overrides);
 
         foreach ($variableNames as $name) {
             if (false === array_key_exists($name, $variables)) {
@@ -97,11 +103,11 @@ final readonly class ServerUrlResolver
     }
 
     /**
-     * @param array<string, string> $variableOverrides
+     * @param array<array-key, ServerVariableOverride> $overrides
      *
      * @return array<string, string>
      */
-    private function mergeVariables(Server $server, array $variableOverrides): array
+    private function mergeVariables(Server $server, array $overrides): array
     {
         /** @var array<string, string> $defaults */
         $defaults = [];
@@ -118,6 +124,11 @@ final readonly class ServerUrlResolver
             }
         }
 
-        return array_merge($defaults, $variableOverrides);
+        $overrideMap = [];
+        foreach ($overrides as $override) {
+            $overrideMap[$override->name] = $override->value;
+        }
+
+        return array_merge($defaults, $overrideMap);
     }
 }

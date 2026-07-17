@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Server;
 
 use Duyler\OpenApi\Schema\Model\Server;
+use Duyler\OpenApi\Validator\Server\Dto\ServerVariableOverride;
 use Duyler\OpenApi\Validator\Server\ServerUrlResolver;
 use Duyler\OpenApi\Validator\Server\ServerVariableException;
 use PHPUnit\Framework\Attributes\Test;
@@ -46,7 +47,11 @@ final class ServerUrlResolverTest extends TestCase
             ],
         );
 
-        $result = $this->resolver->resolve($server, ['env' => 'staging', 'version' => '2']);
+        $result = $this->resolver->resolve(
+            $server,
+            new ServerVariableOverride('env', 'staging'),
+            new ServerVariableOverride('version', '2'),
+        );
 
         $this->assertSame('https://staging.api.example.com/v2', $result);
     }
@@ -139,8 +144,68 @@ final class ServerUrlResolverTest extends TestCase
             ],
         );
 
-        $result = $this->resolver->resolve($server, ['env' => 'dev']);
+        $result = $this->resolver->resolve(
+            $server,
+            new ServerVariableOverride('env', 'dev'),
+        );
 
         $this->assertSame('https://dev.api.com', $result);
+    }
+
+    /**
+     * P-008: RFC 6570 §2.3 permits the dot inside a variable name, so the
+     * server URL `https://api.example.com/{api.version}` must resolve when
+     * the dotted override key is supplied.
+     */
+    #[Test]
+    public function resolves_server_url_with_dot_in_variable_name(): void
+    {
+        $server = new Server(
+            url: 'https://api.example.com/{api.version}',
+            variables: [
+                'api.version' => ['default' => 'v1'],
+            ],
+        );
+
+        $result = $this->resolver->resolve(
+            $server,
+            new ServerVariableOverride('api.version', 'v2'),
+        );
+
+        $this->assertSame('https://api.example.com/v2', $result);
+    }
+
+    /**
+     * P-008: A dotted server-variable name must resolve using its declared
+     * default when no override is supplied.
+     */
+    #[Test]
+    public function resolves_server_url_with_dot_in_variable_name_using_default(): void
+    {
+        $server = new Server(
+            url: 'https://api.example.com/{api.version}',
+            variables: [
+                'api.version' => ['default' => 'v1'],
+            ],
+        );
+
+        $result = $this->resolver->resolve($server);
+
+        $this->assertSame('https://api.example.com/v1', $result);
+    }
+
+    /**
+     * P-008: Variable-name extraction must include the dot in each name.
+     */
+    #[Test]
+    public function extracts_variable_names_with_dots(): void
+    {
+        $server = new Server(
+            url: 'https://api.example.com/{api.version}/users/{user.id}',
+        );
+
+        $names = $this->resolver->extractVariableNames($server);
+
+        $this->assertSame(['api.version', 'user.id'], $names);
     }
 }

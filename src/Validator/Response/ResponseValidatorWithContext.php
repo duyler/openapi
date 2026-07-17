@@ -6,15 +6,18 @@ namespace Duyler\OpenApi\Validator\Response;
 
 use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\BodyReader;
 use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Exception\UndefinedResponseException;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Response;
 use Psr\Http\Message\ResponseInterface;
 
 use function is_array;
+use function str_starts_with;
 
 final readonly class ResponseValidatorWithContext
 {
@@ -29,7 +32,9 @@ final readonly class ResponseValidatorWithContext
         private readonly OpenApiDocument $document,
         private readonly SchemaValidatorDependencies $dependencies,
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
+        ?PregExecutor $pregExecutor = null,
     ) {
+        $resolvedPregExecutor = $pregExecutor ?? new PregExecutor($this->configuration->maxRegexBacktracks);
         $this->statusCodeValidator = new StatusCodeValidator();
 
         $this->schemaValidator = new SchemaValidator(
@@ -39,6 +44,7 @@ final readonly class ResponseValidatorWithContext
             reportDeprecated: $this->configuration->reportDeprecated,
             logger: $this->dependencies->logger,
             eventDispatcher: $this->dependencies->eventDispatcher,
+            pregExecutor: $resolvedPregExecutor,
         );
         $this->headersValidator = new ResponseHeadersValidator(
             schemaValidator: $this->schemaValidator,
@@ -52,6 +58,7 @@ final readonly class ResponseValidatorWithContext
             document: $this->document,
             dependencies: $this->dependencies,
             configuration: $this->configuration,
+            pregExecutor: $resolvedPregExecutor,
         );
     }
 
@@ -64,11 +71,11 @@ final readonly class ResponseValidatorWithContext
 
         $this->statusCodeValidator->validate($statusCode, $responses);
 
-        $responseDefinition = $responses[(string) $statusCode]
-            ?? $responses[$this->getRange($statusCode)]
-            ?? $responses['default'];
-
-        $responseDefinition = $this->resolveResponseRef($responseDefinition);
+        $responseDefinition = $this->resolveResponseRef(
+            $responses[(string) $statusCode]
+                ?? $responses[$this->getRange($statusCode)]
+                ?? $responses['default'],
+        );
 
         if (false === ($responseDefinition instanceof Response)) {
             throw new UndefinedResponseException($statusCode, array_keys($responses));
@@ -96,7 +103,10 @@ final readonly class ResponseValidatorWithContext
             return;
         }
 
-        $body = (string) $response->getBody();
+        $maxBytes = str_starts_with($contentType, 'multipart/')
+            ? $this->configuration->maxMultipartBodyBytes
+            : $this->configuration->maxJsonBodyBytes;
+        $body = BodyReader::readSafely($response->getBody(), $maxBytes);
 
         $this->bodyValidator->validate($body, $contentType, $content);
     }

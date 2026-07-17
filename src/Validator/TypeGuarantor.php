@@ -27,14 +27,12 @@ final readonly class TypeGuarantor
             return $value;
         }
 
-        $typeDescription = match (true) {
-            is_object($value) => 'object (' . $value::class . ')',
-            is_resource($value) => 'resource',
-        };
-
         throw new TypeError(sprintf(
             'Value must be array, int, string, float, bool, or null; %s given',
-            $typeDescription,
+            match (true) {
+                is_object($value) => 'object (' . $value::class . ')',
+                is_resource($value) => 'resource',
+            },
         ));
     }
 }

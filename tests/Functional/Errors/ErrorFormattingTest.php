@@ -202,16 +202,12 @@ final class ErrorFormattingTest extends FunctionalTestCase
     #[Test]
     public function format_error_formatting(): void
     {
-        // Email validation is handled by FormatValidator which throws InvalidFormatException
-        // We need to catch this as a validation error
         $schema = new Schema(
             type: 'string',
             format: 'email',
         );
         $context = $this->createContext(new SimpleFormatter());
 
-        // This should throw InvalidFormatException, which is not caught by our validation
-        // So we test for that instead
         $this->expectException(InvalidFormatException::class);
         $this->createValidator()->validateWithContext('not_an_email', $schema, $context);
     }
@@ -230,8 +226,6 @@ final class ErrorFormattingTest extends FunctionalTestCase
         );
         $context = $this->createContext(new SimpleFormatter());
 
-        // Current implementation stops at first error, so we expect 1 error
-        // This is a known limitation that should be addressed in future improvements
         $this->assertMultipleErrors(
             fn() => $this->createValidator()->validateWithContext(
                 ['name' => 'ab', 'email' => 'invalid', 'age' => 15],
@@ -261,7 +255,6 @@ final class ErrorFormattingTest extends FunctionalTestCase
         );
         $context = $this->createContext(new SimpleFormatter());
 
-        // Current implementation stops at first error, so we expect 1 error
         $this->assertMultipleErrors(
             fn() => $this->createValidator()->validateWithContext(
                 ['user' => ['name' => 'ab', 'email' => 'invalid']],
@@ -304,7 +297,6 @@ final class ErrorFormattingTest extends FunctionalTestCase
             $errors = $e->getErrors();
             $this->assertNotEmpty($errors);
 
-            // Check that breadcrumb includes the path
             $error = $errors[0];
             $this->assertStringContainsString('level1', $error->dataPath());
         }
