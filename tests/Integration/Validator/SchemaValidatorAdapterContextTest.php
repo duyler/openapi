@@ -7,7 +7,6 @@ namespace Duyler\OpenApi\Test\Integration\Validator;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
-use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -23,8 +22,6 @@ final class SchemaValidatorAdapterContextTest extends TestCase
             ->disableNullableAsType()
             ->build();
 
-        // SchemaValidatorWithContext normalises property values via SchemaValueNormalizer, which
-        // throws InvalidDataTypeException when null is supplied for a non-nullable property.
         $this->expectException(InvalidDataTypeException::class);
 
         $validator->validateSchema(['name' => null], '#/components/schemas/NullableUser');
@@ -63,7 +60,6 @@ final class SchemaValidatorAdapterContextTest extends TestCase
             ->withEmptyArrayStrategy(EmptyArrayStrategy::PreferObject)
             ->build();
 
-        // SchemaValidatorWithContext wraps the underlying TypeMismatchError in a ValidationException.
         $this->expectException(ValidationException::class);
 
         $validator->validateSchema([], '#/components/schemas/BagArray');

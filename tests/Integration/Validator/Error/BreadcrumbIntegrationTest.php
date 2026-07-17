@@ -72,8 +72,6 @@ class BreadcrumbIntegrationTest extends TestCase
         } catch (ValidationException $e) {
             $errors = $e->getErrors();
             $this->assertNotEmpty($errors);
-            // Basic breadcrumb tracking is implemented
-            // Full integration will be completed in Phase 8
         }
     }
 
@@ -103,7 +101,6 @@ class BreadcrumbIntegrationTest extends TestCase
         } catch (ValidationException $e) {
             $errors = $e->getErrors();
             $this->assertNotEmpty($errors);
-            // Breadcrumb tracking for arrays is implemented
         }
     }
 
@@ -138,7 +135,6 @@ class BreadcrumbIntegrationTest extends TestCase
         } catch (ValidationException $e) {
             $errors = $e->getErrors();
             $this->assertNotEmpty($errors);
-            // Breadcrumb tracking for complex structures is implemented
         }
     }
 
@@ -167,7 +163,6 @@ class BreadcrumbIntegrationTest extends TestCase
             $this->assertNotEmpty($errors);
             $error = $errors[0];
             $this->assertInstanceOf(TypeMismatchError::class, $error);
-            // Access type information from params
             $this->assertArrayHasKey('expected', $error->params());
             $this->assertArrayHasKey('actual', $error->params());
             $this->assertSame('string', $error->params()['expected']);
@@ -208,7 +203,6 @@ class BreadcrumbIntegrationTest extends TestCase
         } catch (ValidationException $e) {
             $errors = $e->getErrors();
             $this->assertNotEmpty($errors);
-            // Multi-level breadcrumb tracking is implemented
         }
     }
 
@@ -241,7 +235,6 @@ class BreadcrumbIntegrationTest extends TestCase
         } catch (ValidationException $e) {
             $errors = $e->getErrors();
             $this->assertNotEmpty($errors);
-            // Multi-dimensional array breadcrumb tracking is implemented
         }
     }
 
@@ -279,7 +272,6 @@ class BreadcrumbIntegrationTest extends TestCase
         } catch (ValidationException $e) {
             $errors = $e->getErrors();
             $this->assertNotEmpty($errors);
-            // Mixed properties and arrays breadcrumb tracking is implemented
         }
     }
 }

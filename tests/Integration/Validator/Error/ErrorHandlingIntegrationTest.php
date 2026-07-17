@@ -79,8 +79,6 @@ class ErrorHandlingIntegrationTest extends TestCase
             $error = $errors[0];
             $this->assertInstanceOf(MinLengthError::class, $error);
             $formatted = $formatter->format($error);
-            // The error may be at root level due to validateInternal not receiving context
-            // This is expected for Phase 7 - full breadcrumb integration will be in Phase 8
             $this->assertStringContainsString('minimum', $formatted);
         }
     }
@@ -115,7 +113,6 @@ class ErrorHandlingIntegrationTest extends TestCase
             $errors = $e->getErrors();
             $this->assertGreaterThanOrEqual(1, count($errors));
             $formatted = $formatter->formatMultiple($errors);
-            // At least one field should have an error
             $this->assertNotEmpty($formatted);
         }
     }
@@ -192,7 +189,6 @@ class ErrorHandlingIntegrationTest extends TestCase
             $this->assertNotEmpty($errors);
             $error = $errors[0];
             $this->assertInstanceOf(MinimumError::class, $error);
-            // Verify formatter is still accessible
             $formatted = $context->errorFormatter->format($error);
             $this->assertNotEmpty($formatted);
         }
@@ -227,7 +223,6 @@ class ErrorHandlingIntegrationTest extends TestCase
             $error = $errors[0];
             $this->assertInstanceOf(MinLengthError::class, $error);
             $formatted = $formatter->format($error);
-            // Root level errors shouldn't have breadcrumb prefix in simple formatter
             $this->assertStringNotContainsString('[/]', $formatted);
             $this->assertNotEmpty($formatted);
         }
@@ -304,7 +299,6 @@ class ErrorHandlingIntegrationTest extends TestCase
             $error = $errors[0];
             $this->assertInstanceOf(MinimumError::class, $error);
             $formatted = $formatter->format($error);
-            // Detailed formatter should include comprehensive information
             $this->assertStringContainsString('minimum', $formatted);
             $this->assertStringContainsString('10', $formatted);
             $this->assertNotEmpty($formatted);

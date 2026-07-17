@@ -346,7 +346,6 @@ YAML;
             ->build();
     }
 
-    // Helper duplicated in RequestBodyMediaTypeTest for test isolation.
     private function assertOperationMatches(Operation $operation, string $method, string $path): void
     {
         self::assertSame($method, $operation->method);

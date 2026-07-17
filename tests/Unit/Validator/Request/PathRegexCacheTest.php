@@ -253,7 +253,6 @@ final class PathRegexCacheTest extends TestCase
 
         $cache->getOrCompute('/a/{x}');
 
-        // Second insert evicts the first; cache stays at 1.
         $cache->getOrCompute('/b/{x}');
 
         self::assertSame(1, $this->cacheSize($cache));
@@ -289,7 +288,6 @@ final class PathRegexCacheTest extends TestCase
         $cache->getOrCompute('/a/{x}');
         $cache->getOrCompute('/b/{x}');
         $cache->getOrCompute('/c/{x}');
-        // Touch '/a/{x}' so '/b/{x}' becomes the LRU victim.
         $cache->getOrCompute('/a/{x}');
         $cache->getOrCompute('/d/{x}');
 
@@ -324,7 +322,6 @@ final class PathRegexCacheTest extends TestCase
 
         $cache->getOrCompute('/a/{x}');
         $cache->getOrCompute('/b/{x}');
-        // Access '/a/{x}' — '/b/{x}' is now LRU.
         $cache->getOrCompute('/a/{x}');
         $cache->getOrCompute('/c/{x}');
 

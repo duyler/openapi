@@ -1421,12 +1421,10 @@ final class OneOfValidatorWithContextTest extends TestCase
             oneOf: [$stringSchema, $intSchema],
         );
 
-        // 'short' fails string (minLength 10) AND fails integer (wrong type)
         try {
             $this->validator->validateWithContext('short', $schema, $this->context);
             $this->fail('Expected ValidationException');
         } catch (ValidationException $e) {
-            // The exception message should indicate none matched
             $this->assertStringContainsString('none did', $e->getMessage());
             $this->assertNotEmpty($e->getErrors());
         }

@@ -120,7 +120,6 @@ final class PathItemBuilderTest extends TestCase
             'allowEmptyValue' => true,
         ]);
 
-        // DeprecationLogger with NullLogger by default; assert no exception
         $this->addToAssertionCount(1);
     }
 

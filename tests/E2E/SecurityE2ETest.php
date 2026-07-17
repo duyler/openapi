@@ -492,7 +492,6 @@ YAML;
         try {
             $validator->validateRequest($request);
         } catch (ValidationException) {
-            // Expected: choice value is not in the enum
         }
 
         $elapsed = microtime(true) - $startTime;
@@ -653,7 +652,6 @@ YAML;
         try {
             $validator->validateRequest($request);
         } catch (InvalidPatternException) {
-            // Expected: PCRE backtrack limit prevents catastrophic backtracking
         }
 
         return microtime(true) - $startTime;

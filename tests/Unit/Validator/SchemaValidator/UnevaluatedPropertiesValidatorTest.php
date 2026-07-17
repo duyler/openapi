@@ -435,7 +435,6 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: $unevaluatedSchema,
         );
 
-        // 'extra' is unevaluated and should be validated against unevaluatedSchema
         $succeeded = false;
 
         try {
@@ -463,7 +462,6 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
 
         $this->expectException(TypeMismatchError::class);
 
-        // 'extra' is unevaluated and 'string' does not match integer schema
         $this->validator->validate(['name' => 'John', 'extra' => 'not_an_integer'], $schema);
     }
 
@@ -476,7 +474,6 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: $unevaluatedSchema,
         );
 
-        // No ValidationContext provided — should use default
         $succeeded = false;
 
         try {
@@ -502,7 +499,6 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: $unevaluatedSchema,
         );
 
-        // No unevaluated properties — schema validation not triggered
         $succeeded = false;
 
         try {

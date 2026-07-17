@@ -84,8 +84,6 @@ final class SchemaBuilderTest extends TestCase
             'exclusiveMinimum' => true,
         ]);
 
-        // OAS 3.0: exclusiveMinimum=true means the minimum value is treated as exclusive.
-        // The converter resolves exclusiveMinimum to the value of `minimum` (5).
         self::assertSame(5.0, $schema->exclusiveMinimum);
         self::assertSame(5.0, $schema->minimum);
     }

@@ -232,7 +232,6 @@ YAML;
             ->build();
     }
 
-    // Helper duplicated in WebhookQueryHeaderResponseTest for test isolation.
     /**
      * @param array<string, string> $headers
      */

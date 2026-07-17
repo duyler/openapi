@@ -29,7 +29,6 @@ final class SecurityValidatorTest extends TestCase
     #[Test]
     public function http_bearer_with_valid_token_passes(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/users')
             ->withHeader('Authorization', 'Bearer eyJhbGciOiJIUzI1NiJ9.test');
         $securityRequirements = new SecurityRequirement([
@@ -42,17 +41,14 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        // Act
         $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
 
-        // Assert — no exception means success
         $this->expectNotToPerformAssertions();
     }
 
     #[Test]
     public function http_basic_returns_unsupported_scheme_error(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/users')
             ->withHeader('Authorization', 'Basic dXNlcjpwYXNz');
         $securityRequirements = new SecurityRequirement([
@@ -65,17 +61,14 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        // Assert
         $this->expectException(ValidationException::class);
 
-        // Act
         $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
     }
 
     #[Test]
     public function http_basic_error_contains_unsupported_http_scheme_location(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/users')
             ->withHeader('Authorization', 'Basic dXNlcjpwYXNz');
         $securityRequirements = new SecurityRequirement([
@@ -88,12 +81,10 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        // Act
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
             $this->fail('Expected ValidationException was not thrown');
         } catch (ValidationException $e) {
-            // Assert
             $errors = $e->getErrors();
             $this->assertCount(1, $errors);
             $error = $errors[0];
@@ -107,7 +98,6 @@ final class SecurityValidatorTest extends TestCase
     #[Test]
     public function api_key_in_query_with_valid_key_passes(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/data?api_key=my-secret-key');
         $securityRequirements = new SecurityRequirement([
             ['apiKeyQuery' => []],
@@ -120,17 +110,14 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        // Act
         $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
 
-        // Assert — no exception means success
         $this->expectNotToPerformAssertions();
     }
 
     #[Test]
     public function api_key_in_cookie_with_valid_key_passes(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/data')
             ->withCookieParams(['session_token' => 'abc123def456']);
         $securityRequirements = new SecurityRequirement([
@@ -144,17 +131,14 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        // Act
         $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
 
-        // Assert — no exception means success
         $this->expectNotToPerformAssertions();
     }
 
     #[Test]
     public function api_key_in_query_with_empty_value_reports_empty_query_parameter_location(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/data?api_key=');
         $securityRequirements = new SecurityRequirement([
             ['apiKeyQuery' => []],
@@ -167,12 +151,10 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        // Act
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
             $this->fail('Expected ValidationException was not thrown');
         } catch (ValidationException $e) {
-            // Assert
             $errors = $e->getErrors();
             $this->assertCount(1, $errors);
             $error = $errors[0];
@@ -186,7 +168,6 @@ final class SecurityValidatorTest extends TestCase
     #[Test]
     public function api_key_in_query_with_missing_parameter_reports_missing_query_parameter_location(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/data');
         $securityRequirements = new SecurityRequirement([
             ['apiKeyQuery' => []],
@@ -199,12 +180,10 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        // Act
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
             $this->fail('Expected ValidationException was not thrown');
         } catch (ValidationException $e) {
-            // Assert
             $errors = $e->getErrors();
             $this->assertCount(1, $errors);
             $error = $errors[0];
@@ -218,7 +197,6 @@ final class SecurityValidatorTest extends TestCase
     #[Test]
     public function api_key_in_cookie_with_empty_value_reports_empty_cookie_parameter_location(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/data')
             ->withCookieParams(['session' => '']);
         $securityRequirements = new SecurityRequirement([
@@ -232,12 +210,10 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        // Act
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
             $this->fail('Expected ValidationException was not thrown');
         } catch (ValidationException $e) {
-            // Assert
             $errors = $e->getErrors();
             $this->assertCount(1, $errors);
             $error = $errors[0];
@@ -251,7 +227,6 @@ final class SecurityValidatorTest extends TestCase
     #[Test]
     public function api_key_in_header_missing_psr7_distinguishes_via_missing_only(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/data');
         $securityRequirements = new SecurityRequirement([
             ['apiKeyHeader' => []],
@@ -264,12 +239,10 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        // Act
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
             $this->fail('Expected ValidationException was not thrown');
         } catch (ValidationException $e) {
-            // Assert
             $errors = $e->getErrors();
             $this->assertCount(1, $errors);
             $error = $errors[0];
@@ -283,7 +256,6 @@ final class SecurityValidatorTest extends TestCase
     #[Test]
     public function api_key_in_header_with_empty_value_psr7_limitation_yields_missing(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/data')
             ->withHeader('X-API-Key', '');
         $securityRequirements = new SecurityRequirement([
@@ -297,12 +269,10 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        // Act
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
             $this->fail('Expected ValidationException was not thrown');
         } catch (ValidationException $e) {
-            // Assert
             $errors = $e->getErrors();
             $this->assertCount(1, $errors);
             $error = $errors[0];
@@ -314,7 +284,6 @@ final class SecurityValidatorTest extends TestCase
     #[Test]
     public function api_key_in_query_with_array_value_reports_missing(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/data?api_key[]=val');
         $securityRequirements = new SecurityRequirement([
             ['apiKeyQuery' => []],
@@ -327,12 +296,10 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        // Act
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
             $this->fail('Expected ValidationException was not thrown');
         } catch (ValidationException $e) {
-            // Assert
             $errors = $e->getErrors();
             $this->assertCount(1, $errors);
             $error = $errors[0];
@@ -344,7 +311,6 @@ final class SecurityValidatorTest extends TestCase
     #[Test]
     public function api_key_in_cookie_with_array_value_reports_missing(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/data')
             ->withCookieParams(['session_token' => ['array_value']]);
         $securityRequirements = new SecurityRequirement([
@@ -358,12 +324,10 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        // Act
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
             $this->fail('Expected ValidationException was not thrown');
         } catch (ValidationException $e) {
-            // Assert
             $errors = $e->getErrors();
             $this->assertCount(1, $errors);
             $error = $errors[0];
@@ -375,7 +339,6 @@ final class SecurityValidatorTest extends TestCase
     #[Test]
     public function api_key_in_header_with_valid_key_passes(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/data')
             ->withHeader('X-API-Key', 'sk-12345abcde');
         $securityRequirements = new SecurityRequirement([
@@ -389,17 +352,14 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        // Act
         $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
 
-        // Assert — no exception means success
         $this->expectNotToPerformAssertions();
     }
 
     #[Test]
     public function unknown_scheme_type_returns_unsupported_error(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/users');
         $securityRequirements = new SecurityRequirement([
             ['oauth2Auth' => []],
@@ -410,12 +370,10 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        // Act
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
             $this->fail('Expected ValidationException was not thrown');
         } catch (ValidationException $e) {
-            // Assert
             $errors = $e->getErrors();
             $this->assertCount(1, $errors);
             $error = $errors[0];
@@ -429,19 +387,16 @@ final class SecurityValidatorTest extends TestCase
     #[Test]
     public function undefined_scheme_name_returns_scheme_not_found_error(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/users');
         $securityRequirements = new SecurityRequirement([
             ['undefinedScheme' => []],
         ]);
         $securitySchemes = [];
 
-        // Act
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
             $this->fail('Expected ValidationException was not thrown');
         } catch (ValidationException $e) {
-            // Assert
             $errors = $e->getErrors();
             $this->assertCount(1, $errors);
             $error = $errors[0];
@@ -455,7 +410,6 @@ final class SecurityValidatorTest extends TestCase
     #[Test]
     public function missing_bearer_credentials_throws_validation_exception(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/users');
         $securityRequirements = new SecurityRequirement([
             ['bearerAuth' => []],
@@ -467,17 +421,14 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        // Assert
         $this->expectException(ValidationException::class);
 
-        // Act
         $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
     }
 
     #[Test]
     public function missing_bearer_credentials_error_contains_correct_location(): void
     {
-        // Arrange
         $request = $this->factory->createServerRequest('GET', '/users');
         $securityRequirements = new SecurityRequirement([
             ['bearerAuth' => []],
@@ -489,12 +440,10 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        // Act
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
             $this->fail('Expected ValidationException was not thrown');
         } catch (ValidationException $e) {
-            // Assert
             $errors = $e->getErrors();
             $this->assertCount(1, $errors);
             $error = $errors[0];

@@ -492,8 +492,6 @@ final class ItemsValidatorWithContextTest extends TestCase
             items: $itemSchema,
         );
 
-        // index 0 is covered by prefixItems, items validator should skip it
-        // indices 1+ should be validated against items schema
         $data = [42, 'second', 'third'];
 
         $this->validator->validateWithContext($data, $schema, $this->context);
@@ -512,7 +510,6 @@ final class ItemsValidatorWithContextTest extends TestCase
             items: $itemSchema,
         );
 
-        // index 0 is prefix, index 1 is wrong type for items schema
         $data = [42, 123, 'valid'];
 
         $this->expectException(ValidationException::class);
@@ -607,14 +604,12 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $validator = new ItemsValidatorWithContext(document: $document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
-        // Arrange: массив с элементами разных discriminator-типов
         $data = [
             ['petType' => 'cat', 'name' => 'Fluffy', 'indoor' => true],
             ['petType' => 'dog', 'name' => 'Rex', 'breed' => 'German Shepherd'],
             ['petType' => 'cat', 'name' => 'Whiskers'],
         ];
 
-        // Act & Assert: каждый элемент валидируется по своему discriminator-типу
         $validator->validateWithContext($data, $schema, $this->context);
 
         $this->assertTrue(true);

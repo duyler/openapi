@@ -8,7 +8,6 @@ use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\MissingRequestBodyException;
-use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use JsonException;
@@ -318,7 +317,6 @@ XML;
             ->withHeader('Content-Type', 'application/xml')
             ->withBody($this->psrFactory->createStream('<root><unclosed>'));
 
-        // SchemaValidatorWithContext wraps the underlying TypeMismatchError in a ValidationException.
         $this->expectException(ValidationException::class);
         $validator->validateRequest($request);
     }

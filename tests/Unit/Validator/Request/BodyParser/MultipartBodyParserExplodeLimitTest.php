@@ -27,7 +27,6 @@ final class MultipartBodyParserExplodeLimitTest extends TestCase
         $boundary = 'b123';
         $contentType = 'multipart/form-data; boundary=' . $boundary;
 
-        // MAX_MULTIPART_PARTS = 1000 → 1001 boundary delimiters produces 1002 splits.
         $body = str_repeat('--' . $boundary . "\r\nX: 1\r\n\r\nv\r\n", 1001);
 
         $this->expectException(RuntimeException::class);
@@ -41,7 +40,6 @@ final class MultipartBodyParserExplodeLimitTest extends TestCase
         $boundary = 'b123';
         $contentType = 'multipart/form-data; boundary=' . $boundary;
 
-        // 5 parts — well under the 1000 cap.
         $body = '';
         for ($i = 0; $i < 5; ++$i) {
             $body .= '--' . $boundary . "\r\n"

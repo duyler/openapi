@@ -261,10 +261,6 @@ class ArrayLengthValidatorTest extends TestCase
     #[Test]
     public function unique_items_treats_distinct_scalar_json_types_as_unique(): void
     {
-        // JSON Schema draft 2020-12 §6.4.3: items of different JSON types
-        // (number, string, boolean) are never equal. Previously this array
-        // was wrongly rejected because PHP loose comparison (SORT_REGULAR)
-        // collapsed 1 == "1" == true into duplicates.
         $schema = new Schema(type: 'array', uniqueItems: true);
 
         $succeeded = false;

@@ -182,7 +182,6 @@ final class FloatDoubleValidatorTest extends TestCase
         } catch (InvalidFormatException $exception) {
         }
 
-        // NAN !== NAN per IEEE 754, so we use is_nan() for the value check.
         $this->assertNotNull(
             $exception,
             'NAN must be rejected because it is not serializable as JSON per RFC 8259 §6.',

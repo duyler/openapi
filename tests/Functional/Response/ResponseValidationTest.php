@@ -970,7 +970,6 @@ final class ResponseValidationTest extends TestCase
             ->withHeader('Content-Type', 'text/plain')
             ->withBody($this->psrFactory->createStream($longText));
 
-        // SchemaValidatorWithContext wraps MaxLengthError in a ValidationException.
         $this->expectException(ValidationException::class);
         $validator->validateResponse($response, $operation);
     }

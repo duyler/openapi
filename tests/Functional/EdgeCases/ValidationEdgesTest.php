@@ -11,7 +11,6 @@ use PHPUnit\Framework\Attributes\Test;
 
 final class ValidationEdgesTest extends FunctionalTestCase
 {
-    // Numeric boundaries
     #[Test]
     public function int32_maximum_boundary(): void
     {
@@ -86,7 +85,6 @@ final class ValidationEdgesTest extends FunctionalTestCase
         );
     }
 
-    // String boundaries
     #[Test]
     public function empty_string_allowed(): void
     {
@@ -133,7 +131,6 @@ final class ValidationEdgesTest extends FunctionalTestCase
     #[Test]
     public function string_with_special_characters(): void
     {
-        // Use a simpler pattern without problematic delimiters
         $schema = new Schema(
             type: 'string',
             pattern: '^[a-zA-Z0-9!@#$%^&*()_+=\\-]*$',
@@ -148,7 +145,6 @@ final class ValidationEdgesTest extends FunctionalTestCase
     #[Test]
     public function string_with_unicode_characters(): void
     {
-        // Just test that unicode strings are accepted without pattern validation
         $schema = new Schema(type: 'string');
         $context = $this->createContext(new SimpleFormatter());
 
@@ -168,7 +164,6 @@ final class ValidationEdgesTest extends FunctionalTestCase
         );
     }
 
-    // Array boundaries
     #[Test]
     public function empty_array_allowed(): void
     {
@@ -231,7 +226,6 @@ final class ValidationEdgesTest extends FunctionalTestCase
         );
     }
 
-    // Object boundaries
     #[Test]
     public function empty_object_allowed(): void
     {
@@ -297,7 +291,6 @@ final class ValidationEdgesTest extends FunctionalTestCase
         );
     }
 
-    // Float boundaries
     #[Test]
     public function very_small_float(): void
     {

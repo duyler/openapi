@@ -192,7 +192,6 @@ YAML;
             ->fromYamlString(self::EXTERNAL_URL_MAPPING_SPEC)
             ->build();
 
-        // petType 'bird' is not in mapping, so external ref is not dereferenced.
         $data = ['petType' => 'bird'];
 
         $caught = null;
@@ -316,7 +315,6 @@ YAML;
 
         $catData = ['petType' => 'cat', 'name' => 'Tom'];
 
-        // Validates without throwing — local mapping resolution works.
         $caught = null;
         $succeeded = false;
 

@@ -11,7 +11,6 @@ use PHPUnit\Framework\Attributes\Test;
 
 final class ComplexScenariosTest extends FunctionalTestCase
 {
-    // Deeply nested structures
     #[Test]
     public function deeply_nested_objects_10_levels(): void
     {
@@ -104,7 +103,6 @@ final class ComplexScenariosTest extends FunctionalTestCase
         );
     }
 
-    // Large payloads
     #[Test]
     public function large_object_many_fields(): void
     {
@@ -154,7 +152,6 @@ final class ComplexScenariosTest extends FunctionalTestCase
         );
     }
 
-    // Special characters handling
     #[Test]
     public function html_entities_in_strings(): void
     {
@@ -188,7 +185,6 @@ final class ComplexScenariosTest extends FunctionalTestCase
         );
     }
 
-    // Null vs missing handling
     #[Test]
     public function null_vs_missing_field(): void
     {
@@ -206,7 +202,6 @@ final class ComplexScenariosTest extends FunctionalTestCase
         );
         $context = $this->createContext(new SimpleFormatter());
 
-        // null in nullable field should pass
         $this->assertValidationPasses(
             fn() => $this->createValidator()->validateWithContext(
                 ['required_field' => 'value', 'nullable_field' => null],
@@ -215,7 +210,6 @@ final class ComplexScenariosTest extends FunctionalTestCase
             ),
         );
 
-        // missing optional field should pass
         $this->assertValidationPasses(
             fn() => $this->createValidator()->validateWithContext(
                 ['required_field' => 'value'],
@@ -272,7 +266,6 @@ final class ComplexScenariosTest extends FunctionalTestCase
         );
     }
 
-    // Helper methods
     private function createDeepNestingSchema(int $levels): Schema
     {
         if ($levels === 1) {

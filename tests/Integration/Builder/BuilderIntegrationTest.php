@@ -156,10 +156,7 @@ YAML;
         $formatter = new DetailedFormatter();
 
         $customValidator = new class implements FormatValidatorInterface {
-            public function validate(mixed $data): void
-            {
-                // Custom validation logic
-            }
+            public function validate(mixed $data): void {}
         };
 
         $validator = OpenApiValidatorBuilder::create()
@@ -185,11 +182,9 @@ YAML;
         $validator2 = $builder2->build();
         $validator3 = $builder3->build();
 
-        // Each validator should be independent
         $this->assertNotSame($validator1, $validator2);
         $this->assertNotSame($validator2, $validator3);
 
-        // Validators should have different configurations
         $this->assertFalse($validator1->isCoercion());
         $this->assertTrue($validator2->isCoercion());
         $this->assertTrue($validator3->isCoercion());

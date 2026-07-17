@@ -71,18 +71,12 @@ class AdditionalPropertiesValidatorImplodeCapTest extends TestCase
 
         self::assertNotNull($caught);
 
-        // Sanity bound: 100 capped names plus the indicator stay well under 50KB.
-        // A naive `implode(', ', $additionalKeys)` over 1000 keys produces ~10KB
-        // here and over 5MB for 100k keys — this assert catches a regression.
         self::assertLessThan(self::MESSAGE_SIZE_LIMIT_BYTES, strlen($caught->getMessage()));
     }
 
     #[Test]
     public function huge_payload_message_size_under_50kb(): void
     {
-        // 100k additional properties would have allocated ~5MB in the message
-        // before FU-017. After the fix the message is built from the capped
-        // `$errors` array, so it stays bounded regardless of payload size.
         $data = $this->buildDataWithAdditionalProperties(100_000);
         $schema = $this->buildSchemaDisallowingAdditionalProperties();
 

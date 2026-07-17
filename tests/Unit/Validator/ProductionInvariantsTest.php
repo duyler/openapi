@@ -36,8 +36,6 @@ final class ProductionInvariantsTest extends TestCase
     {
         $source = file_get_contents(self::PATTERN_VALIDATOR_PATH);
 
-        // Strip string literals and comments before scanning — a single quoted '@'
-        // char in an exception message is not a suppression operator.
         $codeOnly = self::stripStringLiterals($source);
         $codeOnly = self::stripLineComments($codeOnly);
         $codeOnly = self::stripBlockComments($codeOnly);
@@ -55,9 +53,6 @@ final class ProductionInvariantsTest extends TestCase
     {
         $source = file_get_contents(self::PATTERN_VALIDATOR_PATH);
 
-        // The PregExecutor wrapper (Task 03) lowered pcre.backtrack_limit and
-        // wraps the call in set_error_handler / restore_error_handler. Asserting
-        // the delegation survives prevents regressions back to a bare call.
         self::assertStringContainsString('pregExecutor()', $source);
         self::assertStringContainsString('->match(', $source);
         self::assertStringNotContainsString('@preg_match', $source);
@@ -76,9 +71,6 @@ final class ProductionInvariantsTest extends TestCase
             $codeOnly = self::stripLineComments($codeOnly);
             $codeOnly = self::stripBlockComments($codeOnly);
 
-            // TypeFormatter.php documents the legacy gettype() name in its
-            // PHPDoc — that is allowed by rule §12 (PHPDoc on public API).
-            // Only flag actual function-call invocations in non-doc code.
             if (1 === preg_match('/\bgettype\s*\(/', $codeOnly)) {
                 $violations[] = $file;
             }
@@ -116,8 +108,6 @@ final class ProductionInvariantsTest extends TestCase
 
     private static function stripStringLiterals(string $code): string
     {
-        // Drop single- and double-quoted strings, treating escapes naively.
-        // PCRE only — we intentionally keep this dependency-free.
         $pattern = '/
             (?:
                 "(?:\\\\.|[^"\\\\])*"
@@ -134,8 +124,6 @@ final class ProductionInvariantsTest extends TestCase
         $lines = explode("\n", $code);
         $out = [];
         foreach ($lines as $line) {
-            // Naive: remove from // to end of line. Heredoc/nowdoc edge cases
-            // are not relevant in the files this test scans.
             $idx = strpos($line, '//');
             if (false !== $idx) {
                 $line = substr($line, 0, $idx);
@@ -148,7 +136,6 @@ final class ProductionInvariantsTest extends TestCase
 
     private static function stripBlockComments(string $code): string
     {
-        // Strip /* ... */ comments (covers PHPDoc blocks).
         return (string) preg_replace('/\/\*.*?\*\//s', '', $code);
     }
 }

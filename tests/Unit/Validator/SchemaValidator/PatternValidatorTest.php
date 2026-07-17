@@ -355,7 +355,6 @@ class PatternValidatorTest extends TestCase
     #[Test]
     public function validate_pattern_with_all_delimiter_candidates_and_slash(): void
     {
-        // Pattern contains all 8 delimiter candidates (#~!|@%+;) AND /
         $schema = new Schema(type: 'string', pattern: '#~!|@%+;path/to/resource');
 
         $succeeded = false;

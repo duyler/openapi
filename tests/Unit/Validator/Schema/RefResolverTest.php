@@ -1364,7 +1364,6 @@ final class RefResolverTest extends TestCase
     {
         $this->assertInstanceOf(RefResolverInterface::class, $this->resolver);
 
-        // clear() should be callable through the interface
         $this->resolver->clear();
     }
 

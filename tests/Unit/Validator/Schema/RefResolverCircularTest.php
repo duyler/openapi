@@ -251,7 +251,6 @@ final class RefResolverCircularTest extends TestCase
     #[Test]
     public function ref_with_many_path_segments_throws_exception(): void
     {
-        // Build a deeply nested schema: S0 -> properties -> p0 -> properties -> p1 -> ... -> Leaf
         $leafSchema = new Schema(title: 'Leaf', type: 'string');
         $current = $leafSchema;
         for ($i = 99; $i >= 0; --$i) {
@@ -264,7 +263,6 @@ final class RefResolverCircularTest extends TestCase
             components: new Components(schemas: ['Deep' => $current]),
         );
 
-        // Build ref: #/components/schemas/Deep/properties/p0/properties/p1/...
         $segments = ['components', 'schemas', 'Deep'];
         for ($i = 0; $i < 100; ++$i) {
             $segments[] = 'properties';

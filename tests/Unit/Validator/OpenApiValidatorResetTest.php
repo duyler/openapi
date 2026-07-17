@@ -274,7 +274,6 @@ YAML;
 
         $this->assertInstanceOf(OpenApiValidatorInterface::class, $validator);
 
-        // reset() should be callable through the interface
         $validator->reset();
     }
 

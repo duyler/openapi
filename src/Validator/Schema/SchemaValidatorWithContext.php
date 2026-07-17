@@ -103,10 +103,6 @@ final class SchemaValidatorWithContext
 
         $this->validateInternal($data, $schema, $context);
 
-        // Stateless list excludes OneOfValidator (context-handled). For schemas
-        // without discriminator we still need to enforce oneOf: invoke the
-        // context-aware validator without discriminator routing so $ref inside
-        // oneOf subschemas resolves correctly through doValidate.
         if (null === $schema->discriminator && null !== $schema->oneOf) {
             $this->oneOfValidator->validateWithContext($data, $schema, $context, useDiscriminator: false);
         }

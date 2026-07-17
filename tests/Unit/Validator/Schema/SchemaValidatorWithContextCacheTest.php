@@ -145,7 +145,6 @@ final class SchemaValidatorWithContextCacheTest extends TestCase
         try {
             $validator->validate(['any' => 'data'], $schema);
         } catch (SchemaDepthExceededException) {
-            // Controlled depth guard is acceptable; the goal is to avoid stack overflow.
         } catch (RuntimeException $e) {
             self::fail(sprintf('Expected no stack overflow, got: %s', $e->getMessage()));
         }

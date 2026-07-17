@@ -274,11 +274,6 @@ final readonly class ValidatorCompiler
 
     private function generatePatternCheck(string $pattern): string
     {
-        // Transient RegexValidator: compilation is a one-shot offline code-generation
-        // step, not part of the runtime validation hot path. The generated class is
-        // standalone and carries no runtime RegexValidator dependency, and reset()
-        // must not affect compilation output. A dedicated short-lived normalizer is
-        // therefore correct here (no shared-eviction benefit for single-shot use).
         $normalizedPattern = new RegexValidator()->normalize($pattern);
         $escapedPattern = var_export($normalizedPattern, true);
         $code = sprintf("        if (false === preg_match(%s, (string) \$data)) {\n", $escapedPattern);
@@ -561,12 +556,6 @@ final readonly class ValidatorCompiler
         }
 
         if (true === $schema->uniqueItems) {
-            // JSON Schema draft 2020-12 §6.4.3 / §4.2.3 equality: items are
-            // duplicates when their JSON serializations match. This mirrors
-            // the runtime ArrayLengthValidator behaviour, including numeric
-            // equality across int/float (json_encode(1) === json_encode(1.0)
-            // === "1"), while keeping distinct JSON types separate
-            // (json_encode(1)="1", json_encode("1")='"1"', json_encode(true)="true").
             $code .= "        \$__seen = [];\n";
             $code .= "        foreach (\$data as \$__item) {\n";
             $code .= "            \$__key = json_encode(\$__item, JSON_THROW_ON_ERROR);\n";

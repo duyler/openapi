@@ -434,7 +434,6 @@ YAML;
             ->withBody($this->factory->createStream($body));
     }
 
-    // Helper duplicated in MultipartUploadTest for test isolation.
     private function assertOperationMatches(Operation $operation, string $method, string $path): void
     {
         self::assertSame($method, $operation->method);

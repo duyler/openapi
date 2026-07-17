@@ -26,7 +26,6 @@ final class ParameterDeserializerExplodeLimitTest extends TestCase
     #[Test]
     public function form_style_large_comma_count_rejected(): void
     {
-        // MAX_PARAMETER_ARRAY_ITEMS = 1000 → 1000 commas splits into 1001 items.
         $value = 'a' . str_repeat(',a', 1000);
 
         $this->expectException(InvalidParameterException::class);
@@ -40,7 +39,6 @@ final class ParameterDeserializerExplodeLimitTest extends TestCase
     #[Test]
     public function form_style_normal_comma_count_accepted(): void
     {
-        // 3 items — under the 1000 cap.
         $result = $this->deserializer->deserialize(
             'a,b,c',
             $this->arrayParameter('query', 'form', false),
@@ -78,7 +76,6 @@ final class ParameterDeserializerExplodeLimitTest extends TestCase
     #[Test]
     public function simple_style_large_comma_count_rejected(): void
     {
-        // simple style → splitBySeparator(',') on array-typed path parameter.
         $value = 'a' . str_repeat(',a', 1000);
 
         $this->expectException(InvalidParameterException::class);

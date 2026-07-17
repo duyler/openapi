@@ -200,13 +200,10 @@ final class RegexValidatorTest extends TestCase
     #[Test]
     public function normalize_pattern_with_all_delimiter_candidates_and_slash(): void
     {
-        // Pattern contains ALL 8 delimiter candidates (#~!|@%+;) AND /
         $result = $this->validator->normalize('#~!|@%+;path/to/resource');
 
-        // Should fallback to '/' as delimiter and escape slashes inside
         self::assertSame('/#~!|@%+;path\/to\/resource/', $result);
 
-        // Must be a valid regex that actually works
         self::assertSame(1, preg_match($result, '#~!|@%+;path/to/resource'));
         self::assertSame(0, preg_match($result, 'other/value'));
     }
@@ -224,7 +221,6 @@ final class RegexValidatorTest extends TestCase
     #[Test]
     public function normalize_pattern_with_all_old_candidates_plus_slash(): void
     {
-        // Old candidates were #~!| — with / all present, ! is still available
         $result = $this->validator->normalize('#~|path/to/resource');
 
         self::assertSame('!#~|path/to/resource!', $result);
@@ -286,14 +282,12 @@ final class RegexValidatorTest extends TestCase
         $validator->normalize('^a$');
         $validator->normalize('^b$');
 
-        // With maxSize=1, the second insert evicts the first. Validate still works.
         self::assertSame('#^b$#', $validator->normalize('^b$'));
     }
 
     #[Test]
     public function normalize_pattern_starting_with_backslash_wraps_with_delimiter(): void
     {
-        // Backslash-first pattern has no delimiters; must be wrapped.
         $result = $this->validator->normalize('\d+');
 
         self::assertSame('#\d+#', $result);
@@ -312,7 +306,6 @@ final class RegexValidatorTest extends TestCase
     #[Test]
     public function normalize_pattern_with_single_occurrence_first_char_wraps_with_delimiter(): void
     {
-        // '#' appears only once (at position 0) — no closing delimiter.
         $result = $this->validator->normalize('#abc');
 
         self::assertNotSame('#abc', $result);
@@ -338,8 +331,6 @@ final class RegexValidatorTest extends TestCase
     #[Test]
     public function normalize_pattern_with_invalid_modifier_chars_wraps_with_delimiter(): void
     {
-        // '#test#e' — 'e' is not a valid PCRE modifier (not in [imsxADSUXJu]),
-        // so hasDelimiters returns false and the whole string is re-wrapped.
         $result = $this->validator->normalize('#test#e');
 
         self::assertNotSame('#test#e', $result);
@@ -374,7 +365,6 @@ final class RegexValidatorTest extends TestCase
         $validator->normalize('p1');
         $validator->normalize('p2');
         $validator->normalize('p3');
-        // Touch 'p1' so 'p2' becomes the LRU victim.
         $validator->normalize('p1');
         $validator->normalize('p4');
 
@@ -409,7 +399,6 @@ final class RegexValidatorTest extends TestCase
 
         $validator->normalize('p1');
         $validator->normalize('p2');
-        // Access 'p1' — 'p2' is now LRU.
         $validator->normalize('p1');
         $validator->normalize('p3');
 

@@ -32,7 +32,6 @@ class BreadcrumbTest extends TestCase
         $this->assertSame('users', $newBreadcrumb->current());
         $this->assertSame(['users'], $newBreadcrumb->segments());
 
-        // Original breadcrumb should be unchanged (immutable)
         $this->assertSame('/', $breadcrumb->toString());
     }
 
