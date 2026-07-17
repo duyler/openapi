@@ -18,9 +18,10 @@ use JsonException;
 
 use function is_string;
 use function json_encode;
-use function spl_object_id;
 
 use function sprintf;
+
+use function count;
 
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
@@ -92,7 +93,9 @@ final class CompilationCache implements CompilationCacheInterface
             return $this->hashCache[$schema];
         }
 
-        $data = $this->schemaToArray($schema, []);
+        /** @var WeakMap<Schema, int> $visited */
+        $visited = new WeakMap();
+        $data = $this->schemaToArray($schema, $visited);
 
         try {
             $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
@@ -111,17 +114,19 @@ final class CompilationCache implements CompilationCacheInterface
     }
 
     /**
-     * @param array<int, true> $visited
+     * @param WeakMap<Schema, int> $visited
      */
-    private function schemaToArray(Schema $schema, array $visited): array
+    private function schemaToArray(Schema $schema, WeakMap $visited): array
     {
-        $id = spl_object_id($schema);
+        if ($visited->offsetExists($schema)) {
+            /** @var int */
+            $id = $visited[$schema];
 
-        if (isset($visited[$id])) {
             return [self::CIRCULAR_REF_KEY => $id];
         }
 
-        $visited[$id] = true;
+        $id = count($visited);
+        $visited[$schema] = $id;
 
         $data = [
             'ref' => $schema->ref,
@@ -188,9 +193,9 @@ final class CompilationCache implements CompilationCacheInterface
     }
 
     /**
-     * @param array<int, true> $visited
+     * @param WeakMap<Schema, int> $visited
      */
-    private function schemaToArrayOrNull(?Schema $schema, array $visited): ?array
+    private function schemaToArrayOrNull(?Schema $schema, WeakMap $visited): ?array
     {
         if (null === $schema) {
             return null;
@@ -200,9 +205,9 @@ final class CompilationCache implements CompilationCacheInterface
     }
 
     /**
-     * @param array<int, true> $visited
+     * @param WeakMap<Schema, int> $visited
      */
-    private function additionalPropertiesToArray(Schema|bool|null $value, array $visited): array|bool|null
+    private function additionalPropertiesToArray(Schema|bool|null $value, WeakMap $visited): array|bool|null
     {
         if ($value instanceof Schema) {
             return $this->schemaToArray($value, $visited);
@@ -241,12 +246,12 @@ final class CompilationCache implements CompilationCacheInterface
     }
 
     /**
-     * @param list<Schema>|null $schemas
-     * @param array<int, true> $visited
+     * @param list<Schema>|null    $schemas
+     * @param WeakMap<Schema, int> $visited
      *
      * @return list<array>|null
      */
-    private function schemaListToArray(?array $schemas, array $visited): ?array
+    private function schemaListToArray(?array $schemas, WeakMap $visited): ?array
     {
         if (null === $schemas) {
             return null;
@@ -257,11 +262,11 @@ final class CompilationCache implements CompilationCacheInterface
 
     /**
      * @param array<string, Schema>|null $schemas
-     * @param array<int, true> $visited
+     * @param WeakMap<Schema, int>       $visited
      *
      * @return array<string, array>|null
      */
-    private function schemaMapToArray(?array $schemas, array $visited): ?array
+    private function schemaMapToArray(?array $schemas, WeakMap $visited): ?array
     {
         if (null === $schemas) {
             return null;

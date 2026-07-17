@@ -447,14 +447,21 @@ final readonly class OpenApiValidatorBuilder
         $realPath = realpath($path);
 
         if (false === $realPath) {
-            return self::CACHE_KEY_FILE_PREFIX . hash('xxh64', $path);
+            return self::CACHE_KEY_FILE_PREFIX . hash('sha256', $path);
         }
 
-        return self::CACHE_KEY_FILE_PREFIX . hash('xxh64', $realPath);
+        $mtime = filemtime($realPath);
+        $size = filesize($realPath);
+
+        if (false === $mtime || false === $size) {
+            return self::CACHE_KEY_FILE_PREFIX . hash('sha256', $realPath);
+        }
+
+        return self::CACHE_KEY_FILE_PREFIX . hash('sha256', $realPath . '|' . $mtime . '|' . $size);
     }
 
     private function generateCacheKeyFromString(string $content): string
     {
-        return self::CACHE_KEY_CONTENT_PREFIX . hash('xxh64', $content);
+        return self::CACHE_KEY_CONTENT_PREFIX . hash('sha256', $content);
     }
 }

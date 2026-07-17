@@ -18,7 +18,6 @@ use WeakMap;
 use function assert;
 use function count;
 use function is_array;
-use function spl_object_id;
 
 final class SchemaValidatorWithContext
 {
@@ -71,7 +70,9 @@ final class SchemaValidatorWithContext
     private function doValidate(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
     {
         $schema = $this->resolveRef($schema);
-        $schema = $this->resolveCompositionRefs($schema, []);
+        /** @var WeakMap<Schema, true> $visited */
+        $visited = new WeakMap();
+        $schema = $this->resolveCompositionRefs($schema, $visited);
 
         if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
             $this->oneOfValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
@@ -141,11 +142,11 @@ final class SchemaValidatorWithContext
      * Recurses into nested composition arrays to handle specs where a
      * resolved subschema itself contains further composition with $ref.
      *
-     * @param array<int, bool> $visited spl_object_id map to prevent infinite recursion
+     * @param WeakMap<Schema, true> $visited identity-based cycle guard
      *
      * @throws SchemaDepthExceededException if recursion exceeds MAX_DEPTH
      */
-    private function resolveCompositionRefs(Schema $schema, array $visited): Schema
+    private function resolveCompositionRefs(Schema $schema, WeakMap $visited): Schema
     {
         if (isset($this->resolvedCache[$schema])) {
             $cached = $this->resolvedCache[$schema];
@@ -158,15 +159,13 @@ final class SchemaValidatorWithContext
             throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
         }
 
-        $schemaId = spl_object_id($schema);
-
-        if (isset($visited[$schemaId])) {
+        if ($visited->offsetExists($schema)) {
             $this->resolvedCache[$schema] = $schema;
 
             return $schema;
         }
 
-        $visited[$schemaId] = true;
+        $visited[$schema] = true;
 
         $allOf = $this->resolveCompositionArray($schema->allOf, $visited);
 
@@ -208,11 +207,11 @@ final class SchemaValidatorWithContext
      * validators that cannot route by discriminator and would error out.
      *
      * @param list<Schema>|null      $schemas
-     * @param array<int, bool>       $visited
+     * @param WeakMap<Schema, true>  $visited
      *
      * @return list<Schema>|null
      */
-    private function resolveCompositionArray(?array $schemas, array $visited): ?array
+    private function resolveCompositionArray(?array $schemas, WeakMap $visited): ?array
     {
         if (null === $schemas) {
             return null;

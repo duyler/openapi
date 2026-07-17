@@ -644,16 +644,14 @@ final class CompilationCacheTest extends TestCase
     }
 
     /**
-     * Documents a known limitation: cross-instance hash stability for cyclic
-     * schemas is NOT guaranteed because spl_object_id() is embedded in the
-     * __circular_ref__ marker. This test asserts the CURRENT behavior so that
-     * any future change (e.g., switching to path-based markers) explicitly
-     * breaks this test and forces a contract update.
-     *
-     * The same-instance stability is covered by generateKey_handles_self_referential_schema.
+     * Cross-instance hash stability for cyclic schemas: WeakMap cycle marker
+     * uses a deterministic per-call counter instead of spl_object_id(), so two
+     * structurally identical self-referential schemas MUST produce the same
+     * hash. Regression guard for P-027 (cache-poisoning via spl_object_id
+     * recycling after GC).
      */
     #[Test]
-    public function generateKey_cyclic_schema_different_instances_yields_different_hash(): void
+    public function generateKey_cyclic_schema_different_instances_yields_same_hash(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -664,7 +662,36 @@ final class CompilationCacheTest extends TestCase
         $key1 = $cache->generateKey($schema1);
         $key2 = $cache->generateKey($schema2);
 
-        self::assertNotSame($key1, $key2);
+        self::assertSame($key1, $key2);
+    }
+
+    /**
+     * Forced GC between two generateKey() calls MUST NOT change the hash.
+     * With spl_object_id() recycling, a new schema allocated after GC could
+     * reuse a previously freed id, corrupting the cycle marker. The WeakMap
+     * per-call instance is GC-aware (entries vanish only when the key object
+     * is unreachable, which cannot happen mid-call).
+     */
+    #[Test]
+    public function generateKey_cyclic_schema_survives_gc_between_calls(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema1 = $this->createSelfReferentialSchema();
+        $key1 = $cache->generateKey($schema1);
+
+        for ($i = 0; $i < 20; ++$i) {
+            $scratch = new Schema(type: 'object', properties: ['p' . $i => new Schema(type: 'string')]);
+            unset($scratch);
+        }
+
+        gc_collect_cycles();
+
+        $schema2 = $this->createSelfReferentialSchema();
+        $key2 = $cache->generateKey($schema2);
+
+        self::assertSame($key1, $key2);
     }
 
     private function createSelfReferentialSchema(): Schema

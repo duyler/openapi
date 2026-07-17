@@ -144,7 +144,9 @@ final class RefResolver implements RefResolverInterface
         OpenApiDocument $document,
         int $depth = 0,
     ): bool {
-        [$has,] = $this->doSchemaHasDiscriminator($schema, $document, [], $depth);
+        /** @var WeakMap<Schema, true> $visited */
+        $visited = new WeakMap();
+        [$has,] = $this->doSchemaHasDiscriminator($schema, $document, $visited, $depth);
 
         return $has;
     }
@@ -152,7 +154,9 @@ final class RefResolver implements RefResolverInterface
     #[Override]
     public function schemaHasRef(Schema $schema, int $depth = 0): bool
     {
-        [$has,] = $this->doSchemaHasRef($schema, [], $depth);
+        /** @var WeakMap<Schema, true> $visited */
+        $visited = new WeakMap();
+        [$has,] = $this->doSchemaHasRef($schema, $visited, $depth);
 
         return $has;
     }
@@ -239,29 +243,27 @@ final class RefResolver implements RefResolverInterface
     }
 
     /**
-     * @param array<int, bool> $visited
+     * @param WeakMap<Schema, true> $visited
      *
      * @throws SchemaDepthExceededException
      *
-     * @return array{bool, array<int, bool>}
+     * @return array{bool, WeakMap<Schema, true>}
      */
     private function doSchemaHasDiscriminator(
         Schema $schema,
         OpenApiDocument $document,
-        array $visited,
+        WeakMap $visited,
         int $depth,
     ): array {
         if ($depth >= ValidationContext::MAX_DEPTH) {
             throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
         }
 
-        $schemaId = spl_object_id($schema);
-
-        if (isset($visited[$schemaId])) {
+        if ($visited->offsetExists($schema)) {
             return [false, $visited];
         }
 
-        $visited[$schemaId] = true;
+        $visited[$schema] = true;
 
         if (null !== $schema->ref) {
             return $this->checkRefForDiscriminator(
@@ -293,14 +295,14 @@ final class RefResolver implements RefResolverInterface
     }
 
     /**
-     * @param array<int, bool> $visited
+     * @param WeakMap<Schema, true> $visited
      *
-     * @return array{bool, array<int, bool>}
+     * @return array{bool, WeakMap<Schema, true>}
      */
     private function checkRefForDiscriminator(
         string $ref,
         OpenApiDocument $document,
-        array $visited,
+        WeakMap $visited,
         int $depth,
     ): array {
         try {
@@ -318,25 +320,23 @@ final class RefResolver implements RefResolverInterface
     }
 
     /**
-     * @param array<int, bool> $visited
+     * @param WeakMap<Schema, true> $visited
      *
      * @throws SchemaDepthExceededException
      *
-     * @return array{bool, array<int, bool>}
+     * @return array{bool, WeakMap<Schema, true>}
      */
-    private function doSchemaHasRef(Schema $schema, array $visited, int $depth): array
+    private function doSchemaHasRef(Schema $schema, WeakMap $visited, int $depth): array
     {
         if ($depth >= ValidationContext::MAX_DEPTH) {
             throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
         }
 
-        $schemaId = spl_object_id($schema);
-
-        if (isset($visited[$schemaId])) {
+        if ($visited->offsetExists($schema)) {
             return [false, $visited];
         }
 
-        $visited[$schemaId] = true;
+        $visited[$schema] = true;
 
         if (null !== $schema->ref) {
             return [true, $visited];
