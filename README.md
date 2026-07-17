@@ -133,6 +133,55 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
+### External `$ref` Resolution
+
+The validator supports external `$ref` references for `file://` URIs and
+relative-path refs by default. The builtin `FileExternalRefResolver` loads
+the referenced YAML/JSON file, follows an optional JSON Pointer fragment
+(e.g. `components/user.yaml#/UserSchema`), and returns the referenced schema.
+
+```yaml
+# openapi.yaml
+components:
+  schemas:
+    User:
+      $ref: 'components/user.yaml#/UserSchema'
+```
+
+Network schemes (`http://`, `https://`, `ftp://`, `ftps://`) are **denied by
+default** to prevent SSRF. When the builtin resolver encounters a denied
+scheme it throws `ExternalRefSecurityException` (surfaced by `RefResolver`
+as `UnresolvableRefException`). To enable network resolution, inject a custom
+`ExternalRefResolverInterface` implementation:
+
+```php
+use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\ExternalRefResolverInterface;
+
+final class MyHttpExternalRefResolver implements ExternalRefResolverInterface
+{
+    public function resolve(string $ref): \Duyler\OpenApi\Schema\Model\Schema
+    {
+        // fetch $ref over HTTP, return Schema
+    }
+}
+
+$refResolver = new RefResolver(new MyHttpExternalRefResolver());
+```
+
+The resolver also supports an optional `allowedRoot` to defend against
+`../../../etc/passwd` style path traversal and symlink escapes:
+
+```php
+use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
+
+$resolver = new FileExternalRefResolver(allowedRoot: '/var/specs');
+```
+
+When `allowedRoot` is configured, the resolver resolves both the requested
+path and the root via `realpath()` and refuses any reference whose real
+location is not a descendant of the root.
+
 ### PSR-7 Integration
 
 The validator works with any PSR-7 implementation. The examples in this README use `nyholm/psr7` (installed as a dev dependency); substitute your preferred implementation (Guzzle PSR-7, Laminas Diactoros) in production:
@@ -1036,6 +1085,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `UndefinedResponseException` | Response status code not defined in spec |
 | `RefResolutionException` | Failed to resolve `$ref` reference |
 | `UnresolvableCallbackPathException` | Callback runtime template (e.g. `{$request.body#/callback_url}`) cannot be resolved in strict mode |
+| `ExternalRefSecurityException` | External `$ref` violates builtin resolver security policy (denied scheme, path traversal outside the allowed root). Surfaced by `RefResolver` as `UnresolvableRefException` |
 | `SchemaDepthExceededException` | Maximum schema nesting depth exceeded |
 | `UnknownValidatorException` | Unknown validator type requested |
 | `VersionNotFoundException` | Requested schema name or version is not registered (thrown by `SchemaRegistry::getOrFail()`) |

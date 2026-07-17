@@ -16,6 +16,8 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use RuntimeException;
+
 use function sprintf;
 
 /**
@@ -119,12 +121,15 @@ components:
 YAML;
 
     /**
-     * Negative: mapping with external https URL is not supported by RefResolver.
+     * Negative: mapping with external https URL is not supported by the
+     * builtin FileExternalRefResolver.
      *
      * Actual behaviour characterization: DiscriminatorValidator delegates to
-     * RefResolver::resolve(), which only accepts local refs (starting with
-     * '#/'). Any other shape (http URL, file path) throws
-     * UnresolvableRefException with a "Only local refs" reason.
+     * RefResolver::resolve(), which delegates to the builtin
+     * FileExternalRefResolver for non-local refs. The builtin resolver denies
+     * network schemes (http, https, ftp, ...) by throwing
+     * ExternalRefSecurityException, which RefResolver wraps as
+     * UnresolvableRefException with a clear "use a custom resolver" hint.
      */
     #[Test]
     public function di_08_external_url_mapping_throws_unresolvable_ref_exception(): void
@@ -149,17 +154,16 @@ YAML;
         );
 
         $this->assertSame('https://example.com/schemas/cat.json', $caught->ref);
-        $this->assertStringContainsString('Only local refs', $caught->reason);
+        $this->assertStringContainsString('External ref not resolved', $caught->reason);
     }
 
     /**
-     * Negative: relative file path mapping value (without $self) is also rejected.
-     *
-     * Relative references must start with '#/' to be considered local;
-     * otherwise RefResolver rejects them as non-local.
+     * Negative: relative file path mapping value (without $self) is resolved
+     * by the builtin FileExternalRefResolver against CWD. When the referenced
+     * file does not exist relative to CWD, RuntimeException is raised.
      */
     #[Test]
-    public function di_08_relative_file_mapping_throws_unresolvable_ref_exception(): void
+    public function di_08_relative_file_mapping_throws_runtime_exception_for_missing_file(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::RELATIVE_FILE_MAPPING_SPEC)
@@ -167,21 +171,10 @@ YAML;
 
         $dogData = ['petType' => 'dog', 'name' => 'Rex', 'breed' => 'labrador'];
 
-        $caught = null;
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('External ref file not found');
 
-        try {
-            $validator->validateSchema($dogData, '#/components/schemas/Pet');
-        } catch (UnresolvableRefException $e) {
-            $caught = $e;
-        }
-
-        $this->assertNotNull(
-            $caught,
-            'Expected UnresolvableRefException for relative file mapping value.',
-        );
-
-        $this->assertSame('schemas/dog.yaml', $caught->ref);
-        $this->assertStringContainsString('Only local refs', $caught->reason);
+        $validator->validateSchema($dogData, '#/components/schemas/Pet');
     }
 
     /**

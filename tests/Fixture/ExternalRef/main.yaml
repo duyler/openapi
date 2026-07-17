@@ -1,0 +1,11 @@
+openapi: 3.2.0
+info:
+  title: External Ref Fixture
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    User:
+      $ref: 'components/user.yaml#/UserSchema'
+    Order:
+      $ref: 'components/order.yaml#/OrderSchema'
