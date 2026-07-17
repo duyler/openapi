@@ -18,15 +18,6 @@ final readonly class AnyOfValidator extends AbstractCompositionalValidator
             return;
         }
 
-        $nullableAsType = $context?->nullableAsType ?? true;
-
-        if (null === $data && $nullableAsType) {
-            $hasNullableSchema = array_any($schema->anyOf, fn($subSchema) => $subSchema->nullable);
-            if ($hasNullableSchema) {
-                return;
-            }
-        }
-
         $result = $this->validateSchemas($schema->anyOf, $data, $context, 'anyOf');
 
         if (0 === $result->validCount) {

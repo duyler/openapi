@@ -236,4 +236,37 @@ class OneOfValidatorTest extends TestCase
 
         $this->validator->validate(null, $schema, $context);
     }
+
+    #[Test]
+    public function oneOf_throws_when_multiple_nullable_schemas_match_null(): void
+    {
+        $schema = new Schema(
+            oneOf: [
+                new Schema(type: 'string', nullable: true),
+                new Schema(type: 'integer', nullable: true),
+            ],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $this->expectException(OneOfError::class);
+
+        $this->validator->validate(null, $schema, $context);
+    }
+
+    #[Test]
+    public function oneOf_passes_when_single_nullable_schema_matches_null(): void
+    {
+        $schema = new Schema(
+            oneOf: [
+                new Schema(type: 'string', nullable: true),
+                new Schema(type: 'integer'),
+            ],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate(null, $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
 }

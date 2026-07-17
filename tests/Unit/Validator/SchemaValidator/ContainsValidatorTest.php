@@ -219,7 +219,7 @@ class ContainsValidatorTest extends TestCase
         } catch (MaxContainsError $e) {
             self::assertSame('maxContains', $e->keyword());
             self::assertSame('/', $e->dataPath());
-            self::assertSame(['maxContains' => 1, 'actual' => 2], $e->params());
+            self::assertSame(['maxContains' => 1, 'minDetectedCount' => 2], $e->params());
         }
     }
 
@@ -373,7 +373,7 @@ class ContainsValidatorTest extends TestCase
         } catch (MaxContainsError $e) {
             self::assertSame('maxContains', $e->keyword());
             self::assertSame('/', $e->dataPath());
-            self::assertSame(['maxContains' => 0, 'actual' => 1], $e->params());
+            self::assertSame(['maxContains' => 0, 'minDetectedCount' => 1], $e->params());
         }
     }
 
@@ -482,6 +482,43 @@ class ContainsValidatorTest extends TestCase
             self::assertSame('minContains', $e->keyword());
             self::assertSame('/', $e->dataPath());
             self::assertSame(['minContains' => 3, 'actual' => 2], $e->params());
+        }
+    }
+
+    #[Test]
+    public function max_contains_error_includes_min_detected_count(): void
+    {
+        $schema = new Schema(
+            type: 'array',
+            contains: new Schema(type: 'integer'),
+            maxContains: 2,
+        );
+
+        try {
+            $this->validator->validate([1, 2, 3, 4, 5], $schema);
+            self::fail('Expected MaxContainsError was not thrown');
+        } catch (MaxContainsError $e) {
+            self::assertSame(2, $e->params()['maxContains']);
+            self::assertSame(3, $e->params()['minDetectedCount']);
+            self::assertStringContainsString('at least 3', $e->getMessage());
+        }
+    }
+
+    #[Test]
+    public function max_contains_error_message_does_not_claim_exact_count(): void
+    {
+        $schema = new Schema(
+            type: 'array',
+            contains: new Schema(type: 'integer'),
+            maxContains: 1,
+        );
+
+        try {
+            $this->validator->validate([1, 2, 3, 4], $schema);
+            self::fail('Expected MaxContainsError was not thrown');
+        } catch (MaxContainsError $e) {
+            self::assertStringContainsString('at least', $e->getMessage());
+            self::assertStringNotContainsString('has 2 matching items,', $e->getMessage());
         }
     }
 }

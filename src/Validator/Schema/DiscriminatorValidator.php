@@ -145,17 +145,19 @@ final readonly class DiscriminatorValidator
         OpenApiDocument $document,
         string $dataPath,
     ): Schema {
-        $schemas = $schema->oneOf ?? $schema->anyOf ?? [];
+        $schemas = $schema->oneOf ?? $schema->anyOf ?? $schema->allOf ?? [];
 
         foreach ($schemas as $candidateSchema) {
-            if (null === $candidateSchema->ref) {
-                continue;
+            if (null !== $candidateSchema->ref) {
+                $implicitName = $this->extractSchemaName($candidateSchema->ref);
+
+                if ($implicitName === $value) {
+                    return $this->dependencies->refResolver->resolve($candidateSchema->ref, $document);
+                }
             }
 
-            $implicitName = $this->extractSchemaName($candidateSchema->ref);
-
-            if ($implicitName === $value) {
-                return $this->dependencies->refResolver->resolve($candidateSchema->ref, $document);
+            if (null !== $candidateSchema->oneOf || null !== $candidateSchema->anyOf || null !== $candidateSchema->allOf) {
+                return $this->findMatchingSchema($value, $discriminator, $candidateSchema, $document, $dataPath);
             }
         }
 

@@ -19,15 +19,6 @@ final readonly class OneOfValidator extends AbstractCompositionalValidator
             return;
         }
 
-        $nullableAsType = $context?->nullableAsType ?? true;
-
-        if (null === $data && $nullableAsType) {
-            $hasNullableSchema = array_any($schema->oneOf, fn($subSchema) => $subSchema->nullable);
-            if ($hasNullableSchema) {
-                return;
-            }
-        }
-
         $result = $this->validateSchemas($schema->oneOf, $data, $context, 'oneOf');
 
         if (0 === $result->validCount) {

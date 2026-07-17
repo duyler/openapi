@@ -409,4 +409,169 @@ final class DiscriminatorValidatorTest extends TestCase
         // Assert: inline schema skipped (no $ref), Cat selected by name.
         $this->assertNull($exception, 'Inline schema without $ref must be skipped during implicit mapping');
     }
+
+    #[Test]
+    public function discriminator_with_allOf_ref_resolves_correctly(): void
+    {
+        // Arrange: discriminator sits on a schema that uses allOf composition
+        // with inline $refs. Per OAS 3.2 §6.8.1 implicit mapping must resolve
+        // the candidate schema by last $ref segment.
+        $catSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $dogSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            discriminator: new Discriminator(propertyName: 'petType'),
+            allOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+                new Schema(ref: '#/components/schemas/Dog'),
+            ],
+        );
+
+        $document = new OpenApiDocument(
+            '3.2.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                    'Dog' => $dogSchema,
+                ],
+            ),
+        );
+
+        $catData = ['petType' => 'Cat'];
+
+        // Act.
+        $exception = null;
+
+        try {
+            $this->validator->validate($catData, $petSchema, $document);
+        } catch (Throwable $e) {
+            $exception = $e;
+        }
+
+        // Assert: allOf branch traversed, Cat resolved implicitly.
+        // Anti-test: with old `$schema->oneOf ?? $schema->anyOf ?? []`
+        // (no allOf), `findMatchingSchema` returns [] and the discriminator
+        // throws UnknownDiscriminatorValueException.
+        $this->assertNull($exception, 'Discriminator must resolve $refs inside allOf composition');
+    }
+
+    #[Test]
+    public function discriminator_with_allOf_and_nested_oneOf(): void
+    {
+        // Arrange: parent uses allOf; one candidate wraps a nested oneOf that
+        // actually contains the $refs. Recursive descent must find the match.
+        $catSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $dogSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            discriminator: new Discriminator(propertyName: 'petType'),
+            allOf: [
+                new Schema(
+                    oneOf: [
+                        new Schema(ref: '#/components/schemas/Cat'),
+                        new Schema(ref: '#/components/schemas/Dog'),
+                    ],
+                ),
+            ],
+        );
+
+        $document = new OpenApiDocument(
+            '3.2.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                    'Dog' => $dogSchema,
+                ],
+            ),
+        );
+
+        $catData = ['petType' => 'Cat'];
+
+        // Act.
+        $exception = null;
+
+        try {
+            $this->validator->validate($catData, $petSchema, $document);
+        } catch (Throwable $e) {
+            $exception = $e;
+        }
+
+        // Assert: recursive descent into the nested oneOf finds Cat.
+        $this->assertNull($exception, 'Discriminator must recurse through allOf into nested oneOf');
+    }
+
+    #[Test]
+    public function discriminator_with_allOf_unknown_value_throws_unknown_exception(): void
+    {
+        // Arrange: allOf branch present but value matches none of the
+        // candidates; UnknownDiscriminatorValueException must surface.
+        $catSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            discriminator: new Discriminator(propertyName: 'petType'),
+            allOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+            ],
+        );
+
+        $document = new OpenApiDocument(
+            '3.2.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                ],
+            ),
+        );
+
+        // Assert.
+        $this->expectException(UnknownDiscriminatorValueException::class);
+        $this->expectExceptionMessage('Unknown discriminator value "Bird"');
+
+        // Act.
+        $this->validator->validate(['petType' => 'Bird'], $petSchema, $document);
+    }
 }

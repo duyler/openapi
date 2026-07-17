@@ -10,18 +10,23 @@ final class MaxContainsError extends AbstractValidationError
 {
     public function __construct(
         int $maxContains,
-        int $actualCount,
+        int $minDetectedCount,
         string $dataPath,
         string $schemaPath,
     ) {
-        $message = sprintf('Array has %d matching items, but maximum contains is %d at %s', $actualCount, $maxContains, $dataPath);
+        $message = sprintf(
+            'Array has at least %d matching items (detection stopped at threshold), but maximum contains is %d at %s',
+            $minDetectedCount,
+            $maxContains,
+            $dataPath,
+        );
 
         parent::__construct(
             message: $message,
             keyword: 'maxContains',
             dataPath: $dataPath,
             schemaPath: $schemaPath,
-            params: ['maxContains' => $maxContains, 'actual' => $actualCount],
+            params: ['maxContains' => $maxContains, 'minDetectedCount' => $minDetectedCount],
             suggestion: sprintf('Ensure array has at most %d matching items', $maxContains),
         );
     }

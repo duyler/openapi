@@ -552,4 +552,79 @@ XML;
             unlink($tempFile);
         }
     }
+
+    #[Test]
+    public function preserves_namespaced_attributes(): void
+    {
+        $xml = '<root xmlns:atom="http://www.w3.org/2005/Atom"><atom:link href="https://example.com/feed"/></root>';
+
+        $result = $this->parser->parse($xml);
+
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('atom:link', $result);
+        $linkValue = $result['atom:link'];
+        $this->assertIsArray($linkValue);
+        $this->assertSame('https://example.com/feed', $linkValue['@href']);
+    }
+
+    #[Test]
+    public function preserves_default_namespace_children(): void
+    {
+        $xml = '<root xmlns="http://example.com/ns"><item>value</item></root>';
+
+        $result = $this->parser->parse($xml);
+
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('item', $result);
+        $this->assertSame('value', $result['item']);
+    }
+
+    #[Test]
+    public function preserves_mixed_namespaced_and_default_elements(): void
+    {
+        $xml = '<root xmlns="http://example.com/ns" xmlns:atom="http://www.w3.org/2005/Atom">'
+            . '<title>default-title</title>'
+            . '<atom:link href="https://example.com/feed"/>'
+            . '</root>';
+
+        $result = $this->parser->parse($xml);
+
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('title', $result);
+        $this->assertSame('default-title', $result['title']);
+        $this->assertArrayHasKey('atom:link', $result);
+        $this->assertIsArray($result['atom:link']);
+        $this->assertSame('https://example.com/feed', $result['atom:link']['@href']);
+    }
+
+    #[Test]
+    public function preserves_namespaced_attributes_with_prefix(): void
+    {
+        $xml = '<root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="string"/>';
+
+        $result = $this->parser->parse($xml);
+
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('@xsi:type', $result);
+        $this->assertSame('string', $result['@xsi:type']);
+    }
+
+    #[Test]
+    public function preserves_repeated_namespaced_children_as_numeric_array(): void
+    {
+        $xml = '<feed xmlns:atom="http://www.w3.org/2005/Atom">'
+            . '<atom:link href="https://a.example.com"/>'
+            . '<atom:link href="https://b.example.com"/>'
+            . '</feed>';
+
+        $result = $this->parser->parse($xml);
+
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('atom:link', $result);
+        $this->assertIsArray($result['atom:link']);
+        $this->assertArrayHasKey(0, $result['atom:link']);
+        $this->assertArrayHasKey(1, $result['atom:link']);
+        $this->assertSame('https://a.example.com', $result['atom:link'][0]['@href']);
+        $this->assertSame('https://b.example.com', $result['atom:link'][1]['@href']);
+    }
 }

@@ -23,9 +23,17 @@ final readonly class AllOfValidator extends AbstractCompositionalValidator
         $result = $this->validateSchemas($schema->allOf, $data, $context, 'allOf');
 
         if ([] !== $result->errors || [] !== $result->abstractErrors) {
+            $allErrors = $result->abstractErrors;
+
+            foreach ($result->errors as $exception) {
+                foreach ($exception->getErrors() as $error) {
+                    $allErrors[] = $error;
+                }
+            }
+
             throw new ValidationException(
                 'All of the schemas must match, but ' . count($result->errors) . ' failed',
-                errors: $result->abstractErrors,
+                errors: $allErrors,
             );
         }
     }

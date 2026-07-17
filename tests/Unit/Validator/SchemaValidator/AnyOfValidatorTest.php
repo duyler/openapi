@@ -222,4 +222,20 @@ class AnyOfValidatorTest extends TestCase
 
         $this->expectNotToPerformAssertions();
     }
+
+    #[Test]
+    public function anyOf_passes_when_multiple_nullable_schemas_match_null(): void
+    {
+        $schema = new Schema(
+            anyOf: [
+                new Schema(type: 'string', nullable: true),
+                new Schema(type: 'integer', nullable: true),
+            ],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate(null, $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
 }

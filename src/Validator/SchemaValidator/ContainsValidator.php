@@ -68,10 +68,9 @@ final readonly class ContainsValidator extends AbstractSchemaValidator
         }
 
         if (null !== $schema->maxContains && $matchCount > $schema->maxContains) {
-            // actualCount reports the detection threshold (maxContains + 1), not a full count — the loop above breaks early as a perf optimization once violation is certain.
             throw new MaxContainsError(
                 maxContains: $schema->maxContains,
-                actualCount: $matchCount,
+                minDetectedCount: $matchCount,
                 dataPath: $dataPath,
                 schemaPath: '/maxContains',
             );

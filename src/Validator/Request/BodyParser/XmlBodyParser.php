@@ -44,6 +44,14 @@ final readonly class XmlBodyParser
         }
     }
 
+    /**
+     * Converts a SimpleXMLElement into a nested array where namespaced
+     * nodes keep their prefix in the key (e.g. `atom:link`, `@xsi:type`)
+     * to avoid data loss per RFC 7303. Default-namespace and non-namespaced
+     * nodes are keyed by their local name.
+     *
+     * @return array<array-key, mixed>|string|null
+     */
     private static function xmlToArray(SimpleXMLElement $xml): array|string|null
     {
         /** @var array<int|string, mixed> $result */
@@ -58,6 +66,23 @@ final readonly class XmlBodyParser
          */
         foreach ($attributes as $name => $value) {
             $result['@' . $name] = (string) $value;
+        }
+
+        foreach ($xml->getNamespaces(true) as $prefix => $namespace) {
+            if ('' === $prefix) {
+                continue;
+            }
+
+            $nsAttributes = $xml->attributes($namespace);
+            assert($nsAttributes instanceof SimpleXMLElement);
+
+            /**
+             * @var string $name
+             * @var SimpleXMLElement $value
+             */
+            foreach ($nsAttributes as $name => $value) {
+                $result['@' . $prefix . ':' . $name] = (string) $value;
+            }
         }
 
         $children = $xml->children();
@@ -86,6 +111,39 @@ final readonly class XmlBodyParser
             $result[$name] = $existing;
         }
 
+        foreach ($xml->getNamespaces(true) as $prefix => $namespace) {
+            if ('' === $prefix) {
+                continue;
+            }
+
+            $nsChildren = $xml->children($namespace);
+            assert($nsChildren instanceof SimpleXMLElement);
+
+            /**
+             * @var string $name
+             * @var SimpleXMLElement $child
+             */
+            foreach ($nsChildren as $name => $child) {
+                $key = $prefix . ':' . $name;
+                $childValue = self::elementToValue($child);
+
+                if (false === array_key_exists($key, $result)) {
+                    $result[$key] = $childValue;
+                    continue;
+                }
+
+                /** @var array<array-key, mixed>|string|null $existing */
+                $existing = $result[$key];
+
+                if (false === is_array($existing) || false === array_key_exists(0, $existing)) {
+                    $existing = [$existing];
+                }
+
+                $existing[] = $childValue;
+                $result[$key] = $existing;
+            }
+        }
+
         if ([] === $result) {
             $text = (string) $xml;
 
@@ -106,9 +164,33 @@ final readonly class XmlBodyParser
         assert($attributes instanceof SimpleXMLElement);
         $hasAttributes = 0 !== $attributes->count();
 
+        foreach ($element->getNamespaces(true) as $namespace) {
+            $nsAttributes = $element->attributes($namespace);
+            assert($nsAttributes instanceof SimpleXMLElement);
+
+            if (0 !== $nsAttributes->count()) {
+                $hasAttributes = true;
+
+                break;
+            }
+        }
+
         $children = $element->children();
         assert($children instanceof SimpleXMLElement);
         $hasChildren = 0 !== $children->count();
+
+        if (false === $hasChildren) {
+            foreach ($element->getNamespaces(true) as $namespace) {
+                $nsChildren = $element->children($namespace);
+                assert($nsChildren instanceof SimpleXMLElement);
+
+                if (0 !== $nsChildren->count()) {
+                    $hasChildren = true;
+
+                    break;
+                }
+            }
+        }
 
         if (false === $hasAttributes && false === $hasChildren) {
             $text = (string) $element;
