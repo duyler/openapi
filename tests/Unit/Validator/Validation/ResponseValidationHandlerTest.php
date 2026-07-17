@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Validation;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\StreamStubHelper;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Validator\Validation\ResponseValidationHandler;
@@ -23,6 +24,8 @@ use const PHP_URL_QUERY;
 #[CoversClass(ResponseValidationHandler::class)]
 final class ResponseValidationHandlerTest extends TestCase
 {
+    use StreamStubHelper;
+
     private const string SIMPLE_YAML = <<<YAML
 openapi: 3.0.3
 info:
@@ -184,6 +187,7 @@ YAML;
 
         $stream = $this->createStub(StreamInterface::class);
         $stream->method('__toString')->willReturn($body);
+        $this->configureReadableStream($stream, $body);
         $response->method('getBody')->willReturn($stream);
 
         return $response;

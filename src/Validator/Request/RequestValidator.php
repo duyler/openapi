@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Operation;
+use Duyler\OpenApi\Validator\BodyReader;
+use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Override;
 use Psr\Http\Message\ServerRequestInterface;
 use Duyler\OpenApi\Schema\Model\Parameter;
 
 use function is_array;
+use function str_starts_with;
 
 final readonly class RequestValidator implements RequestValidatorInterface
 {
@@ -22,6 +25,7 @@ final readonly class RequestValidator implements RequestValidatorInterface
         private readonly HeadersValidator $headersValidator,
         private readonly CookieValidator $cookieValidator,
         private readonly RequestBodyValidatorInterface $bodyValidator,
+        private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
     ) {}
 
     #[Override]
@@ -65,7 +69,10 @@ final readonly class RequestValidator implements RequestValidatorInterface
         $this->cookieValidator->validateWithHeader($cookies, $cookieHeader, $parameterSchemas);
 
         $contentType = $request->getHeaderLine('Content-Type');
-        $body = (string) $request->getBody();
+        $maxBytes = str_starts_with($contentType, 'multipart/')
+            ? $this->configuration->maxMultipartBodyBytes
+            : $this->configuration->maxJsonBodyBytes;
+        $body = BodyReader::readSafely($request->getBody(), $maxBytes);
         $this->bodyValidator->validate($body, $contentType, $operation->requestBody);
     }
 }

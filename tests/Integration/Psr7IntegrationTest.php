@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Integration;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\StreamStubHelper;
 use Duyler\OpenApi\Validator\Operation;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -15,6 +16,8 @@ use Psr\Http\Message\UriInterface;
 
 final class Psr7IntegrationTest extends TestCase
 {
+    use StreamStubHelper;
+
     #[Test]
     public function validate_request_with_psr7_request(): void
     {
@@ -149,6 +152,8 @@ YAML;
             ->method('__toString')
             ->willReturn($body);
 
+        $this->configureReadableStream($stream, $body);
+
         $request
             ->method('getBody')
             ->willReturn($stream);
@@ -179,6 +184,8 @@ YAML;
         $stream
             ->method('__toString')
             ->willReturn($body);
+
+        $this->configureReadableStream($stream, $body);
 
         $response
             ->method('getBody')

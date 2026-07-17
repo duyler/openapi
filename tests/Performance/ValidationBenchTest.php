@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Performance;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\StreamStubHelper;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
@@ -13,6 +14,8 @@ use Psr\Http\Message\UriInterface;
 
 final class ValidationBenchTest extends TestCase
 {
+    use StreamStubHelper;
+
     #[Test]
     public function benchmark_simple_validation(): void
     {
@@ -159,6 +162,8 @@ YAML;
         $stream
             ->method('__toString')
             ->willReturn($body);
+
+        $this->configureReadableStream($stream, $body);
 
         $request
             ->method('getBody')

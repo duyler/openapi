@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Response;
 
 use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\BodyReader;
 use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
@@ -15,6 +16,7 @@ use Duyler\OpenApi\Schema\Model\Response;
 use Psr\Http\Message\ResponseInterface;
 
 use function is_array;
+use function str_starts_with;
 
 final readonly class ResponseValidatorWithContext
 {
@@ -96,7 +98,10 @@ final readonly class ResponseValidatorWithContext
             return;
         }
 
-        $body = (string) $response->getBody();
+        $maxBytes = str_starts_with($contentType, 'multipart/')
+            ? $this->configuration->maxMultipartBodyBytes
+            : $this->configuration->maxJsonBodyBytes;
+        $body = BodyReader::readSafely($response->getBody(), $maxBytes);
 
         $this->bodyValidator->validate($body, $contentType, $content);
     }

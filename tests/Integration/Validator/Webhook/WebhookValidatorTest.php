@@ -17,6 +17,7 @@ use Duyler\OpenApi\Schema\Model\Responses;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Model\Webhooks;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Test\Support\StreamStubHelper;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
@@ -56,6 +57,8 @@ use TypeError;
 /** @internal */
 final class WebhookValidatorTest extends TestCase
 {
+    use StreamStubHelper;
+
     private WebhookValidator $webhookValidator;
 
     #[Override]
@@ -622,6 +625,7 @@ final class WebhookValidatorTest extends TestCase
 
         $bodyMock = $this->createStub(StreamInterface::class);
         $bodyMock->method('__toString')->willReturn($body);
+        $this->configureReadableStream($bodyMock, $body);
         $request->method('getBody')->willReturn($bodyMock);
 
         return $request;
@@ -656,6 +660,7 @@ final class WebhookValidatorTest extends TestCase
 
         $bodyMock = $this->createStub(StreamInterface::class);
         $bodyMock->method('__toString')->willReturn($body);
+        $this->configureReadableStream($bodyMock, $body);
         $request->method('getBody')->willReturn($bodyMock);
 
         return $request;

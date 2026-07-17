@@ -63,6 +63,9 @@ final readonly class ValidationContext
         public readonly bool $strictFormats = false,
         public readonly PathRegexCache $pathRegexCache = new PathRegexCache(),
         public readonly RegexValidator $regexValidator = new RegexValidator(),
+        public readonly int $maxJsonBodyBytes = ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES,
+        public readonly int $maxMultipartBodyBytes = ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES,
+        public readonly bool $strictStreaming = false,
     ) {
         $this->statelessValidators = new StatelessValidatorRegistry(
             $this->pool,
@@ -107,6 +110,9 @@ final readonly class ValidationContext
             emptyArrayStrategy: $this->emptyArrayStrategy,
             reportDeprecated: $this->reportDeprecated,
             strictFormats: $this->strictFormats,
+            maxJsonBodyBytes: $this->maxJsonBodyBytes,
+            maxMultipartBodyBytes: $this->maxMultipartBodyBytes,
+            strictStreaming: $this->strictStreaming,
         );
     }
 

@@ -182,6 +182,58 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(reportDeprecated: true));
     }
 
+    /**
+     * Override the maximum allowed size, in bytes, for non-multipart request
+     * and response bodies (JSON, XML, text). Bodies larger than this cap are
+     * rejected before being fully materialised in memory.
+     *
+     * @return self New builder instance with the JSON body cap applied
+     */
+    public function withMaxJsonBodySize(int $maxBytes): self
+    {
+        return $this->with(new BuilderConfig(maxJsonBodyBytes: $maxBytes));
+    }
+
+    /**
+     * Override the maximum allowed size, in bytes, for multipart request and
+     * response bodies. multipart payloads typically carry larger uploads, so
+     * the cap is kept independent from the JSON cap.
+     *
+     * @return self New builder instance with the multipart body cap applied
+     */
+    public function withMaxMultipartBodySize(int $maxBytes): self
+    {
+        return $this->with(new BuilderConfig(maxMultipartBodyBytes: $maxBytes));
+    }
+
+    /**
+     * Enable strict streaming mode.
+     *
+     * When enabled, malformed JSON records in NDJSON, SSE, and JSON Text
+     * Sequence streams raise a MalformedStreamRecordException instead of being
+     * logged and skipped. This is an opt-in behaviour and remains disabled by
+     * default for backward compatibility.
+     *
+     * @return self New builder instance with strict streaming enabled
+     */
+    public function enableStrictStreaming(): self
+    {
+        return $this->with(new BuilderConfig(strictStreaming: true));
+    }
+
+    /**
+     * Disable strict streaming mode.
+     *
+     * Restores the default fail-open behaviour where malformed JSON records
+     * are logged and skipped rather than raised.
+     *
+     * @return self New builder instance with strict streaming disabled
+     */
+    public function disableStrictStreaming(): self
+    {
+        return $this->with(new BuilderConfig(strictStreaming: false));
+    }
+
     public function build(): OpenApiValidatorInterface
     {
         $document = $this->loadSpec();
@@ -201,6 +253,9 @@ final readonly class OpenApiValidatorBuilder
         $securityValidation = $this->config->securityValidation ?? false;
         $strictFormats = $this->config->strictFormats ?? false;
         $reportDeprecated = $this->config->reportDeprecated ?? true;
+        $maxJsonBodyBytes = $this->config->maxJsonBodyBytes ?? ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES;
+        $maxMultipartBodyBytes = $this->config->maxMultipartBodyBytes ?? ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES;
+        $strictStreaming = $this->config->strictStreaming ?? false;
 
         $context = new ValidationContext(
             document: $document,
@@ -217,6 +272,9 @@ final readonly class OpenApiValidatorBuilder
             strictFormats: $strictFormats,
             pathRegexCache: $pathRegexCache,
             regexValidator: $regexValidator,
+            maxJsonBodyBytes: $maxJsonBodyBytes,
+            maxMultipartBodyBytes: $maxMultipartBodyBytes,
+            strictStreaming: $strictStreaming,
         );
 
         return new OpenApiValidator(
@@ -228,6 +286,9 @@ final readonly class OpenApiValidatorBuilder
                 securityValidation: $securityValidation,
                 strictFormats: $strictFormats,
                 reportDeprecated: $reportDeprecated,
+                maxJsonBodyBytes: $maxJsonBodyBytes,
+                maxMultipartBodyBytes: $maxMultipartBodyBytes,
+                strictStreaming: $strictStreaming,
             ),
             dependencies: new ValidatorDependencies(
                 pool: $pool,

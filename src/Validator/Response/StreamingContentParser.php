@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Response;
 
+use Duyler\OpenApi\Validator\Exception\MalformedStreamRecordException;
 use Duyler\OpenApi\Validator\JsonDepthLimit;
 use JsonException;
 use Psr\Http\Message\StreamInterface;
@@ -16,6 +17,9 @@ use function ctype_digit;
 use function is_array;
 use function is_null;
 use function is_scalar;
+use function mb_strlen;
+use function mb_substr;
+use function preg_replace;
 use function sprintf;
 use function strlen;
 use function trim;
@@ -25,11 +29,12 @@ use const JSON_THROW_ON_ERROR;
 final readonly class StreamingContentParser
 {
     private const string RECORD_SEPARATOR = "\x1E";
-    private const int JSON_MAX_DEPTH = JsonDepthLimit::Trusted->value;
+    private const int JSON_MAX_DEPTH = JsonDepthLimit::Untrusted->value;
     private const int STREAM_CHUNK_SIZE = 8192;
     private const string UTF8_BOM = "\xEF\xBB\xBF";
     private const int DEFAULT_MAX_LINE_LENGTH = 1_048_576;
     private const int DEFAULT_MAX_RECORD_LENGTH = 10_485_760;
+    private const int LOG_RECORD_TRUNCATE_LENGTH = 256;
 
     /**
      * W3C Server-Sent Events default event type used when the event field is absent.
@@ -56,6 +61,7 @@ final readonly class StreamingContentParser
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly int $maxLineLength = self::DEFAULT_MAX_LINE_LENGTH,
         private readonly int $maxRecordLength = self::DEFAULT_MAX_RECORD_LENGTH,
+        private readonly bool $strictStreaming = false,
     ) {}
 
     /**
@@ -200,8 +206,11 @@ final readonly class StreamingContentParser
             $decoded = json_decode($line, true, self::JSON_MAX_DEPTH, JSON_THROW_ON_ERROR);
             $items[] = $decoded;
         } catch (JsonException $exception) {
+            if ($this->strictStreaming) {
+                throw new MalformedStreamRecordException($line, $exception);
+            }
             $this->logger->warning('Failed to parse JSON line in NDJSON stream', [
-                'line' => $line,
+                'line' => $this->truncateForLog($line),
                 'exception' => $exception,
             ]);
             $items[] = null;
@@ -224,12 +233,33 @@ final readonly class StreamingContentParser
             $decoded = json_decode($json, true, self::JSON_MAX_DEPTH, JSON_THROW_ON_ERROR);
             $items[] = $decoded;
         } catch (JsonException $exception) {
+            if ($this->strictStreaming) {
+                throw new MalformedStreamRecordException($json, $exception);
+            }
             $this->logger->warning('Failed to parse JSON sequence item', [
-                'json' => $json,
+                'json' => $this->truncateForLog($json),
                 'exception' => $exception,
             ]);
             $items[] = null;
         }
+    }
+
+    private function truncateForLog(string $record): string
+    {
+        if (mb_strlen($record, 'UTF-8') <= self::LOG_RECORD_TRUNCATE_LENGTH) {
+            return $this->sanitizeForLog($record);
+        }
+
+        return $this->sanitizeForLog(
+            mb_substr($record, 0, self::LOG_RECORD_TRUNCATE_LENGTH, 'UTF-8'),
+        );
+    }
+
+    private function sanitizeForLog(string $value): string
+    {
+        $sanitized = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '?', $value);
+
+        return $sanitized ?? '?';
     }
 
     /**
@@ -447,8 +477,11 @@ final readonly class StreamingContentParser
                 assert(is_array($decoded) || is_null($decoded) || is_scalar($decoded));
                 $dataValue = $decoded;
             } catch (JsonException $exception) {
+                if ($this->strictStreaming) {
+                    throw new MalformedStreamRecordException($event['data'], $exception);
+                }
                 $this->logger->warning('Failed to parse SSE event data as JSON, using raw value', [
-                    'data' => $event['data'],
+                    'data' => $this->truncateForLog($event['data']),
                     'exception' => $exception,
                 ]);
             }

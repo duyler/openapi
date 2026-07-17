@@ -39,7 +39,10 @@ final readonly class ResponseBodyValidatorWithContext
     ) {
         $this->negotiator = new ContentTypeNegotiator();
         $this->typeCoercer = new ResponseTypeCoercer();
-        $this->streamingParser = new StreamingContentParser($this->dependencies->logger);
+        $this->streamingParser = new StreamingContentParser(
+            $this->dependencies->logger,
+            strictStreaming: $this->configuration->strictStreaming,
+        );
         $this->exampleValidator = new ExampleValidator();
 
         $this->regularSchemaValidator = new SchemaValidator(

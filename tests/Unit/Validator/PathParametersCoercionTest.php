@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\StreamStubHelper;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
@@ -17,6 +18,8 @@ use const PHP_URL_QUERY;
 
 final class PathParametersCoercionTest extends TestCase
 {
+    use StreamStubHelper;
+
     private const string YAML_WITH_INTEGER_PATH_PARAM = <<<YAML
 openapi: 3.0.0
 info:
@@ -171,6 +174,7 @@ YAML;
     {
         $stream = $this->createStub(StreamInterface::class);
         $stream->method('__toString')->willReturn($content);
+        $this->configureReadableStream($stream, $content);
 
         return $stream;
     }
