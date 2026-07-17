@@ -9,39 +9,44 @@ use Duyler\OpenApi\Schema\Model\Server;
 use function strlen;
 use function usort;
 
-use function assert;
-use function is_string;
-
 use const PHP_URL_PATH;
 
 final readonly class ServerPathMatcher
 {
-    public function __construct(
-        private ServerUrlResolver $resolver = new ServerUrlResolver(),
-    ) {}
+    /** @var list<array{server: Server, basePath: string}> */
+    private readonly array $sortedServerPaths;
 
     /**
-     * Matches a request path against server definitions and strips the base path.
-     *
      * @param list<Server> $servers
      */
-    public function matchPath(array $servers, string $requestPath): ?ServerPathMatch
-    {
-        /** @var list<array{server: Server, basePath: string}> $resolved */
-        $resolved = $this->resolveServerBasePaths($servers);
+    public function __construct(
+        array $servers = [],
+        private readonly ServerUrlResolver $resolver = new ServerUrlResolver(),
+    ) {
+        $sortedServerPaths = $this->resolveServerBasePaths($servers);
+        usort($sortedServerPaths, $this->compareByBasePathLength(...));
 
-        usort($resolved, $this->compareByBasePathLength(...));
-
-        return $this->findMatch($resolved, $requestPath);
+        $this->sortedServerPaths = $sortedServerPaths;
     }
 
+    /**
+     * Matches a request path against precompiled server base paths and strips the matched prefix.
+     */
+    public function matchPath(string $requestPath): ?ServerPathMatch
+    {
+        return $this->findMatch($this->sortedServerPaths, $requestPath);
+    }
+
+    /**
+     * @param list<Server> $servers
+     *
+     * @return list<array{server: Server, basePath: string}>
+     */
     private function resolveServerBasePaths(array $servers): array
     {
         $resolved = [];
 
         foreach ($servers as $server) {
-            assert($server instanceof Server);
-
             $basePath = $this->resolveBasePath($server);
 
             if (null === $basePath) {
@@ -73,20 +78,21 @@ final readonly class ServerPathMatcher
         return $basePath;
     }
 
+    /**
+     * @param array{server: Server, basePath: string} $a
+     * @param array{server: Server, basePath: string} $b
+     */
     private function compareByBasePathLength(array $a, array $b): int
     {
-        assert(isset($a['basePath'], $b['basePath']));
-        assert(is_string($a['basePath']) && is_string($b['basePath']));
-
         return strlen($b['basePath']) <=> strlen($a['basePath']);
     }
 
+    /**
+     * @param list<array{server: Server, basePath: string}> $resolved
+     */
     private function findMatch(array $resolved, string $requestPath): ?ServerPathMatch
     {
         foreach ($resolved as $entry) {
-            assert(isset($entry['basePath'], $entry['server']));
-            assert(is_string($entry['basePath']) && $entry['server'] instanceof Server);
-
             $basePath = $entry['basePath'];
 
             if (str_starts_with($requestPath, $basePath . '/') || $requestPath === $basePath) {

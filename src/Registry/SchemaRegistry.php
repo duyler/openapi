@@ -9,15 +9,45 @@ use Duyler\OpenApi\Registry\Exception\VersionNotFoundException;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 
 use function count;
+use function uksort;
+use function assert;
 
 final readonly class SchemaRegistry
 {
+    /** @var array<string, OpenApiDocument> */
+    private readonly array $latestBySchema;
+
+    /** @var array<string, list<string>> */
+    private readonly array $sortedVersions;
+
     /**
      * @param array<string, array<string, OpenApiDocument>> $schemas
      */
     public function __construct(
         private readonly array $schemas = [],
-    ) {}
+    ) {
+        /** @var array<string, OpenApiDocument> $latestBySchema */
+        $latestBySchema = [];
+        /** @var array<string, list<string>> $sortedVersions */
+        $sortedVersions = [];
+
+        foreach ($schemas as $name => $versions) {
+            /** @var array<string, OpenApiDocument> $sorted */
+            $sorted = $versions;
+            uksort($sorted, self::compareVersions(...));
+
+            /** @var list<string> $sortedVersionKeys */
+            $sortedVersionKeys = array_keys($sorted);
+            $sortedVersions[$name] = $sortedVersionKeys;
+
+            $values = array_values($sorted);
+            assert([] !== $values);
+            $latestBySchema[$name] = $values[count($values) - 1];
+        }
+
+        $this->latestBySchema = $latestBySchema;
+        $this->sortedVersions = $sortedVersions;
+    }
 
     /**
      * Register a new schema under the given name and version.
@@ -54,19 +84,7 @@ final readonly class SchemaRegistry
     public function get(string $name, ?string $version = null): ?OpenApiDocument
     {
         if (null === $version) {
-            $versions = $this->schemas[$name] ?? [];
-
-            if ([] === $versions) {
-                return null;
-            }
-
-            uksort($versions, function (string $a, string $b): int {
-                return version_compare($a, $b);
-            });
-
-            $values = array_values($versions);
-
-            return $values[count($values) - 1];
+            return $this->latestBySchema[$name] ?? null;
         }
 
         return $this->schemas[$name][$version] ?? null;
@@ -106,14 +124,7 @@ final readonly class SchemaRegistry
      */
     public function getVersions(string $name): array
     {
-        /** @var array<string> $versions */
-        $versions = array_keys($this->schemas[$name] ?? []);
-
-        usort($versions, function (string $a, string $b): int {
-            return version_compare($a, $b);
-        });
-
-        return $versions;
+        return $this->sortedVersions[$name] ?? [];
     }
 
     /**
@@ -148,5 +159,10 @@ final readonly class SchemaRegistry
     public function countVersions(string $name): int
     {
         return count($this->schemas[$name] ?? []);
+    }
+
+    private static function compareVersions(string $a, string $b): int
+    {
+        return version_compare($a, $b);
     }
 }

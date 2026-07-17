@@ -29,6 +29,7 @@ final readonly class PathFinder
 {
     private const string PARAM_WILDCARD = '*';
     private const string TEMPLATES_KEY = "\0__templates__\0";
+    private const int MAX_TRIE_DEPTH = 32;
 
     /** @var array<int|string, mixed> */
     private array $trie;
@@ -84,19 +85,10 @@ final readonly class PathFinder
     {
         $candidates = [];
         $segments = explode('/', trim($requestPath, '/'));
-        $matches = $this->lookupTrie($this->trie, $segments, 0);
+        $matches = [];
+        $this->lookupTrie($this->trie, $segments, 0, $matches);
 
-        usort(
-            $matches,
-            function (array $a, array $b): int {
-                /** @var string $templateA */
-                $templateA = $a['template'];
-                /** @var string $templateB */
-                $templateB = $b['template'];
-
-                return $this->templateOrder[$templateA] <=> $this->templateOrder[$templateB];
-            },
-        );
+        usort($matches, $this->compareTemplateOrder(...));
 
         foreach ($matches as ['template' => $template, 'item' => $pathItem]) {
             $pathParameters = $this->pathParser->tryMatchPath($requestPath, $template);
@@ -171,38 +163,70 @@ final readonly class PathFinder
     }
 
     /**
+     * Collect-into-shared-array recursion: appends every template match
+     * reachable from $node into $results by reference, avoiding the
+     * K copy-on-write allocations that the previous spread-merge form
+     * produced on paths traversing K wildcard nodes.
+     *
      * @param array<int|string, mixed> $node
      * @param list<string>             $segments
-     *
-     * @return list<array{template: string, item: PathItem}>
+     * @param int<0, max>              $depth
+     * @param list<array{template: string, item: PathItem}> $results
      */
-    private function lookupTrie(array $node, array $segments, int $depth): array
+    private function lookupTrie(array $node, array $segments, int $depth, array &$results): void
     {
+        if ($depth >= self::MAX_TRIE_DEPTH) {
+            return;
+        }
+
         if ($depth === count($segments)) {
             /** @var list<array{template: string, item: PathItem}> $templates */
             $templates = $node[self::TEMPLATES_KEY] ?? [];
+            foreach ($templates as $template) {
+                $results[] = $template;
+            }
 
-            return $templates;
+            return;
         }
 
         $segment = $segments[$depth];
-        $candidates = [];
 
         if (array_key_exists($segment, $node)) {
             /** @var mixed $child */
             $child = $node[$segment];
             assert(is_array($child));
-            $candidates = [...$candidates, ...$this->lookupTrie($child, $segments, $depth + 1)];
+            $this->lookupTrie($child, $segments, $depth + 1, $results);
         }
 
         if (array_key_exists(self::PARAM_WILDCARD, $node)) {
             /** @var mixed $child */
             $child = $node[self::PARAM_WILDCARD];
             assert(is_array($child));
-            $candidates = [...$candidates, ...$this->lookupTrie($child, $segments, $depth + 1)];
+            $this->lookupTrie($child, $segments, $depth + 1, $results);
         }
+    }
 
-        return $candidates;
+    /**
+     * @param array{template: string, item: PathItem} $a
+     * @param array{template: string, item: PathItem} $b
+     */
+    private function compareTemplateOrder(array $a, array $b): int
+    {
+        /** @var string $templateA */
+        $templateA = $a['template'];
+        /** @var string $templateB */
+        $templateB = $b['template'];
+
+        return $this->templateOrder[$templateA] <=> $this->templateOrder[$templateB];
+    }
+
+    /**
+     * @param array{0: Operation, 1: array<string, string>} $a
+     * @param array{0: Operation, 1: array<string, string>} $b
+     */
+    private function compareByPlaceholderCount(array $a, array $b): int
+    {
+        return $a[0]->countPlaceholders() <=> $b[0]->countPlaceholders();
     }
 
     private function isParameter(string $segment): bool
@@ -217,17 +241,7 @@ final readonly class PathFinder
      */
     private function prioritizeCandidates(array $candidates): array
     {
-        usort(
-            $candidates,
-            function (array $a, array $b): int {
-                /** @var Operation $operationA */
-                $operationA = $a[0];
-                /** @var Operation $operationB */
-                $operationB = $b[0];
-
-                return $operationA->countPlaceholders() <=> $operationB->countPlaceholders();
-            },
-        );
+        usort($candidates, $this->compareByPlaceholderCount(...));
 
         return $candidates[0];
     }

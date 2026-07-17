@@ -35,7 +35,9 @@ final readonly class RequestValidationHandler
         $this->eventDispatcher = $context->eventDispatcher;
         $this->logger = $context->logger;
         $this->securityValidator = new SecurityValidator();
-        $this->serverPathMatcher = new ServerPathMatcher();
+        $this->serverPathMatcher = new ServerPathMatcher(
+            $context->document->servers?->servers ?? [],
+        );
     }
 
     public function validate(ServerRequestInterface $request): Operation
@@ -94,8 +96,7 @@ final readonly class RequestValidationHandler
             return $requestPath;
         }
 
-        $servers = $this->context->document->servers?->servers ?? [];
-        $match = $this->serverPathMatcher->matchPath($servers, $requestPath);
+        $match = $this->serverPathMatcher->matchPath($requestPath);
 
         if (null !== $match) {
             return $match->strippedPath;

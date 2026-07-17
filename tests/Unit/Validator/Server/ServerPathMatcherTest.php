@@ -11,19 +11,14 @@ use PHPUnit\Framework\TestCase;
 
 final class ServerPathMatcherTest extends TestCase
 {
-    private ServerPathMatcher $matcher;
-
-    protected function setUp(): void
-    {
-        $this->matcher = new ServerPathMatcher();
-    }
-
     #[Test]
     public function strips_base_path_from_request_path(): void
     {
         $server = new Server(url: '/v1');
 
-        $result = $this->matcher->matchPath([$server], '/v1/users/42');
+        $matcher = new ServerPathMatcher([$server]);
+
+        $result = $matcher->matchPath('/v1/users/42');
 
         $this->assertNotNull($result);
         $this->assertSame('/users/42', $result->strippedPath);
@@ -35,7 +30,9 @@ final class ServerPathMatcherTest extends TestCase
     {
         $server = new Server(url: 'https://api.example.com/v1');
 
-        $result = $this->matcher->matchPath([$server], '/v1/users/42');
+        $matcher = new ServerPathMatcher([$server]);
+
+        $result = $matcher->matchPath('/v1/users/42');
 
         $this->assertNotNull($result);
         $this->assertSame('/users/42', $result->strippedPath);
@@ -46,7 +43,9 @@ final class ServerPathMatcherTest extends TestCase
     {
         $server = new Server(url: 'https://api.example.com');
 
-        $result = $this->matcher->matchPath([$server], '/users/42');
+        $matcher = new ServerPathMatcher([$server]);
+
+        $result = $matcher->matchPath('/users/42');
 
         $this->assertNull($result);
     }
@@ -56,7 +55,9 @@ final class ServerPathMatcherTest extends TestCase
     {
         $server = new Server(url: '/');
 
-        $result = $this->matcher->matchPath([$server], '/users/42');
+        $matcher = new ServerPathMatcher([$server]);
+
+        $result = $matcher->matchPath('/users/42');
 
         $this->assertNull($result);
     }
@@ -66,7 +67,9 @@ final class ServerPathMatcherTest extends TestCase
     {
         $server = new Server(url: '/v2');
 
-        $result = $this->matcher->matchPath([$server], '/v1/users/42');
+        $matcher = new ServerPathMatcher([$server]);
+
+        $result = $matcher->matchPath('/v1/users/42');
 
         $this->assertNull($result);
     }
@@ -77,7 +80,9 @@ final class ServerPathMatcherTest extends TestCase
         $serverV1 = new Server(url: '/v1');
         $serverV1Beta = new Server(url: '/v1beta');
 
-        $result = $this->matcher->matchPath([$serverV1, $serverV1Beta], '/v1beta/users');
+        $matcher = new ServerPathMatcher([$serverV1, $serverV1Beta]);
+
+        $result = $matcher->matchPath('/v1beta/users');
 
         $this->assertNotNull($result);
         $this->assertSame('/users', $result->strippedPath);
@@ -95,7 +100,9 @@ final class ServerPathMatcherTest extends TestCase
         );
         $serverB = new Server(url: 'https://api.example.com/v1/sub');
 
-        $result = $this->matcher->matchPath([$serverA, $serverB], '/v1/sub/resource');
+        $matcher = new ServerPathMatcher([$serverA, $serverB]);
+
+        $result = $matcher->matchPath('/v1/sub/resource');
 
         $this->assertNotNull($result);
         $this->assertSame('/resource', $result->strippedPath);
@@ -107,7 +114,9 @@ final class ServerPathMatcherTest extends TestCase
     {
         $server = new Server(url: '/v1');
 
-        $result = $this->matcher->matchPath([$server], '/v1');
+        $matcher = new ServerPathMatcher([$server]);
+
+        $result = $matcher->matchPath('/v1');
 
         $this->assertNotNull($result);
         $this->assertSame('/', $result->strippedPath);
@@ -124,7 +133,9 @@ final class ServerPathMatcherTest extends TestCase
             ],
         );
 
-        $result = $this->matcher->matchPath([$server], '/v2/users');
+        $matcher = new ServerPathMatcher([$server]);
+
+        $result = $matcher->matchPath('/v2/users');
 
         $this->assertNotNull($result);
         $this->assertSame('/users', $result->strippedPath);
@@ -135,7 +146,9 @@ final class ServerPathMatcherTest extends TestCase
     {
         $server = new Server(url: 'https://{unknown}.example.com/v1');
 
-        $result = $this->matcher->matchPath([$server], '/v1/users');
+        $matcher = new ServerPathMatcher([$server]);
+
+        $result = $matcher->matchPath('/v1/users');
 
         $this->assertNull($result);
     }
@@ -145,7 +158,9 @@ final class ServerPathMatcherTest extends TestCase
     {
         $server = new Server(url: './v1');
 
-        $result = $this->matcher->matchPath([$server], '/v1/users/42');
+        $matcher = new ServerPathMatcher([$server]);
+
+        $result = $matcher->matchPath('/v1/users/42');
 
         $this->assertNotNull($result);
         $this->assertSame('/users/42', $result->strippedPath);

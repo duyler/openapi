@@ -34,6 +34,7 @@ final class RefResolver implements RefResolverInterface
 {
     private const int REF_ROOT_PREFIX_LENGTH = 2;
 
+    /** @var WeakMap<OpenApiDocument, RefCache> */
     private WeakMap $cache;
 
     /** @var WeakMap<Schema, WeakMap<OpenApiDocument, bool>> */
@@ -47,7 +48,9 @@ final class RefResolver implements RefResolverInterface
     public function __construct(
         private readonly ?ExternalRefResolverInterface $externalRefResolver = null,
     ) {
-        $this->cache = new WeakMap();
+        /** @var WeakMap<OpenApiDocument, RefCache> $cache */
+        $cache = new WeakMap();
+        $this->cache = $cache;
         /** @var WeakMap<Schema, WeakMap<OpenApiDocument, bool>> $hasDiscriminatorCache */
         $hasDiscriminatorCache = new WeakMap();
         $this->hasDiscriminatorCache = $hasDiscriminatorCache;
@@ -60,7 +63,9 @@ final class RefResolver implements RefResolverInterface
     #[Override]
     public function clear(): void
     {
-        $this->cache = new WeakMap();
+        /** @var WeakMap<OpenApiDocument, RefCache> $cache */
+        $cache = new WeakMap();
+        $this->cache = $cache;
         /** @var WeakMap<Schema, WeakMap<OpenApiDocument, bool>> $hasDiscriminatorCache */
         $hasDiscriminatorCache = new WeakMap();
         $this->hasDiscriminatorCache = $hasDiscriminatorCache;
@@ -733,10 +738,10 @@ final class RefResolver implements RefResolverInterface
         $visited[$ref] = true;
 
         if (isset($this->cache[$document])) {
-            /** @var array<string, Schema|Parameter|Response> */
-            $cacheEntry = $this->cache[$document];
-            if (isset($cacheEntry[$ref])) {
-                return [$cacheEntry[$ref], $visited];
+            /** @var RefCache $existing */
+            $existing = $this->cache[$document];
+            if (isset($existing->map[$ref])) {
+                return [$existing->map[$ref], $visited];
             }
         }
 
@@ -753,10 +758,14 @@ final class RefResolver implements RefResolverInterface
             return $this->resolveRef($result->ref, $document, $visited, $depth + 1);
         }
 
-        /** @var array<string, Schema|Parameter|Response> */
-        $cacheArray = $this->cache[$document] ?? [];
-        $cacheArray[$ref] = $result;
-        $this->cache[$document] = $cacheArray;
+        if (isset($this->cache[$document])) {
+            /** @var RefCache $refCache */
+            $refCache = $this->cache[$document];
+        } else {
+            $refCache = new RefCache();
+            $this->cache[$document] = $refCache;
+        }
+        $refCache->map[$ref] = $result;
 
         return [$result, $visited];
     }
