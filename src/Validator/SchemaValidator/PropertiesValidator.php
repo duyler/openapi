@@ -45,7 +45,7 @@ final readonly class PropertiesValidator extends AbstractSchemaValidator
                 $value = SchemaValueNormalizer::normalize($data[$name], $allowNull);
 
                 if (null === $context) {
-                    $context = ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
+                    $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
                 }
 
                 $context->enterBreadcrumb($name);

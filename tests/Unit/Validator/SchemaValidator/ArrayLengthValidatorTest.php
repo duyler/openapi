@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\SchemaValidator\ArrayLengthValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\DuplicateItemsError;
@@ -31,7 +32,7 @@ class ArrayLengthValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new ArrayLengthValidator($this->pool, BuiltinFormats::create());
+        $this->validator = new ArrayLengthValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]

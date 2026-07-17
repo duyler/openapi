@@ -8,7 +8,6 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\JsonDepthLimit;
 use Duyler\OpenApi\Validator\LibxmlSecuredContext;
-use Duyler\OpenApi\Validator\PregExecutor;
 use JsonException;
 use Override;
 use SimpleXMLElement;
@@ -51,7 +50,7 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
     private const int XML_PARSE_OPTIONS = LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING;
 
     public function __construct(
-        private readonly PregExecutor $pregExecutor = new PregExecutor(),
+        private readonly ValidatorDependencies $dependencies,
     ) {}
 
     #[Override]
@@ -146,7 +145,7 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
             return false;
         }
 
-        return 1 === $this->pregExecutor->match('/<[a-zA-Z][^>]*>/', $data);
+        return 1 === $this->dependencies->pregExecutor->match('/<[a-zA-Z][^>]*>/', $data);
     }
 
     private function isValidPdf(string $data): bool
@@ -177,7 +176,7 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
     private function isValidMultipartFormData(string $data): bool
     {
         $matches = [];
-        if (1 !== $this->pregExecutor->match('/^--(?<boundary>[^\r\n]+)/', $data, $matches)) {
+        if (1 !== $this->dependencies->pregExecutor->match('/^--(?<boundary>[^\r\n]+)/', $data, $matches)) {
             return false;
         }
 
@@ -185,7 +184,7 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
         assert(is_string($boundary));
         $closingBoundary = '--' . $boundary . '--';
 
-        return 1 === $this->pregExecutor->match('/' . preg_quote($closingBoundary, '/') . '\s*$/', $data);
+        return 1 === $this->dependencies->pregExecutor->match('/' . preg_quote($closingBoundary, '/') . '\s*$/', $data);
     }
 
     private function isValidUrlEncoded(string $data): bool
@@ -197,7 +196,7 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
         if (self::MAX_URLENCODED_PAIRS < substr_count($data, '&') + 1) {
             return false;
         }
-        return array_all(explode('&', $data), fn($pair) => !(1 !== $this->pregExecutor->match('/^[^&=]+(?:=[^&]*)?$/', $pair)));
+        return array_all(explode('&', $data), fn($pair) => !(1 !== $this->dependencies->pregExecutor->match('/^[^&=]+(?:=[^&]*)?$/', $pair)));
     }
 
     private function isRecognizedMediaType(string $mediaType): bool

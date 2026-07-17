@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\SchemaValidator\AdditionalPropertiesValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\AdditionalPropertyError;
@@ -25,7 +26,7 @@ class AdditionalPropertiesValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new AdditionalPropertiesValidator($this->pool, BuiltinFormats::create());
+        $this->validator = new AdditionalPropertiesValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]

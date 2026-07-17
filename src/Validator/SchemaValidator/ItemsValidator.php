@@ -49,7 +49,7 @@ final readonly class ItemsValidator extends AbstractSchemaValidator
                 $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
 
                 if (null === $context) {
-                    $context = ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
+                    $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
                 }
 
                 $context->enterBreadcrumbIndex($index);

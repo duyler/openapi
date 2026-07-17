@@ -34,7 +34,7 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator
             /** @var array-key|array<array-key, mixed> $item */
             $validator = $this->createSchemaValidator();
             $nullableAsType = $context?->nullableAsType ?? true;
-            $itemContext = $context ?? ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
+            $itemContext = $context ?? ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
             $validator->validate($item, $schema->unevaluatedItems, $itemContext);
         }
     }

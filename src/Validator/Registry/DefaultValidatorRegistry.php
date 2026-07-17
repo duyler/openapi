@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\SchemaValidator\ValidatorFactory;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
@@ -27,7 +28,7 @@ use function array_key_exists;
  */
 final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterface
 {
-    /** @var array<class-string<SchemaValidatorInterface>, SchemaValidatorInterface> */
+    /** @var array<string, SchemaValidatorInterface> */
     private readonly array $validators;
 
     public function __construct(
@@ -40,17 +41,19 @@ final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterf
         private readonly RegexValidator $regexValidator = new RegexValidator(),
         private readonly PregExecutor $pregExecutor = new PregExecutor(),
     ) {
-        $this->validators = new ValidatorFactory(
-            $this->pool,
-            $this->formatRegistry,
-            $this->strictFormats,
-            $this->logger,
-            $this->reportDeprecated,
-            $this->eventDispatcher,
-            $this,
-            $this->regexValidator,
-            $this->pregExecutor,
-        )->createAll();
+        $dependencies = new ValidatorDependencies(
+            pool: $this->pool,
+            formatRegistry: $this->formatRegistry,
+            strictFormats: $this->strictFormats,
+            logger: $this->logger,
+            reportDeprecated: $this->reportDeprecated,
+            eventDispatcher: $this->eventDispatcher,
+            registry: $this,
+            regexValidator: $this->regexValidator,
+            pregExecutor: $this->pregExecutor,
+        );
+
+        $this->validators = new ValidatorFactory($dependencies)->createAll();
     }
 
     #[Override]

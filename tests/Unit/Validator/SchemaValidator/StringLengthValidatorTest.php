@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\SchemaValidator\StringLengthValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\MaxLengthError;
@@ -27,7 +28,7 @@ class StringLengthValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new StringLengthValidator($this->pool, BuiltinFormats::create());
+        $this->validator = new StringLengthValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]

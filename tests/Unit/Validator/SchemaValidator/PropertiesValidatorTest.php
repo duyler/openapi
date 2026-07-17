@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Exception\MinLengthError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\SchemaValidator\PropertiesValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -32,7 +33,7 @@ class PropertiesValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new PropertiesValidator($this->pool, BuiltinFormats::create());
+        $this->validator = new PropertiesValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedItemsValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
@@ -30,7 +31,7 @@ class UnevaluatedItemsValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new UnevaluatedItemsValidator($this->pool, BuiltinFormats::create());
+        $this->validator = new UnevaluatedItemsValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]

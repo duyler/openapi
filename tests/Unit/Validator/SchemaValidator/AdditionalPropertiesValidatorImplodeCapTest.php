@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\AdditionalPropertiesValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -41,10 +42,7 @@ class AdditionalPropertiesValidatorImplodeCapTest extends TestCase
     #[Override]
     protected function setUp(): void
     {
-        $this->validator = new AdditionalPropertiesValidator(
-            new ValidatorPool(),
-            BuiltinFormats::create(),
-        );
+        $this->validator = new AdditionalPropertiesValidator(new ValidatorDependencies(pool: new ValidatorPool(), formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]

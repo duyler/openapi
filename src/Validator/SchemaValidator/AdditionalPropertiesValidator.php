@@ -111,7 +111,7 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
                 $value = $data[$key];
 
                 if (null === $context) {
-                    $context = ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
+                    $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
                 }
 
                 $context->enterBreadcrumb((string) $key);

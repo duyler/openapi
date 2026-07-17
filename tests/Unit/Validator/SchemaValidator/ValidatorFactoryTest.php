@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
+use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\AdditionalPropertiesValidator;
@@ -35,22 +37,29 @@ use Duyler\OpenApi\Validator\SchemaValidator\StringLengthValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\TypeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedItemsValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedPropertiesValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\SchemaValidator\ValidatorFactory;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 
 final class ValidatorFactoryTest extends TestCase
 {
-    private ValidatorPool $pool;
-    private FormatRegistry $formatRegistry;
+    private ValidatorDependencies $dependencies;
+
     private ValidatorFactory $factory;
 
+    #[Override]
     protected function setUp(): void
     {
-        $this->pool = new ValidatorPool();
-        $this->formatRegistry = BuiltinFormats::create();
-        $this->factory = new ValidatorFactory($this->pool, $this->formatRegistry);
+        $this->dependencies = new ValidatorDependencies(
+            pool: new ValidatorPool(),
+            formatRegistry: BuiltinFormats::create(),
+        );
+        $this->factory = new ValidatorFactory($this->dependencies);
     }
 
     #[Test]
@@ -172,4 +181,81 @@ final class ValidatorFactoryTest extends TestCase
 
         self::assertNotSame($validators1, $validators2);
     }
+
+    #[Test]
+    public function create_all_propagates_format_registry_to_format_validator(): void
+    {
+        $formatRegistry = new FormatRegistry();
+        $dependencies = new ValidatorDependencies(
+            pool: new ValidatorPool(),
+            formatRegistry: $formatRegistry,
+            strictFormats: true,
+        );
+
+        $validators = new ValidatorFactory($dependencies)->createAll();
+
+        $schema = new Schema(type: 'string', format: 'unknown-format');
+
+        $this->expectException(InvalidFormatException::class);
+        $validators[FormatValidator::class]->validate('any-value', $schema);
+    }
+
+    #[Test]
+    public function custom_validator_registered_via_factory_is_returned_by_createAll(): void
+    {
+        $customKeyword = 'my-keyword';
+        $customFactory = fn(ValidatorDependencies $dependencies): CustomTestValidator => new CustomTestValidator($dependencies);
+
+        $factory = new ValidatorFactory($this->dependencies, [
+            $customKeyword => $customFactory,
+        ]);
+
+        $validators = $factory->createAll();
+
+        self::assertArrayHasKey($customKeyword, $validators);
+        self::assertInstanceOf(CustomTestValidator::class, $validators[$customKeyword]);
+    }
+
+    #[Test]
+    public function custom_validator_registered_via_factory_receives_same_dependencies(): void
+    {
+        $customKeyword = 'my-keyword';
+        $capturedDependencies = null;
+        $customFactory = function (ValidatorDependencies $dependencies) use (&$capturedDependencies): CustomTestValidator {
+            $capturedDependencies = $dependencies;
+
+            return new CustomTestValidator($dependencies);
+        };
+
+        $factory = new ValidatorFactory($this->dependencies, [
+            $customKeyword => $customFactory,
+        ]);
+
+        $factory->createAll();
+
+        self::assertSame($this->dependencies, $capturedDependencies);
+    }
+
+    #[Test]
+    public function custom_validator_overrides_builtin_when_keyword_collides_with_class_string(): void
+    {
+        $customKeyword = TypeValidator::class;
+        $customFactory = fn(ValidatorDependencies $dependencies): CustomTestValidator => new CustomTestValidator($dependencies);
+
+        $factory = new ValidatorFactory($this->dependencies, [
+            $customKeyword => $customFactory,
+        ]);
+
+        $validators = $factory->createAll();
+
+        self::assertInstanceOf(CustomTestValidator::class, $validators[$customKeyword]);
+    }
+}
+
+final readonly class CustomTestValidator implements SchemaValidatorInterface
+{
+    public function __construct(private ValidatorDependencies $dependencies) {}
+
+    #[Override]
+    public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void {}
 }

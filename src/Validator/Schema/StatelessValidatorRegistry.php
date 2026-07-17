@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\Schema;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\SchemaValidator\ValidatorFactory;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -28,16 +29,18 @@ final readonly class StatelessValidatorRegistry
         RegexValidator $regexValidator = new RegexValidator(),
         PregExecutor $pregExecutor = new PregExecutor(),
     ) {
-        $this->validators = new ValidatorFactory(
-            $pool,
-            $formatRegistry,
+        $dependencies = new ValidatorDependencies(
+            pool: $pool,
+            formatRegistry: $formatRegistry,
             strictFormats: $strictFormats,
             logger: $logger,
             reportDeprecated: $reportDeprecated,
             eventDispatcher: $eventDispatcher,
             regexValidator: $regexValidator,
             pregExecutor: $pregExecutor,
-        )->createStatelessList();
+        );
+
+        $this->validators = new ValidatorFactory($dependencies)->createStatelessList();
     }
 
     /**

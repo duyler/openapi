@@ -45,7 +45,7 @@ final readonly class PrefixItemsValidator extends AbstractSchemaValidator
                 $value = SchemaValueNormalizer::normalize($data[$i], $allowNull);
 
                 if (null === $context) {
-                    $context = ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
+                    $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
                 }
 
                 $context->enterBreadcrumbIndex($i);

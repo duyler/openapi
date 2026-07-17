@@ -11,6 +11,7 @@ use Duyler\OpenApi\Validator\Registry\ValidatorRegistryInterface;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\SchemaValidator\TypeValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Override;
@@ -145,14 +146,14 @@ final class SchemaValidatorWithRegistryTest extends TestCase
             #[Override]
             public function getValidator(string $type): SchemaValidatorInterface
             {
-                return new TypeValidator($this->pool, BuiltinFormats::create());
+                return new TypeValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
             }
 
             #[Override]
             public function getAllValidators(): iterable
             {
                 return [
-                    TypeValidator::class => new TypeValidator($this->pool, BuiltinFormats::create()),
+                    TypeValidator::class => new TypeValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create())),
                 ];
             }
         };

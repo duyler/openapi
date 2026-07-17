@@ -18,7 +18,7 @@ final readonly class DeprecatedValidator extends AbstractSchemaValidator
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
-        if (false === $this->reportDeprecated) {
+        if (false === $this->reportDeprecated()) {
             return;
         }
 
@@ -43,7 +43,7 @@ final readonly class DeprecatedValidator extends AbstractSchemaValidator
 
             $propertyPath = '/' === $dataPath ? '/' . $name : $dataPath . '/' . $name;
 
-            $this->eventDispatcher?->dispatch(
+            $this->eventDispatcher()?->dispatch(
                 new ValidationWarningEvent(
                     propertyPath: $propertyPath,
                     propertyName: $name,
@@ -52,7 +52,7 @@ final readonly class DeprecatedValidator extends AbstractSchemaValidator
                 ),
             );
 
-            $this->logger->warning(
+            $this->logger()->warning(
                 sprintf('Deprecated property "%s" is used at path "%s"', $name, $propertyPath),
             );
         }

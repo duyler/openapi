@@ -41,7 +41,7 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
                 $value = $data[$propertyName];
 
                 if (null === $context) {
-                    $context = ValidationContext::create(pool: $this->pool, nullableAsType: $nullableAsType);
+                    $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
                 }
 
                 $context->enterBreadcrumb($propertyName);

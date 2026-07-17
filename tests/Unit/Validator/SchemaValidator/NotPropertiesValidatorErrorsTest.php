@@ -12,6 +12,7 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\NotValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\PropertiesValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -33,8 +34,8 @@ final class NotPropertiesValidatorErrorsTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->notValidator = new NotValidator($this->pool, BuiltinFormats::create());
-        $this->propertiesValidator = new PropertiesValidator($this->pool, BuiltinFormats::create());
+        $this->notValidator = new NotValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $this->propertiesValidator = new PropertiesValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]

@@ -13,6 +13,10 @@ use function is_string;
 
 final readonly class ContentEncodingValidator implements SchemaValidatorInterface
 {
+    public function __construct(
+        private readonly ValidatorDependencies $dependencies,
+    ) {}
+
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {

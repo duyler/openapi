@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\SchemaValidator\NumericRangeValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
@@ -38,7 +39,7 @@ class NumericRangeValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new NumericRangeValidator($this->pool, BuiltinFormats::create());
+        $this->validator = new NumericRangeValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]
