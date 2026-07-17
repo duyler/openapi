@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\Request\PathParser;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 
@@ -14,11 +15,9 @@ use function array_key_exists;
 use function assert;
 use function count;
 use function is_array;
-use function sprintf;
 use function str_ends_with;
 use function str_starts_with;
 use function strtolower;
-use function strtoupper;
 use function usort;
 
 /**
@@ -58,9 +57,7 @@ final readonly class PathFinder
         $candidates = $this->findCandidates($requestPath, $method);
 
         if ([] === $candidates) {
-            throw new BuilderException(
-                sprintf('Operation not found: %s %s', strtoupper($method), $requestPath),
-            );
+            throw new OperationNotFoundException($requestPath, $method);
         }
 
         [$operation, $pathParameters] = 1 === count($candidates)

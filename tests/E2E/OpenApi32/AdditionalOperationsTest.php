@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\E2E\OpenApi32;
 
-use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
@@ -142,7 +142,7 @@ YAML;
     }
 
     #[Test]
-    public function unknown_additional_method_throws_builder_exception(): void
+    public function unknown_additional_method_throws_operation_not_found(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::ADDITIONAL_OPERATIONS_SPEC)
@@ -154,11 +154,11 @@ YAML;
 
         try {
             $validator->validateRequest($request);
-        } catch (BuilderException $e) {
+        } catch (OperationNotFoundException $e) {
             $caught = $e;
         }
 
-        self::assertNotNull($caught, 'LINK not declared must throw BuilderException');
+        self::assertNotNull($caught, 'LINK not declared must throw OperationNotFoundException');
         self::assertStringContainsString('LINK', $caught->getMessage());
     }
 

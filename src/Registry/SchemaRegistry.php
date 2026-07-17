@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Registry;
 
+use Duyler\OpenApi\Registry\Exception\SchemaAlreadyRegisteredException;
 use Duyler\OpenApi\Registry\Exception\VersionNotFoundException;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 
@@ -18,7 +19,31 @@ final readonly class SchemaRegistry
         private readonly array $schemas = [],
     ) {}
 
+    /**
+     * Register a new schema under the given name and version.
+     *
+     * Fails fast by throwing {@see SchemaAlreadyRegisteredException} when the
+     * name+version pair is already registered. Use {@see registerOrReplace()}
+     * for explicit overwrite semantics (hot-reload, immutable replacement).
+     *
+     * @throws SchemaAlreadyRegisteredException When the name+version pair is already registered.
+     */
     public function register(string $name, string $version, OpenApiDocument $document): self
+    {
+        if (isset($this->schemas[$name][$version])) {
+            throw new SchemaAlreadyRegisteredException($name, $version);
+        }
+
+        return $this->registerOrReplace($name, $version, $document);
+    }
+
+    /**
+     * Register a schema, replacing any existing entry for the same name+version.
+     *
+     * Intended for explicit overwrite use cases such as hot-reloading a spec
+     * in development or replacing a placeholder document with a final one.
+     */
+    public function registerOrReplace(string $name, string $version, OpenApiDocument $document): self
     {
         $newSchemas = $this->schemas;
         $newSchemas[$name][$version] = $document;
@@ -99,9 +124,25 @@ final readonly class SchemaRegistry
         return array_keys($this->schemas);
     }
 
-    public function count(): int
+    /**
+     * Returns the number of distinct schema names registered.
+     */
+    public function countNames(): int
     {
         return count($this->schemas);
+    }
+
+    /**
+     * Returns the total number of name+version pairs registered across all schemas.
+     */
+    public function countSchemas(): int
+    {
+        $total = 0;
+        foreach ($this->schemas as $versions) {
+            $total += count($versions);
+        }
+
+        return $total;
     }
 
     public function countVersions(string $name): int

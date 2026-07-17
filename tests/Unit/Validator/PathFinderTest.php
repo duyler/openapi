@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator;
 
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\PathFinder;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -129,7 +130,7 @@ YAML;
     {
         $finder = $this->createPathFinder();
 
-        $this->expectException(BuilderException::class);
+        $this->expectException(OperationNotFoundException::class);
         $this->expectExceptionMessage('Operation not found: POST /unknown');
 
         $finder->findOperation('/unknown', 'POST');
@@ -140,7 +141,7 @@ YAML;
     {
         $finder = $this->createPathFinder();
 
-        $this->expectException(BuilderException::class);
+        $this->expectException(OperationNotFoundException::class);
         $this->expectExceptionMessage('Operation not found: DELETE /users/123');
 
         $finder->findOperation('/users/123', 'DELETE');

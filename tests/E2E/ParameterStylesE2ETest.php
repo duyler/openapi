@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\E2E;
 
-use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -329,7 +329,7 @@ YAML;
     }
 
     #[Test]
-    public function matrix_style_with_invalid_path_throws_builder_exception(): void
+    public function matrix_style_with_invalid_path_throws_operation_not_found(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::MATRIX_SPEC)
@@ -337,12 +337,12 @@ YAML;
 
         $request = $this->psrFactory->createServerRequest('GET', '/nonexistent/;id=42');
 
-        $this->expectException(BuilderException::class);
+        $this->expectException(OperationNotFoundException::class);
         $validator->validateRequest($request);
     }
 
     #[Test]
-    public function label_style_with_invalid_path_throws_builder_exception(): void
+    public function label_style_with_invalid_path_throws_operation_not_found(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::LABEL_SPEC)
@@ -350,7 +350,7 @@ YAML;
 
         $request = $this->psrFactory->createServerRequest('GET', '/unknown/.blue');
 
-        $this->expectException(BuilderException::class);
+        $this->expectException(OperationNotFoundException::class);
         $validator->validateRequest($request);
     }
 }

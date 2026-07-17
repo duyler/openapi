@@ -7,10 +7,11 @@ namespace Duyler\OpenApi\Builder;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
+use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Link\LinkContext;
 use Duyler\OpenApi\Validator\Link\ResolvedLink;
 use Duyler\OpenApi\Validator\Operation;
-use Duyler\OpenApi\Validator\Exception\ValidationException;
 use InvalidArgumentException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -41,7 +42,8 @@ interface OpenApiValidatorInterface
      * @param ServerRequestInterface $request HTTP request to validate
      * @return Operation Matched operation from OpenAPI specification
      * @throws ValidationException If validation fails
-     * @throws BuilderException If operation not found in specification
+     * @throws OperationNotFoundException If operation not found in specification
+     * @throws BuilderException If specification has no paths defined
      */
     public function validateRequest(ServerRequestInterface $request): Operation;
 

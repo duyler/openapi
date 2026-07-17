@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Functional\Server;
 
-use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
@@ -193,7 +193,7 @@ final class ServerPathResolutionTest extends TestCase
 
         $request = $this->psrFactory->createServerRequest('GET', '/v3/users');
 
-        $this->expectException(BuilderException::class);
+        $this->expectException(OperationNotFoundException::class);
         $validator->validateRequest($request);
     }
 
@@ -209,7 +209,7 @@ final class ServerPathResolutionTest extends TestCase
             '/v1/users/550e8400-e29b-41d4-a716-446655440000',
         );
 
-        $this->expectException(BuilderException::class);
+        $this->expectException(OperationNotFoundException::class);
         $validator->validateRequest($request);
     }
 

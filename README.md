@@ -499,11 +499,14 @@ $validatorV2 = OpenApiValidatorBuilder::create()
     ->build();
 $documentV2 = $validatorV2->getDocument();
 
-// Register schemas
+// Register schemas (throws on duplicate name+version)
 $registry = new SchemaRegistry();
 $registry = $registry
     ->register('api', '1.0.0', $documentV1)
     ->register('api', '2.0.0', $documentV2);
+
+// Replace an existing entry explicitly (hot-reload, immutable replacement)
+$registry = $registry->registerOrReplace('api', '1.0.0', $reloadedDocumentV1);
 
 // Get specific version (returns null if missing)
 $schema = $registry->get('api', '1.0.0');
@@ -535,24 +538,25 @@ $names = $registry->getNames();
 // ['api']
 
 // Count schemas and versions
-$total = $registry->count();                // 1
-$apiVersions = $registry->countVersions('api'); // 2
+$totalNames   = $registry->countNames();   // 1 — distinct names
+$totalSchemas = $registry->countSchemas(); // 2 — total name+version pairs
+$apiVersions  = $registry->countVersions('api'); // 2
 ```
 
-The registry is immutable: `register()` returns a new instance with the added schema.
+The registry is immutable: `register()` and `registerOrReplace()` return a new
+instance with the added schema.
 
-#### Design choices
+`register()` is the fail-safe default: it throws
+`SchemaAlreadyRegisteredException` (extends `\RuntimeException`) when the
+`name+version` pair is already present, preventing accidental silent data loss.
+Use `registerOrReplace()` to opt into explicit overwrite semantics when you
+need immutable replacement patterns such as hot-reloading a spec in development
+or replacing a placeholder document with a final one.
 
-- **Registering an existing name+version overwrites the document silently.** This is intentional and enables immutable update patterns (for example, hot-reloading a spec in development, or replacing a placeholder document with a final one). Guard with `has()` if silent overwrite is undesirable for your use case:
-
-  ```php
-  if ($registry->has('api', '1.0.0')) {
-      throw new LogicException('Refusing to overwrite api 1.0.0');
-  }
-  $registry = $registry->register('api', '1.0.0', $document);
-  ```
-
-- **`get()` returns `null` for a missing schema or version** (mirrors the PSR-6 cache convention). Use `has()` to distinguish "missing" from "present" before calling `get()`, or use `getOrFail()` to fail fast with a `VersionNotFoundException` (extends `\RuntimeException`).
+- **`get()` returns `null` for a missing schema or version** (mirrors the PSR-6
+  cache convention). Use `has()` to distinguish "missing" from "present" before
+  calling `get()`, or use `getOrFail()` to fail fast with a
+  `VersionNotFoundException` (extends `\RuntimeException`).
 
 ### Validator Pool
 
@@ -1026,6 +1030,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `MissingRequestBodyException` | Request body is required but missing or empty |
 | `UnsupportedMediaTypeException` | Content-Type not supported by the operation |
 | `PathMismatchException` | Request path doesn't match any operation template |
+| `OperationNotFoundException` | Request path or method does not match any operation in the specification (thrown by `PathFinder::findOperation()` and `validateRequest()`) |
 | `InvalidParameterException` | Parameter value is malformed or invalid |
 | `InvalidPatternException` | Invalid regex pattern in schema definition |
 | `UndefinedResponseException` | Response status code not defined in spec |
@@ -1034,6 +1039,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `SchemaDepthExceededException` | Maximum schema nesting depth exceeded |
 | `UnknownValidatorException` | Unknown validator type requested |
 | `VersionNotFoundException` | Requested schema name or version is not registered (thrown by `SchemaRegistry::getOrFail()`) |
+| `SchemaAlreadyRegisteredException` | Schema name+version pair is already registered (thrown by `SchemaRegistry::register()`; use `registerOrReplace()` for explicit overwrite) |
 
 ### Error Formatters
 
