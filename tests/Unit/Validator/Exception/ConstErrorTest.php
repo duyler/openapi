@@ -105,7 +105,7 @@ final class ConstErrorTest extends TestCase
             schemaPath: '/properties/field',
         );
 
-        self::assertSame('const', $exception->getType());
+        self::assertSame('const', $exception->keyword());
     }
 
     #[Test]

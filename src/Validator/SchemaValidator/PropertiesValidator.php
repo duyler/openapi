@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Override;
@@ -66,6 +67,8 @@ final readonly class PropertiesValidator extends AbstractSchemaValidator
                     previous: $e,
                     errors: $e->getErrors(),
                 );
+            } catch (InvalidFormatException $e) {
+                throw $e;
             } catch (AbstractValidationError $e) {
                 throw new ValidationException(
                     sprintf('Property "%s" validation failed', $name),

@@ -8,6 +8,7 @@ use Duyler\OpenApi\Validator\Error\Breadcrumb;
 use Override;
 use RuntimeException;
 use Throwable;
+use Deprecated;
 
 abstract class AbstractValidationError extends RuntimeException implements ValidationErrorInterface
 {
@@ -66,7 +67,11 @@ abstract class AbstractValidationError extends RuntimeException implements Valid
         return $this->suggestion;
     }
 
+    /**
+     * @see keyword()
+     */
     #[Override]
+    #[Deprecated(message: 'Use keyword() instead. This method will be removed in 2.0.')]
     public function getType(): string
     {
         return $this->keyword;

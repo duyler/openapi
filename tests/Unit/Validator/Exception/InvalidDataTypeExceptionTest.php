@@ -59,12 +59,6 @@ final class InvalidDataTypeExceptionTest extends TestCase
     }
 
     #[Test]
-    public function getType_returns_invalid(): void
-    {
-        self::assertSame('invalid', $this->exception->getType());
-    }
-
-    #[Test]
     public function type_property_is_invalid(): void
     {
         self::assertSame('invalid', $this->exception->type);

@@ -103,7 +103,7 @@ final class InvalidFormatExceptionTest extends TestCase
     }
 
     #[Test]
-    public function getType_returns_format(): void
+    public function keyword_returns_format_for_backward_compat(): void
     {
         $exception = new InvalidFormatException(
             format: 'email',
@@ -111,6 +111,6 @@ final class InvalidFormatExceptionTest extends TestCase
             message: 'Test message',
         );
 
-        self::assertSame('format', $exception->getType());
+        self::assertSame('format', $exception->keyword());
     }
 }

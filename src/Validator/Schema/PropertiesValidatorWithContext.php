@@ -12,6 +12,7 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\DiscriminatorMismatchException;
 use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -56,6 +57,7 @@ final readonly class PropertiesValidatorWithContext
                 }
             } catch (DiscriminatorMismatchException|
                 InvalidDiscriminatorValueException|
+                InvalidFormatException|
                 MissingDiscriminatorPropertyException|
                 UnknownDiscriminatorValueException $e
             ) {

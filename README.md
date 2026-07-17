@@ -484,29 +484,19 @@ Available events:
 
 Manage multiple API versions:
 
-> **Warning:** `getDocument()` is a method of the concrete `OpenApiValidator` class, not the `OpenApiValidatorInterface`. If you type-hint the interface, this method is unavailable and will cause a runtime error. Type-hint the concrete class directly or perform an `instanceof` check before calling it.
-
 ```php
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Registry\SchemaRegistry;
-use LogicException;
 
 // Load multiple versions
 $validatorV1 = OpenApiValidatorBuilder::create()
     ->fromYamlFile('api-v1.yaml')
     ->build();
-if (!($validatorV1 instanceof OpenApiValidator)) {
-    throw new LogicException('Validator must be an instance of OpenApiValidator to access getDocument()');
-}
 $documentV1 = $validatorV1->getDocument();
 
 $validatorV2 = OpenApiValidatorBuilder::create()
     ->fromYamlFile('api-v2.yaml')
     ->build();
-if (!($validatorV2 instanceof OpenApiValidator)) {
-    throw new LogicException('Validator must be an instance of OpenApiValidator to access getDocument()');
-}
 $documentV2 = $validatorV2->getDocument();
 
 // Register schemas
@@ -938,7 +928,9 @@ try {
 
 ### Validation Error Reference
 
-All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schemaPath()`, `keyword()`, `message()`, `params()`, `suggestion()`, and `getType()` methods. The `getType()` method returns the validation keyword that triggered the error (e.g., `'type'`, `'minLength'`, `'format'`).
+All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schemaPath()`, `keyword()`, `message()`, `params()`, and `suggestion()` methods.
+
+> Note: The `getType()` method is deprecated in favor of `keyword()` and will be removed in 2.0. Both return the same validation keyword (e.g., `'type'`, `'minLength'`, `'format'`). Use `keyword()` in new code.
 
 #### Type and Value Errors
 
@@ -951,7 +943,7 @@ All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schem
 
 #### Format Validation Errors
 
-`InvalidFormatException` extends `RuntimeException` and implements `ValidationErrorInterface` directly (without extending `AbstractValidationError`). It is thrown by format validators rather than the schema validator.
+`InvalidFormatException` extends `AbstractValidationError` and is thrown by format validators rather than the schema validator.
 
 | Error Type | Keyword | Description |
 |------------|---------|-------------|
@@ -1054,6 +1046,21 @@ use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
 
 // JSON formatter for API responses
 use Duyler\OpenApi\Validator\Error\Formatter\JsonFormatter;
+```
+
+To format a `ValidationException` without holding a reference to the validator, call `ErrorFormatterInterface::formatException()` directly. This is the canonical replacement for `OpenApiValidatorInterface::getFormattedErrors()` (deprecated, removed in 2.0):
+
+```php
+use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
+
+$formatter = new SimpleFormatter();
+
+try {
+    $operation = $validator->validateRequest($request);
+} catch (ValidationException $e) {
+    echo $formatter->formatException($e);
+}
 ```
 
 ## Built-in Format Validators

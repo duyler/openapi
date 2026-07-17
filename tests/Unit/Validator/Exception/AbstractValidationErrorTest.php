@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Exception;
 
 use Duyler\OpenApi\Validator\Exception\ConstError;
 use Duyler\OpenApi\Validator\Exception\EnumError;
+use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -145,7 +146,7 @@ final class AbstractValidationErrorTest extends TestCase
     }
 
     #[Test]
-    public function getType_returns_correct_value_for_const(): void
+    public function keyword_returns_correct_value_for_const(): void
     {
         $exception = new ConstError(
             expected: 'test',
@@ -154,11 +155,11 @@ final class AbstractValidationErrorTest extends TestCase
             schemaPath: '/properties/field',
         );
 
-        self::assertSame('const', $exception->getType());
+        self::assertSame('const', $exception->keyword());
     }
 
     #[Test]
-    public function getType_returns_correct_value_for_enum(): void
+    public function keyword_returns_correct_value_for_enum(): void
     {
         $exception = new EnumError(
             allowedValues: ['a', 'b'],
@@ -167,10 +168,11 @@ final class AbstractValidationErrorTest extends TestCase
             schemaPath: '/properties/field',
         );
 
-        self::assertSame('enum', $exception->getType());
+        self::assertSame('enum', $exception->keyword());
     }
 
     #[Test]
+    #[IgnoreDeprecations]
     public function getType_matches_keyword_for_all_subclasses(): void
     {
         $constException = new ConstError(

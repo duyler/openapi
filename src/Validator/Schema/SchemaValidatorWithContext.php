@@ -10,6 +10,7 @@ use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorMode;
@@ -255,6 +256,8 @@ final class SchemaValidatorWithContext
         foreach ($this->dependencies->statelessValidators->getValidators() as $validator) {
             try {
                 $validator->validate($data, $schema, $context);
+            } catch (InvalidFormatException $e) {
+                throw $e;
             } catch (AbstractValidationError $e) {
                 $errors[] = $e;
             }

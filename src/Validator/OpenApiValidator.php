@@ -28,6 +28,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         private readonly ValidatorDependencies $dependencies,
     ) {}
 
+    #[Override]
     public function getDocument(): OpenApiDocument
     {
         return $this->document;

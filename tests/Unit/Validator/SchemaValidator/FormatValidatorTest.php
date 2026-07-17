@@ -89,7 +89,7 @@ class FormatValidatorTest extends TestCase
         self::assertSame('email', $caught->format);
         self::assertSame('email', $caught->params()['format']);
         self::assertSame('not-an-email', $caught->params()['value']);
-        self::assertSame('format', $caught->getType());
+        self::assertSame('format', $caught->keyword());
         self::assertSame('', $caught->dataPath());
     }
 

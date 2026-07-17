@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\NestedValidationError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -73,6 +74,8 @@ final readonly class ItemsValidator extends AbstractSchemaValidator
                         ),
                     ],
                 );
+            } catch (InvalidFormatException $e) {
+                throw $e;
             } catch (AbstractValidationError $e) {
                 $dataPath = $this->getDataPath($context);
 

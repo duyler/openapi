@@ -105,7 +105,7 @@ final class EnumErrorTest extends TestCase
             schemaPath: '/properties/color',
         );
 
-        self::assertSame('enum', $exception->getType());
+        self::assertSame('enum', $exception->keyword());
     }
 
     #[Test]

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Error\Formatter;
 
 use Duyler\OpenApi\Validator\Exception\ValidationErrorInterface;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 use ValueError;
 
@@ -55,6 +56,12 @@ final readonly class JsonFormatter implements ErrorFormatterInterface
         return $result;
     }
 
+    #[Override]
+    public function formatException(ValidationException $exception): string
+    {
+        return $this->formatMultiple($exception->getErrors());
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -63,7 +70,7 @@ final readonly class JsonFormatter implements ErrorFormatterInterface
         $data = [
             'breadcrumb' => $error->dataPath(),
             'message' => $error->message(),
-            'type' => $error->getType(),
+            'type' => $error->keyword(),
             'details' => $error->params(),
         ];
 

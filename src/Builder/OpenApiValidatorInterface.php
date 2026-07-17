@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Builder;
 
 use Duyler\OpenApi\Builder\Exception\BuilderException;
+use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Link\LinkContext;
 use Duyler\OpenApi\Validator\Link\ResolvedLink;
 use Duyler\OpenApi\Validator\Operation;
@@ -12,6 +14,7 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use InvalidArgumentException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Deprecated;
 
 /**
  * OpenAPI validator interface
@@ -21,6 +24,17 @@ use Psr\Http\Message\ServerRequestInterface;
  */
 interface OpenApiValidatorInterface
 {
+    /**
+     * Get the OpenAPI document used by this validator.
+     *
+     * The document is loaded at build time and remains immutable for the
+     * lifetime of the validator instance. Use this for SchemaRegistry,
+     * introspection, or building routing maps.
+     *
+     * @return OpenApiDocument
+     */
+    public function getDocument(): OpenApiDocument;
+
     /**
      * Validate PSR-7 server request and return matched operation
      *
@@ -51,11 +65,17 @@ interface OpenApiValidatorInterface
     public function validateSchema(mixed $data, string $schemaRef): void;
 
     /**
-     * Get validation errors as formatted string
+     * Get validation errors as formatted string.
+     *
+     * @see ErrorFormatterInterface::formatException()
      *
      * @param ValidationException $e Validation exception containing errors
      * @return string Formatted error messages
      */
+    #[Deprecated(message: <<<'TXT'
+    Use ErrorFormatterInterface::formatException() instead.
+                 This method will be removed in 2.0.
+    TXT)]
     public function getFormattedErrors(ValidationException $e): string;
 
     /**
