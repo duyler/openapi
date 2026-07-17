@@ -281,7 +281,7 @@ final class SchemaValidatorWithContext
             }
         }
 
-        if (count($errors) > 0) {
+        if ([] !== $errors) {
             throw new ValidationException(
                 'Schema validation failed',
                 errors: $errors,

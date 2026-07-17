@@ -50,7 +50,7 @@ final readonly class RequestBodyCoercer extends AbstractCoercer
     private function coerceUnionType(mixed $value, array $types, Schema $schema, bool $strict, bool $nullableAsType): mixed
     {
         foreach ($types as $type) {
-            if (!is_string($type) || 'null' === $type) {
+            if (false === is_string($type) || 'null' === $type) {
                 continue;
             }
 

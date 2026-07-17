@@ -72,7 +72,7 @@ final readonly class SchemaValueNormalizer
      */
     public static function typeIncludesNull(string|array|null $type): bool
     {
-        if (!is_array($type)) {
+        if (false === is_array($type)) {
             return false;
         }
 

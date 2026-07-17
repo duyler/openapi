@@ -18,7 +18,6 @@ use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 
 use function array_key_exists;
-use function count;
 use function sprintf;
 
 final readonly class PropertiesValidatorWithContext
@@ -67,7 +66,7 @@ final readonly class PropertiesValidatorWithContext
             }
         }
 
-        if (count($errors) > 0) {
+        if ([] !== $errors) {
             throw new ValidationException(
                 sprintf('Properties validation failed at %s', $context->breadcrumbs->currentPath()),
                 errors: $errors,

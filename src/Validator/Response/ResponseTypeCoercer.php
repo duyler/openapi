@@ -46,7 +46,7 @@ final readonly class ResponseTypeCoercer extends AbstractCoercer
     private function coerceUnionType(mixed $value, array $types, CoercionContext $context): mixed
     {
         foreach ($types as $type) {
-            if (!is_string($type) || 'null' === $type) {
+            if (false === is_string($type) || 'null' === $type) {
                 continue;
             }
 

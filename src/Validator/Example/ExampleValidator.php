@@ -153,7 +153,7 @@ final readonly class ExampleValidator
             return true;
         }
 
-        if (!is_array($data) || !is_array($example)) {
+        if (false === is_array($data) || false === is_array($example)) {
             return false;
         }
 

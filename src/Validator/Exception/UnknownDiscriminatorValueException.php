@@ -7,7 +7,6 @@ namespace Duyler\OpenApi\Validator\Exception;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Override;
 
-use function count;
 use function sprintf;
 
 final class UnknownDiscriminatorValueException extends AbstractValidationError
@@ -28,7 +27,7 @@ final class UnknownDiscriminatorValueException extends AbstractValidationError
             $value,
         );
 
-        if (count($mappingValues) > 0) {
+        if ([] !== $mappingValues) {
             $message .= sprintf(
                 '. Known values: %s',
                 implode(', ', $mappingValues),
@@ -44,7 +43,7 @@ final class UnknownDiscriminatorValueException extends AbstractValidationError
                 'value' => $value,
                 'mappingValues' => $mappingValues,
             ],
-            suggestion: count($mappingValues) > 0
+            suggestion: [] !== $mappingValues
                 ? sprintf('Use one of: %s', implode(', ', $mappingValues))
                 : null,
         );

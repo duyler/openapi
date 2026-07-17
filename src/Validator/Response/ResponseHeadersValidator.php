@@ -177,7 +177,7 @@ final readonly class ResponseHeadersValidator
             );
         }
 
-        if (!$decoded instanceof stdClass) {
+        if (false === $decoded instanceof stdClass) {
             throw new TypeMismatchError(
                 expected: 'object',
                 actual: $value,

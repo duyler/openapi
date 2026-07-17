@@ -54,7 +54,7 @@ final readonly class DateTimeValidator extends AbstractStringFormatValidator
             throw new InvalidFormatException('date-time', $data, 'Invalid date-time format');
         }
 
-        if (!checkdate((int) $matches['month'], (int) $matches['day'], (int) $matches['year'])) {
+        if (false === checkdate((int) $matches['month'], (int) $matches['day'], (int) $matches['year'])) {
             throw new InvalidFormatException('date-time', $data, 'Invalid date-time value');
         }
 

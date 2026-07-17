@@ -68,7 +68,7 @@ final readonly class ItemsValidatorWithContext
             }
         }
 
-        if (count($errors) > 0) {
+        if ([] !== $errors) {
             throw new ValidationException(
                 sprintf('Items validation failed at %s', $context->breadcrumbs->currentPath()),
                 errors: $errors,
