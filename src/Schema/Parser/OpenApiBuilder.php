@@ -10,10 +10,10 @@ use Duyler\OpenApi\Schema\Model\SecurityRequirement;
 use Duyler\OpenApi\Schema\Model\Tags;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\SchemaParserInterface;
+use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 use Throwable;
 
-use function gettype;
 use function is_array;
 use function is_string;
 use function sprintf;
@@ -52,7 +52,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
                     sprintf(
                         'Invalid %s: expected object at root, got %s',
                         $this->getFormatName(),
-                        gettype($data),
+                        TypeFormatter::format($data),
                     ),
                 );
             }
@@ -122,7 +122,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             throw new InvalidSchemaException(
                 sprintf(
                     'Unsupported OpenAPI version: %s. Only 3.0.x, 3.1.x and 3.2.x are supported.',
-                    is_string($version) ? $version : gettype($version),
+                    is_string($version) ? $version : TypeFormatter::format($version),
                 ),
             );
         }

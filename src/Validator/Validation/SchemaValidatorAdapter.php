@@ -8,10 +8,10 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\EventDispatchingTrait;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\TypeFormatter;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 
-use function gettype;
 use function is_array;
 use function is_scalar;
 use function sprintf;
@@ -57,7 +57,7 @@ final readonly class SchemaValidatorAdapter
     {
         if (null !== $data && false === is_scalar($data) && false === is_array($data)) {
             throw new InvalidDataTypeException(
-                sprintf('Data must be scalar, array, or null, got %s', gettype($data)),
+                sprintf('Data must be scalar, array, or null, got %s', TypeFormatter::format($data)),
             );
         }
 

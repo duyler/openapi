@@ -10,6 +10,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Model\Xml;
 use Duyler\OpenApi\Schema\Model\SchemaFieldMetadata;
 use Duyler\OpenApi\Schema\Serializer\SchemaToArrayConverter;
+use Duyler\OpenApi\Validator\TypeFormatter;
 
 use function array_key_exists;
 use function array_values;
@@ -21,7 +22,6 @@ use function is_bool;
 use function is_string;
 use function sprintf;
 use function version_compare;
-use function gettype;
 
 /**
  * Parses an OpenAPI 3.2 / JSON Schema 2020-12 wire-form array into a
@@ -327,7 +327,7 @@ final readonly class SchemaFromArrayConverter
                 }
 
                 throw new InvalidSchemaException(
-                    sprintf('Expected array or boolean for schema, got %s', gettype($schemaData)),
+                    sprintf('Expected array or boolean for schema, got %s', TypeFormatter::format($schemaData)),
                 );
             },
             $items,

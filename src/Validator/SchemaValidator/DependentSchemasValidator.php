@@ -13,10 +13,10 @@ use Duyler\OpenApi\Validator\Exception\NestedValidationError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
+use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
 use function array_key_exists;
-use function gettype;
 use function is_array;
 use function sprintf;
 
@@ -58,7 +58,7 @@ final readonly class DependentSchemasValidator extends AbstractSchemaValidator i
                         errors: [
                             new TypeMismatchError(
                                 expected: $this->formatSchemaType($dependentSchema->type, 'object'),
-                                actual: gettype($data),
+                                actual: TypeFormatter::format($data),
                                 dataPath: $dataPath,
                                 schemaPath: '/dependentSchemas/' . $propertyName,
                             ),

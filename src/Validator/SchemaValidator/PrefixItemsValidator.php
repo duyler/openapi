@@ -13,10 +13,10 @@ use Duyler\OpenApi\Validator\Exception\NestedValidationError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
+use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
 use function count;
-use function gettype;
 use function is_array;
 use function sprintf;
 
@@ -70,7 +70,7 @@ final readonly class PrefixItemsValidator extends AbstractSchemaValidator implem
                     errors: [
                         new TypeMismatchError(
                             expected: $this->formatSchemaType($schema->prefixItems[$i]->type),
-                            actual: gettype($data[$i]),
+                            actual: TypeFormatter::format($data[$i]),
                             dataPath: $dataPath . '[' . $i . ']',
                             schemaPath: '/prefixItems/' . $i,
                         ),

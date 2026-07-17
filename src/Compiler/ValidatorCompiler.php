@@ -115,6 +115,7 @@ final readonly class ValidatorCompiler
             $code .= sprintf("namespace %s;\n\n", $namespace);
         }
 
+        $code .= "use Duyler\\OpenApi\\Validator\\TypeFormatter;\n\n";
         $code .= sprintf("readonly class %s\n{\n", $shortName);
         $code .= '    public function validate(mixed $data): void' . "\n";
         $code .= "    {\n";
@@ -187,7 +188,7 @@ final readonly class ValidatorCompiler
 
         if (1 === count($checks)) {
             $code .= sprintf("        if (false === %s) {\n", $checks[0]);
-            $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected ' . %s . ' but got ' . gettype(\$data));\n", $typesString);
+            $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected ' . %s . ' but got ' . TypeFormatter::format(\$data));\n", $typesString);
             $code .= "        }\n\n";
 
             return $code;
@@ -195,7 +196,7 @@ final readonly class ValidatorCompiler
 
         $condition = implode(' || ', $checks);
         $code .= sprintf("        if (false === (%s)) {\n", $condition);
-        $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected ' . %s . ' but got ' . gettype(\$data));\n", $typesString);
+        $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected ' . %s . ' but got ' . TypeFormatter::format(\$data));\n", $typesString);
         $code .= "        }\n\n";
 
         return $code;

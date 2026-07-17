@@ -171,7 +171,7 @@ class BreadcrumbIntegrationTest extends TestCase
             $this->assertArrayHasKey('expected', $error->params());
             $this->assertArrayHasKey('actual', $error->params());
             $this->assertSame('string', $error->params()['expected']);
-            $this->assertSame('integer', $error->params()['actual']);
+            $this->assertSame('int', $error->params()['actual']);
         }
     }
 

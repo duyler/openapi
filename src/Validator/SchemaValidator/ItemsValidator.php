@@ -13,9 +13,9 @@ use Duyler\OpenApi\Validator\Exception\NestedValidationError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
+use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
-use function gettype;
 use function is_array;
 use function sprintf;
 use function count;
@@ -74,7 +74,7 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
                     errors: [
                         new TypeMismatchError(
                             expected: $this->formatSchemaType($schema->items->type),
-                            actual: gettype($item),
+                            actual: TypeFormatter::format($item),
                             dataPath: $dataPath . '[' . $index . ']',
                             schemaPath: '/items',
                         ),

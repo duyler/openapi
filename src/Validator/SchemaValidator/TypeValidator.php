@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
 use function array_filter;
@@ -19,7 +20,6 @@ use function is_infinite;
 use function is_int;
 use function is_nan;
 use function is_string;
-use function gettype;
 
 final readonly class TypeValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
@@ -59,7 +59,7 @@ final readonly class TypeValidator extends AbstractSchemaValidator implements Ke
             if (false === $this->isValidUnionType($data, $types, $emptyArrayStrategy)) {
                 throw new TypeMismatchError(
                     expected: implode('|', $types),
-                    actual: gettype($data),
+                    actual: TypeFormatter::format($data),
                     dataPath: $dataPath,
                     schemaPath: '/type',
                 );
@@ -71,7 +71,7 @@ final readonly class TypeValidator extends AbstractSchemaValidator implements Ke
         if (false === $this->isValidType($data, $schema->type, $emptyArrayStrategy)) {
             throw new TypeMismatchError(
                 expected: $schema->type,
-                actual: gettype($data),
+                actual: TypeFormatter::format($data),
                 dataPath: $dataPath,
                 schemaPath: '/type',
             );

@@ -14,12 +14,12 @@ use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\TypeFormatter;
 
 use function array_key_exists;
 use function assert;
 use function end;
 use function explode;
-use function gettype;
 use function is_array;
 use function is_string;
 
@@ -95,7 +95,7 @@ final readonly class DiscriminatorValidator
         if (false === is_array($data)) {
             throw new DiscriminatorMismatchException(
                 expectedType: 'object',
-                actualType: gettype($data),
+                actualType: TypeFormatter::format($data),
                 propertyName: $propertyName,
                 dataPath: $dataPath,
             );
@@ -114,7 +114,7 @@ final readonly class DiscriminatorValidator
             throw new InvalidDiscriminatorValueException(
                 propertyName: $propertyName,
                 expectedType: 'string',
-                actualType: gettype($value),
+                actualType: TypeFormatter::format($value),
                 dataPath: $this->buildPath($dataPath, $propertyName),
             );
         }

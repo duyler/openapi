@@ -142,6 +142,6 @@ YAML;
         self::assertInstanceOf(TypeMismatchError::class, $caught);
         self::assertSame('type', $caught->keyword());
         self::assertSame('string', $caught->params()['expected']);
-        self::assertSame('integer', $caught->params()['actual']);
+        self::assertSame('int', $caught->params()['actual']);
     }
 }

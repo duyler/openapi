@@ -8,8 +8,8 @@ use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
 use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Model\Xml;
+use Duyler\OpenApi\Validator\TypeFormatter;
 
-use function gettype;
 use function implode;
 use function is_array;
 use function is_bool;
@@ -40,7 +40,7 @@ final readonly class SchemaBuilder
         }
 
         throw new InvalidSchemaException(
-            sprintf('Expected array or boolean for schema, got %s', gettype($data)),
+            sprintf('Expected array or boolean for schema, got %s', TypeFormatter::format($data)),
         );
     }
 
