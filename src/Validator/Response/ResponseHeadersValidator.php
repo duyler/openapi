@@ -77,33 +77,14 @@ final readonly class ResponseHeadersValidator
 
     private function coerceValue(string $value, Schema $schema, string $headerName): array|int|string|float|bool
     {
-        $type = $schema->type;
-
-        if ('string' === $type) {
-            return $value;
-        }
-
-        if ('integer' === $type) {
-            return $this->coerceToInteger($value, $headerName);
-        }
-
-        if ('number' === $type) {
-            return $this->coerceToNumber($value, $headerName);
-        }
-
-        if ('boolean' === $type) {
-            return $this->coerceToBoolean($value, $headerName);
-        }
-
-        if ('array' === $type) {
-            return $this->coerceToArray($value, $headerName);
-        }
-
-        if ('object' === $type) {
-            return $this->coerceToObject($value, $headerName);
-        }
-
-        return $value;
+        return match ($schema->type) {
+            'integer' => $this->coerceToInteger($value, $headerName),
+            'number' => $this->coerceToNumber($value, $headerName),
+            'boolean' => $this->coerceToBoolean($value, $headerName),
+            'array' => $this->coerceToArray($value, $headerName),
+            'object' => $this->coerceToObject($value, $headerName),
+            default => $value,
+        };
     }
 
     private function coerceToInteger(string $value, string $headerName): int

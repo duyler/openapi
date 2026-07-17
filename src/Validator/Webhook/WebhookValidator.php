@@ -27,8 +27,7 @@ final readonly class WebhookValidator
         $webhook = $this->findWebhook($webhookName, $document);
         $operation = $this->extractOperation($request, $webhookName, $webhook);
 
-        $requestPath = $request->getUri()->getPath();
-        $this->requestValidator->validate($request, $operation, $requestPath);
+        $this->requestValidator->validate($request, $operation, $request->getUri()->getPath());
 
         return $operation;
     }

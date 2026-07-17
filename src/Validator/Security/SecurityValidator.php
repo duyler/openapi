@@ -20,9 +20,11 @@ final readonly class SecurityValidator
     public function validate(SecurityValidationContext $context): void
     {
         $allErrors = [];
+        $request = $context->request;
+        $securitySchemes = $context->securitySchemes;
 
         foreach ($context->securityRequirements->requirements as $requirementAlternatives) {
-            $errors = $this->validateRequirement($context->request, $requirementAlternatives, $context->securitySchemes);
+            $errors = $this->validateRequirement($request, $requirementAlternatives, $securitySchemes);
 
             if ([] === $errors) {
                 return;

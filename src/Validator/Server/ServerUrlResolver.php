@@ -64,10 +64,8 @@ final readonly class ServerUrlResolver
     {
         preg_match_all('/\{(\w+)\}/', $server->url, $matches);
 
-        /** @var list<string> $result */
-        $result = $matches[1];
-
-        return $result;
+        /** @var list<string> */
+        return $matches[1];
     }
 
     /**

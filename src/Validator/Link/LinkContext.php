@@ -4,13 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Link;
 
-/**
- * Holds all context data needed to resolve Runtime Expressions in OpenAPI Links.
- *
- * @param array<string, mixed> $body Deserialized response body
- * @param array<string, string> $headers Response headers
- * @param array<string, mixed> $queryParams Query parameters
- */
 final readonly class LinkContext
 {
     /**

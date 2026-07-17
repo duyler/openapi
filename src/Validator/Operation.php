@@ -20,7 +20,7 @@ final readonly class Operation implements Stringable
     ) {
         preg_match_all('/\{[^}]+\}/', $this->path, $matches);
 
-        $this->placeholderCount = count($matches[0] ?? []);
+        $this->placeholderCount = count($matches[0]);
     }
 
     #[Override]

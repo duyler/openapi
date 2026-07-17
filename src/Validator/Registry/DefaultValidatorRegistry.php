@@ -16,10 +16,10 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 use function array_key_exists;
-use function assert;
 
 final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterface
 {
+    /** @var array<class-string<SchemaValidatorInterface>, SchemaValidatorInterface> */
     private readonly array $validators;
 
     public function __construct(
@@ -31,35 +31,7 @@ final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterf
         private readonly ?EventDispatcherInterface $eventDispatcher = null,
         private readonly RegexValidator $regexValidator = new RegexValidator(),
     ) {
-        $validators = $this->createValidators();
-        foreach ($validators as $validator) {
-            assert($validator instanceof SchemaValidatorInterface);
-        }
-        $this->validators = $validators;
-    }
-
-    #[Override]
-    public function getValidator(string $type): SchemaValidatorInterface
-    {
-        if (false === array_key_exists($type, $this->validators)) {
-            throw new UnknownValidatorException($type);
-        }
-
-        $validator = $this->validators[$type];
-        assert($validator instanceof SchemaValidatorInterface);
-
-        return $validator;
-    }
-
-    #[Override]
-    public function getAllValidators(): iterable
-    {
-        return $this->validators;
-    }
-
-    private function createValidators(): array
-    {
-        return new ValidatorFactory(
+        $this->validators = new ValidatorFactory(
             $this->pool,
             $this->formatRegistry,
             $this->strictFormats,
@@ -69,5 +41,21 @@ final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterf
             $this,
             $this->regexValidator,
         )->createAll();
+    }
+
+    #[Override]
+    public function getValidator(string $type): SchemaValidatorInterface
+    {
+        if (false === array_key_exists($type, $this->validators)) {
+            throw new UnknownValidatorException($type);
+        }
+
+        return $this->validators[$type];
+    }
+
+    #[Override]
+    public function getAllValidators(): iterable
+    {
+        return $this->validators;
     }
 }

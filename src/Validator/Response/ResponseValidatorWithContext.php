@@ -64,11 +64,11 @@ final readonly class ResponseValidatorWithContext
 
         $this->statusCodeValidator->validate($statusCode, $responses);
 
-        $responseDefinition = $responses[(string) $statusCode]
-            ?? $responses[$this->getRange($statusCode)]
-            ?? $responses['default'];
-
-        $responseDefinition = $this->resolveResponseRef($responseDefinition);
+        $responseDefinition = $this->resolveResponseRef(
+            $responses[(string) $statusCode]
+                ?? $responses[$this->getRange($statusCode)]
+                ?? $responses['default'],
+        );
 
         if (false === ($responseDefinition instanceof Response)) {
             throw new UndefinedResponseException($statusCode, array_keys($responses));

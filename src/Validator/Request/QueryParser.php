@@ -29,8 +29,6 @@ final readonly class QueryParser
     private const int MAX_QUERY_PAIRS = 1000;
 
     /**
-     * Parse query string into parameters.
-     *
      * Uses an explicit segment-based parser (insertNested + assignSegments) instead
      * of parse_str because parse_str converts dots in keys to underscores
      * (e.g. `user.name` becomes `user_name`) and keeps only the last value for
@@ -81,8 +79,6 @@ final readonly class QueryParser
     }
 
     /**
-     * Handle explode parameter format
-     *
      * @param array<int, scalar> $values
      * @return array<int, scalar>|string
      */

@@ -189,10 +189,7 @@ final class RefResolver implements RefResolverInterface
 
         $resolved = $this->resolveParameter($parameter->ref, $document);
 
-        $description = $resolved->description;
-        if (null !== $parameter->refDescription) {
-            $description = $parameter->refDescription;
-        }
+        $description = $parameter->refDescription ?? $resolved->description;
 
         return new Parameter(
             ref: null,
@@ -225,15 +222,9 @@ final class RefResolver implements RefResolverInterface
 
         $resolved = $this->resolveResponse($response->ref, $document);
 
-        $summary = $resolved->summary;
-        if (null !== $response->refSummary) {
-            $summary = $response->refSummary;
-        }
+        $summary = $response->refSummary ?? $resolved->summary;
 
-        $description = $resolved->description;
-        if (null !== $response->refDescription) {
-            $description = $response->refDescription;
-        }
+        $description = $response->refDescription ?? $resolved->description;
 
         return new Response(
             ref: null,

@@ -45,10 +45,9 @@ final readonly class SchemaCache
             return null;
         }
 
-        $document = $value;
-        assert($document instanceof OpenApiDocument);
+        assert($value instanceof OpenApiDocument);
 
-        return $document;
+        return $value;
     }
 
     public function set(string $key, OpenApiDocument $document): void

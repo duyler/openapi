@@ -65,10 +65,8 @@ final readonly class QueryStringValidator
 
     private function validateQueryStringParameter(string $queryString, Parameter $parameter): void
     {
-        $name = $parameter->name ?? 'unknown';
-
         if ('' === $queryString && $parameter->required) {
-            throw new MissingParameterException('querystring', $name);
+            throw new MissingParameterException('querystring', $parameter->name ?? 'unknown');
         }
 
         if ('' === $queryString) {

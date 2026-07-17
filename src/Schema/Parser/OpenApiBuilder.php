@@ -440,7 +440,11 @@ abstract class OpenApiBuilder implements SchemaParserInterface
      */
     protected function checkSchemaDeprecations(array $data): void
     {
-        if ($this->shouldWarnDeprecation() && isset($data['example'])) {
+        if (false === $this->shouldWarnDeprecation()) {
+            return;
+        }
+
+        if (isset($data['example'])) {
             $this->deprecationLogger->warn(
                 'example',
                 'Schema Object',
@@ -449,7 +453,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             );
         }
 
-        if ($this->shouldWarnDeprecation() && isset($data['nullable']) && $data['nullable']) {
+        if (isset($data['nullable']) && $data['nullable']) {
             $this->deprecationLogger->warn(
                 'nullable',
                 'Schema Object',
@@ -458,7 +462,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             );
         }
 
-        if ($this->shouldWarnDeprecation() && isset($data['exclusiveMinimum']) && is_bool($data['exclusiveMinimum'])) {
+        if (isset($data['exclusiveMinimum']) && is_bool($data['exclusiveMinimum'])) {
             $this->deprecationLogger->warn(
                 'exclusiveMinimum (bool)',
                 'Schema Object',
@@ -467,7 +471,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             );
         }
 
-        if ($this->shouldWarnDeprecation() && isset($data['exclusiveMaximum']) && is_bool($data['exclusiveMaximum'])) {
+        if (isset($data['exclusiveMaximum']) && is_bool($data['exclusiveMaximum'])) {
             $this->deprecationLogger->warn(
                 'exclusiveMaximum (bool)',
                 'Schema Object',
@@ -536,21 +540,23 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
     protected function buildXml(array $data): Xml
     {
-        if ($this->shouldWarnDeprecation() && isset($data['attribute'])) {
-            $this->deprecationLogger->warn(
-                'attribute',
-                'XML Object',
-                self::DEPRECATION_VERSION,
-                'nodeType: "attribute"',
-            );
-        }
+        if ($this->shouldWarnDeprecation()) {
+            if (isset($data['attribute'])) {
+                $this->deprecationLogger->warn(
+                    'attribute',
+                    'XML Object',
+                    self::DEPRECATION_VERSION,
+                    'nodeType: "attribute"',
+                );
+            }
 
-        if ($this->shouldWarnDeprecation() && isset($data['wrapped'])) {
-            $this->deprecationLogger->warn(
-                'wrapped',
-                'XML Object',
-                self::DEPRECATION_VERSION,
-            );
+            if (isset($data['wrapped'])) {
+                $this->deprecationLogger->warn(
+                    'wrapped',
+                    'XML Object',
+                    self::DEPRECATION_VERSION,
+                );
+            }
         }
 
         $xml = new Xml(

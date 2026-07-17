@@ -7,7 +7,6 @@ namespace Duyler\OpenApi\Validator\Request;
 use Duyler\OpenApi\Validator\Exception\PathMismatchException;
 
 use function is_string;
-use function assert;
 
 final readonly class PathParser
 {
@@ -33,9 +32,8 @@ final readonly class PathParser
      */
     public function tryMatchPath(string $requestPath, string $template): ?array
     {
-        $regex = $this->templateToRegex($template);
-
-        assert('' !== $regex);
+        /** @var non-empty-string $regex */
+        $regex = $this->pathRegexCache->getOrCompute($template);
 
         $matches = [];
         $matchResult = preg_match($regex, $requestPath, $matches);
@@ -52,10 +50,5 @@ final readonly class PathParser
         }
 
         return $params;
-    }
-
-    private function templateToRegex(string $template): string
-    {
-        return $this->pathRegexCache->getOrCompute($template);
     }
 }

@@ -34,6 +34,9 @@ final readonly class ItemsValidator extends AbstractSchemaValidator
 
         $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
         $validator = $this->createSchemaValidator();
+        $nullableAsType = $context?->nullableAsType ?? true;
+        $allowNull = $nullableAsType && ($schema->items->nullable
+            || SchemaValueNormalizer::typeIncludesNull($schema->items->type));
 
         foreach ($data as $index => $item) {
             /** @var int $index */
@@ -41,11 +44,7 @@ final readonly class ItemsValidator extends AbstractSchemaValidator
                 continue;
             }
 
-            $nullableAsType = $context?->nullableAsType ?? true;
-
             try {
-                $allowNull = $nullableAsType && ($schema->items->nullable
-                    || SchemaValueNormalizer::typeIncludesNull($schema->items->type));
                 $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
 
                 if (null === $context) {

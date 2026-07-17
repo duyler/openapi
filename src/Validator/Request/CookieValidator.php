@@ -18,8 +18,6 @@ final readonly class CookieValidator extends AbstractParameterValidator
     private const int MAX_COOKIE_PAIRS = 100;
 
     /**
-     * Parse Cookie header into name=>value pairs.
-     *
      * Cookie pairs without `=` (e.g. flag-style cookies) are preserved with an
      * empty string value rather than dropped, for tolerant parsing of malformed
      * Cookie headers. Per RFC 6265 §4.1.1 cookie-pair should contain `=`, but

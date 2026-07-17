@@ -76,7 +76,7 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
     {
         $isValid = match ($expectedMediaType) {
             'application/json' => $this->isValidJson($data),
-            'application/xml', 'text/xml' => $this->isValidXml($data),
+            'application/xml', 'text/xml', 'image/svg+xml' => $this->isValidXml($data),
             'text/plain' => $this->isValidTextPlain($data),
             'text/html' => $this->isValidHtml($data),
             'application/pdf' => $this->isValidPdf($data),
@@ -84,7 +84,6 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
             'image/png' => $this->isValidPng($data),
             'image/jpeg' => $this->isValidJpeg($data),
             'image/gif' => $this->isValidGif($data),
-            'image/svg+xml' => $this->isValidSvg($data),
             'multipart/form-data' => $this->isValidMultipartFormData($data),
             'application/x-www-form-urlencoded' => $this->isValidUrlEncoded($data),
             default => $this->isRecognizedMediaType($expectedMediaType),
@@ -163,11 +162,6 @@ final readonly class ContentMediaTypeValidator implements SchemaValidatorInterfa
     private function isValidGif(string $data): bool
     {
         return str_starts_with($data, 'GIF87a') || str_starts_with($data, 'GIF89a');
-    }
-
-    private function isValidSvg(string $data): bool
-    {
-        return $this->isValidXml($data);
     }
 
     private function isValidMultipartFormData(string $data): bool

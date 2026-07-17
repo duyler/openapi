@@ -15,13 +15,11 @@ final readonly class DetailedFormatter implements ErrorFormatterInterface
     #[Override]
     public function format(ValidationErrorInterface $error): string
     {
-        $breadcrumb = $error->dataPath();
-        $message = $error->message();
         $details = $this->getDetails($error);
         $suggestion = $error->suggestion();
 
-        $output = sprintf("Error at %s:\n", $breadcrumb);
-        $output .= sprintf("  Message: %s\n", $message);
+        $output = sprintf("Error at %s:\n", $error->dataPath());
+        $output .= sprintf("  Message: %s\n", $error->message());
 
         if ([] !== $details) {
             $output .= "  Details:\n";

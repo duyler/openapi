@@ -423,9 +423,8 @@ final readonly class ValidatorCompiler
             return '';
         }
 
-        $escapedVar = '$data' === $dataVar ? "\$data" : $dataVar;
         $safeVarForError = addslashes($dataVar);
-        $code = sprintf("        if (false === is_array(%s)) {\n", $escapedVar);
+        $code = sprintf("        if (false === is_array(%s)) {\n", $dataVar);
         $code .= sprintf("            throw new \\RuntimeException('Expected object for %s');\n", $safeVarForError);
         $code .= "        }\n\n";
 
@@ -542,7 +541,7 @@ final readonly class ValidatorCompiler
             $code .= "        }\n\n";
         }
 
-        if (null !== $schema->uniqueItems && $schema->uniqueItems) {
+        if (true === $schema->uniqueItems) {
             // JSON Schema draft 2020-12 §6.4.3 / §4.2.3 equality: items are
             // duplicates when their JSON serializations match. This mirrors
             // the runtime ArrayLengthValidator behaviour, including numeric

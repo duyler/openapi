@@ -31,8 +31,9 @@ final readonly class PropertyNamesValidator extends AbstractSchemaValidator
             );
         }
 
+        $validator = $this->createSchemaValidator();
+
         foreach (array_keys($data) as $propertyName) {
-            $validator = $this->createSchemaValidator();
             $validator->validate($propertyName, $schema->propertyNames, $context);
         }
     }

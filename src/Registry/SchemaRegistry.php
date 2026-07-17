@@ -41,7 +41,7 @@ final readonly class SchemaRegistry
 
             $values = array_values($versions);
 
-            return $values[count($values) - 1] ?? null;
+            return $values[count($values) - 1];
         }
 
         return $this->schemas[$name][$version] ?? null;

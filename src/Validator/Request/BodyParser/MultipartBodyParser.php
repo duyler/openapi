@@ -47,7 +47,8 @@ final readonly class MultipartBodyParser
         $sections = explode($delimiter, $body);
 
         foreach ($sections as $section) {
-            if ('' === trim($section) || '--' === trim($section)) {
+            $trimmed = trim($section);
+            if ('' === $trimmed || '--' === $trimmed) {
                 continue;
             }
 

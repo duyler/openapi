@@ -27,11 +27,9 @@ final class SimpleFormatter implements ErrorFormatterInterface
     #[Override]
     public function formatMultiple(array $errors): string
     {
-        $lines = array_map(
+        return implode("\n", array_map(
             $this->format(...),
             $errors,
-        );
-
-        return implode("\n", $lines);
+        ));
     }
 }

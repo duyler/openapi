@@ -25,12 +25,13 @@ final readonly class PatternPropertiesValidator extends AbstractSchemaValidator
             return;
         }
 
+        $regexValidator = $this->regexValidator();
+
         foreach ($schema->patternProperties as $pattern => $propertySchema) {
             if ('' === $pattern) {
                 continue;
             }
 
-            $regexValidator = $this->regexValidator();
             $regexValidator->validate(
                 $regexValidator->normalize($pattern),
                 "pattern property '{$pattern}'",
@@ -48,7 +49,7 @@ final readonly class PatternPropertiesValidator extends AbstractSchemaValidator
                     continue;
                 }
 
-                $normalizedPattern = $this->regexValidator()->normalize($pattern);
+                $normalizedPattern = $regexValidator->normalize($pattern);
                 assert('' !== $normalizedPattern);
 
                 $result = preg_match($normalizedPattern, $propertyName);

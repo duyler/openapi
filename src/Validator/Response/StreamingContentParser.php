@@ -130,27 +130,7 @@ final readonly class StreamingContentParser
         }
 
         foreach ($lines as $line) {
-            if ('' === $line) {
-                if ([] !== $currentEvent) {
-                    $events[] = $this->formatSseEvent($currentEvent);
-                    $currentEvent = [];
-                }
-                continue;
-            }
-
-            if (str_starts_with($line, ':')) {
-                continue;
-            }
-
-            $colonPos = strpos($line, ':');
-            if (false !== $colonPos) {
-                $field = substr($line, 0, $colonPos);
-                $rawValue = substr($line, $colonPos + 1);
-                $value = str_starts_with($rawValue, self::SSE_FIELD_SPACE)
-                    ? substr($rawValue, 1)
-                    : $rawValue;
-                $this->applySseField($currentEvent, $field, $value);
-            }
+            $this->processSseLine($line, $currentEvent, $events);
         }
 
         if ([] !== $currentEvent) {
@@ -270,9 +250,7 @@ final readonly class StreamingContentParser
             }
 
             if (false === $bomStripped) {
-                if (str_starts_with($chunk, self::UTF8_BOM)) {
-                    $chunk = substr($chunk, strlen(self::UTF8_BOM));
-                }
+                $chunk = $this->stripBom($chunk);
                 $bomStripped = true;
             }
 
@@ -319,9 +297,7 @@ final readonly class StreamingContentParser
             }
 
             if (false === $bomStripped) {
-                if (str_starts_with($chunk, self::UTF8_BOM)) {
-                    $chunk = substr($chunk, strlen(self::UTF8_BOM));
-                }
+                $chunk = $this->stripBom($chunk);
                 $bomStripped = true;
             }
 
@@ -408,9 +384,7 @@ final readonly class StreamingContentParser
             }
 
             if (false === $bomStripped) {
-                if (str_starts_with($chunk, self::UTF8_BOM)) {
-                    $chunk = substr($chunk, strlen(self::UTF8_BOM));
-                }
+                $chunk = $this->stripBom($chunk);
                 $bomStripped = true;
             }
 

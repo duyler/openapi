@@ -37,11 +37,10 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
     ) {
         $this->negotiator = new ContentTypeNegotiator();
         $this->exampleValidator = new ExampleValidator();
-        $effectiveFormatRegistry = $this->dependencies->formatRegistry;
 
         $this->regularSchemaValidator = new SchemaValidator(
             $this->dependencies->pool,
-            $effectiveFormatRegistry,
+            $this->dependencies->formatRegistry,
             strictFormats: $this->configuration->strictFormats,
             reportDeprecated: $this->configuration->reportDeprecated,
             logger: $this->dependencies->logger,

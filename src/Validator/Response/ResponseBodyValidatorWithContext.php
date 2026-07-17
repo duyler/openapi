@@ -41,11 +41,10 @@ final readonly class ResponseBodyValidatorWithContext
         $this->typeCoercer = new ResponseTypeCoercer();
         $this->streamingParser = new StreamingContentParser($this->dependencies->logger);
         $this->exampleValidator = new ExampleValidator();
-        $effectiveFormatRegistry = $this->dependencies->formatRegistry;
 
         $this->regularSchemaValidator = new SchemaValidator(
             $this->dependencies->pool,
-            $effectiveFormatRegistry,
+            $this->dependencies->formatRegistry,
             strictFormats: $this->configuration->strictFormats,
             reportDeprecated: $this->configuration->reportDeprecated,
             logger: $this->dependencies->logger,
@@ -174,9 +173,6 @@ final readonly class ResponseBodyValidatorWithContext
     }
 
     /**
-     * Validate data against a schema, choosing the appropriate validator
-     * based on discriminator or $ref presence.
-     *
      * @param array<int|string, mixed>|int|string|float|bool|null $data
      */
     private function validateAgainstSchema(mixed $data, Schema $schema): void
