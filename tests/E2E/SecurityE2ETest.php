@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\E2E;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
 use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
@@ -276,6 +277,9 @@ YAML;
                 $validationSucceeded = true;
             } catch (AbstractValidationError $e) {
                 $errorKeyword = $e->keyword();
+                $errorMessage = $e->getMessage();
+            } catch (InvalidDataTypeException $e) {
+                $errorKeyword = 'type';
                 $errorMessage = $e->getMessage();
             } catch (ValidationException $e) {
                 $errorMessage = $e->getMessage();

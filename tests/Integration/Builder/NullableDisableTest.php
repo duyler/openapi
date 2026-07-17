@@ -8,6 +8,7 @@ use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 
 final class NullableDisableTest extends TestCase
@@ -59,7 +60,7 @@ YAML;
                 'name' => null,
             ])));
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(InvalidDataTypeException::class);
         $validator->validateResponse($response, $operation);
     }
 
@@ -145,7 +146,7 @@ YAML;
                 'value1', null, 'value3',
             ])));
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(InvalidDataTypeException::class);
         $validator->validateResponse($response, $operation);
     }
 
@@ -234,7 +235,7 @@ YAML;
                 'user' => ['email' => null],
             ])));
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(InvalidDataTypeException::class);
         $validator->validateResponse($response, $operation);
     }
 

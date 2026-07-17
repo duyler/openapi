@@ -14,7 +14,6 @@ use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Event\ArrayDispatcher;
 use Duyler\OpenApi\Event\ValidationFinishedEvent;
 use Duyler\OpenApi\Event\ValidationStartedEvent;
-use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Webhook\Exception\UnknownWebhookException;
 use Exception;
@@ -125,7 +124,7 @@ YAML;
     #[Test]
     public function validate_schema_with_integer_constraint_fails(): void
     {
-        $this->expectException(MinimumError::class);
+        $this->expectException(ValidationException::class);
 
         $this->validator->validateSchema(-1, '#/components/schemas/PositiveInt');
     }

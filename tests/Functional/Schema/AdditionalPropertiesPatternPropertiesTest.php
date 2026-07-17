@@ -128,6 +128,13 @@ YAML;
 
         try {
             $this->validator->validateSchema($data, '#/components/schemas/UserProfile');
+        } catch (ValidationException $exception) {
+            foreach ($exception->getErrors() as $error) {
+                if ($error instanceof TypeMismatchError) {
+                    $caught = $error;
+                    break;
+                }
+            }
         } catch (TypeMismatchError $e) {
             $caught = $e;
         }

@@ -99,7 +99,7 @@ YAML;
         return [
             'unclosed bracket' => ['{invalid', JsonException::class],
             'closing without opening' => ['}', JsonException::class],
-            'null instead of object' => ['null', TypeMismatchError::class],
+            'null instead of object' => ['null', ValidationException::class],
             'missing value after colon' => ['{"key":}', JsonException::class],
             'trailing comma' => ['{"a":1,}', JsonException::class],
             'whitespace only' => ['   ', MissingRequestBodyException::class],
@@ -318,7 +318,8 @@ XML;
             ->withHeader('Content-Type', 'application/xml')
             ->withBody($this->psrFactory->createStream('<root><unclosed>'));
 
-        $this->expectException(TypeMismatchError::class);
+        // SchemaValidatorWithContext wraps the underlying TypeMismatchError in a ValidationException.
+        $this->expectException(ValidationException::class);
         $validator->validateRequest($request);
     }
 

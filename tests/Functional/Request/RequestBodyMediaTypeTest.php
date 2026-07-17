@@ -177,6 +177,13 @@ YAML;
 
         try {
             $validator->validateRequest($request);
+        } catch (ValidationException $exception) {
+            foreach ($exception->getErrors() as $error) {
+                if ($error instanceof TypeMismatchError) {
+                    $thrown = $error;
+                    break;
+                }
+            }
         } catch (TypeMismatchError $error) {
             $thrown = $error;
         }

@@ -73,6 +73,7 @@ final readonly class ValidationContext
         $this->statelessValidators = new StatelessValidatorRegistry(
             $this->pool,
             $this->formatRegistry,
+            $this->strictFormats,
             $this->reportDeprecated,
             $this->logger,
             $this->eventDispatcher,
@@ -97,13 +98,13 @@ final readonly class ValidationContext
             ),
         );
 
-        $this->requestValidator = $this->buildRequestValidator();
-        $this->responseValidator = $this->buildResponseValidator();
         $this->schemaValidatorWithContext = new SchemaValidatorWithContext(
             $this->document,
             $this->schemaValidatorDependencies,
             $this->buildValidatorConfiguration(),
         );
+        $this->requestValidator = $this->buildRequestValidator();
+        $this->responseValidator = $this->buildResponseValidator();
     }
 
     private function buildValidatorConfiguration(): ValidatorConfiguration

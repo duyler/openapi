@@ -16,9 +16,16 @@ use Override;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 
 use function assert;
 
+/**
+ * @internal Legacy stateless JSON Schema dispatcher. Retained only as the recursion engine
+ *           invoked by {@see AbstractSchemaValidator::createSchemaValidator()} and by parameter
+ *           validators (Path/Query/Headers/Cookie) pending task 14b migration. The canonical
+ *           top-level validator is {@see SchemaValidatorWithContext}.
+ */
 final class SchemaValidator implements SchemaValidatorInterface
 {
     private ?ValidatorRegistryInterface $cachedRegistry = null;

@@ -11,14 +11,12 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
-use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Example\ExampleValidator;
 use Duyler\OpenApi\Validator\Example\ValidatesExamplesTrait;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
 use Duyler\OpenApi\Validator\Request\MediaTypeMatcher;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
-use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\TypeGuarantor;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Psr\Http\Message\StreamInterface;
@@ -29,7 +27,6 @@ final readonly class ResponseBodyValidatorWithContext
 {
     use ValidatesExamplesTrait;
 
-    private SchemaValidator $regularSchemaValidator;
     private SchemaValidatorWithContext $contextSchemaValidator;
     private readonly ContentTypeNegotiator $negotiator;
     private readonly ResponseTypeCoercer $typeCoercer;
@@ -50,16 +47,6 @@ final readonly class ResponseBodyValidatorWithContext
             strictStreaming: $this->configuration->strictStreaming,
         );
         $this->exampleValidator = new ExampleValidator();
-
-        $this->regularSchemaValidator = new SchemaValidator(
-            $this->dependencies->pool,
-            $this->dependencies->formatRegistry,
-            strictFormats: $this->configuration->strictFormats,
-            reportDeprecated: $this->configuration->reportDeprecated,
-            logger: $this->dependencies->logger,
-            eventDispatcher: $this->dependencies->eventDispatcher,
-            pregExecutor: $resolvedPregExecutor,
-        );
 
         $this->contextSchemaValidator = new SchemaValidatorWithContext(
             $this->document,
@@ -189,24 +176,6 @@ final readonly class ResponseBodyValidatorWithContext
      */
     private function validateAgainstSchema(mixed $data, Schema $schema): void
     {
-        $context = ValidationContext::create(
-            $this->dependencies->pool,
-            $this->dependencies->errorFormatter,
-            $this->configuration->nullableAsType,
-            $this->configuration->emptyArrayStrategy,
-            ValidatorMode::Response,
-        );
-
-        $hasDiscriminator = null !== $schema->discriminator
-            || $this->dependencies->refResolver->schemaHasDiscriminator($schema, $this->document);
-        $hasRef = $this->dependencies->refResolver->schemaHasRef($schema);
-
-        if (false === ($hasDiscriminator || $hasRef)) {
-            $this->regularSchemaValidator->validate($data, $schema, $context);
-
-            return;
-        }
-
         $this->contextSchemaValidator->validate($data, $schema, ValidatorMode::Response);
     }
 }

@@ -359,6 +359,12 @@ YAML;
     ): AbstractValidationError {
         try {
             $validator->validateRequest($request);
+        } catch (ValidationException $exception) {
+            foreach ($exception->getErrors() as $error) {
+                if ($error instanceof AbstractValidationError) {
+                    return $error;
+                }
+            }
         } catch (AbstractValidationError $error) {
             return $error;
         }

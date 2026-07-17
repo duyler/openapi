@@ -15,9 +15,16 @@ use Override;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 
 use function array_key_exists;
 
+/**
+ * @internal Legacy registry used only by {@see SchemaValidator} (the stateless recursion dispatcher).
+ *           The canonical validator {@see SchemaValidatorWithContext}
+ *           uses {@see StatelessValidatorRegistry} instead.
+ */
 final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterface
 {
     /** @var array<class-string<SchemaValidatorInterface>, SchemaValidatorInterface> */

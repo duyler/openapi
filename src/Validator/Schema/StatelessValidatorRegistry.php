@@ -21,6 +21,7 @@ final readonly class StatelessValidatorRegistry
     public function __construct(
         ValidatorPool $pool,
         FormatRegistry $formatRegistry,
+        bool $strictFormats = false,
         bool $reportDeprecated = false,
         LoggerInterface $logger = new NullLogger(),
         ?EventDispatcherInterface $eventDispatcher = null,
@@ -30,6 +31,7 @@ final readonly class StatelessValidatorRegistry
         $this->validators = new ValidatorFactory(
             $pool,
             $formatRegistry,
+            strictFormats: $strictFormats,
             logger: $logger,
             reportDeprecated: $reportDeprecated,
             eventDispatcher: $eventDispatcher,
