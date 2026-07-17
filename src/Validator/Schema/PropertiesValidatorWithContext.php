@@ -28,7 +28,17 @@ final readonly class PropertiesValidatorWithContext
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
     ) {}
 
-    public function validateWithContext(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
+    public function validateWithContext(array $data, Schema $schema, ValidationContext $context): void
+    {
+        $this->validate($data, $schema, $context, true);
+    }
+
+    public function validateWithContextIgnoringDiscriminator(array $data, Schema $schema, ValidationContext $context): void
+    {
+        $this->validate($data, $schema, $context, false);
+    }
+
+    private function validate(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
     {
         if (null === $schema->properties || [] === $schema->properties) {
             return;
@@ -50,7 +60,11 @@ final readonly class PropertiesValidatorWithContext
 
                 try {
                     $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
-                    $rootValidator->validateWithContext($value, $propertySchema, $context, $useDiscriminator);
+                    if ($useDiscriminator) {
+                        $rootValidator->validateWithContext($value, $propertySchema, $context);
+                    } else {
+                        $rootValidator->validateWithContextIgnoringDiscriminator($value, $propertySchema, $context);
+                    }
                 } finally {
                     $context->leaveBreadcrumb();
                 }

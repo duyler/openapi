@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+use Duyler\OpenApi\Validator\Format\String\Enum\UriScheme;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Override;
 
 use function filter_var;
-use function in_array;
 use function sprintf;
 use function strtolower;
 
@@ -26,8 +26,6 @@ final readonly class UriValidator extends AbstractStringFormatValidator
         . '(?<query>\?[^\s#]*)?'
         . '(?<fragment>#[^\s]*)?'
         . '$/';
-
-    private const array ALLOWED_SCHEMES = ['http', 'https', 'ftp', 'ftps', 'file', 'mailto', 'tel', 'data'];
 
     private const int MAX_PORT = 65535;
 
@@ -49,7 +47,7 @@ final readonly class UriValidator extends AbstractStringFormatValidator
         }
 
         $scheme = strtolower((string) ($m['scheme'] ?? ''));
-        if (false === in_array($scheme, self::ALLOWED_SCHEMES, true)) {
+        if (null === UriScheme::tryFrom($scheme)) {
             throw new InvalidFormatException('uri', $data, sprintf('Unsupported URI scheme: %s', $scheme));
         }
 

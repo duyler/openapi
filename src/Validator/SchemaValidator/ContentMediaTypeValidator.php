@@ -8,12 +8,12 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\JsonDepthLimit;
 use Duyler\OpenApi\Validator\LibxmlSecuredContext;
+use Duyler\OpenApi\Validator\SchemaValidator\Enum\ContentMediaType;
 use JsonException;
 use Override;
 use SimpleXMLElement;
 
 use function explode;
-use function in_array;
 use function is_string;
 use function str_starts_with;
 use function substr_count;
@@ -30,22 +30,6 @@ final readonly class ContentMediaTypeValidator implements KeywordApplicable
     private const int JSON_MAX_DEPTH = JsonDepthLimit::Untrusted->value;
 
     private const int MAX_URLENCODED_PAIRS = 1000;
-
-    private const array SUPPORTED_MEDIA_TYPES = [
-        'application/json',
-        'application/xml',
-        'text/plain',
-        'text/html',
-        'text/xml',
-        'image/svg+xml',
-        'multipart/form-data',
-        'application/pdf',
-        'application/octet-stream',
-        'image/png',
-        'image/jpeg',
-        'image/gif',
-        'application/x-www-form-urlencoded',
-    ];
 
     private const int XML_PARSE_OPTIONS = LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING;
 
@@ -207,6 +191,6 @@ final readonly class ContentMediaTypeValidator implements KeywordApplicable
 
     private function isRecognizedMediaType(string $mediaType): bool
     {
-        return in_array($mediaType, self::SUPPORTED_MEDIA_TYPES, true);
+        return null !== ContentMediaType::tryFrom($mediaType);
     }
 }

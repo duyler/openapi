@@ -146,7 +146,7 @@ final class AbstractCoercerTest extends TestCase
     {
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->exposedCoerceToBoolean('invalid', true);
+        $this->coercer->exposedCoerceToBooleanStrict('invalid');
     }
 
     #[Test]
@@ -154,19 +154,19 @@ final class AbstractCoercerTest extends TestCase
     {
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->exposedCoerceToBoolean('admin', true);
+        $this->coercer->exposedCoerceToBooleanStrict('admin');
     }
 
     #[Test]
     public function coerce_to_boolean_strict_accepts_true_string(): void
     {
-        $this->assertTrue($this->coercer->exposedCoerceToBoolean('true', true));
+        $this->assertTrue($this->coercer->exposedCoerceToBooleanStrict('true'));
     }
 
     #[Test]
     public function coerce_to_boolean_strict_accepts_false_string(): void
     {
-        $this->assertFalse($this->coercer->exposedCoerceToBoolean('false', true));
+        $this->assertFalse($this->coercer->exposedCoerceToBooleanStrict('false'));
     }
 
     #[Test]
@@ -174,13 +174,13 @@ final class AbstractCoercerTest extends TestCase
     {
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->exposedCoerceToBoolean('', true);
+        $this->coercer->exposedCoerceToBooleanStrict('');
     }
 
     #[Test]
     public function coerce_to_boolean_strict_accepts_uppercase_true(): void
     {
-        $result = $this->coercer->exposedCoerceToBoolean('TRUE', true);
+        $result = $this->coercer->exposedCoerceToBooleanStrict('TRUE');
 
         $this->assertSame(true, $result);
     }
@@ -188,13 +188,13 @@ final class AbstractCoercerTest extends TestCase
     #[Test]
     public function coerce_to_boolean_non_strict_returns_true_for_invalid_string(): void
     {
-        $this->assertTrue($this->coercer->exposedCoerceToBoolean('invalid', false));
+        $this->assertTrue($this->coercer->exposedCoerceToBoolean('invalid'));
     }
 
     #[Test]
     public function coerce_to_boolean_non_strict_returns_false_for_empty_string(): void
     {
-        $this->assertFalse($this->coercer->exposedCoerceToBoolean('', false));
+        $this->assertFalse($this->coercer->exposedCoerceToBoolean(''));
     }
 
     #[Test]
@@ -232,7 +232,7 @@ final class AbstractCoercerTest extends TestCase
     {
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->exposedCoerceToInteger('abc', true);
+        $this->coercer->exposedCoerceToIntegerStrict('abc');
     }
 
     #[Test]
@@ -240,13 +240,13 @@ final class AbstractCoercerTest extends TestCase
     {
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->exposedCoerceToInteger('3.14', true);
+        $this->coercer->exposedCoerceToIntegerStrict('3.14');
     }
 
     #[Test]
     public function coerce_to_integer_scientific_notation_non_strict_returns_as_is(): void
     {
-        $result = $this->coercer->exposedCoerceToInteger('1e5', false);
+        $result = $this->coercer->exposedCoerceToInteger('1e5');
 
         $this->assertSame('1e5', $result);
     }
@@ -256,13 +256,13 @@ final class AbstractCoercerTest extends TestCase
     {
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->exposedCoerceToInteger('1e5', true);
+        $this->coercer->exposedCoerceToIntegerStrict('1e5');
     }
 
     #[Test]
     public function coerce_to_integer_trailing_chars_non_strict_returns_as_is(): void
     {
-        $result = $this->coercer->exposedCoerceToInteger('12abc', false);
+        $result = $this->coercer->exposedCoerceToInteger('12abc');
 
         $this->assertSame('12abc', $result);
     }
@@ -272,13 +272,13 @@ final class AbstractCoercerTest extends TestCase
     {
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->exposedCoerceToInteger('12abc', true);
+        $this->coercer->exposedCoerceToIntegerStrict('12abc');
     }
 
     #[Test]
     public function coerce_to_integer_hex_notation_non_strict_returns_as_is(): void
     {
-        $result = $this->coercer->exposedCoerceToInteger('0x10', false);
+        $result = $this->coercer->exposedCoerceToInteger('0x10');
 
         $this->assertSame('0x10', $result);
     }
@@ -288,13 +288,13 @@ final class AbstractCoercerTest extends TestCase
     {
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->exposedCoerceToInteger('0x10', true);
+        $this->coercer->exposedCoerceToIntegerStrict('0x10');
     }
 
     #[Test]
     public function coerce_to_integer_empty_string_non_strict_returns_as_is(): void
     {
-        $result = $this->coercer->exposedCoerceToInteger('', false);
+        $result = $this->coercer->exposedCoerceToInteger('');
 
         $this->assertSame('', $result);
     }
@@ -304,13 +304,13 @@ final class AbstractCoercerTest extends TestCase
     {
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->exposedCoerceToInteger('', true);
+        $this->coercer->exposedCoerceToIntegerStrict('');
     }
 
     #[Test]
     public function coerce_to_integer_whole_float_non_strict_returns_int(): void
     {
-        $result = $this->coercer->exposedCoerceToInteger(3.0, false);
+        $result = $this->coercer->exposedCoerceToInteger(3.0);
 
         $this->assertSame(3, $result);
     }
@@ -318,7 +318,7 @@ final class AbstractCoercerTest extends TestCase
     #[Test]
     public function coerce_to_integer_fractional_float_non_strict_returns_as_is(): void
     {
-        $result = $this->coercer->exposedCoerceToInteger(3.14, false);
+        $result = $this->coercer->exposedCoerceToInteger(3.14);
 
         $this->assertSame(3.14, $result);
     }
@@ -328,7 +328,7 @@ final class AbstractCoercerTest extends TestCase
     {
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->exposedCoerceToInteger(3.14, true);
+        $this->coercer->exposedCoerceToIntegerStrict(3.14);
     }
 
     #[Test]
@@ -347,7 +347,7 @@ final class AbstractCoercerTest extends TestCase
     #[Test]
     public function coerce_to_integer_overflow_non_strict_returns_string_as_is(): void
     {
-        $result = $this->coercer->exposedCoerceToInteger('99999999999999999999', false);
+        $result = $this->coercer->exposedCoerceToInteger('99999999999999999999');
 
         $this->assertSame('99999999999999999999', $result);
     }
@@ -357,7 +357,7 @@ final class AbstractCoercerTest extends TestCase
     {
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->exposedCoerceToInteger('99999999999999999999', true);
+        $this->coercer->exposedCoerceToIntegerStrict('99999999999999999999');
     }
 
     #[Test]
@@ -391,13 +391,13 @@ final class AbstractCoercerTest extends TestCase
     {
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->exposedCoerceToNumber('abc', true);
+        $this->coercer->exposedCoerceToNumberStrict('abc');
     }
 
     #[Test]
     public function coerce_to_number_trailing_chars_non_strict_returns_as_is(): void
     {
-        $result = $this->coercer->exposedCoerceToNumber('12abc', false);
+        $result = $this->coercer->exposedCoerceToNumber('12abc');
 
         $this->assertSame('12abc', $result);
     }
@@ -407,13 +407,13 @@ final class AbstractCoercerTest extends TestCase
     {
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->exposedCoerceToNumber('12abc', true);
+        $this->coercer->exposedCoerceToNumberStrict('12abc');
     }
 
     #[Test]
     public function coerce_to_number_hex_notation_non_strict_returns_as_is(): void
     {
-        $result = $this->coercer->exposedCoerceToNumber('0x10', false);
+        $result = $this->coercer->exposedCoerceToNumber('0x10');
 
         $this->assertSame('0x10', $result);
     }
@@ -423,13 +423,13 @@ final class AbstractCoercerTest extends TestCase
     {
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->exposedCoerceToNumber('0x10', true);
+        $this->coercer->exposedCoerceToNumberStrict('0x10');
     }
 
     #[Test]
     public function coerce_to_number_empty_string_non_strict_returns_as_is(): void
     {
-        $result = $this->coercer->exposedCoerceToNumber('', false);
+        $result = $this->coercer->exposedCoerceToNumber('');
 
         $this->assertSame('', $result);
     }
@@ -439,7 +439,7 @@ final class AbstractCoercerTest extends TestCase
     {
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->exposedCoerceToNumber('', true);
+        $this->coercer->exposedCoerceToNumberStrict('');
     }
 
     #[Test]
@@ -494,22 +494,37 @@ final readonly class ConcreteCoercer extends AbstractCoercer
         return $this->isValidType($value, $type);
     }
 
-    public function exposedCoerceToBoolean(mixed $value, bool $strict = false): mixed
+    public function exposedCoerceToBoolean(mixed $value): bool|int|string|float|array|null
     {
-        return $this->coerceToBoolean($value, $strict);
+        return $this->coerceToBoolean($value);
     }
 
-    public function exposedCoerceToInteger(mixed $value, bool $strict = false): mixed
+    public function exposedCoerceToBooleanStrict(mixed $value): bool|int|string|float|array|null
     {
-        return $this->coerceToInteger($value, $strict);
+        return $this->coerceToBooleanStrict($value);
     }
 
-    public function exposedCoerceToNumber(mixed $value, bool $strict = false): mixed
+    public function exposedCoerceToInteger(mixed $value): int|string|float|bool|array|null
     {
-        return $this->coerceToNumber($value, $strict);
+        return $this->coerceToInteger($value);
     }
 
-    public function exposedCoerceToString(mixed $value): mixed
+    public function exposedCoerceToIntegerStrict(mixed $value): int|string|float|bool|array|null
+    {
+        return $this->coerceToIntegerStrict($value);
+    }
+
+    public function exposedCoerceToNumber(mixed $value): float|int|string|bool|array|null
+    {
+        return $this->coerceToNumber($value);
+    }
+
+    public function exposedCoerceToNumberStrict(mixed $value): float|int|string|bool|array|null
+    {
+        return $this->coerceToNumberStrict($value);
+    }
+
+    public function exposedCoerceToString(mixed $value): string|int|float|bool|array|null
     {
         return $this->coerceToString($value);
     }

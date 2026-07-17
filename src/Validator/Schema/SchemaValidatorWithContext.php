@@ -67,12 +67,23 @@ final class SchemaValidatorWithContext
         $this->doValidate($data, $schema, $context, true);
     }
 
-    public function validateWithContext(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
+    public function validateWithContext(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context): void
     {
         $context->incrementDepth();
 
         try {
-            $this->doValidate($data, $schema, $context, $useDiscriminator);
+            $this->doValidate($data, $schema, $context, true);
+        } finally {
+            $context->decrementDepth();
+        }
+    }
+
+    public function validateWithContextIgnoringDiscriminator(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context): void
+    {
+        $context->incrementDepth();
+
+        try {
+            $this->doValidate($data, $schema, $context, false);
         } finally {
             $context->decrementDepth();
         }
@@ -86,7 +97,7 @@ final class SchemaValidatorWithContext
         $schema = $this->resolveCompositionRefs($schema, $visited);
 
         if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
-            $this->oneOfValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
+            $this->oneOfValidator->validateWithContext($data, $schema, $context);
 
             return;
         }
@@ -104,7 +115,7 @@ final class SchemaValidatorWithContext
         $this->validateInternal($data, $schema, $context);
 
         if (null === $schema->discriminator && null !== $schema->oneOf) {
-            $this->oneOfValidator->validateWithContext($data, $schema, $context, useDiscriminator: false);
+            $this->oneOfValidator->validateWithContextIgnoringDiscriminator($data, $schema, $context);
         }
 
         $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
@@ -117,11 +128,19 @@ final class SchemaValidatorWithContext
         bool $useDiscriminator,
     ): void {
         if (null !== $schema->properties && [] !== $schema->properties && is_array($data)) {
-            $this->propertiesValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
+            if ($useDiscriminator) {
+                $this->propertiesValidator->validateWithContext($data, $schema, $context);
+            } else {
+                $this->propertiesValidator->validateWithContextIgnoringDiscriminator($data, $schema, $context);
+            }
         }
 
         if (null !== $schema->items && is_array($data)) {
-            $this->itemsValidator->validateWithContext($data, $schema, $context, $useDiscriminator);
+            if ($useDiscriminator) {
+                $this->itemsValidator->validateWithContext($data, $schema, $context);
+            } else {
+                $this->itemsValidator->validateWithContextIgnoringDiscriminator($data, $schema, $context);
+            }
         }
     }
 

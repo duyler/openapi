@@ -69,20 +69,11 @@
   </file>
   <file src="src/Validator/Request/RequestBodyCoercer.php">
     <MixedAssignment>
-      <code><![CDATA[$coerced[$name]]]></code>
-      <code><![CDATA[$coerced[]]]></code>
       <code><![CDATA[$item]]></code>
-    </MixedAssignment>
-  </file>
-  <file src="src/Validator/Response/ResponseBodyValidatorWithContext.php">
-    <MixedAssignment>
-      <code><![CDATA[$parsedBody]]></code>
     </MixedAssignment>
   </file>
   <file src="src/Validator/Response/ResponseTypeCoercer.php">
     <MixedAssignment>
-      <code><![CDATA[$coerced[$name]]]></code>
-      <code><![CDATA[$coerced[]]]></code>
       <code><![CDATA[$item]]></code>
     </MixedAssignment>
   </file>

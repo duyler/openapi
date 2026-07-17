@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Server;
 
 use Duyler\OpenApi\Schema\Model\Server;
+use Duyler\OpenApi\Validator\Server\Dto\ServerVariableOverride;
 use Duyler\OpenApi\Validator\Server\ServerUrlResolver;
 use Duyler\OpenApi\Validator\Server\ServerVariableException;
 use PHPUnit\Framework\Attributes\Test;
@@ -46,7 +47,11 @@ final class ServerUrlResolverTest extends TestCase
             ],
         );
 
-        $result = $this->resolver->resolve($server, ['env' => 'staging', 'version' => '2']);
+        $result = $this->resolver->resolve(
+            $server,
+            new ServerVariableOverride('env', 'staging'),
+            new ServerVariableOverride('version', '2'),
+        );
 
         $this->assertSame('https://staging.api.example.com/v2', $result);
     }
@@ -139,7 +144,10 @@ final class ServerUrlResolverTest extends TestCase
             ],
         );
 
-        $result = $this->resolver->resolve($server, ['env' => 'dev']);
+        $result = $this->resolver->resolve(
+            $server,
+            new ServerVariableOverride('env', 'dev'),
+        );
 
         $this->assertSame('https://dev.api.com', $result);
     }
@@ -159,7 +167,10 @@ final class ServerUrlResolverTest extends TestCase
             ],
         );
 
-        $result = $this->resolver->resolve($server, ['api.version' => 'v2']);
+        $result = $this->resolver->resolve(
+            $server,
+            new ServerVariableOverride('api.version', 'v2'),
+        );
 
         $this->assertSame('https://api.example.com/v2', $result);
     }

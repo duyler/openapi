@@ -86,9 +86,9 @@ final readonly class TypeCoercer extends AbstractCoercer
         if (is_string($value)) {
             /** @var int|float|bool|string */
             return match ($type) {
-                'integer' => $this->coerceToInteger($value, $strict),
-                'number' => $this->coerceToNumber($value, $strict),
-                'boolean' => $this->coerceToBoolean($value, $strict),
+                'integer' => $strict ? $this->coerceToIntegerStrict($value) : $this->coerceToInteger($value),
+                'number' => $strict ? $this->coerceToNumberStrict($value) : $this->coerceToNumber($value),
+                'boolean' => $strict ? $this->coerceToBooleanStrict($value) : $this->coerceToBoolean($value),
                 default => $value,
             };
         }

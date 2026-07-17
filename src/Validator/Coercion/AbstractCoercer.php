@@ -29,7 +29,7 @@ abstract readonly class AbstractCoercer
         };
     }
 
-    protected function coerceToBoolean(mixed $value, bool $strict = false): mixed
+    protected function coerceToBoolean(mixed $value): bool|int|string|float|array|null
     {
         if (is_bool($value)) {
             return $value;
@@ -41,14 +41,7 @@ abstract readonly class AbstractCoercer
             return match ($lower) {
                 'true', '1', 'yes', 'on' => true,
                 'false', '0', 'no', 'off' => false,
-                default => $strict
-                    ? throw new TypeMismatchError(
-                        expected: 'boolean',
-                        actual: $value,
-                        dataPath: '',
-                        schemaPath: '/type',
-                    )
-                    : (bool) $value,
+                default => (bool) $value,
             };
         }
 
@@ -60,10 +53,44 @@ abstract readonly class AbstractCoercer
             return 0.0 !== $value;
         }
 
+        /** @var array|null $value */
         return $value;
     }
 
-    protected function coerceToInteger(mixed $value, bool $strict = false): mixed
+    protected function coerceToBooleanStrict(mixed $value): bool|int|string|float|array|null
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            $lower = strtolower($value);
+
+            return match ($lower) {
+                'true', '1', 'yes', 'on' => true,
+                'false', '0', 'no', 'off' => false,
+                default => throw new TypeMismatchError(
+                    expected: 'boolean',
+                    actual: $value,
+                    dataPath: '',
+                    schemaPath: '/type',
+                ),
+            };
+        }
+
+        if (is_int($value)) {
+            return 0 !== $value;
+        }
+
+        if (is_float($value)) {
+            return 0.0 !== $value;
+        }
+
+        /** @var array|null $value */
+        return $value;
+    }
+
+    protected function coerceToInteger(mixed $value): int|string|float|bool|array|null
     {
         if (is_int($value)) {
             return $value;
@@ -71,30 +98,12 @@ abstract readonly class AbstractCoercer
 
         if (is_string($value)) {
             if (1 !== preg_match('/^[+-]?\d+$/', $value)) {
-                if ($strict) {
-                    throw new TypeMismatchError(
-                        expected: 'integer',
-                        actual: $value,
-                        dataPath: '',
-                        schemaPath: '/type',
-                    );
-                }
-
                 return $value;
             }
 
             $coerced = (int) $value;
 
             if ((string) $coerced !== IntegerStringNormalizer::canonicalize($value)) {
-                if ($strict) {
-                    throw new TypeMismatchError(
-                        expected: 'integer',
-                        actual: $value,
-                        dataPath: '',
-                        schemaPath: '/type',
-                    );
-                }
-
                 return $value;
             }
 
@@ -102,15 +111,6 @@ abstract readonly class AbstractCoercer
         }
 
         if (is_float($value)) {
-            if ($strict) {
-                throw new TypeMismatchError(
-                    expected: 'integer',
-                    actual: (string) $value,
-                    dataPath: '',
-                    schemaPath: '/type',
-                );
-            }
-
             if (0.0 === fmod($value, 1.0)) {
                 return (int) $value;
             }
@@ -122,10 +122,63 @@ abstract readonly class AbstractCoercer
             return $value ? 1 : 0;
         }
 
+        /** @var array|null $value */
         return $value;
     }
 
-    protected function coerceToNumber(mixed $value, bool $strict = false): mixed
+    /**
+     * Strict variant: throws TypeMismatchError for non-numeric strings, for
+     * strings that lose precision when cast to int, and for float values.
+     * Bool, array, and null pass through unchanged.
+     */
+    protected function coerceToIntegerStrict(mixed $value): int|string|float|bool|array|null
+    {
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            if (1 !== preg_match('/^[+-]?\d+$/', $value)) {
+                throw new TypeMismatchError(
+                    expected: 'integer',
+                    actual: $value,
+                    dataPath: '',
+                    schemaPath: '/type',
+                );
+            }
+
+            $coerced = (int) $value;
+
+            if ((string) $coerced !== IntegerStringNormalizer::canonicalize($value)) {
+                throw new TypeMismatchError(
+                    expected: 'integer',
+                    actual: $value,
+                    dataPath: '',
+                    schemaPath: '/type',
+                );
+            }
+
+            return $coerced;
+        }
+
+        if (is_float($value)) {
+            throw new TypeMismatchError(
+                expected: 'integer',
+                actual: (string) $value,
+                dataPath: '',
+                schemaPath: '/type',
+            );
+        }
+
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        }
+
+        /** @var array|null $value */
+        return $value;
+    }
+
+    protected function coerceToNumber(mixed $value): float|int|string|bool|array|null
     {
         if (is_float($value)) {
             return $value;
@@ -137,15 +190,6 @@ abstract readonly class AbstractCoercer
 
         if (is_string($value)) {
             if (1 !== preg_match('/^[+-]?\d+(\.\d+)?([eE][+-]?\d+)?$/', $value)) {
-                if ($strict) {
-                    throw new TypeMismatchError(
-                        expected: 'number',
-                        actual: $value,
-                        dataPath: '',
-                        schemaPath: '/type',
-                    );
-                }
-
                 return $value;
             }
 
@@ -156,10 +200,46 @@ abstract readonly class AbstractCoercer
             return $value ? 1.0 : 0.0;
         }
 
+        /** @var array|null $value */
         return $value;
     }
 
-    protected function coerceToString(mixed $value): mixed
+    /**
+     * Strict variant: throws TypeMismatchError for non-numeric strings.
+     * Bool, array, and null pass through unchanged.
+     */
+    protected function coerceToNumberStrict(mixed $value): float|int|string|bool|array|null
+    {
+        if (is_float($value)) {
+            return $value;
+        }
+
+        if (is_int($value)) {
+            return (float) $value;
+        }
+
+        if (is_string($value)) {
+            if (1 !== preg_match('/^[+-]?\d+(\.\d+)?([eE][+-]?\d+)?$/', $value)) {
+                throw new TypeMismatchError(
+                    expected: 'number',
+                    actual: $value,
+                    dataPath: '',
+                    schemaPath: '/type',
+                );
+            }
+
+            return (float) $value;
+        }
+
+        if (is_bool($value)) {
+            return $value ? 1.0 : 0.0;
+        }
+
+        /** @var array|null $value */
+        return $value;
+    }
+
+    protected function coerceToString(mixed $value): string|int|float|bool|array|null
     {
         if (is_string($value)) {
             return $value;
@@ -169,6 +249,7 @@ abstract readonly class AbstractCoercer
             return (string) $value;
         }
 
+        /** @var array|null $value */
         return $value;
     }
 }

@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Server;
 
 use Duyler\OpenApi\Schema\Model\Server;
+use Duyler\OpenApi\Validator\Server\Dto\ServerVariableOverride;
 
-use function sprintf;
 use function array_key_exists;
 use function is_array;
 use function is_string;
+use function sprintf;
 
 final readonly class ServerUrlResolver
 {
@@ -24,16 +25,16 @@ final readonly class ServerUrlResolver
      * Resolves a server URL template by substituting variables with provided values.
      *
      * @param Server $server The server definition containing URL template and default variables
-     * @param array<string, string> $variableOverrides Optional overrides for server variables
+     * @param ServerVariableOverride ...$overrides Optional overrides for server variables
      *
      * @return string The resolved URL with all variables substituted
      *
      * @throws ServerVariableException If a required variable is missing
      */
-    public function resolve(Server $server, array $variableOverrides = []): string
+    public function resolve(Server $server, ServerVariableOverride ...$overrides): string
     {
         $url = $server->url;
-        $variables = $this->mergeVariables($server, $variableOverrides);
+        $variables = $this->mergeVariables($server, $overrides);
 
         $result = preg_replace_callback(
             '/\{(' . self::VARNAME_PATTERN . ')\}/',
@@ -79,14 +80,14 @@ final readonly class ServerUrlResolver
      * Validates that all template variables in the server URL have corresponding values.
      *
      * @param Server $server The server definition
-     * @param array<string, string> $variableOverrides Optional overrides for server variables
+     * @param ServerVariableOverride ...$overrides Optional overrides for server variables
      *
      * @throws ServerVariableException If a variable is missing a value
      */
-    public function validateVariables(Server $server, array $variableOverrides = []): void
+    public function validateVariables(Server $server, ServerVariableOverride ...$overrides): void
     {
         $variableNames = $this->extractVariableNames($server);
-        $variables = $this->mergeVariables($server, $variableOverrides);
+        $variables = $this->mergeVariables($server, $overrides);
 
         foreach ($variableNames as $name) {
             if (false === array_key_exists($name, $variables)) {
@@ -102,11 +103,11 @@ final readonly class ServerUrlResolver
     }
 
     /**
-     * @param array<string, string> $variableOverrides
+     * @param array<array-key, ServerVariableOverride> $overrides
      *
      * @return array<string, string>
      */
-    private function mergeVariables(Server $server, array $variableOverrides): array
+    private function mergeVariables(Server $server, array $overrides): array
     {
         /** @var array<string, string> $defaults */
         $defaults = [];
@@ -123,6 +124,11 @@ final readonly class ServerUrlResolver
             }
         }
 
-        return array_merge($defaults, $variableOverrides);
+        $overrideMap = [];
+        foreach ($overrides as $override) {
+            $overrideMap[$override->name] = $override->value;
+        }
+
+        return array_merge($defaults, $overrideMap);
     }
 }

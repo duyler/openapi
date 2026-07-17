@@ -28,7 +28,17 @@ final readonly class ItemsValidatorWithContext
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
     ) {}
 
-    public function validateWithContext(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator = true): void
+    public function validateWithContext(array $data, Schema $schema, ValidationContext $context): void
+    {
+        $this->validate($data, $schema, $context, true);
+    }
+
+    public function validateWithContextIgnoringDiscriminator(array $data, Schema $schema, ValidationContext $context): void
+    {
+        $this->validate($data, $schema, $context, false);
+    }
+
+    private function validate(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
     {
         if (null === $schema->items) {
             return;
@@ -52,7 +62,11 @@ final readonly class ItemsValidatorWithContext
                 try {
                     $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
                     $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
-                    $rootValidator->validateWithContext($normalizedItem, $itemSchema, $context, $useDiscriminator);
+                    if ($useDiscriminator) {
+                        $rootValidator->validateWithContext($normalizedItem, $itemSchema, $context);
+                    } else {
+                        $rootValidator->validateWithContextIgnoringDiscriminator($normalizedItem, $itemSchema, $context);
+                    }
                 } finally {
                     $context->leaveBreadcrumb();
                 }

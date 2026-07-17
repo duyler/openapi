@@ -4,14 +4,25 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Model\Enum\XmlNodeType;
 use JsonSerializable;
 use Override;
 
-use function in_array;
-
 final readonly class Xml implements JsonSerializable
 {
-    public const array VALID_NODE_TYPES = ['element', 'attribute', 'text', 'cdata', 'none'];
+    /**
+     * Canonical list of valid XML node types. Derived from XmlNodeType enum
+     * so the enum remains the single source of truth.
+     *
+     * @var list<string>
+     */
+    public const array VALID_NODE_TYPES = [
+        XmlNodeType::Element->value,
+        XmlNodeType::Attribute->value,
+        XmlNodeType::Text->value,
+        XmlNodeType::Cdata->value,
+        XmlNodeType::None->value,
+    ];
 
     public function __construct(
         public ?string $name = null,
@@ -24,7 +35,7 @@ final readonly class Xml implements JsonSerializable
 
     public static function isValidNodeType(string $nodeType): bool
     {
-        return in_array($nodeType, self::VALID_NODE_TYPES, true);
+        return null !== XmlNodeType::tryFrom($nodeType);
     }
 
     #[Override]

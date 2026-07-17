@@ -14,9 +14,10 @@ use function array_key_exists;
 
 final readonly class ResponseTypeCoercer extends AbstractCoercer
 {
-    public function coerce(mixed $value, CoercionContext $context): mixed
+    public function coerce(mixed $value, CoercionContext $context): array|int|string|float|bool|null
     {
         if (false === $context->enabled || null === $context->schema) {
+            /** @var array|int|string|float|bool|null $value */
             return $value;
         }
 
@@ -27,6 +28,7 @@ final readonly class ResponseTypeCoercer extends AbstractCoercer
         $type = $context->schema->type;
 
         if (null === $type) {
+            /** @var array|int|string|float|bool|null $value */
             return $value;
         }
 
@@ -38,12 +40,13 @@ final readonly class ResponseTypeCoercer extends AbstractCoercer
     }
 
     #[Override]
-    protected function coerceToString(mixed $value): mixed
+    protected function coerceToString(mixed $value): string|int|float|bool|array|null
     {
+        /** @var string|int|float|bool|array|null $value */
         return $value;
     }
 
-    private function coerceUnionType(mixed $value, array $types, CoercionContext $context): mixed
+    private function coerceUnionType(mixed $value, array $types, CoercionContext $context): array|int|string|float|bool|null
     {
         foreach ($types as $type) {
             if (false === is_string($type) || 'null' === $type) {
@@ -58,25 +61,30 @@ final readonly class ResponseTypeCoercer extends AbstractCoercer
             }
         }
 
+        /** @var array|int|string|float|bool|null $value */
         return $value;
     }
 
-    private function coerceToType(mixed $value, string $type, CoercionContext $context): mixed
+    private function coerceToType(mixed $value, string $type, CoercionContext $context): array|int|string|float|bool|null
     {
-        return match ($type) {
+        /** @var array|int|string|float|bool|null $coerced */
+        $coerced = match ($type) {
             'string' => $this->coerceToString($value),
-            'integer' => $this->coerceToInteger($value, $context->strict),
-            'number' => $this->coerceToNumber($value, $context->strict),
-            'boolean' => $this->coerceToBoolean($value, $context->strict),
+            'integer' => $context->strict ? $this->coerceToIntegerStrict($value) : $this->coerceToInteger($value),
+            'number' => $context->strict ? $this->coerceToNumberStrict($value) : $this->coerceToNumber($value),
+            'boolean' => $context->strict ? $this->coerceToBooleanStrict($value) : $this->coerceToBoolean($value),
             'object' => $this->coerceToObject($value, $context),
             'array' => $this->coerceToArray($value, $context),
             default => $value,
         };
+
+        return $coerced;
     }
 
-    private function coerceToObject(mixed $value, CoercionContext $context): mixed
+    private function coerceToObject(mixed $value, CoercionContext $context): array|int|string|float|bool|null
     {
         if (false === is_array($value)) {
+            /** @var array|int|string|float|bool|null $value */
             return $value;
         }
 

@@ -183,7 +183,7 @@ final class OneOfValidatorWithContextTest extends TestCase
 
         $succeeded = false;
         try {
-            $this->validator->validateWithContext('test', $schema, $this->context, useDiscriminator: false);
+            $this->validator->validateWithContextIgnoringDiscriminator('test', $schema, $this->context);
             $succeeded = true;
         } catch (ValidationException $e) {
             self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));

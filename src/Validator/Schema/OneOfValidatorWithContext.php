@@ -16,7 +16,6 @@ use Duyler\OpenApi\Validator\Exception\OneOfError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 
 use function is_array;
-use function assert;
 
 final readonly class OneOfValidatorWithContext
 {
@@ -30,12 +29,18 @@ final readonly class OneOfValidatorWithContext
         $this->discriminatorValidator = new DiscriminatorValidator($this->dependencies, $this->configuration);
     }
 
-    public function validateWithContext(
-        mixed $data,
-        Schema $schema,
-        ValidationContext $context,
-        bool $useDiscriminator = true,
-    ): void {
+    public function validateWithContext(mixed $data, Schema $schema, ValidationContext $context): void
+    {
+        $this->validate($data, $schema, $context, true);
+    }
+
+    public function validateWithContextIgnoringDiscriminator(mixed $data, Schema $schema, ValidationContext $context): void
+    {
+        $this->validate($data, $schema, $context, false);
+    }
+
+    private function validate(mixed $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
+    {
         $oneOf = $schema->oneOf;
 
         if (null === $oneOf) {
@@ -53,8 +58,7 @@ final readonly class OneOfValidatorWithContext
     private function validateWithDiscriminator(mixed $data, Schema $schema, ValidationContext $context): void
     {
         if (null === $data) {
-            assert(null !== $schema->oneOf);
-            if ($this->hasNullableSchema($schema->oneOf) && $context->nullableAsType) {
+            if (null !== $schema->oneOf && $this->hasNullableSchema($schema->oneOf) && $context->nullableAsType) {
                 return;
             }
             throw new ValidationException(

@@ -8,9 +8,11 @@ use Duyler\OpenApi\Registry\Exception\SchemaAlreadyRegisteredException;
 use Duyler\OpenApi\Registry\Exception\VersionNotFoundException;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 
+use RuntimeException;
+
 use function count;
+use function sprintf;
 use function uksort;
-use function assert;
 
 final readonly class SchemaRegistry
 {
@@ -41,7 +43,12 @@ final readonly class SchemaRegistry
             $sortedVersions[$name] = $sortedVersionKeys;
 
             $values = array_values($sorted);
-            assert([] !== $values);
+            if ([] === $values) {
+                throw new RuntimeException(sprintf(
+                    'Schema "%s" must have at least one version registered',
+                    $name,
+                ));
+            }
             $latestBySchema[$name] = $values[count($values) - 1];
         }
 
