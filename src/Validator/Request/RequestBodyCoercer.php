@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request;
 
+use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Coercion\AbstractCoercer;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
 
+use function array_key_exists;
 use function is_array;
 use function is_string;
-use function array_key_exists;
 
 final readonly class RequestBodyCoercer extends AbstractCoercer
 {
@@ -19,39 +20,42 @@ final readonly class RequestBodyCoercer extends AbstractCoercer
             return $value;
         }
 
-        if (null === $value && $context->schema->nullable && $context->nullableAsType) {
+        return $this->coerceInternal(
+            $value,
+            $context->schema,
+            $context->strict,
+            $context->nullableAsType,
+        );
+    }
+
+    private function coerceInternal(mixed $value, Schema $schema, bool $strict, bool $nullableAsType): mixed
+    {
+        if (null === $value && $schema->nullable && $nullableAsType) {
             return $value;
         }
 
-        $type = $context->schema->type;
+        $type = $schema->type;
 
         if (null === $type) {
             return $value;
         }
 
         if (is_array($type)) {
-            return $this->coerceUnionType($value, $type, $context);
+            return $this->coerceUnionType($value, $type, $schema, $strict, $nullableAsType);
         }
 
-        return $this->coerceToType($value, $type, $context);
+        return $this->coerceToType($value, $type, $schema, $strict, $nullableAsType);
     }
 
-    private function coerceUnionType(mixed $value, array $types, CoercionContext $context): mixed
+    private function coerceUnionType(mixed $value, array $types, Schema $schema, bool $strict, bool $nullableAsType): mixed
     {
         foreach ($types as $type) {
             if (!is_string($type) || 'null' === $type) {
                 continue;
             }
 
-            $childContext = new CoercionContext(
-                schema: $context->schema,
-                enabled: true,
-                strict: $context->strict,
-                nullableAsType: $context->nullableAsType,
-            );
-
             /** @var array|int|string|float|bool|null $coerced */
-            $coerced = $this->coerceToType($value, $type, $childContext);
+            $coerced = $this->coerceToType($value, $type, $schema, $strict, $nullableAsType);
 
             if ($this->isValidType($coerced, $type)) {
                 return $coerced;
@@ -61,26 +65,26 @@ final readonly class RequestBodyCoercer extends AbstractCoercer
         return $value;
     }
 
-    private function coerceToType(mixed $value, string $type, CoercionContext $context): mixed
+    private function coerceToType(mixed $value, string $type, Schema $schema, bool $strict, bool $nullableAsType): mixed
     {
         return match ($type) {
             'string' => $this->coerceToString($value),
-            'integer' => $this->coerceToInteger($value, $context->strict),
-            'number' => $this->coerceToNumber($value, $context->strict),
-            'boolean' => $this->coerceToBoolean($value, $context->strict),
-            'object' => $this->coerceToObject($value, $context),
-            'array' => $this->coerceToArray($value, $context),
+            'integer' => $this->coerceToInteger($value, $strict),
+            'number' => $this->coerceToNumber($value, $strict),
+            'boolean' => $this->coerceToBoolean($value, $strict),
+            'object' => $this->coerceToObject($value, $schema, $strict, $nullableAsType),
+            'array' => $this->coerceToArray($value, $schema, $strict, $nullableAsType),
             default => $value,
         };
     }
 
-    private function coerceToObject(mixed $value, CoercionContext $context): mixed
+    private function coerceToObject(mixed $value, Schema $schema, bool $strict, bool $nullableAsType): mixed
     {
         if (false === is_array($value)) {
             return $value;
         }
 
-        $properties = $context->schema->properties ?? null;
+        $properties = $schema->properties ?? null;
 
         if (null === $properties) {
             return $value;
@@ -94,43 +98,29 @@ final readonly class RequestBodyCoercer extends AbstractCoercer
                 continue;
             }
 
-            $childContext = new CoercionContext(
-                schema: $propertySchema,
-                enabled: true,
-                strict: $context->strict,
-                nullableAsType: $context->nullableAsType,
-            );
-
-            $coerced[$name] = $this->coerce($value[$name], $childContext);
+            $coerced[$name] = $this->coerceInternal($value[$name], $propertySchema, $strict, $nullableAsType);
         }
 
         return $coerced;
     }
 
-    private function coerceToArray(mixed $value, CoercionContext $context): array|int|string|float|bool|null
+    private function coerceToArray(mixed $value, Schema $schema, bool $strict, bool $nullableAsType): array|int|string|float|bool|null
     {
         if (false === is_array($value)) {
             /** @var array|int|string|float|bool|null $value */
             return $value;
         }
 
-        $itemsSchema = $context->schema->items ?? null;
+        $itemsSchema = $schema->items ?? null;
 
         if (null === $itemsSchema) {
             return $value;
         }
 
-        $childContext = new CoercionContext(
-            schema: $itemsSchema,
-            enabled: true,
-            strict: $context->strict,
-            nullableAsType: $context->nullableAsType,
-        );
-
         $coerced = [];
 
         foreach ($value as $item) {
-            $coerced[] = $this->coerce($item, $childContext);
+            $coerced[] = $this->coerceInternal($item, $itemsSchema, $strict, $nullableAsType);
         }
 
         return $coerced;

@@ -12,6 +12,14 @@ use Override;
 
 final readonly class EnumValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    private readonly EnumScalarCache $scalarCache;
+
+    public function __construct(ValidatorDependencies $dependencies)
+    {
+        parent::__construct($dependencies);
+        $this->scalarCache = new EnumScalarCache();
+    }
+
     #[Override]
     public function isApplicable(Schema $schema): bool
     {
@@ -25,6 +33,14 @@ final readonly class EnumValidator extends AbstractSchemaValidator implements Ke
             return;
         }
 
+        if ($this->scalarCache->isScalarLookupEligible($schema, $data)) {
+            if ($this->scalarCache->contains($schema, $data)) {
+                return;
+            }
+
+            throw $this->enumError($data, $schema, $context);
+        }
+
         /** @var mixed $allowedValue */
         foreach ($schema->enum as $allowedValue) {
             if (JsonEquals::equals($allowedValue, $data)) {
@@ -32,11 +48,15 @@ final readonly class EnumValidator extends AbstractSchemaValidator implements Ke
             }
         }
 
-        $dataPath = $this->getDataPath($context);
-        throw new EnumError(
-            allowedValues: $schema->enum,
+        throw $this->enumError($data, $schema, $context);
+    }
+
+    private function enumError(mixed $data, Schema $schema, ?ValidationContext $context): EnumError
+    {
+        return new EnumError(
+            allowedValues: $schema->enum ?? [],
             actual: $data,
-            dataPath: $dataPath,
+            dataPath: $this->getDataPath($context),
             schemaPath: '/enum',
         );
     }

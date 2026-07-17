@@ -42,15 +42,26 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
 
         $patternProperties = $schema->patternProperties ?? [];
         if ([] !== $patternProperties && [] !== $additionalKeys) {
-            $additionalKeys = array_values(array_filter($additionalKeys, function (int|string $key) use ($patternProperties): bool {
-                foreach (array_keys($patternProperties) as $pattern) {
-                    if ('' === $pattern) {
-                        continue;
-                    }
+            /** @var array<string, non-empty-string> $normalizedPatterns */
+            $normalizedPatterns = [];
 
-                    $normalizedPattern = $this->regexValidator()->normalize($pattern);
-                    assert('' !== $normalizedPattern);
-                    if (1 === $this->pregExecutor()->match($normalizedPattern, (string) $key)) {
+            foreach (array_keys($patternProperties) as $pattern) {
+                if ('' === $pattern) {
+                    continue;
+                }
+
+                $normalized = $this->regexValidator()->normalize($pattern);
+                assert('' !== $normalized);
+                $normalizedPatterns[$pattern] = $normalized;
+            }
+
+            $pregExecutor = $this->pregExecutor();
+
+            $additionalKeys = array_values(array_filter($additionalKeys, static function (int|string $key) use ($normalizedPatterns, $pregExecutor): bool {
+                $keyString = (string) $key;
+
+                foreach ($normalizedPatterns as $normalizedPattern) {
+                    if (1 === $pregExecutor->match($normalizedPattern, $keyString)) {
                         return false;
                     }
                 }
