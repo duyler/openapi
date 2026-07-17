@@ -368,6 +368,36 @@ final class TypeHelperTest extends TestCase
     }
 
     #[Test]
+    public function as_type_or_null_accepts_canonical_string_types(): void
+    {
+        $canonicalTypes = ['string', 'number', 'integer', 'boolean', 'array', 'object', 'null'];
+
+        foreach ($canonicalTypes as $type) {
+            self::assertSame($type, TypeHelper::asTypeOrNull($type));
+        }
+    }
+
+    #[Test]
+    public function as_type_or_null_rejects_unknown_string_type(): void
+    {
+        self::assertNull(TypeHelper::asTypeOrNull('floot'));
+        self::assertNull(TypeHelper::asTypeOrNull('str'));
+        self::assertNull(TypeHelper::asTypeOrNull('int'));
+    }
+
+    #[Test]
+    public function as_type_or_null_rejects_malicious_string_type(): void
+    {
+        self::assertNull(TypeHelper::asTypeOrNull("string']; system('id'); /*"));
+    }
+
+    #[Test]
+    public function as_type_or_null_rejects_array_with_unknown_element(): void
+    {
+        self::assertNull(TypeHelper::asTypeOrNull(['string', 'floot']));
+    }
+
+    #[Test]
     public function as_enum_list_returns_list(): void
     {
         $result = TypeHelper::asEnumList(['value1', 'value2']);

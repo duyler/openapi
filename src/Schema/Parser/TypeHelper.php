@@ -6,15 +6,26 @@ namespace Duyler\OpenApi\Schema\Parser;
 
 use TypeError;
 
+use function gettype;
+use function in_array;
 use function is_array;
 use function is_bool;
 use function is_float;
 use function is_int;
 use function is_string;
-use function gettype;
 
 final readonly class TypeHelper
 {
+    private const array VALID_TYPES = [
+        'string',
+        'number',
+        'integer',
+        'boolean',
+        'array',
+        'object',
+        'null',
+    ];
+
     /**
      * @param mixed $value
      * @return array<array-key, mixed>
@@ -67,18 +78,27 @@ final readonly class TypeHelper
         }
 
         if (is_string($value)) {
-            return $value;
+            return self::isValidTypeString($value) ? $value : null;
         }
 
         if (is_array($value)) {
             /** @var list<string|null> $result */
             $result = [];
             foreach ($value as $item) {
-                $result[] = match (true) {
-                    null === $item => null,
-                    is_string($item) => $item,
-                    default => throw new TypeError('Expected string or null in type array, got ' . gettype($item)),
-                };
+                if (null === $item) {
+                    $result[] = null;
+                    continue;
+                }
+
+                if (false === is_string($item)) {
+                    throw new TypeError('Expected string or null in type array, got ' . gettype($item));
+                }
+
+                if (false === self::isValidTypeString($item)) {
+                    return null;
+                }
+
+                $result[] = $item;
             }
 
             return $result;
@@ -349,5 +369,10 @@ final readonly class TypeHelper
             return null;
         }
         return self::asSecurityListMap($value);
+    }
+
+    private static function isValidTypeString(string $type): bool
+    {
+        return in_array($type, self::VALID_TYPES, true);
     }
 }

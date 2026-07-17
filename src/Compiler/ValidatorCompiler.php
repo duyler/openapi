@@ -12,8 +12,11 @@ use InvalidArgumentException;
 use RuntimeException;
 
 use function addslashes;
+use function array_filter;
 use function array_keys;
+use function array_map;
 use function array_pop;
+use function array_values;
 use function count;
 use function explode;
 use function implode;
@@ -158,8 +161,14 @@ final readonly class ValidatorCompiler
     {
         $code = '';
 
-        /** @var array<string> $types */
-        $types = is_array($type) ? $type : [$type];
+        /** @var array<string|null> $rawTypes */
+        $rawTypes = is_array($type) ? $type : [$type];
+
+        /** @var list<string> $types */
+        $types = array_values(array_filter(
+            $rawTypes,
+            static fn(mixed $t): bool => null !== $t,
+        ));
 
         $checks = [];
         foreach ($types as $t) {
@@ -170,11 +179,15 @@ final readonly class ValidatorCompiler
             return '';
         }
 
+        $escapedTypes = array_map(
+            static fn(string $t): string => var_export($t, true),
+            $types,
+        );
+        $typesString = implode(" . '|' . ", $escapedTypes);
+
         if (1 === count($checks)) {
             $code .= sprintf("        if (false === %s) {\n", $checks[0]);
-
-            $typesString = implode('|', $types);
-            $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected %s but got ' . gettype(\$data));\n", $typesString);
+            $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected ' . %s . ' but got ' . gettype(\$data));\n", $typesString);
             $code .= "        }\n\n";
 
             return $code;
@@ -182,9 +195,7 @@ final readonly class ValidatorCompiler
 
         $condition = implode(' || ', $checks);
         $code .= sprintf("        if (false === (%s)) {\n", $condition);
-
-        $typesString = implode('|', $types);
-        $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected %s but got ' . gettype(\$data));\n", $typesString);
+        $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected ' . %s . ' but got ' . gettype(\$data));\n", $typesString);
         $code .= "        }\n\n";
 
         return $code;
@@ -489,8 +500,15 @@ final readonly class ValidatorCompiler
 
     private function generateTypeCheckForValue(string|array $type, string $valueVar): string
     {
-        /** @var array<string> $types */
-        $types = is_array($type) ? $type : [$type];
+        /** @var array<string|null> $rawTypes */
+        $rawTypes = is_array($type) ? $type : [$type];
+
+        /** @var list<string> $types */
+        $types = array_values(array_filter(
+            $rawTypes,
+            static fn(mixed $t): bool => null !== $t,
+        ));
+
         $checks = [];
 
         foreach ($types as $t) {

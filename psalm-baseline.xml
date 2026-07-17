@@ -19,7 +19,6 @@
   </file>
   <file src="src/Schema/Parser/TypeHelper.php">
     <MixedAssignment>
-      <code><![CDATA[$item]]></code>
       <code><![CDATA[$val]]></code>
     </MixedAssignment>
   </file>
