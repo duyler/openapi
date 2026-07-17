@@ -14,6 +14,13 @@ use function is_string;
 final readonly class ServerUrlResolver
 {
     /**
+     * RFC 6570 §2.3 variable-name character class for server URL templates.
+     * The dot is a legal character inside a variable name (e.g.
+     * `https://api.example.com/{api.version}`).
+     */
+    private const string VARNAME_PATTERN = '[a-zA-Z0-9_.]+';
+
+    /**
      * Resolves a server URL template by substituting variables with provided values.
      *
      * @param Server $server The server definition containing URL template and default variables
@@ -29,7 +36,7 @@ final readonly class ServerUrlResolver
         $variables = $this->mergeVariables($server, $variableOverrides);
 
         $result = preg_replace_callback(
-            '/\{(\w+)\}/',
+            '/\{(' . self::VARNAME_PATTERN . ')\}/',
             function (array $matches) use ($variables, $server): string {
                 $variableName = $matches[1];
 
@@ -62,7 +69,7 @@ final readonly class ServerUrlResolver
      */
     public function extractVariableNames(Server $server): array
     {
-        preg_match_all('/\{(\w+)\}/', $server->url, $matches);
+        preg_match_all('/\{(' . self::VARNAME_PATTERN . ')\}/', $server->url, $matches);
 
         /** @var list<string> */
         return $matches[1];

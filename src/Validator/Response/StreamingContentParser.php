@@ -393,7 +393,11 @@ final readonly class StreamingContentParser
                 ? substr($rawValue, 1)
                 : $rawValue;
             $this->applySseField($currentEvent, $field, $value);
+
+            return;
         }
+
+        $this->applySseField($currentEvent, $line, '');
     }
 
     /**
