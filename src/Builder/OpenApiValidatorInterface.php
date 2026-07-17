@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Builder;
 
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Validator\Link\LinkContext;
+use Duyler\OpenApi\Validator\Link\ResolvedLink;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use InvalidArgumentException;
@@ -82,24 +83,31 @@ interface OpenApiValidatorInterface
     /**
      * Resolve link parameters from response data.
      *
+     * Builds a LinkContext with the response body as the only populated
+     * field, so only $response.body expressions (and $url/$method/
+     * $statusCode when supplied via the context) can be resolved. Use
+     * resolveLinkWithContext() to supply full request and response
+     * state for $request.* and $response.header/query expressions.
+     *
      * @param string $linkName Link name from OpenAPI specification
      * @param array<string, mixed> $responseData Response data to extract values from
-     * @return array{parameters: array<string, mixed>, requestBody: mixed, server: mixed|null}
      * @throws InvalidArgumentException If the link name is not found in specification
      */
-    public function resolveLink(string $linkName, array $responseData): array;
+    public function resolveLink(string $linkName, array $responseData): ResolvedLink;
 
     /**
      * Resolve link parameters with full context for Runtime Expressions.
      *
-     * Supports $response.body, $response.header, $response.query,
-     * $url, $method, and $statusCode expressions.
+     * Supports all OpenAPI 3.2 §6.19.2 runtime expressions: $url,
+     * $method, $statusCode, $request.path.{name}, $request.query.{name},
+     * $request.header.{name}, $request.body[#/{pointer}], $response.body
+     * [#/{pointer}], $response.header[.{name}|#/pointer], and
+     * $response.query[.{name}|#/pointer].
      *
      * @param string $linkName Link name from OpenAPI specification
-     * @return array{parameters: array<string, mixed>, requestBody: mixed, server: mixed|null}
      * @throws InvalidArgumentException If the link name is not found in specification
      */
-    public function resolveLinkWithContext(string $linkName, LinkContext $context): array;
+    public function resolveLinkWithContext(string $linkName, LinkContext $context): ResolvedLink;
 
     /**
      * Reset internal state for hot-reload scenarios.

@@ -41,7 +41,7 @@ YAML;
 
         $result = $validator->resolveLink('GetObjectItem', ['id' => 42, 'name' => 'first']);
 
-        $this->assertSame(42, $result['parameters']['itemId']);
+        $this->assertSame(42, $result->parameters['itemId']);
     }
 
     #[Test]
@@ -51,7 +51,7 @@ YAML;
 
         $result = $validator->resolveLink('GetFirstItem', [['id' => 42], ['id' => 99]]);
 
-        $this->assertSame(['id' => 42], $result['parameters']['itemId']);
+        $this->assertSame(['id' => 42], $result->parameters['itemId']);
     }
 
     #[Test]
@@ -81,7 +81,7 @@ YAML;
 
         $result = $validator->resolveLink('GetFirstItem', ['id' => 42, 'name' => 'first']);
 
-        $this->assertNull($result['parameters']['itemId']);
+        $this->assertNull($result->parameters['itemId']);
     }
 
     private function buildValidator(): OpenApiValidatorInterface

@@ -84,8 +84,8 @@ The interface exposes the following methods:
 | `getFormattedErrors(ValidationException $e): string` | Format validation errors as string |
 | `validateWebhook(ServerRequestInterface $request, string $name): Operation` | Validate webhook request |
 | `validateCallback(ServerRequestInterface $request, string $name): Operation` | Validate callback request |
-| `resolveLink(string $linkName, array $responseData): array` | Resolve link parameters from response data (body only) |
-| `resolveLinkWithContext(string $linkName, LinkContext $context): array` | Resolve link parameters with full Runtime Expression support ($response.body/header/query, $url, $method, $statusCode) |
+| `resolveLink(string $linkName, array $responseData): ResolvedLink` | Resolve link parameters from response data (response body only) |
+| `resolveLinkWithContext(string $linkName, LinkContext $context): ResolvedLink` | Resolve link parameters with full Runtime Expression support ($request.*, $response.body/header/query, $url, $method, $statusCode) |
 | `reset(): void` | Reset validator state for reuse |
 
 ## Usage
@@ -211,13 +211,18 @@ $validator = OpenApiValidatorBuilder::create()
 
 ### Link Resolution
 
-Resolve OpenAPI Link parameters from response data:
+Resolve OpenAPI Link parameters from response data. Both methods return a
+`ResolvedLink` DTO exposing resolved `parameters`, `requestBody`, and the
+optional `server` override declared by the link.
 
 ```php
 use Duyler\OpenApi\Validator\Link\LinkContext;
 
 // Simple resolution (response body only)
 $result = $validator->resolveLink('GetUserById', ['id' => 42, 'name' => 'John']);
+$result->parameters;   // array<string, mixed>
+$result->requestBody;  // mixed
+$result->server;       // Server|null
 
 // Full resolution with Runtime Expression support
 $context = new LinkContext(
@@ -227,11 +232,37 @@ $context = new LinkContext(
     url: 'https://api.example.com/users/42',
     method: 'GET',
     statusCode: 200,
+    pathParams: ['userId' => 42],
+    requestHeaders: ['X-Request-Id' => 'req-789'],
+    requestBody: ['extra' => 'payload'],
 );
 $result = $validator->resolveLinkWithContext('GetUserById', $context);
 ```
 
-`resolveLink()` only resolves `$response.body` expressions. Use `resolveLinkWithContext()` for full Runtime Expression support: `$response.body`, `$response.header`, `$response.query`, `$url`, `$method`, and `$statusCode`. Note that `$request.body` and `$request.query` expressions are not supported.
+`resolveLink()` populates only the response body context, so it can resolve
+`$response.body` expressions. Use `resolveLinkWithContext()` to supply the
+full request and response state and unlock all OpenAPI 3.2 §6.19.2 runtime
+expressions:
+
+| Expression | Resolves from LinkContext |
+|------------|---------------------------|
+| `$url` | `url` |
+| `$method` | `method` |
+| `$statusCode` | `statusCode` |
+| `$request.path.{name}` | `pathParams[{name}]` |
+| `$request.query.{name}` | `queryParams[{name}]` |
+| `$request.header.{name}` | `requestHeaders[{name}]` (case-insensitive, RFC 9110) |
+| `$request.body` | `requestBody` (whole value) |
+| `$request.body#/{pointer}` | `requestBody` navigated by JSON Pointer |
+| `$response.body` | `body` (whole value) |
+| `$response.body#/{pointer}` | `body` navigated by JSON Pointer |
+| `$response.header` | `headers` (whole map) |
+| `$response.header[.{name}|#/{name}]` | `headers` by name or JSON Pointer |
+| `$response.query` | `queryParams` (whole map) |
+| `$response.query[.{name}|#/{name}]` | `queryParams` by name or JSON Pointer |
+
+Unsupported expressions are returned as the literal string so callers can
+distinguish them from values that legitimately resolve to null.
 
 ## Advanced Usage
 

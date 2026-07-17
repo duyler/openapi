@@ -41,7 +41,6 @@
     <MixedAssignment>
       <code><![CDATA[$current]]></code>
       <code><![CDATA[$expression]]></code>
-      <code><![CDATA[$requestBody]]></code>
       <code><![CDATA[$resolved[$name]]]></code>
     </MixedAssignment>
   </file>
