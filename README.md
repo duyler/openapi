@@ -11,7 +11,7 @@ OpenAPI 3.2 validator for PHP 8.4+
 
 ## Features
 
-- **Full OpenAPI 3.2 Support** - Complete implementation of OpenAPI 3.2 specification
+- **OpenAPI 3.2 Support** - JSON Schema draft 2020-12 validation with known limitations (see Limitations)
 - **JSON Schema Validation** - Full JSON Schema draft 2020-12 validation with 25+ validators
 - **PSR-7 Integration** - PSR-7 HTTP message validation (works with any PSR-7 implementation)
 - **Request Validation** - Validate path parameters, query parameters, headers, cookies, and request body
@@ -27,7 +27,7 @@ OpenAPI 3.2 validator for PHP 8.4+
 - **Webhooks Support** - Validate incoming webhook requests
 - **Streaming Validation** - Validate NDJSON, SSE, and JSON Text Sequences responses
 - **Schema Registry** - Manage multiple schema versions
-- **Validator Compilation** - Generate optimized validator code
+- **Validator Compilation** (experimental) - Generate optimized validator code for basic schemas (see Limitations)
 
 ## Installation
 
@@ -1186,6 +1186,13 @@ $validator = OpenApiValidatorBuilder::create()
 
 ### Migration Examples
 
+> **Warning:** Migration from `league/openapi-psr7-validator` requires rewriting your routing layer.
+> `league` provided `OperationAddress` + `PathParams` utilities; `duyler/openapi` returns a simpler
+> `Operation(path, method)` DTO with a `pathParameters` map. You must extract path parameters
+> yourself (or wait for the planned `Operation` DTO expansion). Additionally, coercion is **opt-in**
+> here (`enableCoercion()`), whereas `league` had it enabled by default — this is a behavioral
+> breaking change for migrants.
+
 #### Before (league/openapi-psr7-validator)
 
 ```php
@@ -1237,7 +1244,7 @@ The following measurements come from the test suite benchmarks run on a standard
 | Path scanning | 100 routes, 50 iterations | < 100 ms total | < 1 MB growth |
 | Full request+response cycle | 2 properties, email format | - | < 50 KB |
 
-These numbers represent upper bounds enforced by assertions in `tests/Benchmark/PerformanceBenchmarkTest.php`. Real-world performance is typically better.
+These numbers represent upper bounds enforced by assertions in `tests/Benchmark/PerformanceBenchmarkTest.php`. They are not reproducible benchmarks: there is no environment spec, no warm-up / iteration protocol, and no comparison against `league/openapi-psr7-validator`. Actual performance depends on hardware, PHP version, opcache, and schema complexity. For production sizing, run [PHPBench](https://phpbench.readthedocs.io/) against your own schemas.
 
 ### Caching
 
@@ -1256,6 +1263,11 @@ $validator = OpenApiValidatorBuilder::create()
     ->withCache($schemaCache)
     ->build();
 ```
+
+`SchemaCache` uses a PSR-6 cache pool keyed by a SHA-256 hash of the spec
+content (file path + mtime + size, or raw content for string-loaded specs) to
+resist cache-poisoning collisions. `CompilationCache` uses the same SHA-256
+keying scheme.
 
 For compiled validators, use `CompilationCache` to avoid regenerating PHP code:
 
