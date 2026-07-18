@@ -34,7 +34,20 @@ final readonly class ServerPathMatcher
      */
     public function matchPath(string $requestPath): ?ServerPathMatch
     {
-        return $this->findMatch($this->sortedServerPaths, $requestPath);
+        foreach ($this->sortedServerPaths as $entry) {
+            $basePath = $entry['basePath'];
+
+            if (str_starts_with($requestPath, $basePath . '/') || $requestPath === $basePath) {
+                $stripped = substr($requestPath, strlen($basePath));
+
+                return new ServerPathMatch(
+                    strippedPath: '/' . ltrim($stripped, '/'),
+                    matchedServer: $entry['server'],
+                );
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -85,26 +98,5 @@ final readonly class ServerPathMatcher
     private function compareByBasePathLength(array $a, array $b): int
     {
         return strlen($b['basePath']) <=> strlen($a['basePath']);
-    }
-
-    /**
-     * @param list<array{server: Server, basePath: string}> $resolved
-     */
-    private function findMatch(array $resolved, string $requestPath): ?ServerPathMatch
-    {
-        foreach ($resolved as $entry) {
-            $basePath = $entry['basePath'];
-
-            if (str_starts_with($requestPath, $basePath . '/') || $requestPath === $basePath) {
-                $stripped = substr($requestPath, strlen($basePath));
-
-                return new ServerPathMatch(
-                    strippedPath: '/' . ltrim($stripped, '/'),
-                    matchedServer: $entry['server'],
-                );
-            }
-        }
-
-        return null;
     }
 }

@@ -7,9 +7,7 @@ namespace Duyler\OpenApi\Cache;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Psr\Cache\CacheItemPoolInterface;
 
-use RuntimeException;
-
-use function sprintf;
+use function assert;
 
 final readonly class SchemaCache
 {
@@ -22,9 +20,6 @@ final readonly class SchemaCache
      *
      * @param CacheItemPoolInterface $pool PSR-6 cache pool
      * @param int $ttl Time to live in seconds (default: 3600)
-     *
-     * @example
-     * $cache = new SchemaCache($symfonyCacheAdapter, 7200);
      */
     public function __construct(
         private readonly CacheItemPoolInterface $pool,
@@ -43,16 +38,7 @@ final readonly class SchemaCache
     {
         $value = $this->decorator->get($key, OpenApiDocument::class);
 
-        if (null === $value) {
-            return null;
-        }
-
-        if (false === $value instanceof OpenApiDocument) {
-            throw new RuntimeException(sprintf(
-                'Cached value for key "%s" is not an OpenApiDocument instance',
-                $key,
-            ));
-        }
+        assert($value === null || $value instanceof OpenApiDocument);
 
         return $value;
     }

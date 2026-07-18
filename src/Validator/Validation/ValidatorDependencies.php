@@ -48,6 +48,7 @@ final readonly class ValidatorDependencies
     public readonly SchemaValidatorWithContext $schemaValidatorWithContext;
     private readonly StatelessValidatorRegistry $statelessValidators;
     private readonly SchemaValidatorDependencies $schemaValidatorDependencies;
+    private readonly ValidatorConfiguration $validatorConfiguration;
 
     public function __construct(
         public readonly OpenApiDocument $document,
@@ -70,6 +71,18 @@ final readonly class ValidatorDependencies
         public readonly int $maxRegexBacktracks = PregExecutor::DEFAULT_MAX_BACKTRACKS,
         public readonly PregExecutor $pregExecutor = new PregExecutor(),
     ) {
+        $this->validatorConfiguration = new ValidatorConfiguration(
+            coercion: $this->coercion,
+            nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
+            reportDeprecated: $this->reportDeprecated,
+            strictFormats: $this->strictFormats,
+            maxJsonBodyBytes: $this->maxJsonBodyBytes,
+            maxMultipartBodyBytes: $this->maxMultipartBodyBytes,
+            strictStreaming: $this->strictStreaming,
+            maxRegexBacktracks: $this->maxRegexBacktracks,
+        );
+
         $this->statelessValidators = new StatelessValidatorRegistry(
             $this->pool,
             $this->formatRegistry,
@@ -100,25 +113,10 @@ final readonly class ValidatorDependencies
 
         $this->schemaValidatorWithContext = $this->schemaValidatorDependencies->rootSchemaValidator(
             $this->document,
-            $this->buildValidatorConfiguration(),
+            $this->validatorConfiguration,
         );
         $this->requestValidator = $this->buildRequestValidator();
         $this->responseValidator = $this->buildResponseValidator();
-    }
-
-    private function buildValidatorConfiguration(): ValidatorConfiguration
-    {
-        return new ValidatorConfiguration(
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            reportDeprecated: $this->reportDeprecated,
-            strictFormats: $this->strictFormats,
-            maxJsonBodyBytes: $this->maxJsonBodyBytes,
-            maxMultipartBodyBytes: $this->maxMultipartBodyBytes,
-            strictStreaming: $this->strictStreaming,
-            maxRegexBacktracks: $this->maxRegexBacktracks,
-        );
     }
 
     private function buildRequestValidator(): RequestValidator
@@ -187,7 +185,7 @@ final readonly class ValidatorDependencies
             bodyValidator: new RequestBodyValidatorWithContext(
                 document: $this->document,
                 dependencies: $this->schemaValidatorDependencies,
-                configuration: $this->buildValidatorConfiguration(),
+                configuration: $this->validatorConfiguration,
                 pregExecutor: $this->pregExecutor,
             ),
         );
@@ -198,7 +196,7 @@ final readonly class ValidatorDependencies
         return new ResponseValidatorWithContext(
             document: $this->document,
             dependencies: $this->schemaValidatorDependencies,
-            configuration: $this->buildValidatorConfiguration(),
+            configuration: $this->validatorConfiguration,
             pregExecutor: $this->pregExecutor,
         );
     }

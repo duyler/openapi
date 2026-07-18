@@ -194,22 +194,7 @@ final readonly class ParameterDeserializer
         return is_array($type) && in_array('array', $type, true);
     }
 
-    /**
-     * Splits a serialized parameter value by the given separator and trims
-     * optional whitespace from each resulting item.
-     *
-     * Per RFC 7230 §3.2.3, optional whitespace is allowed around the list
-     * separator in HTTP header values. The RequestValidator joins PSR-7
-     * multi-value headers with `implode(', ', $values)` (comma + space),
-     * so trimming on the split side keeps the deserializer robust against
-     * any whitespace the join side (or an external client) may introduce.
-     *
-     * Trimming is safe for all callers (headers, path, cookie): RFC 3986
-     * forbids leading/trailing whitespace in URI component values, and
-     * RFC 6265 treats cookie values the same way.
-     *
-     * @return list<string>
-     */
+    /** @return list<string> */
     private function splitBySeparator(string $value, string $separator): array
     {
         assert('' !== $separator, 'Separator must not be empty');

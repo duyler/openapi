@@ -67,9 +67,6 @@ abstract class AbstractValidationError extends RuntimeException implements Valid
         return $this->suggestion;
     }
 
-    /**
-     * @see keyword()
-     */
     #[Override]
     #[Deprecated(message: 'Use keyword() instead. This method will be removed in 2.0.')]
     public function getType(): string

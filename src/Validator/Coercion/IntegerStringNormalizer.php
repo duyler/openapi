@@ -23,6 +23,10 @@ final readonly class IntegerStringNormalizer
         $unsigned = ('+' === $first || '-' === $first) ? substr($value, 1) : $value;
         $digits = ltrim($unsigned, '0') ?: '0';
 
-        return '0' === $digits ? '0' : ('-' === $first ? '-' : '') . $digits;
+        if ('0' === $digits) {
+            return '0';
+        }
+
+        return ('-' === $first ? '-' : '') . $digits;
     }
 }

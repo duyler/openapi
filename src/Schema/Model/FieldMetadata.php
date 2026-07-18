@@ -10,9 +10,7 @@ namespace Duyler\OpenApi\Schema\Model;
  *
  * Adding a new field to `Schema` requires only adding a row here. The
  * SchemaToArrayConverter and SchemaFromArrayConverter read this catalog and
- * serialise / parse the field uniformly, which removes the historical
- * 5-place duplication (ctor + withOverrides + jsonSerialize + schemaToArray +
- * buildSchema).
+ * serialise / parse the field uniformly.
  *
  * Field categories:
  * - `flat`   - lives directly on the Schema facade (scalars, nested Schema,

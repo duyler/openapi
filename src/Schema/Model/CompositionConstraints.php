@@ -4,12 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
-/**
- * Sub-DTO grouping JSON Schema 2020-12 composition / conditional keywords.
- *
- * - `allOf`, `anyOf`, `oneOf` are list-of-schema applicators.
- * - `not`, `if`, `then`, `else` are single-schema applicators.
- */
 final readonly class CompositionConstraints
 {
     /**

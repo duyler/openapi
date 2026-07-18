@@ -8,8 +8,6 @@ use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
 use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Model\Xml;
-use Duyler\OpenApi\Schema\Model\SchemaFieldMetadata;
-use Duyler\OpenApi\Schema\Serializer\SchemaToArrayConverter;
 use Duyler\OpenApi\Validator\TypeFormatter;
 
 use function array_key_exists;
@@ -30,8 +28,7 @@ use function version_compare;
  * This is the inverse of {@see SchemaToArrayConverter::toWireArray()}.
  * Centralising the parser here removes the field enumeration from
  * {@see OpenApiBuilder::buildSchema()} so adding a new field requires editing
- * only {@see SchemaFieldMetadata} plus the
- * constructor call below.
+ * only {@see SchemaFieldMetadata} plus the constructor call below.
  *
  * The parser is version-aware (OpenAPI 3.0 / 3.1 / 3.2) for the
  * `exclusiveMinimum` / `exclusiveMaximum` / `type` migrations and routes
@@ -109,7 +106,7 @@ final readonly class SchemaFromArrayConverter
                 : null,
             additionalProperties: $this->buildOptionalSchema($data, 'additionalProperties'),
             unevaluatedProperties: $this->buildOptionalSchema($data, 'unevaluatedProperties'),
-            items: $this->itemsField($data),
+            items: $this->schemaField($data, 'items'),
             prefixItems: $this->buildSchemaList($data, 'prefixItems'),
             contains: $this->schemaField($data, 'contains'),
             minContains: TypeHelper::asIntOrNull($data['minContains'] ?? null),
@@ -149,25 +146,6 @@ final readonly class SchemaFromArrayConverter
 
         /** @var mixed $value */
         $value = $data[$key];
-
-        if (is_array($value) || is_bool($value)) {
-            return $this->fromArray($value);
-        }
-
-        return null;
-    }
-
-    /**
-     * @param array<array-key, mixed> $data
-     */
-    private function itemsField(array $data): ?Schema
-    {
-        if (false === isset($data['items'])) {
-            return null;
-        }
-
-        /** @var mixed $value */
-        $value = $data['items'];
 
         if (is_array($value) || is_bool($value)) {
             return $this->fromArray($value);

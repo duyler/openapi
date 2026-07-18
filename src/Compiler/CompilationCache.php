@@ -8,16 +8,13 @@ use Duyler\OpenApi\Compiler\Exception\CompilationCacheException;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Serializer\SchemaToArrayConverter;
 use InvalidArgumentException;
+use JsonException;
 use Override;
 use Psr\Cache\CacheItemPoolInterface;
-
 use WeakMap;
-
-use JsonException;
 
 use function is_string;
 use function json_encode;
-
 use function sprintf;
 
 use const JSON_THROW_ON_ERROR;

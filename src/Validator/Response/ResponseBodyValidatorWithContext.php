@@ -39,8 +39,9 @@ final readonly class ResponseBodyValidatorWithContext
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
         ?PregExecutor $pregExecutor = null,
     ) {
-        $resolvedPregExecutor = $pregExecutor ?? new PregExecutor($this->configuration->maxRegexBacktracks);
-        $this->negotiator = new ContentTypeNegotiator($resolvedPregExecutor);
+        $this->negotiator = new ContentTypeNegotiator(
+            $pregExecutor ?? new PregExecutor($this->configuration->maxRegexBacktracks),
+        );
         $this->typeCoercer = new ResponseTypeCoercer();
         $this->streamingParser = new StreamingContentParser(
             $this->dependencies->logger,

@@ -135,8 +135,6 @@ final readonly class OpenApiValidatorBuilder
      *
      * When enabled, the validator checks that required security credentials
      * are present in the request headers, query parameters, or cookies.
-     *
-     * @return self New builder instance with security validation enabled
      */
     public function enableSecurityValidation(): self
     {
@@ -150,8 +148,6 @@ final readonly class OpenApiValidatorBuilder
      * from the request path before matching against OpenAPI path templates.
      * This allows validation of requests routed through a reverse proxy
      * that prefixes paths with a version segment (e.g., /v1/users).
-     *
-     * @return self New builder instance with server path resolution enabled
      */
     public function enableServerPathResolution(): self
     {
@@ -163,8 +159,6 @@ final readonly class OpenApiValidatorBuilder
      *
      * When enabled, unknown format values are rejected during validation
      * instead of being silently skipped.
-     *
-     * @return self New builder instance with strict formats enabled
      */
     public function enableStrictFormats(): self
     {
@@ -176,8 +170,6 @@ final readonly class OpenApiValidatorBuilder
      *
      * When enabled, deprecated fields in the OpenAPI specification are logged
      * through the configured PSR-3 logger.
-     *
-     * @return self New builder instance with deprecation reporting enabled
      */
     public function enableReportDeprecated(): self
     {
@@ -188,8 +180,6 @@ final readonly class OpenApiValidatorBuilder
      * Override the maximum allowed size, in bytes, for non-multipart request
      * and response bodies (JSON, XML, text). Bodies larger than this cap are
      * rejected before being fully materialised in memory.
-     *
-     * @return self New builder instance with the JSON body cap applied
      */
     public function withMaxJsonBodySize(int $maxBytes): self
     {
@@ -200,8 +190,6 @@ final readonly class OpenApiValidatorBuilder
      * Override the maximum allowed size, in bytes, for multipart request and
      * response bodies. multipart payloads typically carry larger uploads, so
      * the cap is kept independent from the JSON cap.
-     *
-     * @return self New builder instance with the multipart body cap applied
      */
     public function withMaxMultipartBodySize(int $maxBytes): self
     {
@@ -215,8 +203,6 @@ final readonly class OpenApiValidatorBuilder
      * Sequence streams raise a MalformedStreamRecordException instead of being
      * logged and skipped. This is an opt-in behaviour and remains disabled by
      * default for backward compatibility.
-     *
-     * @return self New builder instance with strict streaming enabled
      */
     public function enableStrictStreaming(): self
     {
@@ -228,8 +214,6 @@ final readonly class OpenApiValidatorBuilder
      *
      * Restores the default fail-open behaviour where malformed JSON records
      * are logged and skipped rather than raised.
-     *
-     * @return self New builder instance with strict streaming disabled
      */
     public function disableStrictStreaming(): self
     {
@@ -242,8 +226,6 @@ final readonly class OpenApiValidatorBuilder
      * PHP default (1_000_000) bounds the worst-case CPU cost of catastrophic
      * regular expressions on attacker-controlled input such as JSON-Schema
      * "pattern" fields.
-     *
-     * @return self New builder instance with the regex backtracking cap applied
      */
     public function withMaxRegexBacktracks(int $maxBacktracks): self
     {
@@ -261,8 +243,6 @@ final readonly class OpenApiValidatorBuilder
      * while still passing declared security checks on the callback pathItem.
      *
      * Off by default for backward compatibility with existing callback specs.
-     *
-     * @return self New builder instance with strict callback runtime template enabled
      */
     public function enableStrictCallbackRuntimeTemplate(): self
     {
@@ -453,8 +433,6 @@ final readonly class OpenApiValidatorBuilder
             }
 
             throw new BuilderException(sprintf('Unsupported spec type: %s', $this->config->specType ?? 'none'));
-        } catch (BuilderException $e) {
-            throw $e;
         } catch (Exception $e) {
             throw new BuilderException(
                 sprintf('Failed to parse spec: %s', $e->getMessage()),

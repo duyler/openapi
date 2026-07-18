@@ -14,24 +14,16 @@ use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 interface RefResolverInterface
 {
     /**
-     * Resolve $ref to actual schema
-     *
      * @param string $ref JSON Pointer reference (e.g., '#/components/schemas/User')
-     * @param OpenApiDocument $document Root document
      * @param int $depth Current recursion depth
-     * @return Schema Resolved schema
      * @throws Exception\UnresolvableRefException
      * @throws SchemaDepthExceededException
      */
     public function resolve(string $ref, OpenApiDocument $document, int $depth = 0): Schema;
 
     /**
-     * Resolve $ref to actual parameter
-     *
      * @param string $ref JSON Pointer reference (e.g., '#/components/parameters/LimitParam')
-     * @param OpenApiDocument $document Root document
      * @param int $depth Current recursion depth
-     * @return Parameter Resolved parameter
      * @throws Exception\UnresolvableRefException
      * @throws SchemaDepthExceededException
      */
@@ -42,12 +34,8 @@ interface RefResolverInterface
     ): Parameter;
 
     /**
-     * Resolve $ref to actual response
-     *
      * @param string $ref JSON Pointer reference (e.g., '#/components/responses/SuccessResponse')
-     * @param OpenApiDocument $document Root document
      * @param int $depth Current recursion depth
-     * @return Response Resolved response
      * @throws Exception\UnresolvableRefException
      * @throws SchemaDepthExceededException
      */
@@ -60,10 +48,8 @@ interface RefResolverInterface
     /**
      * Check if schema contains discriminator (including nested references)
      *
-     * @param Schema $schema Schema to check
      * @param OpenApiDocument $document Root document for resolving refs
      * @param int $depth Current recursion depth
-     * @return bool True if discriminator found, false otherwise
      * @throws SchemaDepthExceededException
      */
     public function schemaHasDiscriminator(
@@ -75,18 +61,13 @@ interface RefResolverInterface
     /**
      * Check if schema or any of its nested schemas contains $ref
      *
-     * @param Schema $schema Schema to check
      * @param int $depth Current recursion depth
-     * @return bool True if $ref found, false otherwise
      * @throws SchemaDepthExceededException
      */
     public function schemaHasRef(Schema $schema, int $depth = 0): bool;
 
     /**
      * Get base URI from document's $self field
-     *
-     * @param OpenApiDocument $document Root document
-     * @return string|null Base URI or null if not set
      */
     public function getBaseUri(OpenApiDocument $document): ?string;
 
@@ -104,8 +85,6 @@ interface RefResolverInterface
     ): string;
 
     /**
-     * Combine base URI with relative reference
-     *
      * @param string $baseUri Base URI (e.g., 'https://api.example.com/schemas/main.json')
      * @param string $relativeRef Relative reference (e.g., 'schemas/user.yaml')
      * @return string Combined absolute URI
@@ -116,8 +95,6 @@ interface RefResolverInterface
      * Resolve schema reference with summary/description override
      *
      * @param Schema $schema Schema with potential $ref and override values
-     * @param OpenApiDocument $document Root document
-     * @return Schema Resolved schema with overrides applied
      * @throws Exception\UnresolvableRefException
      */
     public function resolveSchemaWithOverride(
@@ -129,8 +106,6 @@ interface RefResolverInterface
      * Resolve parameter reference with summary/description override
      *
      * @param Parameter $parameter Parameter with potential $ref and override values
-     * @param OpenApiDocument $document Root document
-     * @return Parameter Resolved parameter with overrides applied
      * @throws Exception\UnresolvableRefException
      */
     public function resolveParameterWithOverride(
@@ -142,8 +117,6 @@ interface RefResolverInterface
      * Resolve response reference with summary/description override
      *
      * @param Response $response Response with potential $ref and override values
-     * @param OpenApiDocument $document Root document
-     * @return Response Resolved response with overrides applied
      * @throws Exception\UnresolvableRefException
      */
     public function resolveResponseWithOverride(
@@ -152,8 +125,6 @@ interface RefResolverInterface
     ): Response;
 
     /**
-     * Clear internal cache.
-     *
      * Recreates the WeakMap cache to free memory.
      */
     public function clear(): void;

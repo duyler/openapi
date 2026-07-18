@@ -43,7 +43,6 @@ final readonly class ObjectLengthValidator extends AbstractSchemaValidator imple
         }
 
         $dataPath = $this->getDataPath($context);
-        /** @var array<array-key, mixed> $data */
         $count = count($data);
 
         $this->validateLength(

@@ -84,7 +84,9 @@ final readonly class XmlBodyParser
             $result['@' . $name] = (string) $value;
         }
 
-        foreach ($xml->getNamespaces(true) as $prefix => $namespace) {
+        $namespaces = $xml->getNamespaces(true);
+
+        foreach ($namespaces as $prefix => $namespace) {
             if ('' === $prefix) {
                 continue;
             }
@@ -127,7 +129,7 @@ final readonly class XmlBodyParser
             $result[$name] = $existing;
         }
 
-        foreach ($xml->getNamespaces(true) as $prefix => $namespace) {
+        foreach ($namespaces as $prefix => $namespace) {
             if ('' === $prefix) {
                 continue;
             }
@@ -180,7 +182,9 @@ final readonly class XmlBodyParser
         assert($attributes instanceof SimpleXMLElement);
         $hasAttributes = 0 !== $attributes->count();
 
-        foreach ($element->getNamespaces(true) as $namespace) {
+        $namespaces = $element->getNamespaces(true);
+
+        foreach ($namespaces as $namespace) {
             $nsAttributes = $element->attributes($namespace);
             assert($nsAttributes instanceof SimpleXMLElement);
 
@@ -196,7 +200,7 @@ final readonly class XmlBodyParser
         $hasChildren = 0 !== $children->count();
 
         if (false === $hasChildren) {
-            foreach ($element->getNamespaces(true) as $namespace) {
+            foreach ($namespaces as $namespace) {
                 $nsChildren = $element->children($namespace);
                 assert($nsChildren instanceof SimpleXMLElement);
 

@@ -63,37 +63,6 @@ trait EventDispatchingTrait
             );
 
             return $result;
-        } catch (ValidationException $e) {
-            $duration = microtime(true) - $startTime;
-
-            $this->dispatchValidationEvent(
-                $this->createFinishedEvent(
-                    $request,
-                    $response,
-                    $path,
-                    $method,
-                    false,
-                    $duration,
-                    $schemaRef,
-                ),
-            );
-
-            if (null !== $warningMessage) {
-                $this->logger->warning($warningMessage);
-            }
-
-            $this->dispatchValidationEvent(
-                new ValidationErrorEvent(
-                    request: $request,
-                    path: $path,
-                    method: $method,
-                    exception: $e,
-                    response: $response,
-                    schemaRef: $schemaRef,
-                ),
-            );
-
-            throw $e;
         } catch (Throwable $e) {
             $this->dispatchValidationEvent(
                 $this->createFinishedEvent(
@@ -106,6 +75,23 @@ trait EventDispatchingTrait
                     $schemaRef,
                 ),
             );
+
+            if ($e instanceof ValidationException) {
+                if (null !== $warningMessage) {
+                    $this->logger->warning($warningMessage);
+                }
+
+                $this->dispatchValidationEvent(
+                    new ValidationErrorEvent(
+                        request: $request,
+                        path: $path,
+                        method: $method,
+                        exception: $e,
+                        response: $response,
+                        schemaRef: $schemaRef,
+                    ),
+                );
+            }
 
             throw $e;
         }

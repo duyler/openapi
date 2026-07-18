@@ -53,7 +53,6 @@ final readonly class ResponseTypeCoercer extends AbstractCoercer
                 continue;
             }
 
-            /** @var array|int|string|float|bool|null $coerced */
             $coerced = $this->coerceToType($value, $type, $context);
 
             if ($this->isValidType($coerced, $type)) {

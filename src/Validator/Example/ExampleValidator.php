@@ -147,7 +147,7 @@ final readonly class ExampleValidator
     private function matchesExample(
         mixed $data,
         mixed $example,
-        string|false|null $encodedData = null,
+        string|false|null $encodedData,
     ): bool {
         if ($data === $example) {
             return true;
@@ -157,7 +157,6 @@ final readonly class ExampleValidator
             return false;
         }
 
-        $encodedData ??= json_encode($data);
         $exampleEncoded = json_encode($example);
 
         return false !== $encodedData && $encodedData === $exampleEncoded;

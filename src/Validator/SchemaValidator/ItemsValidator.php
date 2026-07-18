@@ -46,7 +46,6 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
             || SchemaValueNormalizer::typeIncludesNull($schema->items->type));
 
         foreach ($data as $index => $item) {
-            /** @var int $index */
             if ($index < $prefixCount) {
                 continue;
             }

@@ -67,7 +67,7 @@ final readonly class PathItemBuilder
             trace: isset($data['trace']) ? $this->buildOperation(TypeHelper::asArray($data['trace'])) : null,
             query: isset($data['query']) ? $this->buildOperation(TypeHelper::asArray($data['query'])) : null,
             additionalOperations: isset($data['additionalOperations']) && is_array($data['additionalOperations'])
-                ? $this->buildAdditionalOperations(TypeHelper::asArray($data['additionalOperations']))
+                ? $this->buildAdditionalOperations($data['additionalOperations'])
                 : null,
             servers: isset($data['servers']) ? new Servers($this->buildServers(TypeHelper::asList($data['servers']))) : null,
             parameters: isset($data['parameters']) ? new Parameters($this->buildParameters(TypeHelper::asList($data['parameters']))) : null,
@@ -169,7 +169,7 @@ final readonly class PathItemBuilder
      */
     public function buildServers(array $data): array
     {
-        return array_map(fn(array $server) => $this->buildServer($server), array_values($data));
+        return array_map($this->buildServer(...), array_values($data));
     }
 
     public function buildServer(array $data): Server

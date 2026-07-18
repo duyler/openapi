@@ -14,11 +14,9 @@ use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Request\RequestValidatorInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 
 use function array_key_exists;
 use function assert;
-use function is_array;
 use function is_string;
 use function parse_url;
 use function preg_match;
@@ -61,9 +59,6 @@ final readonly class CallbackValidator
     ): Operation {
         $pathItems = $this->findCallbacks($callbackName, $document);
 
-        /**
-         * @var array{0: Operation, 1: string} $matched
-         */
         $matched = $this->extractOperation($request, $callbackName, $pathItems, $document);
         $operation = $matched[0];
         $pathTemplate = $matched[1];
@@ -104,10 +99,7 @@ final readonly class CallbackValidator
             return [];
         }
 
-        /** @var Callbacks $callback */
-        $callback = $componentCallbacks[$callbackName];
-
-        return $this->getCallbackExpressions($callback, $callbackName);
+        return $this->getCallbackExpressions($componentCallbacks[$callbackName], $callbackName);
     }
 
     /**
@@ -140,21 +132,13 @@ final readonly class CallbackValidator
      */
     private function getCallbackExpressions(Callbacks $callbacks, string $callbackName): array
     {
-        $expressions = $callbacks->callbacks[$callbackName] ?? null;
-
-        if (false === is_array($expressions)) {
-            return [];
-        }
-
-        return $expressions;
+        return $callbacks->callbacks[$callbackName] ?? [];
     }
 
     /**
-     * Resolve the request against declared callback expressions.
-     *
      * @param array<string, PathItem> $pathItems
      *
-     * @return array{0: Operation, 1: string} Matched operation and the path template to validate against
+     * @return array{0: Operation, 1: string}
      */
     private function extractOperation(
         ServerRequestInterface $request,
@@ -187,37 +171,7 @@ final readonly class CallbackValidator
     }
 
     /**
-     * Resolve a callback expression into the path template that should be used
-     * to validate the incoming request.
-     *
-     * Runtime expressions (containing "{$" markers) reference the original
-     * triggering request and cannot be resolved without its body, so they
-     * are treated as wildcards that accept any URL. The request path itself
-     * is returned as the template.
-     *
-     * Security caveat: when the runtime template is attacker-controlled (for
-     * example `{$request.body#/callback_url}` on a request whose body is
-     * user-supplied), wildcard path validation allows the request to target
-     * any URL while still passing declared security checks. Callers that
-     * cannot guarantee the expression source is trusted should enable strict
-     * callback runtime template mode via
-     * {@see OpenApiValidatorBuilder::enableStrictCallbackRuntimeTemplate()},
-     * which makes this method throw {@see UnresolvableCallbackPathException}
-     * instead of accepting the wildcard.
-     *
-     * Full URL expressions (e.g. "https://example.com/webhook") are parsed
-     * and their path component is compared against the request path. When
-     * matched, the parsed path is returned as the template.
-     *
-     * Path template expressions (e.g. "/callbacks/{eventId}") follow the
-     * OpenAPI 3.2 specification: every "{paramName}" placeholder matches a
-     * single path segment. The expression itself is returned as the template
-     * so that path parameters can be extracted and validated downstream.
-     *
-     * Fixed path expressions are matched by exact comparison against the
-     * request path and returned as-is.
-     *
-     * @return string|null Path template to use for request validation, or null when the expression does not match the request URL
+     * @return string|null
      */
     private function resolvePathTemplate(string $expression, string $requestPath): ?string
     {

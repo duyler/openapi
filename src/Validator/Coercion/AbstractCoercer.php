@@ -126,11 +126,6 @@ abstract readonly class AbstractCoercer
         return $value;
     }
 
-    /**
-     * Strict variant: throws TypeMismatchError for non-numeric strings, for
-     * strings that lose precision when cast to int, and for float values.
-     * Bool, array, and null pass through unchanged.
-     */
     protected function coerceToIntegerStrict(mixed $value): int|string|float|bool|array|null
     {
         if (is_int($value)) {
@@ -204,10 +199,6 @@ abstract readonly class AbstractCoercer
         return $value;
     }
 
-    /**
-     * Strict variant: throws TypeMismatchError for non-numeric strings.
-     * Bool, array, and null pass through unchanged.
-     */
     protected function coerceToNumberStrict(mixed $value): float|int|string|bool|array|null
     {
         if (is_float($value)) {

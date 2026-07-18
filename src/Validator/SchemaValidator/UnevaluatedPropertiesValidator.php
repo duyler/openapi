@@ -9,8 +9,8 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
 use Override;
 
-use function assert;
 use function array_filter;
+use function assert;
 use function is_array;
 use function is_string;
 
@@ -86,7 +86,7 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
         $evaluated = [];
 
         if (null !== $schema->properties) {
-            $evaluated = [...$evaluated, ...array_keys($schema->properties)];
+            $evaluated = array_keys($schema->properties);
         }
 
         if (null !== $schema->patternProperties && [] !== $schema->patternProperties) {

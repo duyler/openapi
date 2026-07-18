@@ -13,11 +13,6 @@ use function sprintf;
  * Thrown when a callback expression uses a runtime template (e.g.
  * `{$request.body#/callback_url}`) and strict callback runtime template
  * resolution is enabled via {@see OpenApiValidatorBuilder::enableStrictCallbackRuntimeTemplate()}.
- *
- * Runtime templates reference the original triggering request body and cannot
- * be resolved by the validator, which would otherwise make path validation a
- * wildcard that accepts any URL. Strict mode rejects such expressions instead
- * of silently accepting them.
  */
 final class UnresolvableCallbackPathException extends RuntimeException
 {

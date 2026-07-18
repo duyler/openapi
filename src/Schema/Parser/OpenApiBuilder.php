@@ -20,15 +20,7 @@ use function sprintf;
 
 use const FILTER_VALIDATE_URL;
 
-/**
- * Abstract base for {@see JsonParser} and {@see YamlParser}.
- *
- * Decomposed (P-057) into five focused sub-builders that share an
- * {@see OpenApiBuildContext}: InfoBuilder, SchemaBuilder, SecuritySchemeBuilder,
- * PathItemBuilder, ComponentsBuilder. Concrete parsers call {@see parse()},
- * which validates the root object and orchestrates the sub-builders through
- * {@see buildDocument()}.
- */
+/** Abstract base for {@see JsonParser} and {@see YamlParser}. */
 abstract class OpenApiBuilder implements SchemaParserInterface
 {
     private const string VERSION_PATTERN = '/^3\.[0-2]\.[0-9]+$/';

@@ -4,15 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
-use Duyler\OpenApi\Schema\Parser\SchemaFromArrayConverter;
-use Duyler\OpenApi\Schema\Serializer\SchemaToArrayConverter;
-
 /**
- * Canonical catalog of every JSON Schema 2020-12 / OpenAPI 3.2 field carried
- * by {@see Schema}. Both {@see SchemaToArrayConverter}
- * and {@see SchemaFromArrayConverter} consume
- * this list, so the wire format is defined exactly once.
- *
  * Order matters: fields are emitted in the order listed here. The canonical
  * order matches the historical emission produced by the legacy
  * `Schema::jsonSerialize()` to keep the serialised byte output byte-stable.

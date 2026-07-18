@@ -49,10 +49,6 @@ final readonly class ContentTypeNegotiator
      */
     private function extractQValue(array $parts): float
     {
-        if (1 === count($parts)) {
-            return 1.0;
-        }
-
         for ($i = 1, $total = count($parts); $i < $total; ++$i) {
             $param = trim($parts[$i]);
 

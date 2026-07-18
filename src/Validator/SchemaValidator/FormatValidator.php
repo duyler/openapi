@@ -36,14 +36,12 @@ final readonly class FormatValidator implements KeywordApplicable
             return;
         }
 
-        if (is_array($schema->type)) {
-            $type = $this->firstStringType($schema->type);
+        $type = is_array($schema->type)
+            ? $this->firstStringType($schema->type)
+            : $schema->type;
 
-            if (null === $type) {
-                return;
-            }
-        } else {
-            $type = $schema->type;
+        if (null === $type) {
+            return;
         }
 
         $formatValidator = $this->dependencies->formatRegistry->getValidator($type, $schema->format);

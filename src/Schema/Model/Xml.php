@@ -10,12 +10,7 @@ use Override;
 
 final readonly class Xml implements JsonSerializable
 {
-    /**
-     * Canonical list of valid XML node types. Derived from XmlNodeType enum
-     * so the enum remains the single source of truth.
-     *
-     * @var list<string>
-     */
+    /** @var list<string> */
     public const array VALID_NODE_TYPES = [
         XmlNodeType::Element->value,
         XmlNodeType::Attribute->value,

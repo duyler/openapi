@@ -14,22 +14,14 @@ final readonly class PathParser
         private readonly PathRegexCache $pathRegexCache,
     ) {}
 
-    /**
-     * Match request path against template
-     *
-     * @return array<string, string> Parameter values
-     */
+    /** @return array<string, string> Parameter values */
     public function matchPath(string $requestPath, string $template): array
     {
         return $this->tryMatchPath($requestPath, $template)
             ?? throw new PathMismatchException($template, $requestPath);
     }
 
-    /**
-     * Non-throwing version of matchPath for iteration use
-     *
-     * @return array<string, string>|null Parameter values, or null if no match
-     */
+    /** @return array<string, string>|null Parameter values, or null if no match */
     public function tryMatchPath(string $requestPath, string $template): ?array
     {
         /** @var non-empty-string $regex */

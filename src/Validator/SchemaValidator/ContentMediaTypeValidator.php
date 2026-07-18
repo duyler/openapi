@@ -186,7 +186,7 @@ final readonly class ContentMediaTypeValidator implements KeywordApplicable
         if (self::MAX_URLENCODED_PAIRS < substr_count($data, '&') + 1) {
             return false;
         }
-        return array_all(explode('&', $data), fn($pair) => !(1 !== $this->dependencies->pregExecutor->match('/^[^&=]+(?:=[^&]*)?$/', $pair)));
+        return array_all(explode('&', $data), fn($pair) => 1 === $this->dependencies->pregExecutor->match('/^[^&=]+(?:=[^&]*)?$/', $pair));
     }
 
     private function isRecognizedMediaType(string $mediaType): bool

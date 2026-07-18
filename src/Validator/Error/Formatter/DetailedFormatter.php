@@ -16,11 +16,15 @@ final readonly class DetailedFormatter implements ErrorFormatterInterface
     #[Override]
     public function format(ValidationErrorInterface $error): string
     {
-        $details = $this->getDetails($error);
-        $suggestion = $error->suggestion();
-
         $output = sprintf("Error at %s:\n", $error->dataPath());
         $output .= sprintf("  Message: %s\n", $error->message());
+
+        $details = [];
+        foreach ($error->params() as $key => $value) {
+            if (is_scalar($value)) {
+                $details[$key] = (string) $value;
+            }
+        }
 
         if ([] !== $details) {
             $output .= "  Details:\n";
@@ -29,6 +33,7 @@ final readonly class DetailedFormatter implements ErrorFormatterInterface
             }
         }
 
+        $suggestion = $error->suggestion();
         if (null !== $suggestion) {
             $output .= sprintf("  Suggestion: %s\n", $suggestion);
         }
@@ -51,23 +56,5 @@ final readonly class DetailedFormatter implements ErrorFormatterInterface
     public function formatException(ValidationException $exception): string
     {
         return $this->formatMultiple($exception->getErrors());
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function getDetails(ValidationErrorInterface $error): array
-    {
-        /** @var array<string, mixed> $params */
-        $params = $error->params();
-        $details = [];
-
-        foreach ($params as $key => $value) {
-            if (is_scalar($value)) {
-                $details[$key] = (string) $value;
-            }
-        }
-
-        return $details;
     }
 }

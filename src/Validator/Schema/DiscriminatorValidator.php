@@ -44,7 +44,7 @@ final readonly class DiscriminatorValidator
         }
 
         if (null === $discriminator->propertyName) {
-            $this->validateWithoutPropertyName($data, $discriminator, $document, $dataPath);
+            $this->validateWithoutPropertyName($data, $discriminator, $document);
 
             return;
         }
@@ -64,22 +64,20 @@ final readonly class DiscriminatorValidator
         $value = $this->extractValue($data, $propertyName, $dataPath);
         $targetSchema = $this->resolveSchema($value, $discriminator, $schema, $document, $dataPath);
 
-        $propertyPath = $this->buildPath($dataPath, $propertyName);
-        $this->validateAgainstSchema($data, $targetSchema, $document, $propertyPath);
+        $this->validateAgainstSchema($data, $targetSchema, $document);
     }
 
     private function validateWithoutPropertyName(
         array|int|string|float|bool $data,
         Discriminator $discriminator,
         OpenApiDocument $document,
-        string $dataPath,
     ): void {
         if (null === $discriminator->defaultMapping) {
             return;
         }
 
         $targetSchema = $this->dependencies->refResolver->resolve($discriminator->defaultMapping, $document);
-        $this->validateAgainstSchema($data, $targetSchema, $document, $dataPath);
+        $this->validateAgainstSchema($data, $targetSchema, $document);
     }
 
     private function buildPath(string $basePath, string $segment): string
@@ -184,7 +182,6 @@ final readonly class DiscriminatorValidator
         mixed $data,
         Schema $schema,
         OpenApiDocument $document,
-        string $dataPath,
     ): void {
         /** @var array<array-key, mixed> $data */
         $rootValidator = $this->dependencies->rootSchemaValidator($document, $this->configuration);

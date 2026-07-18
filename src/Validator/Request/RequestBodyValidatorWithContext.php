@@ -86,30 +86,24 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
 
         $parsedBody = $this->dependencies->bodyParser->parse($body, $requestMediaType, $contentType);
 
-        if ($this->configuration->coercion && null !== $content->schema) {
+        if (null !== $content->schema) {
             $schema = $content->schema;
 
             if (null !== $schema->ref) {
                 $schema = $this->dependencies->refResolver->resolve($schema->ref, $this->document);
             }
 
-            $coercionContext = new CoercionContext(
-                schema: $schema,
-                enabled: true,
-                strict: true,
-                nullableAsType: $this->configuration->nullableAsType,
-            );
+            if ($this->configuration->coercion) {
+                $coercionContext = new CoercionContext(
+                    schema: $schema,
+                    enabled: true,
+                    strict: true,
+                    nullableAsType: $this->configuration->nullableAsType,
+                );
 
-            /** @var array|int|string|float|bool|null $parsedBody */
-            $parsedBody = $this->coercer->coerce($parsedBody, $coercionContext);
-            $parsedBody = TypeGuarantor::ensureValidType($parsedBody, $this->configuration->nullableAsType);
-        }
-
-        if (null !== $content->schema) {
-            $schema = $content->schema;
-
-            if (null !== $schema->ref) {
-                $schema = $this->dependencies->refResolver->resolve($schema->ref, $this->document);
+                /** @var array|int|string|float|bool|null $parsedBody */
+                $parsedBody = $this->coercer->coerce($parsedBody, $coercionContext);
+                $parsedBody = TypeGuarantor::ensureValidType($parsedBody, $this->configuration->nullableAsType);
             }
 
             $this->contextSchemaValidator->validate($parsedBody, $schema, ValidatorMode::Request);

@@ -69,22 +69,19 @@ final readonly class ValidatorCompiler
         string $className,
         ?CompilationCacheInterface $cache = null,
     ): string {
-        $schemaHash = null;
+        if (null === $cache) {
+            return $this->compile($schema, $className);
+        }
 
-        if (null !== $cache) {
-            $schemaHash = $cache->generateKey($schema);
-            $cached = $cache->get($schemaHash);
+        $schemaHash = $cache->generateKey($schema);
+        $cached = $cache->get($schemaHash);
 
-            if (null !== $cached) {
-                return $cached;
-            }
+        if (null !== $cached) {
+            return $cached;
         }
 
         $code = $this->compile($schema, $className);
-
-        if (null !== $cache && null !== $schemaHash) {
-            $cache->set($schemaHash, $code);
-        }
+        $cache->set($schemaHash, $code);
 
         return $code;
     }
@@ -227,10 +224,6 @@ final readonly class ValidatorCompiler
             $conditions[] = sprintf('mb_strlen($data, \'UTF-8\') > %d', $schema->maxLength);
         }
 
-        if ([] === $conditions) {
-            return '';
-        }
-
         $condition = implode(' || ', $conditions);
         $code .= sprintf("        if (%s) {\n", $condition);
         $code .= "            throw new \\RuntimeException('String length validation failed');\n";
@@ -258,10 +251,6 @@ final readonly class ValidatorCompiler
 
         if (null !== $schema->exclusiveMaximum) {
             $conditions[] = sprintf('$data >= %F', $schema->exclusiveMaximum);
-        }
-
-        if ([] === $conditions) {
-            return '';
         }
 
         $condition = implode(' || ', $conditions);

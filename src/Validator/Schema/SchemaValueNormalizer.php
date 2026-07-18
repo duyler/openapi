@@ -44,10 +44,8 @@ final readonly class SchemaValueNormalizer
         }
 
         if ($value instanceof stdClass) {
-            /** @var array<int|string, mixed> $normalized */
-            $normalized = get_object_vars($value);
-
-            return $normalized;
+            /** @var array<int|string, mixed> */
+            return get_object_vars($value);
         }
 
         $typeDescription = match (true) {

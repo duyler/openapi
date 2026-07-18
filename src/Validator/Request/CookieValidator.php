@@ -11,6 +11,7 @@ use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Override;
 
 use function is_string;
+use function rawurldecode;
 use function sprintf;
 use function substr_count;
 
@@ -92,7 +93,7 @@ final readonly class CookieValidator extends AbstractParameterValidator
             return null;
         }
 
-        $decodedValue = $this->decodeValue($value);
+        $decodedValue = rawurldecode($value);
 
         $schemaType = $parameter->schema?->type;
         if ('array' === $schemaType && str_contains($decodedValue, ',')) {
@@ -163,7 +164,7 @@ final readonly class CookieValidator extends AbstractParameterValidator
         /** @var array|int|string|float|bool|null $value */
         $value = $this->findParameter($data, $name);
 
-        return is_string($value) ? $this->decodeValue($value) : $value;
+        return is_string($value) ? rawurldecode($value) : $value;
     }
 
     private function parseExplodedValues(string $cookieHeader, string $name): array
@@ -191,16 +192,11 @@ final readonly class CookieValidator extends AbstractParameterValidator
 
             $pairName = substr($pair, 0, $equalsPos);
             if ($pairName === $name) {
-                $values[] = $this->decodeValue(substr($pair, $equalsPos + 1));
+                $values[] = rawurldecode(substr($pair, $equalsPos + 1));
             }
         }
 
         return $values;
-    }
-
-    private function decodeValue(string $value): string
-    {
-        return rawurldecode($value);
     }
 
     private function hasMultipleCookies(string $cookieHeader, string $name): bool

@@ -15,15 +15,6 @@ use function is_nan;
 use function is_string;
 use function random_bytes;
 
-/**
- * Per-instance scalar-enum lookup cache. Stores precompiled `array<string,true>`
- * HashSets keyed by Schema so the hot-path `EnumValidator::validate` resolves
- * scalar enums in O(1) instead of an O(N) linear scan.
- *
- * Lives outside the readonly `EnumValidator` class because `WeakMap::offsetSet`
- * mutates the property from Psalm's perspective even though the property
- * reference itself never changes after construction.
- */
 final class EnumScalarCache
 {
     /** @var WeakMap<Schema, bool> */
@@ -43,12 +34,6 @@ final class EnumScalarCache
         $this->scalarEnumCache = $scalarEnumCache;
     }
 
-    /**
-     * True when every value in `$schema->enum` is a JSON scalar
-     * (null/int/float/string/bool) AND `$data` is itself a scalar — the
-     * conditions under which the precompiled HashSet is a sound replacement
-     * for the linear-scan fallback.
-     */
     public function isScalarLookupEligible(Schema $schema, mixed $data): bool
     {
         if (!$this->isScalarEnum($schema)) {
@@ -62,10 +47,6 @@ final class EnumScalarCache
             || is_bool($data);
     }
 
-    /**
-     * O(1) membership check against the precompiled scalar HashSet. Caller
-     * must gate on `isScalarLookupEligible()` first.
-     */
     public function contains(Schema $schema, mixed $data): bool
     {
         $set = $this->scalarSetFor($schema);
@@ -89,10 +70,8 @@ final class EnumScalarCache
     private function scalarSetFor(Schema $schema): array
     {
         if (isset($this->scalarEnumCache[$schema])) {
-            /** @var array<string, true> $set */
-            $set = $this->scalarEnumCache[$schema];
-
-            return $set;
+            /** @var array<string, true> */
+            return $this->scalarEnumCache[$schema];
         }
 
         $set = $this->buildScalarSet($schema->enum ?? []);
@@ -101,9 +80,7 @@ final class EnumScalarCache
         return $set;
     }
 
-    /**
-     * @param list<mixed> $enum
-     */
+    /** @param list<mixed> $enum */
     private function computeIsScalarEnum(array $enum): bool
     {
         /** @var mixed $value */
@@ -135,13 +112,6 @@ final class EnumScalarCache
         return $set;
     }
 
-    /**
-     * Deterministic type-prefixed string key that mirrors `JsonEquals::equals`
-     * semantics: int and float that are mathematically equal collapse to the
-     * same key, while distinct JSON types stay disjoint. NaN always produces a
-     * unique key per call so that two NaN values never compare equal per
-     * JSON Schema §4.2.2.
-     */
     private function scalarKey(mixed $value): string
     {
         if (null === $value) {
