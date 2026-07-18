@@ -37,6 +37,7 @@ final readonly class BuilderConfig
         public readonly ?int $maxRegexBacktracks = null,
         public readonly ?bool $strictCallbackRuntimeTemplate = null,
         public readonly ?string $externalRefAllowedRoot = null,
+        public readonly ?int $externalRefMaxBytes = null,
     ) {}
 
     public function merge(self $overrides): self
@@ -64,6 +65,7 @@ final readonly class BuilderConfig
             maxRegexBacktracks: $overrides->maxRegexBacktracks ?? $this->maxRegexBacktracks,
             strictCallbackRuntimeTemplate: $overrides->strictCallbackRuntimeTemplate ?? $this->strictCallbackRuntimeTemplate,
             externalRefAllowedRoot: $overrides->externalRefAllowedRoot ?? $this->externalRefAllowedRoot,
+            externalRefMaxBytes: $overrides->externalRefMaxBytes ?? $this->externalRefMaxBytes,
         );
     }
 }

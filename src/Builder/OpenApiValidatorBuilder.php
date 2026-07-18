@@ -34,6 +34,7 @@ use Duyler\OpenApi\Validator\Validation\ValidatorDependencies as ValidationAssem
 use Duyler\OpenApi\Validator\Validation\WebhookValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Exception;
+use InvalidArgumentException;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -288,6 +289,30 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(strictCallbackRuntimeTemplate: true));
     }
 
+    /**
+     * Override the maximum allowed size, in bytes, for external file:// $ref
+     * payloads loaded by the builtin FileExternalRefResolver. Files larger
+     * than this cap are rejected before being fully materialised in memory,
+     * defending against DoS via attacker-controlled large files or special
+     * files like /dev/zero. The default is 10 MB
+     * (FileExternalRefResolver::DEFAULT_MAX_REF_BYTES).
+     *
+     * @param int $bytes Positive integer size in bytes; values <= 0 raise
+     *                   InvalidArgumentException because they would either
+     *                   reject every file (0) or compare nonsensically
+     *                   against read counts (negative).
+     */
+    public function withExternalRefMaxBytes(int $bytes): self
+    {
+        if ($bytes <= 0) {
+            throw new InvalidArgumentException(
+                'External ref max bytes must be a positive integer',
+            );
+        }
+
+        return $this->with(new BuilderConfig(externalRefMaxBytes: $bytes));
+    }
+
     public function build(): OpenApiValidatorInterface
     {
         $document = $this->loadSpec();
@@ -301,7 +326,10 @@ final readonly class OpenApiValidatorBuilder
         $regexValidator = new RegexValidator();
         $pathFinder = new PathFinder($document, $pathRegexCache);
         $logger = $this->config->logger ?? new NullLogger();
-        $fileResolver = new FileExternalRefResolver(allowedRoot: $this->config->externalRefAllowedRoot);
+        $fileResolver = new FileExternalRefResolver(
+            allowedRoot: $this->config->externalRefAllowedRoot,
+            maxBytes: $this->config->externalRefMaxBytes ?? FileExternalRefResolver::DEFAULT_MAX_REF_BYTES,
+        );
         $refResolver = new RefResolver(builtinFileResolver: $fileResolver);
 
         $coercion = $this->config->coercion ?? false;

@@ -224,6 +224,12 @@ usage without the builder keeps the legacy null-`allowedRoot` behaviour
 (disabled path-traversal check) for backward compatibility; this is
 unsafe for trusted specs and should be replaced by the builder.
 
+External ref files are read in bounded chunks with a default size cap of
+10 MB; files exceeding the cap throw `ExternalRefTooLargeException`. The
+cap is configurable via `withExternalRefMaxBytes(int $bytes)`. Non-regular
+files (`/dev/null`, `/dev/zero`, FIFOs, sockets) are rejected with
+`ExternalRefSecurityException` to prevent DoS via infinite-read special files.
+
 ### PSR-7 Integration
 
 The validator works with any PSR-7 implementation. The examples in this README use `nyholm/psr7` (installed as a dev dependency); substitute your preferred implementation (Guzzle PSR-7, Laminas Diactoros) in production:
@@ -783,6 +789,7 @@ Use the runtime validator when you need the typed error classes (`TypeMismatchEr
 | `enableServerPathResolution()` | Strip server base path from request path before matching | `false` |
 | `enableStrictCallbackRuntimeTemplate()` | Fail-closed on callback runtime expressions like `{$request.body#/callback_url}` instead of treating them as wildcards | `false` |
 | `withExternalRefAllowedRoot(string $path)` | Override the directory that external file:// `$ref` references must stay inside. Auto-derived from the spec file's dirname for `fromYamlFile` / `fromJsonFile`; unset for string-loaded specs. | `null` (auto from spec path) |
+| `withExternalRefMaxBytes(int $bytes)` | Set max external ref file size | `10485760` (10 MB) |
 
 Deprecated reporting is enabled by default. Without a PSR-3 logger, deprecation warnings go to `NullLogger` and produce no output. There is no `disableReportDeprecated()` method; to suppress deprecation warnings, simply omit the logger (the default behavior).
 
@@ -1133,6 +1140,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `RefResolutionException` | Failed to resolve `$ref` reference |
 | `UnresolvableCallbackPathException` | Callback runtime template (e.g. `{$request.body#/callback_url}`) cannot be resolved in strict mode |
 | `ExternalRefSecurityException` | External `$ref` violates builtin resolver security policy (non-allowlisted scheme, path traversal outside the allowed root). Surfaced by `RefResolver` as `UnresolvableRefException` |
+| `ExternalRefTooLargeException` | External `$ref` file exceeds the configured `maxBytes` limit (default 10 MB); extends `\RuntimeException` (not a security policy violation) |
 | `SchemaDepthExceededException` | Maximum schema nesting depth exceeded |
 | `UnknownValidatorException` | Unknown validator type requested |
 | `VersionNotFoundException` | Requested schema name or version is not registered (thrown by `SchemaRegistry::getOrFail()`) |

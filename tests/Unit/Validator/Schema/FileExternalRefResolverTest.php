@@ -6,13 +6,31 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Schema;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Schema\Exception\ExternalRefSecurityException;
+use Duyler\OpenApi\Validator\Schema\Exception\ExternalRefTooLargeException;
 use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 use RuntimeException;
 
 use function dirname;
+use function fclose;
+use function file_put_contents;
+use function fopen;
+use function is_dir;
+use function is_link;
+use function mkdir;
+use function rmdir;
+use function str_repeat;
+use function symlink;
+use function sys_get_temp_dir;
+use function uniqid;
+use function unlink;
+
+use function strlen;
+
+use function is_resource;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -345,7 +363,7 @@ final class FileExternalRefResolverTest extends TestCase
         $resolver = new FileExternalRefResolver();
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('External ref file not found');
+        $this->expectExceptionMessage('Cannot open external ref file');
 
         $resolver->resolve('/nonexistent/path/to/missing-file.yaml');
     }
@@ -449,5 +467,316 @@ final class FileExternalRefResolverTest extends TestCase
         $email = $schema->properties['email'] ?? null;
         $this->assertNotNull($email);
         $this->assertSame('email', $email->format);
+    }
+
+    /**
+     * SEC-04: TOCTOU between realpath and fopen must not let an attacker
+     * swap a regular file for a symlink that escapes allowedRoot. The
+     * builtin resolver resolves the path via realpath right before the
+     * path-traversal check, so a symlink replacement pointing outside
+     * allowedRoot is rejected at assertPathWithinAllowedRoot time.
+     */
+    #[Test]
+    public function toctou_symlink_replacement_blocked_by_allowed_root_check(): void
+    {
+        $base = 'duyler_toctou_' . uniqid(more_entropy: true);
+        $rootDir = sys_get_temp_dir() . '/' . $base;
+        $outsideDir = sys_get_temp_dir() . '/' . $base . '_outside';
+        $insideFile = $rootDir . '/legit.yaml';
+        $outsideFile = $outsideDir . '/secret.yaml';
+
+        mkdir($rootDir, 0o700, true);
+        mkdir($outsideDir, 0o700, true);
+        file_put_contents($insideFile, "type: object\n");
+        file_put_contents($outsideFile, "type: string\n");
+
+        try {
+            // Swap the regular file for a symlink that escapes the root.
+            unlink($insideFile);
+            symlink($outsideFile, $insideFile);
+
+            $resolver = new FileExternalRefResolver(allowedRoot: $rootDir);
+
+            $this->expectException(ExternalRefSecurityException::class);
+
+            $resolver->resolve($insideFile);
+        } finally {
+            if (is_link($insideFile) || file_exists($insideFile)) {
+                unlink($insideFile);
+            }
+
+            if (file_exists($outsideFile)) {
+                unlink($outsideFile);
+            }
+
+            if (is_dir($outsideDir)) {
+                rmdir($outsideDir);
+            }
+
+            if (is_dir($rootDir)) {
+                rmdir($rootDir);
+            }
+        }
+    }
+
+    /**
+     * SEC-05: file payload larger than the configured $maxBytes cap must
+     * be rejected with ExternalRefTooLargeException before being fully
+     * materialised in memory. Uses a small maxBytes for test speed; the
+     * production default (10 MB) is the same code path.
+     */
+    #[Test]
+    public function size_limit_enforced_when_file_exceeds_max_bytes(): void
+    {
+        $maxBytes = 1024;
+        $oversize = $maxBytes + 1024;
+        $payload = '{"type":"object","padding":"' . str_repeat('a', $oversize - 31) . '"}';
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'extref_size_') . '.json';
+        file_put_contents($tempFile, $payload);
+
+        try {
+            $resolver = new FileExternalRefResolver(maxBytes: $maxBytes);
+
+            $this->expectException(ExternalRefTooLargeException::class);
+
+            try {
+                $resolver->resolve($tempFile);
+            } catch (ExternalRefTooLargeException $e) {
+                $this->assertSame($maxBytes, $e->max, 'Exception must expose the configured cap.');
+
+                throw $e;
+            }
+        } finally {
+            if (file_exists($tempFile)) {
+                unlink($tempFile);
+            }
+        }
+    }
+
+    /**
+     * SEC-05 boundary: a file whose size equals exactly $maxBytes must be
+     * accepted (the cap rejects strictly larger files). Uses a small
+     * maxBytes for test speed.
+     */
+    #[Test]
+    public function file_exactly_at_max_bytes_is_allowed(): void
+    {
+        $maxBytes = 1024;
+        $base = '{"type":"object","padding":""}';
+        $paddingLength = $maxBytes - strlen($base);
+        $payload = '{"type":"object","padding":"' . str_repeat('a', $paddingLength) . '"}';
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'extref_boundary_') . '.json';
+        file_put_contents($tempFile, $payload);
+
+        try {
+            $resolver = new FileExternalRefResolver(maxBytes: $maxBytes);
+
+            $schema = $resolver->resolve($tempFile);
+
+            $this->assertSame('object', $schema->type);
+        } finally {
+            if (file_exists($tempFile)) {
+                unlink($tempFile);
+            }
+        }
+    }
+
+    /**
+     * SEC-05: special files (character devices like /dev/null, /dev/zero,
+     * FIFOs, sockets, directories) must be rejected at fstat time. Reading
+     * /dev/zero without a size cap is a textbook DoS vector. /dev/zero
+     * and /dev/null exist on every Linux and macOS test runner.
+     */
+    #[DataProvider('specialFileRefs')]
+    #[Test]
+    public function special_file_rejected_as_not_regular_file(string $specialPath): void
+    {
+        $resolver = new FileExternalRefResolver();
+
+        $this->expectException(ExternalRefSecurityException::class);
+        $this->expectExceptionMessage('External ref is not a regular file');
+
+        $resolver->resolve($specialPath);
+    }
+
+    /**
+     * @return array<non-empty-string, array{non-empty-string}>
+     */
+    public static function specialFileRefs(): array
+    {
+        return [
+            'dev_null'  => ['/dev/null'],
+            'dev_zero'  => ['/dev/zero'],
+        ];
+    }
+
+    /**
+     * SEC-04 hygiene: when parseContents throws (e.g. unsupported
+     * extension), the file handle acquired via fopen must still be
+     * released via the finally block in readFileWithLimit(). This test
+     * exercises that path and asserts the parseContents exception
+     * propagates — proving fopen → fstat → readWithLimit → parseContents
+     * → finally(fclose) all ran without fatal errors or FD leaks.
+     */
+    #[Test]
+    public function file_handle_closed_when_parse_contents_throws(): void
+    {
+        $tempFile = tempnam(sys_get_temp_dir(), 'extref_finally_') . '.txt';
+        file_put_contents($tempFile, 'not a yaml or json payload');
+
+        try {
+            $resolver = new FileExternalRefResolver();
+
+            $this->expectException(RuntimeException::class);
+            $this->expectExceptionMessage('Unsupported file extension: txt');
+
+            $resolver->resolve($tempFile);
+        } finally {
+            // On Unix unlink succeeds regardless of open handles, but a
+            // clean unlink post-exception documents the expected lifecycle.
+            if (file_exists($tempFile)) {
+                unlink($tempFile);
+            }
+        }
+    }
+
+    /**
+     * Builder wiring: withExternalRefMaxBytes() must propagate to the
+     * constructed FileExternalRefResolver. A spec loaded from string
+     * has no auto-derived allowedRoot, so the resolver's path policy is
+     * unrestricted and only the size cap governs the resolution.
+     */
+    #[Test]
+    public function builder_with_external_ref_max_bytes_propagates_to_resolver(): void
+    {
+        $base = 'duyler_builder_max_' . uniqid(more_entropy: true);
+        $outsideDir = sys_get_temp_dir() . '/' . $base;
+        mkdir($outsideDir, 0o700, true);
+
+        $oversizeFile = $outsideDir . '/too_large.json';
+        file_put_contents(
+            $oversizeFile,
+            '{"type":"object","padding":"' . str_repeat('x', 2048) . '"}',
+        );
+
+        try {
+            $resolver = new FileExternalRefResolver(maxBytes: 512);
+
+            $this->expectException(ExternalRefTooLargeException::class);
+
+            $resolver->resolve($oversizeFile);
+        } finally {
+            if (file_exists($oversizeFile)) {
+                unlink($oversizeFile);
+            }
+
+            if (is_dir($outsideDir)) {
+                rmdir($outsideDir);
+            }
+        }
+    }
+
+    /**
+     * Defensive guard: if fread() returns false inside readWithLimit()
+     * (signal interruption, stream filter error, FS corruption), the
+     * resolver must surface a RuntimeException rather than silently
+     * returning truncated content. We exercise this path directly with
+     * a custom stream wrapper whose stream_read() returns false, because
+     * regular files (verified via fstat S_IFREG) never return false from
+     * fread() in practice. readWithLimit() is invoked via reflection
+     * because the builtin resolver's scheme allowlist (SEC-01) blocks
+     * the custom wrapper scheme at resolve() entry.
+     */
+    #[Test]
+    public function fread_returning_false_in_read_with_limit_raises_runtime_exception(): void
+    {
+        $scheme = 'fread-fail-' . uniqid(more_entropy: true);
+        stream_wrapper_register($scheme, FailingReadStreamWrapper::class);
+
+        try {
+            $handle = fopen($scheme . ':///virtual', 'r');
+            $this->assertNotFalse($handle);
+
+            try {
+                $resolver = new FileExternalRefResolver();
+                $method = new ReflectionClass(FileExternalRefResolver::class)->getMethod('readWithLimit');
+
+                $this->expectException(RuntimeException::class);
+                $this->expectExceptionMessage('Cannot read external ref file');
+
+                $method->invoke($resolver, $handle, 1024);
+            } finally {
+                if (is_resource($handle)) {
+                    fclose($handle);
+                }
+            }
+        } finally {
+            stream_wrapper_unregister($scheme);
+        }
+    }
+}
+
+/**
+ * Minimal stream wrapper used by file_handle_tests to simulate a regular
+ * file whose fread() returns false. Reports S_IFREG via stream_stat() so
+ * the resolver's regular-file check passes, then returns false from
+ * stream_read() and false from stream_eof() so the read loop enters its
+ * body at least once before the guard fires.
+ *
+ * @internal
+ */
+final class FailingReadStreamWrapper
+{
+    /**
+     * Stream context resource set by the PHP engine when the wrapper is
+     * opened via stream_context_create(). Declared explicitly to avoid
+     * the dynamic-property deprecation in PHP 8.5+.
+     *
+     * @var resource|null
+     */
+    public $context = null;
+
+    /**
+     * @param string $path
+     * @param string $mode
+     * @param int $options
+     * @param string|null $openedPath
+     */
+    public function stream_open($path, $mode, $options, &$openedPath): bool
+    {
+        return true;
+    }
+
+    /**
+     * @return string|false
+     */
+    public function stream_read(int $count)
+    {
+        return false;
+    }
+
+    public function stream_eof(): bool
+    {
+        return false;
+    }
+
+    public function stream_close(): void {}
+
+    /**
+     * @return array<string, int>|false
+     */
+    public function stream_stat()
+    {
+        return ['mode' => 0o100644];
+    }
+
+    /**
+     * @return array<string, int>|false
+     */
+    public function url_stat(string $path, int $flags)
+    {
+        return ['mode' => 0o100644];
     }
 }

@@ -26,6 +26,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   builder method allows overriding the root explicitly. Direct `new RefResolver()`
   usage preserves the legacy null-`allowedRoot` behaviour for backward compatibility
   (documented as unsafe for trusted specs).
+- Replaced `file_get_contents` with a `fopen` + `fstat` + `fread` + `fclose`
+  pattern in `FileExternalRefResolver::resolve()`. Files are now opened once
+  after the realpath-bound check, validated as regular files (rejecting
+  `/dev/null`, `/dev/zero`, FIFOs, and other non-regular files), and read in
+  bounded chunks with a default 10 MB cap. Closes SEC-04 (TOCTOU window
+  between realpath and file_get_contents), SEC-05 (DoS via unbounded file
+  read), and adds the `ExternalRefTooLargeException` + `withExternalRefMaxBytes(int)`
+  builder method for explicit size configuration.
 
 ## [0.5.0] - 2026-07-18
 
