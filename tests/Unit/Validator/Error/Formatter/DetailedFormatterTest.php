@@ -533,4 +533,54 @@ class DetailedFormatterTest extends TestCase
         self::assertStringContainsString('Error at /', $formatted);
         self::assertStringContainsString('Required property "email" is missing', $formatted);
     }
+
+    #[Test]
+    public function detailed_formatter_omits_value_by_default(): void
+    {
+        $error = new InvalidFormatException(
+            format: 'uuid',
+            value: 'super-secret-token',
+            message: 'Invalid uuid',
+        );
+
+        $formatted = $this->formatter->format($error);
+
+        self::assertStringContainsString('format: uuid', $formatted);
+        self::assertStringNotContainsString('super-secret-token', $formatted);
+        self::assertStringNotContainsString('value:', $formatted);
+    }
+
+    #[Test]
+    public function detailed_formatter_includes_value_with_opt_in(): void
+    {
+        $formatter = new DetailedFormatter(includeSensitiveValues: true);
+
+        $error = new InvalidFormatException(
+            format: 'uuid',
+            value: 'super-secret-token',
+            message: 'Invalid uuid',
+        );
+
+        $formatted = $formatter->format($error);
+
+        self::assertStringContainsString('format: uuid', $formatted);
+        self::assertStringContainsString('value: super-secret-token', $formatted);
+    }
+
+    #[Test]
+    public function detailed_formatter_default_construction_is_backward_compatible(): void
+    {
+        $formatter = new DetailedFormatter();
+
+        $error = new InvalidFormatException(
+            format: 'email',
+            value: 'bad',
+            message: 'Invalid email',
+        );
+
+        $formatted = $formatter->format($error);
+
+        self::assertStringContainsString('format: email', $formatted);
+        self::assertStringNotContainsString('value:', $formatted);
+    }
 }

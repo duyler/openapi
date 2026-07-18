@@ -776,6 +776,7 @@ Use the runtime validator when you need the typed error classes (`TypeMismatchEr
 | `withCache(SchemaCache $cache)` | Enable PSR-6 caching | `null` |
 | `withEventDispatcher(EventDispatcherInterface $dispatcher)` | Set PSR-14 event dispatcher | `null` |
 | `withErrorFormatter(ErrorFormatterInterface $formatter)` | Set error formatter | `SimpleFormatter` |
+| `withDetailedErrors(bool $includeSensitive)` | Use DetailedFormatter with optional sensitive value exposure | Uses `DetailedFormatter` (default omits secrets) |
 | `withFormat(string $type, string $format, FormatValidatorInterface $validator)` | Register custom format | - |
 | `withValidatorPool(ValidatorPool $pool)` | Set custom validator pool | `new ValidatorPool()` |
 | `withLogger(LoggerInterface $logger)` | Set PSR-3 logger | `null` |
@@ -1175,6 +1176,14 @@ try {
     echo $formatter->formatException($e);
 }
 ```
+
+By default, `DetailedFormatter` and `JsonFormatter` omit the raw user-supplied value
+from `InvalidFormatException` errors to prevent accidental disclosure of secrets
+(passwords, tokens) through error messages into logs and API responses. The value
+remains accessible via `$exception->value` for programmatic access. To include the
+raw value in formatted output (for debugging), construct the formatter with
+`includeSensitiveValues: true` or use `withDetailedErrors(includeSensitive: true)`
+on the builder.
 
 ## Built-in Format Validators
 

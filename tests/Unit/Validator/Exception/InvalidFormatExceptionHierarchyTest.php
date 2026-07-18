@@ -87,7 +87,7 @@ final class InvalidFormatExceptionHierarchyTest extends TestCase
     }
 
     #[Test]
-    public function params_expose_format_and_value(): void
+    public function params_expose_format_without_value(): void
     {
         $exception = new InvalidFormatException(
             format: 'email',
@@ -98,7 +98,7 @@ final class InvalidFormatExceptionHierarchyTest extends TestCase
         $params = $exception->params();
 
         self::assertSame('email', $params['format']);
-        self::assertSame('not-an-email', $params['value']);
+        self::assertArrayNotHasKey('value', $params);
     }
 
     #[Test]

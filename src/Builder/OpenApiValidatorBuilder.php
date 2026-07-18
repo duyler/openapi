@@ -12,6 +12,7 @@ use Duyler\OpenApi\Schema\Parser\DeprecationLogger;
 use Duyler\OpenApi\Schema\Parser\JsonParser;
 use Duyler\OpenApi\Schema\Parser\YamlParser;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
+use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
@@ -107,6 +108,27 @@ final readonly class OpenApiValidatorBuilder
     public function withErrorFormatter(ErrorFormatterInterface $formatter): self
     {
         return $this->with(new BuilderConfig(errorFormatter: $formatter));
+    }
+
+    /**
+     * Configure the validator to use {@see DetailedFormatter}, optionally with
+     * sensitive values (such as the raw input that failed format validation)
+     * included in the rendered error output.
+     *
+     * Default is `false`: raw invalid inputs are omitted from formatter output
+     * to prevent accidental disclosure of credentials sent against
+     * `format: password`, `format: uuid`, etc. (CWE-532). Pass `true` only in
+     * trusted debugging contexts.
+     *
+     * When chained with {@see withErrorFormatter()}, the call order wins: a
+     * subsequent `withErrorFormatter()` overrides the formatter installed by
+     * this method, and vice versa.
+     */
+    public function withDetailedErrors(bool $includeSensitive = false): self
+    {
+        return $this->with(new BuilderConfig(
+            errorFormatter: new DetailedFormatter(includeSensitiveValues: $includeSensitive),
+        ));
     }
 
     public function withFormat(

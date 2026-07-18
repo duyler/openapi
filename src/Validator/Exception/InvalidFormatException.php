@@ -16,7 +16,7 @@ final class InvalidFormatException extends AbstractValidationError
             keyword: 'format',
             dataPath: '',
             schemaPath: '/format',
-            params: ['format' => $format, 'value' => $value],
+            params: ['format' => $format],
         );
     }
 }

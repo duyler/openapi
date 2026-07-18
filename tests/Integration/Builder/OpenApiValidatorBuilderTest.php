@@ -644,4 +644,46 @@ JSON;
             ->fromYamlFile('/nonexistent/path/file.yaml')
             ->build();
     }
+
+    #[Test]
+    public function with_detailed_errors_returns_builder_instance(): void
+    {
+        $yaml = "openapi: 3.0.3\ninfo:\n  title: Test\n  version: 1.0.0\npaths: []";
+
+        $builder = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->withDetailedErrors();
+
+        $this->assertInstanceOf(OpenApiValidatorBuilder::class, $builder);
+    }
+
+    #[Test]
+    public function with_detailed_errors_accepts_include_sensitive_flag(): void
+    {
+        $yaml = "openapi: 3.0.3\ninfo:\n  title: Test\n  version: 1.0.0\npaths: []";
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->withDetailedErrors(true)
+            ->build();
+
+        $this->assertSame('Test', $validator->getDocument()->info->title);
+    }
+
+    #[Test]
+    public function with_detailed_errors_chains_before_with_error_formatter(): void
+    {
+        $yaml = "openapi: 3.0.3\ninfo:\n  title: Test\n  version: 1.0.0\npaths: []";
+
+        // Per Oracle correction: withErrorFormatter wins when called after withDetailedErrors.
+        $custom = new DetailedFormatter();
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->withDetailedErrors(true)
+            ->withErrorFormatter($custom)
+            ->build();
+
+        $this->assertSame('Test', $validator->getDocument()->info->title);
+    }
 }

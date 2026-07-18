@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Error\Formatter;
 
 use Duyler\OpenApi\Validator\Error\Formatter\JsonFormatter;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use PHPUnit\Framework\Attributes\Test;
@@ -223,5 +224,46 @@ class JsonFormatterTest extends TestCase
         $this->expectException(ValueError::class);
 
         $this->formatter->formatMultiple([$error]);
+    }
+
+    #[Test]
+    public function json_formatter_omits_value_by_default(): void
+    {
+        $error = new InvalidFormatException(
+            format: 'uuid',
+            value: 'super-secret-token',
+            message: 'Invalid uuid',
+        );
+
+        $formatted = $this->formatter->format($error);
+        $decoded = json_decode($formatted, true);
+
+        $this->assertIsArray($decoded);
+        $this->assertArrayHasKey('details', $decoded);
+        $this->assertArrayHasKey('format', $decoded['details']);
+        $this->assertSame('uuid', $decoded['details']['format']);
+        $this->assertArrayNotHasKey('value', $decoded['details']);
+        $this->assertStringNotContainsString('super-secret-token', $formatted);
+    }
+
+    #[Test]
+    public function json_formatter_includes_value_with_opt_in(): void
+    {
+        $formatter = new JsonFormatter(includeSensitiveValues: true);
+
+        $error = new InvalidFormatException(
+            format: 'uuid',
+            value: 'super-secret-token',
+            message: 'Invalid uuid',
+        );
+
+        $formatted = $formatter->format($error);
+        $decoded = json_decode($formatted, true);
+
+        $this->assertIsArray($decoded);
+        $this->assertArrayHasKey('details', $decoded);
+        $this->assertSame('uuid', $decoded['details']['format']);
+        $this->assertArrayHasKey('value', $decoded['details']);
+        $this->assertSame('super-secret-token', $decoded['details']['value']);
     }
 }

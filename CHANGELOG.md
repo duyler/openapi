@@ -34,6 +34,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   between realpath and file_get_contents), SEC-05 (DoS via unbounded file
   read), and adds the `ExternalRefTooLargeException` + `withExternalRefMaxBytes(int)`
   builder method for explicit size configuration.
+- Removed raw user-supplied values from `InvalidFormatException::params()` output to
+  prevent accidental disclosure of secrets (passwords, tokens, API keys) through error
+  formatters into logs and API responses (CWE-532, closes SEC-06). The value remains
+  accessible via the `$exception->value` property for programmatic access. An opt-in
+  debug mode is available through `withDetailedErrors(includeSensitive: true)` on the
+  builder, or by constructing `new DetailedFormatter(includeSensitiveValues: true)` /
+  `new JsonFormatter(includeSensitiveValues: true)` directly.
 
 ## [0.5.0] - 2026-07-18
 
