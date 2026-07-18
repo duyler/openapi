@@ -233,6 +233,112 @@ final class FileExternalRefResolverTest extends TestCase
         $resolver->resolve($this->fixtureRoot . '/../ExternalRefSibling.yaml');
     }
 
+    /**
+     * SEC-02: a sibling directory whose name shares a prefix with the
+     * allowedRoot must NOT bypass the path-traversal check. The previous
+     * implementation used bare str_starts_with($realFile, $realRoot), so
+     * allowedRoot='/var/specs' happily admitted '/var/specs-evil/x.yaml'.
+     *
+     * The canonical check is: realFile === realRoot OR realFile starts
+     * with realRoot . '/'. The trailing slash makes the prefix boundary
+     * explicit and rejects sibling-evil directories.
+     */
+    #[Test]
+    public function denies_sibling_directory_bypass_with_prefix_match(): void
+    {
+        $base = 'duyler_extref_' . uniqid(more_entropy: true);
+        $rootDir = sys_get_temp_dir() . '/' . $base;
+        $evilDir = sys_get_temp_dir() . '/' . $base . '-evil';
+
+        mkdir($rootDir, 0700, true);
+        mkdir($evilDir, 0700, true);
+        $evilFile = $evilDir . '/file.yaml';
+        file_put_contents($evilFile, "type: object\n");
+
+        try {
+            $resolver = new FileExternalRefResolver(allowedRoot: $rootDir);
+
+            $this->expectException(ExternalRefSecurityException::class);
+
+            $resolver->resolve('file://' . $evilFile);
+        } finally {
+            if (file_exists($evilFile)) {
+                unlink($evilFile);
+            }
+
+            if (is_dir($evilDir)) {
+                rmdir($evilDir);
+            }
+
+            if (is_dir($rootDir)) {
+                rmdir($rootDir);
+            }
+        }
+    }
+
+    /**
+     * SEC-02: strict descendant (file in a subdirectory of allowedRoot)
+     * must remain valid after the prefix-fix. Covers the
+     * str_starts_with($realFile, $realRoot . '/') branch.
+     */
+    #[Test]
+    public function allows_strict_descendant_file_under_root(): void
+    {
+        $base = 'duyler_extref_' . uniqid(more_entropy: true);
+        $rootDir = sys_get_temp_dir() . '/' . $base;
+        $subDir = $rootDir . '/sub';
+        $descendantFile = $subDir . '/file.yaml';
+
+        mkdir($subDir, 0700, true);
+        file_put_contents($descendantFile, "type: object\n");
+
+        try {
+            $resolver = new FileExternalRefResolver(allowedRoot: $rootDir);
+
+            $schema = $resolver->resolve('file://' . $descendantFile);
+
+            $this->assertSame('object', $schema->type);
+        } finally {
+            if (file_exists($descendantFile)) {
+                unlink($descendantFile);
+            }
+
+            if (is_dir($subDir)) {
+                rmdir($subDir);
+            }
+
+            if (is_dir($rootDir)) {
+                rmdir($rootDir);
+            }
+        }
+    }
+
+    /**
+     * SEC-02: edge case where the file path is exactly the allowedRoot
+     * (root points at a file rather than a directory). The fixed
+     * implementation accepts this via the $realFile === $realRoot branch.
+     */
+    #[Test]
+    public function allows_exact_root_match_when_path_equals_root(): void
+    {
+        $base = 'duyler_extref_' . uniqid(more_entropy: true);
+        $rootFile = sys_get_temp_dir() . '/' . $base . '.yaml';
+
+        file_put_contents($rootFile, "type: object\n");
+
+        try {
+            $resolver = new FileExternalRefResolver(allowedRoot: $rootFile);
+
+            $schema = $resolver->resolve('file://' . $rootFile);
+
+            $this->assertSame('object', $schema->type);
+        } finally {
+            if (file_exists($rootFile)) {
+                unlink($rootFile);
+            }
+        }
+    }
+
     #[Test]
     public function throws_on_missing_file(): void
     {

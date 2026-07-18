@@ -173,22 +173,18 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
         if (false === $realFile || false === $realRoot) {
             throw new ExternalRefSecurityException(
                 $filePath,
-                sprintf(
-                    'External ref path resolution failed: file=%s, allowedRoot=%s',
-                    $filePath,
-                    $this->allowedRoot,
-                ),
+                'External ref path resolution failed (file or root does not exist)',
             );
         }
 
-        if (!str_starts_with($realFile, $realRoot)) {
+        if ($realFile === $realRoot) {
+            return;
+        }
+
+        if (!str_starts_with($realFile, $realRoot . '/')) {
             throw new ExternalRefSecurityException(
                 $filePath,
-                sprintf(
-                    'External ref path traversal detected: %s outside allowed root %s',
-                    $filePath,
-                    $this->allowedRoot,
-                ),
+                'External ref path traversal detected: file outside allowed root',
             );
         }
     }
