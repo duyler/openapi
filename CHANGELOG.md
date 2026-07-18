@@ -5,6 +5,109 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-07-18
+
+This release focuses on defense-in-depth security hardening, spec-compliance
+bug fixes, and internal decomposition of the two largest god classes. The
+public API is preserved with two additions: `Operation` now carries resolved
+path parameters and the optional `enableStrictCallbackRuntimeTemplate()` mode
+fail-closes on unresolvable callback expressions.
+
+### Security
+- Closed CWE-94 code injection via type field in `ValidatorCompiler`; generated
+  code now rejects class-name injection.
+- Added `PregExecutor` wrapper enforcing a defensive `pcre.backtrack_limit`
+  (configurable via `withMaxRegexBacktracks()`) to prevent ReDoS on
+  attacker-controlled JSON-Schema `pattern` fields.
+- Capped request body and streaming payload sizes via `withMaxJsonBodySize()`
+  and `withMaxMultipartBodySize()`; streaming depth limit and opt-in
+  `enableStrictStreaming()` mode raise `MalformedStreamRecordException` instead
+  of silently skipping bad records.
+- Replaced xxHash64 cache keys with SHA-256 and `spl_object_id` with `WeakMap`
+  to resist hash-collision poisoning and object-id reuse.
+- Closed auth fail-open in `CookieValidator` and added opt-in
+  `enableStrictCallbackRuntimeTemplate()` to reject unresolvable callback
+  runtime expressions (e.g. `{$request.body#/callback_url}`).
+- `UnresolvableRefException::getMessage()` no longer discloses the internal
+  circular-reference traversal path; the path is preserved in a readonly
+  `$internalTrace` property for safe logging.
+- `AbstractCompositionalValidator` caps accumulated errors at 20;
+  `ContainsValidator` caps validations at 10 000;
+  `ArrayLengthValidator` aborts `uniqueItems` after 100 000 entries.
+- `XmlBodyParser` enforces a 1 MB default `maxXmlBytes` limit (configurable).
+- Added `LogContextSanitizer` to truncate and escape untrusted strings before
+  they enter PSR-3 context, mitigating log injection.
+- Added builtin `FileExternalRefResolver` with SSRF protection: network
+  schemes (`http://`, `https://`, `ftp://`, `ftps://`) are denied by default;
+  optional `allowedRoot` defends against path traversal and symlink escapes.
+
+### Added
+- `Operation` DTO now exposes resolved `pathParameters`, `operationId`, and
+  nullable `schemaOperation` reference; existing call sites keep working via
+  defaults.
+- `OpenApiValidatorInterface::getDocument()` promoted to the public interface.
+- `resolveLinkWithContext()` and `LinkContext` for full OpenAPI 3.2 Runtime
+  Expression support (`$url`, `$method`, `$statusCode`, `$request.*`,
+  `$response.*`).
+- Strict streaming and strict callback runtime template modes (see Security).
+- Magic-value enums (`UriScheme`, `ContentMediaType`, `BooleanCoercionValue`,
+  `XmlNodeType`) replace stringly-typed comparisons.
+
+### Changed
+- Decomposed `Schema` god class into focused constraint sub-DTOs
+  (`ArrayConstraints`, `CompositionConstraints`, `NumericConstraints`,
+  `ObjectConstraints`, `StringConstraints`).
+- Decomposed `OpenApiBuilder` god class into focused builder modules
+  (`ComponentsBuilder`, `InfoBuilder`, `PathItemBuilder`, `SchemaBuilder`,
+  `SecuritySchemeBuilder`) resolved lazily through `OpenApiBuildContext`.
+- Introduced `ValidatorDependencies` DTO and a lazy registry for
+  `ValidatorFactory` (open-closed principle).
+- `ValidationContext` is now per-request and renamed to avoid the name clash
+  with `Error\ValidationContext`.
+- Split overloaded boolean-flag builder methods into focused
+  `enable*`/`disable*` pairs.
+- Consolidated ~660 lines of redundant PHPDoc, dead defensive guards, and
+  unreachable branches across `src/`. Public API signatures preserved.
+
+### Performance
+- Reuse `SchemaValidator` on the hot path; cached discriminator and `$ref`
+  detection.
+- `RefResolver` cache, `PathFinder` trie accumulator, and route sort
+  precompilation.
+- Coercion hot path, `EnumScalarCache` HashSet, and pattern normalization
+  caches.
+- `PathFinder` migrated from linear scan to a segment-based trie.
+
+### Fixed
+- Restored libxml external entity loader and removed global-state mutation
+  from `ValidatorPool::reset()` (Swoole / FrankenPHP threaded workers).
+- SSE parser now handles no-colon lines per WHATWG and supports dotted
+  RFC 6570 variable names.
+- Nine JSON Schema / OAS spec compliance bugs: whole-float acceptance for
+  `type: integer`, `multipleOf` epsilon equivalence, `const`/`enum` numeric
+  equality, `required` / `allowEmptyValue` orthogonality, and more.
+- Five composition validator bugs in `allOf` / `anyOf` / `oneOf` / `not`:
+  typed-error propagation, `$ref` resolution, and discriminator double
+  validation.
+- Replaced `@` operator in `PatternValidator` with explicit error handling;
+  added `TypeFormatter` utility for typed error messages.
+- `SchemaRegistry` semantics refined; `PathFinder` exception naming aligned
+  with public API.
+- README parity fixes: qualified performance claims, documented PHP runtime
+  caveats, and aligned public API examples.
+
+### Deprecated
+- `ValidationErrorInterface::getType()` is deprecated in favor of `keyword()`.
+  Both return the same value; `getType()` will be removed in 2.0.
+
+### Tests
+- Added concurrency tests for Swoole, FrankenPHP threaded, and RoadRunner
+  prefork runtimes.
+- Added ReDoS, billion-laughs, deep-nesting, and memory-exhaustion security
+  regression tests.
+- Added cache-invalidation and alternate PSR-7 implementation coverage
+  (Guzzle, Laminas Diactoros).
+
 ## [0.4.1] - 2026-07-16
 
 ### Fixed
@@ -157,6 +260,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Set `symfony/yaml` requirement to `^7.0`.
 
 [Unreleased]: https://github.com/duyler/openapi/compare/0.5.0...HEAD
-[0.5.0]: https://github.com/duyler/openapi/compare/0.4.0...0.5.0
+[0.5.0]: https://github.com/duyler/openapi/compare/0.4.1...0.5.0
+[0.4.1]: https://github.com/duyler/openapi/compare/0.4.0...0.4.1
 [0.4.0]: https://github.com/duyler/openapi/compare/0.3.3...0.4.0
 [0.3.3]: https://github.com/duyler/openapi/compare/0.3.2...0.3.3
