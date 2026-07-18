@@ -21,6 +21,7 @@ use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Validator\PathFinder;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
+use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
@@ -38,6 +39,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
 
+use function dirname;
 use function sprintf;
 
 final readonly class OpenApiValidatorBuilder
@@ -56,12 +58,24 @@ final readonly class OpenApiValidatorBuilder
 
     public function fromYamlFile(string $path): self
     {
-        return $this->with(new BuilderConfig(specPath: $path, specType: 'yaml'));
+        $realPath = $this->resolveSpecPath($path);
+
+        return $this->with(new BuilderConfig(
+            specPath: $realPath,
+            specType: 'yaml',
+            externalRefAllowedRoot: dirname($realPath),
+        ));
     }
 
     public function fromJsonFile(string $path): self
     {
-        return $this->with(new BuilderConfig(specPath: $path, specType: 'json'));
+        $realPath = $this->resolveSpecPath($path);
+
+        return $this->with(new BuilderConfig(
+            specPath: $realPath,
+            specType: 'json',
+            externalRefAllowedRoot: dirname($realPath),
+        ));
     }
 
     public function fromYamlString(string $content): self
@@ -128,6 +142,31 @@ final readonly class OpenApiValidatorBuilder
     public function withEventDispatcher(EventDispatcherInterface $dispatcher): self
     {
         return $this->with(new BuilderConfig(eventDispatcher: $dispatcher));
+    }
+
+    /**
+     * Override the directory that external file:// $ref references must
+     * remain inside. The default is auto-derived from the spec file
+     * directory (dirname of the realpath of the path passed to
+     * fromYamlFile / fromJsonFile), which keeps external refs inside the
+     * spec directory. Use this method to widen or narrow that root, for
+     * example to allow references into a shared sibling components
+     * directory. Passing a path that does not exist throws BuilderException
+     * at call time so the failure surfaces before build().
+     *
+     * Call this method AFTER fromYamlFile / fromJsonFile: the auto-derive
+     * step unconditionally sets the value, so a withExternalRefAllowedRoot
+     * call placed before fromYamlFile / fromJsonFile will be silently
+     * overwritten.
+     */
+    public function withExternalRefAllowedRoot(string $path): self
+    {
+        $realPath = realpath($path);
+        if (false === $realPath) {
+            throw new BuilderException(sprintf('External ref allowed root does not exist: %s', $path));
+        }
+
+        return $this->with(new BuilderConfig(externalRefAllowedRoot: $realPath));
     }
 
     /**
@@ -262,7 +301,8 @@ final readonly class OpenApiValidatorBuilder
         $regexValidator = new RegexValidator();
         $pathFinder = new PathFinder($document, $pathRegexCache);
         $logger = $this->config->logger ?? new NullLogger();
-        $refResolver = new RefResolver();
+        $fileResolver = new FileExternalRefResolver(allowedRoot: $this->config->externalRefAllowedRoot);
+        $refResolver = new RefResolver(builtinFileResolver: $fileResolver);
 
         $coercion = $this->config->coercion ?? false;
         $nullableAsType = $this->config->nullableAsType ?? true;
@@ -340,6 +380,16 @@ final readonly class OpenApiValidatorBuilder
     private function with(BuilderConfig $overrides): self
     {
         return new self($this->config->merge($overrides));
+    }
+
+    private function resolveSpecPath(string $path): string
+    {
+        $realPath = realpath($path);
+        if (false === $realPath) {
+            throw new BuilderException(sprintf('Spec file does not exist: %s', $path));
+        }
+
+        return $realPath;
     }
 
     private function loadSpec(): OpenApiDocument

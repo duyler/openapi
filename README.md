@@ -186,6 +186,44 @@ When `allowedRoot` is configured, the resolver resolves both the requested
 path and the root via `realpath()` and refuses any reference whose real
 location is not a descendant of the root.
 
+#### Auto-derived `allowedRoot` from the builder
+
+When the spec is loaded with `fromYamlFile()` or `fromJsonFile()`, the
+builder automatically derives `allowedRoot` from `dirname(realpath($path))`
+so the spec directory becomes the confinement boundary. Any external
+`$ref` whose realpath resolves outside that directory is rejected with
+`ExternalRefSecurityException` (surfaced as `UnresolvableRefException`):
+
+```php
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+
+// /var/specs/openapi.yaml referring to /etc/passwd via $ref would now
+// raise UnresolvableRefException at resolution time.
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('/var/specs/openapi.yaml')
+    ->build();
+```
+
+Override the auto-derived root explicitly when external `$ref` references
+must reach outside the spec directory (for example, a shared sibling
+`components/` directory). The path must exist; otherwise the builder
+throws `BuilderException` at call time:
+
+```php
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('/var/specs/openapi.yaml')
+    ->withExternalRefAllowedRoot('/var/shared-components')
+    ->build();
+```
+
+Specs loaded with `fromYamlString()` or `fromJsonString()` do not have a
+spec directory, so the builder leaves `allowedRoot` unset and only the
+scheme whitelist applies. Use `withExternalRefAllowedRoot()` to opt into
+path-confinement for string-loaded specs. Direct `new RefResolver()`
+usage without the builder keeps the legacy null-`allowedRoot` behaviour
+(disabled path-traversal check) for backward compatibility; this is
+unsafe for trusted specs and should be replaced by the builder.
+
 ### PSR-7 Integration
 
 The validator works with any PSR-7 implementation. The examples in this README use `nyholm/psr7` (installed as a dev dependency); substitute your preferred implementation (Guzzle PSR-7, Laminas Diactoros) in production:
@@ -744,6 +782,7 @@ Use the runtime validator when you need the typed error classes (`TypeMismatchEr
 | `enableReportDeprecated()` | Log deprecated schema elements via PSR-3 logger | `true` |
 | `enableServerPathResolution()` | Strip server base path from request path before matching | `false` |
 | `enableStrictCallbackRuntimeTemplate()` | Fail-closed on callback runtime expressions like `{$request.body#/callback_url}` instead of treating them as wildcards | `false` |
+| `withExternalRefAllowedRoot(string $path)` | Override the directory that external file:// `$ref` references must stay inside. Auto-derived from the spec file's dirname for `fromYamlFile` / `fromJsonFile`; unset for string-loaded specs. | `null` (auto from spec path) |
 
 Deprecated reporting is enabled by default. Without a PSR-3 logger, deprecation warnings go to `NullLogger` and produce no output. There is no `disableReportDeprecated()` method; to suppress deprecation warnings, simply omit the logger (the default behavior).
 

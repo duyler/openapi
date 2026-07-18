@@ -47,9 +47,10 @@ final class RefResolver implements RefResolverInterface
 
     public function __construct(
         private readonly ?ExternalRefResolverInterface $externalRefResolver = null,
+        ?FileExternalRefResolver $builtinFileResolver = null,
     ) {
         $this->clear();
-        $this->builtinFileResolver = new FileExternalRefResolver();
+        $this->builtinFileResolver = $builtinFileResolver ?? new FileExternalRefResolver();
     }
 
     #[Override]

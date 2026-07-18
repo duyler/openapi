@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ExternalRefSecurityException` message no longer interpolates the original
   `$ref` (it surfaces only the offending scheme), mitigating path-disclosure
   risk at the resolver layer.
+- Hardened `FileExternalRefResolver` default behaviour through the builder:
+  `OpenApiValidatorBuilder::fromYamlFile()` / `fromJsonFile()` now auto-derive
+  `allowedRoot = dirname(realpath($specPath))` so external `$ref` resolution is
+  confined to the spec directory by default (closes SEC-03 arbitrary file read
+  via the default resolver). New `withExternalRefAllowedRoot(string $path)`
+  builder method allows overriding the root explicitly. Direct `new RefResolver()`
+  usage preserves the legacy null-`allowedRoot` behaviour for backward compatibility
+  (documented as unsafe for trusted specs).
 
 ## [0.5.0] - 2026-07-18
 
