@@ -88,10 +88,10 @@ final readonly class ResponseValidatorWithContext
             $normalizedHeaders[$key] = is_array($value) ? implode(', ', $value) : $value;
         }
 
-        $this->headersValidator->validate($normalizedHeaders, $responseDefinition->headers ?? null);
+        $this->headersValidator->validate($normalizedHeaders, $responseDefinition->headers);
 
         $contentType = $response->getHeaderLine('Content-Type');
-        $content = $responseDefinition->content ?? null;
+        $content = $responseDefinition->content;
 
         if (StreamingMediaTypeDetector::isStreaming($contentType)) {
             $this->bodyValidator->validateStream(

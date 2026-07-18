@@ -14,7 +14,6 @@ use function assert;
 use function count;
 use function is_array;
 use function sprintf;
-use function is_string;
 
 final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
@@ -78,6 +77,7 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
 
         if (false === $schema->additionalProperties) {
             $errors = [];
+            $propertyNames = [];
             $truncated = 0;
 
             foreach ($additionalKeys as $key) {
@@ -87,34 +87,27 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
                     break;
                 }
 
+                $keyString = (string) $key;
+                $propertyNames[] = $keyString;
                 $errors[] = new AdditionalPropertyError(
                     dataPath: $dataPath,
                     schemaPath: '/additionalProperties',
-                    propertyName: (string) $key,
+                    propertyName: $keyString,
                 );
             }
 
             if (0 !== $truncated) {
+                $truncationName = sprintf('... and %d more additional properties', $truncated);
+                $propertyNames[] = $truncationName;
                 $errors[] = new AdditionalPropertyError(
                     dataPath: $dataPath,
                     schemaPath: '/additionalProperties',
-                    propertyName: sprintf('... and %d more additional properties', $truncated),
+                    propertyName: $truncationName,
                 );
             }
 
             throw new ValidationException(
-                sprintf(
-                    'Additional properties are not allowed: %s',
-                    implode(', ', array_map(
-                        static function (AdditionalPropertyError $error): string {
-                            $name = $error->params()['propertyName'];
-                            assert(is_string($name));
-
-                            return $name;
-                        },
-                        $errors,
-                    )),
-                ),
+                sprintf('Additional properties are not allowed: %s', implode(', ', $propertyNames)),
                 errors: $errors,
             );
         }

@@ -21,7 +21,6 @@ use WeakMap;
 
 use function array_filter;
 use function array_values;
-use function assert;
 
 /**
  * @internal Legacy stateless JSON Schema dispatcher. Retained only as the recursion engine
@@ -82,7 +81,6 @@ final class SchemaValidator implements SchemaValidatorInterface
             }
 
             foreach ($validators as $validator) {
-                assert($validator instanceof SchemaValidatorInterface);
                 $validator->validate($data, $schema, $context);
             }
         } finally {
@@ -90,17 +88,12 @@ final class SchemaValidator implements SchemaValidatorInterface
         }
     }
 
-    private function getRegistry(): ValidatorRegistryInterface
-    {
-        return $this->effectiveRegistry;
-    }
-
     /**
      * @return list<SchemaValidatorInterface>
      */
     private function computeApplicableValidators(Schema $schema): array
     {
-        $all = $this->getRegistry()->getAllValidators();
+        $all = $this->effectiveRegistry->getAllValidators();
 
         /** @var list<SchemaValidatorInterface> $filtered */
         $filtered = array_values(array_filter(

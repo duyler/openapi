@@ -4,11 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
-/**
- * Sub-DTO grouping JSON Schema 2020-12 numeric constraint keywords.
- *
- * Applies to both `integer` and `number` types per spec.
- */
 final readonly class NumericConstraints
 {
     public function __construct(

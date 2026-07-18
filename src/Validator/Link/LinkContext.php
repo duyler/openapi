@@ -8,10 +8,8 @@ namespace Duyler\OpenApi\Validator\Link;
  * Carries the runtime context required to evaluate OpenAPI 3.2 §6.19.2
  * Runtime Expressions inside Link parameters and request bodies.
  *
- * Fields are grouped into response context (body, headers, queryParams, url,
- * method, statusCode) and request context (pathParams, requestHeaders,
- * requestBody). The same queryParams array backs both $request.query and
- * $response.query expressions since the underlying query string is shared.
+ * The same queryParams array backs both $request.query and $response.query
+ * expressions since the underlying query string is shared.
  */
 final readonly class LinkContext
 {

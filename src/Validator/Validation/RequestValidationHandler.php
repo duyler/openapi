@@ -96,13 +96,7 @@ final readonly class RequestValidationHandler
             return $requestPath;
         }
 
-        $match = $this->serverPathMatcher->matchPath($requestPath);
-
-        if (null !== $match) {
-            return $match->strippedPath;
-        }
-
-        return $requestPath;
+        return $this->serverPathMatcher->matchPath($requestPath)?->strippedPath ?? $requestPath;
     }
 
     private function createValidatedRequest(

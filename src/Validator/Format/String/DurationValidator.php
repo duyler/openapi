@@ -8,7 +8,6 @@ use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Override;
 
 use function preg_match;
-use function str_contains;
 use function str_starts_with;
 
 final readonly class DurationValidator extends AbstractStringFormatValidator
@@ -39,10 +38,6 @@ final readonly class DurationValidator extends AbstractStringFormatValidator
         $hasTimeComponent = '' !== ($matches['hours'] ?? '')
             || '' !== ($matches['minutes'] ?? '')
             || '' !== ($matches['seconds'] ?? '');
-
-        if ($hasTimeComponent && false === str_contains($data, 'T')) {
-            throw new InvalidFormatException('duration', $data, 'Time components must be preceded by T');
-        }
 
         if (false === $hasWeeksComponent && false === $hasDateComponent && false === $hasTimeComponent) {
             throw new InvalidFormatException('duration', $data, 'Duration must have at least one component');

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator;
 
-use Closure;
-
 use function ini_get;
 use function ini_set;
 use function preg_match;
@@ -54,7 +52,7 @@ final readonly class PregExecutor
     {
         $previous = $this->capturePreviousLimit();
         ini_set('pcre.backtrack_limit', (string) $this->maxBacktracks);
-        set_error_handler($this->suppressCompileWarning());
+        set_error_handler(static fn(int $errno) => E_WARNING === $errno);
 
         try {
             return preg_match($pattern, $subject, $matches, $flags, $offset);
@@ -75,7 +73,7 @@ final readonly class PregExecutor
     {
         $previous = $this->capturePreviousLimit();
         ini_set('pcre.backtrack_limit', (string) $this->maxBacktracks);
-        set_error_handler($this->suppressCompileWarning());
+        set_error_handler(static fn(int $errno) => E_WARNING === $errno);
 
         try {
             return preg_match_all($pattern, $subject, $matches, $flags, $offset);
@@ -90,13 +88,5 @@ final readonly class PregExecutor
         $previous = ini_get('pcre.backtrack_limit');
 
         return false === $previous ? '1000000' : $previous;
-    }
-
-    /**
-     * @return Closure(int, string, string, int): bool
-     */
-    private function suppressCompileWarning(): Closure
-    {
-        return static fn(int $errno, string $errstr, string $errfile, int $errline): bool => E_WARNING === $errno;
     }
 }

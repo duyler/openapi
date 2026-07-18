@@ -8,14 +8,14 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Validator\Coercion\AbstractCoercer;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 
+use function get_object_vars;
+use function in_array;
 use function is_array;
+use function is_bool;
 use function is_float;
 use function is_int;
 use function is_object;
 use function is_string;
-use function in_array;
-use function get_object_vars;
-use function is_bool;
 
 final readonly class TypeCoercer extends AbstractCoercer
 {
@@ -59,7 +59,6 @@ final readonly class TypeCoercer extends AbstractCoercer
 
     /**
      * @param array<int, string> $types
-     * @return array<array-key, mixed>|int|string|float|bool
      */
     private function coerceUnionType(mixed $value, array $types, bool $strict): array|int|string|float|bool
     {
@@ -78,9 +77,6 @@ final readonly class TypeCoercer extends AbstractCoercer
         return $this->normalizeValue($value);
     }
 
-    /**
-     * @return array<array-key, mixed>|int|string|float|bool
-     */
     private function coerceToType(mixed $value, string $type, bool $strict): array|int|string|float|bool
     {
         if (is_string($value)) {
@@ -96,9 +92,6 @@ final readonly class TypeCoercer extends AbstractCoercer
         return $this->normalizeValue($value);
     }
 
-    /**
-     * @return array<array-key, mixed>|int|string|float|bool
-     */
     private function normalizeValue(mixed $value): array|int|string|float|bool
     {
         if (is_array($value)) {

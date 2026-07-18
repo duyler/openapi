@@ -6,11 +6,6 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
-/**
- * Represents a violation of the JSON Schema `additionalProperties` keyword
- * with the value `false`: a property is present in the data even though the
- * schema forbids additional properties.
- */
 final class AdditionalPropertyError extends AbstractValidationError
 {
     public function __construct(

@@ -104,7 +104,6 @@ final readonly class ComponentsBuilder
             $mediaTypes[strtolower($mediaType)] = $this->buildMediaType(TypeHelper::asArray($content));
         }
 
-        /** @var array<string, MediaType> $mediaTypes */
         return new Content($mediaTypes);
     }
 
@@ -206,7 +205,6 @@ final readonly class ComponentsBuilder
             $responses[$statusCode] = $this->buildResponse(TypeHelper::asArray($response));
         }
 
-        /** @var array<string, Response> $responses */
         return new Responses($responses);
     }
 
@@ -244,7 +242,6 @@ final readonly class ComponentsBuilder
             $headers[$headerName] = $this->buildHeader(TypeHelper::asArray($header));
         }
 
-        /** @var array<string, Header> $headers */
         return new Headers($headers);
     }
 
@@ -285,7 +282,6 @@ final readonly class ComponentsBuilder
             $links[$linkName] = $this->buildLink(TypeHelper::asArray($link));
         }
 
-        /** @var array<string, Link> $links */
         return new Links($links);
     }
 
@@ -330,7 +326,6 @@ final readonly class ComponentsBuilder
             }
         }
 
-        /** @var array<string, array<string, PathItem>> $callbacks */
         return new Callbacks($callbacks);
     }
 

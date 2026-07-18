@@ -48,15 +48,7 @@ final class RefResolver implements RefResolverInterface
     public function __construct(
         private readonly ?ExternalRefResolverInterface $externalRefResolver = null,
     ) {
-        /** @var WeakMap<OpenApiDocument, RefCache> $cache */
-        $cache = new WeakMap();
-        $this->cache = $cache;
-        /** @var WeakMap<Schema, WeakMap<OpenApiDocument, bool>> $hasDiscriminatorCache */
-        $hasDiscriminatorCache = new WeakMap();
-        $this->hasDiscriminatorCache = $hasDiscriminatorCache;
-        /** @var WeakMap<Schema, bool> $hasRefCache */
-        $hasRefCache = new WeakMap();
-        $this->hasRefCache = $hasRefCache;
+        $this->clear();
         $this->builtinFileResolver = new FileExternalRefResolver();
     }
 

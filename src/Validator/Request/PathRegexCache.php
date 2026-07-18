@@ -28,13 +28,6 @@ final class PathRegexCache
 
     private const string PLACEHOLDER_TOKEN_FORMAT = "\x01PH%d\x02";
 
-    /**
-     * RFC 6570 §2.3 varname character classes.
-     * `varname = varchar *( ["."] varchar )` — the dot is a legal character
-     * inside a variable name (not a separator), so it must be allowed in the
-     * trailing character class. The leading class excludes the dot because a
-     * varname cannot start with one.
-     */
     private const string VARNAME_FIRST_CHAR_CLASS = 'a-zA-Z_\x80-\xff';
 
     private const string VARNAME_TAIL_CHAR_CLASS = 'a-zA-Z0-9_.\x80-\xff';
@@ -91,25 +84,6 @@ final class PathRegexCache
         $this->order = [];
     }
 
-    /**
-     * Build a delimited regular expression for an OpenAPI path template.
-     *
-     * Implements RFC 6570 Level 1 (`{name}`, matches `[^/]+`) and Level 2
-     * reserved expansion (`{+name}`, matches `[^?#]+`). The fixed parts of the
-     * template are escaped via `preg_quote` to prevent regex meta-characters
-     * (`.`, `+`, `(`, ...) from being interpreted as regex syntax, which would
-     * otherwise allow path-based ACL bypass (e.g. `/v1.0/users` matching
-     * `/v1X0/users`). Variable names follow RFC 6570 §2.3, which permits the
-     * dot inside a name (e.g. `{user.id}`); because PCRE forbids dots in named
-     * subpatterns, the dot is replaced with an underscore when emitting the
-     * capturing group name. Unsupported RFC 6570 operators are rejected
-     * fail-fast.
-     *
-     * @return string Fully-delimited regular expression (`#^...$#`)
-     *
-     * @throws InvalidArgumentException when the template contains an invalid
-     *     parameter name or an unsupported RFC 6570 operator
-     */
     private function buildRegex(string $template): string
     {
         /** @var array<string, array{name: string, operator: string}> $placeholders */

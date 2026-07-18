@@ -113,10 +113,10 @@ final readonly class ResponseHeadersValidator
     {
         if (false === is_numeric($value)) {
             throw new TypeMismatchError(
-                'number',
-                'string',
-                $headerName,
-                '#/type',
+                expected: 'number',
+                actual: 'string',
+                dataPath: $headerName,
+                schemaPath: '#/type',
             );
         }
 
@@ -125,9 +125,7 @@ final readonly class ResponseHeadersValidator
 
     private function coerceToBoolean(string $value, string $headerName): bool
     {
-        $lowerValue = strtolower($value);
-
-        $coercionValue = BooleanCoercionValue::tryFrom($lowerValue);
+        $coercionValue = BooleanCoercionValue::tryFrom(strtolower($value));
 
         if (null !== $coercionValue) {
             return $coercionValue->isTruthy();
@@ -150,9 +148,7 @@ final readonly class ResponseHeadersValidator
             );
         }
 
-        $items = array_filter(array_map(trim(...), explode(',', $value)));
-
-        return array_values($items);
+        return array_values(array_filter(array_map(trim(...), explode(',', $value))));
     }
 
     private function coerceToObject(string $value, string $headerName): array

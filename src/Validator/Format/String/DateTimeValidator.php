@@ -14,23 +14,6 @@ use function preg_match;
 
 final readonly class DateTimeValidator extends AbstractStringFormatValidator
 {
-    /**
-     * ISO 8601 / RFC 3339 date-time pattern.
-     *
-     * Enforces YYYY-MM-DD with leading zeros, HH:MM:SS in the 24-hour range,
-     * accepts the leap second value 60 for the seconds field per RFC 3339 §4.2.3,
-     * allows optional fractional seconds of arbitrary precision per RFC 3339 §2
-     * and a mandatory timezone suffix. The timezone is either Z, z, or an
-     * offset ±HH:MM bounded exactly to +14:00 / -14:00 per RFC 3339 §4.1
-     * (offsets between -13:59 and +13:59 are accepted with any minute value,
-     * but the boundary hour 14 requires minute 00). Semantic validity of the
-     * date portion is verified separately via checkdate() to keep the
-     * validator free of any process-global state and safe for long-running
-     * runtimes (RoadRunner, FrankenPHP, Swoole). After the regex and
-     * checkdate() pass, the DateTimeImmutable constructor performs the
-     * final semantic check (covering arbitrary fractional precision that
-     * DateTimeImmutable::createFromFormat with the `v` format cannot parse).
-     */
     private const string DATETIME_PATTERN = '/^'
         . '(?<year>\d{4})-(?<month>0[1-9]|1[0-2])-(?<day>0[1-9]|[12]\d|3[01])'
         . '[Tt]'

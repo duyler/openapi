@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\Error\ValidationContext;
-use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\PregExecutor;
-use Duyler\OpenApi\Validator\Registry\ValidatorRegistryInterface;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -32,10 +30,6 @@ abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterf
     }
 
     /**
-     * Normalise the OpenAPI `type` value to a single string for inclusion in
-     * `TypeMismatchError::expected`. Union types are joined with `|` to mirror
-     * the convention already used by TypeValidator.
-     *
      * @param string|list<string>|null $type
      */
     protected function formatSchemaType(array|string|null $type, string $default = 'scalar'): string
@@ -56,16 +50,6 @@ abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterf
         return $this->dependencies->pool;
     }
 
-    protected function formatRegistry(): FormatRegistry
-    {
-        return $this->dependencies->formatRegistry;
-    }
-
-    protected function strictFormats(): bool
-    {
-        return $this->dependencies->strictFormats;
-    }
-
     protected function logger(): LoggerInterface
     {
         return $this->dependencies->logger;
@@ -79,11 +63,6 @@ abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterf
     protected function eventDispatcher(): ?EventDispatcherInterface
     {
         return $this->dependencies->eventDispatcher;
-    }
-
-    protected function registry(): ?ValidatorRegistryInterface
-    {
-        return $this->dependencies->registry;
     }
 
     protected function regexValidator(): RegexValidator

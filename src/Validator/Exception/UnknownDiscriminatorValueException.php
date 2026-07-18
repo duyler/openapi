@@ -17,10 +17,7 @@ final class UnknownDiscriminatorValueException extends AbstractValidationError
         string $dataPath = '/',
         string $schemaPath = '/discriminator',
     ) {
-        $mappingValues = [];
-        if (null !== $schema->discriminator && null !== $schema->discriminator->mapping) {
-            $mappingValues = array_keys($schema->discriminator->mapping);
-        }
+        $mappingValues = array_keys($schema->discriminator?->mapping ?? []);
 
         $message = sprintf(
             'Unknown discriminator value "%s"',

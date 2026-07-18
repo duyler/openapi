@@ -57,19 +57,13 @@ final readonly class OneOfValidatorWithContext
 
     private function validateWithDiscriminator(mixed $data, Schema $schema, ValidationContext $context): void
     {
-        if (null === $data) {
-            if (null !== $schema->oneOf && $this->hasNullableSchema($schema->oneOf) && $context->nullableAsType) {
-                return;
-            }
-            throw new ValidationException(
-                'Discriminator validation failed: data must be an object',
-                errors: [
-                    new DiscriminatorDataError(
-                        dataPath: $context->breadcrumbs->currentPath(),
-                        schemaPath: '/oneOf',
-                    ),
-                ],
-            );
+        if (
+            null === $data
+            && null !== $schema->oneOf
+            && $this->hasNullableSchema($schema->oneOf)
+            && $context->nullableAsType
+        ) {
+            return;
         }
 
         if (false === is_array($data)) {

@@ -47,6 +47,9 @@ final readonly class PatternPropertiesValidator extends AbstractSchemaValidator 
             $regexValidator->validate($normalized, "pattern property '{$pattern}'");
         }
 
+        $validator = $this->createSchemaValidator();
+        $nullableAsType = $context?->nullableAsType ?? true;
+
         /** @var array<string, mixed> $data */
         foreach ($data as $propertyName => $propertyValue) {
             if (false === is_string($propertyName)) {
@@ -56,13 +59,9 @@ final readonly class PatternPropertiesValidator extends AbstractSchemaValidator 
             foreach ($normalizedPatterns as $pattern => $normalizedPattern) {
                 assert('' !== $normalizedPattern);
 
-                $result = $this->pregExecutor()->match($normalizedPattern, $propertyName);
-
-                if (false !== $result && 1 === $result) {
+                if (1 === $this->pregExecutor()->match($normalizedPattern, $propertyName)) {
                     $propertySchema = $schema->patternProperties[$pattern];
                     /** @var array-key|array<array-key, mixed> $propertyValue */
-                    $validator = $this->createSchemaValidator();
-                    $nullableAsType = $context?->nullableAsType ?? true;
 
                     if (null === $context) {
                         $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);

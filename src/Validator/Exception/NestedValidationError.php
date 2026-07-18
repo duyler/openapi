@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Exception;
 
 /**
- * Generic validation error used as a fallback when a nested validator throws
- * a `ValidationException` without structured `errors`. Carries the original
- * exception message verbatim so the middleware can render a meaningful
- * diagnostic without asserting a specific keyword (the actual cause may be a
- * `not` violation, `minLength`, or any other nested constraint).
+ * Fallback validation error used when a nested validator throws a
+ * `ValidationException` without structured `errors`. The original
+ * message is preserved verbatim so the middleware can render a
+ * diagnostic without asserting a specific nested keyword.
  */
 final class NestedValidationError extends AbstractValidationError
 {

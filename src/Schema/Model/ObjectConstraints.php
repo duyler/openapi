@@ -7,9 +7,8 @@ namespace Duyler\OpenApi\Schema\Model;
 /**
  * Sub-DTO grouping JSON Schema 2020-12 object constraint keywords.
  *
- * - `additionalProperties`, `unevaluatedProperties`, `contentSchema` accept
- *   `Schema|bool|null` per spec.
- * - `propertyNames` is a Schema that constrains property name strings.
+ * - `additionalProperties` and `unevaluatedProperties` accept `Schema|bool|null`
+ *   per spec.
  */
 final readonly class ObjectConstraints
 {

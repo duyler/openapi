@@ -173,12 +173,7 @@ final readonly class StreamingContentParser
                 $endPos = $length;
             }
 
-            $json = substr($body, $pos, $endPos - $pos);
-            $json = trim($json);
-
-            if ('' !== $json) {
-                $items = $this->appendJsonSeqItem($items, $json);
-            }
+            $items = $this->appendJsonSeqItem($items, substr($body, $pos, $endPos - $pos));
 
             $pos = $endPos;
         }
@@ -450,8 +445,6 @@ final readonly class StreamingContentParser
     }
 
     /**
-     * Format SSE event data
-     *
      * @param array<string, string> $event
      *
      * @return array<int|string, mixed>

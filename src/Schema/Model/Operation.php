@@ -11,9 +11,6 @@ final readonly class Operation implements JsonSerializable
 {
     /**
      * @param list<string>|null $tags
-     * @param Parameters|null $parameters
-     * @param SecurityRequirement|null $security
-     * @param Servers|null $servers
      */
     public function __construct(
         public ?array $tags = null,

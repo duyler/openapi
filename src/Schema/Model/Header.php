@@ -26,7 +26,6 @@ final readonly class Header implements JsonSerializable
     #[Override]
     public function jsonSerialize(): array
     {
-        /** @var array<string, mixed> $data */
         $data = [];
 
         if (null !== $this->description) {

@@ -7,7 +7,6 @@ namespace Duyler\OpenApi\Validator\Validation;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\EventDispatchingTrait;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
-use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\TypeFormatter;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -22,14 +21,12 @@ final readonly class SchemaValidatorAdapter
 
     private readonly ?EventDispatcherInterface $eventDispatcher;
     private readonly LoggerInterface $logger;
-    private readonly RefResolver $refResolver;
 
     public function __construct(
         private readonly ValidatorDependencies $context,
     ) {
         $this->eventDispatcher = $context->eventDispatcher;
         $this->logger = $context->logger;
-        $this->refResolver = $context->refResolver;
     }
 
     public function validate(mixed $data, string $schemaRef): void
@@ -42,7 +39,7 @@ final readonly class SchemaValidatorAdapter
             callback: function () use ($data, $schemaRef): void {
                 $this->logger->info(sprintf('Resolving schema ref: %s', $schemaRef));
 
-                $schema = $this->refResolver->resolve($schemaRef, $this->context->document);
+                $schema = $this->context->refResolver->resolve($schemaRef, $this->context->document);
 
                 $this->logger->info(sprintf('Validating schema: %s', $schemaRef));
 

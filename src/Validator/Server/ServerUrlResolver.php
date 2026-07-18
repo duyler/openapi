@@ -14,20 +14,13 @@ use function sprintf;
 
 final readonly class ServerUrlResolver
 {
-    /**
-     * RFC 6570 §2.3 variable-name character class for server URL templates.
-     * The dot is a legal character inside a variable name (e.g.
-     * `https://api.example.com/{api.version}`).
-     */
     private const string VARNAME_PATTERN = '[a-zA-Z0-9_.]+';
 
     /**
      * Resolves a server URL template by substituting variables with provided values.
      *
-     * @param Server $server The server definition containing URL template and default variables
-     * @param ServerVariableOverride ...$overrides Optional overrides for server variables
-     *
-     * @return string The resolved URL with all variables substituted
+     * @param Server $server
+     * @param ServerVariableOverride ...$overrides
      *
      * @throws ServerVariableException If a required variable is missing
      */
@@ -79,8 +72,8 @@ final readonly class ServerUrlResolver
     /**
      * Validates that all template variables in the server URL have corresponding values.
      *
-     * @param Server $server The server definition
-     * @param ServerVariableOverride ...$overrides Optional overrides for server variables
+     * @param Server $server
+     * @param ServerVariableOverride ...$overrides
      *
      * @throws ServerVariableException If a variable is missing a value
      */

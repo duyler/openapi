@@ -168,12 +168,6 @@ final readonly class QueryParser
     }
 
     /**
-     * Parse a key like "tags[a][b][]" into segments and assign value to a nested tree.
-     *
-     * The early substr_count bound prevents OOM via huge $rest reaching preg_match_all
-     * below — substr_count is O(n) and allocates nothing, while preg_match_all
-     * materializes the full match-set into memory before our depth guard can fire.
-     *
      * @param array<array-key, mixed> $tree
      * @return array<array-key, mixed>
      */
@@ -221,8 +215,6 @@ final readonly class QueryParser
     }
 
     /**
-     * Walk segments and assign value. Empty segment means numeric-indexed append.
-     *
      * @param array<array-key, mixed> $node
      * @param non-empty-list<string> $segments
      * @return array<array-key, mixed>

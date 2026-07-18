@@ -163,11 +163,6 @@ final readonly class PathFinder
     }
 
     /**
-     * Collect-into-shared-array recursion: appends every template match
-     * reachable from $node into $results by reference, avoiding the
-     * K copy-on-write allocations that the previous spread-merge form
-     * produced on paths traversing K wildcard nodes.
-     *
      * @param array<int|string, mixed> $node
      * @param list<string>             $segments
      * @param int<0, max>              $depth
@@ -212,12 +207,7 @@ final readonly class PathFinder
      */
     private function compareTemplateOrder(array $a, array $b): int
     {
-        /** @var string $templateA */
-        $templateA = $a['template'];
-        /** @var string $templateB */
-        $templateB = $b['template'];
-
-        return $this->templateOrder[$templateA] <=> $this->templateOrder[$templateB];
+        return $this->templateOrder[$a['template']] <=> $this->templateOrder[$b['template']];
     }
 
     /**

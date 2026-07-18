@@ -8,14 +8,6 @@ use InvalidArgumentException;
 
 use function sprintf;
 
-/**
- * Thrown when a Schema defines multipleOf with a non-positive value, or when
- * the validator cannot reliably verify multipleOf for a large integer without
- * the bcmath extension.
- *
- * The OpenAPI specification forbids multipleOf values that are zero or negative,
- * because such values make the constraint mathematically meaningless.
- */
 final class InvalidMultipleOfSchemaException extends InvalidArgumentException
 {
     public function __construct(string $message)
@@ -31,12 +23,6 @@ final class InvalidMultipleOfSchemaException extends InvalidArgumentException
         ));
     }
 
-    /**
-     * Factory for the case where integer data combined with a non-integer
-     * multipleOf exceeds the precision that the float relative-epsilon
-     * check can guarantee without the bcmath extension. Fail-closed to
-     * avoid silently accepting arbitrary large values.
-     */
     public static function forLargeIntegerWithoutBcmath(int $data, float $multipleOf): self
     {
         return new self(sprintf(
