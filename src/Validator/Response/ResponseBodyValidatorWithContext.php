@@ -46,6 +46,7 @@ final readonly class ResponseBodyValidatorWithContext
         $this->streamingParser = new StreamingContentParser(
             $this->dependencies->logger,
             strictStreaming: $this->configuration->strictStreaming,
+            maxRecords: $this->configuration->maxStreamingRecords,
         );
         $this->exampleValidator = new ExampleValidator();
 

@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
+- **BREAKING**: Inverted the default of strict callback runtime template
+  resolution from opt-in to opt-out, closing SEC-09 (SSRF via attacker-
+  controlled callback URLs). `OpenApiValidatorBuilder::build()` now resolves
+  the `strictCallbackRuntimeTemplate` config with a `?? true` fallback, so
+  callback expressions that use runtime templates such as
+  `{$request.body#/callback_url}` throw
+  `Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException`
+  by default instead of being silently treated as wildcards that accept any
+  URL. Applications that previously relied on the wildcard behaviour must
+  call `OpenApiValidatorBuilder::disableStrictCallbackRuntimeTemplate()` to
+  opt back into the legacy mode; this opt-out is documented as unsafe when
+  the resolved callback URL is used for outbound HTTP requests without
+  application-level validation. The previous opt-in method
+  `OpenApiValidatorBuilder::enableStrictCallbackRuntimeTemplate()` is
+  retained as a `@deprecated` no-op (`return $this;`) for backward
+  compatibility and will be removed in 2.0. The `BuilderConfig`
+  field type (`?bool = null`) and its `merge()` semantics are unchanged.
+  Migration: callers that explicitly invoked `enableStrictCallbackRuntimeTemplate()`
+  keep working (the call is now a no-op, the default already enables strict
+  mode); callers that relied on the implicit wildcard default must add
+  `disableStrictCallbackRuntimeTemplate()` and validate callback URLs
+  through an application-level allowlist.
 - Hardened `FileExternalRefResolver` scheme policy from blacklist to strict
   whitelist: only `file://` URIs and scheme-less relative paths are now
   accepted. Every other scheme (`php://`, `phar://`, `data://`,

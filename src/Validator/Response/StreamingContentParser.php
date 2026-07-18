@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Response;
 
 use Duyler\OpenApi\Validator\Exception\MalformedStreamRecordException;
 use Duyler\OpenApi\Validator\JsonDepthLimit;
+use Duyler\OpenApi\Validator\Response\Exception\TooManyRecordsException;
 use Duyler\OpenApi\Validator\Util\LogContextSanitizer;
 use Generator;
 use JsonException;
@@ -15,6 +16,7 @@ use Psr\Log\NullLogger;
 use RuntimeException;
 
 use function assert;
+use function count;
 use function ctype_digit;
 use function is_array;
 use function is_null;
@@ -33,6 +35,7 @@ final readonly class StreamingContentParser
     private const string UTF8_BOM = "\xEF\xBB\xBF";
     private const int DEFAULT_MAX_LINE_LENGTH = 1_048_576;
     private const int DEFAULT_MAX_RECORD_LENGTH = 10_485_760;
+    private const int DEFAULT_MAX_RECORDS = 100_000;
     private const int LOG_RECORD_TRUNCATE_LENGTH = 256;
 
     /**
@@ -66,6 +69,7 @@ final readonly class StreamingContentParser
         private readonly int $maxLineLength = self::DEFAULT_MAX_LINE_LENGTH,
         private readonly int $maxRecordLength = self::DEFAULT_MAX_RECORD_LENGTH,
         private readonly bool $strictStreaming = false,
+        private readonly int $maxRecords = self::DEFAULT_MAX_RECORDS,
     ) {}
 
     /**
@@ -113,9 +117,18 @@ final readonly class StreamingContentParser
         assert(is_array($lines));
         /** @var list<array<int|string, mixed>|null> $items */
         $items = [];
+        $recordCount = 0;
 
         foreach ($lines as $line) {
+            $before = count($items);
             $items = $this->appendJsonLine($items, $line);
+            if (count($items) === $before) {
+                continue;
+            }
+            ++$recordCount;
+            if ($recordCount > $this->maxRecords) {
+                throw new TooManyRecordsException(max: $this->maxRecords);
+            }
         }
 
         return $items;
@@ -134,16 +147,29 @@ final readonly class StreamingContentParser
         $events = [];
         /** @var array<string, string> $currentEvent */
         $currentEvent = [];
+        $recordCount = 0;
 
         $lines = preg_split(self::SSE_LINE_SPLIT_PATTERN, $body);
         assert(is_array($lines));
 
         foreach ($lines as $line) {
+            $before = count($events);
             [$currentEvent, $events] = $this->processSseLine($line, $currentEvent, $events);
+            if (count($events) === $before) {
+                continue;
+            }
+            ++$recordCount;
+            if ($recordCount > $this->maxRecords) {
+                throw new TooManyRecordsException(max: $this->maxRecords);
+            }
         }
 
         if ([] !== $currentEvent) {
             $events[] = $this->formatSseEvent($currentEvent);
+            ++$recordCount;
+            if ($recordCount > $this->maxRecords) {
+                throw new TooManyRecordsException(max: $this->maxRecords);
+            }
         }
 
         return $events;
@@ -162,6 +188,7 @@ final readonly class StreamingContentParser
         $items = [];
         $pos = 0;
         $length = strlen($body);
+        $recordCount = 0;
 
         while ($pos < $length) {
             if (self::RECORD_SEPARATOR === substr($body, $pos, 1)) {
@@ -173,7 +200,14 @@ final readonly class StreamingContentParser
                 $endPos = $length;
             }
 
+            $before = count($items);
             $items = $this->appendJsonSeqItem($items, substr($body, $pos, $endPos - $pos));
+            if (count($items) > $before) {
+                ++$recordCount;
+                if ($recordCount > $this->maxRecords) {
+                    throw new TooManyRecordsException(max: $this->maxRecords);
+                }
+            }
 
             $pos = $endPos;
         }
@@ -315,9 +349,18 @@ final readonly class StreamingContentParser
     {
         /** @var list<array<int|string, mixed>|null> $items */
         $items = [];
+        $recordCount = 0;
 
         foreach ($this->readStreamInLines($stream, self::NDJSON_LINE_SPLIT_PATTERN) as $line) {
+            $before = count($items);
             $items = $this->appendJsonLine($items, $line);
+            if (count($items) === $before) {
+                continue;
+            }
+            ++$recordCount;
+            if ($recordCount > $this->maxRecords) {
+                throw new TooManyRecordsException(max: $this->maxRecords);
+            }
         }
 
         return $items;
@@ -332,13 +375,26 @@ final readonly class StreamingContentParser
         $events = [];
         /** @var array<string, string> $currentEvent */
         $currentEvent = [];
+        $recordCount = 0;
 
         foreach ($this->readStreamInLines($stream, self::SSE_LINE_SPLIT_PATTERN) as $line) {
+            $before = count($events);
             [$currentEvent, $events] = $this->processSseLine($line, $currentEvent, $events);
+            if (count($events) === $before) {
+                continue;
+            }
+            ++$recordCount;
+            if ($recordCount > $this->maxRecords) {
+                throw new TooManyRecordsException(max: $this->maxRecords);
+            }
         }
 
         if ([] !== $currentEvent) {
             $events[] = $this->formatSseEvent($currentEvent);
+            ++$recordCount;
+            if ($recordCount > $this->maxRecords) {
+                throw new TooManyRecordsException(max: $this->maxRecords);
+            }
         }
 
         return $events;
@@ -390,6 +446,7 @@ final readonly class StreamingContentParser
         $items = [];
         $buffer = '';
         $bomStripped = false;
+        $recordCount = 0;
 
         while (!$stream->eof()) {
             $chunk = $stream->read(self::STREAM_CHUNK_SIZE);
@@ -417,11 +474,25 @@ final readonly class StreamingContentParser
             $buffer = array_pop($records);
 
             foreach ($records as $record) {
+                $before = count($items);
                 $items = $this->appendJsonSeqItem($items, $record);
+                if (count($items) > $before) {
+                    ++$recordCount;
+                    if ($recordCount > $this->maxRecords) {
+                        throw new TooManyRecordsException(max: $this->maxRecords);
+                    }
+                }
             }
         }
 
+        $before = count($items);
         $items = $this->appendJsonSeqItem($items, $buffer);
+        if (count($items) > $before) {
+            ++$recordCount;
+            if ($recordCount > $this->maxRecords) {
+                throw new TooManyRecordsException(max: $this->maxRecords);
+            }
+        }
 
         return $items;
     }

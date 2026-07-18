@@ -306,20 +306,38 @@ $validator = OpenApiValidatorBuilder::create()
 $operation = $validator->validateCallback($request, 'myCallback');
 ```
 
-> **Security caveat**: Callback runtime expressions like `{$request.body#/callback_url}`
-> reference the original triggering request body and cannot be resolved by the
-> validator, so path validation is bypassed (any URL is accepted as a wildcard).
-> When the runtime template is attacker-controlled, declared security checks on
-> the callback pathItem still pass against an arbitrary URL. Use
-> `enableStrictCallbackRuntimeTemplate()` to fail-closed on unresolvable runtime
-> expressions and throw `UnresolvableCallbackPathException` instead:
+> **Security default — strict fail-closed**: Callback runtime expressions
+> like `{$request.body#/callback_url}` reference the original triggering
+> request body and cannot be resolved by the validator. Since SEC-09, the
+> builder fails closed by default: any callback expression that contains a
+> runtime template throws `UnresolvableCallbackPathException` instead of
+> being treated as a wildcard that accepts any URL. This prevents
+> attacker-controlled runtime templates from bypassing path validation
+> while still passing declared security checks on the callback pathItem.
+
+To opt back into the legacy wildcard behaviour, call
+`disableStrictCallbackRuntimeTemplate()`:
+
+> **SECURITY WARNING**: `disableStrictCallbackRuntimeTemplate()` disables
+> the protection against SSRF via attacker-controlled callback URLs.
+> Declared security checks on the callback pathItem still pass against an
+> arbitrary URL when the runtime template is unresolvable. Use this opt-out
+> only when the application validates callback URLs through another
+> mechanism (for example, an allowlist of permitted outbound hosts, signed
+> callback URLs, or application-level destination validation that runs
+> before any outbound HTTP request is issued).
 
 ```php
 $validator = OpenApiValidatorBuilder::create()
     ->fromYamlFile('openapi.yaml')
-    ->enableStrictCallbackRuntimeTemplate()
+    ->disableStrictCallbackRuntimeTemplate()
     ->build();
 ```
+
+The previous opt-in method `enableStrictCallbackRuntimeTemplate()` is
+retained as a `@deprecated` no-op for backward compatibility: callers that
+explicitly invoked it continue to receive the (now default) strict
+behaviour. The method will be removed in 2.0.
 
 ### Link Resolution
 
@@ -789,7 +807,8 @@ Use the runtime validator when you need the typed error classes (`TypeMismatchEr
 | `enableStrictFormats()` | Reject unknown format values instead of skipping | `false` |
 | `enableReportDeprecated()` | Log deprecated schema elements via PSR-3 logger | `true` |
 | `enableServerPathResolution()` | Strip server base path from request path before matching | `false` |
-| `enableStrictCallbackRuntimeTemplate()` | Fail-closed on callback runtime expressions like `{$request.body#/callback_url}` instead of treating them as wildcards | `false` |
+| `enableStrictCallbackRuntimeTemplate()` | `@deprecated` no-op since SEC-09: strict mode is now the default. Retained for backward compatibility; will be removed in 2.0. | `true` (effective) |
+| `disableStrictCallbackRuntimeTemplate()` | Opt out of strict callback runtime template resolution. **SECURITY WARNING**: callback expressions like `{$request.body#/callback_url}` are treated as wildcards that accept any URL, enabling SSRF via attacker-controlled callback URLs when the resolved URL is used for outbound HTTP. Use only when callback URLs are validated at the application level. | `false` (opt-in legacy mode) |
 | `withExternalRefAllowedRoot(string $path)` | Override the directory that external file:// `$ref` references must stay inside. Auto-derived from the spec file's dirname for `fromYamlFile` / `fromJsonFile`; unset for string-loaded specs. | `null` (auto from spec path) |
 | `withExternalRefMaxBytes(int $bytes)` | Set max external ref file size | `10485760` (10 MB) |
 

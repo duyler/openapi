@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Response;
 
+use Duyler\OpenApi\Validator\Response\Exception\TooManyRecordsException;
 use Duyler\OpenApi\Validator\Response\StreamingContentParser;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -15,6 +16,7 @@ use RuntimeException;
 use ReflectionClass;
 
 use function count;
+use function implode;
 
 #[CoversClass(StreamingContentParser::class)]
 final class StreamingContentParserTest extends TestCase
@@ -1172,5 +1174,344 @@ final class StreamingContentParserTest extends TestCase
 
         self::assertCount(1, $result);
         self::assertSame('hello', $result[0]['data']);
+    }
+
+    /**
+     * SEC-10: Default max records cap is 100_000 — defends against memory
+     * exhaustion from attacker-controlled streaming responses composed of
+     * many tiny records.
+     */
+    #[Test]
+    public function default_max_records_is_one_hundred_thousand(): void
+    {
+        $reflection = new ReflectionClass($this->parser);
+
+        $maxRecords = $reflection->getProperty('maxRecords')->getValue($this->parser);
+
+        self::assertSame(100_000, $maxRecords);
+    }
+
+    /**
+     * SEC-10: NDJSON non-streaming parser enforces the default record cap.
+     * 100_001 records → TooManyRecordsException with max=100_000.
+     */
+    #[Test]
+    public function test_ndjson_record_count_limit_enforced(): void
+    {
+        $body = implode("\n", $this->generateNdJsonLines(100_001));
+
+        $this->expectException(TooManyRecordsException::class);
+        $this->expectExceptionMessage('exceeds maximum record count: 100000');
+
+        $this->parser->parseJsonLines($body);
+    }
+
+    /**
+     * SEC-10: Exactly 100_000 records (the default cap) parse successfully.
+     * Boundary case for the off-by-one in the limit check.
+     */
+    #[Test]
+    public function test_ndjson_record_count_under_limit(): void
+    {
+        $body = implode("\n", $this->generateNdJsonLines(100_000));
+
+        $result = $this->parser->parseJsonLines($body);
+
+        self::assertCount(100_000, $result);
+    }
+
+    /**
+     * SEC-10: SSE non-streaming parser enforces the default record cap.
+     */
+    #[Test]
+    public function test_sse_record_count_limit_enforced(): void
+    {
+        $body = $this->generateSseBody(100_001);
+
+        $this->expectException(TooManyRecordsException::class);
+
+        $this->parser->parseServerSentEvents($body);
+    }
+
+    /**
+     * SEC-10: JSON Text Sequence (RFC 7464) non-streaming parser enforces
+     * the default record cap.
+     */
+    #[Test]
+    public function test_json_seq_record_count_limit_enforced(): void
+    {
+        $body = $this->generateJsonSeqBody(100_001);
+
+        $this->expectException(TooManyRecordsException::class);
+
+        $this->parser->parseJsonSeq($body);
+    }
+
+    /**
+     * SEC-10: Custom max records via constructor — 11 records with max=10
+     * raises TooManyRecordsException with max=10.
+     */
+    #[Test]
+    public function test_custom_max_records(): void
+    {
+        $parser = new StreamingContentParser(maxRecords: 10);
+        $body = implode("\n", $this->generateNdJsonLines(11));
+
+        try {
+            $parser->parseJsonLines($body);
+            self::fail('Expected TooManyRecordsException was not thrown');
+        } catch (TooManyRecordsException $e) {
+            self::assertSame(10, $e->max);
+            self::assertStringContainsString('exceeds maximum record count: 10', $e->getMessage());
+        }
+    }
+
+    /**
+     * SEC-10: Boundary — exactly `maxRecords` parses successfully; max=10,
+     * 10 records → no exception.
+     */
+    #[Test]
+    public function test_custom_max_records_boundary_at_limit(): void
+    {
+        $parser = new StreamingContentParser(maxRecords: 10);
+        $body = implode("\n", $this->generateNdJsonLines(10));
+
+        $result = $parser->parseJsonLines($body);
+
+        self::assertCount(10, $result);
+    }
+
+    /**
+     * SEC-10: SSE custom limit enforced.
+     */
+    #[Test]
+    public function test_custom_max_records_sse(): void
+    {
+        $parser = new StreamingContentParser(maxRecords: 10);
+        $body = $this->generateSseBody(11);
+
+        $this->expectException(TooManyRecordsException::class);
+
+        $parser->parseServerSentEvents($body);
+    }
+
+    /**
+     * SEC-10: JSON-seq custom limit enforced.
+     */
+    #[Test]
+    public function test_custom_max_records_json_seq(): void
+    {
+        $parser = new StreamingContentParser(maxRecords: 10);
+        $body = $this->generateJsonSeqBody(11);
+
+        $this->expectException(TooManyRecordsException::class);
+
+        $parser->parseJsonSeq($body);
+    }
+
+    /**
+     * SEC-10: NDJSON streaming variant enforces the same cap as the
+     * non-streaming variant — defences against memory amplifier must hold
+     * for chunked stream parsing too.
+     */
+    #[Test]
+    public function test_streaming_variant_enforces_limit_ndjson(): void
+    {
+        $parser = new StreamingContentParser(maxRecords: 10);
+        $body = implode("\n", $this->generateNdJsonLines(11));
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $this->expectException(TooManyRecordsException::class);
+
+        $parser->parseStream($stream, 'application/jsonl');
+    }
+
+    /**
+     * SEC-10: SSE streaming variant enforces the cap.
+     */
+    #[Test]
+    public function test_streaming_variant_enforces_limit_sse(): void
+    {
+        $parser = new StreamingContentParser(maxRecords: 10);
+        $body = $this->generateSseBody(11);
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $this->expectException(TooManyRecordsException::class);
+
+        $parser->parseStream($stream, 'text/event-stream');
+    }
+
+    /**
+     * SEC-10: JSON Text Sequence streaming variant enforces the cap.
+     */
+    #[Test]
+    public function test_streaming_variant_enforces_limit_json_seq(): void
+    {
+        $parser = new StreamingContentParser(maxRecords: 10);
+        $body = $this->generateJsonSeqBody(11);
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $this->expectException(TooManyRecordsException::class);
+
+        $parser->parseStream($stream, 'application/json-seq');
+    }
+
+    /**
+     * SEC-10: SSE events are counted, not raw lines. A multi-line SSE event
+     * (`data:` lines accumulated into one event) counts as one record.
+     */
+    #[Test]
+    public function test_sse_counts_events_not_lines(): void
+    {
+        $parser = new StreamingContentParser(maxRecords: 2);
+        // Two multi-line events, each composed of 3 data lines → 2 records.
+        $body = "event: first\ndata: a\ndata: b\ndata: c\n\n"
+            . "event: second\ndata: d\ndata: e\ndata: f\n\n";
+
+        $result = $parser->parseServerSentEvents($body);
+
+        self::assertCount(2, $result);
+    }
+
+    /**
+     * SEC-10: NDJSON empty lines do not count toward the cap.
+     */
+    #[Test]
+    public function test_empty_lines_do_not_count_toward_limit(): void
+    {
+        $parser = new StreamingContentParser(maxRecords: 3);
+        // 3 records interleaved with blank lines — must succeed.
+        $body = "{\"a\":1}\n\n\n{\"b\":2}\n\n{\"c\":3}\n";
+
+        $result = $parser->parseJsonLines($body);
+
+        self::assertCount(3, $result);
+    }
+
+    /**
+     * SEC-10: JSON-seq empty items (consecutive record separators) do not
+     * count toward the cap.
+     */
+    #[Test]
+    public function test_json_seq_empty_items_do_not_count_toward_limit(): void
+    {
+        $parser = new StreamingContentParser(maxRecords: 3);
+        $body = "\x1E\x1E{\"a\":1}\x1E\x1E{\"b\":2}\x1E\x1E{\"c\":3}\x1E\x1E";
+
+        $result = $parser->parseJsonSeq($body);
+
+        self::assertCount(3, $result);
+    }
+
+    /**
+     * SEC-10: SSE with no trailing flush (event mid-assembly when cap hit
+     * by an earlier completed event) — limit is checked on completed events
+     * only, not on in-flight accumulation.
+     */
+    #[Test]
+    public function test_sse_trailing_unflushed_event_counts_after_limit_check(): void
+    {
+        $parser = new StreamingContentParser(maxRecords: 2);
+        // 2 completed events (each terminated by blank line) + 1 trailing
+        // event without terminating blank line — the trailing flush must
+        // trip the cap.
+        $body = "data: a\n\ndata: b\n\ndata: c";
+
+        $this->expectException(TooManyRecordsException::class);
+
+        $parser->parseServerSentEvents($body);
+    }
+
+    /**
+     * SEC-10: SSE comment lines and field-only lines (no event boundary) do
+     * not count toward the cap.
+     */
+    #[Test]
+    public function test_sse_comments_do_not_count_toward_limit(): void
+    {
+        $parser = new StreamingContentParser(maxRecords: 2);
+        // 2 events with multiple comment lines around them — must succeed.
+        $body = ": comment 1\ndata: a\n\n: comment 2\ndata: b\n\n: comment 3\n";
+
+        $result = $parser->parseServerSentEvents($body);
+
+        self::assertCount(2, $result);
+    }
+
+    /**
+     * SEC-10: SSE streaming variant also enforces the cap on the trailing
+     * unflushed event when the body ends without a terminating blank line.
+     */
+    #[Test]
+    public function test_streaming_sse_trailing_unflushed_event_counts_after_limit_check(): void
+    {
+        $parser = new StreamingContentParser(maxRecords: 2);
+        // 2 completed events + 1 trailing event without terminating blank
+        // line — the trailing flush must trip the cap.
+        $body = "data: a\n\ndata: b\n\ndata: c";
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $this->expectException(TooManyRecordsException::class);
+
+        $parser->parseStream($stream, 'text/event-stream');
+    }
+
+    /**
+     * SEC-10: SSE streaming variant counts events, not lines.
+     */
+    #[Test]
+    public function test_streaming_sse_counts_events_not_lines(): void
+    {
+        $parser = new StreamingContentParser(maxRecords: 2);
+        $body = "event: first\ndata: a\ndata: b\ndata: c\n\n"
+            . "event: second\ndata: d\ndata: e\ndata: f\n\n";
+
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
+
+        $result = $parser->parseStream($stream, 'text/event-stream');
+
+        self::assertCount(2, $result);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function generateNdJsonLines(int $count): array
+    {
+        $lines = [];
+        for ($i = 0; $i < $count; ++$i) {
+            $lines[] = '{"id":' . $i . '}';
+        }
+
+        return $lines;
+    }
+
+    private function generateSseBody(int $eventCount): string
+    {
+        $events = [];
+        for ($i = 0; $i < $eventCount; ++$i) {
+            $events[] = "event: msg\ndata: " . '{"id":' . $i . '}' . "\n\n";
+        }
+
+        return implode('', $events);
+    }
+
+    private function generateJsonSeqBody(int $recordCount): string
+    {
+        $records = [];
+        for ($i = 0; $i < $recordCount; ++$i) {
+            $records[] = "\x1E" . '{"id":' . $i . '}';
+        }
+
+        return implode('', $records);
     }
 }

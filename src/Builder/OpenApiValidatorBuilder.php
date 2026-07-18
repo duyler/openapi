@@ -40,6 +40,7 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
+use Duyler\OpenApi\Validator\Response\Exception\TooManyRecordsException;
 
 use function dirname;
 use function sprintf;
@@ -312,18 +313,39 @@ final readonly class OpenApiValidatorBuilder
     /**
      * Enable strict callback runtime template resolution.
      *
-     * When enabled, callback expressions that use runtime templates such as
-     * `{$request.body#/callback_url}` throw an
-     * {@see UnresolvableCallbackPathException}
-     * instead of being treated as wildcards that accept any URL. This prevents
-     * attacker-controlled runtime templates from bypassing path validation
-     * while still passing declared security checks on the callback pathItem.
-     *
-     * Off by default for backward compatibility with existing callback specs.
+     * @deprecated since 1.x, will be removed in 2.0. Strict mode is now the
+     *             default: callback expressions that use runtime templates
+     *             such as `{$request.body#/callback_url}` throw an
+     *             {@see UnresolvableCallbackPathException} by default instead
+     *             of being treated as wildcards that accept any URL. This
+     *             method is retained as a no-op for backward compatibility
+     *             with callers that explicitly opted in. To restore the
+     *             legacy wildcard behaviour, use
+     *             {@see disableStrictCallbackRuntimeTemplate()}.
      */
     public function enableStrictCallbackRuntimeTemplate(): self
     {
-        return $this->with(new BuilderConfig(strictCallbackRuntimeTemplate: true));
+        return $this;
+    }
+
+    /**
+     * Disable strict callback runtime template resolution.
+     *
+     * SECURITY WARNING: When disabled, callback expressions that use runtime
+     * templates such as `{$request.body#/callback_url}` are treated as
+     * wildcards that accept any URL, and declared security checks on the
+     * callback pathItem still pass against an attacker-controlled URL. If
+     * the resolved URL is then used by the application for an outbound HTTP
+     * request, this enables SSRF via the callback parameter.
+     *
+     * Only use this method when the application validates callback URLs
+     * through another mechanism (allowlist, signed URLs, application-level
+     * allowlist of outbound destinations). The strict default is the
+     * fail-closed posture recommended for new code.
+     */
+    public function disableStrictCallbackRuntimeTemplate(): self
+    {
+        return $this->with(new BuilderConfig(strictCallbackRuntimeTemplate: false));
     }
 
     /**
@@ -348,6 +370,31 @@ final readonly class OpenApiValidatorBuilder
         }
 
         return $this->with(new BuilderConfig(externalRefMaxBytes: $bytes));
+    }
+
+    /**
+     * Override the maximum number of records the streaming content parser
+     * (NDJSON, SSE, JSON Text Sequences) will accept from a single response
+     * before raising {@see TooManyRecordsException}.
+     *
+     * The default is 100_000 records, sufficient for typical streaming APIs
+     * while bounding the memory impact of validating an attacker-controlled
+     * response composed of a very large number of small records.
+     *
+     * @param int $max Positive integer record cap; values <= 0 raise
+     *                 InvalidArgumentException because they would either
+     *                 reject every record (0) or compare nonsensically
+     *                 against an accumulated count (negative).
+     */
+    public function withMaxStreamingRecords(int $max): self
+    {
+        if ($max <= 0) {
+            throw new InvalidArgumentException(
+                'Max streaming records must be a positive integer',
+            );
+        }
+
+        return $this->with(new BuilderConfig(maxStreamingRecords: $max));
     }
 
     public function build(): OpenApiValidatorInterface
@@ -380,7 +427,7 @@ final readonly class OpenApiValidatorBuilder
         $maxJsonBodyBytes = $this->config->maxJsonBodyBytes ?? ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES;
         $maxMultipartBodyBytes = $this->config->maxMultipartBodyBytes ?? ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES;
         $strictStreaming = $this->config->strictStreaming ?? false;
-        $strictCallbackRuntimeTemplate = $this->config->strictCallbackRuntimeTemplate ?? false;
+        $strictCallbackRuntimeTemplate = $this->config->strictCallbackRuntimeTemplate ?? true;
 
         $context = new ValidationAssembler(
             document: $document,

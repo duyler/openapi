@@ -427,6 +427,7 @@ YAML;
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::CALLBACKS_YAML)
+            ->disableStrictCallbackRuntimeTemplate()
             ->build();
 
         $request = $this->factory->createServerRequest('POST', 'https://client.example.com/payment/webhook')
@@ -462,6 +463,7 @@ YAML;
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::CALLBACKS_YAML)
+            ->disableStrictCallbackRuntimeTemplate()
             ->build();
 
         $request = $this->factory->createServerRequest('DELETE', '/payment/callback');
@@ -476,6 +478,7 @@ YAML;
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::CALLBACKS_YAML)
+            ->disableStrictCallbackRuntimeTemplate()
             ->build();
 
         $request = $this->factory->createServerRequest('POST', '/payment/callback')
@@ -537,6 +540,7 @@ YAML;
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::INLINE_CALLBACK_YAML)
+            ->disableStrictCallbackRuntimeTemplate()
             ->build();
 
         $callbackRequest = $this->factory->createServerRequest('POST', 'https://client.example.com/events')
@@ -572,6 +576,7 @@ YAML;
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::REF_CALLBACK_YAML)
+            ->disableStrictCallbackRuntimeTemplate()
             ->build();
 
         $request = $this->factory->createServerRequest('POST', 'https://example.com/anywhere')
@@ -593,6 +598,7 @@ YAML;
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::MULTIPLE_CALLBACKS_YAML)
+            ->disableStrictCallbackRuntimeTemplate()
             ->build();
 
         $billingRequest = $this->factory->createServerRequest('POST', 'https://billing.example.com/hook')
@@ -625,6 +631,7 @@ YAML;
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::MULTIPLE_CALLBACKS_YAML)
+            ->disableStrictCallbackRuntimeTemplate()
             ->build();
 
         $request = $this->factory->createServerRequest('POST', 'https://billing.example.com/hook')
@@ -645,6 +652,7 @@ YAML;
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::QUERY_PATH_PARAMS_CALLBACK_YAML)
+            ->disableStrictCallbackRuntimeTemplate()
             ->build();
 
         $request = $this->factory->createServerRequest('POST', 'https://client.example.com/events?eventId=evt_123&status=ok')
@@ -667,6 +675,7 @@ YAML;
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::QUERY_PATH_PARAMS_CALLBACK_YAML)
+            ->disableStrictCallbackRuntimeTemplate()
             ->build();
 
         $request = $this->factory->createServerRequest('POST', 'https://client.example.com/events?eventId=evt_123&status=unknown')
@@ -688,6 +697,7 @@ YAML;
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::QUERY_PATH_PARAMS_CALLBACK_YAML)
+            ->disableStrictCallbackRuntimeTemplate()
             ->build();
 
         $request = $this->factory->createServerRequest('POST', 'https://client.example.com/events?eventId=evt_123')
@@ -710,6 +720,7 @@ YAML;
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::QUERY_PATH_PARAMS_CALLBACK_YAML)
+            ->disableStrictCallbackRuntimeTemplate()
             ->build();
 
         $request = $this->factory->createServerRequest('POST', 'https://client.example.com/events?eventId=evt_123&status=ok')
@@ -772,6 +783,7 @@ YAML;
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SUCCESS_ERROR_CALLBACKS_YAML)
+            ->disableStrictCallbackRuntimeTemplate()
             ->build();
 
         $request = $this->factory->createServerRequest('POST', 'https://success.example.com/hook')
@@ -793,6 +805,7 @@ YAML;
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SUCCESS_ERROR_CALLBACKS_YAML)
+            ->disableStrictCallbackRuntimeTemplate()
             ->build();
 
         $request = $this->factory->createServerRequest('POST', 'https://errors.example.com/hook')
@@ -814,6 +827,7 @@ YAML;
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SUCCESS_ERROR_CALLBACKS_YAML)
+            ->disableStrictCallbackRuntimeTemplate()
             ->build();
 
         $request = $this->factory->createServerRequest('POST', 'https://success.example.com/hook')
@@ -834,6 +848,7 @@ YAML;
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SUCCESS_ERROR_CALLBACKS_YAML)
+            ->disableStrictCallbackRuntimeTemplate()
             ->build();
 
         $request = $this->factory->createServerRequest('POST', 'https://errors.example.com/hook')
