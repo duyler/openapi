@@ -183,7 +183,7 @@ YAML;
             $errors = $e->getErrors();
             $this->assertCount(1, $errors);
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $errors[0]);
-            $this->assertSame('bearerAuth', $errors[0]->params()['schemeName']);
+            $this->assertSame('bearerAuth', $errors[0]->schemeName);
         }
     }
 

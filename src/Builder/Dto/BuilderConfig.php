@@ -38,6 +38,7 @@ final readonly class BuilderConfig
         public readonly ?bool $strictCallbackRuntimeTemplate = null,
         public readonly ?string $externalRefAllowedRoot = null,
         public readonly ?int $externalRefMaxBytes = null,
+        public readonly ?LoggerInterface $securityVerboseLogger = null,
     ) {}
 
     public function merge(self $overrides): self
@@ -66,6 +67,7 @@ final readonly class BuilderConfig
             strictCallbackRuntimeTemplate: $overrides->strictCallbackRuntimeTemplate ?? $this->strictCallbackRuntimeTemplate,
             externalRefAllowedRoot: $overrides->externalRefAllowedRoot ?? $this->externalRefAllowedRoot,
             externalRefMaxBytes: $overrides->externalRefMaxBytes ?? $this->externalRefMaxBytes,
+            securityVerboseLogger: $overrides->securityVerboseLogger ?? $this->securityVerboseLogger,
         );
     }
 }

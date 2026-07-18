@@ -1393,7 +1393,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Cannot open external ref file');
+        $this->expectExceptionMessage('External ref file not found');
 
         $this->resolver->resolve("./relative/path.json", $document);
     }
@@ -1407,7 +1407,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Cannot open external ref file');
+        $this->expectExceptionMessage('External ref file not found');
 
         $this->resolver->resolve("/absolute/path.json", $document);
     }

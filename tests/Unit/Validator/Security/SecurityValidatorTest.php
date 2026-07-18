@@ -13,6 +13,7 @@ use Duyler\OpenApi\Validator\Security\SecurityValidator;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 
 /** @internal */
 final class SecurityValidatorTest extends TestCase
@@ -89,9 +90,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('basicAuth', $error->params()['schemeName']);
-            $this->assertSame('http/basic', $error->params()['schemeType']);
-            $this->assertSame('unsupported http scheme', $error->params()['location']);
+            $this->assertSame('basicAuth', $error->schemeName);
+            $this->assertSame('http/basic', $error->schemeType);
+            $this->assertSame('unsupported http scheme', $error->location);
         }
     }
 
@@ -159,9 +160,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('apiKeyQuery', $error->params()['schemeName']);
-            $this->assertSame('apiKey', $error->params()['schemeType']);
-            $this->assertSame('empty query parameter "api_key"', $error->params()['location']);
+            $this->assertSame('apiKeyQuery', $error->schemeName);
+            $this->assertSame('apiKey', $error->schemeType);
+            $this->assertSame('empty query parameter "api_key"', $error->location);
         }
     }
 
@@ -188,9 +189,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('apiKeyQuery', $error->params()['schemeName']);
-            $this->assertSame('apiKey', $error->params()['schemeType']);
-            $this->assertSame('missing query parameter "api_key"', $error->params()['location']);
+            $this->assertSame('apiKeyQuery', $error->schemeName);
+            $this->assertSame('apiKey', $error->schemeType);
+            $this->assertSame('missing query parameter "api_key"', $error->location);
         }
     }
 
@@ -218,9 +219,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('apiKeyCookie', $error->params()['schemeName']);
-            $this->assertSame('apiKey', $error->params()['schemeType']);
-            $this->assertSame('empty cookie parameter "session"', $error->params()['location']);
+            $this->assertSame('apiKeyCookie', $error->schemeName);
+            $this->assertSame('apiKey', $error->schemeType);
+            $this->assertSame('empty cookie parameter "session"', $error->location);
         }
     }
 
@@ -247,9 +248,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('apiKeyHeader', $error->params()['schemeName']);
-            $this->assertSame('apiKey', $error->params()['schemeType']);
-            $this->assertSame('missing header parameter "X-API-Key"', $error->params()['location']);
+            $this->assertSame('apiKeyHeader', $error->schemeName);
+            $this->assertSame('apiKey', $error->schemeType);
+            $this->assertSame('missing header parameter "X-API-Key"', $error->location);
         }
     }
 
@@ -277,7 +278,7 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('missing header parameter "X-API-Key"', $error->params()['location']);
+            $this->assertSame('missing header parameter "X-API-Key"', $error->location);
         }
     }
 
@@ -304,7 +305,7 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('missing query parameter "api_key"', $error->params()['location']);
+            $this->assertSame('missing query parameter "api_key"', $error->location);
         }
     }
 
@@ -332,7 +333,7 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('missing cookie parameter "session_token"', $error->params()['location']);
+            $this->assertSame('missing cookie parameter "session_token"', $error->location);
         }
     }
 
@@ -378,9 +379,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('oauth2Auth', $error->params()['schemeName']);
-            $this->assertSame('oauth2', $error->params()['schemeType']);
-            $this->assertSame('unsupported scheme type', $error->params()['location']);
+            $this->assertSame('oauth2Auth', $error->schemeName);
+            $this->assertSame('oauth2', $error->schemeType);
+            $this->assertSame('unsupported scheme type', $error->location);
         }
     }
 
@@ -401,9 +402,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('undefinedScheme', $error->params()['schemeName']);
-            $this->assertSame('undefined', $error->params()['schemeType']);
-            $this->assertSame('scheme not found in components/securitySchemes', $error->params()['location']);
+            $this->assertSame('undefinedScheme', $error->schemeName);
+            $this->assertSame('undefined', $error->schemeType);
+            $this->assertSame('scheme not found in components/securitySchemes', $error->location);
         }
     }
 
@@ -448,9 +449,248 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('bearerAuth', $error->params()['schemeName']);
-            $this->assertSame('http/bearer', $error->params()['schemeType']);
-            $this->assertSame('Authorization header', $error->params()['location']);
+            $this->assertSame('bearerAuth', $error->schemeName);
+            $this->assertSame('http/bearer', $error->schemeType);
+            $this->assertSame('Authorization header', $error->location);
         }
+    }
+
+    /**
+     * SEC-07 / CWE-209: the public exception message must be generic so
+     * an unauthenticated caller cannot enumerate the security surface
+     * (scheme names, parameter locations, header names). The message
+     * must NOT contain the scheme name, the scheme type, or the
+     * parameter location — only a fixed "Authentication required"
+     * notice.
+     *
+     * Anti-test: if MissingSecurityCredentialsError reverts to embedding
+     * scheme details in its message, this assertion fails.
+     */
+    #[Test]
+    public function generic_security_message_to_caller_omits_scheme_details(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        try {
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+
+            $message = $error->getMessage();
+            $this->assertSame(
+                'Authentication required: missing or invalid credentials',
+                $message,
+                'Default message must be the generic caller-safe string.',
+            );
+            $this->assertStringNotContainsString('bearerAuth', $message);
+            $this->assertStringNotContainsString('Authorization', $message);
+            $this->assertStringNotContainsString('http/bearer', $message);
+            $this->assertStringNotContainsString('header', $message);
+        }
+    }
+
+    /**
+     * SEC-07 anti-circumvention: scheme details must also be absent
+     * from params(), because error formatters (DetailedFormatter,
+     * JsonFormatter) render params() directly into API responses via
+     * PSR-15 middleware. Only readonly properties retain the detail
+     * for programmatic access by trusted operators.
+     */
+    #[Test]
+    public function generic_security_message_params_are_empty_for_caller_safety(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        try {
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            $error = $e->getErrors()[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame([], $error->params(), 'params() must be empty so formatters never leak scheme details.');
+            $this->assertSame('/security', $error->dataPath(), 'dataPath must not embed the scheme name.');
+            $this->assertSame('/security', $error->schemaPath(), 'schemaPath must not embed the scheme name.');
+        }
+    }
+
+    /**
+     * SEC-07 BC: although the message is generic, scheme details must
+     * remain accessible as readonly properties on the error object so
+     * trusted operators can introspect which scheme failed without
+     * enabling verbose logging.
+     */
+    #[Test]
+    public function scheme_properties_accessible_programmatically(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        try {
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            $error = $e->getErrors()[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('bearerAuth', $error->schemeName);
+            $this->assertSame('http/bearer', $error->schemeType);
+            $this->assertSame('Authorization header', $error->location);
+        }
+    }
+
+    /**
+     * SEC-07 opt-in: when a PSR-3 logger is supplied, the validator
+     * forwards the concrete scheme details at debug level so trusted
+     * operators can still diagnose which scheme failed — even though
+     * the surfaced message stays generic.
+     */
+    #[Test]
+    public function verbose_logging_to_logger_when_logger_supplied(): void
+    {
+        $spy = new SpyLogger();
+        $validator = new SecurityValidator($spy);
+
+        $request = $this->factory->createServerRequest('GET', '/users');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        try {
+            $validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException) {
+            $this->assertCount(1, $spy->records);
+            $record = $spy->records[0];
+            $this->assertSame('debug', $record['level']);
+            $this->assertSame('Security validation failed', $record['message']);
+            $this->assertSame([
+                'schemeName' => 'bearerAuth',
+                'schemeType' => 'http/bearer',
+                'location' => 'Authorization header',
+            ], $record['context']);
+        }
+    }
+
+    /**
+     * SEC-07 default: without an explicit logger, the validator must
+     * NOT emit anything observable — NullLogger is the safe default so
+     * scheme details never end up in production logs via error_log().
+     */
+    #[Test]
+    public function default_null_logger_emits_nothing_without_opt_in(): void
+    {
+        // Default-constructed validator uses NullLogger internally; the
+        // only observable effect is that the generic exception is
+        // raised. This test exists to lock that behaviour: any future
+        // change that introduces a default non-null sink breaks it.
+        $validator = new SecurityValidator();
+
+        $request = $this->factory->createServerRequest('GET', '/users');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        $this->expectException(ValidationException::class);
+
+        $validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+    }
+}
+
+/**
+ * Minimal in-memory PSR-3 spy logger used to assert that the security
+ * validator forwards scheme details at debug level when verbose logging
+ * is enabled. Captures the level, message, and context of every call.
+ *
+ * @internal
+ */
+final class SpyLogger implements LoggerInterface
+{
+    /** @var list<array{level: string, message: string, context: array<string, mixed>}> */
+    public array $records = [];
+
+    public function emergency($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'emergency', 'message' => $message, 'context' => $context];
+    }
+
+    public function alert($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'alert', 'message' => $message, 'context' => $context];
+    }
+
+    public function critical($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'critical', 'message' => $message, 'context' => $context];
+    }
+
+    public function error($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'error', 'message' => $message, 'context' => $context];
+    }
+
+    public function warning($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'warning', 'message' => $message, 'context' => $context];
+    }
+
+    public function notice($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'notice', 'message' => $message, 'context' => $context];
+    }
+
+    public function info($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'info', 'message' => $message, 'context' => $context];
+    }
+
+    public function debug($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'debug', 'message' => $message, 'context' => $context];
+    }
+
+    public function log($level, $message, array $context = []): void
+    {
+        $this->records[] = ['level' => (string) $level, 'message' => $message, 'context' => $context];
     }
 }

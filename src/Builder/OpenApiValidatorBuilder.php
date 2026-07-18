@@ -105,6 +105,21 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(logger: $logger));
     }
 
+    /**
+     * Enable verbose PSR-3 logging of caller-sensitive security and
+     * external-ref diagnostics (scheme names, parameter locations,
+     * resolved filesystem paths). Without this call, the security
+     * validator and the builtin FileExternalRefResolver use a
+     * NullLogger, so the only signal an unauthenticated caller can
+     * observe is a generic exception message. Pass a logger whose
+     * audience is trusted (operators / a sealed log pipeline) to
+     * surface the underlying details at debug level.
+     */
+    public function withSecurityVerboseLogging(LoggerInterface $logger): self
+    {
+        return $this->with(new BuilderConfig(securityVerboseLogger: $logger));
+    }
+
     public function withErrorFormatter(ErrorFormatterInterface $formatter): self
     {
         return $this->with(new BuilderConfig(errorFormatter: $formatter));
@@ -348,9 +363,11 @@ final readonly class OpenApiValidatorBuilder
         $regexValidator = new RegexValidator();
         $pathFinder = new PathFinder($document, $pathRegexCache);
         $logger = $this->config->logger ?? new NullLogger();
+        $securityVerboseLogger = $this->config->securityVerboseLogger ?? new NullLogger();
         $fileResolver = new FileExternalRefResolver(
             allowedRoot: $this->config->externalRefAllowedRoot,
             maxBytes: $this->config->externalRefMaxBytes ?? FileExternalRefResolver::DEFAULT_MAX_REF_BYTES,
+            logger: $securityVerboseLogger,
         );
         $refResolver = new RefResolver(builtinFileResolver: $fileResolver);
 
@@ -385,6 +402,7 @@ final readonly class OpenApiValidatorBuilder
             strictStreaming: $strictStreaming,
             maxRegexBacktracks: $maxRegexBacktracks,
             pregExecutor: $pregExecutor,
+            securityVerboseLogger: $securityVerboseLogger,
         );
 
         return new OpenApiValidator(

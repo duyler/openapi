@@ -70,6 +70,7 @@ final readonly class ValidatorDependencies
         public readonly bool $strictStreaming = false,
         public readonly int $maxRegexBacktracks = PregExecutor::DEFAULT_MAX_BACKTRACKS,
         public readonly PregExecutor $pregExecutor = new PregExecutor(),
+        public readonly ?LoggerInterface $securityVerboseLogger = null,
     ) {
         $this->validatorConfiguration = new ValidatorConfiguration(
             coercion: $this->coercion,

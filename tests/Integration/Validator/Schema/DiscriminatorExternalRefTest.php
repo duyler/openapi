@@ -173,7 +173,7 @@ YAML;
         $dogData = ['petType' => 'dog', 'name' => 'Rex', 'breed' => 'labrador'];
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Cannot open external ref file');
+        $this->expectExceptionMessage('External ref file not found');
 
         $validator->validateSchema($dogData, '#/components/schemas/Pet');
     }

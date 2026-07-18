@@ -41,6 +41,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   debug mode is available through `withDetailedErrors(includeSensitive: true)` on the
   builder, or by constructing `new DetailedFormatter(includeSensitiveValues: true)` /
   `new JsonFormatter(includeSensitiveValues: true)` directly.
+- `MissingSecurityCredentialsError` now emits a generic caller-safe message
+  (`'Authentication required: missing or invalid credentials'`) by default,
+  preventing reconnaissance of API security scheme names, types, and parameter
+  locations by unauthenticated callers (CWE-209, closes SEC-07). Scheme details
+  remain accessible programmatically via `$error->schemeName` / `$error->schemeType`
+  / `$error->location` and are logged at `debug` level when an opt-in PSR-3 logger
+  is provided via `withSecurityVerboseLogging()`. Additionally, all
+  `FileExternalRefResolver` exception messages no longer interpolate absolute
+  filesystem paths (closes SEC-08); paths are available only via the opt-in logger
+  or the `ExternalRefSecurityException::$ref` property for programmatic access.
 
 ## [0.5.0] - 2026-07-18
 

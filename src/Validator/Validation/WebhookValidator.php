@@ -30,7 +30,7 @@ final readonly class WebhookValidator
         $this->eventDispatcher = $context->eventDispatcher;
         $this->logger = $context->logger;
         $this->webhookValidator = new InnerWebhookValidator($context->requestValidator);
-        $this->securityValidator = new SecurityValidator();
+        $this->securityValidator = new SecurityValidator($context->securityVerboseLogger);
     }
 
     public function validate(ServerRequestInterface $request, string $webhookName): Operation

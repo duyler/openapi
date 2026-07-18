@@ -8,6 +8,8 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Parser\ExternalSchemaBuilder;
 use Duyler\OpenApi\Validator\Schema\Exception\ExternalRefSecurityException;
 use Duyler\OpenApi\Validator\Schema\Exception\ExternalRefTooLargeException;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use RuntimeException;
 use Symfony\Component\Yaml\Yaml;
 
@@ -53,6 +55,11 @@ use const PATHINFO_EXTENSION;
  *   lag behind newly registered wrappers.
  * - When an optional allowedRoot is configured, refuses to read files whose
  *   realpath escapes that root (defends against ../ traversal and symlinks).
+ *
+ * SEC-08 / CWE-209: exception messages omit absolute paths and the
+ * configured allowedRoot so a Throwable surfaced by a PSR-15 middleware
+ * cannot leak the server filesystem layout. Concrete paths are forwarded
+ * to the optional PSR-3 logger at debug level instead.
  *
  * The resolver is a pure loader: it does not cache loaded schemas (that is the
  * responsibility of RefResolver::$cache). It parses YAML and JSON payloads and
@@ -106,6 +113,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
         private ?string $allowedRoot = null,
         private ExternalSchemaBuilder $schemaBuilder = new ExternalSchemaBuilder(),
         private int $maxBytes = self::DEFAULT_MAX_REF_BYTES,
+        private LoggerInterface $logger = new NullLogger(),
     ) {}
 
     #[Override]
@@ -133,14 +141,19 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
         $contents = $this->readFileWithLimit($absolutePath);
 
         $data = $this->parseContents($contents, $absolutePath);
-        $target = $this->navigatePointer($data, $pointer);
+        $target = $this->navigatePointer($data, $pointer, $absolutePath);
 
         if (!is_array($target)) {
-            throw new RuntimeException(sprintf(
-                'External ref target is not a schema object in %s%s',
-                $absolutePath,
-                '' === $pointer ? '' : ' at #' . $pointer,
-            ));
+            $this->logger->debug('External ref target is not a schema object', [
+                'path' => $absolutePath,
+                'pointer' => $pointer,
+            ]);
+
+            throw new RuntimeException(
+                '' === $pointer
+                    ? 'External ref target is not a schema object'
+                    : 'External ref target is not a schema object at JSON Pointer',
+            );
         }
 
         return $this->schemaBuilder->buildSchemaFromData($target);
@@ -172,23 +185,29 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
         }
 
         if (false === $handle) {
-            throw new RuntimeException(sprintf(
-                'Cannot open external ref file: %s',
-                basename($absolutePath),
-            ));
+            $this->logger->debug('Failed to open external ref file', [
+                'path' => $absolutePath,
+            ]);
+
+            throw new RuntimeException('External ref file not found');
         }
 
         try {
             $stat = fstat($handle);
             if (false === $stat) {
-                throw new RuntimeException(sprintf(
-                    'Cannot stat external ref file: %s',
-                    basename($absolutePath),
-                ));
+                $this->logger->debug('Failed to stat external ref file', [
+                    'path' => $absolutePath,
+                ]);
+
+                throw new RuntimeException('Failed to read external ref file');
             }
 
             $fileType = $stat['mode'] & self::S_IFMT;
             if (self::S_IFREG !== $fileType) {
+                $this->logger->debug('External ref is not a regular file', [
+                    'path' => $absolutePath,
+                ]);
+
                 throw new ExternalRefSecurityException(
                     $absolutePath,
                     'External ref is not a regular file',
@@ -225,7 +244,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
         while (!feof($handle) && $remaining > 0) {
             $chunk = fread($handle, min(self::READ_CHUNK_BYTES, $remaining));
             if (false === $chunk) {
-                throw new RuntimeException('Cannot read external ref file');
+                throw new RuntimeException('Failed to read external ref file');
             }
             $contents .= $chunk;
             $remaining -= strlen($chunk);
@@ -298,9 +317,14 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
         $realFile = realpath($filePath);
 
         if (false === $realFile || false === $realRoot) {
+            $this->logger->debug('External ref path resolution failed', [
+                'path' => $filePath,
+                'allowedRoot' => $this->allowedRoot,
+            ]);
+
             throw new ExternalRefSecurityException(
                 $filePath,
-                'External ref path resolution failed (file or root does not exist)',
+                'External ref path resolution failed',
             );
         }
 
@@ -309,9 +333,14 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
         }
 
         if (!str_starts_with($realFile, $realRoot . '/')) {
+            $this->logger->debug('External ref path traversal detected', [
+                'path' => $filePath,
+                'allowedRoot' => $this->allowedRoot,
+            ]);
+
             throw new ExternalRefSecurityException(
                 $filePath,
-                'External ref path traversal detected: file outside allowed root',
+                'External ref path traversal detected',
             );
         }
     }
@@ -330,10 +359,11 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
         };
 
         if (!is_array($data)) {
-            throw new RuntimeException(sprintf(
-                'External ref file does not contain a mapping: %s',
-                $filePath,
-            ));
+            $this->logger->debug('External ref file does not contain a mapping', [
+                'path' => $filePath,
+            ]);
+
+            throw new RuntimeException('External ref file does not contain a mapping');
         }
 
         return $data;
@@ -344,7 +374,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
      *
      * @return mixed
      */
-    private function navigatePointer(array $data, string $pointer): mixed
+    private function navigatePointer(array $data, string $pointer, string $absolutePath): mixed
     {
         if ('' === $pointer) {
             return $data;
@@ -356,10 +386,14 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
 
         foreach ($segments as $segment) {
             if (!is_array($current) || !array_key_exists($segment, $current)) {
-                throw new RuntimeException(sprintf(
-                    'External ref JSON Pointer segment "%s" not found',
-                    $segment,
-                ));
+                $this->logger->debug('External ref JSON Pointer segment not found', [
+                    'path' => $absolutePath,
+                    'segment' => $segment,
+                ]);
+
+                throw new RuntimeException(
+                    'External ref JSON Pointer segment not found',
+                );
             }
 
             /** @var mixed $current */

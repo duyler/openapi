@@ -393,9 +393,9 @@ class DetailedFormatterTest extends TestCase
                     location: 'header',
                 ),
                 'security',
-                '/security/bearerAuth',
-                'Security credentials missing for scheme "bearerAuth"',
-                'Expected in: header',
+                '/security',
+                'Authentication required: missing or invalid credentials',
+                '',
                 false,
             ],
             'invalid_format' => [

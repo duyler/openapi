@@ -777,6 +777,7 @@ Use the runtime validator when you need the typed error classes (`TypeMismatchEr
 | `withEventDispatcher(EventDispatcherInterface $dispatcher)` | Set PSR-14 event dispatcher | `null` |
 | `withErrorFormatter(ErrorFormatterInterface $formatter)` | Set error formatter | `SimpleFormatter` |
 | `withDetailedErrors(bool $includeSensitive)` | Use DetailedFormatter with optional sensitive value exposure | Uses `DetailedFormatter` (default omits secrets) |
+| `withSecurityVerboseLogging(LoggerInterface $logger)` | Enable debug-level logging of security validation details (scheme names, types, locations) and external ref filesystem paths | `null` (no verbose logging) |
 | `withFormat(string $type, string $format, FormatValidatorInterface $validator)` | Register custom format | - |
 | `withValidatorPool(ValidatorPool $pool)` | Set custom validator pool | `new ValidatorPool()` |
 | `withLogger(LoggerInterface $logger)` | Set PSR-3 logger | `null` |
@@ -1638,6 +1639,16 @@ The following scheme types are not supported and will produce an error when enco
 - `http/basic` - Basic authentication
 - `oauth2` - OAuth 2.0 flows
 - `openIdConnect` - OpenID Connect Discovery
+
+By default, security validation failures return a generic error message
+(`'Authentication required: missing or invalid credentials'`) that does not
+reveal which security scheme was checked or where the credential was expected.
+This prevents unauthenticated callers from learning the API's security
+configuration (CWE-209). To include scheme details in debug logs (for
+development or operational diagnostics), provide a PSR-3 logger via
+`withSecurityVerboseLogging($logger)`. Scheme details remain accessible
+programmatically via `$error->schemeName`, `$error->schemeType`, and
+`$error->location` for trusted operator code.
 
 ## Requirements
 

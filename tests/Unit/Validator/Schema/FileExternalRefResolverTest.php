@@ -11,8 +11,11 @@ use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use RuntimeException;
+
+use Throwable;
 
 use function dirname;
 use function fclose;
@@ -26,11 +29,13 @@ use function str_repeat;
 use function symlink;
 use function sys_get_temp_dir;
 use function uniqid;
+
 use function unlink;
 
 use function strlen;
 
 use function is_resource;
+use function sprintf;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -363,7 +368,7 @@ final class FileExternalRefResolverTest extends TestCase
         $resolver = new FileExternalRefResolver();
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Cannot open external ref file');
+        $this->expectExceptionMessage('External ref file not found');
 
         $resolver->resolve('/nonexistent/path/to/missing-file.yaml');
     }
@@ -394,7 +399,7 @@ final class FileExternalRefResolverTest extends TestCase
         $resolver = new FileExternalRefResolver();
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('JSON Pointer segment "MissingKey" not found');
+        $this->expectExceptionMessage('External ref JSON Pointer segment not found');
 
         $resolver->resolve($this->fixtureRoot . '/components/user.yaml#/MissingKey');
     }
@@ -704,7 +709,7 @@ final class FileExternalRefResolverTest extends TestCase
                 $method = new ReflectionClass(FileExternalRefResolver::class)->getMethod('readWithLimit');
 
                 $this->expectException(RuntimeException::class);
-                $this->expectExceptionMessage('Cannot read external ref file');
+                $this->expectExceptionMessage('Failed to read external ref file');
 
                 $method->invoke($resolver, $handle, 1024);
             } finally {
@@ -714,6 +719,110 @@ final class FileExternalRefResolverTest extends TestCase
             }
         } finally {
             stream_wrapper_unregister($scheme);
+        }
+    }
+
+    /**
+     * SEC-08 / CWE-209: every exception message produced by the
+     * builtin FileExternalRefResolver must be free of absolute
+     * filesystem paths. The README's PSR-15 middleware example
+     * surfaces any Throwable message to the HTTP client, so paths
+     * such as /var/specs, /private/tmp, /Users/... would disclose
+     * the server's filesystem layout to an unauthenticated caller.
+     *
+     * @param non-empty-string $ref       External ref to feed the resolver
+     * @param class-string     $exception Expected exception class
+     *
+     * @dataProvider absolutePathLeakingRefs
+     */
+    #[Test]
+    #[DataProvider('absolutePathLeakingRefs')]
+    public function no_absolute_path_in_exception_message(string $ref, string $exception): void
+    {
+        $resolver = new FileExternalRefResolver(allowedRoot: $this->fixtureRoot);
+
+        try {
+            $resolver->resolve($ref);
+            $this->fail(sprintf('Expected %s was not thrown', $exception));
+        } catch (Throwable $e) {
+            $this->assertInstanceOf($exception, $e);
+            $message = $e->getMessage();
+            $this->assertStringNotContainsString($ref, $message, 'Exception message must not embed the raw $ref.');
+            $this->assertStringNotContainsString($this->fixtureRoot, $message, 'Exception message must not leak the allowedRoot path.');
+            $this->assertDoesNotMatchRegularExpression('#/var/lib/.*#', $message);
+            $this->assertDoesNotMatchRegularExpression('#/etc/.*#', $message);
+            $this->assertDoesNotMatchRegularExpression('#/private/tmp/.*#', $message);
+        }
+    }
+
+    /**
+     * @return array<non-empty-string, array{non-empty-string, class-string}>
+     */
+    public static function absolutePathLeakingRefs(): array
+    {
+        return [
+            'missing_file' => ['/var/lib/specs/does-not-exist.yaml', RuntimeException::class],
+            'path_traversal' => ['/etc/passwd', ExternalRefSecurityException::class],
+            'json_pointer_to_scalar' => [
+                dirname(__DIR__, 3) . '/Fixture/ExternalRef/components/user.yaml#/UserSchema/type',
+                RuntimeException::class,
+            ],
+        ];
+    }
+
+    /**
+     * SEC-08 / CWE-209: a payload that is not a YAML/JSON mapping must
+     * raise an exception message that does NOT leak the temp-file path
+     * created on the test machine.
+     */
+    #[Test]
+    public function non_mapping_payload_message_does_not_leak_temp_path(): void
+    {
+        $tempFile = tempnam(sys_get_temp_dir(), 'extref_leak_') . '.json';
+        file_put_contents($tempFile, json_encode('plain-string-scalar', JSON_THROW_ON_ERROR));
+
+        try {
+            $resolver = new FileExternalRefResolver();
+
+            try {
+                $resolver->resolve($tempFile);
+                $this->fail('Expected RuntimeException for non-mapping payload');
+            } catch (RuntimeException $e) {
+                $this->assertStringNotContainsString($tempFile, $e->getMessage());
+                $this->assertStringNotContainsString(sys_get_temp_dir(), $e->getMessage());
+                $this->assertSame('External ref file does not contain a mapping', $e->getMessage());
+            }
+        } finally {
+            if (file_exists($tempFile)) {
+                unlink($tempFile);
+            }
+        }
+    }
+
+    /**
+     * SEC-08 opt-in: when a PSR-3 logger is supplied, the resolver
+     * forwards the absolute path at debug level so trusted operators
+     * can still locate the offending file — even though the surfaced
+     * RuntimeException stays generic.
+     */
+    #[Test]
+    public function verbose_logger_receives_absolute_path_for_missing_file(): void
+    {
+        $spy = new SpyLogger();
+        $resolver = new FileExternalRefResolver(logger: $spy);
+
+        try {
+            $resolver->resolve('/var/lib/does-not-exist.yaml');
+            $this->fail('Expected RuntimeException was not thrown');
+        } catch (RuntimeException $e) {
+            $this->assertSame('External ref file not found', $e->getMessage());
+
+            $this->assertCount(1, $spy->records);
+            $record = $spy->records[0];
+            $this->assertSame('debug', $record['level']);
+            $this->assertSame('Failed to open external ref file', $record['message']);
+            $this->assertArrayHasKey('path', $record['context']);
+            $this->assertSame('/var/lib/does-not-exist.yaml', $record['context']['path']);
         }
     }
 }
@@ -778,5 +887,63 @@ final class FailingReadStreamWrapper
     public function url_stat(string $path, int $flags)
     {
         return ['mode' => 0o100644];
+    }
+}
+
+/**
+ * Minimal in-memory PSR-3 spy logger used to assert that the resolver
+ * forwards absolute paths at debug level when verbose logging is
+ * enabled. Captures the level, message, and context of every call.
+ *
+ * @internal
+ */
+final class SpyLogger implements LoggerInterface
+{
+    /** @var list<array{level: string, message: string, context: array<string, mixed>}> */
+    public array $records = [];
+
+    public function emergency($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'emergency', 'message' => $message, 'context' => $context];
+    }
+
+    public function alert($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'alert', 'message' => $message, 'context' => $context];
+    }
+
+    public function critical($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'critical', 'message' => $message, 'context' => $context];
+    }
+
+    public function error($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'error', 'message' => $message, 'context' => $context];
+    }
+
+    public function warning($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'warning', 'message' => $message, 'context' => $context];
+    }
+
+    public function notice($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'notice', 'message' => $message, 'context' => $context];
+    }
+
+    public function info($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'info', 'message' => $message, 'context' => $context];
+    }
+
+    public function debug($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'debug', 'message' => $message, 'context' => $context];
+    }
+
+    public function log($level, $message, array $context = []): void
+    {
+        $this->records[] = ['level' => (string) $level, 'message' => $message, 'context' => $context];
     }
 }
