@@ -148,10 +148,14 @@ components:
       $ref: 'components/user.yaml#/UserSchema'
 ```
 
-Network schemes (`http://`, `https://`, `ftp://`, `ftps://`) are **denied by
-default** to prevent SSRF. When the builtin resolver encounters a denied
-scheme it throws `ExternalRefSecurityException` (surfaced by `RefResolver`
-as `UnresolvableRefException`). To enable network resolution, inject a custom
+Only `file://` URIs and scheme-less relative paths are allowed by default.
+Every other scheme (`http://`, `https://`, `ftp://`, `php://`, `phar://`,
+`data://`, `compress.zlib://`, `compress.bzip2://`, `zip://`, `expect://`,
+`ssh2://`, `rar://`, `ogg://`, `glob://`, and any other PHP stream wrapper)
+is **rejected** with `ExternalRefSecurityException` (surfaced by `RefResolver`
+as `UnresolvableRefException`). The whitelist (not blacklist) approach is the
+only defence that does not lag behind newly registered PHP stream wrappers.
+To enable network or other scheme resolution, inject a custom
 `ExternalRefResolverInterface` implementation:
 
 ```php
@@ -1089,7 +1093,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `UndefinedResponseException` | Response status code not defined in spec |
 | `RefResolutionException` | Failed to resolve `$ref` reference |
 | `UnresolvableCallbackPathException` | Callback runtime template (e.g. `{$request.body#/callback_url}`) cannot be resolved in strict mode |
-| `ExternalRefSecurityException` | External `$ref` violates builtin resolver security policy (denied scheme, path traversal outside the allowed root). Surfaced by `RefResolver` as `UnresolvableRefException` |
+| `ExternalRefSecurityException` | External `$ref` violates builtin resolver security policy (non-allowlisted scheme, path traversal outside the allowed root). Surfaced by `RefResolver` as `UnresolvableRefException` |
 | `SchemaDepthExceededException` | Maximum schema nesting depth exceeded |
 | `UnknownValidatorException` | Unknown validator type requested |
 | `VersionNotFoundException` | Requested schema name or version is not registered (thrown by `SchemaRegistry::getOrFail()`) |

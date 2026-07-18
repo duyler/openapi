@@ -126,10 +126,11 @@ YAML;
      *
      * Actual behaviour characterization: DiscriminatorValidator delegates to
      * RefResolver::resolve(), which delegates to the builtin
-     * FileExternalRefResolver for non-local refs. The builtin resolver denies
-     * network schemes (http, https, ftp, ...) by throwing
+     * FileExternalRefResolver for non-local refs. The builtin resolver allows only
+     * file:// URIs and scheme-less relative paths; every non-allowlisted scheme
+     * (http, https, ftp, php, phar, data, etc.) is rejected with
      * ExternalRefSecurityException, which RefResolver wraps as
-     * UnresolvableRefException with a clear "use a custom resolver" hint.
+     * UnresolvableRefException with a clear "inject custom resolver" hint.
      */
     #[Test]
     public function di_08_external_url_mapping_throws_unresolvable_ref_exception(): void

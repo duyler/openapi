@@ -130,7 +130,7 @@ final class RefResolverTest extends TestCase
         $this->expectException(UnresolvableRefException::class);
         $this->expectExceptionMessage(
             'Cannot resolve $ref "http://example.com/schema": External ref not resolved. '
-            . 'Builtin FileExternalRefResolver supports file://',
+            . 'Builtin FileExternalRefResolver allows only',
         );
 
         $this->resolver->resolve("http://example.com/schema", $document);
@@ -1378,7 +1378,7 @@ final class RefResolverTest extends TestCase
         $this->expectException(UnresolvableRefException::class);
         $this->expectExceptionMessage(
             'Cannot resolve $ref "https://example.com/user.json": External ref not resolved. '
-            . 'Builtin FileExternalRefResolver supports file://',
+            . 'Builtin FileExternalRefResolver allows only',
         );
 
         $this->resolver->resolve("https://example.com/user.json", $document);

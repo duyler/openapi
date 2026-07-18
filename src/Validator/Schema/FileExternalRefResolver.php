@@ -36,9 +36,13 @@ use const PATHINFO_EXTENSION;
  * Builtin external $ref resolver for file:// URIs and relative-path refs.
  *
  * Security policy:
- * - Denies network schemes (http, https, ftp, ftps, gopher, netcat) to prevent
- *   SSRF. Users needing network resolution must inject a custom
- *   ExternalRefResolverInterface implementation.
+ * - Allows only the file:// scheme and scheme-less relative paths. Every
+ *   other scheme is rejected with ExternalRefSecurityException. PHP
+ *   registers dozens of stream wrappers (php://, phar://, data://,
+ *   compress.zlib://, zip://, expect://, ssh2://, rar://, ogg://, glob://
+ *   and more) that would otherwise allow LFI, deserialization gadgets and
+ *   inline schema injection. A whitelist is the only defence that does not
+ *   lag behind newly registered wrappers.
  * - When an optional allowedRoot is configured, refuses to read files whose
  *   realpath escapes that root (defends against ../ traversal and symlinks).
  *
@@ -48,13 +52,14 @@ use const PATHINFO_EXTENSION;
  */
 final readonly class FileExternalRefResolver implements ExternalRefResolverInterface
 {
-    private const array DENIED_SCHEMES = [
-        'http',
-        'https',
-        'ftp',
-        'ftps',
-        'gopher',
-        'netcat',
+    /**
+     * Schemes allowed for external $ref resolution. Anything outside this
+     * list is rejected with ExternalRefSecurityException. The empty string
+     * represents a relative path without a scheme.
+     */
+    private const array ALLOWED_SCHEMES = [
+        '',
+        'file',
     ];
 
     private const string FILE_SCHEME_PREFIX = 'file://';
@@ -69,13 +74,15 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
     {
         $scheme = $this->extractScheme($ref);
 
-        if (in_array($scheme, self::DENIED_SCHEMES, true)) {
+        if (!in_array($scheme, self::ALLOWED_SCHEMES, true)) {
             throw new ExternalRefSecurityException(
                 $ref,
                 sprintf(
-                    "External ref '%s' denied: builtin resolver supports only file:// scheme. "
-                    . 'Inject a custom ExternalRefResolverInterface implementation for network access.',
-                    $ref,
+                    "External ref denied: scheme '%s' is not in allowlist. "
+                    . 'Allowed: file://, relative path. Inject a custom '
+                    . 'ExternalRefResolverInterface implementation for '
+                    . 'network or other scheme access.',
+                    $scheme,
                 ),
             );
         }

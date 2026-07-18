@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+- Hardened `FileExternalRefResolver` scheme policy from blacklist to strict
+  whitelist: only `file://` URIs and scheme-less relative paths are now
+  accepted. Every other scheme (`php://`, `phar://`, `data://`,
+  `compress.zlib://`, `zip://`, `expect://`, `ssh2://`, `rar://`, `ogg://`,
+  `glob://`, plus previously denied `http/https/ftp/ftps/gopher/netcat`) is
+  rejected with `ExternalRefSecurityException`. Closes SEC-01 (LFI/SSRF/RCE
+  via PHP stream wrappers) and SEC-24 (`data://` inline JSON injection).
+- `ExternalRefSecurityException` message no longer interpolates the original
+  `$ref` (it surfaces only the offending scheme), mitigating path-disclosure
+  risk at the resolver layer.
+
 ## [0.5.0] - 2026-07-18
 
 This release focuses on defense-in-depth security hardening, spec-compliance

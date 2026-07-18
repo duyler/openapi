@@ -711,9 +711,11 @@ final class RefResolver implements RefResolverInterface
             } catch (ExternalRefSecurityException $e) {
                 throw new UnresolvableRefException(
                     $ref,
-                    'External ref not resolved. Builtin FileExternalRefResolver supports file:// '
-                    . 'scheme only. For http(s):// or ftp:// refs, inject a custom '
-                    . 'ExternalRefResolverInterface implementation.',
+                    'External ref not resolved. Builtin FileExternalRefResolver allows only '
+                    . 'file:// URIs and scheme-less relative paths; every other scheme '
+                    . '(http, https, ftp, php, phar, data, compress.zlib, zip, expect, '
+                    . 'ssh2, rar, ogg, glob, etc.) is rejected. Inject a custom '
+                    . 'ExternalRefResolverInterface implementation to enable other schemes.',
                     previous: $e,
                 );
             }
