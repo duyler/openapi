@@ -162,7 +162,7 @@ final class ResponseTypeCoercerFullTest extends TestCase
     {
         $schema = new Schema(type: 'integer');
 
-        $result = $this->coercer->coerce(3.14, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce(3.14, new CoercionContext(schema: $schema, enabled: true, strict: false));
 
         $this->assertSame(3.14, $result);
     }

@@ -97,7 +97,7 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
                 $coercionContext = new CoercionContext(
                     schema: $schema,
                     enabled: true,
-                    strict: true,
+                    strict: $this->configuration->strictCoercion,
                     nullableAsType: $this->configuration->nullableAsType,
                 );
 

@@ -801,6 +801,7 @@ Use the runtime validator when you need the typed error classes (`TypeMismatchEr
 | `withLogger(LoggerInterface $logger)` | Set PSR-3 logger | `null` |
 | `withEmptyArrayStrategy(EmptyArrayStrategy $strategy)` | Set empty array validation strategy | `AllowBoth` |
 | `enableCoercion()` | Enable type coercion | `false` |
+| `disableStrictCoercion()` | Restore legacy lax type coercion (non-strict boolean/integer/number casting). When disabled, unknown strings are cast to boolean via `(bool)`, whole floats are accepted as integers, and non-numeric strings pass through unchanged for number type. Overflow and precision-loss guards remain active in both modes. | `true` (strict default) |
 | `enableNullableAsType()` | Enable nullable validation (default: true) | `true` |
 | `disableNullableAsType()` | Disable nullable validation | `false` |
 | `enableSecurityValidation()` | Enable security scheme validation for requests | `false` |

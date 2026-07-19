@@ -14,21 +14,29 @@ final class TypeMismatchError extends AbstractValidationError
         string $dataPath,
         string $schemaPath,
         ?string $suggestion = null,
+        private readonly ?string $reason = null,
     ) {
-        $message = sprintf(
-            'Expected type "%s", but got "%s" at %s',
-            $expected,
-            $actual,
-            $dataPath,
-        );
+        $message = null === $reason
+            ? sprintf(
+                'Expected type "%s", but got "%s" at %s',
+                $expected,
+                $actual,
+                $dataPath,
+            )
+            : sprintf('%s at %s', $reason, $dataPath);
 
         parent::__construct(
             message: $message,
             keyword: 'type',
             dataPath: $dataPath,
             schemaPath: $schemaPath,
-            params: ['expected' => $expected, 'actual' => $actual],
+            params: ['expected' => $expected, 'actual' => $actual, 'reason' => $reason],
             suggestion: $suggestion ?? sprintf('Convert the value to %s or update schema type to %s', $expected, $actual),
         );
+    }
+
+    public function reason(): ?string
+    {
+        return $this->reason;
     }
 }

@@ -11,5 +11,6 @@ final readonly class ParameterValidationConfig
     public function __construct(
         public bool $nullableAsType = true,
         public EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
+        public bool $strictCoercion = true,
     ) {}
 }

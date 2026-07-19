@@ -163,6 +163,22 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(coercion: true));
     }
 
+    /**
+     * Disable strict coercion mode and fall back to the legacy non-strict
+     * coercion behaviour.
+     *
+     * Strict coercion is the default since SEC-13/SEC-14/SEC-15: it rejects
+     * arbitrary strings coerced to boolean (e.g. "admin" no longer silently
+     * becomes true), throws on float-to-integer overflow outside the int64
+     * range, and rejects numeric strings that lose precision when cast to
+     * float. Call this method only when the application explicitly relies on
+     * the legacy lax coercion semantics.
+     */
+    public function disableStrictCoercion(): self
+    {
+        return $this->with(new BuilderConfig(strictCoercion: false));
+    }
+
     public function enableNullableAsType(): self
     {
         return $this->with(new BuilderConfig(nullableAsType: true));
@@ -428,6 +444,7 @@ final readonly class OpenApiValidatorBuilder
         $maxMultipartBodyBytes = $this->config->maxMultipartBodyBytes ?? ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES;
         $strictStreaming = $this->config->strictStreaming ?? false;
         $strictCallbackRuntimeTemplate = $this->config->strictCallbackRuntimeTemplate ?? true;
+        $strictCoercion = $this->config->strictCoercion ?? true;
 
         $context = new ValidationAssembler(
             document: $document,
@@ -450,6 +467,7 @@ final readonly class OpenApiValidatorBuilder
             maxRegexBacktracks: $maxRegexBacktracks,
             pregExecutor: $pregExecutor,
             securityVerboseLogger: $securityVerboseLogger,
+            strictCoercion: $strictCoercion,
         );
 
         return new OpenApiValidator(
@@ -465,6 +483,7 @@ final readonly class OpenApiValidatorBuilder
                 maxMultipartBodyBytes: $maxMultipartBodyBytes,
                 strictStreaming: $strictStreaming,
                 maxRegexBacktracks: $maxRegexBacktracks,
+                strictCoercion: $strictCoercion,
             ),
             dependencies: new ValidatorDependencies(
                 pool: $pool,

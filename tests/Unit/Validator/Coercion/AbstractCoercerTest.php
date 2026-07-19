@@ -485,6 +485,162 @@ final class AbstractCoercerTest extends TestCase
     {
         $this->assertSame([], $this->coercer->exposedCoerceToString([]));
     }
+
+    /**
+     * Anti-test: to verify this test guards against regression, temporarily
+     * remove the overflow check ($value > PHP_INT_MAX || $value < PHP_INT_MIN)
+     * in AbstractCoercer::coerceToInteger(). Without the guard, (int) 1e20
+     * triggers a PHP deprecation notice ("not representable as int") and
+     * returns platform-dependent undefined behavior (commonly 0 or
+     * 7766279631452241920) instead of throwing TypeMismatchError. The same
+     * regression disables coerce_to_integer_throws_on_float_overflow_below_int_min.
+     */
+    #[Test]
+    public function coerce_to_integer_throws_on_float_overflow_above_int_max(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+        $this->expectExceptionMessage('Float value out of integer range');
+
+        $this->coercer->exposedCoerceToInteger(1.0E+20);
+    }
+
+    #[Test]
+    public function coerce_to_integer_throws_on_float_overflow_below_int_min(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+        $this->expectExceptionMessage('Float value out of integer range');
+
+        $this->coercer->exposedCoerceToInteger(-1.0E+20);
+    }
+
+    #[Test]
+    public function coerce_to_integer_accepts_large_whole_float_within_range(): void
+    {
+        // 2^50 = 1125899906842624 is exactly representable as a double and
+        // well within int64 range. PHP_INT_MAX itself rounds to PHP_INT_MAX+1
+        // when cast to float, so the int boundary is not exactly testable
+        // through float.
+        $value = (float) (2 ** 50);
+
+        $result = $this->coercer->exposedCoerceToInteger($value);
+
+        $this->assertSame(2 ** 50, $result);
+    }
+
+    #[Test]
+    public function coerce_to_integer_accepts_negative_whole_float_within_range(): void
+    {
+        $value = (float) -(2 ** 50);
+
+        $result = $this->coercer->exposedCoerceToInteger($value);
+
+        $this->assertSame(-(2 ** 50), $result);
+    }
+
+    #[Test]
+    public function coerce_to_integer_accepts_small_whole_float(): void
+    {
+        $result = $this->coercer->exposedCoerceToInteger(42.0);
+
+        $this->assertSame(42, $result);
+    }
+
+    #[Test]
+    public function coerce_to_number_throws_on_precision_loss_for_oversized_integer_string(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+        $this->expectExceptionMessage('String value loses precision when converted to float');
+
+        $this->coercer->exposedCoerceToNumber('99999999999999999999999999');
+    }
+
+    #[Test]
+    public function coerce_to_number_strict_throws_on_precision_loss_for_oversized_integer_string(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+        $this->expectExceptionMessage('String value loses precision when converted to float');
+
+        $this->coercer->exposedCoerceToNumberStrict('99999999999999999999999999');
+    }
+
+    #[Test]
+    public function coerce_to_number_strict_accepts_exact_int_string(): void
+    {
+        $result = $this->coercer->exposedCoerceToNumberStrict('42');
+
+        $this->assertSame(42.0, $result);
+    }
+
+    #[Test]
+    public function coerce_to_number_accepts_exact_int_string(): void
+    {
+        $result = $this->coercer->exposedCoerceToNumber('42');
+
+        $this->assertSame(42.0, $result);
+    }
+
+    #[Test]
+    public function coerce_to_number_accepts_decimal_string(): void
+    {
+        $result = $this->coercer->exposedCoerceToNumber('3.14');
+
+        $this->assertSame(3.14, $result);
+    }
+
+    #[Test]
+    public function coerce_to_number_accepts_scientific_notation_string(): void
+    {
+        $result = $this->coercer->exposedCoerceToNumber('1e5');
+
+        $this->assertSame(100000.0, $result);
+    }
+
+    #[Test]
+    public function coerce_to_number_accepts_negative_scientific_notation_string(): void
+    {
+        $result = $this->coercer->exposedCoerceToNumber('-2.3E-4');
+
+        $this->assertSame(-0.00023, $result);
+    }
+
+    #[Test]
+    public function coerce_to_number_throws_on_precision_loss_for_long_decimal_string(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+        $this->expectExceptionMessage('String value loses precision when converted to float');
+
+        $this->coercer->exposedCoerceToNumber('1.123456789012345678901234567890');
+    }
+
+    #[Test]
+    public function coerce_to_number_throws_on_precision_loss_for_negative_oversized_integer(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+        $this->expectExceptionMessage('String value loses precision when converted to float');
+
+        $this->coercer->exposedCoerceToNumber('-99999999999999999999999999');
+    }
+
+    #[Test]
+    public function type_mismatch_error_carries_reason_when_provided(): void
+    {
+        try {
+            throw new TypeMismatchError(
+                expected: 'integer',
+                actual: '1.0E+20',
+                dataPath: '/x',
+                schemaPath: '/type',
+                reason: 'Float value out of integer range',
+            );
+        } catch (TypeMismatchError $e) {
+            $this->assertSame('Float value out of integer range at /x', $e->getMessage());
+            $this->assertSame('Float value out of integer range', $e->reason());
+
+            return;
+        }
+
+        $this->fail('Expected TypeMismatchError was not thrown');
+    }
 }
 
 final readonly class ConcreteCoercer extends AbstractCoercer

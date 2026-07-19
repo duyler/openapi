@@ -29,5 +29,6 @@ final readonly class ValidatorConfiguration
         public readonly bool $strictStreaming = false,
         public readonly int $maxRegexBacktracks = self::DEFAULT_MAX_REGEX_BACKTRACKS,
         public readonly int $maxStreamingRecords = self::DEFAULT_MAX_STREAMING_RECORDS,
+        public readonly bool $strictCoercion = true,
     ) {}
 }

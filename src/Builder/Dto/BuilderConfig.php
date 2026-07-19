@@ -40,6 +40,7 @@ final readonly class BuilderConfig
         public readonly ?int $externalRefMaxBytes = null,
         public readonly ?LoggerInterface $securityVerboseLogger = null,
         public readonly ?int $maxStreamingRecords = null,
+        public readonly ?bool $strictCoercion = null,
     ) {}
 
     public function merge(self $overrides): self
@@ -70,6 +71,7 @@ final readonly class BuilderConfig
             externalRefMaxBytes: $overrides->externalRefMaxBytes ?? $this->externalRefMaxBytes,
             securityVerboseLogger: $overrides->securityVerboseLogger ?? $this->securityVerboseLogger,
             maxStreamingRecords: $overrides->maxStreamingRecords ?? $this->maxStreamingRecords,
+            strictCoercion: $overrides->strictCoercion ?? $this->strictCoercion,
         );
     }
 }

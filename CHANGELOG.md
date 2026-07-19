@@ -73,6 +73,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `FileExternalRefResolver` exception messages no longer interpolate absolute
   filesystem paths (closes SEC-08); paths are available only via the opt-in logger
   or the `ExternalRefSecurityException::$ref` property for programmatic access.
+- Coercion is now strict by default: boolean coercion rejects unknown strings
+  like 'admin' or 'foo' instead of silently casting them to true (SEC-13);
+  integer coercion detects overflow before `(int)` cast and throws
+  TypeMismatchError for values outside [PHP_INT_MIN, PHP_INT_MAX] (SEC-14);
+  number coercion detects IEEE-754 precision loss via NumberStringNormalizer
+  canonical string round-trip and rejects strings that cannot be represented
+  exactly as a double, in both strict and non-strict paths (SEC-15). New
+  `disableStrictCoercion()` builder method provides the opt-out for legacy
+  loose-cast behavior.
 
 ## [0.5.0] - 2026-07-18
 
