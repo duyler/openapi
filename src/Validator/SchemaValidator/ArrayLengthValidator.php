@@ -41,6 +41,14 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
 
     private const int MAX_UNIQUE_CHECK = 100000;
 
+    /**
+     * 2^53 — largest integer that survives a round-trip through IEEE 754
+     * double without precision loss. Used to keep numeric equality (1 == 1.0)
+     * while preventing distinct large int64 values from collapsing to the
+     * same float key (SPEC-05).
+     */
+    private const int SAFE_INT64_FLOAT_BOUNDARY = 9007199254740992;
+
     #[Override]
     public function isApplicable(Schema $schema): bool
     {
@@ -203,8 +211,23 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
             return 'n:nan:' . bin2hex(random_bytes(8));
         }
 
-        if (is_int($item) || is_float($item)) {
-            return 'n:' . (string) (float) $item;
+        if (is_int($item)) {
+            // SPEC-05: large int64 values lose precision when cast to float
+            // (9223372036854775806 and 9223372036854775807 both become
+            // 9.223372036854776E+18). 2^53 is the IEEE 754 boundary: every
+            // int with abs <= 2^53 round-trips through float unchanged, so
+            // emit the float form to keep numeric equality (1 == 1.0). Above
+            // the boundary emit the int directly so distinct int64 values do
+            // not collide and we avoid a lossy float→int cast on PHP 8.5.
+            if (abs($item) <= self::SAFE_INT64_FLOAT_BOUNDARY) {
+                return 'n:' . (string) (float) $item;
+            }
+
+            return 'n:i:' . (string) $item;
+        }
+
+        if (is_float($item)) {
+            return 'n:' . (string) $item;
         }
 
         if (null === $item) {

@@ -17,6 +17,14 @@ use function random_bytes;
 
 final class EnumScalarCache
 {
+    /**
+     * 2^53 — largest integer that survives a round-trip through IEEE 754
+     * double without precision loss. Used to keep numeric equality (1 == 1.0)
+     * while preventing distinct large int64 values from collapsing to the
+     * same float key (SPEC-05).
+     */
+    private const int SAFE_INT64_FLOAT_BOUNDARY = 9007199254740992;
+
     /** @var WeakMap<Schema, bool> */
     private WeakMap $isScalarEnumCache;
 
@@ -133,7 +141,24 @@ final class EnumScalarCache
             return 'nan:' . bin2hex($bytes);
         }
 
-        /** @var int|float $value */
-        return 'n:' . (string) (float) $value;
+        if (is_int($value)) {
+            // SPEC-05: large int64 values lose precision when cast to float
+            // (9223372036854775806 and 9223372036854775807 both become
+            // 9.223372036854776E+18). 2^53 is the IEEE 754 boundary: every
+            // int with abs <= 2^53 round-trips through float unchanged, so
+            // emit the float form to keep numeric equality (1 == 1.0). Above
+            // the boundary emit the int directly so distinct int64 enum
+            // values do not collapse and we avoid a lossy float→int cast on
+            // PHP 8.5.
+            if (abs($value) <= self::SAFE_INT64_FLOAT_BOUNDARY) {
+                return 'n:' . (string) (float) $value;
+            }
+
+            return 'n:i:' . (string) $value;
+        }
+
+        // Remaining scalar case: float (callers gate via isScalarLookupEligible).
+        /** @var float $value */
+        return 'n:' . (string) $value;
     }
 }

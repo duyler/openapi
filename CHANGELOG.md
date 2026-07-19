@@ -125,6 +125,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ignored (SPEC-02). A new `SchemaSiblingMerger` class merges resolved and sibling
   schemas with documented merge strategies (sibling-wins for scalars, union for
   required/allOf, intersection for enum, shallow merge for properties/maps).
+- `JsonEquals::equals()` now performs order-independent comparison for JSON
+  objects per JSON Schema 2020-12 section 4.2.2 (SPEC-03), uses direct `===`
+  for integer-to-integer comparison to preserve int64 precision (SPEC-05),
+  and explicitly handles bool vs int distinction (SPEC-04). Same int64 fix
+  applied to `ArrayLengthValidator::itemKey()` and `EnumScalarCache::scalarKey()`.
 
 ## [0.5.0] - 2026-07-18
 

@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Schema;
 
+use function array_is_list;
+use function array_key_exists;
+use function array_keys;
+use function count;
+use function is_array;
+use function is_bool;
 use function is_float;
 use function is_int;
 
@@ -11,10 +17,65 @@ final readonly class JsonEquals
 {
     public static function equals(mixed $a, mixed $b): bool
     {
+        // JSON Schema 2020-12 §4.2.2 instance equality:
+        // - Bool is distinct from int (true !== 1, false !== 0)
+        // - Int and float with the same mathematical value are equal
+        // - Object keys are unordered
+        // - Array order is significant
+
+        if (is_bool($a) || is_bool($b)) {
+            return $a === $b;
+        }
+
         if ((is_int($a) || is_float($a)) && (is_int($b) || is_float($b))) {
+            // Both are numeric. Int-vs-int uses direct comparison to preserve
+            // int64 precision (9223372036854775806 !== 9223372036854775807).
+            // Mixed int/float uses float equality so 1 == 1.0 (§4.2.2 numeric
+            // equality).
+            if (is_int($a) && is_int($b)) {
+                return $a === $b;
+            }
+
             return (float) $a === (float) $b;
+        }
+        if (is_array($a) && is_array($b)) {
+            return self::arraysEqual($a, $b);
         }
 
         return $a === $b;
+    }
+
+    /**
+     * @param array<array-key, mixed> $a
+     * @param array<array-key, mixed> $b
+     */
+    private static function arraysEqual(array $a, array $b): bool
+    {
+        if (count($a) !== count($b)) {
+            return false;
+        }
+
+        if (array_is_list($a) && array_is_list($b)) {
+            for ($i = 0, $n = count($a); $i < $n; ++$i) {
+                if (!self::equals($a[$i], $b[$i])) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        // Associative arrays (JSON objects): order-independent
+        foreach (array_keys($a) as $key) {
+            if (!array_key_exists($key, $b)) {
+                return false;
+            }
+
+            if (!self::equals($a[$key], $b[$key])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

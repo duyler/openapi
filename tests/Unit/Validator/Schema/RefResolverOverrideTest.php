@@ -436,7 +436,7 @@ final class RefResolverOverrideTest extends TestCase
         try {
             $this->schemaValidator->validate('ab', $merged);
             self::fail('Expected validation to fail with MinLengthError or ValidationException for value shorter than merged minLength=5');
-        } catch (MinLengthError | ValidationException $e) {
+        } catch (MinLengthError|ValidationException $e) {
             self::addToAssertionCount(1);
         }
     }
@@ -465,7 +465,7 @@ final class RefResolverOverrideTest extends TestCase
         try {
             $this->schemaValidator->validate(3, $merged);
             self::fail('Expected validation to fail with EnumError or ValidationException for value outside merged enum intersection [1, 2]');
-        } catch (EnumError | ValidationException $e) {
+        } catch (EnumError|ValidationException $e) {
             self::addToAssertionCount(1);
         }
     }
