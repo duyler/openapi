@@ -11,6 +11,7 @@ use Duyler\OpenApi\Validator\PregExecutor;
 use Override;
 
 use function checkdate;
+use function in_array;
 
 final readonly class DateTimeValidator extends AbstractStringFormatValidator
 {
@@ -19,8 +20,11 @@ final readonly class DateTimeValidator extends AbstractStringFormatValidator
         . '[Tt]'
         . '(?<hour>[01]\d|2[0-3]):(?<minute>[0-5]\d):(?<second>[0-5]\d|60)'
         . '(?:\.\d+)?'
-        . '(?:[Zz]|[+-](?:(?:0\d|1[0-3]):[0-5]\d|14:00))'
+        . '(?<offset>[Zz]|[+-](?:(?:0\d|1[0-3]):[0-5]\d|14:00))'
         . '$/';
+
+    /** @var list<string> */
+    private const array UTC_OFFSETS = ['Z', 'z', '+00:00', '-00:00'];
 
     public function __construct(
         private readonly PregExecutor $pregExecutor = new PregExecutor(),
@@ -46,11 +50,18 @@ final readonly class DateTimeValidator extends AbstractStringFormatValidator
         }
 
         if (60 === (int) $matches['second']) {
-            if (23 === (int) $matches['hour'] && 59 === (int) $matches['minute']) {
+            $isEndOfDay = 23 === (int) $matches['hour'] && 59 === (int) $matches['minute'];
+            $isUtc = in_array($matches['offset'], self::UTC_OFFSETS, true);
+
+            if ($isEndOfDay && $isUtc) {
                 return;
             }
 
-            throw new InvalidFormatException('date-time', $data, 'Invalid date-time value');
+            throw new InvalidFormatException(
+                'date-time',
+                $data,
+                'Leap second requires UTC end-of-day (e.g., 23:59:60Z)',
+            );
         }
 
         try {

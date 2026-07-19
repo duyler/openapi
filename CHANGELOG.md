@@ -108,6 +108,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The `OpenApiBuilder::__construct` is no longer `final` so subclasses can
   accept additional constructor parameters via LSP-compatible signatures;
   the constructor body that initialises `OpenApiBuildContext` is unchanged.
+- Leap second (`:60`) in `date-time` and `time` formats is now restricted to
+  UTC end-of-day only (e.g., `23:59:60Z` accepted; `23:59:60+05:00` rejected),
+  preventing ambiguous timezone-dependent leap second interpretation (SEC-20,
+  SEC-21).
 
 ## [0.5.0] - 2026-07-18
 

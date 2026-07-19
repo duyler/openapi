@@ -38,10 +38,10 @@ final class TimeValidatorTest extends TestCase
             'one second before midnight' => ['23:59:59'],
             'midnight with offset' => ['00:00:00+00:00'],
             'midnight Z' => ['00:00:00Z'],
-            'leap second at end of day' => ['23:59:60'],
             'leap second with Z' => ['23:59:60Z'],
-            'leap second with fractional' => ['23:59:60.500'],
-            'leap second with max positive offset' => ['23:59:60+14:00'],
+            'leap second with positive UTC offset' => ['23:59:60+00:00'],
+            'leap second with negative UTC offset' => ['23:59:60-00:00'],
+            'leap second with fractional and Z' => ['23:59:60.500Z'],
             'max positive offset boundary' => ['10:30:00+14:00'],
             'max negative offset boundary' => ['10:30:00-14:00'],
             'offset hour 13 with max minute' => ['10:30:00+13:59'],
@@ -63,6 +63,10 @@ final class TimeValidatorTest extends TestCase
             'hour 24' => ['24:00:00'],
             'minute 60' => ['10:60:00'],
             'second 60 outside leap second' => ['10:30:60'],
+            'leap second without offset' => ['23:59:60'],
+            'leap second with non-UTC offset' => ['23:59:60+05:00'],
+            'leap second with max positive offset' => ['23:59:60+14:00'],
+            'leap second fractional without offset' => ['23:59:60.500'],
             'random text' => ['invalid-time'],
             'date instead of time' => ['2024-01-01'],
             'time without seconds' => ['10:30'],
@@ -136,5 +140,31 @@ final class TimeValidatorTest extends TestCase
         $this->expectNotToPerformAssertions();
 
         $this->validator->validate('10:30:00Z');
+    }
+
+    #[Test]
+    public function time_leap_second_utc_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('23:59:60Z');
+    }
+
+    #[Test]
+    public function time_leap_second_non_utc_rejected(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Leap second requires UTC end-of-day');
+
+        $this->validator->validate('23:59:60+05:00');
+    }
+
+    #[Test]
+    public function time_leap_second_without_offset_rejected(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Leap second requires UTC end-of-day');
+
+        $this->validator->validate('23:59:60');
     }
 }
