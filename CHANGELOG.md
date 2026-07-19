@@ -130,6 +130,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for integer-to-integer comparison to preserve int64 precision (SPEC-05),
   and explicitly handles bool vs int distinction (SPEC-04). Same int64 fix
   applied to `ArrayLengthValidator::itemKey()` and `EnumScalarCache::scalarKey()`.
+- `minLength` and `maxLength` string validation now counts UTF-16 code units
+  per JSON Schema 2020-12 section 4.2.1 instead of Unicode code points,
+  correctly handling supplementary characters (emoji, CJK extensions) that
+  require surrogate pairs in UTF-16 (SPEC-06). New `Utf16::length()` helper
+  counts directly from UTF-8 bytes without mbstring dependency; compiler
+  inlines the same logic for generated validators.
 
 ## [0.5.0] - 2026-07-18
 

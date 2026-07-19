@@ -213,21 +213,54 @@ final readonly class ValidatorCompiler
 
     private function generateStringLengthCheck(Schema $schema): string
     {
-        $code = '';
         $conditions = [];
 
         if (null !== $schema->minLength) {
-            $conditions[] = sprintf('mb_strlen($data, \'UTF-8\') < %d', $schema->minLength);
+            $conditions[] = sprintf('$utf16Length < %d', $schema->minLength);
         }
 
         if (null !== $schema->maxLength) {
-            $conditions[] = sprintf('mb_strlen($data, \'UTF-8\') > %d', $schema->maxLength);
+            $conditions[] = sprintf('$utf16Length > %d', $schema->maxLength);
         }
 
         $condition = implode(' || ', $conditions);
+        $code = $this->generateUtf16LengthComputation();
         $code .= sprintf("        if (%s) {\n", $condition);
         $code .= "            throw new \\RuntimeException('String length validation failed');\n";
         $code .= "        }\n\n";
+
+        return $code;
+    }
+
+    /**
+     * Inlines UTF-16 code-unit counting into compiled validators so they
+     * stay standalone (no dependency on the runtime Utf16 helper) while
+     * still matching JSON Schema 2020-12 §6.3.1: supplementary characters
+     * (4-byte UTF-8 sequences) count as 2 code units via surrogate pairs.
+     */
+    private function generateUtf16LengthComputation(): string
+    {
+        $code = "        \$utf16Length = 0;\n";
+        $code .= "        \$utf16Bytes = strlen((string) \$data);\n";
+        $code .= "        \$utf16Pos = 0;\n";
+        $code .= "        while (\$utf16Pos < \$utf16Bytes) {\n";
+        $code .= "            \$utf16Octet = ord(\$data[\$utf16Pos]);\n";
+        $code .= "            if (\$utf16Octet < 0x80) {\n";
+        $code .= "                \$utf16Pos += 1;\n";
+        $code .= "                \$utf16Length += 1;\n";
+        $code .= "            } elseif (\$utf16Octet < 0xC0) {\n";
+        $code .= "                \$utf16Pos += 1;\n";
+        $code .= "            } elseif (\$utf16Octet < 0xE0) {\n";
+        $code .= "                \$utf16Pos += 2;\n";
+        $code .= "                \$utf16Length += 1;\n";
+        $code .= "            } elseif (\$utf16Octet < 0xF0) {\n";
+        $code .= "                \$utf16Pos += 3;\n";
+        $code .= "                \$utf16Length += 1;\n";
+        $code .= "            } else {\n";
+        $code .= "                \$utf16Pos += 4;\n";
+        $code .= "                \$utf16Length += 2;\n";
+        $code .= "            }\n";
+        $code .= "        }\n";
 
         return $code;
     }

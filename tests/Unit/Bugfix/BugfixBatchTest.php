@@ -148,19 +148,31 @@ final class BugfixBatchTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
+    /**
+     * B12 (regression): the compiler must emit UTF-16 code-unit counting
+     * for minLength/maxLength, not naive strlen bytes. Updated for
+     * SPEC-06: UTF-16 code units per JSON Schema 2020-12 §6.3.1.
+     */
     #[Test]
-    public function b12_compiler_generates_mb_strlen_for_string_length(): void
+    public function b12_compiler_generates_utf16_unit_counting_for_string_length(): void
     {
         $compiler = new ValidatorCompiler();
         $schema = new Schema(type: 'string', minLength: 1, maxLength: 10);
-        $code = $compiler->compile($schema, 'MbStrlenValidator');
+        $code = $compiler->compile($schema, 'Utf16LengthValidatorB12');
 
-        $this->assertStringContainsString("mb_strlen(\$data, 'UTF-8')", $code);
-        $this->assertStringNotContainsString('strlen($data)', $code);
+        $this->assertStringContainsString('$utf16Length', $code);
+        $this->assertStringContainsString('$utf16Length < 1', $code);
+        $this->assertStringContainsString('$utf16Length > 10', $code);
+        $this->assertStringNotContainsString("mb_strlen(\$data, 'UTF-8')", $code);
     }
 
+    /**
+     * B12 (regression): compiled validator must reject strings whose
+     * UTF-16 unit count exceeds maxLength. Cyrillic BMP characters
+     * remain 1 UTF-16 unit each.
+     */
     #[Test]
-    public function b12_compiler_mb_strlen_validates_unicode_correctly(): void
+    public function b12_compiler_utf16_length_validates_unicode_correctly(): void
     {
         $compiler = new ValidatorCompiler();
         $schema = new Schema(type: 'string', minLength: 1, maxLength: 6);

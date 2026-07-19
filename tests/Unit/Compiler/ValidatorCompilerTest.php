@@ -34,6 +34,9 @@ use DeepNestValidValidator;
 use TenLevelsValidator;
 use TwentyLevelsValidator;
 
+use CompiledUtf16RejectValidator;
+use CompiledUtf16Validator;
+
 use const TOKEN_PARSE;
 
 final class ValidatorCompilerTest extends TestCase
@@ -76,7 +79,9 @@ final class ValidatorCompilerTest extends TestCase
         $schema = new Schema(type: 'string', minLength: 1, maxLength: 100);
         $code = $compiler->compile($schema, 'LengthValidator');
 
-        $this->assertStringContainsString("mb_strlen(\$data, 'UTF-8')", $code);
+        $this->assertStringContainsString('$utf16Length < 1', $code);
+        $this->assertStringContainsString('$utf16Length > 100', $code);
+        $this->assertStringNotContainsString('mb_strlen', $code);
     }
 
     #[Test]
@@ -115,7 +120,8 @@ final class ValidatorCompilerTest extends TestCase
         $code = $compiler->compile($schema, 'AllValidators');
 
         $this->assertStringContainsString('is_string($data)', $code);
-        $this->assertStringContainsString("mb_strlen(\$data, 'UTF-8')", $code);
+        $this->assertStringContainsString('$utf16Length', $code);
+        $this->assertStringNotContainsString('mb_strlen', $code);
         $this->assertStringContainsString('preg_match', $code);
         $this->assertStringContainsString('in_array($data', $code);
     }
@@ -580,8 +586,9 @@ final class ValidatorCompilerTest extends TestCase
 
         $code = $compiler->compile($schema, 'AllStringConstraintsValidator');
 
-        $this->assertStringContainsString("mb_strlen(\$data, 'UTF-8') < 5", $code);
-        $this->assertStringContainsString("mb_strlen(\$data, 'UTF-8') > 100", $code);
+        $this->assertStringContainsString('$utf16Length < 5', $code);
+        $this->assertStringContainsString('$utf16Length > 100', $code);
+        $this->assertStringNotContainsString('mb_strlen', $code);
         $this->assertStringContainsString('preg_match', $code);
     }
 
@@ -1983,6 +1990,53 @@ final class ValidatorCompilerTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         $compiler->compileWithCache($schema, '0Invalid');
+    }
+
+    /**
+     * SPEC-06: compiled validators must count UTF-16 code units per
+     * JSON Schema 2020-12 §6.3.1, matching the runtime StringLength
+     * validator. A single supplementary emoji (surrogate pair, 2 UTF-16
+     * units) must satisfy minLength:2 — the buggy mb_strlen-based
+     * emitter rejected it because it counted Unicode code points.
+     */
+    #[Test]
+    public function compile_string_length_counts_utf16_code_units(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string', minLength: 2);
+
+        $code = $compiler->compile($schema, 'CompiledUtf16Validator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new CompiledUtf16Validator();
+
+        $validator->validate('😀');
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    /**
+     * SPEC-06 (anti-test for compiled validator): a single emoji is
+     * 2 UTF-16 units, so minLength:3 must reject it.
+     */
+    #[Test]
+    public function compile_string_length_rejects_emoji_below_min_utf16_units(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'string', minLength: 3);
+
+        $code = $compiler->compile($schema, 'CompiledUtf16RejectValidator');
+
+        $evalCode = str_replace('declare(strict_types=1);', '', substr($code, 5));
+        eval($evalCode);
+
+        $validator = new CompiledUtf16RejectValidator();
+
+        $this->expectException(RuntimeException::class);
+
+        $validator->validate('😀');
     }
 
     /**
