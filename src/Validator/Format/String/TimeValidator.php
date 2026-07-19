@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Override;
-
-use function preg_match;
 
 final readonly class TimeValidator extends AbstractStringFormatValidator
 {
@@ -16,6 +15,10 @@ final readonly class TimeValidator extends AbstractStringFormatValidator
         . '(?:\.\d+)?'
         . '(?:[Zz]|[+-](?:(?:0\d|1[0-3]):[0-5]\d|14:00))?'
         . '$/';
+
+    public function __construct(
+        private readonly PregExecutor $pregExecutor = new PregExecutor(),
+    ) {}
 
     #[Override]
     protected function getFormatName(): string
@@ -28,7 +31,7 @@ final readonly class TimeValidator extends AbstractStringFormatValidator
     {
         $matches = [];
 
-        if (1 !== preg_match(self::TIME_PATTERN, $data, $matches)) {
+        if (1 !== $this->pregExecutor->match(self::TIME_PATTERN, $data, $matches)) {
             throw new InvalidFormatException('time', $data, 'Invalid time format');
         }
 

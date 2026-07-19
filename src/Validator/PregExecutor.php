@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator;
 
+use Duyler\OpenApi\Validator\Exception\PregRuntimeException;
+
 use function ini_get;
 use function ini_set;
+use function preg_last_error;
+use function preg_last_error_msg;
 use function preg_match;
 use function preg_match_all;
 use function restore_error_handler;
 use function set_error_handler;
 
 use const E_WARNING;
+use const PREG_NO_ERROR;
 
 /**
  * Defensive wrapper around preg_match / preg_match_all that lowers the
@@ -32,6 +37,12 @@ use const E_WARNING;
  * return value mirroring the native contract, and the associated E_WARNING is
  * swallowed via a temporary error handler so callers can branch on the return
  * value without leaking diagnostic noise into PSR-3 logs or PHPUnit output.
+ *
+ * A non-zero preg_last_error() after the call indicates an internal PCRE
+ * failure (backtrack_limit exceeded, recursion_limit exceeded, JIT stack
+ * overflow). The return value cannot be trusted in that state, so the wrapper
+ * raises a PregRuntimeException rather than silently returning `false`, which
+ * callers would otherwise misread as "no match".
  */
 final readonly class PregExecutor
 {
@@ -47,6 +58,8 @@ final readonly class PregExecutor
      * @param 0|256|512|768 $flags bitmask of PREG_OFFSET_CAPTURE and PREG_UNMATCHED_AS_NULL
      *
      * @param-out array<array-key, mixed> $matches
+     *
+     * @throws PregRuntimeException when preg_last_error() returns a non-zero code
      */
     public function match(string $pattern, string $subject, ?array &$matches = null, int $flags = 0, int $offset = 0): int|false
     {
@@ -55,7 +68,10 @@ final readonly class PregExecutor
         set_error_handler(static fn(int $errno) => E_WARNING === $errno);
 
         try {
-            return preg_match($pattern, $subject, $matches, $flags, $offset);
+            $result = preg_match($pattern, $subject, $matches, $flags, $offset);
+            $this->assertNoPcreError();
+
+            return $result;
         } finally {
             restore_error_handler();
             ini_set('pcre.backtrack_limit', $previous);
@@ -65,9 +81,11 @@ final readonly class PregExecutor
     /**
      * @param non-empty-string $pattern
      * @param array<array-key, mixed>|null $matches populated by reference when present
-     * @param int $flags bitmask of PREG_PATTERN_ORDER, PREG_SET_ORDER, PREG_OFFSET_CAPTURE, PREG_UNMATCHED_AS_NULL
+     * @param int $flags bitmask of PREG_PATTERNORDER, PREG_SET_ORDER, PREG_OFFSET_CAPTURE, PREG_UNMATCHED_AS_NULL
      *
      * @param-out array<array-key, mixed> $matches
+     *
+     * @throws PregRuntimeException when preg_last_error() returns a non-zero code
      */
     public function matchAll(string $pattern, string $subject, ?array &$matches = null, int $flags = 0, int $offset = 0): int|false
     {
@@ -76,7 +94,10 @@ final readonly class PregExecutor
         set_error_handler(static fn(int $errno) => E_WARNING === $errno);
 
         try {
-            return preg_match_all($pattern, $subject, $matches, $flags, $offset);
+            $result = preg_match_all($pattern, $subject, $matches, $flags, $offset);
+            $this->assertNoPcreError();
+
+            return $result;
         } finally {
             restore_error_handler();
             ini_set('pcre.backtrack_limit', $previous);
@@ -88,5 +109,17 @@ final readonly class PregExecutor
         $previous = ini_get('pcre.backtrack_limit');
 
         return false === $previous ? '1000000' : $previous;
+    }
+
+    /**
+     * @throws PregRuntimeException when preg_last_error() returns a non-zero code
+     */
+    private function assertNoPcreError(): void
+    {
+        $error = preg_last_error();
+
+        if (PREG_NO_ERROR !== $error) {
+            throw new PregRuntimeException(error: $error, message: preg_last_error_msg());
+        }
     }
 }

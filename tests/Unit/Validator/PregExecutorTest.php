@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator;
 
+use Duyler\OpenApi\Validator\Exception\PregRuntimeException;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -13,6 +14,10 @@ use RuntimeException;
 
 use function ini_get;
 use function ini_set;
+use function str_repeat;
+
+use const PREG_BACKTRACK_LIMIT_ERROR;
+use const PREG_INTERNAL_ERROR;
 
 #[CoversClass(PregExecutor::class)]
 class PregExecutorTest extends TestCase
@@ -58,13 +63,27 @@ class PregExecutorTest extends TestCase
     }
 
     #[Test]
-    public function match_returns_false_for_invalid_pattern(): void
+    public function match_throws_preg_runtime_exception_on_compile_error(): void
     {
         $executor = new PregExecutor();
 
-        $result = $executor->match('/[unclosed/', 'anything');
+        $this->expectException(PregRuntimeException::class);
+        $this->expectExceptionMessage('PCRE error ');
 
-        self::assertFalse($result);
+        $executor->match('/[unclosed/', 'anything');
+    }
+
+    #[Test]
+    public function match_throws_on_compile_error_with_internal_error_code(): void
+    {
+        $executor = new PregExecutor();
+
+        try {
+            $executor->match('/[unclosed/', 'anything');
+            self::fail('Expected PregRuntimeException on compile error');
+        } catch (PregRuntimeException $exception) {
+            self::assertSame(PREG_INTERNAL_ERROR, $exception->error);
+        }
     }
 
     #[Test]
@@ -89,6 +108,16 @@ class PregExecutorTest extends TestCase
     }
 
     #[Test]
+    public function match_all_throws_on_compile_error(): void
+    {
+        $executor = new PregExecutor();
+
+        $this->expectException(PregRuntimeException::class);
+
+        $executor->matchAll('/[unclosed/', 'abc');
+    }
+
+    #[Test]
     public function restores_previous_backtrack_limit_on_success(): void
     {
         ini_set('pcre.backtrack_limit', '999999');
@@ -105,7 +134,11 @@ class PregExecutorTest extends TestCase
         ini_set('pcre.backtrack_limit', '888888');
         $executor = new PregExecutor(maxBacktracks: 100);
 
-        $executor->match('/[unclosed/', 'abc');
+        try {
+            $executor->match('/[unclosed/', 'abc');
+            self::fail('Expected PregRuntimeException on compile failure');
+        } catch (PregRuntimeException) {
+        }
 
         self::assertSame('888888', ini_get('pcre.backtrack_limit'));
     }
@@ -125,13 +158,16 @@ class PregExecutorTest extends TestCase
     }
 
     #[Test]
-    public function catastrophic_pattern_returns_false_under_low_limit(): void
+    public function catastrophic_pattern_throws_on_backtrack_limit_under_low_limit(): void
     {
         $executor = new PregExecutor(maxBacktracks: 10);
 
-        $result = $executor->match('/^(a+)+$/', str_repeat('a', 30) . 'b');
-
-        self::assertFalse($result);
+        try {
+            $executor->match('/^(a+)+$/', str_repeat('a', 30) . 'b');
+            self::fail('Expected PregRuntimeException on backtrack limit exhaustion');
+        } catch (PregRuntimeException $exception) {
+            self::assertSame(PREG_BACKTRACK_LIMIT_ERROR, $exception->error);
+        }
     }
 
     #[Test]
@@ -140,7 +176,12 @@ class PregExecutorTest extends TestCase
         $executor = new PregExecutor();
 
         $start = hrtime(true);
-        $executor->match('/^(a+)+$/', str_repeat('a', 30) . 'b');
+
+        try {
+            $executor->match('/^(a+)+$/', str_repeat('a', 30) . 'b');
+        } catch (PregRuntimeException) {
+        }
+
         $elapsedMs = (hrtime(true) - $start) / 1_000_000;
 
         self::assertLessThan(200, $elapsedMs);
@@ -152,6 +193,16 @@ class PregExecutorTest extends TestCase
         $executor = new PregExecutor();
 
         $result = $executor->match('/^[a-z0-9_-]{3,16}$/', 'foo-bar_baz');
+
+        self::assertSame(1, $result);
+    }
+
+    #[Test]
+    public function pattern_length_just_within_default_limit_does_not_raise_pcre_error(): void
+    {
+        $executor = new PregExecutor();
+
+        $result = $executor->match('/^' . str_repeat('a', 32) . '$/', str_repeat('a', 32));
 
         self::assertSame(1, $result);
     }

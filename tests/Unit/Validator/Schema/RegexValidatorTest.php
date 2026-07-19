@@ -14,6 +14,7 @@ use ReflectionClass;
 use function preg_match;
 use function sprintf;
 use function count;
+use function str_repeat;
 
 final class RegexValidatorTest extends TestCase
 {
@@ -433,6 +434,43 @@ final class RegexValidatorTest extends TestCase
         $this->validator->validate('/^test$/');
 
         self::assertSame(0, $this->normalizeCacheSize());
+    }
+
+    #[Test]
+    public function pattern_length_limit_exceeded_throws_invalid_pattern_exception(): void
+    {
+        $tooLongPattern = '/' . str_repeat('a', 1024) . '/';
+
+        $this->expectException(InvalidPatternException::class);
+        $this->expectExceptionMessage('Pattern exceeds maximum length of 1024 bytes');
+
+        $this->validator->validate($tooLongPattern);
+    }
+
+    #[Test]
+    public function pattern_length_just_at_limit_is_accepted(): void
+    {
+        $pattern = '/' . str_repeat('a', 1022) . '/';
+
+        $result = $this->validator->validate($pattern);
+
+        self::assertSame($pattern, $result);
+    }
+
+    #[Test]
+    public function pattern_length_limit_reports_actual_pattern_size(): void
+    {
+        $tooLongPattern = '/' . str_repeat('b', 2048) . '/';
+
+        try {
+            $this->validator->validate($tooLongPattern);
+            self::fail('Expected InvalidPatternException on oversized pattern');
+        } catch (InvalidPatternException $exception) {
+            self::assertStringContainsString(
+                'Pattern exceeds maximum length of 1024 bytes',
+                $exception->getMessage(),
+            );
+        }
     }
 
     /**

@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Override;
-
-use function preg_match;
 
 final readonly class UuidValidator extends AbstractStringFormatValidator
 {
@@ -16,6 +15,10 @@ final readonly class UuidValidator extends AbstractStringFormatValidator
     private const string MAX_UUID = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
 
     private const string UUID_PATTERN = '/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/';
+
+    public function __construct(
+        private readonly PregExecutor $pregExecutor = new PregExecutor(),
+    ) {}
 
     #[Override]
     protected function getFormatName(): string
@@ -30,7 +33,7 @@ final readonly class UuidValidator extends AbstractStringFormatValidator
             return;
         }
 
-        if (1 !== preg_match(self::UUID_PATTERN, $data)) {
+        if (1 !== $this->pregExecutor->match(self::UUID_PATTERN, $data)) {
             throw new InvalidFormatException('uuid', $data, 'Invalid UUID format');
         }
     }

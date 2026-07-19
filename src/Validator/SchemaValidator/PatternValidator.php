@@ -8,10 +8,12 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
 use Duyler\OpenApi\Validator\Exception\PatternMismatchError;
+use Duyler\OpenApi\Validator\Exception\PregRuntimeException;
 use Override;
 
 use function assert;
 use function is_string;
+use function sprintf;
 
 final readonly class PatternValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
@@ -32,12 +34,12 @@ final readonly class PatternValidator extends AbstractSchemaValidator implements
 
         assert('' !== $pattern);
 
-        $result = $this->pregExecutor()->match($pattern, $data);
-
-        if (false === $result) {
+        try {
+            $result = $this->pregExecutor()->match($pattern, $data);
+        } catch (PregRuntimeException $exception) {
             throw new InvalidPatternException(
                 pattern: $schema->pattern,
-                reason: 'Pattern validation failed',
+                reason: sprintf('Pattern validation failed: %s', $exception->getMessage()),
             );
         }
 

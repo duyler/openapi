@@ -26,12 +26,12 @@ final class BuiltinFormats
     {
         $registry = new FormatRegistry();
 
-        $registry = $registry->registerFormat('string', 'date-time', new DateTimeValidator());
-        $registry = $registry->registerFormat('string', 'date', new DateValidator());
-        $registry = $registry->registerFormat('string', 'time', new TimeValidator());
+        $registry = $registry->registerFormat('string', 'date-time', new DateTimeValidator($pregExecutor));
+        $registry = $registry->registerFormat('string', 'date', new DateValidator($pregExecutor));
+        $registry = $registry->registerFormat('string', 'time', new TimeValidator($pregExecutor));
         $registry = $registry->registerFormat('string', 'email', new EmailValidator($pregExecutor));
         $registry = $registry->registerFormat('string', 'uri', new UriValidator($pregExecutor));
-        $registry = $registry->registerFormat('string', 'uuid', new UuidValidator());
+        $registry = $registry->registerFormat('string', 'uuid', new UuidValidator($pregExecutor));
         $registry = $registry->registerFormat('string', 'hostname', new HostnameValidator($pregExecutor));
         $registry = $registry->registerFormat('string', 'ipv4', new Ipv4Validator());
         $registry = $registry->registerFormat('string', 'ipv6', new Ipv6Validator());
@@ -40,12 +40,12 @@ final class BuiltinFormats
         $registry = $registry->registerFormat('number', 'float', new FloatDoubleValidator('float'));
         $registry = $registry->registerFormat('number', 'double', new FloatDoubleValidator('double'));
 
-        $registry = $registry->registerFormat('string', 'duration', new DurationValidator());
-        $registry = $registry->registerFormat('string', 'json-pointer', new JsonPointerValidator());
+        $registry = $registry->registerFormat('string', 'duration', new DurationValidator($pregExecutor));
+        $registry = $registry->registerFormat('string', 'json-pointer', new JsonPointerValidator($pregExecutor));
         $registry = $registry->registerFormat(
             'string',
             'relative-json-pointer',
-            new RelativeJsonPointerValidator(),
+            new RelativeJsonPointerValidator($pregExecutor),
         );
 
         return $registry;
