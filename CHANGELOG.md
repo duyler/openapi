@@ -113,6 +113,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   preventing ambiguous timezone-dependent leap second interpretation (SEC-20,
   SEC-21).
 
+### Fixed
+- JSON Pointer escape sequences (`~1` for `/`, `~0` for `~`) are now decoded
+  when resolving `$ref` fragments in both `RefResolver` and
+  `FileExternalRefResolver`, per RFC 6901 section 3 (SPEC-01). Previously,
+  `$ref: '#/paths/~1user/get'` would fail to resolve because the literal
+  `/user` key was never matched.
+
 ## [0.5.0] - 2026-07-18
 
 This release focuses on defense-in-depth security hardening, spec-compliance

@@ -108,6 +108,37 @@ final class FileExternalRefResolverTest extends TestCase
     }
 
     /**
+     * SPEC-01 / RFC 6901 §3: external $ref JSON Pointer fragments must
+     * decode ~1 -> / and ~0 -> ~ before lookup. The fixture maps the
+     * path key "/user" (literal slash) and the ref encodes the slash as
+     * ~1; without decoding the resolver would look for the literal key
+     * "~1user" and fail with "JSON Pointer segment not found".
+     */
+    #[Test]
+    public function resolves_external_ref_with_decoded_json_pointer(): void
+    {
+        $tempFile = tempnam(sys_get_temp_dir(), 'extref_ptr_') . '.json';
+        file_put_contents($tempFile, json_encode([
+            'paths' => [
+                '/user' => ['type' => 'object', 'title' => 'UserPath'],
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        try {
+            $resolver = new FileExternalRefResolver();
+
+            $schema = $resolver->resolve($tempFile . '#/paths/~1user');
+
+            $this->assertSame('object', $schema->type);
+            $this->assertSame('UserPath', $schema->title);
+        } finally {
+            if (file_exists($tempFile)) {
+                unlink($tempFile);
+            }
+        }
+    }
+
+    /**
      * SEC-01: every PHP stream wrapper outside the allowlist must be
      * rejected with ExternalRefSecurityException. The previous blacklist
      * only covered http/https/ftp/ftps/gopher/netcat and left php://,

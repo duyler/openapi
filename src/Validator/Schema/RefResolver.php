@@ -782,7 +782,11 @@ final class RefResolver implements RefResolverInterface
                 throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
             }
 
-            $current = $this->getProperty($current, $parts[$i]);
+            // RFC 6901 section 3: ~01 is the encoded form of literal "~1".
+            // Direct order (~1 -> /, then ~0 -> ~) yields ~01 -> ~1 (correct).
+            // Reverse order (~0 -> ~, then ~1 -> /) would wrongly yield ~01 -> /1.
+            $decodedSegment = str_replace(['~1', '~0'], ['/', '~'], $parts[$i]);
+            $current = $this->getProperty($current, $decodedSegment);
         }
 
         if (
