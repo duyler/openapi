@@ -296,33 +296,13 @@ final class ParameterDeserializerTest extends TestCase
     }
 
     #[Test]
-    public function deserialize_deep_object_json_string_decodes_to_array(): void
-    {
-        $param = new Parameter(name: 'props', in: 'query', style: 'deepObject', explode: false);
-
-        $result = $this->deserializer->deserialize('{"color":"red"}', $param);
-
-        $this->assertSame(['color' => 'red'], $result);
-    }
-
-    #[Test]
-    public function deserialize_deep_object_non_json_string_falls_back_to_array(): void
-    {
-        $param = new Parameter(name: 'props', in: 'query', style: 'deepObject', explode: false);
-
-        $result = $this->deserializer->deserialize('not-json', $param);
-
-        $this->assertSame(['not-json'], $result);
-    }
-
-    #[Test]
-    public function deserialize_deep_object_plain_string_returns_single_element_array(): void
+    public function deserialize_deep_object_scalar_string_returns_single_element_array(): void
     {
         $param = new Parameter(name: 'props', in: 'query', style: 'deepObject');
 
-        $result = $this->deserializer->deserialize('plain', $param);
+        $result = $this->deserializer->deserialize('color[R]=100', $param);
 
-        $this->assertSame(['plain'], $result);
+        $this->assertSame(['color[R]=100'], $result);
     }
 
     #[Test]

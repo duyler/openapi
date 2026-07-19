@@ -136,6 +136,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   require surrogate pairs in UTF-16 (SPEC-06). New `Utf16::length()` helper
   counts directly from UTF-8 bytes without mbstring dependency; compiler
   inlines the same logic for generated validators.
+- `deepObject` parameter style now correctly handles bracket notation
+  (e.g., `color[R]=100&color[G]=200`) via the existing QueryParser
+  rather than attempting non-spec-compliant JSON decoding in
+  ParameterDeserializer (SPEC-07).
 
 ## [0.5.0] - 2026-07-18
 
