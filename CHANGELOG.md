@@ -82,6 +82,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exactly as a double, in both strict and non-strict paths (SEC-15). New
   `disableStrictCoercion()` builder method provides the opt-out for legacy
   loose-cast behavior.
+- `http/bearer` Authorization scheme matching is now case-insensitive per RFC 6750
+  §2.1 (accepts `BEARER`, `Bearer`, `bearer`, `BeArEr` etc.), and a trailing-space-only
+  header like `Bearer ` (without token) is rejected. The regex `^bearer\s+\S+` replaces
+  the case-sensitive `str_starts_with` check, routed through PregExecutor for backtrack
+  protection (SEC-16).
 
 ## [0.5.0] - 2026-07-18
 

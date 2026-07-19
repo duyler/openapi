@@ -34,7 +34,7 @@ final readonly class RequestValidationHandler
     ) {
         $this->eventDispatcher = $context->eventDispatcher;
         $this->logger = $context->logger;
-        $this->securityValidator = new SecurityValidator($context->securityVerboseLogger);
+        $this->securityValidator = new SecurityValidator($context->securityVerboseLogger, $context->pregExecutor);
         $this->serverPathMatcher = new ServerPathMatcher(
             $context->document->servers?->servers ?? [],
         );

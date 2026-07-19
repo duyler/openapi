@@ -47,6 +47,211 @@ final class SecurityValidatorTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
+    /**
+     * RFC 6750 §2.1: Bearer scheme is case-insensitive. SEC-16
+     * anti-test: revert preg_match to str_starts_with('Bearer ') and
+     * every case-variant assertion below fails.
+     */
+    #[Test]
+    public function http_bearer_uppercase_scheme_passes(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('Authorization', 'BEARER abc123');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function http_bearer_lowercase_scheme_passes(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('Authorization', 'bearer abc123');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function http_bearer_mixed_case_scheme_passes(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('Authorization', 'BeArEr abc123');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    /**
+     * RFC 9110 OWS: one or more whitespace separators between scheme
+     * and token are valid. SEC-16 anti-test: regex with a literal
+     * single space (/\s/ removed) would reject this header.
+     */
+    #[Test]
+    public function http_bearer_multiple_spaces_between_scheme_and_token_passes(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('Authorization', 'Bearer  abc123');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    /**
+     * RFC 6750 §2.1 requires a non-empty b64token. SEC-16 anti-test:
+     * regex without the \S+ requirement would let this header through.
+     */
+    #[Test]
+    public function http_bearer_with_trailing_space_only_rejected_as_missing_token(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('Authorization', 'Bearer ');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        try {
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('bearerAuth', $error->schemeName);
+            $this->assertSame('http/bearer', $error->schemeType);
+            $this->assertSame('Authorization header', $error->location);
+        }
+    }
+
+    /**
+     * SEC-16 anti-test: 'Bearer' alone (no separator, no token) must
+     * not satisfy the validation — the regex requires \s+ after the
+     * scheme word.
+     */
+    #[Test]
+    public function http_bearer_scheme_word_without_token_rejected(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('Authorization', 'Bearer');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+    }
+
+    /**
+     * SEC-16: a raw token without the Bearer scheme prefix must not be
+     * accepted as a valid Bearer credential.
+     */
+    #[Test]
+    public function http_bearer_token_without_scheme_prefix_rejected(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('Authorization', 'abc123');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+    }
+
+    /**
+     * SEC-16: Basic auth must not satisfy a Bearer security
+     * requirement even though both share the Authorization header.
+     */
+    #[Test]
+    public function http_bearer_basic_auth_credentials_rejected_for_bearer_requirement(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('Authorization', 'Basic dXNlcjpwYXNz');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        try {
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('bearerAuth', $error->schemeName);
+            $this->assertSame('http/bearer', $error->schemeType);
+            $this->assertSame('Authorization header', $error->location);
+        }
+    }
+
     #[Test]
     public function http_basic_returns_unsupported_scheme_error(): void
     {

@@ -8,13 +8,13 @@ use Duyler\OpenApi\Schema\Model\SecurityScheme;
 use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
 use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 use function is_string;
 use function sprintf;
-use function str_starts_with;
 use function strtolower;
 use function strtoupper;
 
@@ -24,6 +24,7 @@ final readonly class SecurityValidator
 
     public function __construct(
         ?LoggerInterface $logger = null,
+        private readonly PregExecutor $pregExecutor = new PregExecutor(),
     ) {
         $this->logger = $logger ?? new NullLogger();
     }
@@ -125,7 +126,11 @@ final readonly class SecurityValidator
 
         $authorization = $request->getHeaderLine('Authorization');
 
-        if ('' !== $authorization && str_starts_with($authorization, 'Bearer ')) {
+        // RFC 6750 §2.1: Bearer scheme is case-insensitive (BEARER,
+        // Bearer, bearer all valid). RFC 9110 OWS permits one or more
+        // whitespace characters between scheme and token. RFC 6750 §2.1
+        // requires a non-empty b64token after the scheme prefix.
+        if ('' !== $authorization && 1 === $this->pregExecutor->match('/^bearer\s+\S+/i', $authorization)) {
             return null;
         }
 
