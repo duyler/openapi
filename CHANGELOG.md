@@ -87,6 +87,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   header like `Bearer ` (without token) is rejected. The regex `^bearer\s+\S+` replaces
   the case-sensitive `str_starts_with` check, routed through PregExecutor for backtrack
   protection (SEC-16).
+- `JsonBodyParser::parse()` and `JsonParser::parseContent()` now reject JSON
+  payloads containing invalid UTF-8 byte sequences via `mb_check_encoding()`
+  before `json_decode()` is invoked, throwing
+  `Duyler\OpenApi\Validator\Exception\InvalidUtf8Exception`. The check runs
+  after BOM strip and before the empty-body short-circuit in
+  `JsonBodyParser`, matching the RFC 8259 §8.1 requirement that JSON be
+  UTF-8. PHP's `json_decode()` does not enforce UTF-8 validity on all
+  sequences (notably overlong encodings such as `\xC0\x80` on older PHP
+  versions), so explicit validation is required (closes SEC-17).
+- `YamlParser::parseContent()` now enforces a size cap (default 1 MB) before
+  invoking `Symfony\Component\Yaml\Yaml::parse()` and a nesting depth cap
+  (default 100) after parsing, throwing
+  `Duyler\OpenApi\Validator\Exception\SpecTooLargeException` on overflow.
+  Defends against billion-laughs-style YAML that can cause stack overflow or
+  OOM during parsing (closes SEC-18). New builder methods
+  `withMaxSpecSize(int $bytes)` and `withMaxSpecDepth(int $depth)` provide
+  explicit overrides; defaults are exposed as
+  `YamlParser::DEFAULT_MAX_SPEC_BYTES` and `YamlParser::DEFAULT_MAX_SPEC_DEPTH`.
+  The `OpenApiBuilder::__construct` is no longer `final` so subclasses can
+  accept additional constructor parameters via LSP-compatible signatures;
+  the constructor body that initialises `OpenApiBuildContext` is unchanged.
 
 ## [0.5.0] - 2026-07-18
 

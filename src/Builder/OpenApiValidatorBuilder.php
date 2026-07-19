@@ -40,6 +40,8 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
+use Duyler\OpenApi\Validator\Exception\InvalidUtf8Exception;
+use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
 use Duyler\OpenApi\Validator\Response\Exception\TooManyRecordsException;
 
 use function dirname;
@@ -413,6 +415,52 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(maxStreamingRecords: $max));
     }
 
+    /**
+     * Override the maximum allowed size, in bytes, for an OpenAPI spec
+     * payload parsed by YamlParser. Specs larger than this cap are rejected
+     * before YAML parsing begins, defending against OOM on
+     * attacker-controlled or accidentally oversized specs. The default is
+     * 1 MB (YamlParser::DEFAULT_MAX_SPEC_BYTES) and is sized to accept
+     * typical OpenAPI documents including the bundled petstore spec.
+     *
+     * @param int $bytes Positive integer size in bytes; values <= 0 raise
+     *                   InvalidArgumentException because they would either
+     *                   reject every spec (0) or compare nonsensically
+     *                   against content length (negative).
+     */
+    public function withMaxSpecSize(int $bytes): self
+    {
+        if ($bytes <= 0) {
+            throw new InvalidArgumentException(
+                'Max spec size must be a positive integer',
+            );
+        }
+
+        return $this->with(new BuilderConfig(maxSpecSizeBytes: $bytes));
+    }
+
+    /**
+     * Override the maximum allowed nesting depth for an OpenAPI spec payload
+     * parsed by YamlParser. Specs whose nesting exceeds this cap are rejected
+     * after parsing, defending against billion-laughs-style YAML that can
+     * cause stack overflow. The default is 100 (YamlParser::DEFAULT_MAX_SPEC_DEPTH).
+     *
+     * @param int $depth Positive integer depth cap; values <= 0 raise
+     *                  InvalidArgumentException because they would either
+     *                  reject every spec (0) or compare nonsensically
+     *                  against depth (negative).
+     */
+    public function withMaxSpecDepth(int $depth): self
+    {
+        if ($depth <= 0) {
+            throw new InvalidArgumentException(
+                'Max spec depth must be a positive integer',
+            );
+        }
+
+        return $this->with(new BuilderConfig(maxSpecDepth: $depth));
+    }
+
     public function build(): OpenApiValidatorInterface
     {
         $document = $this->loadSpec();
@@ -605,7 +653,11 @@ final readonly class OpenApiValidatorBuilder
             $deprecationLogger = new DeprecationLogger($this->config->logger ?? new NullLogger(), $this->config->reportDeprecated ?? true);
 
             if ('yaml' === $this->config->specType) {
-                $parser = new YamlParser($deprecationLogger);
+                $parser = new YamlParser(
+                    $deprecationLogger,
+                    $this->config->maxSpecSizeBytes ?? YamlParser::DEFAULT_MAX_SPEC_BYTES,
+                    $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
+                );
 
                 return $parser->parse($content);
             }
@@ -617,6 +669,8 @@ final readonly class OpenApiValidatorBuilder
             }
 
             throw new BuilderException(sprintf('Unsupported spec type: %s', $this->config->specType ?? 'none'));
+        } catch (InvalidUtf8Exception|SpecTooLargeException $e) {
+            throw $e;
         } catch (Exception $e) {
             throw new BuilderException(
                 sprintf('Failed to parse spec: %s', $e->getMessage()),

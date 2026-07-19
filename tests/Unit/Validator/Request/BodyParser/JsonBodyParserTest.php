@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Request\BodyParser;
 
+use Duyler\OpenApi\Validator\Exception\InvalidUtf8Exception;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
 use JsonException;
 use PHPUnit\Framework\Attributes\Test;
@@ -108,5 +109,54 @@ final class JsonBodyParserTest extends TestCase
         $body = 'null';
 
         $this->assertNull($this->parser->parse($body));
+    }
+
+    #[Test]
+    public function parse_invalid_utf8_json_throws_invalid_utf8_exception(): void
+    {
+        $body = "{\"key\":\"\xC0\x80\"}";
+
+        $this->expectException(InvalidUtf8Exception::class);
+        $this->expectExceptionMessage('invalid UTF-8');
+
+        $this->parser->parse($body);
+    }
+
+    #[Test]
+    public function parse_invalid_utf8_with_bom_stripped_first_throws_invalid_utf8_exception(): void
+    {
+        $body = "\xEF\xBB\xBF" . "{\"key\":\"\xFF\xFE\"}";
+
+        $this->expectException(InvalidUtf8Exception::class);
+
+        $this->parser->parse($body);
+    }
+
+    #[Test]
+    public function parse_valid_utf8_json_accepted(): void
+    {
+        $body = '{"key":"héllo wörld — 中文 — 🎉"}';
+
+        $result = $this->parser->parse($body);
+
+        $this->assertSame(['key' => 'héllo wörld — 中文 — 🎉'], $result);
+    }
+
+    #[Test]
+    public function parse_iso_latin_1_byte_sequence_rejected(): void
+    {
+        $body = "{\"key\":\"\xE9\"}";
+
+        $this->expectException(InvalidUtf8Exception::class);
+
+        $this->parser->parse($body);
+    }
+
+    #[Test]
+    public function parse_bom_followed_by_empty_returns_null(): void
+    {
+        $result = $this->parser->parse("\xEF\xBB\xBF");
+
+        $this->assertNull($result);
     }
 }

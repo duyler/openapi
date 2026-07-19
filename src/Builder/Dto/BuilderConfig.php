@@ -41,6 +41,8 @@ final readonly class BuilderConfig
         public readonly ?LoggerInterface $securityVerboseLogger = null,
         public readonly ?int $maxStreamingRecords = null,
         public readonly ?bool $strictCoercion = null,
+        public readonly ?int $maxSpecSizeBytes = null,
+        public readonly ?int $maxSpecDepth = null,
     ) {}
 
     public function merge(self $overrides): self
@@ -72,6 +74,8 @@ final readonly class BuilderConfig
             securityVerboseLogger: $overrides->securityVerboseLogger ?? $this->securityVerboseLogger,
             maxStreamingRecords: $overrides->maxStreamingRecords ?? $this->maxStreamingRecords,
             strictCoercion: $overrides->strictCoercion ?? $this->strictCoercion,
+            maxSpecSizeBytes: $overrides->maxSpecSizeBytes ?? $this->maxSpecSizeBytes,
+            maxSpecDepth: $overrides->maxSpecDepth ?? $this->maxSpecDepth,
         );
     }
 }
