@@ -245,6 +245,19 @@ final readonly class Schema implements JsonSerializable
     }
 
     /**
+     * JSON Schema 2020-12 §8.2.3: when $ref is present, sibling keywords
+     * are evaluated alongside the referenced schema. This method returns
+     * a new schema where $sibling's constraints are merged into $this
+     * (the resolved schema) per the strategy documented in
+     * {@see SchemaSiblingMerger}. The $ref family is dropped because the
+     * merger is invoked after reference resolution.
+     */
+    public function withSibling(Schema $sibling): self
+    {
+        return (new SchemaSiblingMerger())->merge($this, $sibling);
+    }
+
+    /**
      * Returns the string-constraint sub-DTO grouping minLength / maxLength /
      * pattern. Returns null when no string constraint is declared.
      *

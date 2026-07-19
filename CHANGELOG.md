@@ -119,6 +119,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `FileExternalRefResolver`, per RFC 6901 section 3 (SPEC-01). Previously,
   `$ref: '#/paths/~1user/get'` would fail to resolve because the literal
   `/user` key was never matched.
+- `$ref` siblings are now evaluated alongside the resolved schema per JSON
+  Schema 2020-12 section 8.2.3. Previously, sibling keywords like `description`,
+  `title`, `minLength`, `enum`, and `properties` next to a `$ref` were silently
+  ignored (SPEC-02). A new `SchemaSiblingMerger` class merges resolved and sibling
+  schemas with documented merge strategies (sibling-wins for scalars, union for
+  required/allOf, intersection for enum, shallow merge for properties/maps).
 
 ## [0.5.0] - 2026-07-18
 
