@@ -179,6 +179,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (e.g., `color[R]=100&color[G]=200`) via the existing QueryParser
   rather than attempting non-spec-compliant JSON decoding in
   ParameterDeserializer (SPEC-07).
+- `SchemaSiblingMerger::merge()` now aligns scalar bounds, `nullable`,
+  and composition keywords with JSON Schema 2020-12 §8.2.3 ALL OF
+  semantics. Lower bounds (`minLength`, `minItems`, `minProperties`,
+  `minimum`, `exclusiveMinimum`) use stricter-wins (`max`); upper bounds
+  (`maxLength`, `maxItems`, `maxProperties`, `maximum`, `exclusiveMaximum`)
+  use stricter-wins (`min`); `nullable` uses logical AND so a side that
+  forbids null prevails; `anyOf` / `oneOf` declared on both sides are
+  wrapped into a nested `allOf` entry so the merged result is
+  `(resolved composition) AND (sibling composition)` instead of the wider
+  disjunction produced by concatenation; `prefixItems` is now merged
+  per-index via recursive `merge()` calls with leftover items from the
+  longer side appended unchanged. `allOf` concatenation behaviour is
+  preserved (semantically equivalent to ALL OF) (SPEC-02B).
 
 ## [0.5.0] - 2026-07-18
 

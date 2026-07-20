@@ -6,28 +6,48 @@ namespace Duyler\OpenApi\Schema\Model;
 
 use Duyler\OpenApi\Validator\Schema\JsonEquals;
 
+use function array_filter;
 use function array_merge;
 use function array_unique;
 use function array_values;
 use function array_uintersect;
+use function count;
+use function max;
+use function min;
+use function array_slice;
 
 /**
  * Merges a resolved schema with its sibling schema per JSON Schema
  * 2020-12 §8.2.3: when $ref is present, sibling keywords are evaluated
- * alongside the referenced schema (not ignored as in draft-7).
+ * alongside the referenced schema (not ignored as in draft-7), treating
+ * the combined result as an `allOf` of the referenced schema and the
+ * sibling schema.
  *
  * Merge strategy:
- * - Scalars (format/type/pattern/numeric and length bounds/...): sibling
- *   wins when set; resolved value is inherited otherwise.
- * - Booleans (deprecated/readOnly/writeOnly/nullable/hasDefault/hasConst):
- *   logical OR — a sibling `true` tightens constraints, `false` cannot
- *   relax the resolved schema.
+ * - Scalars (format/type/pattern/...): sibling wins when set; resolved
+ *   value is inherited otherwise.
+ * - Scalar bounds (minLength / maxLength / minItems / maxItems /
+ *   minProperties / maxProperties / minimum / maximum / exclusiveMinimum /
+ *   exclusiveMaximum): stricter-wins — lower bounds use `max`, upper
+ *   bounds use `min`. Either side being null inherits the other side.
+ * - nullable: logical AND — both sides must permit null for null to be
+ *   permitted (constraint that forbids null wins).
+ * - Other booleans (deprecated / readOnly / writeOnly / hasDefault /
+ *   hasConst): logical OR — a sibling `true` tightens constraints.
  * - default / const: sibling wins when its has* flag is true.
  * - required: array union (both required lists apply).
  * - enum: array intersection via {@see JsonEquals} comparator (both enum
  *   sets must accept the value). Empty intersection is preserved as an
  *   empty list so downstream EnumValidator rejects every value.
- * - allOf / anyOf / oneOf / prefixItems: array concatenation.
+ * - allOf: array concatenation (semantically equivalent to ALL OF).
+ * - anyOf / oneOf: when only one side declares the keyword, that value is
+ *   inherited; when both sides declare it, each side is wrapped into a
+ *   single-schema entry and the two wrappers are appended to `allOf` so
+ *   the combined result is `(A OR B) AND (C OR D)` instead of the wider
+ *   `A OR B OR C OR D` produced by concatenation.
+ * - prefixItems: per-index recursive merge — each overlapping index pair
+ *   is merged via {@see merge()}, leftover items from the longer side are
+ *   appended unchanged.
  * - properties / patternProperties / dependentSchemas / examples: shallow
  *   per-key merge — sibling entry wins on key collision, deep per-property
  *   merge is a future enhancement.
@@ -45,6 +65,19 @@ final readonly class SchemaSiblingMerger
 {
     public function merge(Schema $resolved, Schema $sibling): Schema
     {
+        $wrappedAnyOf = $this->wrapCompositionInAllOf($resolved->anyOf, $sibling->anyOf, 'anyOf');
+        $wrappedOneOf = $this->wrapCompositionInAllOf($resolved->oneOf, $sibling->oneOf, 'oneOf');
+
+        $compositionsToAdd = array_filter(
+            [$wrappedAnyOf, $wrappedOneOf],
+            static fn(?array $wrapped): bool => null !== $wrapped,
+        );
+
+        $allOf = $this->mergeSchemaList($resolved->allOf, $sibling->allOf);
+        if ([] !== $compositionsToAdd) {
+            $allOf = array_merge($allOf ?? [], ...$compositionsToAdd);
+        }
+
         return new Schema(
             ref: null,
             refSummary: null,
@@ -58,33 +91,33 @@ final readonly class SchemaSiblingMerger
             readOnly: $sibling->readOnly || $resolved->readOnly,
             writeOnly: $sibling->writeOnly || $resolved->writeOnly,
             type: $sibling->type ?? $resolved->type,
-            nullable: $sibling->nullable || $resolved->nullable,
+            nullable: $sibling->nullable && $resolved->nullable,
             const: $sibling->hasConst ? $sibling->const : $resolved->const,
             hasConst: $sibling->hasConst || $resolved->hasConst,
             multipleOf: $sibling->multipleOf ?? $resolved->multipleOf,
-            maximum: $sibling->maximum ?? $resolved->maximum,
-            exclusiveMaximum: $sibling->exclusiveMaximum ?? $resolved->exclusiveMaximum,
-            minimum: $sibling->minimum ?? $resolved->minimum,
-            exclusiveMinimum: $sibling->exclusiveMinimum ?? $resolved->exclusiveMinimum,
-            maxLength: $sibling->maxLength ?? $resolved->maxLength,
-            minLength: $sibling->minLength ?? $resolved->minLength,
+            maximum: $this->mergeUpperBound($resolved->maximum, $sibling->maximum),
+            exclusiveMaximum: $this->mergeUpperBound($resolved->exclusiveMaximum, $sibling->exclusiveMaximum),
+            minimum: $this->mergeLowerBound($resolved->minimum, $sibling->minimum),
+            exclusiveMinimum: $this->mergeLowerBound($resolved->exclusiveMinimum, $sibling->exclusiveMinimum),
+            maxLength: $this->mergeUpperBound($resolved->maxLength, $sibling->maxLength),
+            minLength: $this->mergeLowerBound($resolved->minLength, $sibling->minLength),
             pattern: $sibling->pattern ?? $resolved->pattern,
-            maxItems: $sibling->maxItems ?? $resolved->maxItems,
-            minItems: $sibling->minItems ?? $resolved->minItems,
+            maxItems: $this->mergeUpperBound($resolved->maxItems, $sibling->maxItems),
+            minItems: $this->mergeLowerBound($resolved->minItems, $sibling->minItems),
             uniqueItems: $sibling->uniqueItems ?? $resolved->uniqueItems,
-            maxProperties: $sibling->maxProperties ?? $resolved->maxProperties,
-            minProperties: $sibling->minProperties ?? $resolved->minProperties,
+            maxProperties: $this->mergeUpperBound($resolved->maxProperties, $sibling->maxProperties),
+            minProperties: $this->mergeLowerBound($resolved->minProperties, $sibling->minProperties),
             required: $this->mergeStringList($resolved->required, $sibling->required),
-            allOf: $this->mergeSchemaList($resolved->allOf, $sibling->allOf),
-            anyOf: $this->mergeSchemaList($resolved->anyOf, $sibling->anyOf),
-            oneOf: $this->mergeSchemaList($resolved->oneOf, $sibling->oneOf),
+            allOf: $allOf,
+            anyOf: $this->mergeCompositionField($resolved->anyOf, $sibling->anyOf),
+            oneOf: $this->mergeCompositionField($resolved->oneOf, $sibling->oneOf),
             not: $sibling->not ?? $resolved->not,
             discriminator: $sibling->discriminator ?? $resolved->discriminator,
             properties: $this->mergeSchemaMap($resolved->properties, $sibling->properties),
             additionalProperties: $this->mergeSchemaOrBool($resolved->additionalProperties, $sibling->additionalProperties),
             unevaluatedProperties: $this->mergeSchemaOrBool($resolved->unevaluatedProperties, $sibling->unevaluatedProperties),
             items: $sibling->items ?? $resolved->items,
-            prefixItems: $this->mergeSchemaList($resolved->prefixItems, $sibling->prefixItems),
+            prefixItems: $this->mergePrefixItems($resolved->prefixItems, $sibling->prefixItems),
             contains: $sibling->contains ?? $resolved->contains,
             minContains: $sibling->minContains ?? $resolved->minContains,
             maxContains: $sibling->maxContains ?? $resolved->maxContains,
@@ -232,5 +265,152 @@ final readonly class SchemaSiblingMerger
                 ? 0
                 : ($a <=> $b),
         ));
+    }
+
+    /**
+     * ALL OF semantics for a lower scalar bound: the stricter (larger)
+     * value wins. Null on either side inherits the other side so an
+     * absent constraint cannot relax the resolved one.
+     *
+     * @template T of int|float
+     *
+     * @param T|null $resolved
+     * @param T|null $sibling
+     *
+     * @return T|null
+     */
+    private function mergeLowerBound(int|float|null $resolved, int|float|null $sibling): int|float|null
+    {
+        if (null === $resolved) {
+            return $sibling;
+        }
+
+        if (null === $sibling) {
+            return $resolved;
+        }
+
+        return max($resolved, $sibling);
+    }
+
+    /**
+     * ALL OF semantics for an upper scalar bound: the stricter (smaller)
+     * value wins. Null on either side inherits the other side so an
+     * absent constraint cannot relax the resolved one.
+     *
+     * @template T of int|float
+     *
+     * @param T|null $resolved
+     * @param T|null $sibling
+     *
+     * @return T|null
+     */
+    private function mergeUpperBound(int|float|null $resolved, int|float|null $sibling): int|float|null
+    {
+        if (null === $resolved) {
+            return $sibling;
+        }
+
+        if (null === $sibling) {
+            return $resolved;
+        }
+
+        return min($resolved, $sibling);
+    }
+
+    /**
+     * Wraps a pair of anyOf/oneOf declarations into a two-element schema
+     * list destined for `allOf`, so the combined result reads as
+     * `(resolved composition) AND (sibling composition)` instead of the
+     * wider disjunction produced by concatenation.
+     *
+     * Returns null when only one side (or neither) declares the keyword,
+     * signalling the caller to keep the original anyOf/oneOf field.
+     *
+     * @param ?list<Schema> $resolvedComposition
+     * @param ?list<Schema> $siblingComposition
+     *
+     * @return ?list<Schema>
+     */
+    private function wrapCompositionInAllOf(
+        ?array $resolvedComposition,
+        ?array $siblingComposition,
+        string $keyword,
+    ): ?array {
+        if (null === $resolvedComposition || null === $siblingComposition) {
+            return null;
+        }
+
+        return match ($keyword) {
+            'anyOf' => [
+                new Schema(anyOf: $resolvedComposition),
+                new Schema(anyOf: $siblingComposition),
+            ],
+            'oneOf' => [
+                new Schema(oneOf: $resolvedComposition),
+                new Schema(oneOf: $siblingComposition),
+            ],
+        };
+    }
+
+    /**
+     * Reduces the anyOf/oneOf field after {@see wrapCompositionInAllOf}
+     * has decided whether the keyword survives on the merged schema.
+     * Returns null when both sides declared the keyword (the constraint
+     * has been relocated into `allOf`); otherwise inherits the non-null
+     * side.
+     *
+     * @param ?list<Schema> $resolvedComposition
+     * @param ?list<Schema> $siblingComposition
+     *
+     * @return ?list<Schema>
+     */
+    private function mergeCompositionField(?array $resolvedComposition, ?array $siblingComposition): ?array
+    {
+        if (null !== $resolvedComposition && null !== $siblingComposition) {
+            return null;
+        }
+
+        return $siblingComposition ?? $resolvedComposition;
+    }
+
+    /**
+     * ALL OF semantics for `prefixItems` (positional tuple validation):
+     * each overlapping index pair is merged recursively via {@see merge()};
+     * leftover items from the longer side are appended unchanged so the
+     * positional order is preserved.
+     *
+     * @param ?list<Schema> $resolved
+     * @param ?list<Schema> $sibling
+     *
+     * @return ?list<Schema>
+     */
+    private function mergePrefixItems(?array $resolved, ?array $sibling): ?array
+    {
+        if (null === $sibling) {
+            return $resolved;
+        }
+
+        if (null === $resolved) {
+            return $sibling;
+        }
+
+        $resolvedCount = count($resolved);
+        $siblingCount = count($sibling);
+        $overlap = min($resolvedCount, $siblingCount);
+
+        $merged = [];
+        for ($i = 0; $i < $overlap; ++$i) {
+            $merged[] = $this->merge($resolved[$i], $sibling[$i]);
+        }
+
+        if ($resolvedCount > $overlap) {
+            return array_merge($merged, array_slice($resolved, $overlap));
+        }
+
+        if ($siblingCount > $overlap) {
+            return array_merge($merged, array_slice($sibling, $overlap));
+        }
+
+        return $merged;
     }
 }
