@@ -1252,4 +1252,93 @@ final class ResponseHeadersValidatorTest extends TestCase
 
         $this->validator->validate($headers, $headerSchemas);
     }
+
+    #[Test]
+    public function response_header_number_rejects_precision_loss(): void
+    {
+        $headers = ['X-Total' => '99999999999999999999999999'];
+        $headerSchemas = new Headers([
+            'X-Total' => new Header(
+                schema: new Schema(type: 'number'),
+            ),
+        ]);
+
+        $caught = null;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+        } catch (TypeMismatchError $e) {
+            $caught = $e;
+        }
+
+        self::assertInstanceOf(TypeMismatchError::class, $caught);
+        self::assertStringContainsString('precision', $caught->getMessage());
+        self::assertSame('X-Total', $caught->dataPath());
+    }
+
+    #[Test]
+    public function response_header_number_accepts_valid_float(): void
+    {
+        $headers = ['X-Total' => '3.14'];
+        $headerSchemas = new Headers([
+            'X-Total' => new Header(
+                schema: new Schema(type: 'number'),
+            ),
+        ]);
+
+        $this->validator->validate($headers, $headerSchemas);
+
+        self::assertTrue(true);
+    }
+
+    #[Test]
+    public function response_header_number_accepts_integer_value(): void
+    {
+        $headers = ['X-Total' => '42'];
+        $headerSchemas = new Headers([
+            'X-Total' => new Header(
+                schema: new Schema(type: 'number'),
+            ),
+        ]);
+
+        $this->validator->validate($headers, $headerSchemas);
+
+        self::assertTrue(true);
+    }
+
+    #[Test]
+    public function response_header_number_rejects_extreme_exponent(): void
+    {
+        $headers = ['X-Total' => '1e999999999'];
+        $headerSchemas = new Headers([
+            'X-Total' => new Header(
+                schema: new Schema(type: 'number'),
+            ),
+        ]);
+
+        $caught = null;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+        } catch (TypeMismatchError $e) {
+            $caught = $e;
+        }
+
+        self::assertInstanceOf(TypeMismatchError::class, $caught);
+        self::assertStringContainsString('representable range', $caught->getMessage());
+        self::assertSame('X-Total', $caught->dataPath());
+    }
+
+    #[Test]
+    public function response_header_number_accepts_large_but_valid_exponent(): void
+    {
+        $headers = ['X-Total' => '1e300'];
+        $headerSchemas = new Headers([
+            'X-Total' => new Header(
+                schema: new Schema(type: 'number'),
+            ),
+        ]);
+
+        $this->validator->validate($headers, $headerSchemas);
+
+        self::assertTrue(true);
+    }
 }

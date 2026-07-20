@@ -206,7 +206,7 @@ abstract readonly class AbstractCoercer
                 return $value;
             }
 
-            return self::castStringToFloatOrFail($value);
+            return NumberStringNormalizer::castStringToFloatOrFail($value);
         }
 
         if (is_bool($value)) {
@@ -237,7 +237,7 @@ abstract readonly class AbstractCoercer
                 );
             }
 
-            return self::castStringToFloatOrFail($value);
+            return NumberStringNormalizer::castStringToFloatOrFail($value);
         }
 
         if (is_bool($value)) {
@@ -260,29 +260,5 @@ abstract readonly class AbstractCoercer
 
         /** @var array|null $value */
         return $value;
-    }
-
-    /**
-     * Casts a numeric string to float and rejects values that lose precision
-     * when round-tripped through IEEE-754 double. Guards SEC-15 magic-hash
-     * collisions in both strict and non-strict coercion paths.
-     */
-    private static function castStringToFloatOrFail(string $value): float
-    {
-        $float = (float) $value;
-        $inputCanonical = NumberStringNormalizer::canonicalize($value);
-        $roundtripCanonical = NumberStringNormalizer::canonicalize((string) $float);
-
-        if (null !== $inputCanonical && null !== $roundtripCanonical && $inputCanonical !== $roundtripCanonical) {
-            throw new TypeMismatchError(
-                expected: 'number',
-                actual: $value,
-                dataPath: '',
-                schemaPath: '/type',
-                reason: 'String value loses precision when converted to float',
-            );
-        }
-
-        return $float;
     }
 }

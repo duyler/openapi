@@ -107,6 +107,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exactly as a double, in both strict and non-strict paths (SEC-15). New
   `disableStrictCoercion()` builder method provides the opt-out for legacy
   loose-cast behavior.
+- `ResponseHeadersValidator::coerceToNumber` now rejects numeric strings
+  that lose precision when round-tripped through IEEE-754 double, extending
+  SEC-15 protection to response headers (RESPONSE-HEADERS-COERCION). A
+  header like `X-Total: "99999999999999999999999999"` now throws
+  `TypeMismatchError` with reason `'String value loses precision when
+  converted to float'` instead of silently collapsing to `1.0E+26`. A
+  second guard rejects scientific-notation values whose exponent exceeds
+  the representable range of a double (e.g. `1e999999999`), preventing
+  algorithmic-DoS via unbounded `str_repeat` allocation in the
+  canonical-form expansion; the bound is `abs(exponent) > 320` (PHP_FLOAT_MAX
+  is approximately `1.8e308`). The precision-loss guard is now shared, so
+  body and header coercion cannot drift on SEC-15 precision semantics.
+  The `is_numeric` short-circuit and the `coerceToInteger` /
+  `coerceToBoolean` paths are unchanged.
 - `http/bearer` Authorization scheme matching is now case-insensitive per RFC 6750
   §2.1 (accepts `BEARER`, `Bearer`, `bearer`, `BeArEr` etc.), and a trailing-space-only
   header like `Bearer ` (without token) is rejected. The regex `^bearer\s+\S+` replaces

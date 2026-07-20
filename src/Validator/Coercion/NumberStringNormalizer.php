@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Coercion;
 
+use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+
+use function abs;
 use function explode;
 use function ltrim;
 use function preg_match;
@@ -46,6 +49,57 @@ final readonly class NumberStringNormalizer
         $expanded = self::expandScientificNotation($unsigned);
 
         return self::normalizeDecimal($sign, $expanded);
+    }
+
+    /**
+     * Casts a numeric string to float and rejects values that lose precision
+     * when round-tripped through IEEE-754 double. Detects precision loss
+     * visible at the string representation level (e.g., 17+ significant
+     * digits). Does NOT prevent magic-hash type-juggling collisions for the
+     * 0eNNN pattern (both inputs canonicalize to "0" and pass) - that
+     * requires strict equality in downstream comparisons, not coercion-time
+     * rejection.
+     *
+     * Also rejects scientific-notation values whose exponent exceeds the
+     * representable range of a double BEFORE invoking canonicalize, which
+     * would otherwise expand them via str_repeat and trigger algorithmic
+     * DoS (e.g. `1e999999999` would allocate ~1 GB of zeros).
+     *
+     * @throws TypeMismatchError when the input cannot be represented as float
+     *     without precision loss, or when its scientific-notation exponent
+     *     exceeds the representable range of a double.
+     */
+    public static function castStringToFloatOrFail(string $value, string $dataPath = ''): float
+    {
+        if (1 === preg_match('/^[+-]?\\d+(?:\\.\\d+)?[eE](?<exponent>[+-]?\\d+)$/', $value, $matches)) {
+            $exponent = (int) $matches['exponent'];
+            // PHP_FLOAT_MAX ~ 1.8e308; |exp| > 320 is unrepresentable as double.
+            if (abs($exponent) > 320) {
+                throw new TypeMismatchError(
+                    expected: 'number',
+                    actual: $value,
+                    dataPath: $dataPath,
+                    schemaPath: '/type',
+                    reason: 'Numeric value is outside the representable range of a double',
+                );
+            }
+        }
+
+        $float = (float) $value;
+        $inputCanonical = self::canonicalize($value);
+        $roundtripCanonical = self::canonicalize((string) $float);
+
+        if (null !== $inputCanonical && null !== $roundtripCanonical && $inputCanonical !== $roundtripCanonical) {
+            throw new TypeMismatchError(
+                expected: 'number',
+                actual: $value,
+                dataPath: $dataPath,
+                schemaPath: '/type',
+                reason: 'String value loses precision when converted to float',
+            );
+        }
+
+        return $float;
     }
 
     private static function expandScientificNotation(string $value): string
