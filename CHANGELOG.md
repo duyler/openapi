@@ -229,6 +229,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fixed in SPEC-03. List arrays (`[1,2]` vs `[2,1]`) remain distinct
   because array order is significant per §4.2.2; the canonicalizer
   recurses into list elements but preserves their positions.
+- Documentation: `.ai/guides/process-violations-review-work.md` now explicitly
+  forbids working-tree mutation during review-work (cp/sed/patch/git checkout
+  on src/ or tests/). Parallel review-work agents share the working tree;
+  temporary mutations for anti-test experiments are visible to all agents and
+  caused false FAIL verdicts in the partition-1 task-02 review session.
+  Documented alternatives: `git worktree`, throwaway scripts in the pre-approved
+  temp dir, and pure-read `git stash`/`git diff`/`git show`.
+  (RACE-CONDITION-PROCESS)
 
 ### Changed
 - BC: `TypeCoercer::coerce()` now defaults to strict coercion (`$strict = true`). Third-party callers that relied on the implicit non-strict default MUST pass `false` explicitly via `disableStrictCoercion()` builder method or by passing the fourth argument. (TYPECOERCER-DEFAULT-STRICT)
