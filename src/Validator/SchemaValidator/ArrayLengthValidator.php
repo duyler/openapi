@@ -17,6 +17,8 @@ use Override;
 
 use JsonException;
 
+use function array_is_list;
+use function array_map;
 use function bin2hex;
 use function count;
 use function hash;
@@ -28,10 +30,12 @@ use function is_nan;
 use function is_resource;
 use function is_string;
 use function json_encode;
+use function ksort;
 use function random_bytes;
 use function serialize;
 
 use const JSON_THROW_ON_ERROR;
+use const SORT_STRING;
 
 final readonly class ArrayLengthValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
@@ -259,9 +263,42 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
     private function encodeArrayKey(array $item): string
     {
         try {
-            return json_encode($item, JSON_THROW_ON_ERROR);
+            return json_encode(
+                $this->canonicalizeForEncoding($item),
+                JSON_THROW_ON_ERROR,
+            );
         } catch (JsonException) {
             return serialize($item);
         }
+    }
+
+    /**
+     * Recursively sort associative array keys to produce an order-independent
+     * canonical form. JSON Schema 2020-12 §4.2.2 instance equality treats
+     * object keys as unordered, so {"a":1,"b":2} and {"b":2,"a":1} MUST hash
+     * to the same key in {@see encodeArrayKey}. List arrays preserve element
+     * order (arrays are ordered in §4.2.2).
+     *
+     * @param array<array-key, mixed> $item
+     *
+     * @return array<array-key, mixed>
+     */
+    private function canonicalizeForEncoding(array $item): array
+    {
+        if (array_is_list($item)) {
+            return array_map(
+                fn(mixed $value): mixed => is_array($value) ? $this->canonicalizeForEncoding($value) : $value,
+                $item,
+            );
+        }
+
+        $canonical = array_map(
+            fn(mixed $value): mixed => is_array($value) ? $this->canonicalizeForEncoding($value) : $value,
+            $item,
+        );
+
+        ksort($canonical, SORT_STRING);
+
+        return $canonical;
     }
 }

@@ -192,6 +192,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per-index via recursive `merge()` calls with leftover items from the
   longer side appended unchanged. `allOf` concatenation behaviour is
   preserved (semantically equivalent to ALL OF) (SPEC-02B).
+- `ArrayLengthValidator::encodeArrayKey()` now canonicalizes array keys
+  recursively before `json_encode`, so two JSON objects with identical
+  content but different key order (e.g. `{"a":1,"b":2}` vs `{"b":2,"a":1}`)
+  hash to the same uniqueItems key per JSON Schema 2020-12 §4.2.2 instance
+  equality (SPEC-03B). Previously the `uniqueItems` validator treated them
+  as distinct, producing false negatives on duplicate detection and
+  diverging from the already-canonical `JsonEquals::equals()` behaviour
+  fixed in SPEC-03. List arrays (`[1,2]` vs `[2,1]`) remain distinct
+  because array order is significant per §4.2.2; the canonicalizer
+  recurses into list elements but preserves their positions.
 
 ## [0.5.0] - 2026-07-18
 
