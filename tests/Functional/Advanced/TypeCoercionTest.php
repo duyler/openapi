@@ -424,7 +424,7 @@ YAML;
     {
         $param = new Parameter(schema: new Schema(type: 'boolean'));
 
-        $result = $this->paramCoercer->coerce('maybe', $param, true);
+        $result = $this->paramCoercer->coerce('maybe', $param, true, false);
 
         $this->assertSame(true, $result);
         $this->assertIsBool($result);

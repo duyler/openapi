@@ -86,7 +86,7 @@ final class TypeCoercerTest extends TestCase
             schema: new Schema(type: 'integer'),
         );
 
-        $result = $this->coercer->coerce('1e10', $param, true);
+        $result = $this->coercer->coerce('1e10', $param, true, false);
 
         $this->assertSame('1e10', $result);
         $this->assertIsString($result);
@@ -101,7 +101,7 @@ final class TypeCoercerTest extends TestCase
             schema: new Schema(type: 'integer'),
         );
 
-        $result = $this->coercer->coerce('0x10', $param, true);
+        $result = $this->coercer->coerce('0x10', $param, true, false);
 
         $this->assertSame('0x10', $result);
         $this->assertIsString($result);
@@ -116,7 +116,7 @@ final class TypeCoercerTest extends TestCase
             schema: new Schema(type: 'integer'),
         );
 
-        $result = $this->coercer->coerce('', $param, true);
+        $result = $this->coercer->coerce('', $param, true, false);
 
         $this->assertSame('', $result);
         $this->assertIsString($result);
@@ -366,7 +366,7 @@ final class TypeCoercerTest extends TestCase
             schema: new Schema(type: 'integer'),
         );
 
-        $result = $this->coercer->coerce('123.45', $param, true);
+        $result = $this->coercer->coerce('123.45', $param, true, false);
 
         $this->assertSame('123.45', $result);
         $this->assertIsString($result);
@@ -381,7 +381,7 @@ final class TypeCoercerTest extends TestCase
             schema: new Schema(type: 'boolean'),
         );
 
-        $result = $this->coercer->coerce('random', $param, true);
+        $result = $this->coercer->coerce('random', $param, true, false);
 
         $this->assertTrue($result);
     }
@@ -409,7 +409,7 @@ final class TypeCoercerTest extends TestCase
             schema: new Schema(type: ['integer', 'boolean']),
         );
 
-        $result = $this->coercer->coerce('not-a-number', $param, true);
+        $result = $this->coercer->coerce('not-a-number', $param, true, false);
 
         $this->assertTrue($result);
     }
@@ -423,7 +423,7 @@ final class TypeCoercerTest extends TestCase
             schema: new Schema(type: ['boolean', 'string']),
         );
 
-        $result = $this->coercer->coerce('value', $param, true);
+        $result = $this->coercer->coerce('value', $param, true, false);
 
         $this->assertTrue($result);
     }
@@ -595,7 +595,7 @@ final class TypeCoercerTest extends TestCase
             schema: new Schema(type: ['integer', 'boolean']),
         );
 
-        $result = $this->coercer->coerce('abc', $param, true);
+        $result = $this->coercer->coerce('abc', $param, true, false);
 
         $this->assertTrue($result);
     }
@@ -646,7 +646,7 @@ final class TypeCoercerTest extends TestCase
     }
 
     #[Test]
-    public function coerce_empty_string_to_boolean_true(): void
+    public function coerce_empty_string_to_boolean_false_in_non_strict_mode(): void
     {
         $param = new Parameter(
             name: 'test',
@@ -654,7 +654,7 @@ final class TypeCoercerTest extends TestCase
             schema: new Schema(type: 'boolean'),
         );
 
-        $result = $this->coercer->coerce('', $param, true);
+        $result = $this->coercer->coerce('', $param, true, false);
 
         $this->assertFalse($result);
     }
@@ -668,7 +668,7 @@ final class TypeCoercerTest extends TestCase
             schema: new Schema(type: 'boolean'),
         );
 
-        $result = $this->coercer->coerce('  ', $param, true);
+        $result = $this->coercer->coerce('  ', $param, true, false);
 
         $this->assertTrue($result);
     }
@@ -682,7 +682,7 @@ final class TypeCoercerTest extends TestCase
             schema: new Schema(type: 'boolean'),
         );
 
-        $result = $this->coercer->coerce('2', $param, true);
+        $result = $this->coercer->coerce('2', $param, true, false);
 
         $this->assertTrue($result);
     }
@@ -883,5 +883,32 @@ final class TypeCoercerTest extends TestCase
         $result = $this->coercer->coerce('not-a-number', $param, true, false);
 
         $this->assertSame('not-a-number', $result);
+    }
+
+    #[Test]
+    public function coerce_uses_strict_default_when_argument_omitted(): void
+    {
+        $param = new Parameter(
+            name: 'test',
+            in: 'path',
+            schema: new Schema(type: 'boolean'),
+        );
+
+        $this->expectException(TypeMismatchError::class);
+        $this->coercer->coerce('random', $param, true);
+    }
+
+    #[Test]
+    public function coerce_with_explicit_false_uses_non_strict(): void
+    {
+        $param = new Parameter(
+            name: 'test',
+            in: 'path',
+            schema: new Schema(type: 'boolean'),
+        );
+
+        $result = $this->coercer->coerce('admin', $param, true, false);
+
+        self::assertTrue($result);
     }
 }

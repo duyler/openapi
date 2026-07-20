@@ -439,6 +439,8 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
+`TypeCoercer::coerce()` defaults to strict mode (`$strict = true`). Third-party callers that instantiate `TypeCoercer` directly and omit the fourth argument get strict coercion. To opt out, pass `false` explicitly or use `disableStrictCoercion()` on the builder.
+
 ### Error Formatters
 
 Choose from built-in error formatters or create your own:

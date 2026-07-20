@@ -230,6 +230,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   because array order is significant per §4.2.2; the canonicalizer
   recurses into list elements but preserves their positions.
 
+### Changed
+- BC: `TypeCoercer::coerce()` now defaults to strict coercion (`$strict = true`). Third-party callers that relied on the implicit non-strict default MUST pass `false` explicitly via `disableStrictCoercion()` builder method or by passing the fourth argument. (TYPECOERCER-DEFAULT-STRICT)
+
 ## [0.5.0] - 2026-07-18
 
 This release focuses on defense-in-depth security hardening, spec-compliance

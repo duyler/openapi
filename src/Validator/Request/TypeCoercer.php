@@ -21,9 +21,25 @@ final readonly class TypeCoercer extends AbstractCoercer
 {
     /**
      * @return array<array-key, mixed>|int|string|float|bool|null
+     *
+     * Coerce $value according to $param's schema. When $enabled is false or the
+     * schema has no type, the value is normalised without type conversion.
+     *
+     * Since TYPECOERCER-DEFAULT-STRICT the $strict argument defaults to true:
+     * arbitrary strings no longer silently cast to boolean, and integer
+     * overflow from string input is rejected. Internal callers always pass
+     * $strict explicitly via ParameterValidationConfig::strictCoercion.
+     * Third-party callers that want the legacy lax behaviour MUST pass false
+     * explicitly. Note: the SEC-14 float-to-int overflow guard and the
+     * SEC-15 numeric-string precision-loss guard run unconditionally in
+     * both strict and non-strict modes.
      */
-    public function coerce(mixed $value, Parameter $param, bool $enabled, bool $strict = false): array|int|string|float|bool|null
-    {
+    public function coerce(
+        mixed $value,
+        Parameter $param,
+        bool $enabled,
+        bool $strict = true,
+    ): array|int|string|float|bool|null {
         if (null === $value) {
             if (null !== $param->schema && null !== $param->schema->type) {
                 $types = is_array($param->schema->type) ? $param->schema->type : [$param->schema->type];

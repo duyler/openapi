@@ -599,7 +599,7 @@ YAML;
     {
         $param = new Parameter(schema: new Schema(type: 'boolean'));
 
-        $result = $this->coercer->coerce('', $param, true);
+        $result = $this->coercer->coerce('', $param, true, false);
 
         $this->assertSame(false, $result);
     }
