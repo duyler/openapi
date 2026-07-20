@@ -73,6 +73,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `FileExternalRefResolver` exception messages no longer interpolate absolute
   filesystem paths (closes SEC-08); paths are available only via the opt-in logger
   or the `ExternalRefSecurityException::$ref` property for programmatic access.
+- `UnresolvableRefException::getMessage()` no longer interpolates the
+  attacker-controlled `$ref` value into the message (CWE-209, closes
+  SEC-08-FULL). The ref is preserved on the readonly `$ref` property for
+  programmatic access by trusted code (PSR-3 logger context, Sentry
+  enrichment). Callers that parse `getMessage()` to extract the ref must
+  switch to `$exception->ref` and `$exception->reason`. The `__toString()`
+  override also returns only the safe reason, suppressing class name, file
+  path, and stack trace emitted by default `Exception::__toString()`.
 - Coercion is now strict by default: boolean coercion rejects unknown strings
   like 'admin' or 'foo' instead of silently casting them to true (SEC-13);
   integer coercion detects overflow before `(int)` cast and throws

@@ -8,8 +8,6 @@ use Override;
 use RuntimeException;
 use Throwable;
 
-use function sprintf;
-
 final class UnresolvableRefException extends RuntimeException
 {
     public function __construct(
@@ -19,15 +17,13 @@ final class UnresolvableRefException extends RuntimeException
         ?Throwable $previous = null,
         public readonly ?string $internalTrace = null,
     ) {
-        $message = sprintf(
-            'Cannot resolve $ref "%s": %s',
-            $ref,
-            $reason,
-        );
-
-        parent::__construct($message, $code, $previous);
+        parent::__construct($reason, $code, $previous);
     }
 
+    /**
+     * Returns only the safe reason; suppresses class name, file path, and stack trace
+     * emitted by default Exception::__toString() to prevent PSR-15 middleware leaks.
+     */
     #[Override]
     public function __toString(): string
     {

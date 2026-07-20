@@ -95,9 +95,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "#/invalid/path": Property does not exist',
-        );
+        $this->expectExceptionMessage('Property does not exist');
 
         $this->resolver->resolve("#/invalid/path", $document);
     }
@@ -112,9 +110,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "#/components/schemas/Missing": Value is null',
-        );
+        $this->expectExceptionMessage('Value is null');
 
         $this->resolver->resolve("#/components/schemas/Missing", $document);
     }
@@ -128,10 +124,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "http://example.com/schema": External ref not resolved. '
-            . 'Builtin FileExternalRefResolver allows only',
-        );
+        $this->expectExceptionMessage('External ref not resolved. Builtin FileExternalRefResolver allows only');
 
         $this->resolver->resolve("http://example.com/schema", $document);
     }
@@ -171,9 +164,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "#/openapi": Value is not an object or array',
-        );
+        $this->expectExceptionMessage('Value is not an object or array');
 
         $this->resolver->resolve("#/openapi", $document);
     }
@@ -377,9 +368,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "#/components/schemas/User/nonexistent": Property does not exist',
-        );
+        $this->expectExceptionMessage('Property does not exist');
 
         $this->resolver->resolve(
             "#/components/schemas/User/nonexistent",
@@ -407,9 +396,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "#/components/schemas/User/properties/address": Value is null',
-        );
+        $this->expectExceptionMessage('Value is null');
 
         $this->resolver->resolve(
             "#/components/schemas/User/properties/address",
@@ -426,9 +413,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "#/info/title": Value is not an object or array',
-        );
+        $this->expectExceptionMessage('Value is not an object or array');
 
         $this->resolver->resolve("#/info/title", $document);
     }
@@ -480,9 +465,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "#/components": Value is null',
-        );
+        $this->expectExceptionMessage('Value is null');
 
         $this->resolver->resolve("#/components", $document);
     }
@@ -508,9 +491,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "#/components/schemas/User/properties/tags/0": Value is not an object or array',
-        );
+        $this->expectExceptionMessage('Value is not an object or array');
 
         $this->resolver->resolve(
             "#/components/schemas/User/properties/tags/0",
@@ -1530,10 +1511,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "https://example.com/user.json": External ref not resolved. '
-            . 'Builtin FileExternalRefResolver allows only',
-        );
+        $this->expectExceptionMessage('External ref not resolved. Builtin FileExternalRefResolver allows only');
 
         $this->resolver->resolve("https://example.com/user.json", $document);
     }
