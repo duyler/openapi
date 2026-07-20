@@ -17,6 +17,7 @@ use stdClass;
 
 use const JSON_THROW_ON_ERROR;
 use const PHP_INT_MAX;
+use const PHP_INT_MIN;
 
 #[CoversClass(JsonEquals::class)]
 final class JsonEqualsTest extends TestCase
@@ -130,6 +131,48 @@ final class JsonEqualsTest extends TestCase
     public function int64_neg_max_distinct_from_pos_max(): void
     {
         self::assertFalse(JsonEquals::equals(-9223372036854775807 - 1, PHP_INT_MAX));
+    }
+
+    /**
+     * PHP_INT_MAX-FLOAT-BOUNDARY: `(float) PHP_INT_MAX` rounds to
+     * 9223372036854775808.0 (= PHP_INT_MAX + 1), so naive float equality
+     * would silently collapse two mathematically distinct values. The
+     * safe-integer-range guard rejects the comparison as false instead.
+     */
+    #[Test]
+    public function equals_rejects_int64_max_and_float_int64_max(): void
+    {
+        self::assertFalse(JsonEquals::equals(PHP_INT_MAX, (float) PHP_INT_MAX));
+    }
+
+    #[Test]
+    public function equals_rejects_int64_max_and_rounded_float(): void
+    {
+        self::assertFalse(JsonEquals::equals(PHP_INT_MAX, 9.2233720368547758E+18));
+    }
+
+    #[Test]
+    public function equals_accepts_int_and_float_in_safe_range(): void
+    {
+        self::assertTrue(JsonEquals::equals(1, 1.0));
+    }
+
+    #[Test]
+    public function equals_accepts_negative_int_and_float_in_safe_range(): void
+    {
+        self::assertTrue(JsonEquals::equals(-42, -42.0));
+    }
+
+    #[Test]
+    public function equals_rejects_large_negative_int_and_float(): void
+    {
+        self::assertFalse(JsonEquals::equals(PHP_INT_MIN, (float) PHP_INT_MIN));
+    }
+
+    #[Test]
+    public function equals_int_vs_int_unchanged_for_int64_max(): void
+    {
+        self::assertTrue(JsonEquals::equals(PHP_INT_MAX, PHP_INT_MAX));
     }
 
     // ---- SPEC-04: bool vs int ----
