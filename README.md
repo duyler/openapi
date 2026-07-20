@@ -216,10 +216,12 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
-Specs loaded with `fromYamlString()` or `fromJsonString()` do not have a
-spec directory, so the builder leaves `allowedRoot` unset and only the
-scheme whitelist applies. Use `withExternalRefAllowedRoot()` to opt into
-path-confinement for string-loaded specs. Direct `new RefResolver()`
+Specs loaded with `fromYamlString()` or `fromJsonString()` fail closed at
+`build()` time when the spec contains an external `$ref` (any `$ref` that
+does not start with `#/`) and `withExternalRefAllowedRoot()` has not been
+called. Call `withExternalRefAllowedRoot('/safe/dir')` after the
+from*String method to confine external ref resolution to that directory,
+or remove the external `$ref` from the spec. Direct `new RefResolver()`
 usage without the builder keeps the legacy null-`allowedRoot` behaviour
 (disabled path-traversal check) for backward compatibility; this is
 unsafe for trusted specs and should be replaced by the builder.

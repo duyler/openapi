@@ -27,6 +27,7 @@ use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Dto\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Validation\CallbackValidator;
 use Duyler\OpenApi\Validator\Validation\RequestValidationHandler;
 use Duyler\OpenApi\Validator\Validation\ResponseValidationHandler;
@@ -36,16 +37,29 @@ use Duyler\OpenApi\Validator\Validation\WebhookValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Exception;
 use InvalidArgumentException;
+use JsonException;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
 use Duyler\OpenApi\Validator\Exception\InvalidUtf8Exception;
 use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
+use Duyler\OpenApi\Validator\JsonDepthLimit;
 use Duyler\OpenApi\Validator\Response\Exception\TooManyRecordsException;
+use Symfony\Component\Yaml\Exception\ParseException;
+use Symfony\Component\Yaml\Yaml;
 
 use function dirname;
+use function is_array;
+use function mb_check_encoding;
 use function sprintf;
+use function str_starts_with;
+use function strlen;
+use function is_string;
+
+use function array_key_exists;
+
+use const JSON_THROW_ON_ERROR;
 
 final readonly class OpenApiValidatorBuilder
 {
@@ -440,15 +454,19 @@ final readonly class OpenApiValidatorBuilder
     }
 
     /**
-     * Override the maximum allowed nesting depth for an OpenAPI spec payload
-     * parsed by YamlParser. Specs whose nesting exceeds this cap are rejected
-     * after parsing, defending against billion-laughs-style YAML that can
-     * cause stack overflow. The default is 100 (YamlParser::DEFAULT_MAX_SPEC_DEPTH).
+     * Override the maximum allowed nesting depth for an OpenAPI spec
+     * payload parsed by `YamlParser` or `JsonParser`. Specs whose
+     * nesting exceeds this cap are rejected after parsing, defending
+     * against billion-laughs-style YAML or deeply-nested JSON that can
+     * cause stack overflow or OOM (closes SEC-18 for YAML, extends the
+     * same protection to JSON). The default is 100
+     * (`YamlParser::DEFAULT_MAX_SPEC_DEPTH`) and is sized to accept
+     * typical OpenAPI documents including the bundled petstore spec.
      *
      * @param int $depth Positive integer depth cap; values <= 0 raise
-     *                  InvalidArgumentException because they would either
-     *                  reject every spec (0) or compare nonsensically
-     *                  against depth (negative).
+     *                   InvalidArgumentException because they would either
+     *                   reject every spec (0) or compare nonsensically
+     *                   against depth (negative).
      */
     public function withMaxSpecDepth(int $depth): self
     {
@@ -461,9 +479,20 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(maxSpecDepth: $depth));
     }
 
+    /**
+     * Build the validator from the configured spec. The internal call
+     * order is significant: `loadSpec()` runs first to surface the
+     * canonical parse error via `parseSpec()`, then
+     * `assertExternalRefConfinement()` runs to fail-closed on
+     * string-loaded specs that contain an external `$ref`. The guard
+     * silently passes on a parse failure because `loadSpec()` has
+     * already thrown — do not reorder these calls.
+     */
     public function build(): OpenApiValidatorInterface
     {
         $document = $this->loadSpec();
+
+        $this->assertExternalRefConfinement();
 
         $maxRegexBacktracks = $this->config->maxRegexBacktracks ?? ValidatorConfiguration::DEFAULT_MAX_REGEX_BACKTRACKS;
         $pregExecutor = new PregExecutor($maxRegexBacktracks);
@@ -663,7 +692,10 @@ final readonly class OpenApiValidatorBuilder
             }
 
             if ('json' === $this->config->specType) {
-                $parser = new JsonParser($deprecationLogger);
+                $parser = new JsonParser(
+                    $deprecationLogger,
+                    $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
+                );
 
                 return $parser->parse($content);
             }
@@ -677,6 +709,176 @@ final readonly class OpenApiValidatorBuilder
                 previous: $e,
             );
         }
+    }
+
+    /**
+     * Fail-closed guard for specs loaded via `fromYamlString()` /
+     * `fromJsonString()`: when the parsed spec contains an external
+     * `$ref` (any ref that does not start with `#/`) and the caller has
+     * not opted into path-confinement via `withExternalRefAllowedRoot()`,
+     * the build aborts with a `BuilderException`. File-loaded specs and
+     * specs that explicitly set an allowed root are not affected — the
+     * builtin `FileExternalRefResolver` already confines resolution for
+     * them. Specs that contain only internal JSON pointer refs (`#/...`)
+     * pass through unchanged for backward compatibility.
+     */
+    private function assertExternalRefConfinement(): void
+    {
+        if (null !== $this->config->externalRefAllowedRoot) {
+            return;
+        }
+
+        if (null === $this->config->specContent) {
+            return;
+        }
+
+        $parsedSpec = $this->parseSpecContentAsArray($this->config->specContent);
+        $externalRef = $this->detectExternalRefs($parsedSpec);
+
+        if (null !== $externalRef) {
+            throw new BuilderException(sprintf(
+                'Spec contains external $ref "%s" but externalRefAllowedRoot is not set. '
+                . 'Call withExternalRefAllowedRoot($path) after fromYamlString/fromJsonString, '
+                . 'or remove the external $ref from the spec.',
+                $externalRef,
+            ));
+        }
+    }
+
+    /**
+     * Walk the parsed spec tree and return the first external `$ref`
+     * value found. An external `$ref` is any string value keyed by
+     * `$ref` that does not start with `#/` (the JSON pointer prefix
+     * marking an in-document reference). Discriminator mapping and
+     * defaultMapping values are also treated as external refs because
+     * `DiscriminatorValidator` resolves them through `RefResolver`
+     * exactly like a `$ref`. The recursion is bounded by
+     * `max(maxSpecDepth, ValidationContext::MAX_DEPTH)` as a second
+     * line of defense: the canonical parsers (`YamlParser`,
+     * `JsonParser`) already reject specs deeper than `maxSpecDepth`
+     * at parse time, but this bound ensures the walker never
+     * stack-overflows even if a parser is misconfigured or bypassed.
+     * Returns null when no external ref is present.
+     *
+     * @param array<array-key, mixed> $data
+     */
+    private function detectExternalRefs(array $data, int $depth = 0): ?string
+    {
+        $specDepth = $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH;
+        $maxDepth = max($specDepth, ValidationContext::MAX_DEPTH);
+
+        if ($depth > $maxDepth) {
+            return null;
+        }
+
+        if (array_key_exists('$ref', $data)) {
+            /** @var mixed $ref */
+            $ref = $data['$ref'];
+
+            if (is_string($ref) && !str_starts_with($ref, '#/')) {
+                return $ref;
+            }
+        }
+
+        if (array_key_exists('discriminator', $data)) {
+            /** @var mixed $discriminatorRaw */
+            $discriminatorRaw = $data['discriminator'];
+
+            if (is_array($discriminatorRaw)) {
+                /** @var array<array-key, mixed> $discriminator */
+                $discriminator = $discriminatorRaw;
+
+                if (array_key_exists('defaultMapping', $discriminator)) {
+                    /** @var mixed $defaultMapping */
+                    $defaultMapping = $discriminator['defaultMapping'];
+
+                    if (is_string($defaultMapping) && !str_starts_with($defaultMapping, '#/')) {
+                        return $defaultMapping;
+                    }
+                }
+
+                if (array_key_exists('mapping', $discriminator)) {
+                    /** @var mixed $mappingRaw */
+                    $mappingRaw = $discriminator['mapping'];
+
+                    if (is_array($mappingRaw)) {
+                        /** @var array<array-key, mixed> $mapping */
+                        $mapping = $mappingRaw;
+
+                        foreach ($mapping as $mappingRef) {
+                            /** @var mixed $mappingRef */
+                            if (!is_string($mappingRef)) {
+                                continue;
+                            }
+
+                            if (!str_starts_with($mappingRef, '#/')) {
+                                return $mappingRef;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        foreach ($data as $value) {
+            /** @var mixed $value */
+            if (!is_array($value)) {
+                continue;
+            }
+
+            $nested = $this->detectExternalRefs($value, $depth + 1);
+            if (null !== $nested) {
+                return $nested;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Best-effort parse of the raw spec content into a PHP array. Used
+     * only by {@see assertExternalRefConfinement()} to walk the spec
+     * tree before the `OpenApiValidator` is assembled. Bounded by the
+     * same byte-size cap as `YamlParser` for YAML content and the same
+     * UTF-8 check as `JsonParser` for JSON content. The nesting-depth
+     * cap is enforced inside {@see detectExternalRefs()} rather than
+     * here, because that is where unbounded recursion would otherwise
+     * occur. Any parse failure returns an empty array — `loadSpec()`
+     * already surfaces the canonical parse error via `parseSpec()`,
+     * and the walker must not shadow that exception.
+     *
+     * @return array<array-key, mixed>
+     */
+    private function parseSpecContentAsArray(string $content): array
+    {
+        if ('json' === $this->config->specType) {
+            if (false === mb_check_encoding($content, 'UTF-8')) {
+                return [];
+            }
+
+            try {
+                /** @var mixed $data */
+                $data = json_decode($content, true, JsonDepthLimit::Trusted->value, JSON_THROW_ON_ERROR);
+            } catch (JsonException) {
+                return [];
+            }
+
+            return is_array($data) ? $data : [];
+        }
+
+        $maxBytes = $this->config->maxSpecSizeBytes ?? YamlParser::DEFAULT_MAX_SPEC_BYTES;
+        if (strlen($content) > $maxBytes) {
+            return [];
+        }
+
+        try {
+            /** @var mixed $data */
+            $data = Yaml::parse($content, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
+        } catch (ParseException) {
+            return [];
+        }
+
+        return is_array($data) ? $data : [];
     }
 
     private function generateCacheKeyFromFile(string $path): string

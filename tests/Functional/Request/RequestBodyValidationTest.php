@@ -441,6 +441,7 @@ XML;
         $depth = 200;
         $validator = OpenApiValidatorBuilder::create()
             ->fromJsonString($this->buildNestedSpecJson($depth))
+            ->withMaxSpecDepth(500)
             ->build();
 
         $request = $this->psrFactory->createServerRequest('POST', '/deep')

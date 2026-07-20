@@ -81,6 +81,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   switch to `$exception->ref` and `$exception->reason`. The `__toString()`
   override also returns only the safe reason, suppressing class name, file
   path, and stack trace emitted by default `Exception::__toString()`.
+- `OpenApiValidatorBuilder::build()` now fails closed when a spec loaded
+  via `fromYamlString()` or `fromJsonString()` contains an external
+  `$ref` (any ref that does not start with `#/`) and
+  `withExternalRefAllowedRoot()` has not been called, throwing
+  `BuilderException` instead of leaving `FileExternalRefResolver` running
+  with `allowedRoot = null` (closes STRING-SPEC-FAILOPEN — arbitrary file
+  read via attacker-controlled spec). Specs loaded via `fromYamlFile()` /
+  `fromJsonFile()` and specs that explicitly call
+  `withExternalRefAllowedRoot()` are not affected (the auto-derived or
+  explicit root keeps confinement intact). Specs that contain only
+  internal JSON pointer refs (`#/...`) continue to build without an
+  allowed root for backward compatibility. Direct `new RefResolver()`
+  usage without the builder is unaffected and remains documented as
+  unsafe for trusted specs. Discriminator `mapping` and
+  `defaultMapping` values that resolve to external refs are also caught
+  by this guard, because `DiscriminatorValidator` resolves them through
+  `RefResolver` exactly like a regular `$ref`.
 - Coercion is now strict by default: boolean coercion rejects unknown strings
   like 'admin' or 'foo' instead of silently casting them to true (SEC-13);
   integer coercion detects overflow before `(int)` cast and throws
