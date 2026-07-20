@@ -320,4 +320,242 @@ final class SchemaSiblingMergerTest extends TestCase
 
         self::assertSame([$resolvedAllOfEntry, $siblingAllOfEntry], $merged->allOf);
     }
+
+    #[Test]
+    public function merge_scalar_overrides_where_not_null(): void
+    {
+        $resolved = new Schema(type: 'string', format: 'date-time', pattern: '^a');
+        $sibling = new Schema(type: 'integer', format: 'uuid', pattern: '^b');
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertSame('integer', $merged->type);
+        self::assertSame('uuid', $merged->format);
+        self::assertSame('^b', $merged->pattern);
+    }
+
+    #[Test]
+    public function merge_scalar_inherits_resolved_when_sibling_null(): void
+    {
+        $resolved = new Schema(type: 'string', format: 'date-time', pattern: '^a');
+        $sibling = new Schema();
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertSame('string', $merged->type);
+        self::assertSame('date-time', $merged->format);
+        self::assertSame('^a', $merged->pattern);
+    }
+
+    #[Test]
+    public function merge_deprecated_or_semantics_sibling_true_tightens(): void
+    {
+        $resolved = new Schema(type: 'string');
+        $sibling = new Schema(deprecated: true);
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertTrue($merged->deprecated);
+    }
+
+    #[Test]
+    public function merge_deprecated_stays_false_when_both_false(): void
+    {
+        $resolved = new Schema(type: 'string');
+        $sibling = new Schema();
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertFalse($merged->deprecated);
+        self::assertFalse($merged->readOnly);
+        self::assertFalse($merged->writeOnly);
+    }
+
+    #[Test]
+    public function merge_read_only_and_write_only_or_semantics(): void
+    {
+        $resolved = new Schema(type: 'string', readOnly: true);
+        $sibling = new Schema(writeOnly: true);
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertTrue($merged->readOnly);
+        self::assertTrue($merged->writeOnly);
+    }
+
+    #[Test]
+    public function merge_default_sibling_wins_when_has_default_true(): void
+    {
+        $resolved = new Schema(type: 'string', default: 'resolved', hasDefault: true);
+        $sibling = new Schema(default: 'sibling', hasDefault: true);
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertSame('sibling', $merged->default);
+        self::assertTrue($merged->hasDefault);
+    }
+
+    #[Test]
+    public function merge_default_inherits_resolved_when_sibling_has_default_false(): void
+    {
+        $resolved = new Schema(type: 'string', default: 'resolved', hasDefault: true);
+        $sibling = new Schema();
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertSame('resolved', $merged->default);
+        self::assertTrue($merged->hasDefault);
+    }
+
+    #[Test]
+    public function merge_const_sibling_wins_when_has_const_true(): void
+    {
+        $resolved = new Schema(type: 'string', const: 'resolved', hasConst: true);
+        $sibling = new Schema(const: 'sibling', hasConst: true);
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertSame('sibling', $merged->const);
+        self::assertTrue($merged->hasConst);
+    }
+
+    #[Test]
+    public function merge_additional_properties_sibling_false_overrides_resolved_schema(): void
+    {
+        $resolvedAdditional = new Schema(type: 'object');
+        $resolved = new Schema(type: 'object', additionalProperties: $resolvedAdditional);
+        $sibling = new Schema(additionalProperties: false);
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertFalse($merged->additionalProperties);
+    }
+
+    #[Test]
+    public function merge_additional_properties_sibling_null_inherits_resolved(): void
+    {
+        $resolvedAdditional = new Schema(type: 'object');
+        $resolved = new Schema(type: 'object', additionalProperties: $resolvedAdditional);
+        $sibling = new Schema();
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertSame($resolvedAdditional, $merged->additionalProperties);
+    }
+
+    #[Test]
+    public function merge_required_unions_both_lists_with_unique_values(): void
+    {
+        $resolved = new Schema(type: 'object', required: ['id', 'name']);
+        $sibling = new Schema(required: ['name', 'email']);
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertSame(['id', 'name', 'email'], $merged->required);
+    }
+
+    #[Test]
+    public function merge_required_inherits_resolved_when_sibling_null(): void
+    {
+        $resolved = new Schema(type: 'object', required: ['id']);
+        $sibling = new Schema();
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertSame(['id'], $merged->required);
+    }
+
+    #[Test]
+    public function merge_enum_intersects_via_json_equals_int_float_equivalence(): void
+    {
+        $resolved = new Schema(enum: [1, 2, 3]);
+        $sibling = new Schema(enum: [1.0, 2]);
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertNotNull($merged->enum);
+        self::assertCount(2, $merged->enum);
+        self::assertContains(1, $merged->enum);
+        self::assertContains(2, $merged->enum);
+    }
+
+    #[Test]
+    public function merge_enum_empty_intersection_preserved_as_empty_array(): void
+    {
+        $resolved = new Schema(enum: [1, 2]);
+        $sibling = new Schema(enum: [3, 4]);
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertNotNull($merged->enum);
+        self::assertSame([], $merged->enum);
+    }
+
+    #[Test]
+    public function merge_enum_only_resolved_set_passes_through(): void
+    {
+        $resolved = new Schema(enum: [1, 2]);
+        $sibling = new Schema();
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertSame([1, 2], $merged->enum);
+    }
+
+    #[Test]
+    public function merge_enum_only_sibling_set_passes_through(): void
+    {
+        $resolved = new Schema();
+        $sibling = new Schema(enum: [3, 4]);
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertSame([3, 4], $merged->enum);
+    }
+
+    #[Test]
+    public function merge_title_prefers_sibling_ref_summary_over_sibling_title(): void
+    {
+        $resolved = new Schema(title: 'resolved-title');
+        $sibling = new Schema(title: 'sibling-title', refSummary: 'ref-summary');
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertSame('ref-summary', $merged->title);
+    }
+
+    #[Test]
+    public function merge_title_prefers_sibling_title_over_resolved_title(): void
+    {
+        $resolved = new Schema(title: 'resolved-title');
+        $sibling = new Schema(title: 'sibling-title');
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertSame('sibling-title', $merged->title);
+    }
+
+    #[Test]
+    public function merge_description_prefers_sibling_ref_description_over_resolved(): void
+    {
+        $resolved = new Schema(description: 'resolved-desc');
+        $sibling = new Schema(description: 'sibling-desc', refDescription: 'ref-desc');
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertSame('ref-desc', $merged->description);
+    }
+
+    #[Test]
+    public function merge_properties_map_sibling_wins_on_key_collision(): void
+    {
+        $resolvedProperty = new Schema(type: 'string');
+        $siblingProperty = new Schema(type: 'integer');
+        $resolved = new Schema(type: 'object', properties: ['name' => $resolvedProperty]);
+        $sibling = new Schema(properties: ['name' => $siblingProperty]);
+
+        $merged = (new SchemaSiblingMerger())->merge($resolved, $sibling);
+
+        self::assertSame($siblingProperty, $merged->properties['name']);
+    }
 }

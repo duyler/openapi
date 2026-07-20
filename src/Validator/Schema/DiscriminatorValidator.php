@@ -16,8 +16,6 @@ use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\TypeFormatter;
 
-use LogicException;
-
 use function array_key_exists;
 use function end;
 use function explode;
@@ -49,19 +47,7 @@ final readonly class DiscriminatorValidator
             return;
         }
 
-        $this->validateWithPropertyName($data, $discriminator, $schema, $document, $dataPath);
-    }
-
-    private function validateWithPropertyName(
-        array|int|string|float|bool $data,
-        Discriminator $discriminator,
-        Schema $schema,
-        OpenApiDocument $document,
-        string $dataPath,
-    ): void {
-        $propertyName = $discriminator->propertyName
-            ?? throw new LogicException('Discriminator property name must be set when calling validateWithPropertyName');
-        $value = $this->extractValue($data, $propertyName, $dataPath);
+        $value = $this->extractValue($data, $discriminator->propertyName, $dataPath);
         $targetSchema = $this->resolveSchema($value, $discriminator, $schema, $document, $dataPath);
 
         $this->validateAgainstSchema($data, $targetSchema, $document);

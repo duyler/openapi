@@ -185,14 +185,9 @@ final class RefResolver implements RefResolverInterface
         OpenApiDocument $document,
         int $depth = 0,
     ): bool {
-        if (isset($this->hasDiscriminatorCache[$schema])) {
-            /** @var WeakMap<OpenApiDocument, bool> $docCache */
-            $docCache = $this->hasDiscriminatorCache[$schema];
-        } else {
-            /** @var WeakMap<OpenApiDocument, bool> $docCache */
-            $docCache = new WeakMap();
-            $this->hasDiscriminatorCache[$schema] = $docCache;
-        }
+        /** @var WeakMap<OpenApiDocument, bool> $docCache */
+        $docCache = $this->hasDiscriminatorCache[$schema] ?? new WeakMap();
+        $this->hasDiscriminatorCache[$schema] = $docCache;
 
         if (isset($docCache[$document])) {
             /** @var bool $cached */
@@ -746,13 +741,9 @@ final class RefResolver implements RefResolverInterface
             return $this->resolveRef($result->ref, $document, $visited, $depth + 1);
         }
 
-        if (isset($this->cache[$document])) {
-            /** @var RefCache $refCache */
-            $refCache = $this->cache[$document];
-        } else {
-            $refCache = new RefCache();
-            $this->cache[$document] = $refCache;
-        }
+        /** @var RefCache $refCache */
+        $refCache = $this->cache[$document] ?? new RefCache();
+        $this->cache[$document] = $refCache;
         $refCache->map[$ref] = $result;
 
         return [$result, $visited];

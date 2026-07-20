@@ -28,6 +28,7 @@ use function is_float;
 use function is_int;
 use function is_nan;
 use function is_resource;
+use function is_scalar;
 use function is_string;
 use function json_encode;
 use function ksort;
@@ -110,7 +111,9 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
      */
     private function containsNonScalar(array $data): bool
     {
-        return array_any($data, fn($item) => null !== $item && !is_int($item) && !is_float($item) && !is_string($item) && !is_bool($item));
+        // null is JSON-scalar for hashing purposes; only arrays/objects/resources
+        // force the hash-mode path. is_scalar covers int|float|string|bool.
+        return array_any($data, fn($item) => null !== $item && !is_scalar($item));
     }
 
     /**
@@ -128,13 +131,7 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
             if (false === isset($seen[$key])) {
                 $seen[$key] = true;
                 ++$count;
-
-                if (self::MAX_UNIQUE_CHECK < $count) {
-                    throw new TooManyItemsForUniqueCheckError(
-                        max: self::MAX_UNIQUE_CHECK,
-                        dataPath: $dataPath,
-                    );
-                }
+                $this->enforceUniqueCheckLimit($count, $dataPath);
             }
         }
 
@@ -160,26 +157,14 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
             if (false === isset($buckets[$bucketKey])) {
                 $buckets[$bucketKey] = [$item];
                 ++$count;
-
-                if (self::MAX_UNIQUE_CHECK < $count) {
-                    throw new TooManyItemsForUniqueCheckError(
-                        max: self::MAX_UNIQUE_CHECK,
-                        dataPath: $dataPath,
-                    );
-                }
+                $this->enforceUniqueCheckLimit($count, $dataPath);
                 continue;
             }
 
-            if (false === $this->bucketContainsDuplicate($buckets[$bucketKey], $item)) {
+            if (false === array_any($buckets[$bucketKey], fn($existing) => $this->itemsEqual($item, $existing))) {
                 $buckets[$bucketKey] = [...$buckets[$bucketKey], $item];
                 ++$count;
-
-                if (self::MAX_UNIQUE_CHECK < $count) {
-                    throw new TooManyItemsForUniqueCheckError(
-                        max: self::MAX_UNIQUE_CHECK,
-                        dataPath: $dataPath,
-                    );
-                }
+                $this->enforceUniqueCheckLimit($count, $dataPath);
             }
         }
 
@@ -187,11 +172,15 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
     }
 
     /**
-     * @param list<mixed> $bucket
+     * DoS defence (P-033): abort the unique-items check once the running
+     * unique-count crosses MAX_UNIQUE_CHECK so an attacker-controlled array
+     * cannot grow an unbounded hash table. Idempotent when below the limit.
      */
-    private function bucketContainsDuplicate(array $bucket, mixed $item): bool
+    private function enforceUniqueCheckLimit(int $count, string $dataPath): void
     {
-        return array_any($bucket, fn($existing) => $this->itemsEqual($item, $existing));
+        if (self::MAX_UNIQUE_CHECK < $count) {
+            throw new TooManyItemsForUniqueCheckError(max: self::MAX_UNIQUE_CHECK, dataPath: $dataPath);
+        }
     }
 
     private function itemsEqual(mixed $a, mixed $b): bool
@@ -285,19 +274,17 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
      */
     private function canonicalizeForEncoding(array $item): array
     {
-        if (array_is_list($item)) {
-            return array_map(
-                fn(mixed $value): mixed => is_array($value) ? $this->canonicalizeForEncoding($value) : $value,
-                $item,
-            );
-        }
-
+        // array_map over a single array preserves keys, so the canonicalised
+        // result has the same list-vs-associative shape as the input; the
+        // ksort applies only to associative (object) forms below.
         $canonical = array_map(
             fn(mixed $value): mixed => is_array($value) ? $this->canonicalizeForEncoding($value) : $value,
             $item,
         );
 
-        ksort($canonical, SORT_STRING);
+        if (!array_is_list($canonical)) {
+            ksort($canonical, SORT_STRING);
+        }
 
         return $canonical;
     }

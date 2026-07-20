@@ -70,7 +70,7 @@ final readonly class SecurityValidator
     ): array {
         $errors = [];
 
-        foreach ($requirementAlternatives as $schemeName => $scopes) {
+        foreach ($requirementAlternatives as $schemeName => $_) {
             $scheme = $securitySchemes[$schemeName] ?? null;
 
             if (null === $scheme) {

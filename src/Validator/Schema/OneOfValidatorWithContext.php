@@ -94,6 +94,10 @@ final readonly class OneOfValidatorWithContext
         $errors = [];
         $abstractErrors = [];
 
+        // Safe to hoist: rootSchemaValidator is memoized by document
+        // (SchemaValidatorDependencies::rootSchemaValidator — first-call-wins).
+        $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
+
         foreach ($oneOf as $subSchema) {
             if (false === $subSchema instanceof Schema) {
                 continue;
@@ -103,7 +107,6 @@ final readonly class OneOfValidatorWithContext
                 $allowNull = $context->nullableAsType && ($subSchema->nullable
                     || SchemaValueNormalizer::typeIncludesNull($subSchema->type));
                 $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
-                $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
                 $rootValidator->validateWithContext($normalizedData, $subSchema, $context);
                 ++$validCount;
             } catch (AbstractValidationError $e) {

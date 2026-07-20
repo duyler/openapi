@@ -53,9 +53,6 @@ final readonly class StreamingContentParser
      */
     private const string SSE_LINE_SPLIT_PATTERN = '/\r\n|\r|\n/';
 
-    /**
-     * Line-splitting pattern for NDJSON streams: tolerant CRLF or LF.
-     */
     private const string NDJSON_LINE_SPLIT_PATTERN = '/\r?\n/';
 
     /**
@@ -126,9 +123,7 @@ final readonly class StreamingContentParser
                 continue;
             }
             ++$recordCount;
-            if ($recordCount > $this->maxRecords) {
-                throw new TooManyRecordsException(max: $this->maxRecords);
-            }
+            $this->enforceRecordLimit($recordCount);
         }
 
         return $items;
@@ -159,17 +154,13 @@ final readonly class StreamingContentParser
                 continue;
             }
             ++$recordCount;
-            if ($recordCount > $this->maxRecords) {
-                throw new TooManyRecordsException(max: $this->maxRecords);
-            }
+            $this->enforceRecordLimit($recordCount);
         }
 
         if ([] !== $currentEvent) {
             $events[] = $this->formatSseEvent($currentEvent);
             ++$recordCount;
-            if ($recordCount > $this->maxRecords) {
-                throw new TooManyRecordsException(max: $this->maxRecords);
-            }
+            $this->enforceRecordLimit($recordCount);
         }
 
         return $events;
@@ -204,9 +195,7 @@ final readonly class StreamingContentParser
             $items = $this->appendJsonSeqItem($items, substr($body, $pos, $endPos - $pos));
             if (count($items) > $before) {
                 ++$recordCount;
-                if ($recordCount > $this->maxRecords) {
-                    throw new TooManyRecordsException(max: $this->maxRecords);
-                }
+                $this->enforceRecordLimit($recordCount);
             }
 
             $pos = $endPos;
@@ -222,6 +211,13 @@ final readonly class StreamingContentParser
         }
 
         return $body;
+    }
+
+    private function enforceRecordLimit(int $recordCount): void
+    {
+        if ($recordCount > $this->maxRecords) {
+            throw new TooManyRecordsException(max: $this->maxRecords);
+        }
     }
 
     /**
@@ -358,9 +354,7 @@ final readonly class StreamingContentParser
                 continue;
             }
             ++$recordCount;
-            if ($recordCount > $this->maxRecords) {
-                throw new TooManyRecordsException(max: $this->maxRecords);
-            }
+            $this->enforceRecordLimit($recordCount);
         }
 
         return $items;
@@ -384,17 +378,13 @@ final readonly class StreamingContentParser
                 continue;
             }
             ++$recordCount;
-            if ($recordCount > $this->maxRecords) {
-                throw new TooManyRecordsException(max: $this->maxRecords);
-            }
+            $this->enforceRecordLimit($recordCount);
         }
 
         if ([] !== $currentEvent) {
             $events[] = $this->formatSseEvent($currentEvent);
             ++$recordCount;
-            if ($recordCount > $this->maxRecords) {
-                throw new TooManyRecordsException(max: $this->maxRecords);
-            }
+            $this->enforceRecordLimit($recordCount);
         }
 
         return $events;
@@ -478,9 +468,7 @@ final readonly class StreamingContentParser
                 $items = $this->appendJsonSeqItem($items, $record);
                 if (count($items) > $before) {
                     ++$recordCount;
-                    if ($recordCount > $this->maxRecords) {
-                        throw new TooManyRecordsException(max: $this->maxRecords);
-                    }
+                    $this->enforceRecordLimit($recordCount);
                 }
             }
         }
@@ -489,9 +477,7 @@ final readonly class StreamingContentParser
         $items = $this->appendJsonSeqItem($items, $buffer);
         if (count($items) > $before) {
             ++$recordCount;
-            if ($recordCount > $this->maxRecords) {
-                throw new TooManyRecordsException(max: $this->maxRecords);
-            }
+            $this->enforceRecordLimit($recordCount);
         }
 
         return $items;

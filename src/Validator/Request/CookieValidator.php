@@ -33,12 +33,7 @@ final readonly class CookieValidator extends AbstractParameterValidator
             return [];
         }
 
-        if (self::MAX_COOKIE_PAIRS < substr_count($cookieHeader, ';') + 1) {
-            throw new InvalidParameterException(
-                'cookie',
-                sprintf('Maximum cookie pairs of %d exceeded', self::MAX_COOKIE_PAIRS),
-            );
-        }
+        $this->enforcePairCountLimit($cookieHeader);
 
         $cookies = [];
         $pairs = explode(';', $cookieHeader);
@@ -167,7 +162,7 @@ final readonly class CookieValidator extends AbstractParameterValidator
         return is_string($value) ? rawurldecode($value) : $value;
     }
 
-    private function parseExplodedValues(string $cookieHeader, string $name): array
+    private function enforcePairCountLimit(string $cookieHeader): void
     {
         if (self::MAX_COOKIE_PAIRS < substr_count($cookieHeader, ';') + 1) {
             throw new InvalidParameterException(
@@ -175,6 +170,11 @@ final readonly class CookieValidator extends AbstractParameterValidator
                 sprintf('Maximum cookie pairs of %d exceeded', self::MAX_COOKIE_PAIRS),
             );
         }
+    }
+
+    private function parseExplodedValues(string $cookieHeader, string $name): array
+    {
+        $this->enforcePairCountLimit($cookieHeader);
 
         $values = [];
         $pairs = explode(';', $cookieHeader);
@@ -201,12 +201,7 @@ final readonly class CookieValidator extends AbstractParameterValidator
 
     private function hasMultipleCookies(string $cookieHeader, string $name): bool
     {
-        if (self::MAX_COOKIE_PAIRS < substr_count($cookieHeader, ';') + 1) {
-            throw new InvalidParameterException(
-                'cookie',
-                sprintf('Maximum cookie pairs of %d exceeded', self::MAX_COOKIE_PAIRS),
-            );
-        }
+        $this->enforcePairCountLimit($cookieHeader);
 
         $count = 0;
         $pairs = explode(';', $cookieHeader);

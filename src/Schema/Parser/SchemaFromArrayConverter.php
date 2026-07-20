@@ -27,7 +27,7 @@ use function version_compare;
  *
  * This is the inverse of {@see SchemaToArrayConverter::toWireArray()}.
  * Centralising the parser here removes the field enumeration from
- * {@see OpenApiBuilder::buildSchema()} so adding a new field requires editing
+ * {@see SchemaBuilder::buildSchema()} so adding a new field requires editing
  * only {@see SchemaFieldMetadata} plus the constructor call below.
  *
  * The parser is version-aware (OpenAPI 3.0 / 3.1 / 3.2) for the

@@ -322,6 +322,33 @@ class TypeValidatorTest extends TestCase
     }
 
     #[Test]
+    public function validate_integer_type_with_negative_whole_float(): void
+    {
+        $schema = new Schema(type: 'integer');
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(-3.0, $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function throw_type_mismatch_error_for_negative_non_whole_float_as_integer(): void
+    {
+        $schema = new Schema(type: 'integer');
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->validator->validate(-3.14, $schema);
+    }
+
+    #[Test]
     public function validate_union_integer_number_with_whole_float(): void
     {
         $schema = new Schema(type: ['integer', 'number']);

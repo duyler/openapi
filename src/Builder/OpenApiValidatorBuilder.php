@@ -733,7 +733,9 @@ final readonly class OpenApiValidatorBuilder
         }
 
         $parsedSpec = $this->parseSpecContentAsArray($this->config->specContent);
-        $externalRef = $this->detectExternalRefs($parsedSpec);
+        $specDepth = $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH;
+        $maxDepth = max($specDepth, ValidationContext::MAX_DEPTH);
+        $externalRef = $this->detectExternalRefs($parsedSpec, 0, $maxDepth);
 
         if (null !== $externalRef) {
             throw new BuilderException(sprintf(
@@ -760,13 +762,15 @@ final readonly class OpenApiValidatorBuilder
      * stack-overflows even if a parser is misconfigured or bypassed.
      * Returns null when no external ref is present.
      *
+     * The $maxDepth bound is computed once by the caller and threaded
+     * through the recursion, because BuilderConfig is readonly and the
+     * bound is therefore constant for the entire walk — recomputing it
+     * per node is wasted work on deeply nested specs.
+     *
      * @param array<array-key, mixed> $data
      */
-    private function detectExternalRefs(array $data, int $depth = 0): ?string
+    private function detectExternalRefs(array $data, int $depth, int $maxDepth): ?string
     {
-        $specDepth = $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH;
-        $maxDepth = max($specDepth, ValidationContext::MAX_DEPTH);
-
         if ($depth > $maxDepth) {
             return null;
         }
@@ -826,7 +830,7 @@ final readonly class OpenApiValidatorBuilder
                 continue;
             }
 
-            $nested = $this->detectExternalRefs($value, $depth + 1);
+            $nested = $this->detectExternalRefs($value, $depth + 1, $maxDepth);
             if (null !== $nested) {
                 return $nested;
             }

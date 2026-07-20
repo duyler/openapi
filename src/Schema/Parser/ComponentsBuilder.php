@@ -22,11 +22,9 @@ use Duyler\OpenApi\Schema\Model\Responses;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Model\SecurityScheme;
 
-use function assert;
 use function is_array;
 use function strtolower;
 use function is_bool;
-use function is_string;
 
 /**
  * Builds OpenAPI Components and the object types referenced from it:
@@ -170,11 +168,10 @@ final readonly class ComponentsBuilder
      */
     public function buildEncodingMap(array $data): array
     {
+        /** @var array<string, array<string, mixed>> $data */
         $encodings = [];
 
         foreach ($data as $name => $encoding) {
-            assert(is_string($name));
-            assert(is_array($encoding));
             $encodings[$name] = $this->buildEncoding(TypeHelper::asArray($encoding));
         }
 
@@ -186,10 +183,10 @@ final readonly class ComponentsBuilder
      */
     public function buildPrefixEncoding(array $data): array
     {
+        /** @var list<array<string, mixed>> $data */
         $encodings = [];
 
         foreach ($data as $encoding) {
-            assert(is_array($encoding));
             $encodings[] = $this->buildEncoding(TypeHelper::asArray($encoding));
         }
 

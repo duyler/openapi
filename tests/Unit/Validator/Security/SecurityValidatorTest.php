@@ -563,6 +563,46 @@ final class SecurityValidatorTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
+    /**
+     * SEC-16 fail-closed anti-test: an apiKey scheme with an `in`
+     * value outside the {query, header, cookie} allowlist must
+     * resolve to MissingSecurityCredentialsError via the match
+     * default arm, NOT throw UnhandledMatchError. Reverting the
+     * `default => null` arm (or replacing the match with a strict
+     * dispatcher) breaks this — the error class changes to
+     * \Error, the location string leaks the raw `in` value, and
+     * the caller-visible exception is no longer the generic
+     * AuthenticationRequired message but a stack trace.
+     */
+    #[Test]
+    public function api_key_with_unknown_in_value_fails_closed_with_missing_credentials_error(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/data');
+        $securityRequirements = new SecurityRequirement([
+            ['apiKeyPath' => []],
+        ]);
+        $securitySchemes = [
+            'apiKeyPath' => new SecurityScheme(
+                type: 'apiKey',
+                in: 'path',
+                name: 'id',
+            ),
+        ];
+
+        try {
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/data', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('apiKeyPath', $error->schemeName);
+            $this->assertSame('apiKey', $error->schemeType);
+            $this->assertSame('missing path parameter "id"', $error->location);
+        }
+    }
+
     #[Test]
     public function unknown_scheme_type_returns_unsupported_error(): void
     {

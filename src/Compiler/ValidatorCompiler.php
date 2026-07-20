@@ -183,16 +183,11 @@ final readonly class ValidatorCompiler
         );
         $typesString = implode(" . '|' . ", $escapedTypes);
 
-        if (1 === count($checks)) {
-            $code .= sprintf("        if (false === %s) {\n", $checks[0]);
-            $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected ' . %s . ' but got ' . TypeFormatter::format(\$data));\n", $typesString);
-            $code .= "        }\n\n";
+        $condition = 1 === count($checks)
+            ? $checks[0]
+            : '(' . implode(' || ', $checks) . ')';
 
-            return $code;
-        }
-
-        $condition = implode(' || ', $checks);
-        $code .= sprintf("        if (false === (%s)) {\n", $condition);
+        $code .= sprintf("        if (false === %s) {\n", $condition);
         $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected ' . %s . ' but got ' . TypeFormatter::format(\$data));\n", $typesString);
         $code .= "        }\n\n";
 
@@ -336,10 +331,10 @@ final readonly class ValidatorCompiler
                 errorMessage: $errorMessage,
             );
         } else {
-            $code = $this->generateFloatMultipleOfCheck(
+            $code = $this->buildFloatQuotientCheck(
                 multipleOfStr: $multipleOfStr,
                 epsilonStr: $epsilonStr,
-                errorMessage: $errorMessage,
+                exportedMessage: var_export($errorMessage, true),
             );
         }
 
@@ -376,16 +371,6 @@ final readonly class ValidatorCompiler
      * NumericRangeValidator::isMultipleOf float branch exactly, avoiding
      * the precision-loss bug of fmod on large dividends.
      */
-    private function generateFloatMultipleOfCheck(
-        string $multipleOfStr,
-        string $epsilonStr,
-        string $errorMessage,
-    ): string {
-        $exportedMessage = var_export($errorMessage, true);
-
-        return $this->buildFloatQuotientCheck($multipleOfStr, $epsilonStr, $exportedMessage);
-    }
-
     private function buildFloatQuotientCheck(string $multipleOfStr, string $epsilonStr, string $exportedMessage): string
     {
         $code = sprintf("            \$quotient = (float) \$data / %s;\n", $multipleOfStr);
@@ -539,16 +524,11 @@ final readonly class ValidatorCompiler
 
         $safeVarName = addslashes($valueVar);
 
-        if (1 === count($checks)) {
-            $code = sprintf("        if (false === %s) {\n", $checks[0]);
-            $code .= sprintf("            throw new \\RuntimeException('Type mismatch for %s');\n", $safeVarName);
-            $code .= "        }\n";
+        $condition = 1 === count($checks)
+            ? $checks[0]
+            : '(' . implode(' || ', $checks) . ')';
 
-            return $code;
-        }
-
-        $condition = implode(' || ', $checks);
-        $code = sprintf("        if (false === (%s)) {\n", $condition);
+        $code = sprintf("        if (false === %s) {\n", $condition);
         $code .= sprintf("            throw new \\RuntimeException('Type mismatch for %s');\n", $safeVarName);
         $code .= "        }\n";
 

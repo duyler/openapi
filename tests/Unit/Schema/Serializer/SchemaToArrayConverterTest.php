@@ -7,12 +7,15 @@ namespace Duyler\OpenApi\Test\Unit\Schema\Serializer;
 use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Model\Xml;
+use Duyler\OpenApi\Schema\Parser\SchemaFromArrayConverter;
 use Duyler\OpenApi\Schema\Serializer\SchemaToArrayConverter;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 use WeakMap;
+
+use const JSON_THROW_ON_ERROR;
 
 #[CoversClass(SchemaToArrayConverter::class)]
 final class SchemaToArrayConverterTest extends TestCase
@@ -241,5 +244,48 @@ final class SchemaToArrayConverterTest extends TestCase
         $jsonResult = $schema->jsonSerialize();
 
         self::assertSame($wireResult, $jsonResult);
+    }
+
+    #[Test]
+    public function wire_array_round_trips_through_from_array_converter(): void
+    {
+        $original = new Schema(
+            title: 'User',
+            description: 'A user record',
+            type: 'object',
+            default: ['guest'],
+            hasDefault: true,
+            deprecated: true,
+            readOnly: true,
+            multipleOf: 1.0,
+            maximum: 100.0,
+            minimum: 0.0,
+            minLength: 3,
+            maxLength: 50,
+            pattern: '^[a-z]+$',
+            minItems: 1,
+            maxItems: 10,
+            uniqueItems: true,
+            minProperties: 1,
+            maxProperties: 5,
+            required: ['name'],
+            format: 'email',
+            enum: ['a', 'b'],
+            const: 'fixed',
+            hasConst: true,
+            properties: [
+                'name' => new Schema(type: 'string', minLength: 1),
+            ],
+        );
+
+        $converter = new SchemaToArrayConverter();
+        $parser = new SchemaFromArrayConverter(documentVersion: '3.2.0');
+
+        $wire = $converter->toWireArray($original);
+        $json = json_encode($wire, JSON_THROW_ON_ERROR);
+        $reparsed = $parser->fromArray(json_decode($json, true, 512, JSON_THROW_ON_ERROR));
+        $rejson = json_encode($converter->toWireArray($reparsed), JSON_THROW_ON_ERROR);
+
+        self::assertSame($json, $rejson);
     }
 }

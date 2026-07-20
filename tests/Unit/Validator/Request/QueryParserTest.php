@@ -269,6 +269,22 @@ final class QueryParserTest extends TestCase
     }
 
     #[Test]
+    public function parse_key_with_unclosed_brackets_above_max_depth_throws_exception(): void
+    {
+        // 65 '[' chars with zero ']' would yield a single-segment parse
+        // (preg_match_all finds no valid [key] pairs, segments = ['a']),
+        // so the segment-count guard cannot fire. The raw substr_count
+        // guard in insertNested is the only defence against this vector
+        // and must reject the input outright.
+        $key = 'a' . str_repeat('[', 65);
+
+        $this->expectException(InvalidParameterException::class);
+        $this->expectExceptionMessage('Maximum query parameter nesting depth of 64 exceeded');
+
+        $this->parser->parse($key . '=1');
+    }
+
+    #[Test]
     public function handle_explode_true(): void
     {
         $result = $this->parser->handleExplode(['1', '2', '3'], true);
