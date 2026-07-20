@@ -9,6 +9,9 @@ use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use const PHP_INT_MAX;
+use const PHP_INT_MIN;
+
 final class AbstractCoercerTest extends TestCase
 {
     private ConcreteCoercer $coercer;
@@ -511,6 +514,54 @@ final class AbstractCoercerTest extends TestCase
         $this->expectExceptionMessage('Float value out of integer range');
 
         $this->coercer->exposedCoerceToInteger(-1.0E+20);
+    }
+
+    /**
+     * Anti-test: to verify this test guards against regression, temporarily
+     * restore the previous guard ($value > PHP_INT_MAX || $value < PHP_INT_MIN)
+     * in AbstractCoercer::coerceToInteger(). The previous float-vs-int
+     * comparison missed the bypass double (float) PHP_INT_MAX =
+     * 9223372036854775808.0 (= PHP_INT_MAX + 1) because PHP implicitly
+     * coerces PHP_INT_MAX to the same float, leaving `$value > PHP_INT_MAX`
+     * false at the boundary. The subsequent (int) cast then wrapped around
+     * to a non-int64 value with a PHP 8.4 deprecation warning (PHP 9.0
+     * promotes this to TypeError). The same regression disables
+     * coerce_to_integer_rejects_float_just_below_php_int_max and
+     * coerce_to_integer_rejects_float_just_above_php_int_min.
+     */
+    #[Test]
+    public function coerce_to_integer_rejects_float_at_php_int_max_boundary(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+        $this->expectExceptionMessage('Float value out of integer range');
+
+        $this->coercer->exposedCoerceToInteger((float) PHP_INT_MAX);
+    }
+
+    #[Test]
+    public function coerce_to_integer_rejects_float_just_below_php_int_max(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+        $this->expectExceptionMessage('Float value out of integer range');
+
+        $this->coercer->exposedCoerceToInteger((float) (PHP_INT_MAX - 1));
+    }
+
+    #[Test]
+    public function coerce_to_integer_rejects_float_just_above_php_int_min(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+        $this->expectExceptionMessage('Float value out of integer range');
+
+        $this->coercer->exposedCoerceToInteger((float) (PHP_INT_MIN + 1));
+    }
+
+    #[Test]
+    public function coerce_to_integer_accepts_whole_float_in_safe_range(): void
+    {
+        $result = $this->coercer->exposedCoerceToInteger(42.0);
+
+        $this->assertSame(42, $result);
     }
 
     #[Test]

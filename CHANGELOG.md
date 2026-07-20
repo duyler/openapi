@@ -153,6 +153,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   SEC-21).
 
 ### Fixed
+- `JsonEquals::equals()` now rejects equality for mixed int+float
+  comparisons when the int side is outside the IEEE 754 safe integer
+  range (`abs($int) > 2 ** 53`). Previously, `JsonEquals::equals(PHP_INT_MAX,
+  (float) PHP_INT_MAX)` returned `true` because both operands rounded to
+  the same double (`9.223372036854776E+18`), even though they are
+  mathematically distinct (`PHP_INT_MAX = 9223372036854775807` vs
+  `(float) PHP_INT_MAX = 9223372036854775808.0`). This caused false-positive
+  equality in `uniqueItems`, `const`, and `enum` validation for int64
+  values beyond the double-precision safe integer boundary. The fix
+  introduces a `SAFE_INT64_FLOAT_BOUNDARY = 9007199254740992` (= 2^53)
+  constant and an early `return false` when the int operand exceeds it,
+  preserving the existing `1 == 1.0` semantics for values within the
+  safe range. Int-vs-int and float-vs-float comparisons are unchanged.
+  Closes PHP_INT_MAX-FLOAT-BOUNDARY.
+- `AbstractCoercer::coerceToInteger()` (non-strict path) now rejects float
+  values in the boundary range roughly `[PHP_INT_MAX - 1023, PHP_INT_MAX]`
+  and the symmetric negative range by switching the overflow guard from
+  `> PHP_INT_MAX` to `>= (float) PHP_INT_MAX` (and `<= (float) PHP_INT_MIN`
+  on the negative side), with an explicit `(float)` cast to make the
+  float-vs-float comparison semantics unambiguous. Previously, the implicit
+  `int → float` coercion of `PHP_INT_MAX` rounded to `9223372036854775808.0`
+  (= `PHP_INT_MAX + 1`), hiding boundary values from the check; the
+  subsequent `(int) $value` cast then silently wrapped around to
+  `PHP_INT_MIN` with a PHP 8.4 deprecation warning (will become a
+  `TypeError` in PHP 9.0). The strict-mode `coerceToIntegerStrict` path
+  was unaffected because it rejects all float inputs before the range
+  check. Closes WEAKPHP-INT-CHECK.
 - JSON Pointer escape sequences (`~1` for `/`, `~0` for `~`) are now decoded
   when resolving `$ref` fragments in both `RefResolver` and
   `FileExternalRefResolver`, per RFC 6901 section 3 (SPEC-01). Previously,

@@ -115,7 +115,7 @@ abstract readonly class AbstractCoercer
         }
 
         if (is_float($value)) {
-            if ($value > PHP_INT_MAX || $value < PHP_INT_MIN) {
+            if ($value >= (float) PHP_INT_MAX || $value <= (float) PHP_INT_MIN) {
                 throw new TypeMismatchError(
                     expected: 'integer',
                     actual: sprintf('%F', $value),
