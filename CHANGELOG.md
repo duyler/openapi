@@ -56,6 +56,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `generateKey`; existing three-argument callers continue to work for
   any schema that does not transitively contain a `$ref`.
 
+### Changed
+- `CallbackValidator` (both the outer
+  `Duyler\OpenApi\Validator\Validation\CallbackValidator` and the inner
+  `Duyler\OpenApi\Validator\Callback\CallbackValidator`) now default the
+  `$strictCallbackRuntimeTemplate` constructor parameter to `true`,
+  closing R3-SEC-009 / R3-SEC-025 (CWE-918 SSRF, CWE-1188 Insecure
+  Default Initialization; OWASP ASVS 4.0 V12.6.1). Previously the
+  builder already enforced strict mode via its
+  `strictCallbackRuntimeTemplate ?? true` fallback (SEC-09), but the
+  class constructors themselves defaulted to `false`, so third-party
+  code that instantiated either class directly — bypassing the builder —
+  silently got the legacy wildcard behaviour for callback runtime
+  expressions like `{$request.body#/callback_url}`. With an attacker-
+  controlled request body this permitted SSRF (cloud-metadata
+  endpoints, internal admin services, internal-network scanning) when
+  the resolved URL was used for an outbound HTTP request. The fix
+  makes the class default match the builder default (single source of
+  truth). Callers that instantiate `Validation\CallbackValidator` or
+  `Callback\CallbackValidator` directly without passing the flag
+  explicitly will now observe stricter behaviour
+  (`UnresolvableCallbackPathException` instead of a wildcard match).
+  Builder callers are unaffected. To opt back into the legacy wildcard
+  behaviour, pass `strictCallbackRuntimeTemplate: false` explicitly to
+  the constructor (only when callback URLs are validated at the
+  application level — see README section "Callbacks").
+
 ### Fixed
 - `PatternValidator::validate()` now calls `RegexValidator::validate()`
   between `normalize()` and `pregExecutor()->match()`, closing R3-SEC-002

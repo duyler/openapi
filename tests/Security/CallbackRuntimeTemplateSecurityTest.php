@@ -27,13 +27,14 @@ use PHPUnit\Framework\TestCase;
  * and cannot be resolved by the validator, which makes path validation a
  * wildcard that accepts any URL. When the runtime template is attacker-
  * controlled, declared security checks on the callback pathItem still pass
- * against an arbitrary URL. Strict mode is the default since the SEC-09 fix:
- * `OpenApiValidatorBuilder::build()` resolves the
- * `strictCallbackRuntimeTemplate` config with a `?? true` fallback, so the
- * validator throws {@see UnresolvableCallbackPathException} by default.
- * Legacy wildcard behaviour is opt-in via
- * {@see OpenApiValidatorBuilder::disableStrictCallbackRuntimeTemplate()}.
- * The pre-fix opt-in method
+ * against an arbitrary URL. Strict mode is the default since the SEC-09 fix
+ * on three converging levels: (1) the `OpenApiValidatorBuilder::build()`
+ * `?? true` fallback; (2) the `Validation\CallbackValidator` constructor
+ * default (R3-SEC-009); (3) the inner `Callback\CallbackValidator`
+ * constructor default (R3-SEC-009). Legacy wildcard behaviour is opt-in via
+ * {@see OpenApiValidatorBuilder::disableStrictCallbackRuntimeTemplate()} or
+ * by passing `strictCallbackRuntimeTemplate: false` explicitly to either
+ * class constructor. The pre-fix opt-in method
  * {@see OpenApiValidatorBuilder::enableStrictCallbackRuntimeTemplate()} is
  * retained as a deprecated no-op for backward compatibility.
  *
@@ -95,7 +96,7 @@ YAML;
     }
 
     #[Test]
-    public function inner_validator_default_keeps_wildcard_when_disabled(): void
+    public function inner_validator_allows_wildcard_when_strict_explicitly_disabled(): void
     {
         $requestValidator = $this->createStub(RequestValidatorInterface::class);
         $requestValidator->method('validate');

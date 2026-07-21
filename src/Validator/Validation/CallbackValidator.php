@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Operation as SchemaOperation;
 use Duyler\OpenApi\Validator\Callback\CallbackValidator as InnerCallbackValidator;
 use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
 use Duyler\OpenApi\Validator\EventDispatchingTrait;
+use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -23,10 +24,22 @@ final readonly class CallbackValidator
     private readonly InnerCallbackValidator $callbackValidator;
     private readonly SecurityValidator $securityValidator;
 
+    /**
+     * @param bool $strictCallbackRuntimeTemplate Defaults to true (fail-closed):
+     *     callback expressions containing runtime templates
+     *     (e.g. `{$request.body#/callback_url}`) that cannot be resolved by
+     *     the validator throw {@see UnresolvableCallbackPathException}
+     *     instead of being treated as wildcards that accept any URL. This
+     *     matches the `OpenApiValidatorBuilder` default and prevents SSRF
+     *     via attacker-controlled runtime templates when the resolved URL
+     *     is used for an outbound HTTP request. Pass false explicitly only
+     *     when callback URLs are validated at the application level (see
+     *     README section "Callbacks" for the security implications).
+     */
     public function __construct(
         private readonly ValidatorDependencies $context,
         private readonly bool $securityValidation = false,
-        private readonly bool $strictCallbackRuntimeTemplate = false,
+        private readonly bool $strictCallbackRuntimeTemplate = true,
     ) {
         $this->eventDispatcher = $context->eventDispatcher;
         $this->logger = $context->logger;

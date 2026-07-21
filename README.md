@@ -341,6 +341,18 @@ retained as a `@deprecated` no-op for backward compatibility: callers that
 explicitly invoked it continue to receive the (now default) strict
 behaviour. The method will be removed in 2.0.
 
+The `CallbackValidator` class itself (both the outer
+`Duyler\OpenApi\Validator\Validation\CallbackValidator` and the inner
+`Duyler\OpenApi\Validator\Callback\CallbackValidator`) also defaults
+`$strictCallbackRuntimeTemplate` to `true`, matching the builder default.
+Frameworks that instantiate either class directly without going through
+`OpenApiValidatorBuilder` therefore receive the same safe-by-default
+behaviour. Pass `strictCallbackRuntimeTemplate: false` explicitly to the
+constructor only when callback URLs are validated at the application level
+(for example, an allowlist of permitted outbound hosts, signed callback
+URLs, or application-level destination validation that runs before any
+outbound HTTP request is issued).
+
 ### Link Resolution
 
 Resolve OpenAPI Link parameters from response data. Both methods return a
