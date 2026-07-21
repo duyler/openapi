@@ -57,6 +57,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   any schema that does not transitively contain a `$ref`.
 
 ### Fixed
+- `PatternValidator::validate()` now calls `RegexValidator::validate()`
+  between `normalize()` and `pregExecutor()->match()`, closing R3-SEC-002
+  (CWE-1333, CWE-400, CWE-770; OWASP ASVS 4.0 V5.3.4). The sibling
+  validators `PatternPropertiesValidator` and `PropertyNamesValidator`
+  already enforced `RegexValidator::MAX_PATTERN_LENGTH = 1024`, but
+  `PatternValidator` (the consumer of the JSON-Schema `pattern` keyword
+  on string instances) called only `normalize()`. An attacker controlling
+  the spec (via `fromYamlString()` or a multi-tenant schema-validation
+  service) could ship a megabyte-sized `pattern`; `PregExecutor` capped
+  backtracking but not compile-time cost, so PCRE burned hundreds of
+  milliseconds compiling the pattern on the first `validate()` call. The
+  fix applies the length cap symmetrically with the other regex-consuming
+  validators. Patterns longer than 1024 bytes now raise
+  `InvalidPatternException` with `reason: 'Pattern exceeds maximum length
+  of 1024 bytes'` at the first validation call instead of falling through
+  to PCRE compilation.
+- `PregExecutor` now sets `pcre.recursion_limit` (default
+  `DEFAULT_MAX_RECURSION = 512`) alongside `pcre.backtrack_limit` for the
+  duration of every `preg_match` / `preg_match_all` call, closing
+  R3-SEC-017 (CWE-1333, CWE-400, CWE-770). Previously only
+  `pcre.backtrack_limit` was bounded; `pcre.recursion_limit` was left at
+  the PHP default (`100_000`), allowing deeply-nested patterns such as
+  `(a|a)*b`, `(.*)*$`, or `((a+)*)+` to exhaust the C stack on systems
+  with small main-thread stacks (Alpine Linux musl libc defaults to 2 MB,
+  Windows PHP builds to 1 MB) and segfault the worker process — a
+  reliable DoS independent of backtracking. The fix mirrors the existing
+  capture/restore pattern used for `pcre.backtrack_limit`: the previous
+  value is captured before the call and restored inside a `finally`
+  block, including when `preg_match` itself throws. The Swoole-race
+  caveat documented in R3-SEC-020 now applies symmetrically to both ini
+  variables; it is re-documented in the `PregExecutor` class PHPDoc.
+  `pcre.recursion_limit` is a separate mechanism from
+  `pcre.backtrack_limit`: the latter bounds NFA backtracking while the
+  former bounds the depth of recursion in PCRE's internal matcher. On
+  PCRE2 10.x the recursion limit has less impact than on PCRE1 because
+  JIT compilation uses its own stack, but it remains a realistic attack
+  vector whenever the JIT falls back to the interpreter (certain
+  patterns, `pcre.jit=0`, or stack-size-constrained runtimes).
 - `SchemaSiblingMerger::merge()` now honours JSON Schema 2020-12 §8.2.3
   ALL OF semantics for the ten non-bound fields that previously used a
   sibling-wins strategy, closing R3-SPEC-006 (C-006). When a `$ref`

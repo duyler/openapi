@@ -31,6 +31,7 @@ final readonly class PatternValidator extends AbstractSchemaValidator implements
         }
 
         $pattern = $this->regexValidator()->normalize($schema->pattern);
+        $pattern = $this->regexValidator()->validate($pattern, 'pattern');
 
         assert('' !== $pattern);
 
