@@ -93,28 +93,6 @@ final class UriValidatorTest extends TestCase
     }
 
     #[Test]
-    public function triple_slash_authority_is_rejected(): void
-    {
-        $uri = 'http:///example.com';
-
-        $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Invalid URI format');
-
-        $this->validator->validate($uri);
-    }
-
-    #[Test]
-    public function port_above_max_is_rejected(): void
-    {
-        $uri = 'http://example.com:99999';
-
-        $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('URI port out of range');
-
-        $this->validator->validate($uri);
-    }
-
-    #[Test]
     public function http_uri_with_port_path_query_fragment_passes(): void
     {
         $this->expectNotToPerformAssertions();
@@ -129,17 +107,6 @@ final class UriValidatorTest extends TestCase
     }
 
     #[Test]
-    public function javascript_scheme_uri_is_rejected(): void
-    {
-        $uri = 'javascript:alert(1)';
-
-        $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Invalid URI format');
-
-        $this->validator->validate($uri);
-    }
-
-    #[Test]
     public function relative_path_uri_is_rejected(): void
     {
         $uri = '/relative/path';
@@ -150,10 +117,173 @@ final class UriValidatorTest extends TestCase
         $this->validator->validate($uri);
     }
 
+    /**
+     * RFC 3986 §3 allows an empty reg-name in the authority, so an
+     * `http:///path` triple-slash URI is a syntactically valid URI
+     * even though the host is empty. The validator no longer rejects
+     * this shape; it accepts it per RFC 3986 generic syntax. The
+     * previous rejection was a side effect of the now-removed
+     * `filter_var(FILTER_VALIDATE_URL)` fallback.
+     */
     #[Test]
-    public function unsupported_scheme_message_does_not_leak_scheme_name(): void
+    public function triple_slash_authority_is_valid_per_rfc_3986(): void
     {
-        $uri = 'javascript://example.com/';
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('http:///example.com');
+    }
+
+    /**
+     * RFC 3986 §3.3 `path-rootless = segment-nz-nc *( "/" segment )`
+     * admits `(` and `)` via `sub-delims`, so `javascript:alert(1)`
+     * is a syntactically valid URI. Per JSON Schema 2020-12 §7.3.1
+     * the `uri` format validates RFC 3986 generic syntax only;
+     * scheme-specific allowlisting is the application's responsibility
+     * (handled at the consumer layer, not the format validator).
+     */
+    #[Test]
+    public function javascript_scheme_uri_is_valid_per_rfc_3986(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('javascript:alert(1)');
+    }
+
+    /**
+     * RFC 3986 host reg-name permits non-ASCII characters; the
+     * validator accepts IDN hosts per RFC 3986 generic syntax. The
+     * previous `filter_var(FILTER_VALIDATE_URL)` fallback rejected
+     * bare UTF-8 hosts without Punycode conversion; that fallback
+     * has been removed (Task 10, Variant A). IDN-to-ASCII Punycode
+     * conversion remains explicitly out of scope.
+     */
+    #[Test]
+    public function idn_host_uri_accepted_per_rfc_3986(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('https://' . "\xd0\xbf\xd1\x80\xd0\xb8\xd0\xbc\xd0\xb5\xd1\x80.\xd1\x80\xd1\x84");
+    }
+
+    #[Test]
+    public function mailto_uri_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('mailto:user@example.com');
+    }
+
+    #[Test]
+    public function mailto_uri_with_query_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('mailto:user@example.com?subject=Hello');
+    }
+
+    #[Test]
+    public function tel_uri_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('tel:+1-816-555-1212');
+    }
+
+    #[Test]
+    public function urn_uuid_uri_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('urn:uuid:550e8400-e29b-41d4-a716-446655440000');
+    }
+
+    #[Test]
+    public function urn_isbn_uri_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('urn:isbn:0451450523');
+    }
+
+    #[Test]
+    public function data_uri_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('data:text/plain;base64,SGVsbG8=');
+    }
+
+    #[Test]
+    public function git_plus_https_scheme_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('git+https://github.com/foo/bar');
+    }
+
+    #[Test]
+    public function ssh_scheme_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('ssh://host/path');
+    }
+
+    #[Test]
+    public function irc_scheme_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('irc://irc.example.com/channel');
+    }
+
+    #[Test]
+    public function magnet_scheme_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('magnet:?xt=urn:btih:abc123');
+    }
+
+    #[Test]
+    public function bitcoin_scheme_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('bitcoin:1BgGZ9tcN4rm9KBzDn7KprQz7SZ2BXArAj');
+    }
+
+    #[Test]
+    public function chrome_extension_scheme_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('chrome-extension://abc123/path');
+    }
+
+    #[Test]
+    public function http_uri_with_port_in_path_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $this->validator->validate('http://example.com:8080/path');
+    }
+
+    #[Test]
+    public function relative_ref_without_scheme_is_rejected(): void
+    {
+        $uri = '//example.com/path';
+
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid URI format');
+
+        $this->validator->validate($uri);
+    }
+
+    #[Test]
+    public function uri_without_colon_is_rejected(): void
+    {
+        $uri = 'not a uri at all';
+
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid URI format');
+
+        $this->validator->validate($uri);
+    }
+
+    /**
+     * S-021: port-range error message must NOT interpolate the
+     * attacker-supplied port value or any other attacker-derived
+     * fragment (CWE-209).
+     */
+    #[Test]
+    public function port_out_of_range_rejected_with_generic_message(): void
+    {
+        $uri = 'http://example.com:99999/path';
 
         $exception = null;
 
@@ -162,50 +292,40 @@ final class UriValidatorTest extends TestCase
         } catch (InvalidFormatException $exception) {
         }
 
-        $this->assertNotNull($exception);
-        $this->assertStringContainsString('Unsupported URI scheme', $exception->getMessage());
+        $this->assertNotNull($exception, 'Port-out-of-range URI must be rejected');
+        $this->assertSame('Invalid URI: port out of range', $exception->getMessage());
+        $this->assertStringNotContainsString('99999', $exception->getMessage());
+    }
+
+    /**
+     * S-021: even when the attacker controls the scheme AND the port,
+     * the error message must not echo either back. The validator
+     * must use a generic message verbatim.
+     */
+    #[Test]
+    public function error_message_does_not_disclose_scheme_in_port_range_error(): void
+    {
+        $uri = 'javascript://example.com:99999/path';
+
+        $exception = null;
+
+        try {
+            $this->validator->validate($uri);
+        } catch (InvalidFormatException $exception) {
+        }
+
+        $this->assertNotNull($exception, 'Out-of-range port must trigger InvalidFormatException');
+        $this->assertSame('Invalid URI: port out of range', $exception->getMessage());
         $this->assertStringNotContainsString(
             'javascript',
             $exception->getMessage(),
-            'getMessage() must not interpolate attacker-derived scheme (S-021).',
+            'getMessage() must not disclose attacker-supplied scheme (S-021, CWE-209).',
         );
+        $this->assertStringNotContainsString('99999', $exception->getMessage());
     }
 
     /**
-     * Defence in depth: regex allows non-ASCII hosts (IDN), but PHP's
-     * filter_var(FILTER_VALIDATE_URL) on PHP 8.4+ rejects bare UTF-8 hosts
-     * without Punycode conversion. IDN-to-ASCII conversion is explicitly
-     * out of scope per the task spec. This test pins the current behaviour:
-     * the regex layer accepts the host, but the final filter_var layer
-     * rejects it. Tracked as escalation in
-     * `.ai/tasks/review/19-format-validators-uri-uuid.md`.
-     */
-    #[Test]
-    public function idn_host_uri_rejected_by_filter_var_layer(): void
-    {
-        $uri = 'https://' . "\xd0\xbf\xd1\x80\xd0\xb8\xd0\xbc\xd0\xb5\xd1\x80.\xd1\x80\xd1\x84";
-
-        $exception = null;
-
-        try {
-            $this->validator->validate($uri);
-        } catch (InvalidFormatException $exception) {
-        }
-
-        $this->assertNotNull(
-            $exception,
-            'IDN host URI is rejected by the filter_var defence-in-depth layer; '
-            . 'see .ai/tasks/review/19-format-validators-uri-uuid.md for the spec contradiction.',
-        );
-    }
-
-    /**
-     * URI edge cases: scheme//authority requirement, allowlist, port range.
-     *
-     * The validator uses defence in depth (RFC 3986 regex → scheme allowlist
-     * → port ≤ 65535 → filter_var). mailto/tel/data schemes lack `//authority`
-     * and are therefore rejected by the regex layer even though they appear in
-     * the scheme allowlist. file URIs require a non-empty host.
+     * URI edge cases across all four RFC 3986 §3 hier-part forms.
      *
      * @return array<string, array{0: string, 1: bool}>
      */
@@ -214,15 +334,28 @@ final class UriValidatorTest extends TestCase
         return [
             'relative URI "../relative" is rejected (no scheme)' => ['../relative', false],
             'relative URI "path/to/file" is rejected (no scheme)' => ['path/to/file', false],
-            'URN "urn:uuid:..." is rejected (no //authority, urn not in allowlist)' => ['urn:uuid:550e8400-e29b-41d4-a716-446655440000', false],
-            'URN "urn:isbn:0451450523" is rejected' => ['urn:isbn:0451450523', false],
-            'file URI "file:///path/to/file" is rejected (empty host)' => ['file:///path/to/file', false],
-            'file URI with host "file://localhost/path" is accepted' => ['file://localhost/path/to/file', true],
-            'mailto URI "mailto:test@test.com" is rejected (no //authority)' => ['mailto:test@test.com', false],
-            'mailto URI with subject is rejected (no //authority)' => ['mailto:test@example.com?subject=Hello', false],
+            'relative network-path "//example.com/path" is rejected (no scheme)' => ['//example.com/path', false],
+            'URN uuid is valid (path-rootless)' => ['urn:uuid:550e8400-e29b-41d4-a716-446655440000', true],
+            'URN isbn is valid (path-rootless)' => ['urn:isbn:0451450523', true],
+            'file URI "file:///path/to/file" is valid (empty host allowed)' => ['file:///path/to/file', true],
+            'file URI with host is valid' => ['file://localhost/path/to/file', true],
+            'mailto URI is valid (path-rootless)' => ['mailto:test@test.com', true],
+            'mailto URI with subject is valid (path-rootless + query)' => ['mailto:test@example.com?subject=Hello', true],
+            'tel URI is valid (path-rootless)' => ['tel:+1234567890', true],
+            'data URI is valid (path-rootless)' => ['data:text/plain;base64,SGVsbG8=', true],
+            'git+https URI is valid (scheme allows "+")' => ['git+https://github.com/foo/bar', true],
+            'ssh URI is valid' => ['ssh://host/path', true],
+            'magnet URI is valid (path-empty)' => ['magnet:?xt=urn:btih:abc', true],
+            'bitcoin URI is valid (path-rootless)' => ['bitcoin:1BgGZ9tcN4rm9KBzDn7KprQz7SZ2BXArAj', true],
+            'javascript URI is valid per RFC 3986' => ['javascript:alert(1)', true],
             'absolute https URI is valid (positive control)' => ['https://example.com', true],
             'absolute http URI with path is valid (positive control)' => ['http://example.com/path', true],
             'absolute ftp URI is valid' => ['ftp://example.com/file', true],
+            'IPv6 literal host is valid (regex host branch \[[0-9a-fA-F:]+\])' => ['http://[::1]:8080/path', true],
+            'port 0 is valid per RFC 3986 (DIGIT allows zero)' => ['http://example.com:0/', true],
+            'port 65535 is valid (MAX_PORT boundary)' => ['http://example.com:65535/', true],
+            'port 65536 is rejected (first value above MAX_PORT)' => ['http://example.com:65536/', false],
+            'URI "http://example.com:/path" is valid via path-absolute fallback (regex absorbs //example.com:/path as path-absolute hier-part, not authority+empty-port)' => ['http://example.com:/path', true],
         ];
     }
 
@@ -266,26 +399,6 @@ final class UriValidatorTest extends TestCase
         if (null !== $exception) {
             $this->assertSame('uri', $exception->format);
             $this->assertSame($relativeUri, $exception->value(reveal: true));
-        }
-    }
-
-    #[Test]
-    public function urn_uri_rejected_by_regex_layer(): void
-    {
-        $urnUri = 'urn:uuid:550e8400-e29b-41d4-a716-446655440000';
-
-        $exception = null;
-
-        try {
-            $this->validator->validate($urnUri);
-        } catch (InvalidFormatException $exception) {
-        }
-
-        $this->assertNotNull($exception, 'URN must be rejected: no //authority and urn not in scheme allowlist');
-
-        if (null !== $exception) {
-            $this->assertSame('uri', $exception->format);
-            $this->assertSame($urnUri, $exception->value(reveal: true));
         }
     }
 }

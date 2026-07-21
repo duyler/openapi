@@ -346,14 +346,24 @@ final class SecurityExceptionLeakTest extends TestCase
         $validator = new UriValidator();
         $sensitiveScheme = 'javascript';
 
+        // RFC 3986 generic-syntax-valid URIs are accepted regardless of
+        // scheme (no allowlist), so a URI that would previously fail the
+        // allowlist now passes. Trigger the only remaining throw path
+        // (port-out-of-range) while still embedding an attacker-supplied
+        // scheme to prove the message is generic (S-021, CWE-209).
         try {
-            $validator->validate($sensitiveScheme . '://example.com');
+            $validator->validate($sensitiveScheme . '://example.com:99999');
             self::fail('Expected InvalidFormatException was not thrown');
         } catch (InvalidFormatException $e) {
             self::assertStringNotContainsString(
                 $sensitiveScheme,
                 $e->getMessage(),
                 'getMessage() must not interpolate attacker-controlled scheme (S-021).',
+            );
+            self::assertStringNotContainsString(
+                '99999',
+                $e->getMessage(),
+                'getMessage() must not interpolate attacker-controlled port (S-021).',
             );
         }
     }

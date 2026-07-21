@@ -161,6 +161,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   application level — see README section "Callbacks").
 
 ### Fixed
+- `UriValidator` now accepts all RFC 3986 valid URIs including scheme-less
+  forms (`mailto:`, `tel:`, `urn:`, `data:`, `magnet:?...`) and
+  non-allowlisted schemes (`git+https`, `ssh`, `irc`, `magnet`, `bitcoin`,
+  `chrome-extension`) (R3-SPEC-008, R3-SPEC-009). The previous
+  implementation required `//authority` via a regex lookahead and enforced
+  a closed scheme allowlist through the now-removed `Format\String\Enum\UriScheme`
+  enum; both contradicted RFC 3986 §3 / §3.1 and JSON Schema 2020-12 §7.3.1
+  (which delegate `format: uri` to RFC 3986 generic syntax without
+  restricting the scheme set). The regex now implements all four
+  hier-part alternatives (`"//" authority path-abempty`, `path-absolute`,
+  `path-rootless`, `path-empty`); the redundant `filter_var(FILTER_VALIDATE_URL)`
+  fallback has been removed because it rejected valid scheme-less URIs and
+  IDN hosts.
+- `UriValidator` error messages no longer disclose the URI scheme or port
+  from user input (R3-SEC-021, CWE-209). The previous messages
+  `'Unsupported URI scheme'` and `'URI port out of range'` have been
+  replaced with the generic strings `'Invalid URI format'` and
+  `'Invalid URI: port out of range'`. The full URI value remains available
+  through `$e->value(reveal: true)` for trusted-operator diagnostics.
 - `PatternValidator::validate()` now calls `RegexValidator::validate()`
   between `normalize()` and `pregExecutor()->match()`, closing R3-SEC-002
   (CWE-1333, CWE-400, CWE-770; OWASP ASVS 4.0 V5.3.4). The sibling
