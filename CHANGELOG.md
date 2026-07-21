@@ -8,6 +8,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
+- `CompilationCache::generateKey()` now includes the document context
+  for schemas that contain `$ref`, closing R3-SEC-004 (cross-document
+  cache poisoning). Previously `SchemaToArrayConverter::toSnapshotArray`
+  serialised `$ref` pointers as opaque strings, so two `OpenApiDocument`
+  instances that exposed the same `#/components/schemas/...` pointer but
+  resolved it to different target schemas produced identical cache keys.
+  A second tenant sharing a PSR-6 pool would then silently reuse a stale
+  compiled validator from the first tenant. The fix resolves
+  `#/components/schemas/...` pointers against the supplied document
+  before hashing (in-memory only, mirroring `ValidatorCompiler::resolveRefs`
+  cycle detection), and additionally folds in a SHA-256 fingerprint of
+  the document's entire `components.schemas` map so that two documents
+  with identical resolved-target content but different sibling components
+  still produce different keys (tenant isolation). Schemas that
+  transitively contain a `$ref` (at the top level or nested in
+  `properties` / `items`) without an explicit `$document` argument now
+  throw `CompilationCacheException` (fail-closed) instead of silently
+  hashing the literal pointer string. `CompilationCacheInterface::generateKey`
+  signature changed to `(Schema, string $className, ?OpenApiDocument $document = null)`
+  and `ValidatorCompiler::compileWithCache` gained a fourth optional
+  `?OpenApiDocument $document` parameter that flows through to
+  `generateKey`; existing three-argument callers continue to work for
+  any schema that does not transitively contain a `$ref`.
+
+### Fixed
+- `CompilationCache::generateKey()` now incorporates the target PHP
+  class name into the cache key, closing R3-ARCH-001 (cache-key
+  collision when the same `Schema` is compiled under different class
+  names). Previously the key depended only on the schema snapshot, so
+  `compileWithCache($schema, 'UserValidator', $cache)` followed by
+  `compileWithCache($schema, 'AdminValidator', $cache)` returned the
+  first call's cached code; `require_once` then loaded a class still
+  named `UserValidator`, and `new AdminValidator()` failed with
+  `Fatal error: Class "AdminValidator" not found`. The fix SHA-256
+  hashes the className and combines it with the schema hash and the
+  document fingerprint through a second SHA-256 pass, keeping the
+  returned key inside PSR-6 length and charset limits
+  (`namespace.length + 1 + 64`) regardless of how long the className
+  is. The internal in-memory WeakMap was widened from
+  `WeakMap<Schema, string>` to `WeakMap<Schema, array<string, string>>`
+  so the same `Schema` instance compiled under N class names or M
+  documents keeps O(1) lookup over the `N * M` cache entries.
+
+### Security
 - **BREAKING**: Inverted the default of strict callback runtime template
   resolution from opt-in to opt-out, closing SEC-09 (SSRF via attacker-
   controlled callback URLs). `OpenApiValidatorBuilder::build()` now resolves

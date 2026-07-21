@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Compiler;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Schema\OpenApiDocument;
 
 interface CompilationCacheInterface
 {
@@ -12,5 +13,5 @@ interface CompilationCacheInterface
 
     public function set(string $schemaHash, string $compiledCode): void;
 
-    public function generateKey(Schema $schema): string;
+    public function generateKey(Schema $schema, string $className, ?OpenApiDocument $document = null): string;
 }

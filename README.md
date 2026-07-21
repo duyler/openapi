@@ -764,9 +764,14 @@ $compiler = new ValidatorCompiler();
 
 // First call compiles and caches, subsequent calls return cached code
 $code = $compiler->compileWithCache($schema, 'UserValidator', $compilationCache);
+
+// For schemas that contain a $ref, pass the OpenApiDocument as the fourth
+// argument so the cache key can resolve #/components/schemas/... pointers
+// against the document and fingerprint its components.schemas map.
+$code = $compiler->compileWithCache($refSchema, 'PetValidator', $compilationCache, $document);
 ```
 
-`CompilationCache` uses a PSR-6 cache pool and generates a SHA-256 hash of the schema to use as the cache key. Cached entries expire after the configured TTL (default: 24 hours / 86400 seconds). Pass a custom TTL to the `CompilationCache` constructor to override:
+`CompilationCache` uses a PSR-6 cache pool and generates a SHA-256 hash that incorporates the target class name, the schema snapshot, and (when supplied) the document context, then collapses the compound input through a second SHA-256 pass so the returned key never exceeds `namespace.length + 1 + 64` characters regardless of how long the class name is. The class name input prevents collisions when the same schema is compiled under different class names; the document context input (a SHA-256 fingerprint of the document's `components.schemas` map, applied after in-memory `#/components/schemas/...` pointer resolution) prevents cross-document cache poisoning when tenants share a PSR-6 pool. Schemas that contain a `$ref` therefore require the document argument; pass `null` only for `$ref`-free schemas. Cached entries expire after the configured TTL (default: 24 hours / 86400 seconds). Pass a custom TTL to the `CompilationCache` constructor to override:
 
 ```php
 $compilationCache = new CompilationCache($pool, ttl: 3600); // 1-hour TTL

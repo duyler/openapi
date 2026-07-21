@@ -7,8 +7,12 @@ namespace Duyler\OpenApi\Test\Unit\Compiler;
 use Duyler\OpenApi\Compiler\CompilationCache;
 use Duyler\OpenApi\Compiler\Exception\CompilationCacheException;
 use Duyler\OpenApi\Compiler\ValidatorCompiler;
+use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\Discriminator;
+use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Schema\OpenApiDocument;
+use InvalidArgumentException;
 use JsonException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -141,8 +145,8 @@ final class CompilationCacheTest extends TestCase
             maxLength: 100,
         );
 
-        $key1 = $cache->generateKey($schema1);
-        $key2 = $cache->generateKey($schema2);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertSame($key1, $key2);
     }
@@ -163,8 +167,8 @@ final class CompilationCacheTest extends TestCase
             minLength: 10,
         );
 
-        $key1 = $cache->generateKey($schema1);
-        $key2 = $cache->generateKey($schema2);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertNotSame($key1, $key2);
     }
@@ -177,7 +181,7 @@ final class CompilationCacheTest extends TestCase
 
         $schema = new Schema(type: 'string');
 
-        $key = $cache->generateKey($schema);
+        $key = $cache->generateKey($schema, 'DefaultValidator');
 
         self::assertStringContainsString('validator_compilation.', $key);
     }
@@ -190,7 +194,7 @@ final class CompilationCacheTest extends TestCase
 
         $schema = new Schema(type: 'string');
 
-        $key = $cache->generateKey($schema);
+        $key = $cache->generateKey($schema, 'DefaultValidator');
 
         self::assertStringContainsString('custom_namespace.', $key);
     }
@@ -217,8 +221,8 @@ final class CompilationCacheTest extends TestCase
             enum: ['a', 'b'],
         );
 
-        $key1 = $cache->generateKey($schema1);
-        $key2 = $cache->generateKey($schema2);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertSame($key1, $key2);
     }
@@ -243,8 +247,8 @@ final class CompilationCacheTest extends TestCase
             ],
         );
 
-        $key1 = $cache->generateKey($schema1);
-        $key2 = $cache->generateKey($schema2);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertNotSame($key1, $key2);
     }
@@ -265,8 +269,8 @@ final class CompilationCacheTest extends TestCase
             items: new Schema(type: 'integer'),
         );
 
-        $key1 = $cache->generateKey($schema1);
-        $key2 = $cache->generateKey($schema2);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertNotSame($key1, $key2);
     }
@@ -280,8 +284,8 @@ final class CompilationCacheTest extends TestCase
         $schema1 = new Schema(type: 'string', minLength: null);
         $schema2 = new Schema(type: 'string');
 
-        $key1 = $cache->generateKey($schema1);
-        $key2 = $cache->generateKey($schema2);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertSame($key1, $key2);
     }
@@ -295,8 +299,8 @@ final class CompilationCacheTest extends TestCase
         $schema1 = new Schema(type: 'string', format: 'email');
         $schema2 = new Schema(type: 'string', format: 'uri');
 
-        $key1 = $cache->generateKey($schema1);
-        $key2 = $cache->generateKey($schema2);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertNotSame($key1, $key2);
     }
@@ -310,8 +314,8 @@ final class CompilationCacheTest extends TestCase
         $schema1 = new Schema(type: 'string', title: 'Schema A');
         $schema2 = new Schema(type: 'string', title: 'Schema B');
 
-        $key1 = $cache->generateKey($schema1);
-        $key2 = $cache->generateKey($schema2);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertNotSame($key1, $key2);
     }
@@ -325,8 +329,8 @@ final class CompilationCacheTest extends TestCase
         $schema1 = new Schema(type: 'string', description: 'First description');
         $schema2 = new Schema(type: 'string', description: 'Second description');
 
-        $key1 = $cache->generateKey($schema1);
-        $key2 = $cache->generateKey($schema2);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertNotSame($key1, $key2);
     }
@@ -340,8 +344,8 @@ final class CompilationCacheTest extends TestCase
         $schema1 = new Schema(type: 'string', deprecated: false);
         $schema2 = new Schema(type: 'string', deprecated: true);
 
-        $key1 = $cache->generateKey($schema1);
-        $key2 = $cache->generateKey($schema2);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertNotSame($key1, $key2);
     }
@@ -355,8 +359,8 @@ final class CompilationCacheTest extends TestCase
         $schema1 = new Schema(type: 'string', nullable: false);
         $schema2 = new Schema(type: 'string', nullable: true);
 
-        $key1 = $cache->generateKey($schema1);
-        $key2 = $cache->generateKey($schema2);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertNotSame($key1, $key2);
     }
@@ -370,8 +374,8 @@ final class CompilationCacheTest extends TestCase
         $schema1 = new Schema(type: 'string', default: 'alpha', hasDefault: true);
         $schema2 = new Schema(type: 'string', default: 'beta', hasDefault: true);
 
-        $key1 = $cache->generateKey($schema1);
-        $key2 = $cache->generateKey($schema2);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertNotSame($key1, $key2);
     }
@@ -385,8 +389,8 @@ final class CompilationCacheTest extends TestCase
         $schema1 = new Schema(type: 'string', const: 'fixed-a', hasConst: true);
         $schema2 = new Schema(type: 'string', const: 'fixed-b', hasConst: true);
 
-        $key1 = $cache->generateKey($schema1);
-        $key2 = $cache->generateKey($schema2);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertNotSame($key1, $key2);
     }
@@ -406,8 +410,8 @@ final class CompilationCacheTest extends TestCase
             discriminator: new Discriminator(propertyName: 'kind'),
         );
 
-        $key1 = $cache->generateKey($schema1);
-        $key2 = $cache->generateKey($schema2);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertNotSame($key1, $key2);
     }
@@ -421,8 +425,8 @@ final class CompilationCacheTest extends TestCase
         $schema1 = new Schema(type: 'string', readOnly: false, writeOnly: false);
         $schema2 = new Schema(type: 'string', readOnly: true, writeOnly: true);
 
-        $key1 = $cache->generateKey($schema1);
-        $key2 = $cache->generateKey($schema2);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertNotSame($key1, $key2);
     }
@@ -507,6 +511,23 @@ final class CompilationCacheTest extends TestCase
 
         self::assertArrayHasKey('DEFAULT_TTL', $constants);
         self::assertSame(86400, $constants['DEFAULT_TTL']);
+    }
+
+    /**
+     * Constructor guard: a non-positive TTL is rejected at construction
+     * time rather than silently producing a cache that expires
+     * immediately. The error message must include the offending value so
+     * operators can debug misconfigurations.
+     */
+    #[Test]
+    public function constructor_rejects_non_positive_ttl(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('TTL must be a positive integer, got 0.');
+
+        new CompilationCache($pool, ttl: 0);
     }
 
     /**
@@ -599,10 +620,10 @@ final class CompilationCacheTest extends TestCase
 
         $schema = $this->createSelfReferentialSchema();
 
-        $key1 = $cache->generateKey($schema);
+        $key1 = $cache->generateKey($schema, 'DefaultValidator');
 
         $freshCache = new CompilationCache($pool);
-        $key2 = $freshCache->generateKey($schema);
+        $key2 = $freshCache->generateKey($schema, 'DefaultValidator');
 
         $hashPart = substr($key1, strlen('validator_compilation.'));
 
@@ -630,13 +651,61 @@ final class CompilationCacheTest extends TestCase
         $caught = null;
 
         try {
-            $cache->generateKey($schema);
+            $cache->generateKey($schema, 'DefaultValidator');
         } catch (CompilationCacheException $e) {
             $caught = $e;
         }
 
         self::assertNotNull($caught);
         self::assertStringContainsString('Failed to encode schema for hash:', $caught->getMessage());
+
+        $previous = $caught->getPrevious();
+
+        self::assertInstanceOf(JsonException::class, $previous);
+    }
+
+    /**
+     * Symmetry guard: `documentFingerprint` runs the same `json_encode`
+     * path over a snapshot of `components.schemas`. A non-JSON-encodable
+     * value (resource) inside a component schema MUST be wrapped in a
+     * `CompilationCacheException` with the original `JsonException`
+     * preserved on `getPrevious()`, mirroring the wrapper used in
+     * `calculateSchemaHash`. Without the wrapper, the raw
+     * `JsonException` would leak through the public `generateKey`
+     * surface and break the domain-exception contract.
+     */
+    #[Test]
+    public function document_fingerprint_wraps_json_exception_in_compilation_cache_exception(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(type: 'string');
+
+        $document = new OpenApiDocument(
+            openapi: '3.0.3',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Broken' => new Schema(
+                        type: 'string',
+                        default: [fopen('php://memory', 'r')],
+                        hasDefault: true,
+                    ),
+                ],
+            ),
+        );
+
+        $caught = null;
+
+        try {
+            $cache->generateKey($schema, 'DefaultValidator', $document);
+        } catch (CompilationCacheException $e) {
+            $caught = $e;
+        }
+
+        self::assertNotNull($caught);
+        self::assertStringContainsString('Failed to encode document components for fingerprint:', $caught->getMessage());
 
         $previous = $caught->getPrevious();
 
@@ -659,8 +728,8 @@ final class CompilationCacheTest extends TestCase
         $schema1 = $this->createSelfReferentialSchema();
         $schema2 = $this->createSelfReferentialSchema();
 
-        $key1 = $cache->generateKey($schema1);
-        $key2 = $cache->generateKey($schema2);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertSame($key1, $key2);
     }
@@ -679,7 +748,7 @@ final class CompilationCacheTest extends TestCase
         $cache = new CompilationCache($pool);
 
         $schema1 = $this->createSelfReferentialSchema();
-        $key1 = $cache->generateKey($schema1);
+        $key1 = $cache->generateKey($schema1, 'DefaultValidator');
 
         for ($i = 0; $i < 20; ++$i) {
             $scratch = new Schema(type: 'object', properties: ['p' . $i => new Schema(type: 'string')]);
@@ -689,9 +758,494 @@ final class CompilationCacheTest extends TestCase
         gc_collect_cycles();
 
         $schema2 = $this->createSelfReferentialSchema();
-        $key2 = $cache->generateKey($schema2);
+        $key2 = $cache->generateKey($schema2, 'DefaultValidator');
 
         self::assertSame($key1, $key2);
+    }
+
+    /**
+     * R3-ARCH-001: the cache key MUST differ when the same schema is
+     * compiled under different class names. Without className in the
+     * hash input, the second compile would reuse a stale cached class
+     * with the wrong short name (`Fatal error: Class "AdminValidator"
+     * not found` after `require_once` of the cached file).
+     */
+    #[Test]
+    public function generate_key_differs_for_different_class_names(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(type: 'string');
+
+        $key1 = $cache->generateKey($schema, 'UserValidator');
+        $key2 = $cache->generateKey($schema, 'AdminValidator');
+
+        self::assertNotSame($key1, $key2);
+    }
+
+    /**
+     * Determinism guard: same Schema instance, same class name, two calls
+     * (the second served from the in-memory compound-key WeakMap cache)
+     * MUST return byte-identical keys.
+     */
+    #[Test]
+    public function generate_key_same_for_same_class_name_and_schema(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(type: 'string');
+
+        $key1 = $cache->generateKey($schema, 'UserValidator');
+        $key2 = $cache->generateKey($schema, 'UserValidator');
+
+        self::assertSame($key1, $key2);
+    }
+
+    /**
+     * R3-SEC-004: a schema with `$ref: '#/components/schemas/Base'` MUST
+     * hash differently when `Base` resolves to a different target schema.
+     * Without document-context in the hash input, document v1 (Base is
+     * integer) and document v2 (Base is string) would collide and the
+     * second compile would silently reuse v1's stale validator.
+     */
+    #[Test]
+    public function generate_key_differs_for_different_document_context_with_ref(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(ref: '#/components/schemas/Base');
+
+        $documentV1 = $this->buildDocumentWithBase(new Schema(type: 'integer'));
+        $documentV2 = $this->buildDocumentWithBase(new Schema(type: 'string'));
+
+        $key1 = $cache->generateKey($schema, 'BaseValidator', $documentV1);
+        $key2 = $cache->generateKey($schema, 'BaseValidator', $documentV2);
+
+        self::assertNotSame($key1, $key2);
+    }
+
+    /**
+     * Determinism guard for document-context hashing: the same Schema and
+     * the same document MUST produce identical keys across calls. The
+     * document fingerprint is memoized via WeakMap, but that is an
+     * optimisation — the output must be byte-identical regardless.
+     */
+    #[Test]
+    public function generate_key_same_for_same_document_context_with_ref(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(ref: '#/components/schemas/Base');
+        $document = $this->buildDocumentWithBase(new Schema(type: 'integer'));
+
+        $key1 = $cache->generateKey($schema, 'BaseValidator', $document);
+        $key2 = $cache->generateKey($schema, 'BaseValidator', $document);
+
+        self::assertSame($key1, $key2);
+    }
+
+    /**
+     * Tenant isolation: two documents whose `Base` schema resolves to
+     * identical content MUST still produce different cache keys when the
+     * documents differ in any other component. Without the document
+     * fingerprint in the hash input, tenants sharing a PSR-6 pool would
+     * cross-share validator code (cache-poisoning vector when one
+     * tenant is malicious and controls the className of a poisoned
+     * cached class). The fingerprint is the only input that
+     * differentiates these cases because schema resolution alone
+     * produces identical resolved snapshots.
+     */
+    #[Test]
+    public function generate_key_differs_across_documents_with_identical_resolved_schema(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(ref: '#/components/schemas/Base');
+
+        $documentV1 = new OpenApiDocument(
+            openapi: '3.0.3',
+            info: new InfoObject(title: 'Tenant A', version: '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Base' => new Schema(type: 'string'),
+                    'TenantAOnly' => new Schema(type: 'integer'),
+                ],
+            ),
+        );
+
+        $documentV2 = new OpenApiDocument(
+            openapi: '3.0.3',
+            info: new InfoObject(title: 'Tenant B', version: '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Base' => new Schema(type: 'string'),
+                    'TenantBOnly' => new Schema(type: 'boolean'),
+                ],
+            ),
+        );
+
+        $key1 = $cache->generateKey($schema, 'BaseValidator', $documentV1);
+        $key2 = $cache->generateKey($schema, 'BaseValidator', $documentV2);
+
+        self::assertNotSame($key1, $key2);
+    }
+
+    /**
+     * R3-SEC-004 fail-closed: a schema containing a `$ref` MUST throw
+     * `CompilationCacheException` when no document is provided. Previously
+     * the literal `$ref` string was hashed as-is, silently colliding across
+     * documents that resolved the same pointer to different targets.
+     */
+    #[Test]
+    public function generate_key_throws_when_schema_has_ref_and_document_is_null(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(ref: '#/components/schemas/Base');
+
+        $this->expectException(CompilationCacheException::class);
+        $this->expectExceptionMessage('Schema contains $ref but no document context provided');
+
+        $cache->generateKey($schema, 'BaseValidator');
+    }
+
+    /**
+     * R3-SEC-004 fail-closed for nested `$ref`: a top-level `$ref`-free
+     * object schema whose property carries a `$ref` MUST also throw
+     * `CompilationCacheException` when no document is provided. The
+     * top-level-only check is insufficient because
+     * `SchemaToArrayConverter::toSnapshotArray` serialises nested `$ref`
+     * pointers as opaque strings, so two documents with different
+     * target content for the same nested pointer would collide.
+     */
+    #[Test]
+    public function generate_key_throws_when_nested_ref_in_properties_and_document_is_null(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(
+            type: 'object',
+            properties: ['child' => new Schema(ref: '#/components/schemas/Base')],
+        );
+
+        $this->expectException(CompilationCacheException::class);
+        $this->expectExceptionMessage('Schema contains $ref but no document context provided');
+
+        $cache->generateKey($schema, 'NestedPropertyValidator');
+    }
+
+    /**
+     * R3-SEC-004 fail-closed for nested `$ref` in array items: same
+     * invariant as the properties case but for `type: array` schemas
+     * whose `items` is a `$ref` pointer.
+     */
+    #[Test]
+    public function generate_key_throws_when_nested_ref_in_items_and_document_is_null(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(ref: '#/components/schemas/Base'),
+        );
+
+        $this->expectException(CompilationCacheException::class);
+        $this->expectExceptionMessage('Schema contains $ref but no document context provided');
+
+        $cache->generateKey($schema, 'NestedItemsValidator');
+    }
+
+    /**
+     * R3-SEC-004 fail-closed recursion: a 3-level deep schema tree
+     * (`a -> properties.b -> properties.c -> $ref`) MUST also throw,
+     * proving that `schemaContainsRef` recurses through nested
+     * properties rather than stopping at the first level.
+     */
+    #[Test]
+    public function generate_key_throws_when_deeply_nested_ref_and_document_is_null(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $deepest = new Schema(
+            type: 'object',
+            properties: ['c' => new Schema(ref: '#/components/schemas/Base')],
+        );
+        $middle = new Schema(
+            type: 'object',
+            properties: ['b' => $deepest],
+        );
+        $schema = new Schema(
+            type: 'object',
+            properties: ['a' => $middle],
+        );
+
+        $this->expectException(CompilationCacheException::class);
+        $this->expectExceptionMessage('Schema contains $ref but no document context provided');
+
+        $cache->generateKey($schema, 'DeepNestedValidator');
+    }
+
+    /**
+     * BC path: schemas without `$ref` continue to work without a document
+     * argument. This is the legacy `compileWithCache(schema, name, cache)`
+     * flow that must remain valid for any schema that does not transitively
+     * contain a `$ref`.
+     */
+    #[Test]
+    public function generate_key_works_for_schema_without_ref_and_null_document(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(type: 'string', minLength: 1);
+
+        $key = $cache->generateKey($schema, 'StringValidator');
+
+        self::assertStringContainsString('validator_compilation.', $key);
+    }
+
+    /**
+     * PSR-6 pool keys have implementation-specific length limits (Symfony
+     * FilesystemAdapter caps around 50 chars + namespace prefix, other
+     * adapters reject keys > 64 chars). The final SHA-256 collapse keeps
+     * the key inside `namespace.length + 1 + 64` regardless of how long
+     * the className or how nested the document is.
+     */
+    #[Test]
+    public function generate_key_returns_compact_key_within_psr6_length(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(type: 'string');
+
+        $longClassName = 'App\\Modules\\Whatever\\VeryLong\\Namespace\\Path\\To\\A\\ValidatorClass';
+        $key = $cache->generateKey($schema, $longClassName);
+
+        self::assertLessThanOrEqual(128, strlen($key));
+    }
+
+    /**
+     * Cycle detection in `resolveRefsForHash`: a document where A points to
+     * B and B points back to A MUST throw `CompilationCacheException` with
+     * a message containing `Circular $ref`, instead of infinite-looping
+     * during cache key computation.
+     */
+    #[Test]
+    public function generate_key_detects_circular_ref(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(ref: '#/components/schemas/A');
+        $document = new OpenApiDocument(
+            openapi: '3.0.3',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'A' => new Schema(ref: '#/components/schemas/B'),
+                    'B' => new Schema(ref: '#/components/schemas/A'),
+                ],
+            ),
+        );
+
+        $this->expectException(CompilationCacheException::class);
+        $this->expectExceptionMessage('Circular $ref detected while calculating cache key');
+
+        $cache->generateKey($schema, 'CycleValidator', $document);
+    }
+
+    /**
+     * End-to-end check that `compileWithCache` actually flows the new
+     * `$className` and `$document` arguments into distinct cache keys: two
+     * compiles of the same schema under different class names MUST emit
+     * different generated code (the class short name appears in the
+     * emitted PHP source).
+     */
+    #[Test]
+    public function compile_with_cache_passes_class_name_and_document(): void
+    {
+        $storage = [];
+
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $pool
+            ->method('getItem')
+            ->willReturnCallback(function (string $key) use (&$storage) {
+                $item = $this->createStub(CacheItemInterface::class);
+                $item->method('isHit')->willReturn(array_key_exists($key, $storage));
+                $item->method('get')->willReturn($storage[$key] ?? null);
+                $item->method('set')->willReturnCallback(function ($value) use ($key, &$storage, $item) {
+                    $storage[$key] = $value;
+
+                    return $item;
+                });
+                $item->method('expiresAfter')->willReturnSelf();
+
+                return $item;
+            });
+
+        $pool->method('save')->willReturn(true);
+
+        $cache = new CompilationCache($pool);
+        $compiler = new ValidatorCompiler();
+
+        $document = $this->buildDocumentWithBase(new Schema(type: 'string'));
+        $schema = new Schema(ref: '#/components/schemas/Base');
+
+        $code1 = $compiler->compileWithCache($schema, 'FirstRefValidator', $cache, $document);
+        $code2 = $compiler->compileWithCache($schema, 'SecondRefValidator', $cache, $document);
+
+        self::assertStringContainsString('class FirstRefValidator', $code1);
+        self::assertStringContainsString('class SecondRefValidator', $code2);
+    }
+
+    /**
+     * Memoization sanity: calling `generateKey` twice on the same Schema
+     * object under the same (className, document) triple returns from the
+     * in-memory WeakMap on the second call without re-hashing. Observable
+     * effect: the second call is significantly faster, but more importantly
+     * the result is byte-identical.
+     */
+    #[Test]
+    public function generate_key_uses_compound_cache_on_repeated_call(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(type: 'string');
+        $document = $this->buildDocumentWithBase(new Schema(type: 'integer'));
+
+        $key1 = $cache->generateKey($schema, 'MemoValidator', $document);
+        $key2 = $cache->generateKey($schema, 'MemoValidator', $document);
+
+        self::assertSame($key1, $key2);
+    }
+
+    /**
+     * Compound-cache dimension check: the same Schema under two different
+     * documents MUST return different keys, proving that the compound-key
+     * `WeakMap<Schema, array<string, string>>` correctly distinguishes
+     * document contexts on the same schema object.
+     */
+    #[Test]
+    public function generate_key_distinguishes_documents_for_same_schema_instance(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(ref: '#/components/schemas/Base');
+        $documentV1 = $this->buildDocumentWithBase(new Schema(type: 'integer'));
+        $documentV2 = $this->buildDocumentWithBase(new Schema(type: 'string'));
+
+        $key1 = $cache->generateKey($schema, 'BaseValidator', $documentV1);
+        $key2 = $cache->generateKey($schema, 'BaseValidator', $documentV2);
+
+        self::assertNotSame($key1, $key2);
+    }
+
+    /**
+     * Rejects `$ref` pointers that are not in `#/components/schemas/...`
+     * form. The compiler does not support external or alternate-shape
+     * refs at compile time, so the cache key generator must fail-closed.
+     */
+    #[Test]
+    public function generate_key_rejects_unsupported_ref_shape(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(ref: 'https://example.com/external.yaml#/Base');
+        $document = $this->buildDocumentWithBase(new Schema(type: 'string'));
+
+        $this->expectException(CompilationCacheException::class);
+        $this->expectExceptionMessage('Unsupported $ref for cache key');
+
+        $cache->generateKey($schema, 'ExternalRefValidator', $document);
+    }
+
+    /**
+     * Rejects `$ref` whose target is not present in the document's
+     * `components.schemas` map. Without this guard, an unresolvable ref
+     * would silently fall back to hashing the literal pointer string.
+     */
+    #[Test]
+    public function generate_key_rejects_missing_component_target(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(ref: '#/components/schemas/Missing');
+        $document = new OpenApiDocument(
+            openapi: '3.0.3',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(schemas: ['Other' => new Schema(type: 'string')]),
+        );
+
+        $this->expectException(CompilationCacheException::class);
+        $this->expectExceptionMessage('Schema not found: Missing');
+
+        $cache->generateKey($schema, 'MissingTargetValidator', $document);
+    }
+
+    /**
+     * Resolution recursion into `properties`: an object schema whose
+     * property is a `$ref` MUST have the property resolved against the
+     * document before hashing, so two documents that resolve the same
+     * property `$ref` to different target schemas produce different keys.
+     */
+    #[Test]
+    public function generate_key_resolves_nested_ref_in_properties(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(
+            type: 'object',
+            properties: ['child' => new Schema(ref: '#/components/schemas/Base')],
+        );
+
+        $documentV1 = $this->buildDocumentWithBase(new Schema(type: 'integer'));
+        $documentV2 = $this->buildDocumentWithBase(new Schema(type: 'string'));
+
+        $key1 = $cache->generateKey($schema, 'NestedPropertyValidator', $documentV1);
+        $key2 = $cache->generateKey($schema, 'NestedPropertyValidator', $documentV2);
+
+        self::assertNotSame($key1, $key2);
+    }
+
+    /**
+     * Resolution recursion into `items`: an array schema whose `items`
+     * is a `$ref` MUST have the items schema resolved against the
+     * document before hashing, so two documents that resolve the same
+     * items `$ref` to different target schemas produce different keys.
+     */
+    #[Test]
+    public function generate_key_resolves_nested_ref_in_items(): void
+    {
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
+
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(ref: '#/components/schemas/Base'),
+        );
+
+        $documentV1 = $this->buildDocumentWithBase(new Schema(type: 'integer'));
+        $documentV2 = $this->buildDocumentWithBase(new Schema(type: 'string'));
+
+        $key1 = $cache->generateKey($schema, 'NestedItemsValidator', $documentV1);
+        $key2 = $cache->generateKey($schema, 'NestedItemsValidator', $documentV2);
+
+        self::assertNotSame($key1, $key2);
     }
 
     private function createSelfReferentialSchema(): Schema
@@ -700,5 +1254,16 @@ final class CompilationCacheTest extends TestCase
         $schema = $schema->withOverrides(properties: ['self' => &$schema]);
 
         return $schema;
+    }
+
+    private function buildDocumentWithBase(Schema $base): OpenApiDocument
+    {
+        return new OpenApiDocument(
+            openapi: '3.0.3',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(
+                schemas: ['Base' => $base],
+            ),
+        );
     }
 }

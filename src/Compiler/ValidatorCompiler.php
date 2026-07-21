@@ -68,12 +68,13 @@ final readonly class ValidatorCompiler
         Schema $schema,
         string $className,
         ?CompilationCacheInterface $cache = null,
+        ?OpenApiDocument $document = null,
     ): string {
         if (null === $cache) {
             return $this->compile($schema, $className);
         }
 
-        $schemaHash = $cache->generateKey($schema);
+        $schemaHash = $cache->generateKey($schema, $className, $document);
         $cached = $cache->get($schemaHash);
 
         if (null !== $cached) {
