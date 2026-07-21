@@ -42,6 +42,15 @@ final readonly class ValidatorCompiler
      */
     private const float RELATIVE_EPSILON_FACTOR = 1e-9;
 
+    /**
+     * Backtrack cap inlined into compiled `pattern` checks. Mirrors
+     * PregExecutor::DEFAULT_MAX_BACKTRACKS so the compiled validator stays
+     * semantically equivalent to the runtime validator. Kept as an explicit
+     * literal (not a reference to the runtime constant) so the generated
+     * standalone class does not depend on the library at runtime.
+     */
+    private const int COMPILED_MAX_BACKTRACKS = 10_000;
+
     public function compile(Schema $schema, string $className): string
     {
         $this->validateClassName($className);
@@ -290,12 +299,61 @@ final readonly class ValidatorCompiler
         return $code;
     }
 
+    /**
+     * Emits the `pattern` keyword check into the generated validator.
+     *
+     * The generated code inlines the defensive wrapper of
+     * Duyler\OpenApi\Validator\PregExecutor::match rather than emitting a
+     * call to it: README's "Validator Compilation" section promises that
+     * compiled validators are "a standalone PHP class without dependency on
+     * the library at runtime", so any external call would break consumer
+     * contracts. The wrapper lowers `pcre.backtrack_limit` for the duration
+     * of the call (defending against catastrophic-backtracking patterns
+     * such as `(a+)+`, CWE-1333 / CWE-400), captures and restores the
+     * previous value inside a try/finally (the limit is process-global),
+     * and disambiguates `false` (PCRE error) from `0` (no match) so that
+     * backtrack-overflow surface as a distinct RuntimeException message
+     * instead of being misreported as a validation failure.
+     *
+     * Observable behaviour at the validator level mirrors the runtime
+     * pattern check: both surface a dedicated exception on PCRE failure
+     * (compile error or backtrack-limit exhausted) and a separate
+     * exception on no-match. `PregExecutor::match` itself returns
+     * `int|false` (0 on no-match, false on compile error) and only
+     * throws `PregRuntimeException` when `preg_last_error()` is non-
+     * zero; the runtime `PatternValidator` converts the 0/false returns
+     * into validation errors. The compiled wrapper collapses these
+     * paths into two `RuntimeException` messages directly, because the
+     * generated validator has no caller to delegate the conversion to.
+     * The internal mechanism otherwise mirrors `PregExecutor::match`
+     * (limit capture, error handler, try/finally restoration).
+     *
+     * The `COMPILED_MAX_BACKTRACKS` constant is kept as an explicit
+     * literal rather than a reference to `PregExecutor::DEFAULT_MAX_BACKTRACKS`
+     * so the generated standalone class does not depend on the library at
+     * runtime.
+     */
     private function generatePatternCheck(string $pattern): string
     {
         $normalizedPattern = new RegexValidator()->normalize($pattern);
         $escapedPattern = var_export($normalizedPattern, true);
-        $code = sprintf("        if (false === preg_match(%s, (string) \$data)) {\n", $escapedPattern);
-        $code .= "            throw new \\RuntimeException('Pattern validation failed');\n";
+        $limit = var_export((string) self::COMPILED_MAX_BACKTRACKS, true);
+
+        $code = "        \$previous = ini_get('pcre.backtrack_limit');\n";
+        $code .= "        \$previous = false === \$previous ? '1000000' : \$previous;\n";
+        $code .= sprintf("        ini_set('pcre.backtrack_limit', %s);\n", $limit);
+        $code .= "        set_error_handler(static fn(int \$errno) => E_WARNING === \$errno);\n";
+        $code .= "        try {\n";
+        $code .= sprintf("            \$result = preg_match(%s, (string) \$data);\n", $escapedPattern);
+        $code .= "            if (false === \$result) {\n";
+        $code .= "                throw new \\RuntimeException('PCRE error during pattern validation');\n";
+        $code .= "            }\n";
+        $code .= "            if (0 === \$result) {\n";
+        $code .= "                throw new \\RuntimeException('Pattern validation failed');\n";
+        $code .= "            }\n";
+        $code .= "        } finally {\n";
+        $code .= "            restore_error_handler();\n";
+        $code .= "            ini_set('pcre.backtrack_limit', \$previous);\n";
         $code .= "        }\n\n";
 
         return $code;

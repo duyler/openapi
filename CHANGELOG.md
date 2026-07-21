@@ -8,6 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
+- `ValidatorCompiler::generatePatternCheck` now emits an inlined defensive
+  wrapper around `preg_match` for the `pattern` keyword, closing R3-SEC-001
+  (CWE-1333, CWE-400; OWASP ASVS 4.0 V5.3.4). Previously the compiled
+  validator called `preg_match` directly with PHP's default
+  `pcre.backtrack_limit = 1_000_000`, bypassing the
+  `PregExecutor::DEFAULT_MAX_BACKTRACKS = 10_000` cap that the runtime
+  validator enforces. A spec-supplied catastrophic-backtracking pattern
+  (e.g. `^(a+)+$`) matched against attacker-controlled data could burn
+  hundreds of milliseconds of CPU per call inside a compiled validator,
+  enabling CPU DoS. The fix inlines the
+  `PregExecutor::match` semantics — capture previous limit, lower it to
+  `10_000`, install a bounded-scope error handler, call `preg_match`,
+  restore everything inside `try`/`finally` — so the generated class stays
+  self-contained (no library call) and the standalone-validator contract
+  documented in the README "Validator Compilation" section is preserved.
+  `ValidatorCompiler::COMPILED_MAX_BACKTRACKS` is the explicit mirror of
+  `PregExecutor::DEFAULT_MAX_BACKTRACKS`; update both together if the cap
+  ever changes.
+  Operators upgrading from a pre-fix release MUST flush their PSR-6
+  `CompilationCache` pool (or restart long-running workers) to retire
+  cached compiled validators that still contain the raw `preg_match`
+  call. The cache key (introduced in R3-ARCH-001) does not incorporate
+  the compiler version, so existing entries persist until their TTL
+  expires (24h default) or the pool is cleared manually.
 - `CompilationCache::generateKey()` now includes the document context
   for schemas that contain `$ref`, closing R3-SEC-004 (cross-document
   cache poisoning). Previously `SchemaToArrayConverter::toSnapshotArray`
@@ -33,6 +57,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   any schema that does not transitively contain a `$ref`.
 
 ### Fixed
+- `ValidatorCompiler::generatePatternCheck` now disambiguates a PCRE
+  runtime error (`preg_match === false`, e.g. malformed pattern that
+  passes `RegexValidator::normalize` but fails PCRE compilation, or
+  `pcre.backtrack_limit` exceeded on a catastrophic-backtracking input)
+  from a genuine no-match (`preg_match === 0`), closing the
+  R3-PERF-001 disambiguation part. Previously the compiled validator
+  emitted `if (false === preg_match(...)) throw new
+  RuntimeException('Pattern validation failed')`, which conflated the two
+  cases; backtrack-overflow surfaced in operator logs as "Pattern
+  validation failed" — misleading because the data may have matched the
+  pattern but PCRE ran out of resources. The new generated code throws
+  `RuntimeException('PCRE error during pattern validation')` for the
+  `false` branch and `RuntimeException('Pattern validation failed')` for
+  the `0` branch, matching the disambiguation contract of the runtime
+  `PregExecutor`.
 - `CompilationCache::generateKey()` now incorporates the target PHP
   class name into the cache key, closing R3-ARCH-001 (cache-key
   collision when the same `Schema` is compiled under different class
