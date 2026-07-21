@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
@@ -602,5 +603,201 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
         }
 
         self::assertSame(true, $succeeded);
+    }
+
+    /**
+     * C-001 regression: properties validated by an in-place applicator
+     * (here simulated by directly marking them in context, as
+     * AllOfValidator would after a successful branch) must be treated
+     * as evaluated by unevaluatedProperties.
+     */
+    #[Test]
+    public function unevaluated_properties_with_context_annotations_passes(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            unevaluatedProperties: false,
+        );
+
+        $context = ValidationContext::create($this->pool);
+        $context->markPropertyEvaluated('name');
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(['name' => 'Alice'], $schema, $context);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass when "name" is evaluated via annotation, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function unevaluated_properties_with_partial_context_annotations_fails_on_unevaluated(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            unevaluatedProperties: false,
+        );
+
+        $context = ValidationContext::create($this->pool);
+        $context->markPropertyEvaluated('known');
+
+        $this->expectException(UnevaluatedPropertyError::class);
+
+        $this->validator->validate(['known' => 1, 'unknown' => 2], $schema, $context);
+    }
+
+    /**
+     * C-004 regression: annotations from composition validators
+     * (allOf/anyOf/oneOf/if-then-else) merge with static analysis
+     * of properties / patternProperties.
+     */
+    #[Test]
+    public function unevaluated_properties_merges_static_and_annotation_evaluated(): void
+    {
+        $nameSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'static' => $nameSchema,
+            ],
+            unevaluatedProperties: false,
+        );
+
+        $context = ValidationContext::create($this->pool);
+        $context->markPropertyEvaluated('from_annotation');
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(['static' => 'value', 'from_annotation' => 42], $schema, $context);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass when both static and annotation-evaluated properties cover the data, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    /**
+     * C-001 regression: when a property is evaluated by an annotation
+     * AND present in patternProperties, both contribute to evaluated
+     * set; no double-counting issues.
+     */
+    #[Test]
+    public function unevaluated_properties_with_pattern_properties_and_annotations(): void
+    {
+        $patternSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'object',
+            patternProperties: [
+                '/^x_/' => $patternSchema,
+            ],
+            unevaluatedProperties: false,
+        );
+
+        $context = ValidationContext::create($this->pool);
+        $context->markPropertyEvaluated('annotated');
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(['x_foo' => 'value', 'annotated' => 1], $schema, $context);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass for pattern-matched x_foo and annotation-evaluated "annotated", got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function unevaluated_properties_with_additional_properties_true_registers_all_keys(): void
+    {
+        $additional = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'object',
+            additionalProperties: $additional,
+            unevaluatedProperties: false,
+        );
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(['any_key' => 'value', 'other' => 'val'], $schema);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass for additionalProperties:schema covering all keys, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function unevaluated_properties_with_schema_uses_annotation_set(): void
+    {
+        $unevaluatedSchema = new Schema(type: 'integer');
+        $schema = new Schema(
+            type: 'object',
+            unevaluatedProperties: $unevaluatedSchema,
+        );
+
+        $context = ValidationContext::create($this->pool);
+        $context->markPropertyEvaluated('evaluated_by_branch');
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate(['evaluated_by_branch' => 'anything', 'extra' => 42], $schema, $context);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass when "evaluated_by_branch" is in annotations and "extra" matches unevaluatedItems schema, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    /**
+     * C-001 regression: without context (legacy SchemaValidator path),
+     * the validator falls back to static analysis only. Properties not
+     * declared in static schema are flagged as unevaluated.
+     */
+    #[Test]
+    public function unevaluated_properties_without_context_uses_static_analysis_only(): void
+    {
+        $nameSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'declared' => $nameSchema,
+            ],
+            unevaluatedProperties: false,
+        );
+
+        $this->expectException(UnevaluatedPropertyError::class);
+
+        $this->validator->validate(['declared' => 'value', 'undeclared' => 1], $schema, null);
+    }
+
+    #[Test]
+    public function unevaluated_properties_fails_on_truly_unevaluated(): void
+    {
+        $known = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'known' => $known,
+            ],
+            unevaluatedProperties: false,
+        );
+
+        $context = ValidationContext::create($this->pool);
+
+        $this->expectException(UnevaluatedPropertyError::class);
+
+        $this->validator->validate(['known' => 'value', 'unknown' => 1], $schema, $context);
     }
 }

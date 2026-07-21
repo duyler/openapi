@@ -33,7 +33,7 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
             return;
         }
 
-        $evaluatedProperties = $this->getEvaluatedProperties($schema, $data);
+        $evaluatedProperties = $this->getEvaluatedProperties($schema, $data, $context);
         $unevaluatedProperties = array_diff(array_keys($data), $evaluatedProperties);
         /** @var array<array-key, string> $stringUnevaluatedProperties */
         $stringUnevaluatedProperties = array_filter($unevaluatedProperties, is_string(...));
@@ -77,16 +77,38 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
         }
     }
 
-    private function getEvaluatedProperties(Schema $schema, array $data): array
+    /**
+     * Returns the list of object property names evaluated by this
+     * schema's own properties / patternProperties / additionalProperties
+     * keywords plus every property registered by an in-place applicator
+     * (allOf / anyOf / oneOf / if / then / else / $ref / contains) via
+     * ValidationContext annotation-state (R3-SPEC-001 / R3-SPEC-004).
+     *
+     * Annotation-state is only consulted when a non-null context is
+     * supplied; the legacy {@see SchemaValidator}
+     * path passes null and falls back to static analysis only.
+     *
+     * @param array<array-key, mixed> $data
+     *
+     * @return list<string>
+     */
+    private function getEvaluatedProperties(Schema $schema, array $data, ?ValidationContext $context): array
     {
         if (true === $schema->additionalProperties || $schema->additionalProperties instanceof Schema) {
-            return array_keys($data);
+            /** @var list<string> $keys */
+            $keys = array_keys($data);
+
+            return $keys;
         }
 
         $evaluated = [];
 
         if (null !== $schema->properties) {
-            $evaluated = array_keys($schema->properties);
+            /** @var list<string> $keys */
+            $keys = array_keys($schema->properties);
+            foreach ($keys as $propertyName) {
+                $evaluated[] = $propertyName;
+            }
         }
 
         if (null !== $schema->patternProperties && [] !== $schema->patternProperties) {
@@ -109,6 +131,15 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
             }
         }
 
-        return array_unique($evaluated);
+        if (null !== $context) {
+            foreach ($context->evaluatedPropertyNames() as $propertyName) {
+                $evaluated[] = $propertyName;
+            }
+        }
+
+        /** @var list<string> $unique */
+        $unique = array_values(array_unique($evaluated));
+
+        return $unique;
     }
 }

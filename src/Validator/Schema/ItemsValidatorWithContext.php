@@ -67,6 +67,7 @@ final readonly class ItemsValidatorWithContext
                     } else {
                         $rootValidator->validateWithContextIgnoringDiscriminator($normalizedItem, $itemSchema, $context);
                     }
+                    $context->markItemEvaluated($index);
                 } finally {
                     $context->leaveBreadcrumb();
                 }

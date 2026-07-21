@@ -112,11 +112,11 @@ final class SchemaValidatorWithContext
             return;
         }
 
-        $this->validateInternal($data, $schema, $context);
-
         if (null === $schema->discriminator && null !== $schema->oneOf) {
             $this->oneOfValidator->validateWithContextIgnoringDiscriminator($data, $schema, $context);
         }
+
+        $this->validateInternal($data, $schema, $context);
 
         $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
     }

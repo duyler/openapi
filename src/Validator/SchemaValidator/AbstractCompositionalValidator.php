@@ -28,7 +28,6 @@ abstract readonly class AbstractCompositionalValidator extends AbstractSchemaVal
         ?ValidationContext $context,
         string $schemaType,
     ): ValidationResult {
-        $nullableAsType = $context?->nullableAsType ?? true;
         $validCount = 0;
         $errors = [];
         $abstractErrors = [];
@@ -36,11 +35,17 @@ abstract readonly class AbstractCompositionalValidator extends AbstractSchemaVal
 
         foreach ($schemas as $subSchema) {
             try {
-                $allowNull = $nullableAsType && ($subSchema->nullable
-                    || SchemaValueNormalizer::typeIncludesNull($subSchema->type));
-                $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
+                $normalizedData = $this->normalizeForBranch($data, $subSchema, $context);
                 $validator = $this->createSchemaValidator();
-                $validator->validate($normalizedData, $subSchema, $context);
+
+                if (null !== $context) {
+                    $childContext = $context->forkForBranch();
+                    $validator->validate($normalizedData, $subSchema, $childContext);
+                    $context->mergeChildAnnotations($childContext);
+                } else {
+                    $validator->validate($normalizedData, $subSchema, null);
+                }
+
                 ++$validCount;
             } catch (InvalidDataTypeException $e) {
                 $errors[] = new ValidationException(
@@ -74,5 +79,17 @@ abstract readonly class AbstractCompositionalValidator extends AbstractSchemaVal
         }
 
         return new ValidationResult($validCount, $errors, $abstractErrors);
+    }
+
+    /**
+     * @return array<array-key, mixed>|int|string|float|bool|null
+     */
+    private function normalizeForBranch(mixed $data, Schema $subSchema, ?ValidationContext $context): array|int|string|float|bool|null
+    {
+        $nullableAsType = $context?->nullableAsType ?? true;
+        $allowNull = $nullableAsType && ($subSchema->nullable
+            || SchemaValueNormalizer::typeIncludesNull($subSchema->type));
+
+        return SchemaValueNormalizer::normalize($data, $allowNull);
     }
 }

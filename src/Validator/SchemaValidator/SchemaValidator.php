@@ -27,6 +27,22 @@ use function array_values;
  *           invoked by {@see AbstractSchemaValidator::createSchemaValidator()} and by parameter
  *           validators (Path/Query/Headers/Cookie) pending task 14b migration. The canonical
  *           top-level validator is {@see SchemaValidatorWithContext}.
+ *
+ *           Annotation tracking (R3-SPEC-001..004): when this dispatcher is
+ *           used as the recursion engine inside composition validators
+ *           ({@see AllOfValidator}, {@see AnyOfValidator}, {@see NotValidator},
+ *           {@see IfThenElseValidator}, {@see ContainsValidator}) it forwards
+ *           the supplied {@see ValidationContext} to nested stateless
+ *           validators so annotation-state propagation works correctly
+ *           across nested allOf/anyOf/if-then-else/$ref. When invoked
+ *           directly as a top-level validator (without an externally
+ *           supplied context) it creates a fresh context per validate()
+ *           call, so annotation tracking still works for direct callers.
+ *           The context-aware path through {@see SchemaValidatorWithContext}
+ *           remains the canonical entry point for request/response
+ *           validation because it also routes discriminator oneOf and
+ *           $ref-pre-resolved composition that this legacy dispatcher
+ *           cannot handle.
  */
 final class SchemaValidator implements SchemaValidatorInterface
 {

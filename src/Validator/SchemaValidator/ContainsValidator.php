@@ -43,7 +43,7 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
 
         $matchCount = 0;
 
-        foreach ($data as $item) {
+        foreach ($data as $index => $item) {
             if (self::MAX_CONTAINS_VALIDATIONS <= $matchCount) {
                 throw new TooManyContainsValidationsError(
                     max: self::MAX_CONTAINS_VALIDATIONS,
@@ -55,6 +55,8 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
                 /** @var array-key|array<array-key, mixed> $item */
                 $validator->validate($item, $schema->contains, $containsContext);
                 ++$matchCount;
+                /** @var int $index */
+                $context?->markItemEvaluated($index);
 
                 if (null !== $schema->maxContains && $matchCount > $schema->maxContains) {
                     break;

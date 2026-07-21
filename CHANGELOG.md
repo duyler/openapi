@@ -57,6 +57,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   any schema that does not transitively contain a `$ref`.
 
 ### Fixed
+- `UnevaluatedPropertiesValidator` now consults every adjacent in-place
+  applicator (`allOf`, `anyOf`, `oneOf`, `if`, `then`, `else`, `$ref`)
+  in addition to `properties`, `patternProperties`, and
+  `additionalProperties`, closing R3-SPEC-001 (false-positive
+  `UnevaluatedPropertyError` on the common OpenAPI idiom
+  `unevaluatedProperties: false` + `allOf` for inheritance). JSON
+  Schema 2020-12 §10.3.4 requires `unevaluatedProperties` to consider
+  every property that was successfully evaluated by any adjacent
+  in-place applicator. The fix introduces mutable annotation-state on
+  `ValidationContext` (`evaluatedPropertyNames: array<string, true>`)
+  that every composition validator (`AllOfValidator`, `AnyOfValidator`,
+  `OneOfValidatorWithContext`, `IfThenElseValidator`) populates through
+  `forkForBranch()` + `mergeChildAnnotations()` on successful
+  sub-validation, and that keyword validators (`PropertiesValidator`,
+  `PropertiesValidatorWithContext`, `PatternPropertiesValidator`,
+  `AdditionalPropertiesValidator`) populate directly via
+  `markPropertyEvaluated()`. `NotValidator` deliberately contributes an
+  empty annotation set per §10.3.4. `UnevaluatedPropertiesValidator`
+  reads `$context->evaluatedPropertyNames()` and merges with its
+  existing static analysis of `properties` / `patternProperties` /
+  `additionalProperties`. The legacy stateless `SchemaValidator` path
+  that passes `null` for the context falls back to static analysis
+  only; this is a documented limitation (canonical entry point is
+  `SchemaValidatorWithContext`).
+- `UnevaluatedItemsValidator::getEvaluatedItemIndices` (renamed from
+  `getEvaluatedItemsCount` to return a list of indices instead of a
+  count) now treats `items` as evaluating every index `>=
+  prefixItems count` when `items` is present, closing R3-SPEC-002.
+  JSON Schema 2020-12 §10.3.1.2 requires `unevaluatedItems` to consider
+  items at indices `>= prefixItems count` evaluated when `items` is
+  present. The previous implementation checked `prefixItems` first and
+  short-circuited the `items` check, silently over-rejecting every
+  item past `prefixItems` in schemas like
+  `prefixItems: [...]; items: {type: integer}; unevaluatedItems: false`
+  on data `['foo', 1, 2, 3]`. The fix also drops the unused
+  `PHP_INT_MAX` sentinel in favour of an explicit index set.
+- `ContainsValidator` now registers every matched index in
+  `ValidationContext` via `markItemEvaluated(int $index)` so that
+  `UnevaluatedItemsValidator` recognises `contains`-validated items as
+  evaluated, closing R3-SPEC-003. JSON Schema 2020-12 §11.2.1.3
+  annotates `contains` as a `list<int>` of matched indices, not a
+  boolean. The previous implementation re-computed the evaluated set
+  from `prefixItems` / `items` only, so a schema like
+  `contains: {type: integer, minimum: 0}; unevaluatedItems: false`
+  on data `[1, 2, 'x']` rejected indices 0 and 1 even though they had
+  already been validated against the `contains` schema. After the fix,
+  `contains` annotations propagate through the shared context and
+  `unevaluatedItems` only fails the truly unevaluated index 2.
+- `UnevaluatedItemsValidator` now also consumes composition annotations
+  (`allOf`, `anyOf`, `oneOf`, `if`, `then`, `else`, `$ref`) through the
+  same `ValidationContext::evaluatedItemIndices()` channel used for
+  `contains`, closing R3-SPEC-004. JSON Schema 2020-12 §11.1.1.3
+  requires `unevaluatedItems` to consult every in-place applicator
+  annotation. The previous implementation had no annotation channel at
+  all and could not honour schemas like
+  `unevaluatedItems: false; allOf: [{items: {type: integer}}]` on data
+  `[1, 2, 3]`, rejecting every item as unevaluated. The
+  `ItemsValidator` (legacy stateless path), `ItemsValidatorWithContext`
+  (canonical path), and `PrefixItemsValidator` now register evaluated
+  indices into the shared context, and `OneOfValidatorWithContext` was
+  reordered to run before the stateless validator pass in
+  `SchemaValidatorWithContext::doValidate` so that its annotations are
+  visible when `unevaluatedItems` / `unevaluatedProperties` run.
 - `ValidatorCompiler::generateConstCheck` now emits an inline
   `jsonEquals` call instead of a PHP strict `!==` comparison, closing
   R3-CORRECTNESS-001. JSON Schema 2020-12 §4.2.2 numeric equality

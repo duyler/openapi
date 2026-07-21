@@ -1634,6 +1634,44 @@ The validator covers approximately 95% of JSON Schema draft 2020-12 keywords. Th
 - `contentEncoding` / `contentMediaType` - content validation
 - Custom vocabularies and keyword extensions
 
+### Annotation Tracking for `unevaluatedProperties` / `unevaluatedItems`
+
+JSON Schema 2020-12 §10.3.4 / §11.1.1.3 define `unevaluatedProperties` and
+`unevaluatedItems` through the *annotations* produced by adjacent in-place
+applicators (`properties`, `patternProperties`, `additionalProperties`,
+`prefixItems`, `items`, `contains`, `allOf`, `anyOf`, `oneOf`, `if`,
+`then`, `else`, `$ref`), not through static schema analysis. The runtime
+validator propagates these annotations through `ValidationContext`:
+`PropertiesValidator` / `PropertiesValidatorWithContext` /
+`PatternPropertiesValidator` / `AdditionalPropertiesValidator` register
+evaluated property names; `PrefixItemsValidator` / `ItemsValidator` /
+`ItemsValidatorWithContext` / `ContainsValidator` register evaluated item
+indices; and composition validators (`AllOfValidator`, `AnyOfValidator`,
+`OneOfValidatorWithContext`, `IfThenElseValidator`) fork a child context
+per branch and merge annotations only on successful sub-validation.
+`NotValidator` deliberately contributes an empty annotation set per
+§10.3.4.
+
+Limitations:
+
+- Annotation tracking works only when validation flows through
+  `SchemaValidatorWithContext` (the canonical entry point returned by
+  `OpenApiValidatorBuilder::build()`). The legacy stateless
+  `SchemaValidator` dispatcher is annotation-aware when invoked with an
+  externally supplied `ValidationContext` (which the canonical path
+  always does), but when called directly without a context it falls back
+  to the static analysis path (`properties`, `patternProperties`,
+  `additionalProperties`) and cannot honour `unevaluatedProperties` /
+  `unevaluatedItems` across `allOf` / `anyOf` / `oneOf` / `if`-`then`-
+  `else` / `$ref` / `contains`. Application code that invokes
+  `SchemaValidator` directly should switch to `SchemaValidatorWithContext`
+  for full annotation coverage.
+- `unevaluatedItems: false` (boolean) and `unevaluatedProperties: false`
+  (boolean) require boolean-schema-form support and are tracked
+  separately; the validator currently treats `unevaluatedItems` as
+  `?Schema` (only `Schema|null` accepted). The `unevaluatedProperties`
+  field already accepts `Schema|bool|null`.
+
 ### Validator Compiler
 
 The `ValidatorCompiler` is marked as `@experimental`. It supports a subset of JSON Schema keywords: `type`, `enum`, `const`, `minLength`, `maxLength`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`, `pattern`, `minItems`, `maxItems`, `uniqueItems`, `properties`, `required`, `additionalProperties`, `items`.

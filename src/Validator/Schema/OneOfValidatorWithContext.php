@@ -103,12 +103,15 @@ final readonly class OneOfValidatorWithContext
                 continue;
             }
 
+            $childContext = $context->forkForBranch();
+
             try {
                 $allowNull = $context->nullableAsType && ($subSchema->nullable
                     || SchemaValueNormalizer::typeIncludesNull($subSchema->type));
                 $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
-                $rootValidator->validateWithContext($normalizedData, $subSchema, $context);
+                $rootValidator->validateWithContext($normalizedData, $subSchema, $childContext);
                 ++$validCount;
+                $context->mergeChildAnnotations($childContext);
             } catch (AbstractValidationError $e) {
                 $abstractErrors[] = $e;
             } catch (InvalidDataTypeException) {

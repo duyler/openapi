@@ -61,6 +61,8 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
 
                 try {
                     $validator->validate($normalizedItem, $schema->items, $context);
+                    /** @var int $index */
+                    $context->markItemEvaluated($index);
                 } finally {
                     $context->leaveBreadcrumb();
                 }
