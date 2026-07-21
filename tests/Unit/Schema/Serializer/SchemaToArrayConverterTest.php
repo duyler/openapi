@@ -288,4 +288,118 @@ final class SchemaToArrayConverterTest extends TestCase
 
         self::assertSame($json, $rejson);
     }
+
+    #[Test]
+    public function round_trip_items_false_emits_false(): void
+    {
+        $schema = new Schema(type: 'array', items: false);
+
+        $result = new SchemaToArrayConverter()->toWireArray($schema);
+
+        self::assertArrayHasKey('items', $result);
+        self::assertFalse($result['items']);
+    }
+
+    #[Test]
+    public function round_trip_items_true_emits_true(): void
+    {
+        $schema = new Schema(type: 'array', items: true);
+
+        $result = new SchemaToArrayConverter()->toWireArray($schema);
+
+        self::assertArrayHasKey('items', $result);
+        self::assertTrue($result['items']);
+    }
+
+    #[Test]
+    public function round_trip_contains_true_emits_true(): void
+    {
+        $schema = new Schema(contains: true);
+
+        $result = new SchemaToArrayConverter()->toWireArray($schema);
+
+        self::assertArrayHasKey('contains', $result);
+        self::assertTrue($result['contains']);
+    }
+
+    #[Test]
+    public function round_trip_not_false_emits_false(): void
+    {
+        $schema = new Schema(not: false);
+
+        $result = new SchemaToArrayConverter()->toWireArray($schema);
+
+        self::assertArrayHasKey('not', $result);
+        self::assertFalse($result['not']);
+    }
+
+    #[Test]
+    public function round_trip_if_false_then_true_else_false_emits_bool(): void
+    {
+        $schema = new Schema(if: false, then: true, else: false);
+
+        $result = new SchemaToArrayConverter()->toWireArray($schema);
+
+        self::assertArrayHasKey('if', $result);
+        self::assertFalse($result['if']);
+        self::assertArrayHasKey('then', $result);
+        self::assertTrue($result['then']);
+        self::assertArrayHasKey('else', $result);
+        self::assertFalse($result['else']);
+    }
+
+    #[Test]
+    public function round_trip_property_names_false_emits_false(): void
+    {
+        $schema = new Schema(propertyNames: false);
+
+        $result = new SchemaToArrayConverter()->toWireArray($schema);
+
+        self::assertArrayHasKey('propertyNames', $result);
+        self::assertFalse($result['propertyNames']);
+    }
+
+    #[Test]
+    public function round_trip_unevaluated_items_false_emits_false(): void
+    {
+        $schema = new Schema(unevaluatedItems: false);
+
+        $result = new SchemaToArrayConverter()->toWireArray($schema);
+
+        self::assertArrayHasKey('unevaluatedItems', $result);
+        self::assertFalse($result['unevaluatedItems']);
+    }
+
+    #[Test]
+    public function round_trip_items_false_passes_back_through_from_array(): void
+    {
+        $parser = new SchemaFromArrayConverter(documentVersion: '3.2.0');
+        $serializer = new SchemaToArrayConverter();
+
+        $schema = new Schema(type: 'array', items: false);
+        $wire = $serializer->toWireArray($schema);
+        $reparsed = $parser->fromArray($wire);
+
+        self::assertFalse($reparsed->items);
+    }
+
+    #[Test]
+    public function snapshot_items_false_emits_false(): void
+    {
+        $schema = new Schema(items: false);
+
+        $result = new SchemaToArrayConverter()->toSnapshotArray($schema, new WeakMap());
+
+        self::assertFalse($result['items']);
+    }
+
+    #[Test]
+    public function snapshot_not_true_emits_true(): void
+    {
+        $schema = new Schema(not: true);
+
+        $result = new SchemaToArrayConverter()->toSnapshotArray($schema, new WeakMap());
+
+        self::assertTrue($result['not']);
+    }
 }

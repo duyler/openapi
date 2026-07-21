@@ -39,6 +39,16 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
             return;
         }
 
+        // Boolean schema form per JSON Schema 2020-12 §4.3.2.
+        // `items: true` accepts every item (no-op); still marks each item as
+        // evaluated so unevaluatedItems does not over-reject. `items: false`
+        // rejects every item at index >= prefixItems count.
+        if (true === $schema->items || false === $schema->items) {
+            $this->validateBooleanItems($data, $schema, $context);
+
+            return;
+        }
+
         $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
         $validator = $this->createSchemaValidator();
         $nullableAsType = $context?->nullableAsType ?? true;
@@ -111,6 +121,55 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
                     errors: $errors,
                 );
             }
+        }
+    }
+
+    /**
+     * Handles boolean-form `items` per JSON Schema 2020-12 §4.3.2.
+     *
+     * `items: true` accepts every item (no-op); still marks each item as
+     * evaluated so unevaluatedItems does not over-reject. `items: false`
+     * rejects every item at index >= prefixItems count.
+     *
+     * @param array<array-key, mixed> $data
+     */
+    private function validateBooleanItems(array $data, Schema $schema, ?ValidationContext $context): void
+    {
+        $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
+
+        if (true === $schema->items) {
+            $dataCount = count($data);
+
+            if (null !== $context) {
+                for ($i = $prefixCount; $i < $dataCount; ++$i) {
+                    $context->markItemEvaluated($i);
+                }
+            }
+
+            return;
+        }
+
+        $dataPath = $this->getDataPath($context);
+        $errors = [];
+        $dataCount = count($data);
+
+        for ($i = $prefixCount; $i < $dataCount; ++$i) {
+            /** @var mixed $rejectedItem */
+            $rejectedItem = $data[$i];
+
+            $errors[] = new TypeMismatchError(
+                expected: 'nothing (boolean schema false)',
+                actual: TypeFormatter::format($rejectedItem),
+                dataPath: $dataPath . '[' . $i . ']',
+                schemaPath: '/items',
+            );
+        }
+
+        if ([] !== $errors) {
+            throw new ValidationException(
+                'Items rejected by items: false',
+                errors: $errors,
+            );
         }
     }
 }

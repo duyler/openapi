@@ -779,7 +779,7 @@ $compilationCache = new CompilationCache($pool, ttl: 3600); // 1-hour TTL
 
 #### Compiler Limitations
 
-The compiler does not support all JSON Schema keywords. If a schema uses unsupported keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `patternProperties`, `format`, `minProperties`, `maxProperties`, `prefixItems`, or `additionalProperties` as a Schema — the bool `true`/`false` form is supported), the compiler throws `UnsupportedKeywordException`. See the Limitations section below for details.
+The compiler does not support all JSON Schema keywords. If a schema uses unsupported keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `patternProperties`, `format`, `minProperties`, `maxProperties`, `prefixItems`, the boolean form of `items`/`contains`/`propertyNames`/`if`/`then`/`else`/`not`/`unevaluatedItems`, or `additionalProperties` as a Schema — the bool `true`/`false` form is supported), the compiler throws `UnsupportedKeywordException`. See the Limitations section below for details.
 
 `prefixItems` is rejected with `UnsupportedKeywordException` during compilation — positional item validation is not generated. Use the runtime validator for `prefixItems` enforcement.
 
@@ -1666,17 +1666,21 @@ Limitations:
   `else` / `$ref` / `contains`. Application code that invokes
   `SchemaValidator` directly should switch to `SchemaValidatorWithContext`
   for full annotation coverage.
-- `unevaluatedItems: false` (boolean) and `unevaluatedProperties: false`
-  (boolean) require boolean-schema-form support and are tracked
-  separately; the validator currently treats `unevaluatedItems` as
-  `?Schema` (only `Schema|null` accepted). The `unevaluatedProperties`
-  field already accepts `Schema|bool|null`.
+- Boolean schema form (`Schema|bool|null`) is supported by the runtime
+  validator for every schema-typed keyword: `additionalProperties`,
+  `unevaluatedProperties`, `contentSchema`, `items`, `contains`,
+  `propertyNames`, `if`, `then`, `else`, `not`, `unevaluatedItems`.
+  `true` always passes; `false` always rejects (per JSON Schema 2020-12
+  §4.3.2). The `ValidatorCompiler` rejects boolean-form `items`,
+  `contains`, `propertyNames`, `if`, `then`, `else`, `not`,
+  `unevaluatedItems` with `UnsupportedKeywordException`; use the runtime
+  validator for these schemas.
 
 ### Validator Compiler
 
 The `ValidatorCompiler` is marked as `@experimental`. It supports a subset of JSON Schema keywords: `type`, `enum`, `const`, `minLength`, `maxLength`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`, `pattern`, `minItems`, `maxItems`, `uniqueItems`, `properties`, `required`, `additionalProperties`, `items`.
 
-The compiler does not support composition keywords (`allOf`, `anyOf`, `oneOf`, `not`), conditional keywords (`if`/`then`/`else`), `patternProperties`, `format`, `minProperties`, `maxProperties`, `prefixItems`, or `additionalProperties` as a Schema (the bool `true`/`false` form is supported). If any of these are present in a schema, `compile()` throws `UnsupportedKeywordException`.
+The compiler does not support composition keywords (`allOf`, `anyOf`, `oneOf`, `not`), conditional keywords (`if`/`then`/`else`), `patternProperties`, `format`, `minProperties`, `maxProperties`, `prefixItems`, or `additionalProperties` as a Schema (the bool `true`/`false` form is supported). The boolean form of `items`, `contains`, `propertyNames`, `if`, `then`, `else`, `not`, and `unevaluatedItems` is also unsupported and throws `UnsupportedKeywordException`; use the runtime validator for these schemas. If any of these are present in a schema, `compile()` throws `UnsupportedKeywordException`.
 
 Generated validators throw generic `RuntimeException` on failure rather than the typed error classes used by the runtime validator.
 

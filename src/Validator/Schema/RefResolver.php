@@ -661,7 +661,8 @@ final class RefResolver implements RefResolverInterface
      */
     private function collectSingleSubSchemas(Schema $schema): array
     {
-        return array_values(array_filter([
+        /** @var list<Schema|bool|null> $candidates */
+        $candidates = [
             $schema->items,
             $schema->not,
             $schema->contains,
@@ -673,7 +674,17 @@ final class RefResolver implements RefResolverInterface
             $schema->additionalProperties instanceof Schema ? $schema->additionalProperties : null,
             $schema->unevaluatedProperties instanceof Schema ? $schema->unevaluatedProperties : null,
             $schema->contentSchema instanceof Schema ? $schema->contentSchema : null,
-        ], fn(?Schema $s): bool => null !== $s));
+        ];
+
+        $schemas = [];
+
+        foreach ($candidates as $candidate) {
+            if ($candidate instanceof Schema) {
+                $schemas[] = $candidate;
+            }
+        }
+
+        return $schemas;
     }
 
     /**

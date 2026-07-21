@@ -2040,6 +2040,81 @@ final class ValidatorCompilerTest extends TestCase
     }
 
     /**
+     * SPEC-005: boolean-form schema keywords (items/contains/propertyNames/
+     * if/then/else/not/unevaluatedItems) are rejected at compile time with
+     * an explicit `UnsupportedKeywordException` so the compiler never
+     * silently drops them. Use the runtime validator for these schemas.
+     */
+    #[Test]
+    public function compile_schema_with_items_false_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'array', items: false);
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'ItemsFalseValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('items (boolean form)', $caught->keywords);
+    }
+
+    #[Test]
+    public function compile_schema_with_not_true_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(not: true);
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'NotTrueValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('not (boolean form)', $caught->keywords);
+    }
+
+    #[Test]
+    public function compile_schema_with_contains_false_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(type: 'array', contains: false);
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'ContainsFalseValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('contains (boolean form)', $caught->keywords);
+    }
+
+    #[Test]
+    public function compile_schema_with_if_false_throws_unsupported_keyword_exception(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(if: false, then: new Schema(type: 'string'));
+
+        $caught = null;
+        try {
+            $compiler->compile($schema, 'IfFalseValidator');
+        } catch (UnsupportedKeywordException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertContains('if (boolean form)', $caught->keywords);
+        $this->assertContains('if', $caught->keywords);
+    }
+
+    /**
      * Build a schema nested \$depth levels deep. The outermost is an object
      * with a single `nested` property which drills down \$depth-1 levels
      * to a final `value: integer`.

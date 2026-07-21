@@ -18,15 +18,15 @@ final readonly class ArrayConstraints
      * @param list<Schema>|null                   $prefixItems
      */
     public function __construct(
-        public ?Schema $items = null,
+        public Schema|bool|null $items = null,
         public ?array $prefixItems = null,
         public ?int $minItems = null,
         public ?int $maxItems = null,
         public ?bool $uniqueItems = null,
-        public ?Schema $contains = null,
+        public Schema|bool|null $contains = null,
         public ?int $minContains = null,
         public ?int $maxContains = null,
-        public ?Schema $unevaluatedItems = null,
+        public Schema|bool|null $unevaluatedItems = null,
     ) {}
 
     public function isEmpty(): bool

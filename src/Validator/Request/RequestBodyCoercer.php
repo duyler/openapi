@@ -118,7 +118,7 @@ final readonly class RequestBodyCoercer extends AbstractCoercer
             return $value;
         }
 
-        $itemsSchema = $schema->items ?? null;
+        $itemsSchema = $schema->items instanceof Schema ? $schema->items : null;
 
         if (null === $itemsSchema) {
             return $value;

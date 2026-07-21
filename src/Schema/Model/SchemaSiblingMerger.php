@@ -52,8 +52,11 @@ use function array_slice;
  *   per-key merge — sibling entry wins on key collision, deep per-property
  *   merge is a future enhancement.
  * - Schema|bool|null unions (additionalProperties / unevaluatedProperties /
- *   contentSchema): sibling wins when it is a Schema or an explicit bool;
- *   otherwise the resolved value is kept.
+ *   contentSchema / not / items / contains / propertyNames / if / then /
+ *   else / unevaluatedItems): sibling wins when it is a Schema or an
+ *   explicit bool; otherwise the resolved value is kept. Two-Schema merge
+ *   (recursive merge or allOf wrapping) is out of scope here and tracked
+ *   by R3-SPEC-006; this method only preserves sibling-wins for that case.
  * - title / description: refSummary / refDescription take precedence
  *   (preserves the historical OpenAPI override convention), then the
  *   sibling's own value, then the resolved schema's value.
@@ -111,23 +114,23 @@ final readonly class SchemaSiblingMerger
             allOf: $allOf,
             anyOf: $this->mergeCompositionField($resolved->anyOf, $sibling->anyOf),
             oneOf: $this->mergeCompositionField($resolved->oneOf, $sibling->oneOf),
-            not: $sibling->not ?? $resolved->not,
+            not: $this->mergeSchemaOrBool($resolved->not, $sibling->not),
             discriminator: $sibling->discriminator ?? $resolved->discriminator,
             properties: $this->mergeSchemaMap($resolved->properties, $sibling->properties),
             additionalProperties: $this->mergeSchemaOrBool($resolved->additionalProperties, $sibling->additionalProperties),
             unevaluatedProperties: $this->mergeSchemaOrBool($resolved->unevaluatedProperties, $sibling->unevaluatedProperties),
-            items: $sibling->items ?? $resolved->items,
+            items: $this->mergeSchemaOrBool($resolved->items, $sibling->items),
             prefixItems: $this->mergePrefixItems($resolved->prefixItems, $sibling->prefixItems),
-            contains: $sibling->contains ?? $resolved->contains,
+            contains: $this->mergeSchemaOrBool($resolved->contains, $sibling->contains),
             minContains: $sibling->minContains ?? $resolved->minContains,
             maxContains: $sibling->maxContains ?? $resolved->maxContains,
             patternProperties: $this->mergeSchemaMap($resolved->patternProperties, $sibling->patternProperties),
-            propertyNames: $sibling->propertyNames ?? $resolved->propertyNames,
+            propertyNames: $this->mergeSchemaOrBool($resolved->propertyNames, $sibling->propertyNames),
             dependentSchemas: $this->mergeSchemaMap($resolved->dependentSchemas, $sibling->dependentSchemas),
-            if: $sibling->if ?? $resolved->if,
-            then: $sibling->then ?? $resolved->then,
-            else: $sibling->else ?? $resolved->else,
-            unevaluatedItems: $sibling->unevaluatedItems ?? $resolved->unevaluatedItems,
+            if: $this->mergeSchemaOrBool($resolved->if, $sibling->if),
+            then: $this->mergeSchemaOrBool($resolved->then, $sibling->then),
+            else: $this->mergeSchemaOrBool($resolved->else, $sibling->else),
+            unevaluatedItems: $this->mergeSchemaOrBool($resolved->unevaluatedItems, $sibling->unevaluatedItems),
             example: $sibling->example ?? $resolved->example,
             examples: $this->mergeMixedMap($resolved->examples, $sibling->examples),
             enum: $this->mergeEnum($resolved->enum, $sibling->enum),

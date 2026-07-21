@@ -1211,4 +1211,180 @@ final class SchemaTest extends TestCase
         self::assertSame('object', $decoded['items']['type']);
         self::assertArrayHasKey('id', $decoded['items']['properties']);
     }
+
+    #[Test]
+    public function construct_with_items_false_succeeds(): void
+    {
+        $schema = new Schema(items: false);
+
+        self::assertFalse($schema->items);
+    }
+
+    #[Test]
+    public function construct_with_items_true_succeeds(): void
+    {
+        $schema = new Schema(items: true);
+
+        self::assertTrue($schema->items);
+    }
+
+    #[Test]
+    public function construct_with_contains_false_succeeds(): void
+    {
+        $schema = new Schema(contains: false);
+
+        self::assertFalse($schema->contains);
+    }
+
+    #[Test]
+    public function construct_with_contains_true_succeeds(): void
+    {
+        $schema = new Schema(contains: true);
+
+        self::assertTrue($schema->contains);
+    }
+
+    #[Test]
+    public function construct_with_property_names_false_succeeds(): void
+    {
+        $schema = new Schema(propertyNames: false);
+
+        self::assertFalse($schema->propertyNames);
+    }
+
+    #[Test]
+    public function construct_with_property_names_true_succeeds(): void
+    {
+        $schema = new Schema(propertyNames: true);
+
+        self::assertTrue($schema->propertyNames);
+    }
+
+    #[Test]
+    public function construct_with_if_false_succeeds(): void
+    {
+        $schema = new Schema(if: false);
+
+        self::assertFalse($schema->if);
+    }
+
+    #[Test]
+    public function construct_with_if_true_succeeds(): void
+    {
+        $schema = new Schema(if: true);
+
+        self::assertTrue($schema->if);
+    }
+
+    #[Test]
+    public function construct_with_then_false_succeeds(): void
+    {
+        $schema = new Schema(then: false);
+
+        self::assertFalse($schema->then);
+    }
+
+    #[Test]
+    public function construct_with_then_true_succeeds(): void
+    {
+        $schema = new Schema(then: true);
+
+        self::assertTrue($schema->then);
+    }
+
+    #[Test]
+    public function construct_with_else_false_succeeds(): void
+    {
+        $schema = new Schema(else: false);
+
+        self::assertFalse($schema->else);
+    }
+
+    #[Test]
+    public function construct_with_else_true_succeeds(): void
+    {
+        $schema = new Schema(else: true);
+
+        self::assertTrue($schema->else);
+    }
+
+    #[Test]
+    public function construct_with_not_false_succeeds(): void
+    {
+        $schema = new Schema(not: false);
+
+        self::assertFalse($schema->not);
+    }
+
+    #[Test]
+    public function construct_with_not_true_succeeds(): void
+    {
+        $schema = new Schema(not: true);
+
+        self::assertTrue($schema->not);
+    }
+
+    #[Test]
+    public function construct_with_unevaluated_items_false_succeeds(): void
+    {
+        $schema = new Schema(unevaluatedItems: false);
+
+        self::assertFalse($schema->unevaluatedItems);
+    }
+
+    #[Test]
+    public function construct_with_unevaluated_items_true_succeeds(): void
+    {
+        $schema = new Schema(unevaluatedItems: true);
+
+        self::assertTrue($schema->unevaluatedItems);
+    }
+
+    #[Test]
+    public function json_serialize_items_false_emits_false(): void
+    {
+        $schema = new Schema(type: 'array', items: false);
+
+        $serialized = $schema->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertArrayHasKey('items', $serialized);
+        self::assertFalse($serialized['items']);
+    }
+
+    #[Test]
+    public function json_serialize_items_true_emits_true(): void
+    {
+        $schema = new Schema(type: 'array', items: true);
+
+        $serialized = $schema->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertArrayHasKey('items', $serialized);
+        self::assertTrue($serialized['items']);
+    }
+
+    #[Test]
+    public function json_serialize_not_false_emits_false(): void
+    {
+        $schema = new Schema(not: false);
+
+        $serialized = $schema->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertArrayHasKey('not', $serialized);
+        self::assertFalse($serialized['not']);
+    }
+
+    #[Test]
+    public function json_serialize_contains_true_emits_true(): void
+    {
+        $schema = new Schema(contains: true);
+
+        $serialized = $schema->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertArrayHasKey('contains', $serialized);
+        self::assertTrue($serialized['contains']);
+    }
 }

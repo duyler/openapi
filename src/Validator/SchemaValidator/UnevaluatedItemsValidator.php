@@ -6,6 +6,9 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
 use function array_diff_key;
@@ -33,6 +36,12 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
             return;
         }
 
+        // Boolean schema form per JSON Schema 2020-12 §4.3.2.
+        // `unevaluatedItems: true` accepts every item (no-op).
+        if (true === $schema->unevaluatedItems) {
+            return;
+        }
+
         $evaluatedIndices = $this->getEvaluatedItemIndices($schema, $data, $context);
         /** @var list<int> $dataIndices */
         $dataIndices = array_keys($data);
@@ -40,6 +49,32 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
             $dataIndices,
             array_flip($evaluatedIndices),
         ));
+
+        // `unevaluatedItems: false` rejects every unevaluated item.
+        if (false === $schema->unevaluatedItems) {
+            if ([] === $unevaluatedIndices) {
+                return;
+            }
+
+            $dataPath = $this->getDataPath($context);
+            $errors = [];
+
+            foreach ($unevaluatedIndices as $index) {
+                /** @var array-key|array<array-key, mixed> $item */
+                $item = $data[$index];
+                $errors[] = new TypeMismatchError(
+                    expected: 'nothing (boolean schema false)',
+                    actual: TypeFormatter::format($item),
+                    dataPath: $dataPath . '[' . $index . ']',
+                    schemaPath: '/unevaluatedItems',
+                );
+            }
+
+            throw new ValidationException(
+                'Unevaluated items rejected by unevaluatedItems: false',
+                errors: $errors,
+            );
+        }
 
         $validator = $this->createSchemaValidator();
         $nullableAsType = $context?->nullableAsType ?? true;
@@ -68,6 +103,11 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
      * annotations were merged into the context (R3-SPEC-002 / R3-SPEC-
      * 003 / R3-SPEC-004).
      *
+     * Boolean-form `items: true` evaluates every index >= prefixItems count
+     * (validation passes trivially); `items: false` does NOT register
+     * evaluated indices because validation fails, so annotations do not
+     * apply per JSON Schema 2020-12 §10.3.4.
+     *
      * @param array<array-key, mixed> $data
      *
      * @return list<int>
@@ -86,7 +126,12 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
             }
         }
 
-        if (null !== $schema->items) {
+        // `items: Schema(...)` assumes validation succeeds for the static
+        // analysis path; `items: true` trivially evaluates every index >=
+        // prefixItems count; `items: false` does NOT register evaluated
+        // indices because validation fails, so annotations do not apply
+        // per JSON Schema 2020-12 §10.3.4.
+        if (null !== $schema->items && false !== $schema->items) {
             $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
             for ($i = $prefixCount; $i < $dataCount; ++$i) {
                 $evaluated[$i] = $i;

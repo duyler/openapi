@@ -57,6 +57,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   any schema that does not transitively contain a `$ref`.
 
 ### Fixed
+- `Schema` now accepts `Schema|bool|null` for every schema-typed
+  keyword: `items`, `contains`, `propertyNames`, `if`, `then`, `else`,
+  `not`, `unevaluatedItems` join the already-typed `additionalProperties`,
+  `unevaluatedProperties`, `contentSchema`, closing R3-SPEC-005 (C-005).
+  JSON Schema 2020-12 §4.3.2 mandates that boolean schemas be accepted
+  anywhere a Schema is accepted as a keyword value: `true` always passes,
+  `false` always rejects. Previously these 8 keywords were typed
+  `?Schema` only, so direct programmatic construction
+  (`new Schema(items: false)`) threw `TypeError`, and the parser's
+  `SchemaFromArrayConverter::schemaField` workaround rewrote `false`
+  into `Schema(not: new Schema())` — losing the bool semantics in
+  `SchemaSiblingMerger`, `ValidatorCompiler::resolveRefs`, and the
+  round-trip serializer (`SchemaToArrayConverter` emitted
+  `{"not":{}}` instead of `false`). The fix introduces a single
+  `schemaOrBoolOrNull` parser helper that pass-throughs booleans, an
+  `SchemaSiblingMerger::mergeSchemaOrBool` route for all 8 keywords
+  (sibling-wins preserves `false` as the stricter ALL OF result), and
+  `SchemaToArrayConverter` emits booleans directly so
+  `fromArray(toArray(schema)) === schema`. Each runtime validator
+  (`ItemsValidator`, `ItemsValidatorWithContext`, `ContainsValidator`,
+  `PropertyNamesValidator`, `NotValidator`, `IfThenElseValidator`,
+  `UnevaluatedItemsValidator`) handles both boolean branches with typed
+  errors (`TypeMismatchError`, `ContainsMatchError`, `NotValidationError`,
+  `MinContainsError`) per §11 of `php-best-practices.md`. The
+  `ValidatorCompiler` rejects boolean-form variants of these 8 keywords
+  with `UnsupportedKeywordException` (fail-closed) so the compiler never
+  silently drops them; use the runtime validator for these schemas.
 - `UnevaluatedPropertiesValidator` now consults every adjacent in-place
   applicator (`allOf`, `anyOf`, `oneOf`, `if`, `then`, `else`, `$ref`)
   in addition to `properties`, `patternProperties`, and

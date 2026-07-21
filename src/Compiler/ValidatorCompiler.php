@@ -25,6 +25,7 @@ use function is_array;
 use function preg_match;
 use function sprintf;
 use function var_export;
+use function is_bool;
 
 /**
  * @experimental
@@ -647,7 +648,13 @@ final readonly class ValidatorCompiler
             $code .= "        }\n\n";
         }
 
-        $code .= $this->generateItemValidation($schema->items);
+        $itemSchema = $schema->items instanceof Schema ? $schema->items : null;
+
+        if (null === $itemSchema) {
+            return $code;
+        }
+
+        $code .= $this->generateItemValidation($itemSchema);
 
         return $code;
     }
@@ -797,7 +804,7 @@ PHP;
             return true;
         }
 
-        if (null !== $schema->items && $this->schemaHasUniqueItemsInItemsChain($schema->items)) {
+        if ($schema->items instanceof Schema && $this->schemaHasUniqueItemsInItemsChain($schema->items)) {
             return true;
         }
 
@@ -840,7 +847,7 @@ PHP;
         }
 
         $resolvedItems = null;
-        if (null !== $schema->items) {
+        if ($schema->items instanceof Schema) {
             [$resolvedItems,] = $this->resolveRefs($schema->items, $document, $resolved);
         }
 
@@ -892,6 +899,17 @@ PHP;
             'maxProperties' => null !== $schema->maxProperties,
             'additionalProperties' => $schema->additionalProperties instanceof Schema,
             'prefixItems' => null !== $schema->prefixItems,
+            'contains' => null !== $schema->contains,
+            'propertyNames' => null !== $schema->propertyNames,
+            'unevaluatedItems' => null !== $schema->unevaluatedItems,
+            'items (boolean form)' => is_bool($schema->items),
+            'contains (boolean form)' => is_bool($schema->contains),
+            'propertyNames (boolean form)' => is_bool($schema->propertyNames),
+            'if (boolean form)' => is_bool($schema->if),
+            'then (boolean form)' => is_bool($schema->then),
+            'else (boolean form)' => is_bool($schema->else),
+            'not (boolean form)' => is_bool($schema->not),
+            'unevaluatedItems (boolean form)' => is_bool($schema->unevaluatedItems),
         ];
 
         $detected = array_keys(array_filter($keywordMap));
@@ -902,7 +920,7 @@ PHP;
             }
         }
 
-        if (null !== $schema->items) {
+        if ($schema->items instanceof Schema) {
             $detected = [...$detected, ...$this->detectUnsupportedKeywords($schema->items)];
         }
 

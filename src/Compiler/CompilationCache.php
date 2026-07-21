@@ -263,7 +263,7 @@ final class CompilationCache implements CompilationCacheInterface
             }
         }
 
-        $resolvedItems = $schema->items !== null
+        $resolvedItems = $schema->items instanceof Schema
             ? $this->resolveRefsForHash($schema->items, $document, $visited)
             : null;
 
@@ -327,7 +327,7 @@ final class CompilationCache implements CompilationCacheInterface
             }
         }
 
-        if (null !== $schema->items && $this->schemaContainsRef($schema->items, $visited)) {
+        if ($schema->items instanceof Schema && $this->schemaContainsRef($schema->items, $visited)) {
             return true;
         }
 

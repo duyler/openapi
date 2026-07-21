@@ -8,9 +8,13 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
+use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
+use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
+
+use function sprintf;
 
 final readonly class IfThenElseValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
@@ -27,19 +31,95 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
             return;
         }
 
-        $nullableAsType = $context?->nullableAsType ?? true;
-        $validator = $this->createSchemaValidator();
-
-        $ifValid = $this->validateIfBranch($validator, $data, $schema->if, $context, $nullableAsType);
-
-        if ($ifValid && null !== $schema->then) {
-            $this->validateThenOrElse($validator, $data, $schema->then, $context, $nullableAsType);
+        // Boolean schema form per JSON Schema 2020-12 §4.3.2.
+        // `if: true` always validates → activate `then` branch.
+        // `if: false` always fails → activate `else` branch.
+        if (true === $schema->if) {
+            $this->routeThenOrElse(schema: $schema, data: $data, context: $context, ifValid: true);
 
             return;
         }
 
-        if (false === $ifValid && null !== $schema->else) {
-            $this->validateThenOrElse($validator, $data, $schema->else, $context, $nullableAsType);
+        if (false === $schema->if) {
+            $this->routeThenOrElse(schema: $schema, data: $data, context: $context, ifValid: false);
+
+            return;
+        }
+
+        $nullableAsType = $context?->nullableAsType ?? true;
+        $validator = $this->createSchemaValidator();
+        $ifValid = $this->validateIfBranch($validator, $data, $schema->if, $context, $nullableAsType);
+
+        $this->routeThenOrElse(schema: $schema, data: $data, context: $context, ifValid: $ifValid, validator: $validator, nullableAsType: $nullableAsType);
+    }
+
+    /**
+     * Routes to the `then` or `else` branch based on the `if` validation
+     * result. Handles both Schema-instance branches (delegated to the
+     * recursive validator) and boolean branches per JSON Schema 2020-12
+     * §4.3.2 (`true` always passes; `false` always rejects with a typed
+     * `TypeMismatchError`).
+     */
+    private function routeThenOrElse(
+        Schema $schema,
+        mixed $data,
+        ?ValidationContext $context,
+        bool $ifValid,
+        ?SchemaValidator $validator = null,
+        bool $nullableAsType = true,
+    ): void {
+        if ($ifValid) {
+            if (null === $schema->then) {
+                return;
+            }
+
+            if ($schema->then instanceof Schema) {
+                $this->validateThenOrElse($validator ?? $this->createSchemaValidator(), $data, $schema->then, $context, $nullableAsType);
+            } else {
+                $this->applyBooleanBranch($schema->then, $data, $context, 'then');
+            }
+
+            return;
+        }
+
+        if (null === $schema->else) {
+            return;
+        }
+
+        if ($schema->else instanceof Schema) {
+            $this->validateThenOrElse($validator ?? $this->createSchemaValidator(), $data, $schema->else, $context, $nullableAsType);
+        } else {
+            $this->applyBooleanBranch($schema->else, $data, $context, 'else');
+        }
+    }
+
+    /**
+     * Handles boolean-form `then` / `else` branches.
+     *
+     * `true` always passes (no-op); `false` always rejects with a
+     * `TypeMismatchError` so the conditional routing surfaces a typed
+     * failure rather than silently swallowing the rejection.
+     */
+    private function applyBooleanBranch(Schema|bool $branch, mixed $data, ?ValidationContext $context, string $keyword): void
+    {
+        if (true === $branch) {
+            return;
+        }
+
+        if (false === $branch) {
+            $dataPath = $this->getDataPath($context);
+
+            throw new ValidationException(
+                sprintf('Data rejected by boolean-%s branch', $keyword),
+                errors: [
+                    new TypeMismatchError(
+                        expected: 'nothing (boolean schema false)',
+                        actual: TypeFormatter::format($data),
+                        dataPath: $dataPath,
+                        schemaPath: '/' . $keyword,
+                    ),
+                ],
+            );
         }
     }
 
