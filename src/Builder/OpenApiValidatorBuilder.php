@@ -431,11 +431,13 @@ final readonly class OpenApiValidatorBuilder
 
     /**
      * Override the maximum allowed size, in bytes, for an OpenAPI spec
-     * payload parsed by YamlParser. Specs larger than this cap are rejected
-     * before YAML parsing begins, defending against OOM on
-     * attacker-controlled or accidentally oversized specs. The default is
-     * 1 MB (YamlParser::DEFAULT_MAX_SPEC_BYTES) and is sized to accept
-     * typical OpenAPI documents including the bundled petstore spec.
+     * payload parsed by `YamlParser` or `JsonParser`. Specs larger than
+     * this cap are rejected before YAML or JSON parsing begins, defending
+     * against OOM on attacker-controlled or accidentally oversized specs
+     * (CWE-400, CWE-770). The default is 1 MB
+     * (`YamlParser::DEFAULT_MAX_SPEC_BYTES` / `JsonParser::DEFAULT_MAX_SPEC_BYTES`,
+     * same value) and is sized to accept typical OpenAPI documents
+     * including the bundled petstore spec.
      *
      * @param int $bytes Positive integer size in bytes; values <= 0 raise
      *                   InvalidArgumentException because they would either
@@ -695,6 +697,7 @@ final readonly class OpenApiValidatorBuilder
                 $parser = new JsonParser(
                     $deprecationLogger,
                     $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
+                    $this->config->maxSpecSizeBytes ?? JsonParser::DEFAULT_MAX_SPEC_BYTES,
                 );
 
                 return $parser->parse($content);

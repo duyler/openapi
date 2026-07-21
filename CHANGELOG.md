@@ -214,6 +214,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (R3-CONCURRENCY-001, R3-CONCURRENCY-002, R3-CONCURRENCY-003).
 
 ### Fixed
+- `JsonParser` now enforces a configurable size cap (default 1 MB,
+  `JsonParser::DEFAULT_MAX_SPEC_BYTES`) on input JSON before parsing,
+  matching `YamlParser` behavior. Closes the SEC-18 gap for JSON
+  (R3-SEC-014, CWE-400, CWE-770). The cap is wired through
+  `OpenApiValidatorBuilder::withMaxSpecSize()` and applies to both YAML
+  and JSON specs. The size check runs before `json_decode` so an
+  attacker-controlled multi-GB payload never reaches the decoder.
 - `TypeCoercer::coerceToType` now coerces non-string inputs (`bool`, `int`,
   `float`) through the same `coerceToInteger`/`coerceToNumber`/
   `coerceToBoolean`/`coerceToString` path as strings

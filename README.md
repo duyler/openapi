@@ -843,6 +843,8 @@ Use the runtime validator when you need the typed error classes (`TypeMismatchEr
 | `disableStrictCallbackRuntimeTemplate()` | Opt out of strict callback runtime template resolution. **SECURITY WARNING**: callback expressions like `{$request.body#/callback_url}` are treated as wildcards that accept any URL, enabling SSRF via attacker-controlled callback URLs when the resolved URL is used for outbound HTTP. Use only when callback URLs are validated at the application level. | `false` (opt-in legacy mode) |
 | `withExternalRefAllowedRoot(string $path)` | Override the directory that external file:// `$ref` references must stay inside. Auto-derived from the spec file's dirname for `fromYamlFile` / `fromJsonFile`; unset for string-loaded specs. | `null` (auto from spec path) |
 | `withExternalRefMaxBytes(int $bytes)` | Set max external ref file size | `10485760` (10 MB) |
+| `withMaxSpecSize(int $bytes)` | Set the maximum allowed size, in bytes, for a parsed OpenAPI spec payload. Applies to both YAML and JSON specs (defends against OOM on attacker-controlled or accidentally oversized input; CWE-400, CWE-770). | `1048576` (1 MB) |
+| `withMaxSpecDepth(int $depth)` | Set the maximum allowed nesting depth for a parsed OpenAPI spec payload. Applies to both YAML and JSON specs. | `100` |
 
 Deprecated reporting is enabled by default. Without a PSR-3 logger, deprecation warnings go to `NullLogger` and produce no output. There is no `disableReportDeprecated()` method; to suppress deprecation warnings, simply omit the logger (the default behavior).
 
