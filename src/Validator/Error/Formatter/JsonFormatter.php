@@ -75,7 +75,7 @@ final readonly class JsonFormatter implements ErrorFormatterInterface
         $details = $error->params();
 
         if ($this->includeSensitiveValues && $error instanceof InvalidFormatException) {
-            $details = array_merge($details, ['value' => $error->value]);
+            $details = array_merge($details, ['value' => $error->value(reveal: true)]);
         }
 
         $data = [

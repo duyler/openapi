@@ -10,6 +10,8 @@ use function sprintf;
 
 final class InvalidMultipleOfSchemaException extends InvalidArgumentException
 {
+    use SanitizableExceptionTrait;
+
     public function __construct(string $message)
     {
         parent::__construct($message);

@@ -59,15 +59,15 @@ final class RefResolverInfoLeakTest extends TestCase
                 'getMessage() must not leak the cycle path arrow notation (P-030)',
             );
 
-            self::assertNotNull($e->internalTrace);
+            self::assertNotNull($e->internalTrace(reveal: true));
             self::assertStringContainsString(
                 '#/components/schemas/A',
-                $e->internalTrace,
+                $e->internalTrace(reveal: true),
                 'internalTrace must preserve the cycle path for logging',
             );
             self::assertStringContainsString(
                 '#/components/schemas/B',
-                $e->internalTrace,
+                $e->internalTrace(reveal: true),
                 'internalTrace must preserve the cycle path for logging',
             );
         }

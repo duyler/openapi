@@ -96,9 +96,9 @@ YAML;
 
             $this->assertCount(1, $errors);
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $errors[0]);
-            $this->assertSame('bearerAuth', $errors[0]->schemeName);
-            $this->assertSame('http/bearer', $errors[0]->schemeType);
-            $this->assertSame('Authorization header', $errors[0]->location);
+            $this->assertSame('bearerAuth', $errors[0]->schemeName(reveal: true));
+            $this->assertSame('http/bearer', $errors[0]->schemeType(reveal: true));
+            $this->assertSame('Authorization header', $errors[0]->location(reveal: true));
         }
     }
 
@@ -168,9 +168,9 @@ YAML;
 
             $this->assertCount(1, $errors);
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $errors[0]);
-            $this->assertSame('apiKey', $errors[0]->schemeName);
-            $this->assertSame('apiKey', $errors[0]->schemeType);
-            $this->assertSame('missing header parameter "X-API-Key"', $errors[0]->location);
+            $this->assertSame('apiKey', $errors[0]->schemeName(reveal: true));
+            $this->assertSame('apiKey', $errors[0]->schemeType(reveal: true));
+            $this->assertSame('missing header parameter "X-API-Key"', $errors[0]->location(reveal: true));
         }
     }
 
@@ -212,7 +212,7 @@ YAML;
 
             $this->assertCount(1, $errors);
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $errors[0]);
-            $this->assertSame('Authorization header', $errors[0]->location);
+            $this->assertSame('Authorization header', $errors[0]->location(reveal: true));
         }
 
         $this->assertTrue($caught, 'ValidationException should be thrown for wrong scheme prefix');

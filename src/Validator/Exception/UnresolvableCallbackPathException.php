@@ -22,6 +22,8 @@ use function sprintf;
  */
 final class UnresolvableCallbackPathException extends RuntimeException
 {
+    use SanitizableExceptionTrait;
+
     public function __construct(string $expression)
     {
         parent::__construct(

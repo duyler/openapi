@@ -10,6 +10,8 @@ use function sprintf;
 
 final class SchemaDepthExceededException extends RuntimeException
 {
+    use SanitizableExceptionTrait;
+
     public function __construct(int $maxDepth)
     {
         parent::__construct(

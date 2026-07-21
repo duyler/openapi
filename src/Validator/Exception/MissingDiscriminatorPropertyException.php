@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Exception;
 
-use Override;
-
 use function sprintf;
 
 final class MissingDiscriminatorPropertyException extends AbstractValidationError
@@ -30,11 +28,5 @@ final class MissingDiscriminatorPropertyException extends AbstractValidationErro
             ],
             suggestion: sprintf('Add property "%s" to the object', $propertyName),
         );
-    }
-
-    #[Override]
-    public function __toString(): string
-    {
-        return $this->getMessage();
     }
 }

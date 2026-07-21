@@ -10,7 +10,6 @@ use Duyler\OpenApi\Validator\PregExecutor;
 use Override;
 
 use function filter_var;
-use function sprintf;
 use function strtolower;
 
 use const FILTER_VALIDATE_URL;
@@ -48,12 +47,12 @@ final readonly class UriValidator extends AbstractStringFormatValidator
 
         $scheme = strtolower((string) ($m['scheme'] ?? ''));
         if (null === UriScheme::tryFrom($scheme)) {
-            throw new InvalidFormatException('uri', $data, sprintf('Unsupported URI scheme: %s', $scheme));
+            throw new InvalidFormatException('uri', $data, 'Unsupported URI scheme');
         }
 
         $portValue = (string) ($m['port'] ?? '');
         if ('' !== $portValue && (int) $portValue > self::MAX_PORT) {
-            throw new InvalidFormatException('uri', $data, sprintf('Port out of range: %s', $portValue));
+            throw new InvalidFormatException('uri', $data, 'URI port out of range');
         }
 
         if (false === filter_var($data, FILTER_VALIDATE_URL)) {

@@ -218,7 +218,7 @@ final class FileExternalRefResolverTest extends TestCase
                 $e->getMessage(),
                 'Exception message must not leak the absolute path embedded in $ref.',
             );
-            $this->assertSame($ref, $e->ref, 'Exception must still retain $ref as a separate property for callers.');
+            $this->assertSame($ref, $e->ref(reveal: true), 'Exception must still retain $ref as a separate property for callers.');
             $this->assertStringContainsString(
                 'php',
                 $e->getMessage(),

@@ -123,6 +123,6 @@ final class InvalidFormatExceptionHierarchyTest extends TestCase
         );
 
         self::assertSame('uuid', $exception->format);
-        self::assertSame(42, $exception->value);
+        self::assertSame(42, $exception->value(reveal: true));
     }
 }

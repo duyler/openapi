@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Compiler\Exception;
 
+use Duyler\OpenApi\Validator\Exception\SanitizableExceptionTrait;
 use RuntimeException;
 
 use function implode;
@@ -11,6 +12,8 @@ use function sprintf;
 
 final class UnsupportedKeywordException extends RuntimeException
 {
+    use SanitizableExceptionTrait;
+
     /**
      * @param list<string> $keywords
      */

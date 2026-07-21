@@ -20,7 +20,7 @@ final class InvalidFormatExceptionTest extends TestCase
         );
 
         self::assertSame('email', $exception->format);
-        self::assertSame('invalid-email', $exception->value);
+        self::assertSame('invalid-email', $exception->value(reveal: true));
         self::assertSame('Invalid email format', $exception->getMessage());
     }
 
@@ -113,7 +113,7 @@ final class InvalidFormatExceptionTest extends TestCase
             message: 'Invalid uuid',
         );
 
-        self::assertSame('password123', $exception->value);
+        self::assertSame('password123', $exception->value(reveal: true));
     }
 
     #[Test]

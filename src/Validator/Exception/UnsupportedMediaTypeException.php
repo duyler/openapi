@@ -11,6 +11,8 @@ use function sprintf;
 
 final class UnsupportedMediaTypeException extends RuntimeException
 {
+    use SanitizableExceptionTrait;
+
     /**
      * @param list<string> $supportedTypes
      */

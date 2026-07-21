@@ -12,4 +12,7 @@ use RuntimeException;
  * UTF-8 validity by default, so JsonBodyParser and JsonParser reject such
  * input via mb_check_encoding() before decoding.
  */
-final class InvalidUtf8Exception extends RuntimeException {}
+final class InvalidUtf8Exception extends RuntimeException
+{
+    use SanitizableExceptionTrait;
+}

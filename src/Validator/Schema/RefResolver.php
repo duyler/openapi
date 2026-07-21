@@ -745,7 +745,7 @@ final class RefResolver implements RefResolverInterface
         try {
             $result = $this->navigate($document, $parts);
         } catch (UnresolvableRefException $e) {
-            throw new UnresolvableRefException($ref, $e->reason, previous: $e);
+            throw new UnresolvableRefException($ref, $e->reason(), previous: $e);
         }
 
         if (null !== $result->ref) {

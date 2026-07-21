@@ -11,7 +11,6 @@ use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use InvalidArgumentException;
 use RuntimeException;
 
-use function addslashes;
 use function array_filter;
 use function array_keys;
 use function array_map;
@@ -467,7 +466,7 @@ final readonly class ValidatorCompiler
 
         $code = sprintf("        foreach (array_keys(%s) as \$key) {\n", $dataVar);
         $code .= sprintf("            if (false === in_array(\$key, %s, true)) {\n", $exportedKeys);
-        $code .= "                throw new \\RuntimeException('Additional property not allowed: ' . \$key);\n";
+        $code .= "                throw new \\RuntimeException(sprintf('Additional property not allowed: %s', var_export(\$key, true)));\n";
         $code .= "            }\n";
         $code .= "        }\n\n";
 
@@ -510,9 +509,9 @@ final readonly class ValidatorCompiler
             return '';
         }
 
-        $safeVarForError = addslashes($dataVar);
+        $safeVarForError = var_export($dataVar, true);
         $code = sprintf("        if (false === is_array(%s)) {\n", $dataVar);
-        $code .= sprintf("            throw new \\RuntimeException('Expected object for %s');\n", $safeVarForError);
+        $code .= sprintf("            throw new \\RuntimeException(sprintf('Expected object for %%s', %s));\n", $safeVarForError);
         $code .= "        }\n\n";
 
         foreach ($schema->properties as $propertyName => $propertySchema) {
@@ -565,8 +564,8 @@ final readonly class ValidatorCompiler
             $safeName = var_export($propertyName, true);
             $code .= sprintf("        if (false === array_key_exists(%s, %s)) {\n", $safeName, $dataVar);
             $code .= sprintf(
-                "            throw new \\RuntimeException('Required property missing: %s');\n",
-                addslashes($propertyName),
+                "            throw new \\RuntimeException(sprintf('Required property missing: %%s', %s));\n",
+                var_export($propertyName, true),
             );
             $code .= "        }\n";
         }
@@ -595,14 +594,14 @@ final readonly class ValidatorCompiler
             return '';
         }
 
-        $safeVarName = addslashes($valueVar);
+        $safeVarName = var_export($valueVar, true);
 
         $condition = 1 === count($checks)
             ? $checks[0]
             : '(' . implode(' || ', $checks) . ')';
 
         $code = sprintf("        if (false === %s) {\n", $condition);
-        $code .= sprintf("            throw new \\RuntimeException('Type mismatch for %s');\n", $safeVarName);
+        $code .= sprintf("            throw new \\RuntimeException(sprintf('Type mismatch for %%s', %s));\n", $safeVarName);
         $code .= "        }\n";
 
         return $code;

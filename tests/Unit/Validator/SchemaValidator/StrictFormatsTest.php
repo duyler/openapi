@@ -77,7 +77,7 @@ YAML;
             $this->fail('Expected InvalidFormatException was not thrown');
         } catch (InvalidFormatException $exception) {
             $this->assertSame('typo', $exception->format);
-            $this->assertSame('test@example.com', $exception->value);
+            $this->assertSame('test@example.com', $exception->value(reveal: true));
         }
     }
 

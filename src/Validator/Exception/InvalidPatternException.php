@@ -10,6 +10,8 @@ use function sprintf;
 
 final class InvalidPatternException extends RuntimeException
 {
+    use SanitizableExceptionTrait;
+
     public function __construct(
         string $pattern,
         string $reason,

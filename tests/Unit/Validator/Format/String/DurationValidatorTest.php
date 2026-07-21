@@ -112,7 +112,7 @@ final class DurationValidatorTest extends TestCase
             $this->validator->validate($invalidValue);
             $this->fail('Expected InvalidFormatException was not thrown');
         } catch (InvalidFormatException $exception) {
-            $this->assertSame($invalidValue, $exception->value);
+            $this->assertSame($invalidValue, $exception->value(reveal: true));
         }
     }
 
@@ -141,7 +141,7 @@ final class DurationValidatorTest extends TestCase
             $this->fail('P1W1D should be rejected: weeks are exclusive and cannot combine with days');
         } catch (InvalidFormatException $exception) {
             $this->assertSame('duration', $exception->format);
-            $this->assertSame($invalidValue, $exception->value);
+            $this->assertSame($invalidValue, $exception->value(reveal: true));
         }
     }
 
@@ -170,7 +170,7 @@ final class DurationValidatorTest extends TestCase
             $this->fail('P1W1H should be rejected: weeks are exclusive and cannot combine with hours');
         } catch (InvalidFormatException $exception) {
             $this->assertSame('duration', $exception->format);
-            $this->assertSame($invalidValue, $exception->value);
+            $this->assertSame($invalidValue, $exception->value(reveal: true));
         }
     }
 
@@ -199,7 +199,7 @@ final class DurationValidatorTest extends TestCase
             $this->fail('PW should be rejected: number of weeks is required before W designator');
         } catch (InvalidFormatException $exception) {
             $this->assertSame('duration', $exception->format);
-            $this->assertSame($invalidValue, $exception->value);
+            $this->assertSame($invalidValue, $exception->value(reveal: true));
         }
     }
 

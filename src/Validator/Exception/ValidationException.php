@@ -18,6 +18,8 @@ use Throwable;
  */
 class ValidationException extends Exception
 {
+    use SanitizableExceptionTrait;
+
     /**
      * @param array<int, ValidationErrorInterface> $errors
      */

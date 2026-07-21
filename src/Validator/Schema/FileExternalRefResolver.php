@@ -16,6 +16,7 @@ use Symfony\Component\Yaml\Yaml;
 use Override;
 
 use function array_key_exists;
+use function basename;
 use function fclose;
 use function feof;
 use function fopen;
@@ -209,7 +210,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
                 ]);
 
                 throw new ExternalRefSecurityException(
-                    $absolutePath,
+                    basename($absolutePath),
                     'External ref is not a regular file',
                 );
             }
@@ -323,7 +324,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
             ]);
 
             throw new ExternalRefSecurityException(
-                $filePath,
+                basename($filePath),
                 'External ref path resolution failed',
             );
         }
@@ -339,7 +340,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
             ]);
 
             throw new ExternalRefSecurityException(
-                $filePath,
+                basename($filePath),
                 'External ref path traversal detected',
             );
         }

@@ -1779,7 +1779,7 @@ final class ValidatorCompilerTest extends TestCase
         token_get_all($code, TOKEN_PARSE);
 
         $this->assertStringContainsString('array_key_exists(\'it\\\'s\'', $code);
-        $this->assertStringContainsString('Required property missing: it\\\'s', $code);
+        $this->assertStringContainsString('Required property missing: %s', $code);
     }
 
     /**

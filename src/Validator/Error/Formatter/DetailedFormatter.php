@@ -33,9 +33,9 @@ final readonly class DetailedFormatter implements ErrorFormatterInterface
 
         if ($this->includeSensitiveValues
             && $error instanceof InvalidFormatException
-            && is_scalar($error->value)
+            && is_scalar($error->value(reveal: true))
         ) {
-            $details['value'] = (string) $error->value;
+            $details['value'] = (string) $error->value(reveal: true);
         }
 
         if ([] !== $details) {

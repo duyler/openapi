@@ -8,6 +8,8 @@ use RuntimeException;
 
 final class MissingRequestBodyException extends RuntimeException
 {
+    use SanitizableExceptionTrait;
+
     public function __construct()
     {
         parent::__construct('Request body is required but missing or empty');

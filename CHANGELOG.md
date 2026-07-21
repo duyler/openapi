@@ -8,6 +8,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
+- All exception classes shipped by the package now sanitize `__toString()`
+  output to prevent disclosure of server filesystem paths, class names, and
+  stack traces through `(string) $e` casts in PSR-15 middleware or PSR-3
+  loggers (R3-SEC-INFO-LEAK-SYSTEMATIC, CWE-209, CWE-497; findings S-019).
+  A new `Duyler\OpenApi\Validator\Exception\SanitizableExceptionTrait`
+  provides the canonical `__toString()` override returning only
+  `getMessage()`. The trait is applied directly to every standalone
+  exception class and inherited transitively through
+  `AbstractValidationError`. The two existing per-class overrides
+  (`UnresolvableRefException`, `UnknownDiscriminatorValueException`) and
+  the four duplicate `__toString()` methods on the discriminator exception
+  family were consolidated into the single trait.
+- Sensitive public readonly properties on category-B exception classes are
+  now `protected readonly` and exposed only through explicit opt-in
+  getters with a `bool $reveal = false` parameter (S-005, S-008, S-016,
+  S-032). Affected classes and their previous public API:
+  - `ExternalRefSecurityException::$ref` → `$e->ref(reveal: true)`
+  - `UnresolvableRefException::$ref`, `::$reason`, `::$internalTrace` →
+    `$e->ref(reveal: true)`, `$e->reason()`, `$e->internalTrace(reveal: true)`
+  - `InvalidFormatException::$value` → `$e->value(reveal: true)`
+    (`$format` stays public; it is a spec-declared keyword, not a value)
+  - `MissingSecurityCredentialsError::$schemeName`, `::$schemeType`,
+    `::$location` → `$e->schemeName(reveal: true)` etc.
+  - `InvalidParameterException::$parameterName` →
+    `$e->parameterName(reveal: true)`
+  Default calls (`$e->value()`, `$e->schemeName()`, ...) return the
+  literal string `'<redacted>'` so reflective serializers (Sentry, Bugsnag,
+  `(array) $e`, `var_export`) cannot leak attacker-controlled values.
+  Trusted-operator code (security auditors, verbose loggers via
+  `DetailedFormatter(includeSensitiveValues: true)`,
+  `JsonFormatter(includeSensitiveValues: true)`) must now pass
+  `reveal: true` to read the underlying value. This is a breaking change.
+- `MalformedStreamRecordException::$record` is now truncated to 256 bytes
+  via `LogContextSanitizer::truncate()` in the constructor, preventing a
+  multi-megabyte attacker-controlled streaming payload from being
+  amplified verbatim into logs or error trackers (S-007, CWE-209).
+  Control characters are escaped via the same helper to neutralise log
+  injection. The truncated value remains public readonly because the
+  sanitised form is useful for debugging user-facing stream parse errors.
+- `FileExternalRefResolver` now passes `basename($absolutePath)` instead
+  of the resolved absolute filesystem path when throwing
+  `ExternalRefSecurityException` for non-regular files, failed path
+  resolution, and detected path traversal (S-005 defence-in-depth).
+  Concrete filesystem layout remains reachable only through the optional
+  PSR-3 verbose logger at debug level.
+- `UnresolvableRefException` constructor now truncates `$reason` and
+  `$internalTrace` to 256 bytes via `LogContextSanitizer::truncate()`,
+  preventing an attacker-controlled multi-megabyte `$ref` or navigation
+  chain from being amplified into logs (S-008 defence-in-depth).
+  Existing short ref strings (`#/components/schemas/...`) are unchanged.
+- `ExternalRefSecurityException::$ref` is likewise truncated to 256 bytes
+  in the constructor; the original full-length attacker input is not
+  retained (S-005 defence-in-depth).
+- `UriValidator` no longer interpolates the attacker-supplied scheme or
+  port into `InvalidFormatException` messages (R3-SEC-021, CWE-209). The
+  messages are now the generic strings `'Unsupported URI scheme'` and
+  `'URI port out of range'`. The full URI value remains available via
+  `$e->value(reveal: true)` for trusted-operator diagnostics.
+- `ValidatorCompiler` now escapes attacker-controlled property names in
+  generated-code throw messages via `var_export($key, true)` instead of
+  raw string concatenation, and replaces every remaining
+  `addslashes(...)` site in generated-code error strings with the same
+  `var_export` + `sprintf('%s', ...)` pattern (R3-SEC-015, CWE-094 /
+  CWE-133). Generated validators no longer interpolate attacker keys into
+  single-quoted PHP string literals, which previously could produce
+  parseable-but-malformed messages or escape-sequence injection when the
+  key contained bytes that defeated `addslashes`.
+
+### BREAKING
+- Exception sanitisation changes listed under `### Security` above are
+  breaking. Direct property access (`$e->value`, `$e->schemeName`,
+  `$e->ref`, `$e->internalTrace`, `$e->parameterName`, `$e->schemeType`,
+  `$e->location`) now throws `Error: Cannot access protected property`.
+  Replace with the matching opt-in getter call (`$e->value(reveal: true)`,
+  etc.). Trusted code that previously relied on `includeSensitiveValues: true`
+  on `DetailedFormatter` / `JsonFormatter` continues to work — the
+  formatters now call the opt-in getters internally.
+
 - `ValidatorCompiler::generatePatternCheck` now emits an inlined defensive
   wrapper around `preg_match` for the `pattern` keyword, closing R3-SEC-001
   (CWE-1333, CWE-400; OWASP ASVS 4.0 V5.3.4). Previously the compiled

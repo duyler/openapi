@@ -17,6 +17,8 @@ use function sprintf;
  */
 final class SpecTooLargeException extends RuntimeException
 {
+    use SanitizableExceptionTrait;
+
     public static function forSize(int $max, int $actual, int $code = 0, ?Throwable $previous = null): self
     {
         return new self(

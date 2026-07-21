@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Response\Exception;
 
+use Duyler\OpenApi\Validator\Exception\SanitizableExceptionTrait;
 use RuntimeException;
 
 use function sprintf;
@@ -16,6 +17,8 @@ use function sprintf;
  */
 final class TooManyRecordsException extends RuntimeException
 {
+    use SanitizableExceptionTrait;
+
     public function __construct(
         public readonly int $max,
     ) {

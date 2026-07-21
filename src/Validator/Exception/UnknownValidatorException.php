@@ -8,6 +8,8 @@ use InvalidArgumentException;
 
 final class UnknownValidatorException extends InvalidArgumentException
 {
+    use SanitizableExceptionTrait;
+
     public function __construct(string $type)
     {
         parent::__construct('Unknown validator type: ' . $type);

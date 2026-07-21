@@ -56,7 +56,7 @@ final class UnresolvableRefExceptionTest extends TestCase
             reason: 'Reason',
         );
 
-        self::assertSame($ref, $exception->ref);
+        self::assertSame($ref, $exception->ref(reveal: true));
     }
 
     /**
@@ -78,6 +78,6 @@ final class UnresolvableRefExceptionTest extends TestCase
             reason: 'Circular reference detected',
         );
 
-        self::assertSame('Circular reference detected', $exception->reason);
+        self::assertSame('Circular reference detected', $exception->reason());
     }
 }

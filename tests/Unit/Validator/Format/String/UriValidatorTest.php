@@ -109,7 +109,7 @@ final class UriValidatorTest extends TestCase
         $uri = 'http://example.com:99999';
 
         $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage(sprintf('Port out of range: %s', '99999'));
+        $this->expectExceptionMessage('URI port out of range');
 
         $this->validator->validate($uri);
     }
@@ -151,7 +151,7 @@ final class UriValidatorTest extends TestCase
     }
 
     #[Test]
-    public function unsupported_scheme_message_contains_scheme_name(): void
+    public function unsupported_scheme_message_does_not_leak_scheme_name(): void
     {
         $uri = 'javascript://example.com/';
 
@@ -163,7 +163,12 @@ final class UriValidatorTest extends TestCase
         }
 
         $this->assertNotNull($exception);
-        $this->assertStringContainsString('Unsupported URI scheme: javascript', $exception->getMessage());
+        $this->assertStringContainsString('Unsupported URI scheme', $exception->getMessage());
+        $this->assertStringNotContainsString(
+            'javascript',
+            $exception->getMessage(),
+            'getMessage() must not interpolate attacker-derived scheme (S-021).',
+        );
     }
 
     /**
@@ -260,7 +265,7 @@ final class UriValidatorTest extends TestCase
 
         if (null !== $exception) {
             $this->assertSame('uri', $exception->format);
-            $this->assertSame($relativeUri, $exception->value);
+            $this->assertSame($relativeUri, $exception->value(reveal: true));
         }
     }
 
@@ -280,7 +285,7 @@ final class UriValidatorTest extends TestCase
 
         if (null !== $exception) {
             $this->assertSame('uri', $exception->format);
-            $this->assertSame($urnUri, $exception->value);
+            $this->assertSame($urnUri, $exception->value(reveal: true));
         }
     }
 }

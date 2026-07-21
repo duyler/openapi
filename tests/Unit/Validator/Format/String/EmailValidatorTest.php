@@ -173,7 +173,7 @@ final class EmailValidatorTest extends TestCase
 
         if (null !== $exception) {
             $this->assertSame('email', $exception->format);
-            $this->assertSame($emptyEmail, $exception->value);
+            $this->assertSame($emptyEmail, $exception->value(reveal: true));
         }
     }
 
@@ -197,7 +197,7 @@ final class EmailValidatorTest extends TestCase
 
         if (null !== $exception) {
             $this->assertSame('email', $exception->format);
-            $this->assertSame($idnEmail, $exception->value);
+            $this->assertSame($idnEmail, $exception->value(reveal: true));
         }
     }
 

@@ -1080,6 +1080,58 @@ try {
 }
 ```
 
+### Exception Sanitization
+
+Every exception class shipped by this package overrides `__toString()` so
+the default `Exception::__toString()` (which returns class name, absolute
+file path, line number, and full stack trace) cannot leak server
+filesystem layout or internal structure into PSR-15 middleware responses
+or PSR-3 logs (CWE-209, CWE-497). `(string) $e` always returns just
+`$e->getMessage()`.
+
+Exception classes that carry attacker-controlled values
+(`InvalidFormatException::$value`,
+`MissingSecurityCredentialsError::$schemeName` / `$schemeType` /
+`$location`, `ExternalRefSecurityException::$ref`,
+`UnresolvableRefException::$ref` / `$internalTrace`,
+`InvalidParameterException::$parameterName`) store them in
+`protected readonly` properties and expose them only through explicit
+opt-in getters with a `bool $reveal = false` parameter. The default call
+returns the literal string `'<redacted>'`; trusted operator code (a
+security auditor, a verbose logger constructed with
+`DetailedFormatter(includeSensitiveValues: true)`) must pass
+`reveal: true` to read the underlying value:
+
+```php
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+
+try {
+    $validator->validateSchema(['email' => 'not-an-email'], '#/components/schemas/User');
+} catch (ValidationException $e) {
+    /** @var InvalidFormatException $formatError */
+    $formatError = $e->getErrors()[0];
+
+    // Safe to log / surface to caller:
+    echo $formatError->message();          // 'Invalid email format'
+    echo $formatError->format;             // 'email' (spec keyword, not sensitive)
+    echo (string) $formatError;            // 'Invalid email format' (no file path / trace)
+
+    // Trusted operator only — explicit opt-in:
+    echo $formatError->value(reveal: true); // 'not-an-email'
+    echo $formatError->value();             // '<redacted>' (default)
+}
+```
+
+The same pattern applies to all sanitised exception classes. Migrate
+direct property reads (`$e->value`, `$e->schemeName`, `$e->ref`, ...)
+to the matching getter with `reveal: true`.
+
+`MalformedStreamRecordException::$record` is truncated to 256 bytes and
+control-character-escaped in the constructor via `LogContextSanitizer`,
+preventing a multi-megabyte attacker payload from being amplified into
+logs. The truncated value stays public readonly because it remains
+useful for diagnosing user-facing stream parse failures.
+
 ### Validation Error Reference
 
 All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schemaPath()`, `keyword()`, `message()`, `params()`, and `suggestion()` methods.
@@ -1224,10 +1276,10 @@ try {
 By default, `DetailedFormatter` and `JsonFormatter` omit the raw user-supplied value
 from `InvalidFormatException` errors to prevent accidental disclosure of secrets
 (passwords, tokens) through error messages into logs and API responses. The value
-remains accessible via `$exception->value` for programmatic access. To include the
-raw value in formatted output (for debugging), construct the formatter with
-`includeSensitiveValues: true` or use `withDetailedErrors(includeSensitive: true)`
-on the builder.
+remains accessible via `$exception->value(reveal: true)` for trusted programmatic
+access (see Exception Sanitization above). To include the raw value in formatted
+output (for debugging), construct the formatter with `includeSensitiveValues: true`
+or use `withDetailedErrors(includeSensitive: true)` on the builder.
 
 ## Built-in Format Validators
 
@@ -1732,8 +1784,9 @@ This prevents unauthenticated callers from learning the API's security
 configuration (CWE-209). To include scheme details in debug logs (for
 development or operational diagnostics), provide a PSR-3 logger via
 `withSecurityVerboseLogging($logger)`. Scheme details remain accessible
-programmatically via `$error->schemeName`, `$error->schemeType`, and
-`$error->location` for trusted operator code.
+programmatically via the opt-in getters `$error->schemeName(reveal: true)`,
+`$error->schemeType(reveal: true)`, and `$error->location(reveal: true)`
+for trusted operator code (see Exception Sanitization above).
 
 ## Requirements
 

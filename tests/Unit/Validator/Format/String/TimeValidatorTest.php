@@ -128,7 +128,7 @@ final class TimeValidatorTest extends TestCase
             $this->validator->validate($invalidValue);
             $this->fail('Expected InvalidFormatException was not thrown');
         } catch (InvalidFormatException $exception) {
-            $this->assertSame($invalidValue, $exception->value);
+            $this->assertSame($invalidValue, $exception->value(reveal: true));
         }
     }
 

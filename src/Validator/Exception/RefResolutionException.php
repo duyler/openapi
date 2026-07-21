@@ -6,4 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use Exception;
 
-final class RefResolutionException extends Exception {}
+final class RefResolutionException extends Exception
+{
+    use SanitizableExceptionTrait;
+}

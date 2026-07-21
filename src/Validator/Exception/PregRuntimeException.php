@@ -19,6 +19,8 @@ use function sprintf;
  */
 final class PregRuntimeException extends RuntimeException
 {
+    use SanitizableExceptionTrait;
+
     public function __construct(
         public readonly int $error,
         string $message,

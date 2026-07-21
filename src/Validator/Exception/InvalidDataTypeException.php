@@ -10,6 +10,8 @@ use Throwable;
 
 final class InvalidDataTypeException extends InvalidArgumentException implements ValidationErrorInterface
 {
+    use SanitizableExceptionTrait;
+
     public readonly string $type;
 
     public function __construct(string $message, int $code = 0, ?Throwable $previous = null)

@@ -164,9 +164,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('bearerAuth', $error->schemeName);
-            $this->assertSame('http/bearer', $error->schemeType);
-            $this->assertSame('Authorization header', $error->location);
+            $this->assertSame('bearerAuth', $error->schemeName(reveal: true));
+            $this->assertSame('http/bearer', $error->schemeType(reveal: true));
+            $this->assertSame('Authorization header', $error->location(reveal: true));
         }
     }
 
@@ -246,9 +246,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('bearerAuth', $error->schemeName);
-            $this->assertSame('http/bearer', $error->schemeType);
-            $this->assertSame('Authorization header', $error->location);
+            $this->assertSame('bearerAuth', $error->schemeName(reveal: true));
+            $this->assertSame('http/bearer', $error->schemeType(reveal: true));
+            $this->assertSame('Authorization header', $error->location(reveal: true));
         }
     }
 
@@ -295,9 +295,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('basicAuth', $error->schemeName);
-            $this->assertSame('http/basic', $error->schemeType);
-            $this->assertSame('unsupported http scheme', $error->location);
+            $this->assertSame('basicAuth', $error->schemeName(reveal: true));
+            $this->assertSame('http/basic', $error->schemeType(reveal: true));
+            $this->assertSame('unsupported http scheme', $error->location(reveal: true));
         }
     }
 
@@ -365,9 +365,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('apiKeyQuery', $error->schemeName);
-            $this->assertSame('apiKey', $error->schemeType);
-            $this->assertSame('empty query parameter "api_key"', $error->location);
+            $this->assertSame('apiKeyQuery', $error->schemeName(reveal: true));
+            $this->assertSame('apiKey', $error->schemeType(reveal: true));
+            $this->assertSame('empty query parameter "api_key"', $error->location(reveal: true));
         }
     }
 
@@ -394,9 +394,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('apiKeyQuery', $error->schemeName);
-            $this->assertSame('apiKey', $error->schemeType);
-            $this->assertSame('missing query parameter "api_key"', $error->location);
+            $this->assertSame('apiKeyQuery', $error->schemeName(reveal: true));
+            $this->assertSame('apiKey', $error->schemeType(reveal: true));
+            $this->assertSame('missing query parameter "api_key"', $error->location(reveal: true));
         }
     }
 
@@ -424,9 +424,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('apiKeyCookie', $error->schemeName);
-            $this->assertSame('apiKey', $error->schemeType);
-            $this->assertSame('empty cookie parameter "session"', $error->location);
+            $this->assertSame('apiKeyCookie', $error->schemeName(reveal: true));
+            $this->assertSame('apiKey', $error->schemeType(reveal: true));
+            $this->assertSame('empty cookie parameter "session"', $error->location(reveal: true));
         }
     }
 
@@ -453,9 +453,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('apiKeyHeader', $error->schemeName);
-            $this->assertSame('apiKey', $error->schemeType);
-            $this->assertSame('missing header parameter "X-API-Key"', $error->location);
+            $this->assertSame('apiKeyHeader', $error->schemeName(reveal: true));
+            $this->assertSame('apiKey', $error->schemeType(reveal: true));
+            $this->assertSame('missing header parameter "X-API-Key"', $error->location(reveal: true));
         }
     }
 
@@ -483,7 +483,7 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('missing header parameter "X-API-Key"', $error->location);
+            $this->assertSame('missing header parameter "X-API-Key"', $error->location(reveal: true));
         }
     }
 
@@ -510,7 +510,7 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('missing query parameter "api_key"', $error->location);
+            $this->assertSame('missing query parameter "api_key"', $error->location(reveal: true));
         }
     }
 
@@ -538,7 +538,7 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('missing cookie parameter "session_token"', $error->location);
+            $this->assertSame('missing cookie parameter "session_token"', $error->location(reveal: true));
         }
     }
 
@@ -597,9 +597,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('apiKeyPath', $error->schemeName);
-            $this->assertSame('apiKey', $error->schemeType);
-            $this->assertSame('missing path parameter "id"', $error->location);
+            $this->assertSame('apiKeyPath', $error->schemeName(reveal: true));
+            $this->assertSame('apiKey', $error->schemeType(reveal: true));
+            $this->assertSame('missing path parameter "id"', $error->location(reveal: true));
         }
     }
 
@@ -624,9 +624,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('oauth2Auth', $error->schemeName);
-            $this->assertSame('oauth2', $error->schemeType);
-            $this->assertSame('unsupported scheme type', $error->location);
+            $this->assertSame('oauth2Auth', $error->schemeName(reveal: true));
+            $this->assertSame('oauth2', $error->schemeType(reveal: true));
+            $this->assertSame('unsupported scheme type', $error->location(reveal: true));
         }
     }
 
@@ -647,9 +647,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('undefinedScheme', $error->schemeName);
-            $this->assertSame('undefined', $error->schemeType);
-            $this->assertSame('scheme not found in components/securitySchemes', $error->location);
+            $this->assertSame('undefinedScheme', $error->schemeName(reveal: true));
+            $this->assertSame('undefined', $error->schemeType(reveal: true));
+            $this->assertSame('scheme not found in components/securitySchemes', $error->location(reveal: true));
         }
     }
 
@@ -694,9 +694,9 @@ final class SecurityValidatorTest extends TestCase
             $this->assertCount(1, $errors);
             $error = $errors[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('bearerAuth', $error->schemeName);
-            $this->assertSame('http/bearer', $error->schemeType);
-            $this->assertSame('Authorization header', $error->location);
+            $this->assertSame('bearerAuth', $error->schemeName(reveal: true));
+            $this->assertSame('http/bearer', $error->schemeType(reveal: true));
+            $this->assertSame('Authorization header', $error->location(reveal: true));
         }
     }
 
@@ -806,9 +806,9 @@ final class SecurityValidatorTest extends TestCase
         } catch (ValidationException $e) {
             $error = $e->getErrors()[0];
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('bearerAuth', $error->schemeName);
-            $this->assertSame('http/bearer', $error->schemeType);
-            $this->assertSame('Authorization header', $error->location);
+            $this->assertSame('bearerAuth', $error->schemeName(reveal: true));
+            $this->assertSame('http/bearer', $error->schemeType(reveal: true));
+            $this->assertSame('Authorization header', $error->location(reveal: true));
         }
     }
 
