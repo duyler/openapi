@@ -16,6 +16,7 @@ use function is_float;
 use function is_int;
 use function is_object;
 use function is_string;
+use function is_scalar;
 
 final readonly class TypeCoercer extends AbstractCoercer
 {
@@ -83,7 +84,11 @@ final readonly class TypeCoercer extends AbstractCoercer
                 continue;
             }
 
-            $coerced = $this->coerceToType($value, $type, $strict);
+            try {
+                $coerced = $this->coerceToType($value, $type, $strict);
+            } catch (TypeMismatchError) {
+                continue;
+            }
 
             if ($this->isValidType($coerced, $type)) {
                 return $coerced;
@@ -95,17 +100,18 @@ final readonly class TypeCoercer extends AbstractCoercer
 
     private function coerceToType(mixed $value, string $type, bool $strict): array|int|string|float|bool
     {
-        if (is_string($value)) {
-            /** @var int|float|bool|string */
-            return match ($type) {
-                'integer' => $strict ? $this->coerceToIntegerStrict($value) : $this->coerceToInteger($value),
-                'number' => $strict ? $this->coerceToNumberStrict($value) : $this->coerceToNumber($value),
-                'boolean' => $strict ? $this->coerceToBooleanStrict($value) : $this->coerceToBoolean($value),
-                default => $value,
-            };
+        if (false === is_scalar($value) && false === is_array($value)) {
+            return $this->normalizeValue($value);
         }
 
-        return $this->normalizeValue($value);
+        /** @var array<array-key, mixed>|int|string|float|bool */
+        return match ($type) {
+            'integer' => $strict ? $this->coerceToIntegerStrict($value) : $this->coerceToInteger($value),
+            'number' => $strict ? $this->coerceToNumberStrict($value) : $this->coerceToNumber($value),
+            'boolean' => $strict ? $this->coerceToBooleanStrict($value) : $this->coerceToBoolean($value),
+            'string' => $this->coerceToString($value),
+            default => $this->normalizeValue($value),
+        };
     }
 
     private function normalizeValue(mixed $value): array|int|string|float|bool

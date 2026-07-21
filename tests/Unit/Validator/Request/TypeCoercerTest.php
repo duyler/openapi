@@ -12,6 +12,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
+use const PHP_INT_MAX;
+
 final class TypeCoercerTest extends TestCase
 {
     private TypeCoercer $coercer;
@@ -397,7 +399,8 @@ final class TypeCoercerTest extends TestCase
 
         $result = $this->coercer->coerce(123, $param, true);
 
-        $this->assertSame(123, $result);
+        $this->assertSame('123', $result);
+        $this->assertIsString($result);
     }
 
     #[Test]
@@ -628,21 +631,6 @@ final class TypeCoercerTest extends TestCase
 
         $this->assertSame(42, $result);
         $this->assertIsInt($result);
-    }
-
-    #[Test]
-    public function coerce_union_number_to_float_from_string(): void
-    {
-        $param = new Parameter(
-            name: 'test',
-            in: 'path',
-            schema: new Schema(type: ['number', 'string']),
-        );
-
-        $result = $this->coercer->coerce('123.45', $param, true);
-
-        $this->assertSame(123.45, $result);
-        $this->assertIsFloat($result);
     }
 
     #[Test]
@@ -910,5 +898,435 @@ final class TypeCoercerTest extends TestCase
         $result = $this->coercer->coerce('admin', $param, true, false);
 
         self::assertTrue($result);
+    }
+
+    #[Test]
+    public function coerce_bool_true_to_integer_strict_returns_one(): void
+    {
+        $param = new Parameter(
+            name: 'count',
+            in: 'query',
+            schema: new Schema(type: 'integer'),
+        );
+
+        $result = $this->coercer->coerce(true, $param, true);
+
+        $this->assertSame(1, $result);
+        $this->assertIsInt($result);
+    }
+
+    #[Test]
+    public function coerce_bool_false_to_integer_strict_returns_zero(): void
+    {
+        $param = new Parameter(
+            name: 'count',
+            in: 'query',
+            schema: new Schema(type: 'integer'),
+        );
+
+        $result = $this->coercer->coerce(false, $param, true);
+
+        $this->assertSame(0, $result);
+        $this->assertIsInt($result);
+    }
+
+    #[Test]
+    public function coerce_int_one_to_boolean_strict_returns_true(): void
+    {
+        $param = new Parameter(
+            name: 'active',
+            in: 'query',
+            schema: new Schema(type: 'boolean'),
+        );
+
+        $result = $this->coercer->coerce(1, $param, true);
+
+        $this->assertTrue($result);
+    }
+
+    #[Test]
+    public function coerce_int_zero_to_boolean_strict_returns_false(): void
+    {
+        $param = new Parameter(
+            name: 'active',
+            in: 'query',
+            schema: new Schema(type: 'boolean'),
+        );
+
+        $result = $this->coercer->coerce(0, $param, true);
+
+        $this->assertFalse($result);
+    }
+
+    #[Test]
+    public function coerce_float_whole_to_integer_non_strict_returns_int(): void
+    {
+        $param = new Parameter(
+            name: 'count',
+            in: 'query',
+            schema: new Schema(type: 'integer'),
+        );
+
+        $result = $this->coercer->coerce(5.0, $param, true, false);
+
+        $this->assertSame(5, $result);
+        $this->assertIsInt($result);
+    }
+
+    #[Test]
+    public function coerce_float_non_whole_to_integer_strict_throws(): void
+    {
+        $param = new Parameter(
+            name: 'count',
+            in: 'query',
+            schema: new Schema(type: 'integer'),
+        );
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->coercer->coerce(5.5, $param, true, true);
+    }
+
+    #[Test]
+    public function coerce_float_non_whole_to_integer_non_strict_returns_float(): void
+    {
+        $param = new Parameter(
+            name: 'count',
+            in: 'query',
+            schema: new Schema(type: 'integer'),
+        );
+
+        $result = $this->coercer->coerce(5.5, $param, true, false);
+
+        $this->assertSame(5.5, $result);
+        $this->assertIsFloat($result);
+    }
+
+    #[Test]
+    public function coerce_float_to_string_strict_returns_string(): void
+    {
+        $param = new Parameter(
+            name: 'price',
+            in: 'query',
+            schema: new Schema(type: 'string'),
+        );
+
+        $result = $this->coercer->coerce(1.5, $param, true);
+
+        $this->assertSame('1.5', $result);
+        $this->assertIsString($result);
+    }
+
+    #[Test]
+    public function coerce_int_to_string_strict_returns_string(): void
+    {
+        $param = new Parameter(
+            name: 'id',
+            in: 'query',
+            schema: new Schema(type: 'string'),
+        );
+
+        $result = $this->coercer->coerce(42, $param, true);
+
+        $this->assertSame('42', $result);
+        $this->assertIsString($result);
+    }
+
+    #[Test]
+    public function coerce_bool_to_string_strict_returns_string(): void
+    {
+        $param = new Parameter(
+            name: 'flag',
+            in: 'query',
+            schema: new Schema(type: 'string'),
+        );
+
+        $result = $this->coercer->coerce(true, $param, true);
+
+        $this->assertSame('1', $result);
+        $this->assertIsString($result);
+    }
+
+    #[Test]
+    public function coerce_int_to_number_strict_returns_float(): void
+    {
+        $param = new Parameter(
+            name: 'price',
+            in: 'query',
+            schema: new Schema(type: 'number'),
+        );
+
+        $result = $this->coercer->coerce(42, $param, true);
+
+        $this->assertSame(42.0, $result);
+        $this->assertIsFloat($result);
+    }
+
+    #[Test]
+    public function coerce_float_to_number_strict_returns_float(): void
+    {
+        $param = new Parameter(
+            name: 'price',
+            in: 'query',
+            schema: new Schema(type: 'number'),
+        );
+
+        $result = $this->coercer->coerce(3.14, $param, true);
+
+        $this->assertSame(3.14, $result);
+        $this->assertIsFloat($result);
+    }
+
+    #[Test]
+    public function coerce_float_zero_to_boolean_strict_returns_false(): void
+    {
+        $param = new Parameter(
+            name: 'active',
+            in: 'query',
+            schema: new Schema(type: 'boolean'),
+        );
+
+        $result = $this->coercer->coerce(0.0, $param, true);
+
+        $this->assertFalse($result);
+    }
+
+    #[Test]
+    public function coerce_float_one_to_boolean_strict_returns_true(): void
+    {
+        $param = new Parameter(
+            name: 'active',
+            in: 'query',
+            schema: new Schema(type: 'boolean'),
+        );
+
+        $result = $this->coercer->coerce(1.0, $param, true);
+
+        $this->assertTrue($result);
+    }
+
+    #[Test]
+    public function coerce_array_remains_array_via_normalize(): void
+    {
+        $param = new Parameter(
+            name: 'tags',
+            in: 'query',
+            schema: new Schema(type: 'string'),
+        );
+
+        $result = $this->coercer->coerce([1, 2, 3], $param, true);
+
+        $this->assertSame([1, 2, 3], $result);
+        $this->assertIsArray($result);
+    }
+
+    #[Test]
+    public function coerce_union_integer_string_with_non_numeric_string_returns_string(): void
+    {
+        $param = new Parameter(
+            name: 'mixed',
+            in: 'query',
+            schema: new Schema(type: ['integer', 'string']),
+        );
+
+        $result = $this->coercer->coerce('abc', $param, true);
+
+        $this->assertSame('abc', $result);
+        $this->assertIsString($result);
+    }
+
+    #[Test]
+    public function coerce_union_integer_string_with_numeric_string_returns_int(): void
+    {
+        $param = new Parameter(
+            name: 'mixed',
+            in: 'query',
+            schema: new Schema(type: ['integer', 'string']),
+        );
+
+        $result = $this->coercer->coerce('42', $param, true);
+
+        $this->assertSame(42, $result);
+        $this->assertIsInt($result);
+    }
+
+    #[Test]
+    public function coerce_union_string_integer_with_int_returns_string(): void
+    {
+        $param = new Parameter(
+            name: 'mixed',
+            in: 'query',
+            schema: new Schema(type: ['string', 'integer']),
+        );
+
+        $result = $this->coercer->coerce(42, $param, true);
+
+        $this->assertSame('42', $result);
+        $this->assertIsString($result);
+    }
+
+    #[Test]
+    public function coerce_union_number_integer_with_int_returns_float(): void
+    {
+        $param = new Parameter(
+            name: 'mixed',
+            in: 'query',
+            schema: new Schema(type: ['number', 'integer']),
+        );
+
+        $result = $this->coercer->coerce(42, $param, true);
+
+        $this->assertSame(42.0, $result);
+        $this->assertIsFloat($result);
+    }
+
+    #[Test]
+    public function coerce_union_integer_boolean_with_string_falls_through_to_normalize(): void
+    {
+        $param = new Parameter(
+            name: 'mixed',
+            in: 'query',
+            schema: new Schema(type: ['integer', 'boolean']),
+        );
+
+        $result = $this->coercer->coerce('abc', $param, true);
+
+        $this->assertSame('abc', $result);
+        $this->assertIsString($result);
+    }
+
+    #[Test]
+    public function coerce_union_with_null_skips_null_type(): void
+    {
+        $param = new Parameter(
+            name: 'mixed',
+            in: 'query',
+            schema: new Schema(type: ['null', 'integer']),
+        );
+
+        $result = $this->coercer->coerce(42, $param, true);
+
+        $this->assertSame(42, $result);
+        $this->assertIsInt($result);
+    }
+
+    #[Test]
+    public function coerce_union_three_types_falls_through(): void
+    {
+        $param = new Parameter(
+            name: 'mixed',
+            in: 'query',
+            schema: new Schema(type: ['integer', 'boolean', 'string']),
+        );
+
+        $result = $this->coercer->coerce('abc', $param, true);
+
+        $this->assertSame('abc', $result);
+        $this->assertIsString($result);
+    }
+
+    #[Test]
+    public function coerce_union_three_types_all_throw_falls_through_to_normalize(): void
+    {
+        $param = new Parameter(
+            name: 'mixed',
+            in: 'query',
+            schema: new Schema(type: ['integer', 'number']),
+        );
+
+        $result = $this->coercer->coerce([1, 2, 3], $param, true);
+
+        $this->assertSame([1, 2, 3], $result);
+    }
+
+    #[Test]
+    public function coerce_string_integer_unchanged_regression(): void
+    {
+        $param = new Parameter(
+            name: 'id',
+            in: 'path',
+            schema: new Schema(type: 'integer'),
+        );
+
+        $result = $this->coercer->coerce('123', $param, true);
+
+        $this->assertSame(123, $result);
+        $this->assertIsInt($result);
+    }
+
+    #[Test]
+    public function coerce_string_boolean_unchanged_regression(): void
+    {
+        $param = new Parameter(
+            name: 'flag',
+            in: 'query',
+            schema: new Schema(type: 'boolean'),
+        );
+
+        $result = $this->coercer->coerce('true', $param, true);
+
+        $this->assertTrue($result);
+    }
+
+    #[Test]
+    public function coerce_string_non_numeric_integer_strict_throws_regression(): void
+    {
+        $param = new Parameter(
+            name: 'id',
+            in: 'path',
+            schema: new Schema(type: 'integer'),
+        );
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->coercer->coerce('abc', $param, true);
+    }
+
+    #[Test]
+    public function coerce_float_overflow_integer_throws_regression(): void
+    {
+        $param = new Parameter(
+            name: 'big',
+            in: 'query',
+            schema: new Schema(type: 'integer'),
+        );
+
+        $overflow = (float) PHP_INT_MAX * 2;
+
+        $this->expectException(TypeMismatchError::class);
+
+        $this->coercer->coerce($overflow, $param, true, false);
+    }
+
+    #[Test]
+    public function coerce_null_with_nullable_returns_null_regression(): void
+    {
+        $param = new Parameter(
+            name: 'opt',
+            in: 'query',
+            schema: new Schema(type: 'integer', nullable: true),
+        );
+
+        $result = $this->coercer->coerce(null, $param, true);
+
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function coerce_object_with_integer_type_returns_array(): void
+    {
+        $param = new Parameter(
+            name: 'data',
+            in: 'query',
+            schema: new Schema(type: 'integer'),
+        );
+
+        $input = new stdClass();
+        $input->count = 5;
+
+        $result = $this->coercer->coerce($input, $param, true);
+
+        $this->assertSame(['count' => 5], $result);
+        $this->assertIsArray($result);
     }
 }

@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\Request;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Coercion\AbstractCoercer;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
+use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 
 use function array_key_exists;
 use function is_array;
@@ -56,8 +57,12 @@ final readonly class RequestBodyCoercer extends AbstractCoercer
                 continue;
             }
 
-            /** @var array|int|string|float|bool|null $coerced */
-            $coerced = $this->coerceToType($value, $type, $schema, $strict, $nullableAsType);
+            try {
+                /** @var array|int|string|float|bool|null $coerced */
+                $coerced = $this->coerceToType($value, $type, $schema, $strict, $nullableAsType);
+            } catch (TypeMismatchError) {
+                continue;
+            }
 
             if ($this->isValidType($coerced, $type)) {
                 return $coerced;

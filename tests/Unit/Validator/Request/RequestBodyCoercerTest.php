@@ -949,4 +949,18 @@ final class RequestBodyCoercerTest extends TestCase
 
         $this->assertSame('anything', $result);
     }
+
+    #[Test]
+    public function coerce_union_integer_string_with_non_numeric_string_returns_string(): void
+    {
+        $schema = new Schema(type: ['integer', 'string']);
+
+        $result = $this->coercer->coerce(
+            'abc',
+            new CoercionContext(schema: $schema, enabled: true, strict: true),
+        );
+
+        $this->assertSame('abc', $result);
+        $this->assertIsString($result);
+    }
 }

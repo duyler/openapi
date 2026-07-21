@@ -161,6 +161,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   application level — see README section "Callbacks").
 
 ### Fixed
+- `TypeCoercer::coerceToType` now coerces non-string inputs (`bool`, `int`,
+  `float`) through the same `coerceToInteger`/`coerceToNumber`/
+  `coerceToBoolean`/`coerceToString` path as strings
+  (R3-CORRECTNESS-005). Previously only `is_string($value)` inputs were
+  routed through the typed coercion methods; everything else bypassed
+  them via `normalizeValue`, making the `bool`/`int`/`float` branches in
+  `AbstractCoercer` effectively dead code. For JSON request bodies parsed
+  via `json_decode($json, true)` this meant that a field declared as
+  `type: integer` but received as `bool true` (or as `float 5.0`) was
+  silently normalised to its raw PHP value instead of being coerced to
+  the schema-declared type. Scalar inputs (`bool`, `int`, `float`,
+  `string`) now route through the schema-type match; non-scalar inputs
+  (`resource`, `null` already handled earlier) continue to fall through
+  to `normalizeValue`, preserving the existing behaviour for edge cases.
+- `TypeCoercer::coerceUnionType` now catches `TypeMismatchError` and
+  continues to the next type in the union instead of aborting on the
+  first failure (R3-CORRECTNESS-006). For a union type such as
+  `['integer', 'string']` with input `'abc'`, the previous behaviour
+  propagated `TypeMismatchError` from `coerceToIntegerStrict('abc')` and
+  the `'string'` branch was never reached. Union coercion is now
+  first-match-wins across all declared types; if no type matches, the
+  original value is returned via `normalizeValue` as before. The
+  SEC-14 (float-to-int overflow) and SEC-15 (numeric-string precision)
+  guards continue to throw `TypeMismatchError`, which is now caught and
+  handled by the loop.
 - `UriValidator` now accepts all RFC 3986 valid URIs including scheme-less
   forms (`mailto:`, `tel:`, `urn:`, `data:`, `magnet:?...`) and
   non-allowlisted schemes (`git+https`, `ssh`, `irc`, `magnet`, `bitcoin`,

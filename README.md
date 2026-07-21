@@ -453,6 +453,8 @@ $validator = OpenApiValidatorBuilder::create()
 
 `TypeCoercer::coerce()` defaults to strict mode (`$strict = true`). Third-party callers that instantiate `TypeCoercer` directly and omit the fourth argument get strict coercion. To opt out, pass `false` explicitly or use `disableStrictCoercion()` on the builder.
 
+Type coercion also applies to non-string PHP scalars produced by `json_decode(..., true)` for JSON request bodies. A field declared as `type: integer` receiving `bool true` is coerced to `int 1`; `type: boolean` receiving `int 1` is coerced to `bool true`; `type: string` receiving `int 42` or `float 1.5` is coerced to `"42"` / `"1.5"`. Non-scalar inputs (`resource`, `null` handled earlier via `nullable`) fall through unchanged via normalisation. For both parameter (`TypeCoercer`) and request body (`RequestBodyCoercer`) coercion, union types such as `type: [integer, string]` try each type in order and return the first successful coercion; an input like `'abc'` no longer aborts on the `integer` branch but falls through to `string`.
+
 ### Error Formatters
 
 Choose from built-in error formatters or create your own:
