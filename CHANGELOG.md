@@ -57,6 +57,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   any schema that does not transitively contain a `$ref`.
 
 ### Fixed
+- `SchemaSiblingMerger::merge()` now honours JSON Schema 2020-12 §8.2.3
+  ALL OF semantics for the ten non-bound fields that previously used a
+  sibling-wins strategy, closing R3-SPEC-006 (C-006). When a `$ref`
+  carries sibling keywords, the referenced schema and the sibling must
+  be evaluated as `allOf: [$ref, sibling]`; the previous implementation
+  collapsed each side into a single value via `$sibling->field ??
+  $resolved->field`, silently dropping the referenced schema's
+  constraint. Concretely, `multipleOf: 3` (resolved) + `multipleOf: 5`
+  (sibling) used to validate as `multipleOf: 5` (5 was applied, 3 was
+  discarded), so an input like `10` passed despite not being a multiple
+  of the resolved `3`. Same divergence existed for `pattern`, `format`,
+  `type`, `items`, `contains`, `propertyNames`, `if`, `then`, `else`.
+  The fix specialises each keyword per ALL OF semantics: `type` is
+  intersected as a set (a single element collapses to string form;
+  disjoint intersection wraps both sides into separate `allOf`
+  sub-schemas so the validator rejects every value); identical `format`
+  strings collapse to one while divergent formats wrap into `allOf`;
+  `multipleOf` and `pattern` are always wrapped into `allOf` when both
+  sides declare them (numeric LCM is intentionally not computed inline
+  because it is undefined for non-integer multiples; regex conjunction
+  via lookaheads risks catastrophic backtracking and downstream-consumer
+  incompatibility); `items`, `contains`, `propertyNames` are merged
+  recursively via `merge()` so both schemas' constraints apply;
+  `if`/`then`/`else` triples are each wrapped into a separate `allOf`
+  sub-schema when both sides declare any element of the triple so each
+  conditional applicator applies independently per §10.2.2. The
+  pre-existing sibling-wins test `merge_scalar_overrides_where_not_null`
+  is updated to assert the new wrap-based output. Schemas that used
+  `$ref + sibling` for narrowing (the common OpenAPI idiom
+  `$ref: '#/$defs/Base', minLength: 5`) are unaffected because only one
+  side declares the keyword.
+- `SchemaSiblingMerger::mergeSchemaOrBool` now recursively merges two
+  Schema instances instead of letting the sibling silently overwrite the
+  resolved schema, closing R3-SPEC-019 (O-042). The previous sibling-
+  wins strategy was correct for the boolean case (`false` is the
+  stricter ALL OF result, `true` is a no-op) but lost the referenced
+  schema's constraints when both sides were Schema instances. The fix
+  applies uniformly to every Schema|bool|null keyword
+  (`additionalProperties`, `unevaluatedProperties`, `contentSchema`,
+  `not`, `items`, `contains`, `propertyNames`, `if`, `then`, `else`,
+  `unevaluatedItems`): `false` still wins; `true` still inherits the
+  other side; `null` still inherits the non-null side; two Schema
+  instances now go through `merge()`. Behaviour is backwards-compatible
+  with task 05 for the boolean paths.
 - `Schema` now accepts `Schema|bool|null` for every schema-typed
   keyword: `items`, `contains`, `propertyNames`, `if`, `then`, `else`,
   `not`, `unevaluatedItems` join the already-typed `additionalProperties`,

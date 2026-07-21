@@ -15,6 +15,7 @@ use function count;
 use function max;
 use function min;
 use function array_slice;
+use function is_array;
 
 /**
  * Merges a resolved schema with its sibling schema per JSON Schema
@@ -24,8 +25,18 @@ use function array_slice;
  * sibling schema.
  *
  * Merge strategy:
- * - Scalars (format/type/pattern/...): sibling wins when set; resolved
- *   value is inherited otherwise.
+ * - type: intersection of type sets. Each side may be a string or a
+ *   list (JSON Schema 2020-12 nullable form). Disjoint intersection
+ *   (e.g. `integer` + `string`) returns null and both sides are wrapped
+ *   into separate `allOf` sub-schemas so the validator rejects every
+ *   value per ALL OF semantics (R3-SPEC-006).
+ * - multipleOf / pattern: when both sides declare the keyword, both are
+ *   wrapped into separate `allOf` sub-schemas. Numeric LCM and regex
+ *   conjunction are intentionally not computed inline because (a) LCM is
+ *   undefined for non-integer multiples and (b) regex lookaheads risk
+ *   catastrophic backtracking and downstream-consumer incompatibility.
+ * - format: identical formats collapse to one; divergent formats wrap
+ *   into separate `allOf` sub-schemas (R3-SPEC-006).
  * - Scalar bounds (minLength / maxLength / minItems / maxItems /
  *   minProperties / maxProperties / minimum / maximum / exclusiveMinimum /
  *   exclusiveMaximum): stricter-wins — lower bounds use `max`, upper
@@ -48,15 +59,21 @@ use function array_slice;
  * - prefixItems: per-index recursive merge — each overlapping index pair
  *   is merged via {@see merge()}, leftover items from the longer side are
  *   appended unchanged.
+ * - if / then / else: when both sides declare any of the triple, each
+ *   side's triple is wrapped into a separate `allOf` sub-schema so the
+ *   two conditional applicators apply independently (R3-SPEC-006). When
+ *   only one side declares the triple, that value is inherited.
+ * - Schema|bool|null unions (additionalProperties / unevaluatedProperties /
+ *   contentSchema / not / items / contains / propertyNames /
+ *   unevaluatedItems): `false` wins (stricter); `true` is a no-op;
+ *   `null` inherits the other side; two Schema instances are merged
+ *   recursively via {@see merge()} per R3-SPEC-019. Cycle detection is
+ *   delegated to the caller's reference-resolution loop (the merger is
+ *   only invoked once per `$ref + sibling` resolution, so a visited-set
+ *   is unnecessary here).
  * - properties / patternProperties / dependentSchemas / examples: shallow
  *   per-key merge — sibling entry wins on key collision, deep per-property
  *   merge is a future enhancement.
- * - Schema|bool|null unions (additionalProperties / unevaluatedProperties /
- *   contentSchema / not / items / contains / propertyNames / if / then /
- *   else / unevaluatedItems): sibling wins when it is a Schema or an
- *   explicit bool; otherwise the resolved value is kept. Two-Schema merge
- *   (recursive merge or allOf wrapping) is out of scope here and tracked
- *   by R3-SPEC-006; this method only preserves sibling-wins for that case.
  * - title / description: refSummary / refDescription take precedence
  *   (preserves the historical OpenAPI override convention), then the
  *   sibling's own value, then the resolved schema's value.
@@ -81,11 +98,25 @@ final readonly class SchemaSiblingMerger
             $allOf = array_merge($allOf ?? [], ...$compositionsToAdd);
         }
 
+        $scalarAdditions = $this->collectScalarFieldAdditions($resolved, $sibling);
+        $compositionAdditions = $this->collectCompositionFieldAdditions($resolved, $sibling);
+
+        foreach ([$scalarAdditions, $compositionAdditions] as $additions) {
+            if ([] !== $additions) {
+                $allOf = array_merge($allOf ?? [], $additions);
+            }
+        }
+
+        [$mergedIf, $mergedThen, $mergedElse, $ifThenElseAdditions] = $this->mergeIfThenElse($resolved, $sibling);
+        if ([] !== $ifThenElseAdditions) {
+            $allOf = array_merge($allOf ?? [], $ifThenElseAdditions);
+        }
+
         return new Schema(
             ref: null,
             refSummary: null,
             refDescription: null,
-            format: $sibling->format ?? $resolved->format,
+            format: $this->mergeFormat($resolved->format, $sibling->format),
             title: $sibling->refSummary ?? $sibling->title ?? $resolved->title,
             description: $sibling->refDescription ?? $sibling->description ?? $resolved->description,
             default: $sibling->hasDefault ? $sibling->default : $resolved->default,
@@ -93,18 +124,18 @@ final readonly class SchemaSiblingMerger
             deprecated: $sibling->deprecated || $resolved->deprecated,
             readOnly: $sibling->readOnly || $resolved->readOnly,
             writeOnly: $sibling->writeOnly || $resolved->writeOnly,
-            type: $sibling->type ?? $resolved->type,
+            type: $this->mergeType($resolved->type, $sibling->type),
             nullable: $sibling->nullable && $resolved->nullable,
             const: $sibling->hasConst ? $sibling->const : $resolved->const,
             hasConst: $sibling->hasConst || $resolved->hasConst,
-            multipleOf: $sibling->multipleOf ?? $resolved->multipleOf,
+            multipleOf: $this->mergeNullableIdentical($resolved->multipleOf, $sibling->multipleOf),
             maximum: $this->mergeUpperBound($resolved->maximum, $sibling->maximum),
             exclusiveMaximum: $this->mergeUpperBound($resolved->exclusiveMaximum, $sibling->exclusiveMaximum),
             minimum: $this->mergeLowerBound($resolved->minimum, $sibling->minimum),
             exclusiveMinimum: $this->mergeLowerBound($resolved->exclusiveMinimum, $sibling->exclusiveMinimum),
             maxLength: $this->mergeUpperBound($resolved->maxLength, $sibling->maxLength),
             minLength: $this->mergeLowerBound($resolved->minLength, $sibling->minLength),
-            pattern: $sibling->pattern ?? $resolved->pattern,
+            pattern: $this->mergeNullableIdentical($resolved->pattern, $sibling->pattern),
             maxItems: $this->mergeUpperBound($resolved->maxItems, $sibling->maxItems),
             minItems: $this->mergeLowerBound($resolved->minItems, $sibling->minItems),
             uniqueItems: $sibling->uniqueItems ?? $resolved->uniqueItems,
@@ -127,9 +158,9 @@ final readonly class SchemaSiblingMerger
             patternProperties: $this->mergeSchemaMap($resolved->patternProperties, $sibling->patternProperties),
             propertyNames: $this->mergeSchemaOrBool($resolved->propertyNames, $sibling->propertyNames),
             dependentSchemas: $this->mergeSchemaMap($resolved->dependentSchemas, $sibling->dependentSchemas),
-            if: $this->mergeSchemaOrBool($resolved->if, $sibling->if),
-            then: $this->mergeSchemaOrBool($resolved->then, $sibling->then),
-            else: $this->mergeSchemaOrBool($resolved->else, $sibling->else),
+            if: $mergedIf,
+            then: $mergedThen,
+            else: $mergedElse,
             unevaluatedItems: $this->mergeSchemaOrBool($resolved->unevaluatedItems, $sibling->unevaluatedItems),
             example: $sibling->example ?? $resolved->example,
             examples: $this->mergeMixedMap($resolved->examples, $sibling->examples),
@@ -219,20 +250,208 @@ final readonly class SchemaSiblingMerger
     }
 
     /**
-     * Sibling wins when it declares a Schema or an explicit bool; null
-     * sibling inherits the resolved schema so absent constraints do not
-     * erase referenced ones.
+     * JSON Schema 2020-12 §8.2.3 ALL OF semantics for `Schema|bool|null`
+     * fields. Boolean schemas follow §4.3.2: `false` is the stricter
+     * constraint and wins over any other input; `true` is a no-op that
+     * inherits the other side. Two Schema instances are merged recursively
+     * via {@see merge()} so the referenced schema's constraints are not
+     * silently erased by the sibling (R3-SPEC-019).
      *
      * @param Schema|bool|null $resolved
      * @param Schema|bool|null $sibling
      */
     private function mergeSchemaOrBool(Schema|bool|null $resolved, Schema|bool|null $sibling): Schema|bool|null
     {
-        if (null !== $sibling) {
+        if (false === $sibling || false === $resolved) {
+            return false;
+        }
+
+        if (true === $sibling) {
+            return $resolved;
+        }
+
+        if (true === $resolved) {
             return $sibling;
         }
 
-        return $resolved;
+        if (null === $sibling) {
+            return $resolved;
+        }
+
+        if (null === $resolved) {
+            return $sibling;
+        }
+
+        return $this->merge($resolved, $sibling);
+    }
+
+    /**
+     * Returns null when both sides are non-null so the caller can collect
+     * the value into `allOf`. Used for scalar fields whose ALL OF
+     * semantics cannot be combined inline (`multipleOf` and `pattern`).
+     *
+     * @template T
+     *
+     * @param T|null $resolved
+     * @param T|null $sibling
+     *
+     * @return T|null
+     */
+    private function mergeNullableIdentical(mixed $resolved, mixed $sibling): mixed
+    {
+        if (null === $resolved) {
+            return $sibling;
+        }
+
+        if (null === $sibling) {
+            return $resolved;
+        }
+
+        return null;
+    }
+
+    /**
+     * Wraps divergent scalar fields (`multipleOf`, `pattern`) into allOf
+     * sub-schemas so both constraints apply per JSON Schema 2020-12 §8.2.3.
+     *
+     * @return list<Schema>
+     */
+    private function collectScalarFieldAdditions(Schema $resolved, Schema $sibling): array
+    {
+        $additions = [];
+
+        if (null !== $resolved->multipleOf && null !== $sibling->multipleOf) {
+            $additions[] = new Schema(multipleOf: $resolved->multipleOf);
+            $additions[] = new Schema(multipleOf: $sibling->multipleOf);
+        }
+
+        if (null !== $resolved->pattern && null !== $sibling->pattern) {
+            $additions[] = new Schema(pattern: $resolved->pattern);
+            $additions[] = new Schema(pattern: $sibling->pattern);
+        }
+
+        return $additions;
+    }
+
+    /**
+     * Wraps divergent `format` declarations and disjoint `type`
+     * declarations into allOf sub-schemas. Identical formats collapse to
+     * a single value via {@see mergeFormat}; overlapping types intersect
+     * via {@see mergeType}.
+     *
+     * @return list<Schema>
+     */
+    private function collectCompositionFieldAdditions(Schema $resolved, Schema $sibling): array
+    {
+        $additions = [];
+
+        if (null !== $resolved->type && null !== $sibling->type && null === $this->mergeType($resolved->type, $sibling->type)) {
+            $additions[] = new Schema(type: $resolved->type);
+            $additions[] = new Schema(type: $sibling->type);
+        }
+
+        if (null !== $resolved->format && null !== $sibling->format && $resolved->format !== $sibling->format) {
+            $additions[] = new Schema(format: $resolved->format);
+            $additions[] = new Schema(format: $sibling->format);
+        }
+
+        return $additions;
+    }
+
+    /**
+     * Merges two format declarations: identical formats collapse to one;
+     * divergent formats wrap into separate allOf sub-schemas via the
+     * caller.
+     */
+    private function mergeFormat(?string $resolved, ?string $sibling): ?string
+    {
+        if (null === $resolved) {
+            return $sibling;
+        }
+
+        if (null === $sibling) {
+            return $resolved;
+        }
+
+        return $resolved === $sibling ? $resolved : null;
+    }
+
+    /**
+     * Intersects two `type` declarations. Both may be a single string or
+     * a list (JSON Schema 2020-12 nullable form). Returns the
+     * intersection: empty intersection returns null (caller wraps both
+     * into separate allOf sub-schemas); single element returns the string
+     * form; multiple elements return the list form.
+     *
+     * @param string|list<string>|null $resolved
+     * @param string|list<string>|null $sibling
+     *
+     * @return string|list<string>|null
+     */
+    private function mergeType(string|array|null $resolved, string|array|null $sibling): string|array|null
+    {
+        if (null === $resolved) {
+            return $sibling;
+        }
+
+        if (null === $sibling) {
+            return $resolved;
+        }
+
+        $resolvedSet = $this->typeToSet($resolved);
+        $siblingSet = $this->typeToSet($sibling);
+        $intersection = array_values(array_intersect($resolvedSet, $siblingSet));
+
+        if ([] === $intersection) {
+            return null;
+        }
+
+        return 1 === count($intersection) ? $intersection[0] : $intersection;
+    }
+
+    /**
+     * @param string|list<string> $type
+     *
+     * @return list<string>
+     */
+    private function typeToSet(string|array $type): array
+    {
+        return is_array($type) ? $type : [$type];
+    }
+
+    /**
+     * Merges the `if` / `then` / `else` triple. Each keyword is an in-place
+     * applicator that applies independently per JSON Schema 2020-12
+     * §10.2.2. When both sides declare any element of the triple, both
+     * sides' triples are wrapped into separate allOf sub-schemas so each
+     * conditional applicator survives. When only one side declares the
+     * triple, that value is inherited.
+     *
+     * @return array{0: Schema|bool|null, 1: Schema|bool|null, 2: Schema|bool|null, 3: list<Schema>}
+     */
+    private function mergeIfThenElse(Schema $resolved, Schema $sibling): array
+    {
+        $resolvedHas = null !== $resolved->if || null !== $resolved->then || null !== $resolved->else;
+        $siblingHas = null !== $sibling->if || null !== $sibling->then || null !== $sibling->else;
+
+        if (false === $resolvedHas || false === $siblingHas) {
+            return [
+                $sibling->if ?? $resolved->if,
+                $sibling->then ?? $resolved->then,
+                $sibling->else ?? $resolved->else,
+                [],
+            ];
+        }
+
+        return [
+            null,
+            null,
+            null,
+            [
+                new Schema(if: $resolved->if, then: $resolved->then, else: $resolved->else),
+                new Schema(if: $sibling->if, then: $sibling->then, else: $sibling->else),
+            ],
+        ];
     }
 
     /**
