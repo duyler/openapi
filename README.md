@@ -12,7 +12,7 @@ OpenAPI 3.2 validator for PHP 8.4+
 ## Features
 
 - **OpenAPI 3.2 Support** - JSON Schema draft 2020-12 validation with known limitations (see Limitations)
-- **JSON Schema Validation** - Full JSON Schema draft 2020-12 validation with 25+ validators
+- **JSON Schema Validation** - Full JSON Schema draft 2020-12 validation with 30 validators
 - **PSR-7 Integration** - PSR-7 HTTP message validation (works with any PSR-7 implementation)
 - **Request Validation** - Validate path parameters, query parameters, headers, cookies, and request body
 - **Response Validation** - Validate status codes, headers, and response bodies
@@ -90,6 +90,7 @@ The interface exposes the following methods:
 | `getFormattedErrors(ValidationException $e): string` | Format validation errors as string |
 | `validateWebhook(ServerRequestInterface $request, string $name): Operation` | Validate webhook request |
 | `validateCallback(ServerRequestInterface $request, string $name): Operation` | Validate callback request |
+| `getDocument(): OpenApiDocument` | Returns the loaded OpenAPI document for introspection, `SchemaRegistry` registration, or building routing maps. Available after `build()`; safe to call multiple times (memoised). |
 | `resolveLink(string $linkName, array $responseData): ResolvedLink` | Resolve link parameters from response data (response body only) |
 | `resolveLinkWithContext(string $linkName, LinkContext $context): ResolvedLink` | Resolve link parameters with full Runtime Expression support ($request.*, $response.body/header/query, $url, $method, $statusCode) |
 | `reset(): void` | Reset validator state for reuse |
@@ -750,7 +751,7 @@ $validator = new UserValidator();
 $validator->validate(['name' => 'John', 'age' => 30]);
 ```
 
-The compiler generates a standalone PHP class with hardcoded validation rules. It does not depend on the library at runtime.
+The compiler generates a standalone PHP class with hardcoded validation rules. The generated code has a minimal runtime dependency on `Duyler\OpenApi\Validator\TypeFormatter::format()` for type-mismatch error messages; otherwise no library code is invoked.
 
 #### Compilation with $ref Resolution
 
@@ -845,6 +846,12 @@ Use the runtime validator when you need the typed error classes (`TypeMismatchEr
 | `withExternalRefMaxBytes(int $bytes)` | Set max external ref file size | `10485760` (10 MB) |
 | `withMaxSpecSize(int $bytes)` | Set the maximum allowed size, in bytes, for a parsed OpenAPI spec payload. Applies to both YAML and JSON specs (defends against OOM on attacker-controlled or accidentally oversized input; CWE-400, CWE-770). | `1048576` (1 MB) |
 | `withMaxSpecDepth(int $depth)` | Set the maximum allowed nesting depth for a parsed OpenAPI spec payload. Applies to both YAML and JSON specs. | `100` |
+| `withMaxJsonBodySize(int $bytes)` | Override the maximum allowed size, in bytes, for non-multipart request and response bodies (JSON, XML, text). Bodies exceeding the cap are rejected before being fully materialised in memory. | `10485760` (10 MB) — `ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES` |
+| `withMaxMultipartBodySize(int $bytes)` | Override the maximum allowed size, in bytes, for multipart request and response bodies. Multipart payloads typically carry larger uploads, so the cap is kept independent from the JSON cap. | `52428800` (50 MB) — `ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES` |
+| `withMaxRegexBacktracks(int $maxBacktracks)` | Override the defensive `pcre.backtrack_limit` applied to every `preg_match` call routed through `PregExecutor`. Lowering bounds the worst-case CPU cost of catastrophic regex on attacker-controlled input (JSON Schema `pattern`). | `PregExecutor::DEFAULT_MAX_BACKTRACKS` (1_000_000, PHP default) |
+| `withMaxStreamingRecords(int $max)` | Override the maximum number of records accepted from a single NDJSON / SSE / JSON Text Sequences response before `TooManyRecordsException`. Bounds memory impact of attacker-controlled streaming responses. | `100000` — `ValidatorConfiguration::DEFAULT_MAX_STREAMING_RECORDS` |
+| `enableStrictStreaming()` | Enable strict streaming mode: malformed JSON records in NDJSON, SSE, and JSON Text Sequences raise `MalformedStreamRecordException` instead of being logged and skipped. Opt-in for backward compatibility. | `false` |
+| `disableStrictStreaming()` | Disable strict streaming mode; restores the default fail-open behaviour where malformed records are logged and skipped. | `false` (default remains in effect) |
 
 Deprecated reporting is enabled by default. Without a PSR-3 logger, deprecation warnings go to `NullLogger` and produce no output. There is no `disableReportDeprecated()` method; to suppress deprecation warnings, simply omit the logger (the default behavior).
 
@@ -927,14 +934,10 @@ final class ValidationMiddleware implements MiddlewareInterface
                 ], JSON_PRETTY_PRINT),
             );
         } catch (Throwable $e) {
-            $message = $e instanceof ValidationException
-                ? 'Validation failed'
-                : 'Internal validation error';
-
             return new Response(
                 status: 400,
                 headers: ['Content-Type' => 'application/json'],
-                body: json_encode(['error' => $message], JSON_PRETTY_PRINT),
+                body: json_encode(['error' => 'Internal validation error'], JSON_PRETTY_PRINT),
             );
         }
 
@@ -1773,7 +1776,7 @@ The validator covers approximately 95% of JSON Schema draft 2020-12 keywords. Th
 
 - `$dynamicRef` / `$dynamicAnchor` - dynamic schema resolution
 - `$recursiveRef` / `$recursiveAnchor` - recursive schema resolution
-- `contentEncoding` / `contentMediaType` - content validation
+- `contentEncoding` / `contentMediaType` - **limited** support: `ContentEncodingValidator` covers base64, `ContentMediaTypeValidator` covers JSON/XML/text; custom encodings and media types are not supported.
 - Custom vocabularies and keyword extensions
 
 ### Annotation Tracking for `unevaluatedProperties` / `unevaluatedItems`

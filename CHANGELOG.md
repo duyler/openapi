@@ -581,6 +581,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mode); callers that relied on the implicit wildcard default must add
   `disableStrictCallbackRuntimeTemplate()` and validate callback URLs
   through an application-level allowlist.
+- Bounded streaming record count: NDJSON, SSE, and JSON Text Sequences
+  parsers now enforce a configurable cap on the number of records accepted
+  from a single response (default 100 000). Responses exceeding the cap
+  raise `Duyler\OpenApi\Validator\Response\Exception\TooManyRecordsException`,
+  preventing memory exhaustion from attacker-controlled streaming responses
+  composed of a very large number of small records (SEC-10, CWE-400,
+  CWE-770). The cap is configurable via
+  `OpenApiValidatorBuilder::withMaxStreamingRecords(int $max)`; values
+  <= 0 raise `InvalidArgumentException`.
 - Hardened `FileExternalRefResolver` scheme policy from blacklist to strict
   whitelist: only `file://` URIs and scheme-less relative paths are now
   accepted. Every other scheme (`php://`, `phar://`, `data://`,
@@ -599,13 +608,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   builder method allows overriding the root explicitly. Direct `new RefResolver()`
   usage preserves the legacy null-`allowedRoot` behaviour for backward compatibility
   (documented as unsafe for trusted specs).
+- `FileExternalRefResolver::assertPathWithinAllowedRoot()` now rejects
+  sibling-directory bypass attempts: a realpath like
+  `/var/specs-shared/User.yaml` (sibling of the configured `allowedRoot`
+  `/var/specs`) was previously accepted because the prefix check
+  `str_starts_with($realFile, $realRoot)` matched the common `/var/specs`
+  prefix. The check now requires `$realRoot . '/'` as the prefix (with an
+  explicit edge case for `$realFile === $realRoot`), closing SEC-02 (LFI
+  via sibling-directory traversal when the attacker can write a sibling
+  directory; CWE-22, CWE-178).
 - Replaced `file_get_contents` with a `fopen` + `fstat` + `fread` + `fclose`
   pattern in `FileExternalRefResolver::resolve()`. Files are now opened once
   after the realpath-bound check, validated as regular files (rejecting
   `/dev/null`, `/dev/zero`, FIFOs, and other non-regular files), and read in
   bounded chunks with a default 10 MB cap. Closes SEC-04 (TOCTOU window
   between realpath and file_get_contents), SEC-05 (DoS via unbounded file
-  read), and adds the `ExternalRefTooLargeException` + `withExternalRefMaxBytes(int)`
+  read), and SEC-25 (defence-in-depth: the chunked `fread` loop hardens the
+  resolver against future regressions where a TOCTOU window between the
+  realpath check and the file read could be re-introduced by refactoring),
+  and adds the `ExternalRefTooLargeException` + `withExternalRefMaxBytes(int)`
   builder method for explicit size configuration.
 - Removed raw user-supplied values from `InvalidFormatException::params()` output to
   prevent accidental disclosure of secrets (passwords, tokens, API keys) through error
@@ -677,6 +698,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   header like `Bearer ` (without token) is rejected. The regex `^bearer\s+\S+` replaces
   the case-sensitive `str_starts_with` check, routed through PregExecutor for backtrack
   protection (SEC-16).
+- Regex patterns supplied via the JSON Schema `pattern` field (or
+  `patternProperties` / `propertyNames`) are now capped at
+  `RegexValidator::MAX_PATTERN_LENGTH = 1024` bytes; patterns exceeding the
+  cap are rejected with `InvalidPatternException` before PCRE compiles them,
+  defending against attacker-controlled specifications that ship a large
+  regex designed to burn CPU during PCRE compilation (SEC-11, CWE-1333,
+  CWE-770). Additionally, `preg_match` errors inside
+  `RegexValidator::validate()` are now routed through `set_error_handler`
+  + `restore_error_handler` instead of the `@` operator (closes SEC-12;
+  aligns with the project-wide categorical ban on `@` per
+  `.ai/guides/php-best-practices.md` §3), surfacing compilation failures
+  as `InvalidPatternException` instead of silently returning `false`.
 - `JsonBodyParser::parse()` and `JsonParser::parseContent()` now reject JSON
   payloads containing invalid UTF-8 byte sequences via `mb_check_encoding()`
   before `json_decode()` is invoked, throwing
