@@ -521,6 +521,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   $this->lock->lock(); }` — the constructor's invariant is trusted
   inside the class. No behavioural change for callers; pre-existing
   tests that passed lock-stubs with the methods continue to work.
+- `OpenApiValidatorBuilder::generateCacheKeyFromFile` now incorporates
+  a SHA-256 hash of the spec file contents into the `SchemaCache`
+  cache key (previously: path + mtime + size). The new key format
+  `openapi_spec_file_<sha256(realpath | sha256(content))>` prevents
+  cache-poisoning via size-preserving or mtime-preserving spec
+  tampering, where an attacker with write access to the spec file
+  rewrites a constraint (e.g. `minLength: 50` → `minLength: 99`),
+  pads the file to the original byte size, and then `touch -r`-aligns
+  the mtime, yielding an identical cache key under the old metadata-
+  only scheme and silently serving the tampered document from cache
+  on the next build (R3-SEC-003, S-003, OWASP ASVS V8.1.3, CWE-349,
+  CWE-1023). `loadSpecFromFile` now reads the spec file exactly once
+  and reuses the content for both cache-key generation and parsing;
+  `mtime` and `size` are intentionally excluded from the new key
+  because they offered no defence once an attacker controls write
+  access to the spec file. `generateCacheKeyFromString` (string-loaded
+  specs) is unchanged.
 
 ### Security
 - **BREAKING**: Inverted the default of strict callback runtime template

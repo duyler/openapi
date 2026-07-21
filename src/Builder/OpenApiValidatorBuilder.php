@@ -624,15 +624,6 @@ final readonly class OpenApiValidatorBuilder
             throw new BuilderException('Spec path or type not set');
         }
 
-        $cacheKey = $this->generateCacheKeyFromFile($this->config->specPath);
-
-        if (null !== $this->config->cache) {
-            $cachedDocument = $this->config->cache->get($cacheKey);
-            if (null !== $cachedDocument) {
-                return $cachedDocument;
-            }
-        }
-
         if (false === is_file($this->config->specPath)) {
             throw new BuilderException(sprintf('Spec file does not exist: %s', $this->config->specPath));
         }
@@ -641,6 +632,15 @@ final readonly class OpenApiValidatorBuilder
 
         if (false === $content) {
             throw new BuilderException(sprintf('Failed to read spec file: %s', $this->config->specPath));
+        }
+
+        $cacheKey = $this->generateCacheKeyFromFile($this->config->specPath, $content);
+
+        if (null !== $this->config->cache) {
+            $cachedDocument = $this->config->cache->get($cacheKey);
+            if (null !== $cachedDocument) {
+                return $cachedDocument;
+            }
         }
 
         $document = $this->parseSpec($content);
@@ -885,22 +885,28 @@ final readonly class OpenApiValidatorBuilder
         return is_array($data) ? $data : [];
     }
 
-    private function generateCacheKeyFromFile(string $path): string
+    /**
+     * Compute the SchemaCache key for a file-loaded spec.
+     *
+     * The key incorporates the realpath AND a SHA-256 hash of the file
+     * contents. This prevents cache-poisoning via size-preserving or
+     * mtime-preserving spec tampering (OWASP ASVS V8.1.3, CWE-349,
+     * CWE-1023). mtime and size are intentionally NOT part of the key:
+     * they offered no protection once an attacker controls write-access
+     * to the spec file.
+     *
+     * When realpath() returns false (file vanished mid-call), the key
+     * degrades to a hash of the unresolved $path argument plus the
+     * content hash. This preserves uniqueness across caller-distinct
+     * paths even when realpath fails.
+     */
+    private function generateCacheKeyFromFile(string $path, string $content): string
     {
         $realPath = realpath($path);
+        $pathComponent = false === $realPath ? $path : $realPath;
+        $contentHash = hash('sha256', $content);
 
-        if (false === $realPath) {
-            return self::CACHE_KEY_FILE_PREFIX . hash('sha256', $path);
-        }
-
-        $mtime = filemtime($realPath);
-        $size = filesize($realPath);
-
-        if (false === $mtime || false === $size) {
-            return self::CACHE_KEY_FILE_PREFIX . hash('sha256', $realPath);
-        }
-
-        return self::CACHE_KEY_FILE_PREFIX . hash('sha256', $realPath . '|' . $mtime . '|' . $size);
+        return self::CACHE_KEY_FILE_PREFIX . hash('sha256', $pathComponent . '|' . $contentHash);
     }
 
     private function generateCacheKeyFromString(string $content): string

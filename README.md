@@ -1444,9 +1444,10 @@ $validator = OpenApiValidatorBuilder::create()
 ```
 
 `SchemaCache` uses a PSR-6 cache pool keyed by a SHA-256 hash of the spec
-content (file path + mtime + size, or raw content for string-loaded specs) to
-resist cache-poisoning collisions. `CompilationCache` uses the same SHA-256
-keying scheme.
+file path and content (or raw content for string-loaded specs). The
+content-hash defends against cache-poisoning via size-preserving or
+mtime-preserving spec tampering (OWASP ASVS V8.1.3, CWE-349, CWE-1023).
+`CompilationCache` uses the same SHA-256 keying scheme.
 
 For compiled validators, use `CompilationCache` to avoid regenerating PHP code:
 
