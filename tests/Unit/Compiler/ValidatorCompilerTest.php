@@ -69,7 +69,7 @@ final class ValidatorCompilerTest extends TestCase
         $schema = new Schema(type: 'string', enum: ['a', 'b', 'c']);
         $code = $compiler->compile($schema, 'EnumValidator');
 
-        $this->assertStringContainsString('in_array($data', $code);
+        $this->assertStringContainsString('$this->jsonEquals(', $code);
     }
 
     #[Test]
@@ -123,7 +123,7 @@ final class ValidatorCompilerTest extends TestCase
         $this->assertStringContainsString('$utf16Length', $code);
         $this->assertStringNotContainsString('mb_strlen', $code);
         $this->assertStringContainsString('preg_match', $code);
-        $this->assertStringContainsString('in_array($data', $code);
+        $this->assertStringContainsString('$this->jsonEquals(', $code);
     }
 
     #[Test]
@@ -925,7 +925,7 @@ final class ValidatorCompilerTest extends TestCase
 
         $code = $compiler->compile($schema, 'ConstValidator');
 
-        $this->assertStringContainsString("'fixed' !== \$data", $code);
+        $this->assertStringContainsString("\$this->jsonEquals('fixed'", $code);
         $this->assertStringContainsString('Value must be const', $code);
     }
 

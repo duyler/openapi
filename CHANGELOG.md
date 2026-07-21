@@ -57,6 +57,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   any schema that does not transitively contain a `$ref`.
 
 ### Fixed
+- `ValidatorCompiler::generateConstCheck` now emits an inline
+  `jsonEquals` call instead of a PHP strict `!==` comparison, closing
+  R3-CORRECTNESS-001. JSON Schema 2020-12 §4.2.2 numeric equality
+  treats `1` (int) and `1.0` (float) as equal, but PHP `1 !== 1.0` —
+  so a compiled validator previously rejected `1.0` for `const: 1`
+  while the runtime validator accepted it. The same fix covers
+  object key-order: `const: {a:1,b:2}` and data `{b:2,a:1}` are now
+  both accepted by the compiled validator (per §4.2.2 unordered-keys
+  rule). Mixed int/float comparisons above 2^53 are rejected as
+  unequal, matching `JsonEquals::SAFE_INT64_FLOAT_BOUNDARY`. The
+  `jsonEquals` helper is inlined into the generated class only when
+  the schema uses `const`, `enum`, or `uniqueItems`, so the
+  standalone-validator contract (no library code is emitted) is
+  preserved.
+- `ValidatorCompiler::generateEnumCheck` now emits a linear-scan
+  with the inline `jsonEquals` helper instead of
+  `in_array($data, [...], true)`, closing R3-CORRECTNESS-002. PHP
+  strict `in_array` suffers from the same `1 !== 1.0` divergence as
+  the const check: a compiled validator previously rejected int `1`
+  for `enum: [1.0, 2.0, 3.0]` while the runtime validator accepted
+  it. After the fix, both validators agree on §4.2.2 numeric
+  equality and §4.2.2 object-key-order equality for the top-level
+  `enum` keyword (applies to top-level `enum` only; `items.enum`
+  strict-equality is a known limitation for a follow-up task).
+- `ValidatorCompiler::generateArrayCheck` for the `uniqueItems`
+  keyword now emits a canonicalised-key lookup with an
+  associative-array `isset` (O(n)) plus a `100000` unique-entry cap,
+  closing R3-CORRECTNESS-003. The previous code used
+  `json_encode($__item, JSON_THROW_ON_ERROR)` directly, which
+  produced distinct keys for JSON-equal values (`json_encode(1)` is
+  `'1'` while `json_encode(1.0)` is `'1.0'`), so a compiled
+  validator accepted `[1, 1.0]` while the runtime validator rejected
+  it. The same canonicalisation also covers reordered-key objects:
+  `[{a:1,b:2}, {b:2,a:1}]` is now correctly detected as a duplicate
+  via `ksort` on object keys before `json_encode`. The cap matches
+  `ArrayLengthValidator::MAX_UNIQUE_CHECK = 100000` and the
+  runtime's `TooManyItemsForUniqueCheckError` DoS defence. The
+  O(n²) `in_array` lookup was replaced by an associative-array
+  `isset` for O(n) enforcement.
+- `ValidatorCompiler::generateArrayCheck` for the `uniqueItems`
+  keyword now wraps the canonicalisation `json_encode` in
+  `try { ... } catch (\JsonException $e) { throw new \RuntimeException(...); }`,
+  closing R3-CORRECTNESS-013. `\JsonException` extends `\Exception`
+  (not `\RuntimeException`), so callers that
+  `catch (\RuntimeException $e)` previously missed the failure when
+  the data contained a non-encodable value (resource or recursive
+  array). The wrapper converts the `JsonException` to a generic
+  `RuntimeException` with a chained `$previous` for trace
+  preservation, matching the README "Compiler Limitations" contract
+  that compiled validators only throw `RuntimeException`.
 - `ValidatorCompiler::generatePatternCheck` now disambiguates a PCRE
   runtime error (`preg_match === false`, e.g. malformed pattern that
   passes `RegexValidator::normalize` but fails PCRE compilation, or

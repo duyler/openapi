@@ -160,6 +160,12 @@ final readonly class ValidatorCompiler
         }
 
         $code .= "    }\n";
+
+        if ($this->needsEqualityHelpers($schema)) {
+            $code .= $this->renderJsonEqualsInline();
+            $code .= $this->renderCanonicalKeyInline();
+        }
+
         $code .= "}\n";
 
         return $code;
@@ -207,10 +213,17 @@ final readonly class ValidatorCompiler
     private function generateEnumCheck(array $enum): string
     {
         $enumValues = array_map(fn($val) => var_export($val, true), $enum);
-        $valuesString = implode(', ', $enumValues);
+        $valuesArray = '[' . implode(', ', $enumValues) . ']';
 
-        $code = "        if (false === in_array(\$data, [$valuesString], true)) {\n";
-        $code .= "            throw new \\RuntimeException('Value must be one of: ' . implode(', ', [$valuesString]));\n";
+        $code = "        \$__matched = false;\n";
+        $code .= sprintf("        foreach (%s as \$__candidate) {\n", $valuesArray);
+        $code .= "            if (\$this->jsonEquals(\$__candidate, \$data)) {\n";
+        $code .= "                \$__matched = true;\n";
+        $code .= "                break;\n";
+        $code .= "            }\n";
+        $code .= "        }\n";
+        $code .= "        if (false === \$__matched) {\n";
+        $code .= sprintf("            throw new \\RuntimeException('Value must be one of: ' . implode(', ', %s));\n", $valuesArray);
         $code .= "        }\n\n";
 
         return $code;
@@ -363,8 +376,8 @@ final readonly class ValidatorCompiler
     {
         $exportedValue = var_export($constValue, true);
 
-        $code = sprintf("        if (%s !== \$data) {\n", $exportedValue);
-        $code .= sprintf("            throw new \\RuntimeException(sprintf('Value must be const: %%s', var_export(\$data, true)));\n");
+        $code = sprintf("        if (false === \$this->jsonEquals(%s, \$data)) {\n", $exportedValue);
+        $code .= "            throw new \\RuntimeException(sprintf('Value must be const: %%s', var_export(\$data, true)));\n";
         $code .= "        }\n\n";
 
         return $code;
@@ -619,11 +632,18 @@ final readonly class ValidatorCompiler
         if (true === $schema->uniqueItems) {
             $code .= "        \$__seen = [];\n";
             $code .= "        foreach (\$data as \$__item) {\n";
-            $code .= "            \$__key = json_encode(\$__item, JSON_THROW_ON_ERROR);\n";
-            $code .= "            if (in_array(\$__key, \$__seen, true)) {\n";
+            $code .= "            try {\n";
+            $code .= "                \$__key = \$this->canonicalJsonKey(\$__item);\n";
+            $code .= "            } catch (\\JsonException \$__e) {\n";
+            $code .= "                throw new \\RuntimeException(sprintf('Failed to encode value for uniqueness check: %s', \$__e->getMessage()), 0, \$__e);\n";
+            $code .= "            }\n";
+            $code .= "            if (isset(\$__seen[\$__key])) {\n";
             $code .= "                throw new \\RuntimeException('Array items must be unique');\n";
             $code .= "            }\n";
-            $code .= "            \$__seen[] = \$__key;\n";
+            $code .= "            \$__seen[\$__key] = true;\n";
+            $code .= "            if (100000 < count(\$__seen)) {\n";
+            $code .= "                throw new \\RuntimeException('Too many items for unique check');\n";
+            $code .= "            }\n";
             $code .= "        }\n\n";
         }
 
@@ -651,6 +671,145 @@ final readonly class ValidatorCompiler
         $code .= "        }\n\n";
 
         return $code;
+    }
+
+    /**
+     * Inlines `JsonEquals::equals` / `JsonEquals::arraysEqual` into the
+     * generated validator class as private instance methods so the
+     * standalone-validator contract documented in the README "Validator
+     * Compilation" section is preserved (no library code is emitted as a
+     * call). The runtime SAFE_INT64_FLOAT_BOUNDARY = 2^53 constant is
+     * inlined as a literal so the generated class does not reference any
+     * library constant. Mirrors `src/Validator/Schema/JsonEquals.php`.
+     */
+    private function renderJsonEqualsInline(): string
+    {
+        return <<<'PHP'
+    private function jsonEquals(mixed $a, mixed $b): bool
+    {
+        if (is_bool($a) || is_bool($b)) {
+            return $a === $b;
+        }
+        if ((is_int($a) || is_float($a)) && (is_int($b) || is_float($b))) {
+            if (is_int($a) && is_int($b)) {
+                return $a === $b;
+            }
+            if (is_int($a) && abs($a) > 9007199254740992) {
+                return false;
+            }
+            if (is_int($b) && abs($b) > 9007199254740992) {
+                return false;
+            }
+            return (float) $a === (float) $b;
+        }
+        if (is_array($a) && is_array($b)) {
+            return $this->arraysEqual($a, $b);
+        }
+        return $a === $b;
+    }
+
+    private function arraysEqual(array $a, array $b): bool
+    {
+        if (count($a) !== count($b)) {
+            return false;
+        }
+        if (array_is_list($a) && array_is_list($b)) {
+            for ($i = 0, $n = count($a); $i < $n; ++$i) {
+                if (!$this->jsonEquals($a[$i], $b[$i])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        foreach (array_keys($a) as $__key) {
+            if (!array_key_exists($__key, $b)) {
+                return false;
+            }
+            if (!$this->jsonEquals($a[$__key], $b[$__key])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+PHP;
+    }
+
+    /**
+     * Inlines a deterministic-key encoder for `uniqueItems` so that
+     * JSON-equal values (int 1 vs float 1.0, assoc-arrays with reordered
+     * keys) collapse to the same hash key. Mirrors the canonicalisation
+     * approach of `ArrayLengthValidator::canonicalizeForEncoding` /
+     * `ArrayLengthValidator::itemKey` so the compiled validator stays
+     * numerically equivalent to the runtime validator. The
+     * `JSON_THROW_ON_ERROR` flag is caught and rethrown as
+     * `RuntimeException` at the call site (see `generateArrayCheck`) so
+     * the README "Compiler Limitations" RuntimeException-only contract
+     * is preserved.
+     */
+    private function renderCanonicalKeyInline(): string
+    {
+        return <<<'PHP'
+    private function canonicalJsonKey(mixed $value): string
+    {
+        if (is_float($value) && (float) (int) $value === $value) {
+            $value = (int) $value;
+        }
+        if (is_array($value)) {
+            $value = $this->canonicalizeArrayKeys($value);
+        }
+        return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+    }
+
+    private function canonicalizeArrayKeys(array $value): array
+    {
+        ksort($value);
+        foreach ($value as $k => $v) {
+            if (is_array($v)) {
+                $value[$k] = $this->canonicalizeArrayKeys($v);
+            } elseif (is_float($v) && (float) (int) $v === $v) {
+                $value[$k] = (int) $v;
+            }
+        }
+        return $value;
+    }
+
+PHP;
+    }
+
+    /**
+     * Equality helpers are emitted into the generated class only when at
+     * least one keyword consumes them. Walks the schema tree so that
+     * `uniqueItems: true` nested inside an object property or an array
+     * items chain also triggers emission.
+     */
+    private function needsEqualityHelpers(Schema $schema): bool
+    {
+        return $schema->hasConst
+            || null !== $schema->enum
+            || true === $schema->uniqueItems
+            || $this->schemaHasUniqueItemsInItemsChain($schema);
+    }
+
+    private function schemaHasUniqueItemsInItemsChain(Schema $schema): bool
+    {
+        if (true === $schema->uniqueItems) {
+            return true;
+        }
+
+        if (null !== $schema->items && $this->schemaHasUniqueItemsInItemsChain($schema->items)) {
+            return true;
+        }
+
+        if (null !== $schema->properties) {
+            foreach ($schema->properties as $child) {
+                if ($this->schemaHasUniqueItemsInItemsChain($child)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
