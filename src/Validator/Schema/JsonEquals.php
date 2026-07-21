@@ -28,21 +28,11 @@ final readonly class JsonEquals
 
     public static function equals(mixed $a, mixed $b): bool
     {
-        // JSON Schema 2020-12 §4.2.2 instance equality:
-        // - Bool is distinct from int (true !== 1, false !== 0)
-        // - Int and float with the same mathematical value are equal
-        // - Object keys are unordered
-        // - Array order is significant
-
         if (is_bool($a) || is_bool($b)) {
             return $a === $b;
         }
 
         if ((is_int($a) || is_float($a)) && (is_int($b) || is_float($b))) {
-            // Both are numeric. Int-vs-int uses direct comparison to preserve
-            // int64 precision (9223372036854775806 !== 9223372036854775807).
-            // Mixed int/float uses float equality so 1 == 1.0 (§4.2.2 numeric
-            // equality).
             if (is_int($a) && is_int($b)) {
                 return $a === $b;
             }
@@ -84,7 +74,6 @@ final readonly class JsonEquals
             return true;
         }
 
-        // Associative arrays (JSON objects): order-independent
         foreach (array_keys($a) as $key) {
             if (!array_key_exists($key, $b)) {
                 return false;

@@ -28,13 +28,10 @@ final readonly class NotValidator extends AbstractSchemaValidator implements Key
             return;
         }
 
-        // Boolean schema form per JSON Schema 2020-12 §4.3.2.
-        // `not: false` always passes (the subschema never matches).
         if (false === $schema->not) {
             return;
         }
 
-        // `not: true` always fails (the subschema matches every value).
         if (true === $schema->not) {
             throw new ValidationException(
                 'Data must NOT match the "not" schema',

@@ -31,9 +31,6 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
             return;
         }
 
-        // Boolean schema form per JSON Schema 2020-12 §4.3.2.
-        // `if: true` always validates → activate `then` branch.
-        // `if: false` always fails → activate `else` branch.
         if (true === $schema->if) {
             $this->routeThenOrElse(schema: $schema, data: $data, context: $context, ifValid: true);
 

@@ -36,15 +36,12 @@ final readonly class PropertyNamesValidator extends AbstractSchemaValidator impl
             return;
         }
 
-        // Boolean schema form per JSON Schema 2020-12 §4.3.2.
-        // `propertyNames: true` accepts every property name (no-op).
         if (true === $schema->propertyNames) {
             return;
         }
 
         $dataPath = $this->getDataPath($context);
 
-        // `propertyNames: false` rejects every property name.
         if (false === $schema->propertyNames) {
             $errors = [];
 

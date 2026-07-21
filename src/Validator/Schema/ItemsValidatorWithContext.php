@@ -46,7 +46,6 @@ final readonly class ItemsValidatorWithContext
             return;
         }
 
-        // Boolean schema form per JSON Schema 2020-12 §4.3.2.
         if (true === $schema->items || false === $schema->items) {
             $this->validateBooleanItems($data, $schema, $context);
 

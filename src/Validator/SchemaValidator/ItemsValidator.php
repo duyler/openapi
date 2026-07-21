@@ -39,10 +39,6 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
             return;
         }
 
-        // Boolean schema form per JSON Schema 2020-12 §4.3.2.
-        // `items: true` accepts every item (no-op); still marks each item as
-        // evaluated so unevaluatedItems does not over-reject. `items: false`
-        // rejects every item at index >= prefixItems count.
         if (true === $schema->items || false === $schema->items) {
             $this->validateBooleanItems($data, $schema, $context);
 

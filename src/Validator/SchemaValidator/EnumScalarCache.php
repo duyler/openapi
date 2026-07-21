@@ -142,14 +142,6 @@ final class EnumScalarCache
         }
 
         if (is_int($value)) {
-            // SPEC-05: large int64 values lose precision when cast to float
-            // (9223372036854775806 and 9223372036854775807 both become
-            // 9.223372036854776E+18). 2^53 is the IEEE 754 boundary: every
-            // int with abs <= 2^53 round-trips through float unchanged, so
-            // emit the float form to keep numeric equality (1 == 1.0). Above
-            // the boundary emit the int directly so distinct int64 enum
-            // values do not collapse and we avoid a lossy float→int cast on
-            // PHP 8.5.
             if (abs($value) <= self::SAFE_INT64_FLOAT_BOUNDARY) {
                 return 'n:' . (string) (float) $value;
             }
@@ -157,7 +149,6 @@ final class EnumScalarCache
             return 'n:i:' . (string) $value;
         }
 
-        // Remaining scalar case: float (callers gate via isScalarLookupEligible).
         /** @var float $value */
         return 'n:' . (string) $value;
     }

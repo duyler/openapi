@@ -386,9 +386,6 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
         $segments = explode('/', $pointer);
 
         foreach ($segments as $segment) {
-            // RFC 6901 section 3: ~01 is the encoded form of literal "~1".
-            // Direct order (~1 -> /, then ~0 -> ~) yields ~01 -> ~1 (correct).
-            // Reverse order (~0 -> ~, then ~1 -> /) would wrongly yield ~01 -> /1.
             $decodedSegment = str_replace(['~1', '~0'], ['/', '~'], $segment);
 
             if (!is_array($current) || !array_key_exists($decodedSegment, $current)) {

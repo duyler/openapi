@@ -165,6 +165,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   lock remains the prefork-safe default and is unchanged.
 
 ### Changed
+- Removed all inline `//` comments from `src/` (72 lines across 15 files)
+  to comply with `php-best-practices.md` §12 "Comments are strictly
+  forbidden; PHPDoc on public API is the only allowed form of in-source
+  documentation". PHPDoc on public API was preserved unchanged. Rationale
+  that previously lived inside private methods (JSON Schema 2020-12 §4.3.2
+  boolean schema form notes, RFC 6901 §3 JSON Pointer escape order,
+  IEEE 754 §4.2.2 int64 precision notes / SPEC-05) was removed; the
+  canonical constants `JsonEquals::SAFE_INT64_FLOAT_BOUNDARY` and the
+  matching `SAFE_INT64_FLOAT_BOUNDARY` constants on `ArrayLengthValidator`
+  and `EnumScalarCache`, plus their PHPDoc explanations, remain the single
+  source of truth for the int64-precision rationale. Closes R3-BP-003
+  (findings BP-006).
 - **BC-break**: `format: int32` and `format: int64` are now registered as
   format validators via `IntegerRangeValidator`. Values outside the int32
   range `[-2147483648, 2147483647]` now throw `InvalidFormatException`

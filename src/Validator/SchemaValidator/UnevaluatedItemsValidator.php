@@ -36,8 +36,6 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
             return;
         }
 
-        // Boolean schema form per JSON Schema 2020-12 §4.3.2.
-        // `unevaluatedItems: true` accepts every item (no-op).
         if (true === $schema->unevaluatedItems) {
             return;
         }
@@ -50,7 +48,6 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
             array_flip($evaluatedIndices),
         ));
 
-        // `unevaluatedItems: false` rejects every unevaluated item.
         if (false === $schema->unevaluatedItems) {
             if ([] === $unevaluatedIndices) {
                 return;
@@ -126,11 +123,6 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
             }
         }
 
-        // `items: Schema(...)` assumes validation succeeds for the static
-        // analysis path; `items: true` trivially evaluates every index >=
-        // prefixItems count; `items: false` does NOT register evaluated
-        // indices because validation fails, so annotations do not apply
-        // per JSON Schema 2020-12 §10.3.4.
         if (null !== $schema->items && false !== $schema->items) {
             $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
             for ($i = $prefixCount; $i < $dataCount; ++$i) {

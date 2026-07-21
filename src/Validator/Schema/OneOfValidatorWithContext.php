@@ -94,8 +94,6 @@ final readonly class OneOfValidatorWithContext
         $errors = [];
         $abstractErrors = [];
 
-        // Safe to hoist: rootSchemaValidator is memoized by document
-        // (SchemaValidatorDependencies::rootSchemaValidator — first-call-wins).
         $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
 
         foreach ($oneOf as $subSchema) {

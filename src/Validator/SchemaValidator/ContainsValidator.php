@@ -40,9 +40,6 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
 
         $dataPath = $this->getDataPath($context);
 
-        // Boolean schema form per JSON Schema 2020-12 §4.3.2.
-        // `contains: true` is satisfied by every item, so any non-empty array
-        // matches and an empty array fails the default minContains=1.
         if (true === $schema->contains) {
             $matchCount = count($data);
             $effectiveMinContains = $schema->minContains ?? 1;
@@ -82,8 +79,6 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
             return;
         }
 
-        // `contains: false` never matches → MinContainsError / ContainsMatchError
-        // for any non-empty array; empty array still respects minContains.
         if (false === $schema->contains) {
             $effectiveMinContains = $schema->minContains ?? 1;
 

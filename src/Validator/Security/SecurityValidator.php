@@ -126,10 +126,6 @@ final readonly class SecurityValidator
 
         $authorization = $request->getHeaderLine('Authorization');
 
-        // RFC 6750 §2.1: Bearer scheme is case-insensitive (BEARER,
-        // Bearer, bearer all valid). RFC 9110 OWS permits one or more
-        // whitespace characters between scheme and token. RFC 6750 §2.1
-        // requires a non-empty b64token after the scheme prefix.
         if ('' !== $authorization && 1 === $this->pregExecutor->match('/^bearer\s+\S+/i', $authorization)) {
             return null;
         }

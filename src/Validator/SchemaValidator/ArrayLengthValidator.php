@@ -111,8 +111,6 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
      */
     private function containsNonScalar(array $data): bool
     {
-        // null is JSON-scalar for hashing purposes; only arrays/objects/resources
-        // force the hash-mode path. is_scalar covers int|float|string|bool.
         return array_any($data, fn($item) => null !== $item && !is_scalar($item));
     }
 
@@ -205,13 +203,6 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
         }
 
         if (is_int($item)) {
-            // SPEC-05: large int64 values lose precision when cast to float
-            // (9223372036854775806 and 9223372036854775807 both become
-            // 9.223372036854776E+18). 2^53 is the IEEE 754 boundary: every
-            // int with abs <= 2^53 round-trips through float unchanged, so
-            // emit the float form to keep numeric equality (1 == 1.0). Above
-            // the boundary emit the int directly so distinct int64 values do
-            // not collide and we avoid a lossy float→int cast on PHP 8.5.
             if (abs($item) <= self::SAFE_INT64_FLOAT_BOUNDARY) {
                 return 'n:' . (string) (float) $item;
             }
@@ -274,9 +265,6 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
      */
     private function canonicalizeForEncoding(array $item): array
     {
-        // array_map over a single array preserves keys, so the canonicalised
-        // result has the same list-vs-associative shape as the input; the
-        // ksort applies only to associative (object) forms below.
         $canonical = array_map(
             fn(mixed $value): mixed => is_array($value) ? $this->canonicalizeForEncoding($value) : $value,
             $item,

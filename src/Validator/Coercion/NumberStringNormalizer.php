@@ -73,7 +73,6 @@ final readonly class NumberStringNormalizer
     {
         if (1 === preg_match('/^[+-]?\\d+(?:\\.\\d+)?[eE](?<exponent>[+-]?\\d+)$/', $value, $matches)) {
             $exponent = (int) $matches['exponent'];
-            // PHP_FLOAT_MAX ~ 1.8e308; |exp| > 320 is unrepresentable as double.
             if (abs($exponent) > 320) {
                 throw new TypeMismatchError(
                     expected: 'number',
