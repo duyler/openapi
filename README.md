@@ -1294,8 +1294,8 @@ The following format validators are included:
 | `date-time` | ISO 8601 date-time | `2026-01-15T10:30:00Z`                 |
 | `date` | ISO 8601 date | `2026-01-15`                           |
 | `time` | ISO 8601 time | `10:30:00Z`                            |
-| `email` | Email address | `user@example.com`                     |
-| `uri` | URI | `https://example.com`                  |
+| `email` | Email address (RFC 5321 + RFC 6531 SMTPUTF8) | `user@example.com`, `用户@例子.广告`, `user@[127.0.0.1]` |
+| `uri` | URI (RFC 3986 generic syntax) | `https://example.com`                  |
 | `uuid` | UUID | `550e8400-e29b-41d4-a716-446655440000` |
 | `hostname` | Hostname | `example.com`                          |
 | `ipv4` | IPv4 address | `192.168.1.1`                          |
@@ -1304,6 +1304,15 @@ The following format validators are included:
 | `duration` | ISO 8601 duration | `P3Y6M4DT12H30M5S`                     |
 | `json-pointer` | JSON Pointer | `/path/to/value`                       |
 | `relative-json-pointer` | Relative JSON Pointer | `1/property`                           |
+| `binary` | Binary file data hint (pass-through, OAS 3.2 §5.x) | `<file content>` |
+| `password` | Password hint (pass-through, OAS 3.2 §5.x) | `secret123!` |
+| `idn-email` | Internationalized email (RFC 6531 SMTPUTF8) | `用户@例子.广告` |
+| `idn-hostname` | Internationalized hostname (RFC 5890 IDNA2008) | `例え.テスト` |
+| `iri` | Internationalized Resource Identifier (RFC 3987) | `http://例え.テスト/path` |
+| `iri-reference` | Absolute or relative IRI (RFC 3987) | `/path`, `//host/path`, `?q=1` |
+| `uri-reference` | Absolute or relative URI (RFC 3986 §4.1) | `/path`, `//host/path`, `?q=1`, `#frag` |
+| `uri-template` | URI Template (RFC 6570, balanced expressions) | `https://api.example.com/users/{userId}` |
+| `regex` | Regular expression pattern (ECMA-262 syntax via PCRE) | `^[a-z]+$` |
 
 ### Numeric Formats
 
@@ -1311,6 +1320,8 @@ The following format validators are included:
 |--------|-------------|---------|
 | `float` | Floating-point number | `3.14` |
 | `double` | Double-precision number | `3.14159265359` |
+| `int32` | Signed 32-bit integer (range `[-2147483648, 2147483647]`) | `42` |
+| `int64` | Signed 64-bit integer (range `[PHP_INT_MIN, PHP_INT_MAX]`) | `9223372036854775807` |
 
 ### Overriding Built-in Validators
 

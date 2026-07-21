@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+use Duyler\OpenApi\Validator\Exception\PregRuntimeException;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Override;
 
 use function is_string;
+use function sprintf;
 
 abstract readonly class AbstractStringFormatValidator implements FormatValidatorInterface
 {
@@ -23,7 +25,15 @@ abstract readonly class AbstractStringFormatValidator implements FormatValidator
             );
         }
 
-        $this->validateString($data);
+        try {
+            $this->validateString($data);
+        } catch (PregRuntimeException) {
+            throw new InvalidFormatException(
+                $this->getFormatName(),
+                $data,
+                sprintf('Invalid %s format', $this->getFormatName()),
+            );
+        }
     }
 
     abstract protected function getFormatName(): string;

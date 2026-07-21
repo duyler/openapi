@@ -134,7 +134,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `generateKey`; existing three-argument callers continue to work for
   any schema that does not transitively contain a `$ref`.
 
+### Added
+- `EmailValidator` now accepts RFC 5321 domain literals
+  (`user@[127.0.0.1]`, `user@[IPv6:2001:db8::1]`), quoted local parts
+  (`"hello world"@example.com`, `"@"@example.com`, `"hello\"world"@example.com`),
+  and SMTPUTF8 addresses (`用户@例子.广告`, `test@münchen.de`) per RFC 6531.
+  Uses `idn_to_ascii` via ext-intl when available; falls back to a regex
+  with `\p{L}\p{N}` Unicode classes when ext-intl is absent. Full RFC 5322
+  grammar (comments, folding whitespace) remains intentionally out of scope;
+  the validator targets the pragmatic 95% subset. (Closes R3-SPEC-010,
+  C-010.)
+- Registered 10 missing format validators in `BuiltinFormats`: `int32`,
+  `int64`, `binary`, `password`, `idn-email`, `idn-hostname`, `iri`,
+  `iri-reference`, `uri-reference`, `uri-template`, `regex`. With these
+  registered, `enableStrictFormats()` now works on typical OpenAPI 3.2
+  specifications without custom stubs — previously any spec using one of
+  these formats fail-closed with
+  `InvalidFormatException: 'Unknown format "int32" for type "integer" in strict mode'`.
+  Numeric formats use a shared `IntegerRangeValidator` parameterised by
+  `[min, max]`; `binary` and `password` are pass-through hint formats per
+  OAS 3.2 §5.x; `idn-email` / `idn-hostname` / `iri` / `iri-reference`
+  delegate to their ASCII counterparts and accept UTF-8 in the host/domain
+  portions. (Closes R3-SPEC-013, C-013.)
+
 ### Changed
+- **BC-break**: `format: int32` and `format: int64` are now registered as
+  format validators via `IntegerRangeValidator`. Values outside the int32
+  range `[-2147483648, 2147483647]` now throw `InvalidFormatException`
+  from the format validator, which fires BEFORE the `maximum` / `minimum`
+  keywords in the validation pipeline. Previously `format: int32` was a
+  no-op (unregistered) and only the `maximum` keyword rejected out-of-
+  range values. Existing tests that asserted `MaximumError::class` for
+  schema `{ type: integer, format: int32, maximum: 2147483647 }` with
+  value `2147483648` must now accept either `MaximumError` or
+  `InvalidFormatException`. (Relates to R3-SPEC-013, C-013.)
 - `CallbackValidator` (both the outer
   `Duyler\OpenApi\Validator\Validation\CallbackValidator` and the inner
   `Duyler\OpenApi\Validator\Callback\CallbackValidator`) now default the
