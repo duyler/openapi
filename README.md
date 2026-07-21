@@ -708,6 +708,12 @@ $pool = new ValidatorPool(maxSize: 64); // custom capacity
 // Swoole / threaded runtimes: pass a lock to serialize access
 $pool = new ValidatorPool(maxSize: 128, lock: new \Swoole\Lock());
 
+// Or use the named-constructor factory to make the concurrency contract
+// explicit at the call site (delegates to the constructor with the same
+// validation). The lock parameter is required (object), so the type system
+// refuses accidental null-passing under coroutine runtimes.
+$pool = ValidatorPool::forCoroutineRuntime(new \Swoole\Lock(), maxSize: 128);
+
 // Validators are automatically reused and evicted when capacity is exceeded
 $validator = OpenApiValidatorBuilder::create()
     ->fromYamlFile('openapi.yaml')
@@ -1515,6 +1521,62 @@ requires additional concurrency protection:
   validation may race on these globals.
 - `DateTime::getLastErrors()` and `json_last_error()` are also global. Prefer
   code paths that use `JSON_THROW_ON_ERROR` and do not rely on these globals.
+
+#### Unsafe classes and their contracts
+
+The three classes below carry an explicit `@danger NOT_THREAD_SAFE` marker in
+their class-level PHPDoc. The prefork model (one request per worker process)
+needs no extra configuration. Swoole coroutines and threaded FrankenPHP workers
+share mutable process state across coroutines/threads and must apply the
+per-class mitigation.
+
+| Class | Unsafe state | Mitigation | Affected runtimes |
+|-------|--------------|------------|-------------------|
+| `Duyler\OpenApi\Validator\ValidatorPool` | Shared mutable `$cache`/`$order` and check-then-act sequence in `getOrCreate()` | Construct via `ValidatorPool::forCoroutineRuntime($lock, $maxSize)` with a `Swoole\Lock` (or any object exposing `lock()`/`unlock()`); never recurse into `getOrCreate()` from inside the factory closure | Swoole coroutines, FrankenPHP threaded workers |
+| `Duyler\OpenApi\Validator\LibxmlSecuredContext` | Process-global `libxml_use_internal_errors` and `libxml_set_external_entity_loader` captured/restored inside `run()` | Run XML body validation (`contentMediaType: application/xml`) in a prefork worker or delegate XML parsing to an isolated `Swoole\Process` worker; under coroutines the helper may either bypass XXE protection for one coroutine or disable the entity loader process-wide | Swoole coroutines, FrankenPHP threaded workers |
+| `Duyler\OpenApi\Validator\PregExecutor` | Process-global `pcre.backtrack_limit` and `pcre.recursion_limit` mutated via `ini_set` in `match()`/`matchAll()` | Prefer prefork workers; each coroutine should own its own `PregExecutor` instance (the default) and must not assume the ReDoS cap applies to a specific call when coroutines yield inside `preg_match` | Swoole coroutines, FrankenPHP threaded workers |
+
+##### O-004 — nested `getOrCreate()` deadlocks under `Swoole\Lock(SWOOLE_MUTEX)`
+
+`Swoole\Lock(SWOOLE_MUTEX)` (the default) is **non-reentrant**. The lock is
+held for the entire duration of the `$factory` closure passed to
+`getOrCreate()`. If `$factory` recursively re-enters `getOrCreate()` on the
+same lock — even on a different key — the calling coroutine deadlocks. Keep
+factories non-blocking (no I/O) and non-recursive; never embed a
+`getOrCreate()` call inside another.
+
+##### O-006 / S-011 — XML body validation races on libxml globals
+
+`LibxmlSecuredContext::run()` captures `libxml_use_internal_errors` and the
+external entity loader, installs a deny-all loader for the duration of the
+work closure, and restores both inside a `try/finally`. Under Swoole
+coroutines the capture/restore sequence races with concurrent XML parsing
+in other coroutines. Two failure modes exist:
+
+1. Coroutine A installs the deny-all loader; coroutine B captures it as the
+   "previous" state; A restores; B restores to the deny-all loader ->
+   process-wide XML parsing is left without a working entity loader.
+2. A installs the deny-all loader; B yields inside its `$work`; A restores
+   to the default loader; B's `$work` observes the default loader -> XXE
+   protection is silently bypassed for B.
+
+Recommended mitigations: restrict XML body validation to prefork workers,
+or delegate XML parsing to an isolated `Swoole\Process` worker.
+
+##### O-007 / S-020 — `pcre.backtrack_limit` / `pcre.recursion_limit` race
+
+`PregExecutor::match()` and `PregExecutor::matchAll()` lower both
+`pcre.backtrack_limit` and `pcre.recursion_limit` (`PHP_INI_ALL`,
+process-global) before the `preg_match` call and restore the previous
+values inside `try/finally`. Under Swoole coroutines a concurrent
+`preg_match` in another coroutine may observe either the lowered value
+(ReDoS cap silently non-functional) or restore to it (process left with
+the reduced cap after the call returns). Validation correctness is
+preserved, but the ReDoS cap may not apply to a specific call when
+coroutines yield inside `preg_match`. Prefer prefork workers; the
+`OpenApiValidatorBuilder` already wires one `PregExecutor` instance per
+validator, so per-coroutine isolation requires per-coroutine validator
+construction.
 
 The prefork model (one request per worker process, no shared mutable state) is
 the safest option and requires no extra configuration.

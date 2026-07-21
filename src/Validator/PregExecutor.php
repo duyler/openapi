@@ -30,6 +30,20 @@ use const PREG_NO_ERROR;
  * process. DEFAULT_MAX_RECURSION keeps comfortable headroom on typical 8 MB
  * stacks while still bounding pathological inputs.
  *
+ * @danger NOT_THREAD_SAFE
+ *
+ * pcre.backtrack_limit and pcre.recursion_limit are both PHP_INI_ALL
+ * (process-global). Under Swoole coroutines or threaded FrankenPHP
+ * workers, the capture/restore sequence in {@see match()} and
+ * {@see matchAll()} races with concurrent preg_match calls in other
+ * coroutines that read or write the same ini variables (O-007,
+ * S-020). The ReDoS cap may be silently non-functional for an
+ * individual coroutine call: coroutine A lowers the limit, B reads
+ * the lowered value as "previous", A restores, B restores to the
+ * lowered value -> process stuck with the reduced cap. Prefork
+ * runtimes (PHP-FPM, RoadRunner, FrankenPHP non-threaded) are
+ * unaffected because each worker owns its own ini scope.
+ *
  * The wrapper is intentionally dependency-injected: every validator that runs
  * attacker-controlled patterns receives the same immutable instance, configured
  * once by the OpenApiValidatorBuilder. The previous INI values are captured

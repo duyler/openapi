@@ -156,6 +156,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   OAS 3.2 §5.x; `idn-email` / `idn-hostname` / `iri` / `iri-reference`
   delegate to their ASCII counterparts and accept UTF-8 in the host/domain
   portions. (Closes R3-SPEC-013, C-013.)
+- `ValidatorPool::forCoroutineRuntime(object $lock, ?int $maxSize = null)`
+  named-constructor factory for explicit Swoole-coroutine and
+  FrankenPHP-threaded-worker contracts (R3-CONCURRENCY-001). The factory
+  delegates to the existing constructor with the same validation, but the
+  required `object $lock` parameter makes the concurrency contract
+  visible at the call site — `new ValidatorPool()` with an optional null
+  lock remains the prefork-safe default and is unchanged.
 
 ### Changed
 - **BC-break**: `format: int32` and `format: int64` are now registered as
@@ -192,6 +199,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   behaviour, pass `strictCallbackRuntimeTemplate: false` explicitly to
   the constructor (only when callback URLs are validated at the
   application level — see README section "Callbacks").
+- `ValidatorPool`, `LibxmlSecuredContext`, and `PregExecutor` now carry
+  an explicit `@danger NOT_THREAD_SAFE` marker in their class-level
+  PHPDoc, and the README section "Long-Running Processes" enumerates
+  the three unsafe classes with a per-class table (unsafe state,
+  mitigation, affected runtimes) and dedicated paragraphs for the
+  nested-factory deadlock (O-004), the libxml capture/restore race
+  (O-006 / S-011), and the `pcre.backtrack_limit` /
+  `pcre.recursion_limit` race (O-007 / S-020). The contract is now
+  machine-checkable: `grep -lE '@danger\s+NOT_THREAD_SAFE' src/Validator`
+  returns exactly the three files. This hardens the previously soft
+  prefork-only / not-coroutine-safe contract without introducing
+  runtime detection or BC-breaking required-lock semantics
+  (R3-CONCURRENCY-001, R3-CONCURRENCY-002, R3-CONCURRENCY-003).
 
 ### Fixed
 - `TypeCoercer::coerceToType` now coerces non-string inputs (`bool`, `int`,
@@ -492,6 +512,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `WeakMap<Schema, string>` to `WeakMap<Schema, array<string, string>>`
   so the same `Schema` instance compiled under N class names or M
   documents keeps O(1) lookup over the `N * M` cache entries.
+- `ValidatorPool::acquireLock()` and `ValidatorPool::releaseLock()` no
+  longer re-check `method_exists($this->lock, 'lock'/'unlock')` on the
+  hot path of every `getOrCreate()` call (R3-CONCURRENCY-004 / O-034).
+  The constructor already validates that a non-null `$lock` exposes both
+  methods, so the redundant guard was dead branch on the hot path. The
+  body of both helpers now reads `if (null !== $this->lock) {
+  $this->lock->lock(); }` — the constructor's invariant is trusted
+  inside the class. No behavioural change for callers; pre-existing
+  tests that passed lock-stubs with the methods continue to work.
 
 ### Security
 - **BREAKING**: Inverted the default of strict callback runtime template

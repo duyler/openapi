@@ -6,11 +6,19 @@ namespace Duyler\OpenApi\Validator;
 
 use InvalidArgumentException;
 
+use function assert;
 use function count;
 use function method_exists;
 use function sprintf;
 
 /**
+ * @danger NOT_THREAD_SAFE
+ *
+ * Shared mutable $cache/$order race without an explicit lock.
+ * Swoole\Lock(SWOOLE_MUTEX) is non-reentrant, so nested getOrCreate()
+ * calls on the same lock dead-lock (O-004). For coroutine- or
+ * threaded-runtimes use {@see forCoroutineRuntime()}.
+ *
  * Thread-safety: NOT thread-safe by default.
  *
  * Safe to share across requests in prefork models (PHP-FPM, RoadRunner,
@@ -25,7 +33,9 @@ use function sprintf;
  *
  * The $factory passed to getOrCreate() must be non-blocking (no I/O) and
  * non-recursive (no nested getOrCreate() calls); otherwise the pool deadlocks
- * while the lock is held.
+ * while the lock is held. Swoole\Lock(SWOOLE_MUTEX) is non-reentrant: a
+ * factory that recursively re-enters getOrCreate() on the same lock
+ * deadlocks the calling coroutine (O-004).
  */
 final class ValidatorPool
 {
@@ -62,6 +72,22 @@ final class ValidatorPool
         }
 
         $this->maxSize = $resolvedMaxSize;
+    }
+
+    /**
+     * Construct a pool explicitly bound to a coroutine- or thread-safe lock.
+     *
+     * Use this factory when running under Swoole coroutines or FrankenPHP
+     * threaded workers. The lock MUST expose both lock() and unlock() methods
+     * (e.g. Swoole\Lock). The factory delegates to the constructor with the
+     * same validation, but the name signals the concurrency contract at the
+     * call site.
+     *
+     * @throws InvalidArgumentException when $lock is missing lock() or unlock()
+     */
+    public static function forCoroutineRuntime(object $lock, ?int $maxSize = null): self
+    {
+        return new self($maxSize, $lock);
     }
 
     /**
@@ -114,16 +140,22 @@ final class ValidatorPool
 
     private function acquireLock(): void
     {
-        if (null !== $this->lock && method_exists($this->lock, 'lock')) {
-            $this->lock->lock();
+        if (null === $this->lock) {
+            return;
         }
+
+        assert(method_exists($this->lock, 'lock'));
+        $this->lock->lock();
     }
 
     private function releaseLock(): void
     {
-        if (null !== $this->lock && method_exists($this->lock, 'unlock')) {
-            $this->lock->unlock();
+        if (null === $this->lock) {
+            return;
         }
+
+        assert(method_exists($this->lock, 'unlock'));
+        $this->lock->unlock();
     }
 
     private function touch(string $key): void
