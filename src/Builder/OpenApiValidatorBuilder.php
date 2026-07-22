@@ -16,6 +16,7 @@ use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Duyler\OpenApi\Validator\Link\LinkResolver;
 use Duyler\OpenApi\Validator\OpenApiValidator;
@@ -168,8 +169,8 @@ final readonly class OpenApiValidatorBuilder
         string $format,
         FormatValidatorInterface $validator,
     ): self {
-        $registry = ($this->config->formatRegistry ?? BuiltinFormats::create())
-            ->registerFormat($type, $format, $validator);
+        $userRegistry = $this->config->formatRegistry ?? new FormatRegistry();
+        $registry = $userRegistry->registerFormat($type, $format, $validator);
 
         return $this->with(new BuilderConfig(formatRegistry: $registry));
     }
@@ -499,11 +500,14 @@ final readonly class OpenApiValidatorBuilder
         $maxRegexBacktracks = $this->config->maxRegexBacktracks ?? ValidatorConfiguration::DEFAULT_MAX_REGEX_BACKTRACKS;
         $pregExecutor = new PregExecutor($maxRegexBacktracks);
         $pool = $this->config->pool ?? new ValidatorPool();
-        $formatRegistry = $this->config->formatRegistry ?? BuiltinFormats::create($pregExecutor);
+        $userRegistry = $this->config->formatRegistry;
+        $formatRegistry = null === $userRegistry
+            ? BuiltinFormats::create($pregExecutor)
+            : $userRegistry->withBase(BuiltinFormats::create($pregExecutor));
         $errorFormatter = $this->config->errorFormatter ?? new SimpleFormatter();
         $pathRegexCache = new PathRegexCache();
-        $regexValidator = new RegexValidator();
-        $pathFinder = new PathFinder($document, $pathRegexCache);
+        $regexValidator = new RegexValidator(pregExecutor: $pregExecutor);
+        $pathFinder = new PathFinder($document, $pathRegexCache, $pregExecutor);
         $logger = $this->config->logger ?? new NullLogger();
         $securityVerboseLogger = $this->config->securityVerboseLogger ?? new NullLogger();
         $fileResolver = new FileExternalRefResolver(
@@ -885,29 +889,72 @@ final readonly class OpenApiValidatorBuilder
     /**
      * Compute the SchemaCache key for a file-loaded spec.
      *
-     * The key incorporates the realpath AND a SHA-256 hash of the file
-     * contents. This prevents cache-poisoning via size-preserving or
+     * The key incorporates the realpath, a SHA-256 hash of the file
+     * contents, and a SHA-256 of the parse-config fingerprint. The
+     * content hash prevents cache-poisoning via size-preserving or
      * mtime-preserving spec tampering (OWASP ASVS V8.1.3, CWE-349,
-     * CWE-1023). mtime and size are intentionally NOT part of the key:
-     * they offered no protection once an attacker controls write-access
-     * to the spec file.
+     * CWE-1023). The parse-config fingerprint prevents cache-poisoning
+     * when two callers share the same PSR-6 pool with different
+     * parse-time limits (R4-SEC-008, R4-SEC-017): a stricter
+     * maxSpecDepth / maxSpecSizeBytes / externalRefAllowedRoot /
+     * externalRefMaxBytes must NOT silently receive a document that
+     * was cached under looser limits. mtime and size are intentionally
+     * NOT part of the key: they offered no protection once an attacker
+     * controls write-access to the spec file.
      *
      * When realpath() returns false (file vanished mid-call), the key
      * degrades to a hash of the unresolved $path argument plus the
-     * content hash. This preserves uniqueness across caller-distinct
-     * paths even when realpath fails.
+     * content hash and fingerprint. This preserves uniqueness across
+     * caller-distinct paths even when realpath fails.
      */
     private function generateCacheKeyFromFile(string $path, string $content): string
     {
         $realPath = realpath($path);
         $pathComponent = false === $realPath ? $path : $realPath;
         $contentHash = hash('sha256', $content);
+        $configFingerprint = $this->buildParseConfigFingerprint();
 
-        return self::CACHE_KEY_FILE_PREFIX . hash('sha256', $pathComponent . '|' . $contentHash);
+        return self::CACHE_KEY_FILE_PREFIX . hash('sha256', $pathComponent . '|' . $contentHash . '|' . $configFingerprint);
     }
 
+    /**
+     * Compute the SchemaCache key for a string-loaded spec. See
+     * {@see generateCacheKeyFromFile()} for the security rationale
+     * behind including the parse-config fingerprint in the hash input.
+     */
     private function generateCacheKeyFromString(string $content): string
     {
-        return self::CACHE_KEY_CONTENT_PREFIX . hash('sha256', $content);
+        $contentHash = hash('sha256', $content);
+        $configFingerprint = $this->buildParseConfigFingerprint();
+
+        return self::CACHE_KEY_CONTENT_PREFIX . hash('sha256', $contentHash . '|' . $configFingerprint);
+    }
+
+    /**
+     * Stable, ordered string-tuple of all BuilderConfig fields that
+     * affect the result of parseSpec(). Used as an additional input to
+     * the cache-key hash so two callers with the same spec content but
+     * different parse-configs get distinct cache entries (prevents
+     * cache-poisoning, R4-SEC-008 / R4-SEC-017).
+     *
+     * Only fields that change the parsed OpenApiDocument shape or
+     * reject the spec at parse time are included. Runtime validation
+     * toggles (coercion, strictFormats, nullableAsType, etc.) are
+     * deliberately excluded because they do not affect the cached
+     * document and including them would cause spurious cache-misses
+     * whenever a runtime flag is toggled. The `externalRefAllowedRoot`
+     * value is normalised to the empty string when unset so two
+     * callers with `null` produce the same fingerprint (both mean
+     * "no path-confinement" and behave identically at parse time).
+     */
+    private function buildParseConfigFingerprint(): string
+    {
+        return sprintf(
+            'maxSpecDepth=%d|maxSpecSizeBytes=%d|externalRefAllowedRoot=%s|externalRefMaxBytes=%d',
+            $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
+            $this->config->maxSpecSizeBytes ?? YamlParser::DEFAULT_MAX_SPEC_BYTES,
+            $this->config->externalRefAllowedRoot ?? '',
+            $this->config->externalRefMaxBytes ?? FileExternalRefResolver::DEFAULT_MAX_REF_BYTES,
+        );
     }
 }

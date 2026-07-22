@@ -9,8 +9,10 @@ use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Callback\Exception\UnknownCallbackException;
+use Duyler\OpenApi\Validator\Exception\PregRuntimeException;
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
 use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Request\RequestValidatorInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -19,7 +21,6 @@ use function array_key_exists;
 use function assert;
 use function is_string;
 use function parse_url;
-use function preg_match;
 use function sprintf;
 use function str_contains;
 use function str_starts_with;
@@ -62,6 +63,7 @@ final readonly class CallbackValidator
         private readonly RequestValidatorInterface $requestValidator,
         private readonly PathRegexCache $pathRegexCache,
         private readonly bool $strictCallbackRuntimeTemplate = true,
+        private readonly PregExecutor $pregExecutor = new PregExecutor(),
     ) {}
 
     public function validate(
@@ -210,7 +212,13 @@ final readonly class CallbackValidator
 
             assert('' !== $regex);
 
-            return 1 === preg_match($regex, $requestPath) ? $expression : null;
+            try {
+                $matched = 1 === $this->pregExecutor->match($regex, $requestPath);
+            } catch (PregRuntimeException) {
+                $matched = false;
+            }
+
+            return $matched ? $expression : null;
         }
 
         return $expression === $requestPath ? $expression : null;

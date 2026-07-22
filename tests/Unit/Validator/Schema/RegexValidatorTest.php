@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Schema;
 
 use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
+use function hrtime;
 use function preg_match;
 use function sprintf;
 use function count;
@@ -105,7 +107,7 @@ final class RegexValidatorTest extends TestCase
     public function pattern_with_field_name_included_in_exception(): void
     {
         $this->expectException(InvalidPatternException::class);
-        $this->expectExceptionMessage('Invalid regex pattern "[invalid": preg_match(): No ending matching delimiter \']\' found');
+        $this->expectExceptionMessage('Invalid regex pattern "[invalid": PCRE runtime error: PCRE error ');
         $this->validator->validate('[invalid', 'test field');
     }
 
@@ -471,6 +473,34 @@ final class RegexValidatorTest extends TestCase
                 $exception->getMessage(),
             );
         }
+    }
+
+    #[Test]
+    public function validate_routes_catastrophic_backtracking_pattern_through_preg_executor(): void
+    {
+        $validator = new RegexValidator(pregExecutor: new PregExecutor(maxBacktracks: 1000));
+
+        $pattern = '/(a+)+$/';
+
+        $start = hrtime(true);
+        $result = $validator->validate($pattern);
+        $elapsedMilliseconds = (hrtime(true) - $start) / 1_000_000;
+
+        self::assertSame($pattern, $result);
+        self::assertLessThan(
+            2000,
+            $elapsedMilliseconds,
+            sprintf('PregExecutor-backed validate() must remain fast; took %.2f ms', $elapsedMilliseconds),
+        );
+    }
+
+    #[Test]
+    public function constructor_accepts_preg_executor_argument(): void
+    {
+        $pregExecutor = new PregExecutor(maxBacktracks: 500);
+        $validator = new RegexValidator(pregExecutor: $pregExecutor);
+
+        self::assertSame('/^abc$/', $validator->validate('/^abc$/'));
     }
 
     /**

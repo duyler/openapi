@@ -47,6 +47,7 @@ final readonly class CallbackValidator
             $context->requestValidator,
             $context->pathRegexCache,
             $this->strictCallbackRuntimeTemplate,
+            $context->pregExecutor,
         );
         $this->securityValidator = new SecurityValidator($context->securityVerboseLogger, $context->pregExecutor);
     }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
+use Duyler\OpenApi\Validator\Exception\PregRuntimeException;
+use Duyler\OpenApi\Validator\PregExecutor;
 use InvalidArgumentException;
 
 use function count;
@@ -49,8 +51,10 @@ final class RegexValidator
      *
      * @throws InvalidArgumentException when $maxSize is less than 1
      */
-    public function __construct(?int $maxSize = null)
-    {
+    public function __construct(
+        ?int $maxSize = null,
+        private readonly PregExecutor $pregExecutor = new PregExecutor(),
+    ) {
         $resolvedMaxSize = $maxSize ?? self::DEFAULT_MAX_SIZE;
 
         if (1 > $resolvedMaxSize) {
@@ -71,31 +75,27 @@ final class RegexValidator
             );
         }
 
-        $errorMessage = '';
-
-        set_error_handler(function (int $errno, string $errstr) use (&$errorMessage): bool {
-            $errorMessage = $errstr;
-
-            return true;
-        });
+        if ('' === $pattern) {
+            throw new InvalidPatternException(
+                pattern: $pattern,
+                reason: 'Empty pattern is not allowed',
+            );
+        }
 
         try {
-            if ('' === $pattern) {
-                throw new InvalidPatternException(
-                    pattern: $pattern,
-                    reason: 'Empty pattern is not allowed',
-                );
-            }
+            $testResult = $this->pregExecutor->match($pattern, '');
+        } catch (PregRuntimeException $e) {
+            throw new InvalidPatternException(
+                pattern: $pattern,
+                reason: 'PCRE runtime error: ' . $e->getMessage(),
+            );
+        }
 
-            $testResult = preg_match($pattern, '');
-            if (false === $testResult) {
-                throw new InvalidPatternException(
-                    pattern: $pattern,
-                    reason: '' !== $errorMessage ? $errorMessage : 'Unknown regex error',
-                );
-            }
-        } finally {
-            restore_error_handler();
+        if (false === $testResult) {
+            throw new InvalidPatternException(
+                pattern: $pattern,
+                reason: 'Unknown regex error',
+            );
         }
 
         return $pattern;

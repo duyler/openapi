@@ -94,4 +94,47 @@ final class FormatRegistryTest extends TestCase
         $this->assertTrue($registry->hasFormat('string', 'custom'));
         $this->assertFalse($registry->hasFormat('string', 'nonexistent'));
     }
+
+    #[Test]
+    public function with_base_merges_entries_with_user_overriding_base(): void
+    {
+        $baseValidator = new TestValidator();
+        $base = (new FormatRegistry())->registerFormat('string', 'email', $baseValidator);
+
+        $userValidator = new TestValidator();
+        $user = (new FormatRegistry())
+            ->registerFormat('string', 'phone', $userValidator)
+            ->registerFormat('string', 'email', $userValidator);
+
+        $merged = $user->withBase($base);
+
+        $this->assertSame($userValidator, $merged->getValidator('string', 'phone'));
+        $this->assertSame($userValidator, $merged->getValidator('string', 'email'));
+    }
+
+    #[Test]
+    public function with_base_preserves_base_only_entries(): void
+    {
+        $baseValidator = new TestValidator();
+        $base = (new FormatRegistry())->registerFormat('string', 'email', $baseValidator);
+
+        $user = new FormatRegistry();
+
+        $merged = $user->withBase($base);
+
+        $this->assertSame($baseValidator, $merged->getValidator('string', 'email'));
+    }
+
+    #[Test]
+    public function with_base_returns_new_instance(): void
+    {
+        $base = new FormatRegistry();
+        $user = new FormatRegistry();
+
+        $merged = $user->withBase($base);
+
+        $this->assertNotSame($user, $merged);
+        $this->assertNotSame($base, $merged);
+        $this->assertInstanceOf(FormatRegistry::class, $merged);
+    }
 }

@@ -41,6 +41,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PSR-3 / PSR-14 wiring.
 
 ### Fixed
+- Route `preg_match` calls in `RegexValidator`, `PathParser`,
+  `CallbackValidator` through `PregExecutor` so attacker-controlled
+  patterns and request paths honour the configured `maxRegexBacktracks`
+  (R4-SEC-002/003/004). All three classes now accept an optional
+  `PregExecutor` constructor argument (BC default `new PregExecutor()`
+  preserves third-party consumers); the production path
+  `OpenApiValidatorBuilder::build()` threads the shared configured
+  instance to `RegexValidator`, `PathFinder` (and through it to its
+  internal `PathParser`), `Validator\ValidatorDependencies::buildRequestValidator()`,
+  and the inner `Callback\Validator\CallbackValidator`.
 - Resolve `$ref` inside every schema-typed keyword (`additionalProperties`,
   `patternProperties`, `unevaluatedProperties`, `unevaluatedItems`,
   `prefixItems`, `contains`, `propertyNames`, `dependentSchemas`, `not`,
@@ -106,6 +116,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   return value are unchanged. Regression tests cover all four scenarios:
   stop after the first listener, stoppable event without a stop call,
   non-stoppable event, and an event arriving already stopped.
+- Rebuild `FormatRegistry` in `OpenApiValidatorBuilder::build()` so
+  builtin format validators (`email`, `uri`, `date-time`, etc.) share
+  the configured `PregExecutor` even when `withFormat()` was called
+  before or after `withMaxRegexBacktracks()` (R4-SEC-009). Previously
+  `withFormat()` materialised the registry eagerly via
+  `BuiltinFormats::create()` with the default `PregExecutor`
+  (`maxBacktracks = 10_000`), and `build()` skipped builtin recreation
+  via `??` whenever the caller had already registered any custom format,
+  silently bypassing the configured ReDoS cap for builtin validators on
+  attacker-controlled subjects. The fix introduces
+  `FormatRegistry::withBase(self $base): self` and switches
+  `withFormat()` to accumulate user-only entries on a fresh registry;
+  `build()` always composes the final registry by layering the
+  user-provided formats over `BuiltinFormats::create($pregExecutor)`, so
+  user-registered formats override builtin ones on `(type, format)`
+  conflicts while the configured `PregExecutor` reaches every builtin
+  validator regardless of call order. Public API of `withFormat()` is
+  unchanged.
+- `OpenApiValidatorBuilder` now includes parse-affecting configuration
+  (`maxSpecDepth`, `maxSpecSizeBytes`, `externalRefAllowedRoot`,
+  `externalRefMaxBytes`) in the `SchemaCache` cache-key hash
+  (R4-SEC-008, R4-SEC-017). Previously the key was derived only from
+  the spec path and content hash, so two callers sharing a PSR-6 pool
+  with different parse-time limits could poison each other's cache:
+  caller A caching under `maxSpecDepth=10` would let caller B
+  (`maxSpecDepth=5`) silently read the cached document and bypass the
+  stricter depth cap; likewise for `externalRefAllowedRoot`
+  (confinement boundary) and `externalRefMaxBytes` (file-size cap).
+  The fix introduces a private `buildParseConfigFingerprint()` helper
+  that produces a stable string-tuple of parse-affecting fields; the
+  tuple is appended to the SHA-256 input of both
+  `generateCacheKeyFromFile` and `generateCacheKeyFromString`. Runtime-
+  validation toggles (`coercion`, `strictCoercion`, `nullableAsType`,
+  `strictStreaming`, `strictFormats`, `securityValidation`,
+  `reportDeprecated`, `errorFormatter`, `logger`, `pool`,
+  `formatRegistry`, `eventDispatcher`, `maxJsonBodyBytes`,
+  `maxMultipartBodyBytes`, `maxRegexBacktracks`, `maxStreamingRecords`,
+  `serverPathResolution`, `strictCallbackRuntimeTemplate`,
+  `securityVerboseLogger`, `specType`) are deliberately excluded
+  because the parsed document is identical regardless of these flags;
+  including them would cause spurious cache-misses on every toggle.
 
 ### Security
 - All exception classes shipped by the package now sanitize `__toString()`
@@ -295,6 +346,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `?OpenApiDocument $document` parameter that flows through to
   `generateKey`; existing three-argument callers continue to work for
   any schema that does not transitively contain a `$ref`.
+- `SchemaCache` key format changed to incorporate the parse-config
+  fingerprint (R4-SEC-008, R4-SEC-017 — see `### Fixed` above). The
+  SHA-256 hash input for both `generateCacheKeyFromFile` and
+  `generateCacheKeyFromString` now includes a `maxSpecDepth=…|
+  maxSpecSizeBytes=…|externalRefAllowedRoot=…|externalRefMaxBytes=…`
+  suffix. As a result, every existing cache entry becomes a cache-miss
+  on the first `build()` call after upgrade and the spec is re-parsed
+  once per distinct parse-config. The cache then warms back up
+  normally. Operators upgrading across this change should pre-warm the
+  cache (one `build()` per spec and per parse-config at deploy time) if
+  cold-start cost is significant for the deployment.
 
 ### Added
 - `EmailValidator` now accepts RFC 5321 domain literals

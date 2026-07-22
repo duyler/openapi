@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Request;
 
 use Duyler\OpenApi\Validator\Exception\PathMismatchException;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\PathParser;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+
+use function str_repeat;
 
 /** @internal */
 final class PathParserTest extends TestCase
@@ -99,5 +102,22 @@ final class PathParserTest extends TestCase
         $result = $this->parser->matchPath('/users/user%20name', '/users/{userName}');
 
         $this->assertSame(['userName' => 'user%20name'], $result);
+    }
+
+    #[Test]
+    public function try_match_path_with_preg_executor_returns_null_on_non_matching_template(): void
+    {
+        $parser = new PathParser(new PathRegexCache(), new PregExecutor(maxBacktracks: 1000));
+        $attackerPath = '/users/' . str_repeat('a', 50) . '!/extra-segment';
+
+        $this->assertNull($parser->tryMatchPath($attackerPath, '/users/{id}'));
+    }
+
+    #[Test]
+    public function constructor_accepts_preg_executor_argument(): void
+    {
+        $parser = new PathParser(new PathRegexCache(), new PregExecutor(maxBacktracks: 500));
+
+        $this->assertSame(['id' => '42'], $parser->matchPath('/users/42', '/users/{id}'));
     }
 }

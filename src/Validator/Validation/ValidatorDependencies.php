@@ -148,7 +148,7 @@ final readonly class ValidatorDependencies
         );
 
         return new RequestValidator(
-            pathParser: new PathParser($this->pathRegexCache),
+            pathParser: new PathParser($this->pathRegexCache, $this->pregExecutor),
             pathParamsValidator: new PathParametersValidator(
                 schemaValidator: $schemaValidator,
                 deserializer: $deserializer,
