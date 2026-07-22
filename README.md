@@ -127,6 +127,30 @@ The accessors are not part of `OpenApiValidatorInterface`; callers that
 only type-hint the interface will not see them. Use the concrete class
 (`OpenApiValidator`) when you need them.
 
+The `OpenApiDocument` returned by `getDocument()` is a `final readonly`
+value object implementing `JsonSerializable`. Its fields map to the
+top-level OpenAPI 3.2 document structure:
+
+| Field | Type | Always present? |
+|-------|------|-----------------|
+| `openapi` | `string` | Yes — the document version string (e.g. `'3.2.0'`) |
+| `info` | `InfoObject` | Yes — title, version, contact, license |
+| `jsonSchemaDialect` | `?string` | Optional — JSON Schema dialect URI |
+| `servers` | `?Servers` | Optional — server list with variables |
+| `paths` | `?Paths` | Optional — path-item map (mutually exclusive with `webhooks` for some document types) |
+| `webhooks` | `?Webhooks` | Optional — OpenAPI 3.1+ webhooks |
+| `components` | `?Components` | Optional — reusable schemas, parameters, responses, security schemes |
+| `security` | `?SecurityRequirement` | Optional — document-level security requirements |
+| `tags` | `?Tags` | Optional — tag definitions for grouping operations |
+| `externalDocs` | `?ExternalDocs` | Optional — external documentation link |
+| `self` | `?string` | Optional — `$self` reference (when the document was loaded through a self-describing mechanism) |
+
+The document is immutable: callers can read it freely for routing-map
+construction, security-scheme introspection, or `SchemaRegistry`
+registration, but cannot mutate it. `(string) $document` is not
+implemented; use `json_encode($document)` to obtain the canonical JSON
+representation (the class implements `JsonSerializable`).
+
 ## Usage
 
 ### Loading OpenAPI Specifications
@@ -493,6 +517,20 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
+Internally the builder accumulates registered formats into a
+`Duyler\OpenApi\Validator\Format\FormatRegistry`, then layers the
+builtin formats on top via `FormatRegistry::withBase()` at `build()`
+time. Direct construction of `FormatRegistry` is supported for callers
+that wire validators outside the builder:
+
+| Method | Signature | Purpose |
+|--------|-----------|---------|
+| `__construct` | `(array $validators = [])` | Seed with a `(type, format) => FormatValidatorInterface` map |
+| `registerFormat` | `(string $type, string $format, FormatValidatorInterface $validator): self` | Add or replace a single format entry (immutable — returns a new registry) |
+| `getValidator` | `(string $type, string $format): ?FormatValidatorInterface` | Look up the validator for `(type, format)`, or `null` if not registered |
+| `hasFormat` | `(string $type, string $format): bool` | Membership check |
+| `withBase` | `(self $base): self` | Return a new registry whose entries are the union of `$base` and `$this`, with `$this` overriding `$base` on `(type, format)` conflict |
+
 ### Type Coercion
 
 Enable automatic type conversion for query parameters and request body:
@@ -681,6 +719,17 @@ Available events:
 | `ValidationErrorEvent` | Dispatched when validation fails |
 | `ValidationWarningEvent` | Dispatched for non-fatal validation warnings |
 
+The example above registers listeners through the `ArrayDispatcher`
+constructor. `ArrayDispatcher` also exposes a fluent `listen()` method
+for adding listeners after construction (returns `$this` for chaining):
+
+```php
+$dispatcher = new ArrayDispatcher([]);
+$dispatcher
+    ->listen(ValidationStartedEvent::class, $myStartedListener)
+    ->listen(ValidationErrorEvent::class, $myErrorListener);
+```
+
 ### Schema Registry
 
 Manage multiple API versions:
@@ -789,6 +838,14 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
+Beyond the constructor and `forCoroutineRuntime()` factory, `ValidatorPool`
+exposes the two methods that actually drive pool reuse:
+
+| Method | Signature | Purpose |
+|--------|-----------|---------|
+| `getOrCreate` | `(string $key, callable $factory): object` | Return the cached instance for `$key`, or invoke `$factory` (non-blocking, non-recursive — the lock is held for the entire factory call) and cache the result |
+| `clear` | `(): void` | Evict every entry. Useful when the spec is hot-reloaded and all derived validators must be rebuilt |
+
 ### Validator Compilation
 
 Generate optimized validator code:
@@ -865,6 +922,21 @@ $code = $compiler->compileWithCache($refSchema, 'PetValidator', $compilationCach
 $compilationCache = new CompilationCache($pool, ttl: 3600); // 1-hour TTL
 ```
 
+`CompilationCache` implements `CompilationCacheInterface`, which is the
+extension point for swapping the cache backend (for example, a Redis-
+backed pool with a different key namespace, or a noop pool that always
+recompiles for development):
+
+| Method | Signature | Purpose |
+|--------|-----------|---------|
+| `get` | `(string $schemaHash): ?string` | Read cached compiled PHP source, or `null` on miss |
+| `set` | `(string $schemaHash, string $compiledCode): void` | Persist compiled source |
+| `generateKey` | `(Schema $schema, string $className, ?OpenApiDocument $document = null): string` | Compute the cache key from the schema, target class name, and (optional) document context for `$ref` resolution |
+
+Pass any `CompilationCacheInterface` implementation to
+`ValidatorCompiler::compileWithCache()`; `CompilationCache` is the
+PSR-6-backed default.
+
 #### Compiler Limitations
 
 The compiler does not support all JSON Schema keywords. If a schema uses unsupported keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `patternProperties`, `format`, `minProperties`, `maxProperties`, `prefixItems`, `discriminator`, `dependentSchemas`, `unevaluatedProperties`, `unevaluatedItems`, `contentEncoding`, `contentMediaType`, `contentSchema`, the boolean form of `items`/`contains`/`propertyNames`/`if`/`then`/`else`/`not`/`unevaluatedItems`, or `additionalProperties` as a Schema — the bool `true`/`false` form is supported), the compiler throws `UnsupportedKeywordException`. Unsupported keywords are detected anywhere in the schema tree (top-level, nested `properties`, or `items`); the compiler never silently emits a validator that ignores them. See the Limitations section below for details.
@@ -887,6 +959,8 @@ Use the runtime validator when you need the typed error classes (`TypeMismatchEr
 
 | Method | Description | Default |
 |--------|-------------|---------|
+| `create()` | Static factory entry point — equivalent to `new OpenApiValidatorBuilder(new BuilderConfig())`. Returns a fresh builder instance. | - |
+| `build()` | Terminal method — materialises the spec, wires dependencies, and returns an `OpenApiValidatorInterface` (concrete `OpenApiValidator`). Call exactly once per builder instance. | - |
 | `fromYamlFile(string $path)` | Load spec from YAML file | - |
 | `fromJsonFile(string $path)` | Load spec from JSON file | - |
 | `fromYamlString(string $content)` | Load spec from YAML string | - |
@@ -1418,6 +1492,16 @@ access (see Exception Sanitization above). To include the raw value in formatted
 output (for debugging), construct the formatter with `includeSensitiveValues: true`
 or use `withDetailedErrors(includeSensitive: true)` on the builder.
 
+`ErrorFormatterInterface` exposes three methods; `formatException()` is
+the canonical entry point (the others are useful when you hold
+individual errors rather than a full exception):
+
+| Method | Signature | Purpose |
+|--------|-----------|---------|
+| `format` | `(ValidationErrorInterface $error): string` | Render a single validation error |
+| `formatMultiple` | `(array $errors): string` | Render a list of `ValidationErrorInterface` instances |
+| `formatException` | `(ValidationException $exception): string` | Render every error carried by a `ValidationException` (the recommended replacement for the deprecated `OpenApiValidatorInterface::getFormattedErrors()`) |
+
 ## Built-in Format Validators
 
 The following format validators are included:
@@ -1581,6 +1665,24 @@ file path and content (or raw content for string-loaded specs). The
 content-hash defends against cache-poisoning via size-preserving or
 mtime-preserving spec tampering (OWASP ASVS V8.1.3, CWE-349, CWE-1023).
 `CompilationCache` uses the same SHA-256 keying scheme.
+
+`SchemaCache` exposes the standard cache lifecycle on top of the PSR-6
+pool:
+
+| Method | Signature | Purpose |
+|--------|-----------|---------|
+| `__construct` | `(CacheItemPoolInterface $pool, int $ttl = 3600)` | Wrap a PSR-6 pool with a default TTL (seconds) |
+| `get` | `(string $key): ?OpenApiDocument` | Read a cached document, or `null` on miss |
+| `set` | `(string $key, OpenApiDocument $document): void` | Store a document under the given key with the configured TTL |
+| `has` | `(string $key): bool` | Membership check without materialising the document |
+| `delete` | `(string $key): void` | Invalidate a single entry |
+| `clear` | `(): void` | Flush all entries from the underlying pool |
+
+The cache key is normally derived from the spec via the builder. The
+`get` / `set` / `has` / `delete` / `clear` methods are intended for
+operators that manage cache lifecycle outside the build cycle (cache
+warming at deploy time, selective invalidation after a hot-reload,
+clearing before a memory-budget-critical request).
 
 For compiled validators, use `CompilationCache` to avoid regenerating PHP code:
 
