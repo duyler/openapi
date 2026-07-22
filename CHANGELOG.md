@@ -41,6 +41,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PSR-3 / PSR-14 wiring.
 
 ### Fixed
+- `oauth2`, `openIdConnect`, `http/basic`, `http/digest`, `mutualTLS`, and
+  any unknown OpenAPI security scheme types now throw the new
+  `Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException`
+  (extends `\RuntimeException`) instead of being silently classified as a
+  `MissingSecurityCredentialsError` (R4-SEC-010). The previous behaviour
+  misclassified unsupported schemes as missing credentials, which both
+  misled callers (who believed they only had to supply credentials) and
+  broke AND/OR semantics for mixed security requirements: a spec such as
+  `security: [{oauth2: [read], bearerAuth: []}]` would silently downgrade
+  to bearer-only because the AND-list sibling was swallowed as a missing
+  credential. The exception is thrown from
+  `Duyler\OpenApi\Validator\Security\SecurityValidator::validateScheme()` and
+  `validateHttpScheme()` (the match `default` arm and the non-bearer arm
+  respectively), propagates out of `validateRequest()` /
+  `validateWebhook()` / `validateCallback()`, and is **not** wrapped into
+  `ValidationException` — callers must catch
+  `UnsupportedSecuritySchemeException` separately in their PSR-15
+  middleware. The exception carries `schemeName`, `schemeType`, and (for
+  unsupported `http/*` schemes) the `httpScheme` descriptor as public
+  readonly properties; `(string) $e` returns only `getMessage()` so file
+  paths and stack traces are not leaked (CWE-209, CWE-497). The exception
+  message discloses the scheme name and type because the scheme name comes
+  from the operator-loaded spec, not from the request, and the operator
+  needs the diagnostic to fix the spec.
+- OAuth2 scopes declared on a security requirement are no longer
+  discarded (R4-SPEC-003). `SecurityValidator::validateRequirement()` now
+  binds `foreach ($requirementAlternatives as $schemeName => $scopes)` and
+  forwards non-empty scope lists to the configured PSR-3 logger at `debug`
+  level via the `'Security requirement scopes'` entry with
+  `{schemeName, schemeType, scopes}` context. Today scope validation is
+  still deferred (the `oauth2` scheme type itself is rejected with
+  `UnsupportedSecuritySchemeException`), but the declared scopes are now
+  observable for diagnostic and audit purposes; empty scope lists (the
+  default for `apiKey` and `http/bearer`) do not trigger the log entry.
+- AND / OR semantics for mixed supported and unsupported security
+  requirements are now honoured by `SecurityValidator::validate()`. A
+  dict with one unsupported scheme fails closed for the whole AND-list
+  even when a supported sibling would have passed
+  (`security: [{oauth2: [read], bearerAuth: []}]` →
+  `UnsupportedSecuritySchemeException` for every request). The outer
+  OR-list still tries supported alternatives, so a spec such as
+  `security: [{oauth2: [read]}, {bearerAuth: []}]` succeeds for a request
+  carrying a valid `Authorization: Bearer ...` header. If no OR
+  alternative succeeds, the most recently captured
+  `UnsupportedSecuritySchemeException` is re-thrown so the operator sees
+  the spec-configuration error rather than a downstream credential error.
 - Route `preg_match` calls in `RegexValidator`, `PathParser`,
   `CallbackValidator` through `PregExecutor` so attacker-controlled
   patterns and request paths honour the configured `maxRegexBacktracks`
@@ -276,6 +322,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   interpolated into `getMessage()` and is dropped after construction.
 
 ### BREAKING
+- `SecurityValidator` now throws the new
+  `Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException`
+  (extends `\RuntimeException`, **not** `ValidationException`) when the
+  spec declares `oauth2`, `openIdConnect`, `http/basic`, `http/digest`,
+  `mutualTLS`, or any unknown security scheme type (R4-SEC-010 /
+  R4-SPEC-003 — see `### Fixed` above). Previously these schemes were
+  misclassified as a missing-credential `ValidationException` wrapping a
+  `MissingSecurityCredentialsError`, so consumers that catch only
+  `ValidationException` from `validateRequest()` / `validateWebhook()` /
+  `validateCallback()` will now see the new exception bubble through
+  uncaught. Three migration paths:
+
+  1. Remove the unsupported schemes from the spec (the spec was invalid
+     for partial validation all along; the previous behaviour silently
+     bypassed security on those requirements, which is the bug R4-SEC-010
+     fixes).
+  2. Catch `UnsupportedSecuritySchemeException` (or `\RuntimeException`)
+     separately in your PSR-15 middleware and decide how to surface the
+     configuration error to the operator (5xx response, log-and-reject,
+     etc.). The exception is **not** a credential-validation error and
+     must not be reported to the caller with the same shape as
+     `ValidationException`.
+  3. Disable security validation (omit `enableSecurityValidation()` on
+     the builder) and validate OAuth2 / OpenID Connect tokens at the
+     application layer with a dedicated library.
+
+  Direct property access on the new exception (`$e->schemeName`,
+  `$e->schemeType`, `$e->httpScheme`) is `public readonly` (no
+  sanitising getter required — scheme names come from the
+  operator-loaded spec, not from the request, so they are safe to
+  disclose to operators).
+
 - Exception sanitisation changes listed under `### Security` above are
   breaking. Direct property access (`$e->value`, `$e->schemeName`,
   `$e->ref`, `$e->internalTrace`, `$e->parameterName`, `$e->schemeType`,

@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Security;
 use Duyler\OpenApi\Schema\Model\SecurityRequirement;
 use Duyler\OpenApi\Schema\Model\SecurityScheme;
 use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
+use Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
@@ -267,13 +268,13 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(UnsupportedSecuritySchemeException::class);
 
         $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
     }
 
     #[Test]
-    public function http_basic_error_contains_unsupported_http_scheme_location(): void
+    public function http_basic_throws_unsupported_scheme_exception_with_descriptor(): void
     {
         $request = $this->factory->createServerRequest('GET', '/users')
             ->withHeader('Authorization', 'Basic dXNlcjpwYXNz');
@@ -289,15 +290,14 @@ final class SecurityValidatorTest extends TestCase
 
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
-            $this->fail('Expected ValidationException was not thrown');
-        } catch (ValidationException $e) {
-            $errors = $e->getErrors();
-            $this->assertCount(1, $errors);
-            $error = $errors[0];
-            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('basicAuth', $error->schemeName(reveal: true));
-            $this->assertSame('http/basic', $error->schemeType(reveal: true));
-            $this->assertSame('unsupported http scheme', $error->location(reveal: true));
+            $this->fail('Expected UnsupportedSecuritySchemeException was not thrown');
+        } catch (UnsupportedSecuritySchemeException $e) {
+            $this->assertSame('basicAuth', $e->schemeName);
+            $this->assertSame('http', $e->schemeType);
+            $this->assertSame('basic', $e->httpScheme);
+            $this->assertStringContainsString('http/basic', $e->getMessage());
+            $this->assertStringContainsString('basicAuth', $e->getMessage());
+            $this->assertSame($e->getMessage(), (string) $e);
         }
     }
 
@@ -618,15 +618,14 @@ final class SecurityValidatorTest extends TestCase
 
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
-            $this->fail('Expected ValidationException was not thrown');
-        } catch (ValidationException $e) {
-            $errors = $e->getErrors();
-            $this->assertCount(1, $errors);
-            $error = $errors[0];
-            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('oauth2Auth', $error->schemeName(reveal: true));
-            $this->assertSame('oauth2', $error->schemeType(reveal: true));
-            $this->assertSame('unsupported scheme type', $error->location(reveal: true));
+            $this->fail('Expected UnsupportedSecuritySchemeException was not thrown');
+        } catch (UnsupportedSecuritySchemeException $e) {
+            $this->assertSame('oauth2Auth', $e->schemeName);
+            $this->assertSame('oauth2', $e->schemeType);
+            $this->assertNull($e->httpScheme);
+            $this->assertStringContainsString('oauth2', $e->getMessage());
+            $this->assertStringContainsString('oauth2Auth', $e->getMessage());
+            $this->assertSame($e->getMessage(), (string) $e);
         }
     }
 

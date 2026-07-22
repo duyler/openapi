@@ -1326,6 +1326,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `ExternalRefSecurityException` | External `$ref` violates builtin resolver security policy (non-allowlisted scheme, path traversal outside the allowed root). Surfaced by `RefResolver` as `UnresolvableRefException` |
 | `ExternalRefTooLargeException` | External `$ref` file exceeds the configured `maxBytes` limit (default 10 MB); extends `\RuntimeException` (not a security policy violation) |
 | `SchemaDepthExceededException` | Maximum schema nesting depth exceeded |
+| `UnsupportedSecuritySchemeException` | Spec declares a security scheme type this library does not validate (`oauth2`, `openIdConnect`, `http/basic`, `http/digest`, `mutualTLS`, or unknown). Thrown by `SecurityValidator::validate()` (surfaced through `validateRequest()` / `validateWebhook()` / `validateCallback()`); extends `\RuntimeException`, **not** wrapped into `ValidationException`. R4-SEC-010 / R4-SPEC-003. |
 | `UnknownValidatorException` | Unknown validator type requested |
 | `VersionNotFoundException` | Requested schema name or version is not registered (thrown by `SchemaRegistry::getOrFail()`) |
 | `SchemaAlreadyRegisteredException` | Schema name+version pair is already registered (thrown by `SchemaRegistry::register()`; use `registerOrReplace()` for explicit overwrite) |
@@ -1949,22 +1950,72 @@ Response body validation does not expand wildcards: media type matching uses lit
 
 ### Security Validation
 
-Security scheme validation is basic. The validator checks that required credentials are present in the request (headers, query parameters, or cookies) but does not verify their correctness or format. Token validation, signature checking, and OAuth flow handling are outside the scope of this library.
+Security scheme validation is basic. The validator checks that required credentials are present in the request (headers, query parameters, or cookies) but does not verify their correctness or format. Token introspection, JWT signature verification, JWKS resolution, and OAuth flow handling are outside the scope of this library.
 
 > **Note:** Security scheme validation is invoked by `validateRequest()`, `validateWebhook()`, and `validateCallback()` when `enableSecurityValidation()` is enabled. If a security scheme is defined at the document or operation level, the validator checks that required credentials are present in the request. If `enableSecurityValidation()` is not called, security validation is skipped (default behavior).
 
 The following security scheme types are supported:
 
-- `http/bearer` - Checks for `Authorization: Bearer ...` header
-- `apiKey` (query, header, cookie) - Checks for the named parameter in the specified location
+- `http/bearer` - Checks for `Authorization: Bearer ...` header (RFC 6750, case-insensitive scheme prefix)
+- `apiKey` (`query`, `header`, `cookie`) - Checks for the named parameter in the specified location
 
-The following scheme types are not supported and will produce an error when encountered:
+The following scheme types are **not supported** and throw `Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException` when encountered in the spec at request-validation time (R4-SEC-010, R4-SPEC-003):
 
-- `http/basic` - Basic authentication
-- `oauth2` - OAuth 2.0 flows
+- `http/basic` - Basic authentication (`Authorization: Basic base64(user:pass)`)
+- `http/digest` - HTTP Digest authentication
+- `oauth2` - OAuth 2.0 flows (authorizationCode, implicit, password, clientCredentials, deviceCode)
 - `openIdConnect` - OpenID Connect Discovery
+- `mutualTLS` - Mutual TLS
+- any other unknown scheme type
 
-By default, security validation failures return a generic error message
+`UnsupportedSecuritySchemeException` extends `\RuntimeException` (it is a
+configuration error, not a credential-validation error). It is **not** wrapped
+into `ValidationException`; it propagates directly from `validateRequest()` /
+`validateWebhook()` / `validateCallback()` and must be caught separately in a
+PSR-15 middleware. The exception message is operator-facing diagnostic content
+(the scheme name and type), but `(string) $e` returns only `getMessage()` —
+file paths and stack traces are not leaked (CWE-209, CWE-497, R3-SEC-INFO-LEAK).
+
+#### AND / OR semantics with unsupported schemes
+
+The OpenAPI `security` keyword is a list of dicts. The outer list is OR
+(any-of); each inner dict is AND (all-of).
+
+- **AND list with one unsupported scheme**: the whole dict fails closed with
+  `UnsupportedSecuritySchemeException`, even if a supported sibling scheme in
+  the same dict would have passed. A spec such as
+  `security: [{oauth2: [read], bearerAuth: []}]` therefore fails for every
+  request — the operator must remove the unsupported scheme from the spec.
+- **OR list with mixed supported and unsupported dicts**: the supported
+  alternative is still tried. A spec such as
+  `security: [{oauth2: [read]}, {bearerAuth: []}]` succeeds for a request
+  that carries a valid `Authorization: Bearer ...` header, because the
+  second OR dict validates. If no OR alternative succeeds, the most recently
+  captured `UnsupportedSecuritySchemeException` is re-thrown (operator-visible
+  configuration error takes priority over credential errors).
+
+#### OAuth2 scope preservation (R4-SPEC-003)
+
+The scopes declared on a security requirement
+(`security: [{OAuth2: [read, write]}]`) are no longer discarded. Even though
+the `oauth2` scheme itself is rejected, the declared scopes are forwarded to
+the configured PSR-3 logger at `debug` level via the entry
+`'Security requirement scopes'` with `{schemeName, schemeType, scopes}` context,
+so trusted operators can audit which scopes the spec demands. Empty scope
+lists (the default for `apiKey`, `http/bearer`) do not trigger the log entry.
+
+#### Migrating an OAuth2 / OpenID Connect spec
+
+Consumers that need full OAuth2 / OpenID Connect token validation must remove
+the unsupported schemes from their spec and validate the token at the
+application layer, or replace this library's security validator with a custom
+PSR-15 middleware that calls an external token introspection endpoint / JWKS
+verifier. There is no extension point in `SecurityValidator` for plugging in a
+custom scheme handler; the diagnostic exception exists precisely so a missing
+handler is detected instead of silently bypassed (R4-SEC-010 secure-by-default).
+
+By default, credential-validation failures (missing `Authorization: Bearer`
+header, missing API key parameter, etc.) return a generic error message
 (`'Authentication required: missing or invalid credentials'`) that does not
 reveal which security scheme was checked or where the credential was expected.
 This prevents unauthenticated callers from learning the API's security

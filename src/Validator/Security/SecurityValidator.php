@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\Security;
 use Duyler\OpenApi\Schema\Model\SecurityScheme;
 use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
 use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
+use Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Psr\Http\Message\ServerRequestInterface;
@@ -34,15 +35,28 @@ final readonly class SecurityValidator
         $allErrors = [];
         $request = $context->request;
         $securitySchemes = $context->securitySchemes;
+        $unsupportedException = null;
 
         foreach ($context->securityRequirements->requirements as $requirementAlternatives) {
-            $errors = $this->validateRequirement($request, $requirementAlternatives, $securitySchemes);
+            try {
+                $errors = $this->validateRequirement($request, $requirementAlternatives, $securitySchemes);
+            } catch (UnsupportedSecuritySchemeException $e) {
+                if (null === $unsupportedException) {
+                    $unsupportedException = $e;
+                }
+
+                continue;
+            }
 
             if ([] === $errors) {
                 return;
             }
 
             $allErrors = [...$allErrors, ...$errors];
+        }
+
+        if (null !== $unsupportedException) {
+            throw $unsupportedException;
         }
 
         if ([] !== $allErrors) {
@@ -70,7 +84,7 @@ final readonly class SecurityValidator
     ): array {
         $errors = [];
 
-        foreach ($requirementAlternatives as $schemeName => $_) {
+        foreach ($requirementAlternatives as $schemeName => $scopes) {
             $scheme = $securitySchemes[$schemeName] ?? null;
 
             if (null === $scheme) {
@@ -81,6 +95,14 @@ final readonly class SecurityValidator
                 );
 
                 continue;
+            }
+
+            if ([] !== $scopes) {
+                $this->logger->debug('Security requirement scopes', [
+                    'schemeName' => $schemeName,
+                    'schemeType' => $scheme->type,
+                    'scopes' => $scopes,
+                ]);
             }
 
             $error = $this->validateScheme($request, $schemeName, $scheme);
@@ -101,10 +123,9 @@ final readonly class SecurityValidator
         return match ($scheme->type) {
             'http' => $this->validateHttpScheme($request, $schemeName, $scheme),
             'apiKey' => $this->validateApiKeyScheme($request, $schemeName, $scheme),
-            default => $this->reportMissingCredentials(
-                $schemeName,
-                $scheme->type,
-                'unsupported scheme type',
+            default => throw new UnsupportedSecuritySchemeException(
+                schemeName: $schemeName,
+                schemeType: $scheme->type,
             ),
         };
     }
@@ -117,10 +138,10 @@ final readonly class SecurityValidator
         $schemeType = strtolower($scheme->scheme ?? 'bearer');
 
         if ('bearer' !== $schemeType) {
-            return $this->reportMissingCredentials(
-                $schemeName,
-                sprintf('http/%s', $schemeType),
-                'unsupported http scheme',
+            throw new UnsupportedSecuritySchemeException(
+                schemeName: $schemeName,
+                schemeType: 'http',
+                httpScheme: $schemeType,
             );
         }
 
