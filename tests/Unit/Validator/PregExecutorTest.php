@@ -292,6 +292,8 @@ class PregExecutorTest extends TestCase
 
     private function captureRecursionLimitDuringMatch(bool $matchAll, int $maxRecursionLimit): string
     {
+        $autoloadPath = dirname(__DIR__, 3) . '/vendor/autoload.php';
+
         $script = <<<PHP
 <?php
 
@@ -310,7 +312,7 @@ namespace Duyler\\OpenApi\\Validator {
 }
 
 namespace {
-    require '/app/vendor/autoload.php';
+    require '{$autoloadPath}';
     \$executor = new \\Duyler\\OpenApi\\Validator\\PregExecutor(maxRecursionLimit: {$maxRecursionLimit});
 
 PHP;
