@@ -39,17 +39,10 @@ final readonly class RefResolvingSchemaValidator implements SchemaValidatorInter
     #[Override]
     public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
     {
-        $resolved = $this->resolveRef($schema);
-
-        $this->inner->validate($data, $resolved, $context);
-    }
-
-    private function resolveRef(Schema $schema): Schema
-    {
-        if (null === $schema->ref) {
-            return $schema;
+        if (null !== $schema->ref) {
+            $schema = $this->refResolver->resolveSchemaWithOverride($schema, $this->document);
         }
 
-        return $this->refResolver->resolveSchemaWithOverride($schema, $this->document);
+        $this->inner->validate($data, $schema, $context);
     }
 }

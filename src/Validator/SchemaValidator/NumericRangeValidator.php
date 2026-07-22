@@ -152,7 +152,7 @@ final readonly class NumericRangeValidator extends AbstractSchemaValidator imple
             $dataStr = substr($dataStr, 1);
         }
 
-        $absMultipleOf = $multipleOf < 0 ? -$multipleOf : $multipleOf;
+        $absMultipleOf = abs($multipleOf);
         $divisorStr = sprintf('%.' . self::MULTIPLEOF_STRING_PRECISION . 'F', $absMultipleOf);
         $divisorStr = rtrim(rtrim($divisorStr, '0'), '.');
 
@@ -183,7 +183,7 @@ final readonly class NumericRangeValidator extends AbstractSchemaValidator imple
         $len = strlen($dividend);
 
         for ($i = 0; $i < $len; ++$i) {
-            $remainder = ('' === $remainder ? '' : $remainder) . $dividend[$i];
+            $remainder .= $dividend[$i];
             $remainder = ltrim($remainder, '0') ?: '0';
 
             for ($k = 0; $k < self::MAX_DECIMAL_SUBTRACTIONS_PER_DIGIT; ++$k) {

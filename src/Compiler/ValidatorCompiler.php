@@ -779,29 +779,17 @@ PHP;
      */
     private function needsEqualityHelpers(Schema $schema): bool
     {
-        return $schema->hasConst
-            || null !== $schema->enum
-            || true === $schema->uniqueItems
-            || $this->schemaHasEqualityHelpersInChain($schema);
-    }
-
-    private function schemaHasEqualityHelpersInChain(Schema $schema): bool
-    {
-        if (true === $schema->uniqueItems) {
+        if ($schema->hasConst || null !== $schema->enum || true === $schema->uniqueItems) {
             return true;
         }
 
-        if ($schema->hasConst || null !== $schema->enum) {
-            return true;
-        }
-
-        if ($schema->items instanceof Schema && $this->schemaHasEqualityHelpersInChain($schema->items)) {
+        if ($schema->items instanceof Schema && $this->needsEqualityHelpers($schema->items)) {
             return true;
         }
 
         if (null !== $schema->properties) {
             foreach ($schema->properties as $child) {
-                if ($this->schemaHasEqualityHelpersInChain($child)) {
+                if ($this->needsEqualityHelpers($child)) {
                     return true;
                 }
             }

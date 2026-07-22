@@ -15,7 +15,6 @@ use function is_infinite;
 use function is_int;
 use function is_nan;
 use function is_string;
-use function ltrim;
 use function sprintf;
 use function strlen;
 
@@ -328,7 +327,7 @@ abstract readonly class AbstractCoercer
             return true;
         }
 
-        $unsignedString = ltrim(sprintf('%.0f', $absolute), '-');
+        $unsignedString = sprintf('%.0f', $absolute);
         $maxString = (string) PHP_INT_MAX;
         $maxLen = strlen($maxString);
 
