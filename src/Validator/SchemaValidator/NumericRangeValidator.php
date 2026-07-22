@@ -14,23 +14,33 @@ use Duyler\OpenApi\Validator\Exception\MultipleOfKeywordError;
 use Override;
 
 use function abs;
+use function assert;
+use function explode;
 use function extension_loaded;
 use function is_float;
 use function is_infinite;
 use function is_int;
 use function is_nan;
+use function ltrim;
 use function max;
 use function round;
+use function rtrim;
 use function sprintf;
-use function assert;
+use function str_contains;
+use function str_repeat;
+use function str_starts_with;
+use function strlen;
+use function substr;
 
 final readonly class NumericRangeValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
     private const float RELATIVE_EPSILON_FACTOR = 1e-9;
 
-    private const float LARGE_QUOTIENT_THRESHOLD = 1e15;
-
     private const int BCMATH_SCALE = 20;
+
+    private const int MULTIPLEOF_STRING_PRECISION = 14;
+
+    private const int MAX_DECIMAL_SUBTRACTIONS_PER_DIGIT = 10;
 
     #[Override]
     public function isApplicable(Schema $schema): bool
@@ -124,14 +134,105 @@ final readonly class NumericRangeValidator extends AbstractSchemaValidator imple
             return 0 === bccomp($quotient, $floored, self::BCMATH_SCALE);
         }
 
-        $quotient = (float) $data / $multipleOf;
+        if (is_int($data)) {
+            return $this->isBigIntMultipleOfString($data, $multipleOf);
+        }
+
+        $quotient = $data / $multipleOf;
         $rounded = round($quotient);
         $epsilon = self::RELATIVE_EPSILON_FACTOR * max(1.0, abs($quotient));
 
-        if (is_int($data) && abs($quotient) > self::LARGE_QUOTIENT_THRESHOLD) {
-            throw InvalidMultipleOfSchemaException::forLargeIntegerWithoutBcmath($data, $multipleOf);
+        return abs($quotient - $rounded) < $epsilon;
+    }
+
+    private function isBigIntMultipleOfString(int $data, float $multipleOf): bool
+    {
+        $dataStr = (string) $data;
+        if (str_starts_with($dataStr, '-')) {
+            $dataStr = substr($dataStr, 1);
         }
 
-        return abs($quotient - $rounded) < $epsilon;
+        $absMultipleOf = $multipleOf < 0 ? -$multipleOf : $multipleOf;
+        $divisorStr = sprintf('%.' . self::MULTIPLEOF_STRING_PRECISION . 'F', $absMultipleOf);
+        $divisorStr = rtrim(rtrim($divisorStr, '0'), '.');
+
+        if (str_contains($divisorStr, '.')) {
+            $parts = explode('.', $divisorStr, 2);
+            $decimalPlaces = strlen($parts[1] ?? '');
+            $scaledDivisor = ltrim(($parts[0] ?? '') . ($parts[1] ?? ''), '0') ?: '0';
+        } else {
+            $decimalPlaces = 0;
+            $scaledDivisor = $divisorStr;
+        }
+
+        $scaledData = $dataStr . str_repeat('0', $decimalPlaces);
+
+        return '0' === $this->decimalMod($scaledData, $scaledDivisor);
+    }
+
+    private function decimalMod(string $dividend, string $divisor): string
+    {
+        $dividend = ltrim($dividend, '0') ?: '0';
+        $divisor = ltrim($divisor, '0') ?: '0';
+
+        if ('0' === $divisor || '0' === $dividend) {
+            return $dividend;
+        }
+
+        $remainder = '';
+        $len = strlen($dividend);
+
+        for ($i = 0; $i < $len; ++$i) {
+            $remainder = ('' === $remainder ? '' : $remainder) . $dividend[$i];
+            $remainder = ltrim($remainder, '0') ?: '0';
+
+            for ($k = 0; $k < self::MAX_DECIMAL_SUBTRACTIONS_PER_DIGIT; ++$k) {
+                if ($this->decimalCmp($remainder, $divisor) < 0) {
+                    break;
+                }
+                $remainder = $this->decimalSub($remainder, $divisor);
+            }
+        }
+
+        return $remainder;
+    }
+
+    private function decimalCmp(string $a, string $b): int
+    {
+        $a = ltrim($a, '0') ?: '0';
+        $b = ltrim($b, '0') ?: '0';
+        $lenDiff = strlen($a) <=> strlen($b);
+        if (0 !== $lenDiff) {
+            return $lenDiff;
+        }
+
+        return $a <=> $b;
+    }
+
+    private function decimalSub(string $a, string $b): string
+    {
+        $a = ltrim($a, '0') ?: '0';
+        $b = ltrim($b, '0') ?: '0';
+
+        $result = '';
+        $borrow = 0;
+        $j = strlen($b) - 1;
+
+        for ($i = strlen($a) - 1; $i >= 0; --$i, --$j) {
+            $digitA = (int) $a[$i];
+            $digitB = $j >= 0 ? (int) $b[$j] : 0;
+            $diff = $digitA - $digitB - $borrow;
+
+            if ($diff < 0) {
+                $diff += 10;
+                $borrow = 1;
+            } else {
+                $borrow = 0;
+            }
+
+            $result = $diff . $result;
+        }
+
+        return ltrim($result, '0') ?: '0';
     }
 }

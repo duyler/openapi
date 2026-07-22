@@ -41,6 +41,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PSR-3 / PSR-14 wiring.
 
 ### Fixed
+- `NumericRangeValidator::isMultipleOf` no longer throws
+  `InvalidMultipleOfSchemaException::forLargeIntegerWithoutBcmath` for
+  valid int64 values (snowflake IDs, nanosecond timestamps up to
+  `PHP_INT_MAX`) when `bcmath` is not loaded (R4-CORRECTNESS-008).
+  A pure-PHP decimal string-modulus path now handles arbitrary-precision
+  integer modulo against a float `multipleOf` in environments without
+  `bcmath` (alpine Docker images, custom PHP builds). The fast integer
+  modulo path for whole-number `multipleOf` and the bcmath path when
+  the extension is available are unchanged. The
+  `InvalidMultipleOfSchemaException::forLargeIntegerWithoutBcmath`
+  factory is retained as `@deprecated` for backward compatibility with
+  external callers that catch the class explicitly; it is no longer
+  thrown from the validator and will be removed in 2.0.
+- `DiscriminatorValidator::validateAgainstSchema` now forks the parent
+  `ValidationContext` via `forkForBranch` and merges the child's
+  evaluated-property / evaluated-item annotations back via
+  `mergeChildAnnotations` after a successful discriminator-target
+  sub-validation (R4-CORRECTNESS-005, R4-SPEC-015). Previously a fresh
+  `ValidationContext` was created inside `validateAgainstSchema`, so
+  annotations produced by the discriminator target schema never reached
+  the parent context. Adjacent `unevaluatedProperties: false` and
+  `unevaluatedItems: false` constraints on the discriminator-bearing
+  parent schema now correctly honour properties/items already validated
+  by the target schema (JSON Schema 2020-12 §10.3.4 / §11.1.1.3). Failed
+  target sub-validation continues to not contribute annotations, per
+  §10.3.4. The two call sites in `OneOfValidatorWithContext` and
+  `SchemaValidatorWithContext` now thread the parent context through.
+- `TimeValidator` now enforces RFC 3339 §5.6: the `time-offset` component
+  (`Z`, `+HH:MM`, or `-HH:MM`) is required. Time strings without an offset
+  (e.g., `10:30:00`, `10:30:00.123`) are rejected with
+  `InvalidFormatException` (R4-SPEC-006). The previous `TIME_PATTERN` made the
+  offset group optional via a trailing `?`, accepting offset-less inputs that
+  are not valid RFC 3339 `time` productions. This is a breaking change for
+  consumers relying on the lenient behaviour; leap-second inputs (`23:59:60Z`,
+  `23:59:60+00:00`) and all offset-carrying inputs remain valid.
+- `OneOfValidatorWithContext::hasNullableSchema` now considers JSON Schema
+  2020-12 native nullable form `type: ["string", "null"]` in addition to the
+  OAS-extension `nullable: true`. Previously `oneOf` with a subschema using
+  only the native form would reject `data=null` (R4-CORRECTNESS-009).
 - The `http/bearer` security scheme check in `SecurityValidator` now uses
   an end-anchored regex (`/^bearer\s+\S+\s*$/i`, extracted into the
   `BEARER_AUTH_PATTERN` class constant). The previous unanchored pattern

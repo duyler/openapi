@@ -25,19 +25,17 @@ final class TimeValidatorTest extends TestCase
     public static function validTimeValuesProvider(): array
     {
         return [
-            'basic time' => ['10:30:00'],
-            'end of day' => ['23:59:59'],
-            'midnight' => ['00:00:00'],
             'with Z timezone' => ['10:30:00Z'],
+            'with lowercase z timezone' => ['10:30:00z'],
             'with positive offset' => ['10:30:00+03:00'],
             'with negative offset' => ['10:30:00-05:00'],
-            'with milliseconds' => ['10:30:00.123'],
+            'with negative zero offset equivalent to UTC' => ['10:30:00-00:00'],
             'with milliseconds and Z' => ['10:30:00.123Z'],
             'with milliseconds and offset' => ['10:30:00.123+03:00'],
-            'noon' => ['12:00:00'],
-            'one second before midnight' => ['23:59:59'],
+            'with fractional seconds and Z' => ['10:30:00.5Z'],
             'midnight with offset' => ['00:00:00+00:00'],
             'midnight Z' => ['00:00:00Z'],
+            'mid-day UTC regression' => ['12:34:56Z'],
             'leap second with Z' => ['23:59:60Z'],
             'leap second with positive UTC offset' => ['23:59:60+00:00'],
             'leap second with negative UTC offset' => ['23:59:60-00:00'],
@@ -60,6 +58,12 @@ final class TimeValidatorTest extends TestCase
     public static function invalidTimeValuesProvider(): array
     {
         return [
+            'basic time without offset' => ['10:30:00'],
+            'end of day without offset' => ['23:59:59'],
+            'midnight without offset' => ['00:00:00'],
+            'noon without offset' => ['12:00:00'],
+            'milliseconds without offset' => ['10:30:00.123'],
+            'fractional seconds without offset' => ['10:30:00.5'],
             'hour 24' => ['24:00:00'],
             'minute 60' => ['10:60:00'],
             'second 60 outside leap second' => ['10:30:60'],
@@ -163,8 +167,87 @@ final class TimeValidatorTest extends TestCase
     public function time_leap_second_without_offset_rejected(): void
     {
         $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Leap second requires UTC end-of-day');
 
         $this->validator->validate('23:59:60');
+    }
+
+    #[Test]
+    public function r4_spec_006_time_without_offset_is_rejected(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+
+        $this->validator->validate('10:30:00');
+    }
+
+    #[Test]
+    public function r4_spec_006_time_with_utc_z_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('10:30:00Z');
+    }
+
+    #[Test]
+    public function r4_spec_006_time_with_lowercase_z_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('10:30:00z');
+    }
+
+    #[Test]
+    public function r4_spec_006_time_with_positive_numeric_offset_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('10:30:00+03:00');
+    }
+
+    #[Test]
+    public function r4_spec_006_time_with_negative_zero_offset_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('10:30:00-00:00');
+    }
+
+    #[Test]
+    public function r4_spec_006_time_with_max_positive_offset_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('10:30:00+14:00');
+    }
+
+    #[Test]
+    public function r4_spec_006_time_with_max_negative_offset_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('10:30:00-14:00');
+    }
+
+    #[Test]
+    public function r4_spec_006_time_with_offset_above_max_is_rejected(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+
+        $this->validator->validate('10:30:00+15:00');
+    }
+
+    #[Test]
+    public function r4_spec_006_time_with_fractional_seconds_and_utc_is_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('10:30:00.5Z');
+    }
+
+    #[Test]
+    public function r4_spec_006_time_with_fractional_seconds_without_offset_is_rejected(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+
+        $this->validator->validate('10:30:00.5');
     }
 }

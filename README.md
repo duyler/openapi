@@ -1081,6 +1081,14 @@ new Schema(pattern: '[invalid')
 - `exclusiveMinimum` / `exclusiveMaximum` - Exclusive ranges
 - `multipleOf` - Numeric division
 
+> **Big-integer support without `bcmath`**: `multipleOf` for int64 values
+> (e.g. snowflake IDs up to `PHP_INT_MAX`) works without the `bcmath`
+> extension via pure-PHP string-based decimal modulus. When `bcmath` is
+> loaded, the validator prefers the faster bcmath path; when it is
+> absent, the validator falls back to the pure-PHP path instead of
+> rejecting the request. This unblocks production deployments on
+> images that ship without `bcmath` (R4-CORRECTNESS-008).
+
 ### Array Validation
 - `items` / `prefixItems` - Array item validation
 - `minItems` / `maxItems` - Array length constraints
@@ -1399,6 +1407,10 @@ The following format validators are included:
 | `uri-reference` | Absolute or relative URI (RFC 3986 §4.1) | `/path`, `//host/path`, `?q=1`, `#frag` |
 | `uri-template` | URI Template (RFC 6570, balanced expressions) | `https://api.example.com/users/{userId}` |
 | `regex` | Regular expression pattern (ECMA-262 syntax via PCRE) | `^[a-z]+$` |
+
+> The `time` format requires a UTC offset per RFC 3339 §5.6 (`Z`, `+HH:MM`,
+> or `-HH:MM`). Time strings without an offset (e.g., `10:30:00`) are
+> rejected with `InvalidFormatException`.
 
 ### Numeric Formats
 
@@ -1884,6 +1896,13 @@ no longer pass validation as a silent no-op. Circular `$ref` chains are
 bounded by `RefResolver`'s WeakMap cycle guard and the surrounding
 `ValidationContext::MAX_DEPTH` (default 64), which raises
 `SchemaDepthExceededException` instead of looping forever.
+
+Discriminator-routed branches (`discriminator.mapping` resolution) now
+propagate evaluated-property / evaluated-item annotations to the parent
+`ValidationContext` via `forkForBranch` + `mergeChildAnnotations`.
+`unevaluatedProperties: false` and `unevaluatedItems: false` correctly
+exclude properties/items already validated by the discriminator target
+schema (R4-CORRECTNESS-005, R4-SPEC-015).
 
 Known limitation: when a `properties` or `items` subschema is declared
 as `{$ref: '#/...'}` and the resolved target schema allows `null` via

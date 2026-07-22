@@ -156,6 +156,119 @@ final class OneOfValidatorWithContextTest extends TestCase
     }
 
     #[Test]
+    public function validate_with_discriminator_null_data_native_nullable_type(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            discriminator: new Discriminator(propertyName: 'type'),
+            oneOf: [
+                new Schema(type: ['object', 'null']),
+            ],
+        );
+
+        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext(null, $schema, $nullableContext);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function validate_with_discriminator_null_data_native_null_type_singleton(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            discriminator: new Discriminator(propertyName: 'type'),
+            oneOf: [
+                new Schema(type: 'string'),
+                new Schema(type: ['null']),
+            ],
+        );
+
+        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext(null, $schema, $nullableContext);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function validate_with_discriminator_null_data_no_nullable_form(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            discriminator: new Discriminator(propertyName: 'type'),
+            oneOf: [
+                new Schema(type: 'string'),
+                new Schema(type: 'integer'),
+            ],
+        );
+
+        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('data must be an object');
+
+        $this->validator->validateWithContext(null, $schema, $nullableContext);
+    }
+
+    #[Test]
+    public function validate_with_discriminator_null_data_native_nullable_with_nullable_as_type_disabled(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            discriminator: new Discriminator(propertyName: 'type'),
+            oneOf: [
+                new Schema(type: ['object', 'null']),
+            ],
+        );
+
+        $nonNullableContext = ValidationContext::create($this->pool, nullableAsType: false);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('data must be an object');
+
+        $this->validator->validateWithContext(null, $schema, $nonNullableContext);
+    }
+
+    #[Test]
+    public function validate_with_discriminator_null_data_mixed_nullable_forms(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            discriminator: new Discriminator(propertyName: 'type'),
+            oneOf: [
+                new Schema(type: 'string', nullable: true),
+                new Schema(type: ['integer', 'null']),
+            ],
+        );
+
+        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext(null, $schema, $nullableContext);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
     public function validate_with_discriminator_non_array_data(): void
     {
         $schema = new Schema(
