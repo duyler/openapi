@@ -26,6 +26,8 @@ use function tmpfile;
 
 use function sprintf;
 
+use function dirname;
+
 use const PREG_BACKTRACK_LIMIT_ERROR;
 use const PREG_INTERNAL_ERROR;
 
