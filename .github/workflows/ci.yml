@@ -55,6 +55,10 @@ jobs:
   swoole_tests:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+
     container:
       image: phpswoole/swoole:php8.5
       options: --user root
