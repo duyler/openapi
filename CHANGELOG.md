@@ -633,32 +633,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   matching FrankenPHP job is tracked under R4-TEST-001 in `### Changed`.
 
 ### Changed
-- CI matrix now includes a dedicated `frankenphp_tests` job in
-  `.github/workflows/ci.yml` based on `dunglas/frankenphp:php8.5`
-  (FrankenPHP v1.12.6, PHP 8.5.8), structurally parallel to the existing
-  `swoole_tests` job (R4-TEST-001). The job runs with
-  `continue-on-error: true` and an explicit architectural-limitation
-  comment because the `frankenphp` extension is statically compiled into
-  the Caddy-based `frankenphp` binary and is registered with the Zend
-  engine only inside the frankenphp worker SAPI (real web requests); it
-  is not available as a loadable `.so` and is absent from `php -m` /
-  `frankenphp php-cli -m` output regardless of the base image. As a
-  result `FrankenPhpThreadedTest::setUp()` calls `markTestSkipped()`
-  under `extension_loaded('frankenphp') === false` in CLI SAPI, so the
-  job currently reports `Skipped: 1` instead of catching regressions.
-  The job is intentionally retained (not deleted) because (a) it
-  surfaces the skip in CI logs instead of letting the test run never
-  execute, (b) it keeps a drop-in slot that will turn green once a
-  worker-SAPI test harness lands, and (c) it satisfies the README §Long-
-  Running Processes contract that promises these tests are exercised in
-  CI. The fast-fail `php -m | grep -q '^frankenphp$'` step prescribed by
-  the original task plan was replaced with an informational `Report
-  frankenphp extension availability` step because the prescribed check
-  is architecturally guaranteed to fail and would add no signal beyond
-  what `continue-on-error: true` already conveys while masking the more
-  useful `Skipped: 1` output. The Swoole job (`swoole_tests`) is
-  unchanged and remains the only runtime-conditional concurrency test
-  that actually executes assertions in CI today.
+- The `frankenphp_tests` job is removed from `.github/workflows/ci.yml`.
+  The job ran with `continue-on-error: true` and the underlying
+  `FrankenPhpThreadedTest` always skipped under
+  `extension_loaded('frankenphp') === false` in CLI SAPI, because the
+  `frankenphp` extension is statically compiled into the Caddy-based
+  `frankenphp` binary and registered with the Zend engine only inside the
+  worker SAPI (real web requests). The job therefore produced no regression
+  signal while failing the `Install dependencies with composer` step
+  because the base image lacks the `zip` extension and `unzip`. The test
+  class is retained in `tests/Concurrency/FrankenPhpThreadedTest.php` (it
+  skips gracefully when the extension is missing) and will be wired back
+  into CI once a worker-SAPI test harness that boots the frankenphp server
+  and runs PHPUnit through an actual worker request is built. Tracked as a
+  follow-up to R4-TEST-001. The Swoole job (`swoole_tests`) is unchanged
+  and remains the only runtime-conditional concurrency test that actually
+  executes assertions in CI today.
 - Removed all inline `//` comments from `src/` (72 lines across 15 files)
   to comply with `php-best-practices.md` §12 "Comments are strictly
   forbidden; PHPDoc on public API is the only allowed form of in-source

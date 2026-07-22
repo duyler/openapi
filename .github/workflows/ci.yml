@@ -88,84 +88,10 @@ jobs:
       - name: Run Swoole concurrency tests
         run: php -d memory_limit=512M vendor/bin/phpunit --filter='SwooleSharedValidatorTest' --testdox --colors=always
 
-  frankenphp_tests:
-    runs-on: ubuntu-latest
-
-    container:
-      image: dunglas/frankenphp:php8.5
-      options: --user root
-
-    # R4-TEST-001: Architectural limitation — the frankenphp extension is
-    # statically compiled into the Caddy-based frankenphp binary and is
-    # registered with the Zend engine ONLY when PHP runs inside the
-    # frankenphp worker SAPI (real web requests). It is NOT available as
-    # a loadable .so and is absent from `php -m` / `frankenphp php-cli -m`
-    # output regardless of the base image. Verified against
-    # dunglas/frankenphp:php8.5 (FrankenPHP v1.12.6, PHP 8.5.8).
-    # As a result `FrankenPhpThreadedTest` continues to skip in this job
-    # (its `extension_loaded('frankenphp')` gate returns false in CLI),
-    # so the job cannot currently catch regressions. The job exists to
-    # (a) surface the skip in CI logs instead of silently never running,
-    # (b) keep a placeholder that will turn green once a worker-SAPI test
-    # harness is built (planned follow-up), and (c) prevent the README
-    # contract from going entirely unverified. Hence continue-on-error.
-    continue-on-error: true
-
-    steps:
-      - name: Install git (not shipped in frankenphp image)
-        run: apt-get update && apt-get install -y --no-install-recommends git
-
-      - name: Install composer (not shipped in frankenphp image)
-        # dunglas/frankenphp:* ships PHP but not composer (verified on
-        # dunglas/frankenphp:php8.5, FrankenPHP v1.12.6). curl + openssl
-        # are present in the base image so the official installer works.
-        run: |
-          curl -fsSL https://getcomposer.org/installer -o /tmp/composer-setup.php
-          php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
-          rm /tmp/composer-setup.php
-          composer --version
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Determine composer cache directory
-        run: echo "COMPOSER_CACHE_DIR=$(composer config cache-dir)" >> $GITHUB_ENV
-
-      - name: Cache dependencies installed with composer
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.COMPOSER_CACHE_DIR }}
-          key: frankenphp-php8.5-composer-${{ hashFiles('**/composer.json') }}
-          restore-keys: |
-            frankenphp-php8.5-composer-
-
-      - name: Install dependencies with composer
-        run: composer update --ignore-platform-reqs --prefer-dist --no-interaction --no-progress --optimize-autoloader --ansi
-
-      - name: Verify PHP version >= 8.4
-        run: php -v | grep -q 'PHP 8\.[4-9]' || (echo "PHP version below 8.4 in frankenphp image" && exit 1)
-
-      - name: Report frankenphp extension availability
-        # Informational only: intentionally NOT a fast-fail step. The
-        # frankenphp extension is architecturally unavailable in CLI SAPI
-        # (see job-level comment above), so a `php -m | grep -q
-        # '^frankenphp$'` check would always fail. Failing here would
-        # add no signal beyond what continue-on-error already conveys and
-        # would mask the more useful "test skipped" output below.
-        run: |
-          echo "PHP SAPI: $(php -r 'echo PHP_SAPI;')"
-          echo "FrankenPHP binary: $(frankenphp --version)"
-          if php -m 2>/dev/null | grep -q '^frankenphp$'; then
-            echo "frankenphp extension: loaded (unexpected in CLI SAPI)"
-          else
-            echo "frankenphp extension: NOT loaded in CLI SAPI (architecturally expected; see job comment)"
-          fi
-
-      - name: Run FrankenPHP concurrency tests
-        # The test setUp() calls markTestSkipped() because
-        # extension_loaded('frankenphp') is false in CLI SAPI; this step
-        # therefore always reports "Skipped: 1". The job remains
-        # continue-on-error until a worker-SAPI test harness exists.
-        run: php -d memory_limit=512M vendor/bin/phpunit --filter='FrankenPhpThreadedTest' --testdox --colors=always
+  # FrankenPHP worker-SAPI concurrency coverage is tracked as a follow-up
+  # to R4-TEST-001. The frankenphp extension is statically compiled into
+  # the frankenphp binary and is only registered with the Zend engine
+  # inside the worker SAPI (real web requests), so `FrankenPhpThreadedTest`
+  # always skips under CLI SAPI and a CLI-based CI job yields no regression
+  # signal. The test class is retained in tests/Concurrency for a future
+  # worker-SAPI harness; see CHANGELOG 0.6.0 for the full rationale.

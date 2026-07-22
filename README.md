@@ -1699,23 +1699,21 @@ CI matrix job based on `phpswoole/swoole:php8.5` on every push and pull
 request, with a `php -m | grep -q '^swoole$'` fast-fail step that prevents
 the test from silently skipping when the extension is missing (R4-TEST-001).
 
-The FrankenPHP suite has a dedicated CI job based on
-`dunglas/frankenphp:php8.5`, but the job currently runs with
-`continue-on-error: true`. The `frankenphp` extension is statically compiled
-into the Caddy-based `frankenphp` binary and is registered with the Zend
-engine only inside the frankenphp worker SAPI (real web requests); it is not
-available as a loadable `.so` and is absent from `php -m` /
-`frankenphp php-cli -m` output regardless of the base image. As a result
+The FrankenPHP suite (`tests/Concurrency/FrankenPhpThreadedTest`) is
+retained in the repository but is not exercised by CI today. The
+`frankenphp` extension is statically compiled into the Caddy-based
+`frankenphp` binary and is registered with the Zend engine only inside
+the frankenphp worker SAPI (real web requests); it is not available as
+a loadable `.so` and is absent from `php -m` / `frankenphp php-cli -m`
+output regardless of the base image. As a result
 `FrankenPhpThreadedTest::setUp()` calls `markTestSkipped()` under
-`extension_loaded('frankenphp') === false` in CLI SAPI, so the CI job reports
-`Skipped: 1` instead of executing the assertions. Turning this job green
-requires a worker-SAPI test harness that boots the frankenphp server and
-runs PHPUnit through an actual worker request; tracked as a follow-up to
-R4-TEST-001. The placeholder job exists to surface the skip in CI logs
-instead of letting the test run never execute, and to keep a drop-in slot
-that will turn green once the harness lands. `tests/Concurrency/RoadRunnerTest`
-runs in the main `tests` job without any extension gate because RoadRunner
-uses the prefork model and does not require a runtime extension.
+`extension_loaded('frankenphp') === false` in CLI SAPI, so a CLI-based
+CI job cannot catch regressions. Coverage of the FrankenPHP threaded
+contract requires a worker-SAPI test harness that boots the frankenphp
+server and runs PHPUnit through an actual worker request; tracked as a
+follow-up to R4-TEST-001. `tests/Concurrency/RoadRunnerTest` runs in
+the main `tests` job without any extension gate because RoadRunner uses
+the prefork model and does not require a runtime extension.
 
 ## Streaming Response Validation
 
