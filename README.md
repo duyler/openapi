@@ -1190,6 +1190,35 @@ preventing a multi-megabyte attacker payload from being amplified into
 logs. The truncated value stays public readonly because it remains
 useful for diagnosing user-facing stream parse failures.
 
+`PathMismatchException`, `OperationNotFoundException`,
+`UnsupportedMediaTypeException`, and `InvalidParameterException` carry
+attacker-controlled values (`$requestPath`, `$template`, `$method`,
+`$mediaType`, the caller-supplied `$message` argument) but their
+`getMessage()` returns a generic static string
+(`'Request path does not match any declared template'`,
+`'No operation matches the request'`,
+`'Unsupported media type. Supported types: %s'` with the spec-derived
+`$supportedTypes` list, and `'Invalid parameter configuration'`
+respectively) so a PSR-15 middleware that renders the message into an
+HTTP response body, or a PSR-3 logger that writes it into a log file,
+cannot be turned into a reflective XSS or log-injection sink by a
+crafted request path, method, or Content-Type header (R4-SEC-007a/b/c/d,
+CWE-209, CWE-532). `InvalidParameterException` additionally keeps
+`$parameterName` in `protected readonly` and exposes it via the
+`parameterName(bool $reveal = false)` opt-in getter (default returns
+`'<redacted>'`); the constructor's `$message` argument is no longer
+interpolated into `getMessage()` and is dropped after construction.
+The remaining attacker-controlled properties on the three HTTP-side
+exception classes (`PathMismatchException::$requestPath`,
+`PathMismatchException::$template`, `OperationNotFoundException::$requestPath`,
+`OperationNotFoundException::$method`,
+`UnsupportedMediaTypeException::$mediaType`,
+`UnsupportedMediaTypeException::$supportedTypes`) stay `public readonly`
+because they are exception internal state, not message content: a PSR-3
+logger calls `getMessage()` rather than reading properties directly, and
+trusted operator code (verbose formatter, security auditor) needs them
+for diagnostics.
+
 ### Validation Error Reference
 
 All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schemaPath()`, `keyword()`, `message()`, `params()`, and `suggestion()` methods.

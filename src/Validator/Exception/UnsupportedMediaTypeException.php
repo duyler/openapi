@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 use RuntimeException;
 use Throwable;
 
+use function implode;
 use function sprintf;
 
 final class UnsupportedMediaTypeException extends RuntimeException
@@ -23,11 +24,7 @@ final class UnsupportedMediaTypeException extends RuntimeException
         ?Throwable $previous = null,
     ) {
         parent::__construct(
-            sprintf(
-                'Unsupported media type "%s". Supported types: %s',
-                $mediaType,
-                implode(', ', $supportedTypes),
-            ),
+            sprintf('Unsupported media type. Supported types: %s', implode(', ', $supportedTypes)),
             $code,
             $previous,
         );

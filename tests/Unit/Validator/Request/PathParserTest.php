@@ -64,7 +64,7 @@ final class PathParserTest extends TestCase
     public function throw_error_for_mismatch(): void
     {
         $this->expectException(PathMismatchException::class);
-        $this->expectExceptionMessage('Path "/users/123/posts" does not match template "/users/{id}/posts/{postId}"');
+        $this->expectExceptionMessage('Request path does not match any declared template');
 
         $this->parser->matchPath('/users/123/posts', '/users/{id}/posts/{postId}');
     }

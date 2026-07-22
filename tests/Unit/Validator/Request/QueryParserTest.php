@@ -263,7 +263,7 @@ final class QueryParserTest extends TestCase
         $key = 'a' . str_repeat('[b]', 64);
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage('Maximum query parameter nesting depth of 64 exceeded');
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->parser->parse($key . '=1');
     }
@@ -279,7 +279,7 @@ final class QueryParserTest extends TestCase
         $key = 'a' . str_repeat('[', 65);
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage('Maximum query parameter nesting depth of 64 exceeded');
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->parser->parse($key . '=1');
     }
@@ -409,7 +409,7 @@ final class QueryParserTest extends TestCase
         );
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage('Malformed value');
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->parser->parseQueryString('not valid json', $parameter);
     }
@@ -464,7 +464,7 @@ final class QueryParserTest extends TestCase
         );
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage('Malformed value');
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->parser->parseQueryString('', $parameter);
     }

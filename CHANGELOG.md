@@ -187,6 +187,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   OpenAPI specs use fewer than 20 anchors and 50 aliases, so the
   conservative caps allow legitimate schema deduplication while
   rejecting exponential blowup.
+- Sanitize exception messages in `PathMismatchException`,
+  `OperationNotFoundException`, `UnsupportedMediaTypeException`, and
+  `InvalidParameterException` to prevent attacker-controlled request
+  paths, HTTP methods, Content-Type headers, and caller-supplied
+  parameter messages from leaking through `getMessage()` (and
+  therefore through `__toString()`, which `SanitizableExceptionTrait`
+  delegates to `getMessage()`) into PSR-15 middleware responses or
+  PSR-3 log files (R4-SEC-007a/b/c/d, CWE-209, CWE-532). Each
+  `getMessage()` now returns a generic static string
+  (`'Request path does not match any declared template'`,
+  `'No operation matches the request'`,
+  `'Unsupported media type. Supported types: %s'` with the
+  spec-derived `$supportedTypes` list — attacker `mediaType` removed,
+  spec-declared supported types retained — and
+  `'Invalid parameter configuration'`). The attacker-controlled
+  public readonly properties (`PathMismatchException::$requestPath` /
+  `$template`, `OperationNotFoundException::$requestPath` / `$method`,
+  `UnsupportedMediaTypeException::$mediaType` / `$supportedTypes`) are
+  preserved unchanged for trusted-operator diagnostics; only the
+  message content is sanitised. `InvalidParameterException` already
+  exposed `$parameterName` via the opt-in `parameterName(reveal: true)`
+  getter; its constructor's `$message` argument is no longer
+  interpolated into `getMessage()` and is dropped after construction.
 
 ### BREAKING
 - Exception sanitisation changes listed under `### Security` above are
@@ -197,6 +220,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   etc.). Trusted code that previously relied on `includeSensitiveValues: true`
   on `DetailedFormatter` / `JsonFormatter` continues to work — the
   formatters now call the opt-in getters internally.
+
+- The four exception message changes listed under R4-SEC-007a/b/c/d
+  above are breaking for any caller that string-matched on the previous
+  sprintf-formatted `getMessage()` content of `PathMismatchException`,
+  `OperationNotFoundException`, `UnsupportedMediaTypeException`, or
+  `InvalidParameterException` (e.g. code that did
+  `str_contains($e->getMessage(), $request->getUri()->getPath())` or
+  parsed the method/path out of the old `'Operation not found: %s %s'`
+  format). Replace such matching with reads of the public readonly
+  properties (`$e->requestPath`, `$e->method`, `$e->mediaType`,
+  `$e->template`, `$e->supportedTypes`) or, for `InvalidParameterException`,
+  with the `$e->parameterName(reveal: true)` opt-in getter. The exception
+  hierarchy, constructor signatures, parent classes, and all properties
+  are unchanged; only the `getMessage()` body is sanitised.
 
 - `ValidatorCompiler::generatePatternCheck` now emits an inlined defensive
   wrapper around `preg_match` for the `pattern` keyword, closing R3-SEC-001

@@ -50,7 +50,7 @@ final class QueryParserPairCountLimitTest extends TestCase
         $queryString = implode('&', $pairs);
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage('Invalid parameter "query": Maximum query string pairs of 1000 exceeded');
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->parser->parse($queryString);
     }

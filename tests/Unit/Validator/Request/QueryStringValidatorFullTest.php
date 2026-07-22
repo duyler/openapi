@@ -54,7 +54,7 @@ final class QueryStringValidatorFullTest extends TestCase
         );
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage("must use 'content' field");
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->validator->validate('filter=test', [$param]);
     }
@@ -68,7 +68,7 @@ final class QueryStringValidatorFullTest extends TestCase
         );
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage("requires 'content' field");
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->validator->validate('filter=test', [$param]);
     }

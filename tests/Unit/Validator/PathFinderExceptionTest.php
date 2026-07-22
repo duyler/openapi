@@ -52,7 +52,7 @@ YAML;
     }
 
     #[Test]
-    public function operation_not_found_exception_contains_path_and_method(): void
+    public function operation_not_found_exception_contains_path_method_and_sanitised_message(): void
     {
         $finder = $this->createPathFinder();
 
@@ -62,22 +62,8 @@ YAML;
         } catch (OperationNotFoundException $exception) {
             self::assertSame('/users/42', $exception->requestPath);
             self::assertSame('PUT', $exception->method);
-            self::assertSame('Operation not found: PUT /users/42', $exception->getMessage());
+            self::assertSame('No operation matches the request', $exception->getMessage());
             self::assertInstanceOf(RuntimeException::class, $exception);
-        }
-    }
-
-    #[Test]
-    public function operation_not_found_exception_uppercases_method_in_message(): void
-    {
-        $finder = $this->createPathFinder();
-
-        try {
-            $finder->findOperation('/users/42', 'patch');
-            self::fail('Expected OperationNotFoundException to be thrown');
-        } catch (OperationNotFoundException $exception) {
-            self::assertSame('patch', $exception->method);
-            self::assertStringContainsString('PATCH /users/42', $exception->getMessage());
         }
     }
 

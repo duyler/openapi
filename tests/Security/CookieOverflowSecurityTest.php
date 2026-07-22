@@ -64,7 +64,7 @@ final class CookieOverflowSecurityTest extends TestCase
         $this->assertGreaterThan(100, $pairCount);
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage('Maximum cookie pairs of 100 exceeded');
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         try {
             $this->validator->parseCookies($cookieHeader);
@@ -107,7 +107,7 @@ final class CookieOverflowSecurityTest extends TestCase
         );
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage('Maximum cookie pairs of 100 exceeded');
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->validator->parseCookieStyle($cookieHeader, $parameter);
     }
@@ -130,7 +130,7 @@ final class CookieOverflowSecurityTest extends TestCase
         );
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage('Maximum cookie pairs of 100 exceeded');
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->validator->parseCookieStyle($cookieHeader, $parameter);
     }

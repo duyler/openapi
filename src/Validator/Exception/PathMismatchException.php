@@ -7,8 +7,6 @@ namespace Duyler\OpenApi\Validator\Exception;
 use RuntimeException;
 use Throwable;
 
-use function sprintf;
-
 final class PathMismatchException extends RuntimeException
 {
     use SanitizableExceptionTrait;
@@ -20,7 +18,7 @@ final class PathMismatchException extends RuntimeException
         ?Throwable $previous = null,
     ) {
         parent::__construct(
-            sprintf('Path "%s" does not match template "%s"', $requestPath, $template),
+            'Request path does not match any declared template',
             $code,
             $previous,
         );

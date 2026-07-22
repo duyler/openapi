@@ -159,7 +159,7 @@ YAML;
         }
 
         self::assertNotNull($caught, 'LINK not declared must throw OperationNotFoundException');
-        self::assertStringContainsString('LINK', $caught->getMessage());
+        self::assertSame('LINK', $caught->method);
     }
 
     #[Test]

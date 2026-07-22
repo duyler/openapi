@@ -131,7 +131,7 @@ YAML;
         $finder = $this->createPathFinder();
 
         $this->expectException(OperationNotFoundException::class);
-        $this->expectExceptionMessage('Operation not found: POST /unknown');
+        $this->expectExceptionMessage('No operation matches the request');
 
         $finder->findOperation('/unknown', 'POST');
     }
@@ -142,7 +142,7 @@ YAML;
         $finder = $this->createPathFinder();
 
         $this->expectException(OperationNotFoundException::class);
-        $this->expectExceptionMessage('Operation not found: DELETE /users/123');
+        $this->expectExceptionMessage('No operation matches the request');
 
         $finder->findOperation('/users/123', 'DELETE');
     }

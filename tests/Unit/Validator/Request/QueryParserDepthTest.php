@@ -44,7 +44,7 @@ final class QueryParserDepthTest extends TestCase
         $payload = str_repeat('[', $atDepth) . '1' . str_repeat(']', $atDepth);
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage('Invalid JSON');
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->parser->parseQueryString($payload, $this->jsonParameter());
     }
@@ -63,7 +63,7 @@ final class QueryParserDepthTest extends TestCase
         } catch (InvalidParameterException $e) {
             $elapsed = microtime(true) - $start;
 
-            $this->assertStringContainsString('Invalid JSON', $e->getMessage());
+            $this->assertStringContainsString('Invalid parameter configuration', $e->getMessage());
             $this->assertLessThan(
                 0.05,
                 $elapsed,
