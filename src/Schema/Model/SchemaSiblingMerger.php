@@ -398,8 +398,8 @@ final readonly class SchemaSiblingMerger
             return $resolved;
         }
 
-        $resolvedSet = $this->typeToSet($resolved);
-        $siblingSet = $this->typeToSet($sibling);
+        $resolvedSet = is_array($resolved) ? $resolved : [$resolved];
+        $siblingSet = is_array($sibling) ? $sibling : [$sibling];
         $intersection = array_values(array_intersect($resolvedSet, $siblingSet));
 
         if ([] === $intersection) {
@@ -407,16 +407,6 @@ final readonly class SchemaSiblingMerger
         }
 
         return 1 === count($intersection) ? $intersection[0] : $intersection;
-    }
-
-    /**
-     * @param string|list<string> $type
-     *
-     * @return list<string>
-     */
-    private function typeToSet(string|array $type): array
-    {
-        return is_array($type) ? $type : [$type];
     }
 
     /**

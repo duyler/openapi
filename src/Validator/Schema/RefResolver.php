@@ -335,8 +335,7 @@ final class RefResolver implements RefResolverInterface
 
     private function baseUriHadAuthority(string $baseUri): bool
     {
-        $schemeEnd = strpos($baseUri, '://');
-        return false !== $schemeEnd;
+        return false !== strpos($baseUri, '://');
     }
 
     /**

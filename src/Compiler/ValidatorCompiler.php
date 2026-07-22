@@ -565,7 +565,7 @@ final readonly class ValidatorCompiler
             $code .= sprintf("        if (false === array_key_exists(%s, %s)) {\n", $safeName, $dataVar);
             $code .= sprintf(
                 "            throw new \\RuntimeException(sprintf('Required property missing: %%s', %s));\n",
-                var_export($propertyName, true),
+                $safeName,
             );
             $code .= "        }\n";
         }

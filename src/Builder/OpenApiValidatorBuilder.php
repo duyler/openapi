@@ -683,27 +683,21 @@ final readonly class OpenApiValidatorBuilder
         try {
             $deprecationLogger = new DeprecationLogger($this->config->logger ?? new NullLogger(), $this->config->reportDeprecated ?? true);
 
-            if ('yaml' === $this->config->specType) {
-                $parser = new YamlParser(
+            $parser = match ($this->config->specType) {
+                'yaml' => new YamlParser(
                     $deprecationLogger,
                     $this->config->maxSpecSizeBytes ?? YamlParser::DEFAULT_MAX_SPEC_BYTES,
                     $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
-                );
-
-                return $parser->parse($content);
-            }
-
-            if ('json' === $this->config->specType) {
-                $parser = new JsonParser(
+                ),
+                'json' => new JsonParser(
                     $deprecationLogger,
                     $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
                     $this->config->maxSpecSizeBytes ?? JsonParser::DEFAULT_MAX_SPEC_BYTES,
-                );
+                ),
+                default => throw new BuilderException(sprintf('Unsupported spec type: %s', $this->config->specType ?? 'none')),
+            };
 
-                return $parser->parse($content);
-            }
-
-            throw new BuilderException(sprintf('Unsupported spec type: %s', $this->config->specType ?? 'none'));
+            return $parser->parse($content);
         } catch (InvalidUtf8Exception|SpecTooLargeException $e) {
             throw $e;
         } catch (Exception $e) {
