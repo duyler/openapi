@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Event;
 
 use Override;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\EventDispatcher\StoppableEventInterface;
 
 final readonly class ArrayDispatcher implements EventDispatcherInterface
 {
@@ -26,6 +27,10 @@ final readonly class ArrayDispatcher implements EventDispatcherInterface
         }
 
         foreach ($this->listeners[$eventName] as $listener) {
+            if ($event instanceof StoppableEventInterface && $event->isPropagationStopped()) {
+                break;
+            }
+
             $listener($event);
         }
 

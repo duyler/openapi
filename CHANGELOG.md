@@ -93,6 +93,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`1` matches enum `[1, 2, 3]`) holds at every depth; the README's
   previous "known limitation" note for strict `in_array` in items is
   removed.
+- `ArrayDispatcher::dispatch` now respects PSR-14 `StoppableEventInterface`:
+  before each listener call it checks `instanceof StoppableEventInterface`
+  and `$event->isPropagationStopped()`, breaking out of the listener loop
+  when propagation has been requested (R4-PSR-001, PSR-14 §"Stoppable
+  Events"). Previously the dispatcher iterated every registered listener
+  unconditionally, so an event that implemented `StoppableEventInterface`
+  and was stopped by an early listener was still delivered to all
+  subsequent listeners, violating the PSR-14 contract and risking
+  double-processing side effects. Non-stoppable events and listener
+  exceptions propagate exactly as before; the dispatch signature and
+  return value are unchanged. Regression tests cover all four scenarios:
+  stop after the first listener, stoppable event without a stop call,
+  non-stoppable event, and an event arriving already stopped.
 
 ### Security
 - All exception classes shipped by the package now sanitize `__toString()`
