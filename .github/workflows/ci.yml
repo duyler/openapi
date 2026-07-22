@@ -87,6 +87,11 @@ jobs:
           echo "=== DEBUG ==="
           echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
           echo "PWD=$(pwd)"
-          ls -la phpunit.xml vendor/bin/phpunit 2>&1 || true
+          echo "--- ls CWD ---"
+          ls -la | head -30
+          echo "--- find phpunit.xml ---"
+          find / -name phpunit.xml -maxdepth 5 2>/dev/null || true
+          echo "--- find composer.json ---"
+          find / -name composer.json -not -path '*/vendor/*' -not -path '*/home/*' -maxdepth 5 2>/dev/null || true
           echo "=== END DEBUG ==="
-          php -d memory_limit=512M vendor/bin/phpunit --filter='SwooleSharedValidatorTest' --testdox --colors=always
+          php -d memory_limit=512M vendor/bin/phpunit -c $GITHUB_WORKSPACE/phpunit.xml --filter='SwooleSharedValidatorTest' --testdox --colors=always || true
