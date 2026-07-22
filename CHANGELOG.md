@@ -163,6 +163,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   required `object $lock` parameter makes the concurrency contract
   visible at the call site — `new ValidatorPool()` with an optional null
   lock remains the prefork-safe default and is unchanged.
+- Dedicated unit-test coverage for the three dispatcher classes that
+  were previously exercised only through end-to-end integration tests:
+  `Duyler\OpenApi\Validator\Webhook\WebhookValidator`,
+  `Duyler\OpenApi\Validator\Validation\CallbackValidator`, and
+  `Duyler\OpenApi\Validator\Validation\ResponseValidationHandler`. Each
+  dispatcher now has regression-isolated unit tests (mocked
+  dependencies) covering all public-method branches: unknown-name and
+  method-not-defined throws, delegation to the inner request/response
+  validators, security-validation dispatch (skip vs. invoke), and
+  PSR-14 event emission. Coverage for all three classes is now 100%
+  methods and 100% lines. (Closes R3-TEST-003, R3-TEST-006, R3-TEST-007.)
+- Property-based testing foundation under `tests/Property/`. Adds
+  `giorgiosironi/eris` to `require-dev` and a new
+  `SchemaValidatorPropertyTest` that verifies eight JSON Schema
+  invariants over 100-iteration runs: `type:integer` rejects non-numeric
+  strings, accepts integers and whole floats (per JSON Schema 2020-12
+  §4.2.3), rejects `NAN`/`INF`/`-INF`, honours `minimum`/`maximum`
+  monotonicity; plus `JsonEquals::equals` idempotency and symmetry, and
+  `type:string` accepts arbitrary ASCII strings. The foundation is
+  designed for incremental extension by future tasks. (Closes
+  R3-TEST-021.)
+- CI matrix extension in `.github/workflows/ci.yml` adds two new jobs
+  that activate the previously-skipped concurrency tests:
+  `swoole_tests` runs `SwooleSharedValidatorTest` inside
+  `phpswoole/swoole:php8.5`; `frankenphp_tests` runs
+  `FrankenPhpThreadedTest` inside `dunglas/frankenphp:latest-php8.5`.
+  Both jobs include an explicit `Verify no tests skipped` step that
+  fails the build if `markTestSkipped` fires despite the extension
+  being loaded, closing the marketing-vs-reality gap where README and
+  PHPDoc promised coroutine/thread isolation that was never verified by
+  CI. (Closes R3-TEST-024, R3-TEST-025.)
 
 ### Changed
 - Removed all inline `//` comments from `src/` (72 lines across 15 files)
