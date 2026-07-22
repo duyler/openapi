@@ -162,6 +162,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   single-quoted PHP string literals, which previously could produce
   parseable-but-malformed messages or escape-sequence injection when the
   key contained bytes that defeated `addslashes`.
+- YAML anchor bomb (billion-laughs) DoS protection in `YamlParser` via
+  pre-parse anchor/alias count and alias-nesting-depth caps
+  (R4-SEC-012, CWE-400, CWE-770). Three orthogonal `public const int`
+  caps (`MAX_ANCHORS = 100`, `MAX_ALIASES = 1000`, `MAX_ALIAS_DEPTH =
+  10`) are enforced by a byte-level regex scan that mirrors Symfony
+  YAML's `parseAnchor` acceptance pattern (`[^\s,\[\]\{\}]+` with `/u`
+  flag), so non-ASCII anchor names (Cyrillic, CJK) and punctuation
+  characters (dots, colons, pipes) are all detected. The scan runs
+  before `Symfony\Component\Yaml\Yaml::parse()`, so an
+  attacker-controlled ~1 KB payload can never reach the parser even
+  when its expanded in-memory size would exceed the process
+  `memory_limit`. The chain-depth heuristic builds a DAG of anchor-to-anchor
+  references (determined by indentation-based value-range scoping) and
+  computes the longest path with cycle detection, catching both
+  same-line flow-style (`b: &b [*a]`) and multi-line block-style
+  (`b: &b\n  - *a`) billion-laughs variants. Symfony YAML's own
+  `maxAliasesForCollections` (default 128) remains active unchanged
+  as defense-in-depth for collection aliases that slip past the
+  pre-parse scan. Exceeding any cap throws
+  `SpecTooLargeException::forAnchorCount` / `forAliasCount` /
+  `forAliasDepth` with a sanitised message that discloses only the
+  metric and counts (never the attacker payload, CWE-209). Real
+  OpenAPI specs use fewer than 20 anchors and 50 aliases, so the
+  conservative caps allow legitimate schema deduplication while
+  rejecting exponential blowup.
 
 ### BREAKING
 - Exception sanitisation changes listed under `### Security` above are

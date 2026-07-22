@@ -44,4 +44,43 @@ final class SpecTooLargeException extends RuntimeException
             $previous,
         );
     }
+
+    public static function forAnchorCount(int $limit, int $actual, int $code = 0, ?Throwable $previous = null): self
+    {
+        return new self(
+            sprintf(
+                'YAML anchor bomb detected: too many anchors (actual: %d, cap: %d)',
+                $actual,
+                $limit,
+            ),
+            $code,
+            $previous,
+        );
+    }
+
+    public static function forAliasCount(int $limit, int $actual, int $code = 0, ?Throwable $previous = null): self
+    {
+        return new self(
+            sprintf(
+                'YAML anchor bomb detected: too many aliases (actual: %d, cap: %d)',
+                $actual,
+                $limit,
+            ),
+            $code,
+            $previous,
+        );
+    }
+
+    public static function forAliasDepth(int $limit, int $actual, int $code = 0, ?Throwable $previous = null): self
+    {
+        return new self(
+            sprintf(
+                'YAML anchor bomb detected: alias nesting too deep (actual: %d, cap: %d)',
+                $actual,
+                $limit,
+            ),
+            $code,
+            $previous,
+        );
+    }
 }

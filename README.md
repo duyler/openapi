@@ -134,6 +134,35 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
+#### YAML Anchor / Alias Caps (Billion-Laughs Defence)
+
+`YamlParser` enforces three orthogonal pre-parse caps on YAML anchor (`&name`)
+and alias (`*name`) constructs to block the "billion laughs" expansion bomb
+(CWE-400, CWE-770) **before** the Symfony YAML parser materialises the expanded
+document. The pre-parse scan runs after the size check and before
+`Symfony\Component\Yaml\Yaml::parse()`, so an attacker-controlled 1 KB payload
+can never reach the parser even when its expanded in-memory size would exceed
+the process `memory_limit`.
+
+| Cap | Default | Rationale |
+|-----|---------|-----------|
+| `YamlParser::MAX_ANCHORS` | 100 | Real OpenAPI specs use fewer than 20 anchors for schema deduplication. The regex scanner uses `[^ \t,\[\]\{\}\n]+` with `/u` flag, exactly mirroring Symfony YAML's `Inline::parseAnchor` reject set — so any character Symfony accepts as an anchor-name character (Cyrillic, CJK, dots, colons, pipes, FF, VT, NBSP, etc.) is counted. |
+| `YamlParser::MAX_ALIASES` | 1000 | Real OpenAPI specs use fewer than 50 alias references. Symfony YAML's own `maxAliasesForCollections` (default 128) remains active as defense-in-depth for collection aliases that slip past the pre-parse scan. |
+| `YamlParser::MAX_ALIAS_DEPTH` | 10 | DAG-based longest-chain heuristic. Each anchor's value range is determined by indentation (from the anchor's declaration line to the next anchor at the same or lower indentation). Aliases within that range that reference other declared anchors become DAG edges; the longest path is the chain depth. Catches both same-line (flow-style `b: &b [*a]`) and multi-line (`b: &b\n  - *a`) billion-laughs variants. Real billion-laughs payloads use 5-7 chain levels; 10 leaves conservative headroom for legitimate deduplication. |
+
+Exceeding any cap throws `SpecTooLargeException` (a `\RuntimeException`
+subclass) with a sanitised message that discloses only the metric, the actual
+count, and the cap — never the attacker payload (CWE-209). The caps are
+compile-time `public const int` values; runtime configurability is tracked as
+a separate follow-up.
+
+Known heuristic limitation: the byte-level regex scanner cannot distinguish
+anchor/alias tokens from literal `&` / `*` characters inside double-quoted
+YAML strings (for example `description: "User & Admin"`). The conservative
+identifier pattern (`&[A-Za-z0-9_-]+`) rejects the common `& ` case but a
+false positive on `&Word` is possible; treat such specs as trusted or
+pre-process them before passing to the parser.
+
 ### External `$ref` Resolution
 
 The validator supports external `$ref` references for `file://` URIs and
