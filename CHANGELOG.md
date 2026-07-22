@@ -91,6 +91,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PSR-3 / PSR-14 wiring.
 
 ### Fixed
+- **Production readiness series R4**: 37 EI tickets closed across 18 tasks
+  covering correctness, security, spec compliance, PSR-14, and regression
+  test coverage. See individual entries below for details.
 - `NumericRangeValidator::isMultipleOf` no longer throws
   `InvalidMultipleOfSchemaException::forLargeIntegerWithoutBcmath` for
   valid int64 values (snowflake IDs, nanosecond timestamps up to
