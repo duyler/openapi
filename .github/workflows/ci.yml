@@ -83,4 +83,10 @@ jobs:
         run: php -m | grep -q '^swoole$' || (echo "Swoole extension not loaded" && exit 1)
 
       - name: Run Swoole concurrency tests
-        run: cd $GITHUB_WORKSPACE && php -d memory_limit=512M vendor/bin/phpunit --filter='SwooleSharedValidatorTest' --testdox --colors=always
+        run: |
+          echo "=== DEBUG ==="
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          echo "PWD=$(pwd)"
+          ls -la phpunit.xml vendor/bin/phpunit 2>&1 || true
+          echo "=== END DEBUG ==="
+          php -d memory_limit=512M vendor/bin/phpunit --filter='SwooleSharedValidatorTest' --testdox --colors=always
