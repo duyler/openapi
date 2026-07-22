@@ -6,13 +6,18 @@ namespace Duyler\OpenApi\Validator\Coercion;
 
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 
+use function abs;
 use function fmod;
 use function is_array;
 use function is_bool;
 use function is_float;
+use function is_infinite;
 use function is_int;
+use function is_nan;
 use function is_string;
+use function ltrim;
 use function sprintf;
+use function strlen;
 
 use const PHP_INT_MAX;
 use const PHP_INT_MIN;
@@ -115,7 +120,7 @@ abstract readonly class AbstractCoercer
         }
 
         if (is_float($value)) {
-            if ($value >= (float) PHP_INT_MAX || $value <= (float) PHP_INT_MIN) {
+            if ($this->floatExceedsInt64Range($value)) {
                 throw new TypeMismatchError(
                     expected: 'integer',
                     actual: sprintf('%F', $value),
@@ -175,12 +180,61 @@ abstract readonly class AbstractCoercer
         }
 
         if (is_float($value)) {
-            throw new TypeMismatchError(
-                expected: 'integer',
-                actual: (string) $value,
-                dataPath: '',
-                schemaPath: '/type',
-            );
+            if (is_infinite($value)) {
+                throw new TypeMismatchError(
+                    expected: 'integer',
+                    actual: $value > 0 ? 'INF' : '-INF',
+                    dataPath: '',
+                    schemaPath: '/type',
+                    reason: 'Cannot coerce INF to integer',
+                );
+            }
+
+            if (is_nan($value)) {
+                throw new TypeMismatchError(
+                    expected: 'integer',
+                    actual: 'NAN',
+                    dataPath: '',
+                    schemaPath: '/type',
+                    reason: 'Cannot coerce NaN to integer',
+                );
+            }
+
+            if (0.0 !== fmod($value, 1.0)) {
+                throw new TypeMismatchError(
+                    expected: 'integer',
+                    actual: (string) $value,
+                    dataPath: '',
+                    schemaPath: '/type',
+                    reason: 'Float value has non-zero fractional part',
+                );
+            }
+
+            if ($this->floatExceedsInt64Range($value)) {
+                throw new TypeMismatchError(
+                    expected: 'integer',
+                    actual: sprintf('%.0f', $value),
+                    dataPath: '',
+                    schemaPath: '/type',
+                    reason: sprintf(
+                        'Float value out of integer range [%d, %d]',
+                        PHP_INT_MIN,
+                        PHP_INT_MAX,
+                    ),
+                );
+            }
+
+            if (abs($value) >= 9007199254740992.0) {
+                throw new TypeMismatchError(
+                    expected: 'integer',
+                    actual: sprintf('%.0f', $value),
+                    dataPath: '',
+                    schemaPath: '/type',
+                    reason: 'Float value exceeds safe integer range (|value| >= 2^53)',
+                );
+            }
+
+            return (int) $value;
         }
 
         if (is_bool($value)) {
@@ -260,5 +314,28 @@ abstract readonly class AbstractCoercer
 
         /** @var array|null $value */
         return $value;
+    }
+
+    private function floatExceedsInt64Range(float $value): bool
+    {
+        $absolute = abs($value);
+
+        if ($absolute < 9.223372036854775E+18) {
+            return false;
+        }
+
+        if ($absolute > 9.223372036854776E+18) {
+            return true;
+        }
+
+        $unsignedString = ltrim(sprintf('%.0f', $absolute), '-');
+        $maxString = (string) PHP_INT_MAX;
+        $maxLen = strlen($maxString);
+
+        if (strlen($unsignedString) !== $maxLen) {
+            return strlen($unsignedString) > $maxLen;
+        }
+
+        return $unsignedString > $maxString;
     }
 }

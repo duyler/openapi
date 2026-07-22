@@ -41,6 +41,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PSR-3 / PSR-14 wiring.
 
 ### Fixed
+- `coerceToInteger` and `coerceToIntegerStrict` now correctly reject float
+  values that overflow the int64 range near `PHP_INT_MAX` due to IEEE-754
+  imprecision (R4-SEC-013). The previous guard `$value >= (float) PHP_INT_MAX`
+  is replaced by a dedicated `floatExceedsInt64Range()` helper that uses
+  string comparison as defense-in-depth inside the boundary zone
+  `[9.223372036854775E+18, 9.223372036854776E+18]` where only the two
+  representable doubles `(float) PHP_INT_MAX` and `(float) PHP_INT_MIN`
+  can land. This eliminates the residual wrap-around risk where
+  `(float) PHP_INT_MAX = 9223372036854775808.0` (= `PHP_INT_MAX + 1`)
+  passes `>` comparisons but `(int)` cast wraps to a negative value with
+  a PHP 8.5 deprecation notice (TypeError in PHP 9.0).
+- `NumberStringNormalizer::castStringToFloatOrFail` now explicitly rejects
+  values that overflow to INF (e.g. `1e309`, `1e310`, `1e320`) with a
+  clear `'Numeric value overflows IEEE-754 double range (INF)'` reason
+  instead of relying on the precision-loss canonicalize path that
+  produced the misleading `'String value loses precision when converted
+  to float'` message (R4-SEC-014). The DoS cap `abs($exponent) > 320`
+  on the regex is retained for `expandScientificNotation`; the new
+  `is_infinite`/`is_nan` checks run after the `(float)` cast and produce
+  a diagnostic that matches the actual failure mode. NaN (e.g. from a
+  hypothetical numeric `NaN` literal) is rejected with
+  `'Numeric value is NaN'`.
+- `coerceToIntegerStrict` now accepts whole-valued floats (`3.0`,
+  `-7.0`, `0.0`) for `type: integer` per JSON Schema 2020-12 §4.2.3,
+  matching the runtime `TypeValidator` behavior (R4-SPEC-005). Previously
+  the strict coercion rejected every float, creating a behavioral
+  asymmetry: with `enableCoercion()` JSON `3.0` was rejected, while
+  without coercion the same JSON value passed. Floats with non-zero
+  fractional parts (`3.14`) are still rejected with the reason
+  `'Float value has non-zero fractional part'`. INF and NaN are
+  rejected with `'Cannot coerce INF to integer'` / `'Cannot coerce
+  NaN to integer'`. Whole-valued floats outside the IEEE-754 safe
+  integer range (`|value| >= 2^53`, e.g. `9007199254740993.0`) are
+  rejected with `'Float value exceeds safe integer range (|value| >= 2^53)'`
+  to prevent silent precision loss during `(int)` cast; floats that
+  exceed the int64 range are rejected with the same
+  `'Float value out of integer range'` message as the non-strict path.
 - `oauth2`, `openIdConnect`, `http/basic`, `http/digest`, `mutualTLS`, and
   any unknown OpenAPI security scheme types now throw the new
   `Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException`

@@ -173,14 +173,61 @@ final class NumberStringNormalizerTest extends TestCase
     }
 
     #[Test]
-    public function cast_string_to_float_accepts_at_exponent_boundary_320(): void
+    public function cast_string_to_float_rejects_at_exponent_boundary_320_with_inf_reason(): void
     {
-        // Exponent 320 does not trip the DoS guard. The float result overflows to INF,
-        // which is the documented behavior: the guard defends against str_repeat DoS,
-        // not against IEEE-754 overflow.
-        $result = NumberStringNormalizer::castStringToFloatOrFail('1e320');
+        // Exponent 320 does not trip the DoS guard (abs($exponent) > 320), but
+        // (float) '1e320' overflows the IEEE-754 double range to INF. R4-SEC-014:
+        // the explicit is_infinite check rejects the value with an informative
+        // 'overflows IEEE-754 double range (INF)' reason instead of relying on
+        // the misleading 'loses precision' path.
+        $this->expectException(TypeMismatchError::class);
+        $this->expectExceptionMessage('Numeric value overflows IEEE-754 double range (INF)');
 
-        $this->assertInfinite($result);
+        NumberStringNormalizer::castStringToFloatOrFail('1e320');
+    }
+
+    /**
+     * Anti-test: to verify this test guards against regression, temporarily
+     * remove the is_infinite check after `(float) $value` in
+     * NumberStringNormalizer::castStringToFloatOrFail(). Without the guard,
+     * '1e309' overflows to INF and the precision-loss canonicalize path
+     * returns a misleading 'String value loses precision when converted to
+     * float' message that hides the actual INF overflow.
+     */
+    #[Test]
+    public function cast_string_to_float_rejects_1e309_with_inf_reason(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+        $this->expectExceptionMessage('Numeric value overflows IEEE-754 double range (INF)');
+
+        NumberStringNormalizer::castStringToFloatOrFail('1e309');
+    }
+
+    #[Test]
+    public function cast_string_to_float_rejects_negative_1e309_with_inf_reason(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+        $this->expectExceptionMessage('Numeric value overflows IEEE-754 double range (INF)');
+
+        NumberStringNormalizer::castStringToFloatOrFail('-1e309');
+    }
+
+    #[Test]
+    public function cast_string_to_float_rejects_1e310_with_inf_reason(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+        $this->expectExceptionMessage('Numeric value overflows IEEE-754 double range (INF)');
+
+        NumberStringNormalizer::castStringToFloatOrFail('1e310');
+    }
+
+    #[Test]
+    public function cast_string_to_float_rejects_php_float_max_plus_one_with_inf_reason(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+        $this->expectExceptionMessage('Numeric value overflows IEEE-754 double range (INF)');
+
+        NumberStringNormalizer::castStringToFloatOrFail('1.8e308');
     }
 
     #[Test]

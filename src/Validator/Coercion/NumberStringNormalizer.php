@@ -8,6 +8,8 @@ use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 
 use function abs;
 use function explode;
+use function is_infinite;
+use function is_nan;
 use function ltrim;
 use function preg_match;
 use function rtrim;
@@ -85,6 +87,27 @@ final readonly class NumberStringNormalizer
         }
 
         $float = (float) $value;
+
+        if (is_infinite($float)) {
+            throw new TypeMismatchError(
+                expected: 'number',
+                actual: $value,
+                dataPath: $dataPath,
+                schemaPath: '/type',
+                reason: 'Numeric value overflows IEEE-754 double range (INF)',
+            );
+        }
+
+        if (is_nan($float)) {
+            throw new TypeMismatchError(
+                expected: 'number',
+                actual: $value,
+                dataPath: $dataPath,
+                schemaPath: '/type',
+                reason: 'Numeric value is NaN',
+            );
+        }
+
         $inputCanonical = self::canonicalize($value);
         $roundtripCanonical = self::canonicalize((string) $float);
 
