@@ -60,6 +60,9 @@ jobs:
       options: --user root
 
     steps:
+      - name: Install git (not shipped in phpswoole image)
+        run: apt-get update && apt-get install -y --no-install-recommends git
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -83,15 +86,4 @@ jobs:
         run: php -m | grep -q '^swoole$' || (echo "Swoole extension not loaded" && exit 1)
 
       - name: Run Swoole concurrency tests
-        run: |
-          echo "=== DEBUG ==="
-          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
-          echo "PWD=$(pwd)"
-          echo "--- ls CWD ---"
-          ls -la | head -30
-          echo "--- find phpunit.xml ---"
-          find / -name phpunit.xml -maxdepth 5 2>/dev/null || true
-          echo "--- find composer.json ---"
-          find / -name composer.json -not -path '*/vendor/*' -not -path '*/home/*' -maxdepth 5 2>/dev/null || true
-          echo "=== END DEBUG ==="
-          php -d memory_limit=512M vendor/bin/phpunit -c $GITHUB_WORKSPACE/phpunit.xml --filter='SwooleSharedValidatorTest' --testdox --colors=always || true
+        run: php -d memory_limit=512M vendor/bin/phpunit --filter='SwooleSharedValidatorTest' --testdox --colors=always
