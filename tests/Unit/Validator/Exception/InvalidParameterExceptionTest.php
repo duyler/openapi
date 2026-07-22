@@ -17,7 +17,7 @@ final class InvalidParameterExceptionTest extends TestCase
     {
         $exception = new InvalidParameterException('filter', 'Invalid configuration');
 
-        $this->assertSame('filter', $exception->parameterName);
+        $this->assertSame('filter', $exception->parameterName(reveal: true));
         $this->assertStringContainsString('filter', $exception->getMessage());
         $this->assertStringContainsString('Invalid configuration', $exception->getMessage());
     }
@@ -27,7 +27,7 @@ final class InvalidParameterExceptionTest extends TestCase
     {
         $exception = new InvalidParameterException('test');
 
-        $this->assertSame('test', $exception->parameterName);
+        $this->assertSame('test', $exception->parameterName(reveal: true));
     }
 
     #[Test]
@@ -36,7 +36,7 @@ final class InvalidParameterExceptionTest extends TestCase
         $previous = new RuntimeException('Previous error');
         $exception = new InvalidParameterException('param', 'Error', 500, $previous);
 
-        $this->assertSame('param', $exception->parameterName);
+        $this->assertSame('param', $exception->parameterName(reveal: true));
         $this->assertSame(500, $exception->getCode());
         $this->assertSame($previous, $exception->getPrevious());
     }
@@ -46,7 +46,7 @@ final class InvalidParameterExceptionTest extends TestCase
     {
         $exception = InvalidParameterException::invalidConfiguration('filter', 'Invalid schema');
 
-        $this->assertSame('filter', $exception->parameterName);
+        $this->assertSame('filter', $exception->parameterName(reveal: true));
         $this->assertStringContainsString('Invalid schema', $exception->getMessage());
     }
 
@@ -55,7 +55,7 @@ final class InvalidParameterExceptionTest extends TestCase
     {
         $exception = InvalidParameterException::malformedValue('filter', 'Invalid JSON syntax');
 
-        $this->assertSame('filter', $exception->parameterName);
+        $this->assertSame('filter', $exception->parameterName(reveal: true));
         $this->assertStringContainsString('Malformed value', $exception->getMessage());
         $this->assertStringContainsString('Invalid JSON syntax', $exception->getMessage());
     }

@@ -51,3 +51,39 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  swoole_tests:
+    runs-on: ubuntu-latest
+
+    container:
+      image: phpswoole/swoole:php8.5
+      options: --user root
+
+    steps:
+      - name: Install git (not shipped in phpswoole image)
+        run: apt-get update && apt-get install -y --no-install-recommends git
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine composer cache directory
+        run: echo "COMPOSER_CACHE_DIR=$(composer config cache-dir)" >> $GITHUB_ENV
+
+      - name: Cache dependencies installed with composer
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.COMPOSER_CACHE_DIR }}
+          key: swoole-php8.5-composer-${{ hashFiles('**/composer.json') }}
+          restore-keys: |
+            swoole-php8.5-composer-
+
+      - name: Install dependencies with composer
+        run: composer update --ignore-platform-reqs --prefer-dist --no-interaction --no-progress --optimize-autoloader --ansi
+
+      - name: Verify Swoole extension loaded
+        run: php -m | grep -q '^swoole$' || (echo "Swoole extension not loaded" && exit 1)
+
+      - name: Run Swoole concurrency tests
+        run: php -d memory_limit=512M vendor/bin/phpunit --filter='SwooleSharedValidatorTest' --testdox --colors=always

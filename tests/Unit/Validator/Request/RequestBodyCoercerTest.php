@@ -464,7 +464,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'integer');
 
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true, strict: false));
 
         $this->assertSame($expected, $result);
     }
@@ -935,7 +935,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'boolean');
 
-        $result = $this->coercer->coerce('maybe', new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce('maybe', new CoercionContext(schema: $schema, enabled: true, strict: false));
 
         $this->assertTrue($result);
     }
@@ -948,5 +948,19 @@ final class RequestBodyCoercerTest extends TestCase
         $result = $this->coercer->coerce('anything', new CoercionContext(schema: $schema, enabled: true));
 
         $this->assertSame('anything', $result);
+    }
+
+    #[Test]
+    public function coerce_union_integer_string_with_non_numeric_string_returns_string(): void
+    {
+        $schema = new Schema(type: ['integer', 'string']);
+
+        $result = $this->coercer->coerce(
+            'abc',
+            new CoercionContext(schema: $schema, enabled: true, strict: true),
+        );
+
+        $this->assertSame('abc', $result);
+        $this->assertIsString($result);
     }
 }

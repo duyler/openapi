@@ -10,6 +10,7 @@ use Duyler\OpenApi\Schema\Model\Encoding;
 use Duyler\OpenApi\Schema\Model\Example;
 use Duyler\OpenApi\Schema\Model\Header;
 use Duyler\OpenApi\Schema\Model\Headers;
+use Duyler\OpenApi\Schema\Model\Links;
 use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\Model\Response;
@@ -267,5 +268,58 @@ final class ComponentsBuilderTest extends TestCase
         self::assertSame('getUserById', $link->operationId);
         self::assertSame('link to user', $link->description);
         self::assertSame(['id' => '$response.body#/id'], $link->parameters);
+    }
+
+    #[Test]
+    public function build_media_type_with_streaming_3_2_fields(): void
+    {
+        $media = $this->componentsBuilder->buildMediaType([
+            'itemSchema' => ['type' => 'object'],
+            'encoding' => ['prop' => ['contentType' => 'text/plain']],
+            'itemEncoding' => ['contentType' => 'application/json'],
+            'prefixEncoding' => [['contentType' => 'application/json']],
+        ]);
+
+        self::assertNotNull($media->itemSchema);
+        self::assertSame('object', $media->itemSchema->type);
+        self::assertArrayHasKey('prop', $media->encoding ?? []);
+        self::assertInstanceOf(Encoding::class, $media->itemEncoding);
+        self::assertSame('application/json', $media->itemEncoding->contentType);
+        self::assertCount(1, $media->prefixEncoding ?? []);
+        self::assertSame('application/json', $media->prefixEncoding[0]->contentType);
+    }
+
+    #[Test]
+    public function build_response_full_object_without_ref(): void
+    {
+        $response = $this->componentsBuilder->buildResponse([
+            'description' => 'OK',
+            'headers' => ['X-Trace' => ['description' => 'trace']],
+            'content' => ['application/json' => ['schema' => ['type' => 'object']]],
+            'links' => ['UserLink' => ['operationId' => 'getUser']],
+        ]);
+
+        self::assertNull($response->ref);
+        self::assertSame('OK', $response->description);
+        self::assertInstanceOf(Headers::class, $response->headers);
+        self::assertInstanceOf(Content::class, $response->content);
+        self::assertInstanceOf(Links::class, $response->links);
+    }
+
+    #[Test]
+    public function build_link_with_ref_and_server(): void
+    {
+        $link = $this->componentsBuilder->buildLink([
+            '$ref' => '#/components/links/UserLink',
+            'operationRef' => '#/operations/getUser',
+            'description' => 'cross-ref link',
+            'server' => ['url' => 'https://api.example.com'],
+        ]);
+
+        self::assertSame('#/components/links/UserLink', $link->ref);
+        self::assertSame('#/operations/getUser', $link->operationRef);
+        self::assertSame('cross-ref link', $link->description);
+        self::assertNotNull($link->server);
+        self::assertSame('https://api.example.com', $link->server->url);
     }
 }

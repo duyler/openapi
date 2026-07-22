@@ -19,6 +19,7 @@ final readonly class ObjectConstraints
      * @param Schema|bool|null                     $unevaluatedProperties
      * @param array<string, Schema>|null          $patternProperties
      * @param array<string, Schema>|null          $dependentSchemas
+     * @param Schema|bool|null                     $propertyNames
      */
     public function __construct(
         public ?array $properties = null,
@@ -29,7 +30,7 @@ final readonly class ObjectConstraints
         public Schema|bool|null $unevaluatedProperties = null,
         public ?array $patternProperties = null,
         public ?array $dependentSchemas = null,
-        public ?Schema $propertyNames = null,
+        public Schema|bool|null $propertyNames = null,
     ) {}
 
     public function isEmpty(): bool

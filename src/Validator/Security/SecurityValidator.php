@@ -8,15 +8,27 @@ use Duyler\OpenApi\Schema\Model\SecurityScheme;
 use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
 use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 use function is_string;
 use function sprintf;
-use function str_starts_with;
 use function strtolower;
+use function strtoupper;
 
 final readonly class SecurityValidator
 {
+    private readonly LoggerInterface $logger;
+
+    public function __construct(
+        ?LoggerInterface $logger = null,
+        private readonly PregExecutor $pregExecutor = new PregExecutor(),
+    ) {
+        $this->logger = $logger ?? new NullLogger();
+    }
+
     public function validate(SecurityValidationContext $context): void
     {
         $allErrors = [];
@@ -58,14 +70,14 @@ final readonly class SecurityValidator
     ): array {
         $errors = [];
 
-        foreach ($requirementAlternatives as $schemeName => $scopes) {
+        foreach ($requirementAlternatives as $schemeName => $_) {
             $scheme = $securitySchemes[$schemeName] ?? null;
 
             if (null === $scheme) {
-                $errors[] = new MissingSecurityCredentialsError(
-                    schemeName: $schemeName,
-                    schemeType: 'undefined',
-                    location: 'scheme not found in components/securitySchemes',
+                $errors[] = $this->reportMissingCredentials(
+                    $schemeName,
+                    'undefined',
+                    'scheme not found in components/securitySchemes',
                 );
 
                 continue;
@@ -89,10 +101,10 @@ final readonly class SecurityValidator
         return match ($scheme->type) {
             'http' => $this->validateHttpScheme($request, $schemeName, $scheme),
             'apiKey' => $this->validateApiKeyScheme($request, $schemeName, $scheme),
-            default => new MissingSecurityCredentialsError(
-                schemeName: $schemeName,
-                schemeType: $scheme->type,
-                location: 'unsupported scheme type',
+            default => $this->reportMissingCredentials(
+                $schemeName,
+                $scheme->type,
+                'unsupported scheme type',
             ),
         };
     }
@@ -105,23 +117,23 @@ final readonly class SecurityValidator
         $schemeType = strtolower($scheme->scheme ?? 'bearer');
 
         if ('bearer' !== $schemeType) {
-            return new MissingSecurityCredentialsError(
-                schemeName: $schemeName,
-                schemeType: sprintf('http/%s', $schemeType),
-                location: 'unsupported http scheme',
+            return $this->reportMissingCredentials(
+                $schemeName,
+                sprintf('http/%s', $schemeType),
+                'unsupported http scheme',
             );
         }
 
         $authorization = $request->getHeaderLine('Authorization');
 
-        if ('' !== $authorization && str_starts_with($authorization, 'Bearer ')) {
+        if ('' !== $authorization && 1 === $this->pregExecutor->match('/^bearer\s+\S+/i', $authorization)) {
             return null;
         }
 
-        return new MissingSecurityCredentialsError(
-            schemeName: $schemeName,
-            schemeType: 'http/bearer',
-            location: 'Authorization header',
+        return $this->reportMissingCredentials(
+            $schemeName,
+            'http/bearer',
+            'Authorization header',
         );
     }
 
@@ -149,10 +161,37 @@ final readonly class SecurityValidator
             ? sprintf('missing %s parameter "%s"', $location, $name)
             : sprintf('empty %s parameter "%s"', $location, $name);
 
+        return $this->reportMissingCredentials(
+            $schemeName,
+            'apiKey',
+            $reason,
+        );
+    }
+
+    /**
+     * SEC-07 / CWE-209: emit a MissingSecurityCredentialsError with a
+     * generic caller-safe message while forwarding the concrete scheme
+     * details (schemeName, schemeType, location) to the PSR-3 logger at
+     * debug level. The details never reach the exception message and
+     * never reach the params() array consumed by error formatters, so
+     * they cannot leak to unauthenticated callers via a PSR-15
+     * middleware that surfaces Throwable messages.
+     */
+    private function reportMissingCredentials(
+        string $schemeName,
+        string $schemeType,
+        string $location,
+    ): MissingSecurityCredentialsError {
+        $this->logger->debug('Security validation failed', [
+            'schemeName' => $schemeName,
+            'schemeType' => $schemeType,
+            'location' => $location,
+        ]);
+
         return new MissingSecurityCredentialsError(
             schemeName: $schemeName,
-            schemeType: 'apiKey',
-            location: $reason,
+            schemeType: $schemeType,
+            location: $location,
         );
     }
 

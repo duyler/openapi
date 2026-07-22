@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Override;
 
-use function preg_match;
 use function str_starts_with;
 
 final readonly class DurationValidator extends AbstractStringFormatValidator
 {
     private const string DURATION_PATTERN = '/^P(?:(?:(?<years>\d+)Y)?(?:(?<months>\d+)M)?(?:(?<days>\d+)D)?(?:T(?:(?<hours>\d+)H)?(?:(?<minutes>\d+)M)?(?:(?<seconds>\d+)S)?)?|(?<weeks>\d+)W)$/';
+
+    public function __construct(
+        private readonly PregExecutor $pregExecutor = new PregExecutor(),
+    ) {}
 
     #[Override]
     protected function getFormatName(): string
@@ -27,7 +31,7 @@ final readonly class DurationValidator extends AbstractStringFormatValidator
             throw new InvalidFormatException('duration', $data, 'Duration must start with P');
         }
 
-        if (1 !== preg_match(self::DURATION_PATTERN, $data, $matches)) {
+        if (1 !== $this->pregExecutor->match(self::DURATION_PATTERN, $data, $matches)) {
             throw new InvalidFormatException('duration', $data, 'Invalid duration format');
         }
 

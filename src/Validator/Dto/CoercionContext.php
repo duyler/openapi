@@ -11,7 +11,7 @@ final readonly class CoercionContext
     public function __construct(
         public readonly ?Schema $schema,
         public readonly bool $enabled,
-        public readonly bool $strict = false,
+        public readonly bool $strict = true,
         public readonly bool $nullableAsType = true,
     ) {}
 }

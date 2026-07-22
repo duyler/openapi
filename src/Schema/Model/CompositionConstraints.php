@@ -15,10 +15,10 @@ final readonly class CompositionConstraints
         public ?array $allOf = null,
         public ?array $anyOf = null,
         public ?array $oneOf = null,
-        public ?Schema $not = null,
-        public ?Schema $if = null,
-        public ?Schema $then = null,
-        public ?Schema $else = null,
+        public Schema|bool|null $not = null,
+        public Schema|bool|null $if = null,
+        public Schema|bool|null $then = null,
+        public Schema|bool|null $else = null,
     ) {}
 
     public function isEmpty(): bool

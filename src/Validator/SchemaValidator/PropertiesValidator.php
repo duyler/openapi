@@ -58,6 +58,7 @@ final readonly class PropertiesValidator extends AbstractSchemaValidator impleme
 
                 try {
                     $validator->validate($value, $propertySchema, $context);
+                    $context->markPropertyEvaluated($name);
                 } finally {
                     $context->leaveBreadcrumb();
                 }

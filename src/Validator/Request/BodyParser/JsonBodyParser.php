@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
+use Duyler\OpenApi\Validator\Exception\InvalidUtf8Exception;
 use Duyler\OpenApi\Validator\JsonDepthLimit;
 
 use function strlen;
@@ -20,6 +21,10 @@ final readonly class JsonBodyParser
     {
         if (str_starts_with($body, self::UTF8_BOM)) {
             $body = substr($body, strlen(self::UTF8_BOM));
+        }
+
+        if (false === mb_check_encoding($body, 'UTF-8')) {
+            throw new InvalidUtf8Exception('JSON body contains invalid UTF-8 sequences');
         }
 
         if ('' === trim($body)) {

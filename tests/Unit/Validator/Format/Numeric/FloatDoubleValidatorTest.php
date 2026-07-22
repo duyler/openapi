@@ -169,7 +169,7 @@ final class FloatDoubleValidatorTest extends TestCase
             'INF must be rejected because it is not serializable as JSON per RFC 8259 §6.',
         );
         $this->assertSame('float', $exception->format);
-        $this->assertSame(INF, $exception->value);
+        $this->assertSame(INF, $exception->value(reveal: true));
     }
 
     #[Test]
@@ -187,7 +187,7 @@ final class FloatDoubleValidatorTest extends TestCase
             'NAN must be rejected because it is not serializable as JSON per RFC 8259 §6.',
         );
         $this->assertSame('float', $exception->format);
-        $this->assertTrue(is_nan($exception->value));
+        $this->assertTrue(is_nan($exception->value(reveal: true)));
     }
 
     #[Test]
@@ -205,6 +205,6 @@ final class FloatDoubleValidatorTest extends TestCase
             '-INF must be rejected because it is not serializable as JSON per RFC 8259 §6.',
         );
         $this->assertSame('float', $exception->format);
-        $this->assertSame(-INF, $exception->value);
+        $this->assertSame(-INF, $exception->value(reveal: true));
     }
 }

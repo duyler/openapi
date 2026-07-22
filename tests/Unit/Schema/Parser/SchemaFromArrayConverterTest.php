@@ -270,4 +270,99 @@ final class SchemaFromArrayConverterTest extends TestCase
         self::assertCount(1, $schema->oneOf);
         self::assertSame('object', $schema->allOf[0]->type);
     }
+
+    #[Test]
+    public function parser_passes_through_boolean_form_for_items(): void
+    {
+        $converter = new SchemaFromArrayConverter();
+
+        $schema = $converter->fromArray(['type' => 'array', 'items' => false]);
+
+        self::assertFalse($schema->items);
+    }
+
+    #[Test]
+    public function parser_passes_through_boolean_form_for_items_true(): void
+    {
+        $converter = new SchemaFromArrayConverter();
+
+        $schema = $converter->fromArray(['type' => 'array', 'items' => true]);
+
+        self::assertTrue($schema->items);
+    }
+
+    #[Test]
+    public function parser_passes_through_boolean_form_for_contains(): void
+    {
+        $converter = new SchemaFromArrayConverter();
+
+        $schemaTrue = $converter->fromArray(['contains' => true]);
+        $schemaFalse = $converter->fromArray(['contains' => false]);
+
+        self::assertTrue($schemaTrue->contains);
+        self::assertFalse($schemaFalse->contains);
+    }
+
+    #[Test]
+    public function parser_passes_through_boolean_form_for_property_names(): void
+    {
+        $converter = new SchemaFromArrayConverter();
+
+        $schemaTrue = $converter->fromArray(['propertyNames' => true]);
+        $schemaFalse = $converter->fromArray(['propertyNames' => false]);
+
+        self::assertTrue($schemaTrue->propertyNames);
+        self::assertFalse($schemaFalse->propertyNames);
+    }
+
+    #[Test]
+    public function parser_passes_through_boolean_form_for_if_then_else(): void
+    {
+        $converter = new SchemaFromArrayConverter();
+
+        $schema = $converter->fromArray([
+            'if' => true,
+            'then' => false,
+            'else' => true,
+        ]);
+
+        self::assertTrue($schema->if);
+        self::assertFalse($schema->then);
+        self::assertTrue($schema->else);
+    }
+
+    #[Test]
+    public function parser_passes_through_boolean_form_for_not(): void
+    {
+        $converter = new SchemaFromArrayConverter();
+
+        $schemaTrue = $converter->fromArray(['not' => true]);
+        $schemaFalse = $converter->fromArray(['not' => false]);
+
+        self::assertTrue($schemaTrue->not);
+        self::assertFalse($schemaFalse->not);
+    }
+
+    #[Test]
+    public function parser_passes_through_boolean_form_for_unevaluated_items(): void
+    {
+        $converter = new SchemaFromArrayConverter();
+
+        $schemaTrue = $converter->fromArray(['unevaluatedItems' => true]);
+        $schemaFalse = $converter->fromArray(['unevaluatedItems' => false]);
+
+        self::assertTrue($schemaTrue->unevaluatedItems);
+        self::assertFalse($schemaFalse->unevaluatedItems);
+    }
+
+    #[Test]
+    public function parser_rejects_non_array_non_bool_value_for_schema_keyword(): void
+    {
+        $converter = new SchemaFromArrayConverter();
+
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Expected array or boolean for schema keyword "items"');
+
+        $converter->fromArray(['items' => 'not-a-schema']);
+    }
 }

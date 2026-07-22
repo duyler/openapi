@@ -33,14 +33,20 @@ final readonly class Schema implements JsonSerializable
      * @param list<Schema>|null $allOf
      * @param list<Schema>|null $anyOf
      * @param list<Schema>|null $oneOf
-     * @param Schema|null $not
-     * @param Schema|null $items
+     * @param Schema|bool|null $not
+     * @param Schema|bool|null $items
      * @param list<Schema>|null $prefixItems
      * @param array<string, Schema>|null $patternProperties
      * @param array<string, Schema>|null $dependentSchemas
      * @param Schema|bool|null $additionalProperties
      * @param Schema|bool|null $unevaluatedProperties
      * @param Schema|bool|null $contentSchema
+     * @param Schema|bool|null $contains
+     * @param Schema|bool|null $propertyNames
+     * @param Schema|bool|null $if
+     * @param Schema|bool|null $then
+     * @param Schema|bool|null $else
+     * @param Schema|bool|null $unevaluatedItems
      * @param list<mixed>|null $enum
      * @param array<string, mixed>|null $examples
      * @param Xml|null $xml
@@ -78,23 +84,23 @@ final readonly class Schema implements JsonSerializable
         public ?array $allOf = null,
         public ?array $anyOf = null,
         public ?array $oneOf = null,
-        public ?Schema $not = null,
+        public Schema|bool|null $not = null,
         public ?Discriminator $discriminator = null,
         public ?array $properties = null,
         public Schema|bool|null $additionalProperties = null,
         public Schema|bool|null $unevaluatedProperties = null,
-        public ?Schema $items = null,
+        public Schema|bool|null $items = null,
         public ?array $prefixItems = null,
-        public ?Schema $contains = null,
+        public Schema|bool|null $contains = null,
         public ?int $minContains = null,
         public ?int $maxContains = null,
         public ?array $patternProperties = null,
-        public ?Schema $propertyNames = null,
+        public Schema|bool|null $propertyNames = null,
         public ?array $dependentSchemas = null,
-        public ?Schema $if = null,
-        public ?Schema $then = null,
-        public ?Schema $else = null,
-        public ?Schema $unevaluatedItems = null,
+        public Schema|bool|null $if = null,
+        public Schema|bool|null $then = null,
+        public Schema|bool|null $else = null,
+        public Schema|bool|null $unevaluatedItems = null,
         public string|int|float|bool|array|null $example = null,
         public ?array $examples = null,
         public ?array $enum = null,
@@ -112,14 +118,20 @@ final readonly class Schema implements JsonSerializable
      * @param list<Schema>|null $allOf
      * @param list<Schema>|null $anyOf
      * @param list<Schema>|null $oneOf
-     * @param Schema|null $not
-     * @param Schema|null $items
+     * @param Schema|bool|null $not
+     * @param Schema|bool|null $items
      * @param list<Schema>|null $prefixItems
      * @param array<string, Schema>|null $patternProperties
      * @param array<string, Schema>|null $dependentSchemas
      * @param Schema|bool|null $additionalProperties
      * @param Schema|bool|null $unevaluatedProperties
      * @param Schema|bool|null $contentSchema
+     * @param Schema|bool|null $contains
+     * @param Schema|bool|null $propertyNames
+     * @param Schema|bool|null $if
+     * @param Schema|bool|null $then
+     * @param Schema|bool|null $else
+     * @param Schema|bool|null $unevaluatedItems
      * @param list<mixed>|null $enum
      * @param array<string, mixed>|null $examples
      * @param Xml|null $xml
@@ -157,23 +169,23 @@ final readonly class Schema implements JsonSerializable
         ?array $allOf = null,
         ?array $anyOf = null,
         ?array $oneOf = null,
-        ?Schema $not = null,
+        Schema|bool|null $not = null,
         ?Discriminator $discriminator = null,
         ?array $properties = null,
         Schema|bool|null $additionalProperties = null,
         Schema|bool|null $unevaluatedProperties = null,
-        ?Schema $items = null,
+        Schema|bool|null $items = null,
         ?array $prefixItems = null,
-        ?Schema $contains = null,
+        Schema|bool|null $contains = null,
         ?int $minContains = null,
         ?int $maxContains = null,
         ?array $patternProperties = null,
-        ?Schema $propertyNames = null,
+        Schema|bool|null $propertyNames = null,
         ?array $dependentSchemas = null,
-        ?Schema $if = null,
-        ?Schema $then = null,
-        ?Schema $else = null,
-        ?Schema $unevaluatedItems = null,
+        Schema|bool|null $if = null,
+        Schema|bool|null $then = null,
+        Schema|bool|null $else = null,
+        Schema|bool|null $unevaluatedItems = null,
         string|int|float|bool|array|null $example = null,
         ?array $examples = null,
         ?array $enum = null,
@@ -242,6 +254,19 @@ final readonly class Schema implements JsonSerializable
             jsonSchemaDialect: $jsonSchemaDialect ?? $this->jsonSchemaDialect,
             xml: $xml ?? $this->xml,
         );
+    }
+
+    /**
+     * JSON Schema 2020-12 §8.2.3: when $ref is present, sibling keywords
+     * are evaluated alongside the referenced schema. This method returns
+     * a new schema where $sibling's constraints are merged into $this
+     * (the resolved schema) per the strategy documented in
+     * {@see SchemaSiblingMerger}. The $ref family is dropped because the
+     * merger is invoked after reference resolution.
+     */
+    public function withSibling(Schema $sibling): self
+    {
+        return new SchemaSiblingMerger()->merge($this, $sibling);
     }
 
     /**

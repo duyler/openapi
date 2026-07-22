@@ -6,10 +6,12 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\String\UuidValidator;
+use Duyler\OpenApi\Validator\PregExecutor;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
 use function sprintf;
 
@@ -21,6 +23,29 @@ final class UuidValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->validator = new UuidValidator();
+    }
+
+    #[Test]
+    public function uuid_validator_accepts_preg_executor_via_constructor(): void
+    {
+        $pregExecutor = new PregExecutor(maxBacktracks: 5);
+        $validator = new UuidValidator($pregExecutor);
+
+        $reflection = new ReflectionClass($validator);
+        $property = $reflection->getProperty('pregExecutor');
+
+        self::assertSame($pregExecutor, $property->getValue($validator));
+    }
+
+    #[Test]
+    public function uuid_validator_uses_default_preg_executor_when_none_provided(): void
+    {
+        $validator = new UuidValidator();
+
+        $reflection = new ReflectionClass($validator);
+        $property = $reflection->getProperty('pregExecutor');
+
+        self::assertInstanceOf(PregExecutor::class, $property->getValue($validator));
     }
 
     #[Test]

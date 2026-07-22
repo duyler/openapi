@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Exception;
 
 use Duyler\OpenApi\Schema\Model\Schema;
-use Override;
 
 use function sprintf;
 
@@ -44,11 +43,5 @@ final class UnknownDiscriminatorValueException extends AbstractValidationError
                 ? sprintf('Use one of: %s', implode(', ', $mappingValues))
                 : null,
         );
-    }
-
-    #[Override]
-    public function __toString(): string
-    {
-        return $this->getMessage();
     }
 }

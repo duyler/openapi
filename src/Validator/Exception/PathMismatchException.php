@@ -11,6 +11,8 @@ use function sprintf;
 
 final class PathMismatchException extends RuntimeException
 {
+    use SanitizableExceptionTrait;
+
     public function __construct(
         public readonly string $template,
         public readonly string $requestPath,

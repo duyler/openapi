@@ -6,22 +6,17 @@ namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
-use Duyler\OpenApi\Validator\JsonDepthLimit;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
-use JsonException;
 
 use function array_map;
 use function assert;
 use function is_array;
 use function is_string;
-use function json_decode;
 use function sprintf;
 use function strlen;
 use function in_array;
 use function substr_count;
 use function trim;
-
-use const JSON_THROW_ON_ERROR;
 
 final readonly class ParameterDeserializer
 {
@@ -120,12 +115,7 @@ final readonly class ParameterDeserializer
         }
 
         if (false === $explode && str_contains($value, ',')) {
-            if (substr_count($value, ',') + 1 > self::MAX_PARAMETER_ARRAY_ITEMS) {
-                throw new InvalidParameterException(
-                    'parameter',
-                    sprintf('Maximum array items of %d exceeded', self::MAX_PARAMETER_ARRAY_ITEMS),
-                );
-            }
+            $this->assertWithinItemLimit($value, ',');
 
             return explode(',', $value);
         }
@@ -135,24 +125,14 @@ final readonly class ParameterDeserializer
 
     private function deserializePipeDelimited(string $value): array
     {
-        if (substr_count($value, '|') + 1 > self::MAX_PARAMETER_ARRAY_ITEMS) {
-            throw new InvalidParameterException(
-                'parameter',
-                sprintf('Maximum array items of %d exceeded', self::MAX_PARAMETER_ARRAY_ITEMS),
-            );
-        }
+        $this->assertWithinItemLimit($value, '|');
 
         return explode('|', $value);
     }
 
     private function deserializeSpaceDelimited(string $value): array
     {
-        if (substr_count($value, ' ') + 1 > self::MAX_PARAMETER_ARRAY_ITEMS) {
-            throw new InvalidParameterException(
-                'parameter',
-                sprintf('Maximum array items of %d exceeded', self::MAX_PARAMETER_ARRAY_ITEMS),
-            );
-        }
+        $this->assertWithinItemLimit($value, ' ');
 
         return explode(' ', $value);
     }
@@ -166,21 +146,10 @@ final readonly class ParameterDeserializer
         return $this->splitBySeparator($value, ',');
     }
 
-    private function deserializeDeepObject(mixed $value): array
+    /** @return list<string> */
+    private function deserializeDeepObject(string $value): array
     {
-        if (is_string($value)) {
-            try {
-                /** @var array<int|string, mixed>|int|string|float|bool|null $decoded */
-                $decoded = json_decode($value, true, JsonDepthLimit::Untrusted->value, JSON_THROW_ON_ERROR);
-
-                if (is_array($decoded)) {
-                    return $decoded;
-                }
-            } catch (JsonException) {
-            }
-        }
-
-        return (array) $value;
+        return [$value];
     }
 
     private function isArrayType(Parameter $param): bool
@@ -204,12 +173,7 @@ final readonly class ParameterDeserializer
         }
 
         if (str_contains($value, $separator)) {
-            if (substr_count($value, $separator) + 1 > self::MAX_PARAMETER_ARRAY_ITEMS) {
-                throw new InvalidParameterException(
-                    'parameter',
-                    sprintf('Maximum array items of %d exceeded', self::MAX_PARAMETER_ARRAY_ITEMS),
-                );
-            }
+            $this->assertWithinItemLimit($value, $separator);
 
             /** @var list<string> $parts */
             $parts = explode($separator, $value);
@@ -218,5 +182,20 @@ final readonly class ParameterDeserializer
         }
 
         return [$value];
+    }
+
+    /**
+     * DoS defence: cap the number of items produced by exploding a single
+     * parameter value. OpenAPI 3.2 §4.8.7 styles never carry semantically
+     * meaningful arrays of this size; anything larger is an attack vector.
+     */
+    private function assertWithinItemLimit(string $value, string $separator): void
+    {
+        if (substr_count($value, $separator) + 1 > self::MAX_PARAMETER_ARRAY_ITEMS) {
+            throw new InvalidParameterException(
+                'parameter',
+                sprintf('Maximum array items of %d exceeded', self::MAX_PARAMETER_ARRAY_ITEMS),
+            );
+        }
     }
 }

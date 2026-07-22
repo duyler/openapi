@@ -65,6 +65,7 @@ final readonly class PropertiesValidatorWithContext
                     } else {
                         $rootValidator->validateWithContextIgnoringDiscriminator($value, $propertySchema, $context);
                     }
+                    $context->markPropertyEvaluated($name);
                 } finally {
                     $context->leaveBreadcrumb();
                 }

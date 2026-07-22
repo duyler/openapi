@@ -33,23 +33,15 @@ final readonly class ExampleValidator
             }
         }
 
-        $encoded = json_encode($data);
-
-        if (false === $encoded) {
-            $encoded = '(unable to encode data)';
-        }
-
         return [
             new ExampleWarning(
-                $encoded,
+                $this->encodeForWarning($data),
                 'Data does not match any of the declared examples',
             ),
         ];
     }
 
     /**
-     * @param MediaType $mediaType
-     *
      * @return list<ExampleWarning>
      */
     public function validateMediaType(mixed $data, MediaType $mediaType): array
@@ -69,18 +61,23 @@ final readonly class ExampleValidator
             }
         }
 
+        return [
+            new ExampleWarning(
+                $this->encodeForWarning($data),
+                'Data does not match any of the declared media type examples',
+            ),
+        ];
+    }
+
+    private function encodeForWarning(mixed $data): string
+    {
         $encoded = json_encode($data);
 
         if (false === $encoded) {
             $encoded = '(unable to encode data)';
         }
 
-        return [
-            new ExampleWarning(
-                $encoded,
-                'Data does not match any of the declared media type examples',
-            ),
-        ];
+        return $encoded;
     }
 
     /**
@@ -103,8 +100,6 @@ final readonly class ExampleValidator
     }
 
     /**
-     * @param MediaType $mediaType
-     *
      * @return list<mixed>
      */
     private function collectMediaTypeExamples(MediaType $mediaType): array

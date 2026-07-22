@@ -100,11 +100,9 @@ final readonly class LinkResolver
             $expression,
             $matches,
         )) {
-            return $this->resolvePointerExpression(
-                $matches['scope'],
-                $matches['source'],
+            return $this->extractByPath(
+                $this->resolvePointerData($matches['scope'], $matches['source'], $context),
                 $matches['path'] ?? null,
-                $context,
             );
         }
 
@@ -125,18 +123,6 @@ final readonly class LinkResolver
             'response' === $scope && 'header' === $source => $this->lookupHeader($context->headers, $name),
             default => null,
         };
-    }
-
-    private function resolvePointerExpression(
-        string $scope,
-        string $source,
-        ?string $path,
-        LinkContext $context,
-    ): mixed {
-        return $this->extractByPath(
-            $this->resolvePointerData($scope, $source, $context),
-            $path,
-        );
     }
 
     private function resolvePointerData(string $scope, string $source, LinkContext $context): mixed

@@ -103,9 +103,4 @@
       <code><![CDATA[is_string($propertyName)]]></code>
     </RedundantConditionGivenDocblockType>
   </file>
-  <file src="src/Validator/SchemaValidator/UnevaluatedItemsValidator.php">
-    <MixedAssignment>
-      <code><![CDATA[$item]]></code>
-    </MixedAssignment>
-  </file>
 </files>

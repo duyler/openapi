@@ -16,14 +16,31 @@ use function is_float;
 use function is_int;
 use function is_object;
 use function is_string;
+use function is_scalar;
 
 final readonly class TypeCoercer extends AbstractCoercer
 {
     /**
      * @return array<array-key, mixed>|int|string|float|bool|null
+     *
+     * Coerce $value according to $param's schema. When $enabled is false or the
+     * schema has no type, the value is normalised without type conversion.
+     *
+     * Since TYPECOERCER-DEFAULT-STRICT the $strict argument defaults to true:
+     * arbitrary strings no longer silently cast to boolean, and integer
+     * overflow from string input is rejected. Internal callers always pass
+     * $strict explicitly via ParameterValidationConfig::strictCoercion.
+     * Third-party callers that want the legacy lax behaviour MUST pass false
+     * explicitly. Note: the SEC-14 float-to-int overflow guard and the
+     * SEC-15 numeric-string precision-loss guard run unconditionally in
+     * both strict and non-strict modes.
      */
-    public function coerce(mixed $value, Parameter $param, bool $enabled, bool $strict = false): array|int|string|float|bool|null
-    {
+    public function coerce(
+        mixed $value,
+        Parameter $param,
+        bool $enabled,
+        bool $strict = true,
+    ): array|int|string|float|bool|null {
         if (null === $value) {
             if (null !== $param->schema && null !== $param->schema->type) {
                 $types = is_array($param->schema->type) ? $param->schema->type : [$param->schema->type];
@@ -67,7 +84,11 @@ final readonly class TypeCoercer extends AbstractCoercer
                 continue;
             }
 
-            $coerced = $this->coerceToType($value, $type, $strict);
+            try {
+                $coerced = $this->coerceToType($value, $type, $strict);
+            } catch (TypeMismatchError) {
+                continue;
+            }
 
             if ($this->isValidType($coerced, $type)) {
                 return $coerced;
@@ -79,17 +100,18 @@ final readonly class TypeCoercer extends AbstractCoercer
 
     private function coerceToType(mixed $value, string $type, bool $strict): array|int|string|float|bool
     {
-        if (is_string($value)) {
-            /** @var int|float|bool|string */
-            return match ($type) {
-                'integer' => $strict ? $this->coerceToIntegerStrict($value) : $this->coerceToInteger($value),
-                'number' => $strict ? $this->coerceToNumberStrict($value) : $this->coerceToNumber($value),
-                'boolean' => $strict ? $this->coerceToBooleanStrict($value) : $this->coerceToBoolean($value),
-                default => $value,
-            };
+        if (false === is_scalar($value) && false === is_array($value)) {
+            return $this->normalizeValue($value);
         }
 
-        return $this->normalizeValue($value);
+        /** @var array<array-key, mixed>|int|string|float|bool */
+        return match ($type) {
+            'integer' => $strict ? $this->coerceToIntegerStrict($value) : $this->coerceToInteger($value),
+            'number' => $strict ? $this->coerceToNumberStrict($value) : $this->coerceToNumber($value),
+            'boolean' => $strict ? $this->coerceToBooleanStrict($value) : $this->coerceToBoolean($value),
+            'string' => $this->coerceToString($value),
+            default => $this->normalizeValue($value),
+        };
     }
 
     private function normalizeValue(mixed $value): array|int|string|float|bool

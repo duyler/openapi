@@ -12,6 +12,8 @@ use function strtoupper;
 
 final class OperationNotFoundException extends RuntimeException
 {
+    use SanitizableExceptionTrait;
+
     public function __construct(
         public readonly string $requestPath,
         public readonly string $method,

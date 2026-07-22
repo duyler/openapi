@@ -11,6 +11,8 @@ use function sprintf;
 
 final class UndefinedResponseException extends RuntimeException
 {
+    use SanitizableExceptionTrait;
+
     /**
      * @param list<string> $definedResponses
      */

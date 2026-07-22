@@ -12,6 +12,10 @@ use function is_bool;
 use function is_float;
 use function is_int;
 use function is_string;
+use function sprintf;
+
+use const PHP_INT_MAX;
+use const PHP_INT_MIN;
 
 abstract readonly class AbstractCoercer
 {
@@ -111,6 +115,20 @@ abstract readonly class AbstractCoercer
         }
 
         if (is_float($value)) {
+            if ($value >= (float) PHP_INT_MAX || $value <= (float) PHP_INT_MIN) {
+                throw new TypeMismatchError(
+                    expected: 'integer',
+                    actual: sprintf('%F', $value),
+                    dataPath: '',
+                    schemaPath: '/type',
+                    reason: sprintf(
+                        'Float value out of integer range [%d, %d]',
+                        PHP_INT_MIN,
+                        PHP_INT_MAX,
+                    ),
+                );
+            }
+
             if (0.0 === fmod($value, 1.0)) {
                 return (int) $value;
             }
@@ -188,7 +206,7 @@ abstract readonly class AbstractCoercer
                 return $value;
             }
 
-            return (float) $value;
+            return NumberStringNormalizer::castStringToFloatOrFail($value);
         }
 
         if (is_bool($value)) {
@@ -219,7 +237,7 @@ abstract readonly class AbstractCoercer
                 );
             }
 
-            return (float) $value;
+            return NumberStringNormalizer::castStringToFloatOrFail($value);
         }
 
         if (is_bool($value)) {

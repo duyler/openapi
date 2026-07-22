@@ -95,9 +95,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "#/invalid/path": Property does not exist',
-        );
+        $this->expectExceptionMessage('Property does not exist');
 
         $this->resolver->resolve("#/invalid/path", $document);
     }
@@ -112,9 +110,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "#/components/schemas/Missing": Value is null',
-        );
+        $this->expectExceptionMessage('Value is null');
 
         $this->resolver->resolve("#/components/schemas/Missing", $document);
     }
@@ -128,10 +124,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "http://example.com/schema": External ref not resolved. '
-            . 'Builtin FileExternalRefResolver supports file://',
-        );
+        $this->expectExceptionMessage('External ref not resolved. Builtin FileExternalRefResolver allows only');
 
         $this->resolver->resolve("http://example.com/schema", $document);
     }
@@ -171,9 +164,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "#/openapi": Value is not an object or array',
-        );
+        $this->expectExceptionMessage('Value is not an object or array');
 
         $this->resolver->resolve("#/openapi", $document);
     }
@@ -208,6 +199,160 @@ final class RefResolverTest extends TestCase
         $this->assertSame("Address", $resolved->title);
     }
 
+    /**
+     * SPEC-01 / RFC 6901 §3: ~1 must decode to / before lookup.
+     * The schema is keyed with the literal "/user" (contains slash);
+     * without decoding the resolver would look for the literal key "~1user".
+     */
+    #[Test]
+    public function resolve_decodes_json_pointer_slash_escape(): void
+    {
+        $userSchema = new Schema(title: "User");
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+            components: new Components(
+                schemas: [
+                    "/user" => $userSchema,
+                ],
+            ),
+        );
+
+        $resolved = $this->resolver->resolve(
+            "#/components/schemas/~1user",
+            $document,
+        );
+
+        $this->assertSame($userSchema, $resolved);
+        $this->assertSame("User", $resolved->title);
+    }
+
+    /**
+     * SPEC-01 / RFC 6901 §3: ~0 must decode to ~ before lookup.
+     * The property name is literal "~foo"; without decoding the resolver
+     * would look for the literal key "~0foo".
+     */
+    #[Test]
+    public function resolve_decodes_json_pointer_tilde_escape(): void
+    {
+        $tildeSchema = new Schema(title: "Tilde");
+        $parentSchema = new Schema(
+            title: "Parent",
+            properties: [
+                "~foo" => $tildeSchema,
+            ],
+        );
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+            components: new Components(
+                schemas: [
+                    "Parent" => $parentSchema,
+                ],
+            ),
+        );
+
+        $resolved = $this->resolver->resolve(
+            "#/components/schemas/Parent/properties/~0foo",
+            $document,
+        );
+
+        $this->assertSame($tildeSchema, $resolved);
+        $this->assertSame("Tilde", $resolved->title);
+    }
+
+    /**
+     * SPEC-01 / RFC 6901 §3: combined escapes decode a path-template key.
+     * Schema is keyed with "/user/{id}"; the ref encodes each / as ~1.
+     */
+    #[Test]
+    public function resolve_decodes_json_pointer_combined_escape(): void
+    {
+        $schema = new Schema(title: "UserById");
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+            components: new Components(
+                schemas: [
+                    "/user/{id}" => $schema,
+                ],
+            ),
+        );
+
+        $resolved = $this->resolver->resolve(
+            "#/components/schemas/~1user~1{id}",
+            $document,
+        );
+
+        $this->assertSame($schema, $resolved);
+        $this->assertSame("UserById", $resolved->title);
+    }
+
+    /**
+     * SPEC-01 / RFC 6901 §3: decode order is critical.
+     *
+     * For the encoded segment "~01":
+     *  - Direct order (~1 -> /, then ~0 -> ~): "~01" -> "~1"
+     *    (correct: "~01" is the encoded form of literal "~1").
+     *  - Reverse order (~0 -> ~, then ~1 -> /): "~01" -> "~1" -> "/"
+     *    (incorrect: would resolve to key "/", which is absent).
+     *
+     * The document contains both "~1" and "/1" as keys. With the correct
+     * order the ref resolves to the "~1" entry; with the wrong order it
+     * would resolve to neither.
+     */
+    #[Test]
+    public function resolve_decodes_json_pointer_escape_order_matters(): void
+    {
+        $tildeOneSchema = new Schema(title: "TildeOne");
+        $slashOneSchema = new Schema(title: "SlashOne");
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+            components: new Components(
+                schemas: [
+                    "~1" => $tildeOneSchema,
+                    "/1" => $slashOneSchema,
+                ],
+            ),
+        );
+
+        $resolved = $this->resolver->resolve(
+            "#/components/schemas/~01",
+            $document,
+        );
+
+        $this->assertSame($tildeOneSchema, $resolved);
+        $this->assertSame("TildeOne", $resolved->title);
+    }
+
+    /**
+     * SPEC-01 / RFC 6901 §3: segments without escape sequences pass
+     * through unchanged.
+     */
+    #[Test]
+    public function resolve_json_pointer_no_escape_passthrough(): void
+    {
+        $schema = new Schema(title: "Plain");
+        $document = new OpenApiDocument(
+            "3.1.0",
+            new InfoObject("Test API", "1.0.0"),
+            components: new Components(
+                schemas: [
+                    "foo" => $schema,
+                ],
+            ),
+        );
+
+        $resolved = $this->resolver->resolve(
+            "#/components/schemas/foo",
+            $document,
+        );
+
+        $this->assertSame($schema, $resolved);
+        $this->assertSame("Plain", $resolved->title);
+    }
+
     #[Test]
     public function throw_error_for_nonexistent_property_in_path(): void
     {
@@ -223,9 +368,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "#/components/schemas/User/nonexistent": Property does not exist',
-        );
+        $this->expectExceptionMessage('Property does not exist');
 
         $this->resolver->resolve(
             "#/components/schemas/User/nonexistent",
@@ -253,9 +396,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "#/components/schemas/User/properties/address": Value is null',
-        );
+        $this->expectExceptionMessage('Value is null');
 
         $this->resolver->resolve(
             "#/components/schemas/User/properties/address",
@@ -272,9 +413,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "#/info/title": Value is not an object or array',
-        );
+        $this->expectExceptionMessage('Value is not an object or array');
 
         $this->resolver->resolve("#/info/title", $document);
     }
@@ -326,9 +465,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "#/components": Value is null',
-        );
+        $this->expectExceptionMessage('Value is null');
 
         $this->resolver->resolve("#/components", $document);
     }
@@ -354,9 +491,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "#/components/schemas/User/properties/tags/0": Value is not an object or array',
-        );
+        $this->expectExceptionMessage('Value is not an object or array');
 
         $this->resolver->resolve(
             "#/components/schemas/User/properties/tags/0",
@@ -1376,10 +1511,7 @@ final class RefResolverTest extends TestCase
         );
 
         $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage(
-            'Cannot resolve $ref "https://example.com/user.json": External ref not resolved. '
-            . 'Builtin FileExternalRefResolver supports file://',
-        );
+        $this->expectExceptionMessage('External ref not resolved. Builtin FileExternalRefResolver allows only');
 
         $this->resolver->resolve("https://example.com/user.json", $document);
     }

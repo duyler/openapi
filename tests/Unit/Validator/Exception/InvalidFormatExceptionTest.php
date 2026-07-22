@@ -20,7 +20,7 @@ final class InvalidFormatExceptionTest extends TestCase
         );
 
         self::assertSame('email', $exception->format);
-        self::assertSame('invalid-email', $exception->value);
+        self::assertSame('invalid-email', $exception->value(reveal: true));
         self::assertSame('Invalid email format', $exception->getMessage());
     }
 
@@ -73,7 +73,7 @@ final class InvalidFormatExceptionTest extends TestCase
     }
 
     #[Test]
-    public function params_returns_format_and_value(): void
+    public function params_returns_format_only_without_value(): void
     {
         $exception = new InvalidFormatException(
             format: 'email',
@@ -85,9 +85,35 @@ final class InvalidFormatExceptionTest extends TestCase
 
         self::assertIsArray($params);
         self::assertArrayHasKey('format', $params);
-        self::assertArrayHasKey('value', $params);
+        self::assertArrayNotHasKey('value', $params);
         self::assertSame('email', $params['format']);
-        self::assertSame('test@example.com', $params['value']);
+    }
+
+    #[Test]
+    public function value_not_in_params_by_default_for_secret_input(): void
+    {
+        $exception = new InvalidFormatException(
+            format: 'uuid',
+            value: 'password123',
+            message: 'Invalid uuid',
+        );
+
+        $params = $exception->params();
+
+        self::assertSame(['format' => 'uuid'], $params);
+        self::assertArrayNotHasKey('value', $params);
+    }
+
+    #[Test]
+    public function value_accessible_via_property_for_backward_compat(): void
+    {
+        $exception = new InvalidFormatException(
+            format: 'uuid',
+            value: 'password123',
+            message: 'Invalid uuid',
+        );
+
+        self::assertSame('password123', $exception->value(reveal: true));
     }
 
     #[Test]

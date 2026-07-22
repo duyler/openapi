@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Response;
 
+use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Coercion\AbstractCoercer;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
 use Override;
@@ -121,7 +122,8 @@ final readonly class ResponseTypeCoercer extends AbstractCoercer
             return $value;
         }
 
-        $itemsSchema = $context->schema->items ?? null;
+        $schema = $context->schema;
+        $itemsSchema = null !== $schema && $schema->items instanceof Schema ? $schema->items : null;
 
         if (null === $itemsSchema) {
             return $value;

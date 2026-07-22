@@ -12,6 +12,8 @@ use Deprecated;
 
 abstract class AbstractValidationError extends RuntimeException implements ValidationErrorInterface
 {
+    use SanitizableExceptionTrait;
+
     protected readonly string $dataPath;
 
     public function __construct(

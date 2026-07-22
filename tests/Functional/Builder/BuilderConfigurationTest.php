@@ -8,6 +8,7 @@ use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use InvalidArgumentException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
@@ -361,6 +362,47 @@ YAML;
             $this->assertNotEmpty($errors);
             $this->assertSame('security', $errors[0]->keyword());
         }
+    }
+
+    /**
+     * SEC-10: withMaxStreamingRecords rejects non-positive caps because a
+     * cap of 0 would reject every record and a negative cap would compare
+     * nonsensically against an accumulated count.
+     */
+    #[Test]
+    public function with_max_streaming_records_rejects_zero(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Max streaming records must be a positive integer');
+
+        OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::OBJECT_SCHEMA_SPEC)
+            ->withMaxStreamingRecords(0);
+    }
+
+    #[Test]
+    public function with_max_streaming_records_rejects_negative(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::OBJECT_SCHEMA_SPEC)
+            ->withMaxStreamingRecords(-1);
+    }
+
+    /**
+     * SEC-10: A positive cap is accepted and does not interfere with the
+     * rest of the build pipeline.
+     */
+    #[Test]
+    public function with_max_streaming_records_accepts_positive_cap(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::OBJECT_SCHEMA_SPEC)
+            ->withMaxStreamingRecords(50_000)
+            ->build();
+
+        $this->assertNotNull($validator);
     }
 
     private function buildJsonRequest(string $path, string $body): ServerRequestInterface

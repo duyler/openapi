@@ -2499,8 +2499,7 @@ final class OpenApiBuilderTest extends TestCase
         $document = $this->parser->parse($json);
         $schema = $document->components->schemas['TestSchema'];
 
-        $this->assertInstanceOf(Schema::class, $schema->items);
-        $this->assertNull($schema->items->type);
+        $this->assertTrue($schema->items);
     }
 
     #[Test]
@@ -2553,7 +2552,6 @@ final class OpenApiBuilderTest extends TestCase
         $document = $this->parser->parse($json);
         $schema = $document->components->schemas['TestSchema'];
 
-        $this->assertInstanceOf(Schema::class, $schema->not);
-        $this->assertNull($schema->not->type);
+        $this->assertTrue($schema->not);
     }
 }

@@ -11,8 +11,10 @@ use function sprintf;
 
 final class InvalidParameterException extends RuntimeException
 {
+    use SanitizableExceptionTrait;
+
     public function __construct(
-        public readonly string $parameterName,
+        protected readonly string $parameterName,
         string $message = '',
         int $code = 0,
         ?Throwable $previous = null,
@@ -37,5 +39,16 @@ final class InvalidParameterException extends RuntimeException
             $code,
             $previous,
         );
+    }
+
+    /**
+     * Returns the attacker-controlled parameter name (e.g. from a query
+     * string). Pass $reveal = true only from trusted operator code; the
+     * default returns '<redacted>' to prevent reflective serialization
+     * from leaking attacker probes verbatim into logs.
+     */
+    public function parameterName(bool $reveal = false): string
+    {
+        return $reveal ? $this->parameterName : '<redacted>';
     }
 }

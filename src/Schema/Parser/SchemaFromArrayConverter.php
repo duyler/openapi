@@ -27,7 +27,7 @@ use function version_compare;
  *
  * This is the inverse of {@see SchemaToArrayConverter::toWireArray()}.
  * Centralising the parser here removes the field enumeration from
- * {@see OpenApiBuilder::buildSchema()} so adding a new field requires editing
+ * {@see SchemaBuilder::buildSchema()} so adding a new field requires editing
  * only {@see SchemaFieldMetadata} plus the constructor call below.
  *
  * The parser is version-aware (OpenAPI 3.0 / 3.1 / 3.2) for the
@@ -99,29 +99,29 @@ final readonly class SchemaFromArrayConverter
             allOf: $this->buildSchemaList($data, 'allOf'),
             anyOf: $this->buildSchemaList($data, 'anyOf'),
             oneOf: $this->buildSchemaList($data, 'oneOf'),
-            not: $this->schemaField($data, 'not'),
+            not: $this->schemaOrBoolOrNull($data, 'not'),
             discriminator: isset($data['discriminator']) ? $this->buildDiscriminator(TypeHelper::asArray($data['discriminator'])) : null,
             properties: isset($data['properties']) && is_array($data['properties'])
                 ? $this->buildProperties(TypeHelper::asArray($data['properties']))
                 : null,
             additionalProperties: $this->buildOptionalSchema($data, 'additionalProperties'),
             unevaluatedProperties: $this->buildOptionalSchema($data, 'unevaluatedProperties'),
-            items: $this->schemaField($data, 'items'),
+            items: $this->schemaOrBoolOrNull($data, 'items'),
             prefixItems: $this->buildSchemaList($data, 'prefixItems'),
-            contains: $this->schemaField($data, 'contains'),
+            contains: $this->schemaOrBoolOrNull($data, 'contains'),
             minContains: TypeHelper::asIntOrNull($data['minContains'] ?? null),
             maxContains: TypeHelper::asIntOrNull($data['maxContains'] ?? null),
             patternProperties: isset($data['patternProperties']) && is_array($data['patternProperties'])
                 ? $this->buildProperties(TypeHelper::asArray($data['patternProperties']))
                 : null,
-            propertyNames: $this->schemaField($data, 'propertyNames'),
+            propertyNames: $this->schemaOrBoolOrNull($data, 'propertyNames'),
             dependentSchemas: isset($data['dependentSchemas']) && is_array($data['dependentSchemas'])
                 ? $this->buildProperties(TypeHelper::asArray($data['dependentSchemas']))
                 : null,
-            if: $this->schemaField($data, 'if'),
-            then: $this->schemaField($data, 'then'),
-            else: $this->schemaField($data, 'else'),
-            unevaluatedItems: $this->schemaField($data, 'unevaluatedItems'),
+            if: $this->schemaOrBoolOrNull($data, 'if'),
+            then: $this->schemaOrBoolOrNull($data, 'then'),
+            else: $this->schemaOrBoolOrNull($data, 'else'),
+            unevaluatedItems: $this->schemaOrBoolOrNull($data, 'unevaluatedItems'),
             example: $data['example'] ?? null,
             examples: isset($data['examples']) && is_array($data['examples']) ? TypeHelper::asStringMixedMapOrNull($data['examples']) : null,
             enum: TypeHelper::asEnumListOrNull($data['enum'] ?? null),
@@ -136,9 +136,13 @@ final readonly class SchemaFromArrayConverter
     }
 
     /**
+     * Returns the sub-schema value for a schema-typed keyword, passing
+     * boolean values through directly per JSON Schema 2020-12 §4.3.2
+     * (Boolean JSON Schemas). Returns null when the keyword is absent.
+     *
      * @param array<array-key, mixed> $data
      */
-    private function schemaField(array $data, string $key): ?Schema
+    private function schemaOrBoolOrNull(array $data, string $key): Schema|bool|null
     {
         if (false === isset($data[$key])) {
             return null;
@@ -147,11 +151,19 @@ final readonly class SchemaFromArrayConverter
         /** @var mixed $value */
         $value = $data[$key];
 
-        if (is_array($value) || is_bool($value)) {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_array($value)) {
             return $this->fromArray($value);
         }
 
-        return null;
+        throw new InvalidSchemaException(sprintf(
+            'Expected array or boolean for schema keyword "%s", got %s',
+            $key,
+            TypeFormatter::format($value),
+        ));
     }
 
     /**

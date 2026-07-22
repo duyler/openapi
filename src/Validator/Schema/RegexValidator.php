@@ -10,6 +10,7 @@ use InvalidArgumentException;
 use function count;
 use function sprintf;
 use function str_split;
+use function strlen;
 
 /**
  * Instance-scoped regex pattern validator and LRU-cached normalizer.
@@ -23,6 +24,16 @@ final class RegexValidator
     private const string DELIMITER_CANDIDATES = '#~!|@%+;';
 
     private const int DEFAULT_MAX_SIZE = 512;
+
+    /**
+     * Hard cap on the byte length of a user-supplied pattern passed to
+     * validate(). Patterns beyond this size are rejected before PCRE compiles
+     * them, defending against attacker-controlled specifications that ship a
+     * 100 KB regex designed to burn CPU during compilation. Constant format
+     * patterns inside the library (UUID, email, etc.) are not subject to this
+     * limit because they are static and trusted.
+     */
+    private const int MAX_PATTERN_LENGTH = 1024;
 
     /** @var array<string, string> */
     private array $normalizeCache = [];
@@ -53,6 +64,13 @@ final class RegexValidator
 
     public function validate(string $pattern, ?string $fieldName = null): string
     {
+        if (self::MAX_PATTERN_LENGTH < strlen($pattern)) {
+            throw new InvalidPatternException(
+                pattern: $pattern,
+                reason: sprintf('Pattern exceeds maximum length of %d bytes', self::MAX_PATTERN_LENGTH),
+            );
+        }
+
         $errorMessage = '';
 
         set_error_handler(function (int $errno, string $errstr) use (&$errorMessage): bool {

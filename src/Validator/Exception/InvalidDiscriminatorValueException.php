@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Exception;
 
-use Override;
-
 use function sprintf;
 
 final class InvalidDiscriminatorValueException extends AbstractValidationError
@@ -35,11 +33,5 @@ final class InvalidDiscriminatorValueException extends AbstractValidationError
                 'actualType' => $actualType,
             ],
         );
-    }
-
-    #[Override]
-    public function __toString(): string
-    {
-        return $this->getMessage();
     }
 }

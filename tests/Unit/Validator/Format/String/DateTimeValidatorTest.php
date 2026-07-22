@@ -141,6 +141,48 @@ final class DateTimeValidatorTest extends TestCase
     }
 
     #[Test]
+    public function leap_second_utc_z_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('2016-12-31T23:59:60Z');
+    }
+
+    #[Test]
+    public function leap_second_utc_plus00_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('2016-12-31T23:59:60+00:00');
+    }
+
+    #[Test]
+    public function leap_second_utc_minus00_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('2016-12-31T23:59:60-00:00');
+    }
+
+    #[Test]
+    public function leap_second_non_utc_rejected(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Leap second requires UTC end-of-day');
+
+        $this->validator->validate('2016-12-31T23:59:60+14:00');
+    }
+
+    #[Test]
+    public function leap_second_non_end_of_day_rejected(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Leap second requires UTC end-of-day');
+
+        $this->validator->validate('2016-12-31T22:59:60Z');
+    }
+
+    #[Test]
     public function validate_max_positive_offset_boundary(): void
     {
         $this->expectNotToPerformAssertions();

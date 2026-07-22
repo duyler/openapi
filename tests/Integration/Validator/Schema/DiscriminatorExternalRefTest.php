@@ -4,19 +4,17 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Integration\Validator\Schema;
 
+use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
-use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Schema\DiscriminatorValidator;
 use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-
-use RuntimeException;
 
 use function sprintf;
 
@@ -121,93 +119,69 @@ components:
 YAML;
 
     /**
-     * Negative: mapping with external https URL is not supported by the
-     * builtin FileExternalRefResolver.
-     *
-     * Actual behaviour characterization: DiscriminatorValidator delegates to
-     * RefResolver::resolve(), which delegates to the builtin
-     * FileExternalRefResolver for non-local refs. The builtin resolver denies
-     * network schemes (http, https, ftp, ...) by throwing
-     * ExternalRefSecurityException, which RefResolver wraps as
-     * UnresolvableRefException with a clear "use a custom resolver" hint.
+     * Negative: a string-loaded spec whose discriminator mapping
+     * references an external https URL is rejected at `build()` time
+     * with `BuilderException` (STRING-SPEC-FAILOPEN fail-closed
+     * behaviour). The build never reaches `DiscriminatorValidator`,
+     * so no `UnresolvableRefException` is thrown; callers must remove
+     * the external mapping or load the spec via `fromYamlFile` /
+     * `withExternalRefAllowedRoot()` to opt into path-confinement.
      */
     #[Test]
-    public function di_08_external_url_mapping_throws_unresolvable_ref_exception(): void
+    public function di_08_external_url_mapping_throws_builder_exception_at_build_time(): void
     {
-        $validator = OpenApiValidatorBuilder::create()
+        $this->expectException(BuilderException::class);
+        $this->expectExceptionMessage('https://example.com/schemas/cat.json');
+
+        OpenApiValidatorBuilder::create()
             ->fromYamlString(self::EXTERNAL_URL_MAPPING_SPEC)
             ->build();
-
-        $catData = ['petType' => 'cat', 'name' => 'Tom'];
-
-        $caught = null;
-
-        try {
-            $validator->validateSchema($catData, '#/components/schemas/Pet');
-        } catch (UnresolvableRefException $e) {
-            $caught = $e;
-        }
-
-        $this->assertNotNull(
-            $caught,
-            'Expected UnresolvableRefException for external URL mapping value.',
-        );
-
-        $this->assertSame('https://example.com/schemas/cat.json', $caught->ref);
-        $this->assertStringContainsString('External ref not resolved', $caught->reason);
     }
 
     /**
-     * Negative: relative file path mapping value (without $self) is resolved
-     * by the builtin FileExternalRefResolver against CWD. When the referenced
-     * file does not exist relative to CWD, RuntimeException is raised.
+     * Negative: a string-loaded spec whose discriminator mapping
+     * references a relative file path is rejected at `build()` time
+     * with `BuilderException` (STRING-SPEC-FAILOPEN fail-closed
+     * behaviour). The build never reaches the discriminator
+     * resolution path that previously produced a `RuntimeException`
+     * when the referenced file did not exist relative to CWD; callers
+     * must remove the external mapping or load the spec via
+     * `fromYamlFile` / `withExternalRefAllowedRoot()` to opt into
+     * path-confinement.
      */
     #[Test]
-    public function di_08_relative_file_mapping_throws_runtime_exception_for_missing_file(): void
+    public function di_08_relative_file_mapping_throws_builder_exception_at_build_time(): void
     {
-        $validator = OpenApiValidatorBuilder::create()
+        $this->expectException(BuilderException::class);
+        $this->expectExceptionMessage('schemas/cat.yaml');
+
+        OpenApiValidatorBuilder::create()
             ->fromYamlString(self::RELATIVE_FILE_MAPPING_SPEC)
             ->build();
-
-        $dogData = ['petType' => 'dog', 'name' => 'Rex', 'breed' => 'labrador'];
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('External ref file not found');
-
-        $validator->validateSchema($dogData, '#/components/schemas/Pet');
     }
 
     /**
-     * Positive characterization: when mapping value is an external URL, but
-     * the discriminator value is not in the mapping, the validator scans
-     * oneOf schemas. If no candidate matches the discriminator value, the
-     * external ref is never dereferenced — instead UnknownDiscriminatorValueException
-     * is raised. This documents that external refs in mapping only fail
-     * when actually used.
+     * Negative: a string-loaded spec whose discriminator mapping
+     * contains an external URL is rejected at `build()` time with
+     * `BuilderException` (STRING-SPEC-FAILOPEN fail-closed
+     * behaviour) — even when the discriminator value eventually used
+     * at validation time would not have matched the external mapping
+     * key. The guard fails closed at build time and never reaches the
+     * previously-documented fail-late path where
+     * `UnknownDiscriminatorValueException` would have surfaced for
+     * absent values; callers must remove the external mapping or
+     * load the spec via `fromYamlFile` /
+     * `withExternalRefAllowedRoot()` to opt into path-confinement.
      */
     #[Test]
-    public function di_08_external_mapping_not_triggered_when_value_absent_from_mapping(): void
+    public function di_08_external_mapping_with_value_absent_from_request_throws_builder_exception_at_build_time(): void
     {
-        $validator = OpenApiValidatorBuilder::create()
+        $this->expectException(BuilderException::class);
+        $this->expectExceptionMessage('https://example.com/schemas/cat.json');
+
+        OpenApiValidatorBuilder::create()
             ->fromYamlString(self::EXTERNAL_URL_MAPPING_SPEC)
             ->build();
-
-        $data = ['petType' => 'bird'];
-
-        $caught = null;
-
-        try {
-            $validator->validateSchema($data, '#/components/schemas/Pet');
-        } catch (UnknownDiscriminatorValueException $e) {
-            $caught = $e;
-        }
-
-        $this->assertNotNull(
-            $caught,
-            'Unknown discriminator value not in mapping must raise UnknownDiscriminatorValueException.',
-        );
-
-        $this->assertStringContainsString('bird', $caught->getMessage());
     }
 
     /**

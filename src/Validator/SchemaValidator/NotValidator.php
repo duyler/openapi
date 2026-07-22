@@ -28,14 +28,31 @@ final readonly class NotValidator extends AbstractSchemaValidator implements Key
             return;
         }
 
+        if (false === $schema->not) {
+            return;
+        }
+
+        if (true === $schema->not) {
+            throw new ValidationException(
+                'Data must NOT match the "not" schema',
+                errors: [
+                    new NotValidationError(
+                        dataPath: $this->getDataPath($context),
+                        schemaPath: '/not',
+                    ),
+                ],
+            );
+        }
+
         $nullableAsType = $context?->nullableAsType ?? true;
         $validator = $this->createSchemaValidator();
+        $childContext = null !== $context ? $context->forkForBranch() : null;
 
         try {
             $allowNull = $nullableAsType && ($schema->not->nullable
                 || SchemaValueNormalizer::typeIncludesNull($schema->not->type));
             $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
-            $validator->validate($normalizedData, $schema->not, $context);
+            $validator->validate($normalizedData, $schema->not, $childContext);
         } catch (InvalidDataTypeException|ValidationException|AbstractValidationError) {
             return;
         }

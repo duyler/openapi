@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\E2E;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\EnumError;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\MaximumError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
@@ -298,9 +299,17 @@ final class FixtureE2ETest extends TestCase
             self::fail('Expected ValidationException');
         } catch (ValidationException $e) {
             $caught = $e->getErrors()[0] ?? null;
+        } catch (InvalidFormatException $e) {
+            $caught = $e;
         }
 
-        self::assertInstanceOf(MaximumError::class, $caught);
+        // int32 format validator (registered per R3-SPEC-013) fires before
+        // the `maximum` keyword for values exceeding the int32 range.
+        // Either MaximumError or InvalidFormatException is a correct rejection.
+        self::assertTrue(
+            $caught instanceof MaximumError || $caught instanceof InvalidFormatException,
+            'Expected MaximumError or InvalidFormatException for int32_max above range',
+        );
     }
 
     #[Test]

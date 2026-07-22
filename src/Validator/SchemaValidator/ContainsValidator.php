@@ -14,6 +14,7 @@ use Duyler\OpenApi\Validator\Exception\TooManyContainsValidationsError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 
+use function count;
 use function is_array;
 
 final readonly class ContainsValidator extends AbstractSchemaValidator implements KeywordApplicable
@@ -38,12 +39,75 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
         }
 
         $dataPath = $this->getDataPath($context);
+
+        if (true === $schema->contains) {
+            $matchCount = count($data);
+            $effectiveMinContains = $schema->minContains ?? 1;
+
+            if ($matchCount < $effectiveMinContains) {
+                if (0 === $matchCount && 1 === $effectiveMinContains) {
+                    throw new ContainsMatchError(
+                        dataPath: $dataPath,
+                        schemaPath: '/contains',
+                    );
+                }
+
+                throw new MinContainsError(
+                    minContains: $effectiveMinContains,
+                    actualCount: $matchCount,
+                    dataPath: $dataPath,
+                    schemaPath: '/minContains',
+                );
+            }
+
+            if (null !== $schema->maxContains && $matchCount > $schema->maxContains) {
+                throw new MaxContainsError(
+                    maxContains: $schema->maxContains,
+                    minDetectedCount: $matchCount,
+                    dataPath: $dataPath,
+                    schemaPath: '/maxContains',
+                );
+            }
+
+            $containsContext = $context ?? ValidationContext::create(pool: $this->pool());
+
+            foreach (array_keys($data) as $index) {
+                /** @var int $index */
+                $containsContext->markItemEvaluated($index);
+            }
+
+            return;
+        }
+
+        if (false === $schema->contains) {
+            $effectiveMinContains = $schema->minContains ?? 1;
+
+            if (0 === $effectiveMinContains) {
+                return;
+            }
+
+            if (1 === $effectiveMinContains) {
+                throw new ContainsMatchError(
+                    dataPath: $dataPath,
+                    schemaPath: '/contains',
+                );
+            }
+
+            throw new MinContainsError(
+                minContains: $effectiveMinContains,
+                actualCount: 0,
+                dataPath: $dataPath,
+                schemaPath: '/minContains',
+            );
+        }
+
         $validator = $this->createSchemaValidator();
         $containsContext = $context ?? ValidationContext::create(pool: $this->pool());
 
         $matchCount = 0;
+        $effectiveMinContains = $schema->minContains ?? 1;
 
-        foreach ($data as $item) {
+        foreach ($data as $index => $item) {
             if (self::MAX_CONTAINS_VALIDATIONS <= $matchCount) {
                 throw new TooManyContainsValidationsError(
                     max: self::MAX_CONTAINS_VALIDATIONS,
@@ -55,6 +119,8 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
                 /** @var array-key|array<array-key, mixed> $item */
                 $validator->validate($item, $schema->contains, $containsContext);
                 ++$matchCount;
+                /** @var int $index */
+                $context?->markItemEvaluated($index);
 
                 if (null !== $schema->maxContains && $matchCount > $schema->maxContains) {
                     break;
@@ -63,8 +129,6 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
                 continue;
             }
         }
-
-        $effectiveMinContains = $schema->minContains ?? 1;
 
         if ($matchCount < $effectiveMinContains) {
             if (0 === $matchCount && 1 === $effectiveMinContains) {

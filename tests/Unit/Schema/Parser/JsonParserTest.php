@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Schema\Parser;
 
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\Parser\JsonParser;
+use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+
+use function strlen;
 
 final class JsonParserTest extends TestCase
 {
@@ -442,5 +446,110 @@ JSON;
         $this->assertNotNull($userSchema->properties);
         $this->assertArrayHasKey('id', $userSchema->properties);
         $this->assertArrayHasKey('name', $userSchema->properties);
+    }
+
+    #[Test]
+    public function parse_rejects_json_spec_exceeding_default_size_cap(): void
+    {
+        // Given: default JsonParser (1 MB cap) and an oversized payload.
+        $parser = new JsonParser();
+        $oversized = str_repeat(' ', JsonParser::DEFAULT_MAX_SPEC_BYTES + 1);
+
+        // Then: size-cap violation surfaces with both bounds in the message.
+        $this->expectException(SpecTooLargeException::class);
+        $this->expectExceptionMessage((string) JsonParser::DEFAULT_MAX_SPEC_BYTES);
+
+        // When: parse attempts to consume the payload.
+        $parser->parse($oversized);
+    }
+
+    #[Test]
+    public function parse_accepts_json_spec_at_exact_default_size_cap(): void
+    {
+        // Given: default JsonParser and a valid JSON padded with whitespace
+        // so strlen equals the cap exactly (boundary case).
+        $parser = new JsonParser();
+        $payload = '{"openapi": "3.0.3", "info": {"title": "T", "version": "1.0.0"}, "paths": {}}';
+        $padding = str_repeat(' ', JsonParser::DEFAULT_MAX_SPEC_BYTES - strlen($payload));
+        $content = $payload . $padding;
+
+        $this->assertSame(JsonParser::DEFAULT_MAX_SPEC_BYTES, strlen($content));
+
+        // When: parse runs against the boundary-sized content.
+        $document = $parser->parse($content);
+
+        // Then: parsing succeeds and the document is constructed.
+        $this->assertSame('3.0.3', $document->openapi);
+    }
+
+    #[Test]
+    public function parse_rejects_json_spec_exceeding_custom_size_cap(): void
+    {
+        // Given: JsonParser with a tight custom cap and an oversized payload.
+        $parser = new JsonParser(maxSpecBytes: 100);
+        $oversized = str_repeat(' ', 101);
+
+        // Then: the custom cap value appears in the rejection message.
+        $this->expectException(SpecTooLargeException::class);
+        $this->expectExceptionMessage('100');
+
+        // When: parse attempts to consume the oversized payload.
+        $parser->parse($oversized);
+    }
+
+    #[Test]
+    public function parse_size_cap_does_not_affect_smaller_specs(): void
+    {
+        // Given: default JsonParser and a small valid OpenAPI document.
+        $parser = new JsonParser();
+        $json = <<<'JSON'
+{
+    "openapi": "3.0.3",
+    "info": {"title": "Small API", "version": "1.0.0"},
+    "paths": {}
+}
+JSON;
+
+        // When: parse runs against the small document.
+        $document = $parser->parse($json);
+
+        // Then: the document is constructed without a size-cap exception.
+        $this->assertSame('3.0.3', $document->openapi);
+        $this->assertSame('Small API', $document->info->title);
+    }
+
+    #[Test]
+    public function parse_size_cap_throws_before_decode_for_oversized_invalid_json(): void
+    {
+        // Given: JsonParser with a tight custom cap and a payload that is
+        // both oversized AND invalid JSON. Size check must win so the
+        // attacker never reaches json_decode (which would throw JsonException).
+        $parser = new JsonParser(maxSpecBytes: 100);
+        $oversized = str_repeat('x', 10_000);
+
+        // Then: SpecTooLargeException (not JsonException / InvalidSchemaException).
+        $this->expectException(SpecTooLargeException::class);
+
+        // When: parse attempts to consume the oversized invalid payload.
+        $parser->parse($oversized);
+    }
+
+    #[Test]
+    public function parse_size_cap_via_builder_with_max_spec_size(): void
+    {
+        // Given: a JSON spec loaded via the builder with a tiny size cap
+        // and an oversized JSON payload that would otherwise parse.
+        $json = '{"openapi": "3.0.3", "info": {"title": "T", "version": "1.0.0"}, "paths": {}}';
+        $oversized = str_repeat(' ', 101) . $json;
+
+        // Then: the builder surfaces the size-cap exception at build time.
+        $this->expectException(SpecTooLargeException::class);
+
+        // When: build triggers parseSpec which constructs the JsonParser
+        // with the configured maxSpecSizeBytes.
+        OpenApiValidatorBuilder::create()
+            ->fromJsonString($oversized)
+            ->withMaxSpecSize(100)
+            ->build();
     }
 }

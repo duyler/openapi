@@ -23,7 +23,6 @@ final readonly class ResponseValidatorWithContext
 {
     private const int HTTP_STATUS_RANGE_DIVISOR = 100;
 
-    private readonly SchemaValidator $schemaValidator;
     private readonly ResponseHeadersValidator $headersValidator;
     private readonly ResponseBodyValidatorWithContext $bodyValidator;
     private readonly StatusCodeValidator $statusCodeValidator;
@@ -37,7 +36,7 @@ final readonly class ResponseValidatorWithContext
         $resolvedPregExecutor = $pregExecutor ?? new PregExecutor($this->configuration->maxRegexBacktracks);
         $this->statusCodeValidator = new StatusCodeValidator();
 
-        $this->schemaValidator = new SchemaValidator(
+        $schemaValidator = new SchemaValidator(
             $this->dependencies->pool,
             $this->dependencies->formatRegistry,
             strictFormats: $this->configuration->strictFormats,
@@ -47,7 +46,7 @@ final readonly class ResponseValidatorWithContext
             pregExecutor: $resolvedPregExecutor,
         );
         $this->headersValidator = new ResponseHeadersValidator(
-            schemaValidator: $this->schemaValidator,
+            schemaValidator: $schemaValidator,
             pool: $this->dependencies->pool,
             config: new ParameterValidationConfig(
                 nullableAsType: $this->configuration->nullableAsType,

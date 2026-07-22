@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Unit\Schema\Parser;
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\Parser\YamlParser;
+use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -377,5 +378,98 @@ YAML;
         $this->assertSame('petType', $petSchema->discriminator->propertyName);
         $this->assertNotNull($petSchema->discriminator->mapping);
         $this->assertArrayHasKey('cat', $petSchema->discriminator->mapping);
+    }
+
+    #[Test]
+    public function parse_yaml_exceeding_size_limit_throws_spec_too_large_exception(): void
+    {
+        $parser = new YamlParser(maxSpecBytes: 256);
+
+        $padding = str_repeat('a', 1024);
+        $yaml = "openapi: 3.0.3\ninfo:\n  title: {$padding}\n  version: 1.0.0\npaths: {}\n";
+
+        $this->expectException(SpecTooLargeException::class);
+        $this->expectExceptionMessage('exceeds the configured maximum');
+
+        $parser->parse($yaml);
+    }
+
+    #[Test]
+    public function parse_yaml_under_size_limit_accepted(): void
+    {
+        $parser = new YamlParser(maxSpecBytes: 1_048_576);
+
+        $yaml = <<<'YAML'
+openapi: 3.0.3
+info:
+  title: Small API
+  version: 1.0.0
+paths: {}
+YAML;
+
+        $document = $parser->parse($yaml);
+
+        $this->assertSame('3.0.3', $document->openapi);
+    }
+
+    #[Test]
+    public function parse_yaml_exceeding_depth_limit_throws_spec_too_large_exception(): void
+    {
+        $parser = new YamlParser(maxSpecDepth: 10);
+
+        $lines = ['openapi: 3.0.3', 'info:', '  title: Test', '  version: 1.0.0', 'paths: {}', 'components:', '  schemas:', '    Deep:'];
+        $current = '      ';
+        for ($i = 0; $i < 20; ++$i) {
+            $current .= '  ';
+            $lines[] = $current . 'nested:';
+        }
+        $lines[] = $current . '  type: string';
+
+        $this->expectException(SpecTooLargeException::class);
+        $this->expectExceptionMessage('depth');
+
+        $parser->parse(implode("\n", $lines));
+    }
+
+    #[Test]
+    public function parse_yaml_under_depth_limit_accepted(): void
+    {
+        $parser = new YamlParser(maxSpecDepth: 100);
+
+        $lines = ['openapi: 3.0.3', 'info:', '  title: Nested', '  version: 1.0.0', 'paths: {}', 'components:', '  schemas:', '    Deep:'];
+        $current = '      ';
+        for ($i = 0; $i < 10; ++$i) {
+            $current .= '  ';
+            $lines[] = $current . 'level' . $i . ':';
+        }
+        $lines[] = $current . '  type: string';
+
+        $document = $parser->parse(implode("\n", $lines));
+
+        $this->assertSame('3.0.3', $document->openapi);
+    }
+
+    #[Test]
+    public function parse_uses_default_one_megabyte_size_limit_when_omitted(): void
+    {
+        $parser = new YamlParser();
+
+        $yaml = str_repeat('# comment', 100);
+
+        $this->expectException(InvalidSchemaException::class);
+
+        $parser->parse($yaml);
+    }
+
+    #[Test]
+    public function parse_size_check_runs_before_yaml_decode_so_oversized_attack_payload_is_never_decoded(): void
+    {
+        $parser = new YamlParser(maxSpecBytes: 100);
+
+        $oversized = str_repeat('a', 10_000);
+
+        $this->expectException(SpecTooLargeException::class);
+
+        $parser->parse($oversized);
     }
 }

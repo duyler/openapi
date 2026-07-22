@@ -70,6 +70,8 @@ final readonly class ValidatorDependencies
         public readonly bool $strictStreaming = false,
         public readonly int $maxRegexBacktracks = PregExecutor::DEFAULT_MAX_BACKTRACKS,
         public readonly PregExecutor $pregExecutor = new PregExecutor(),
+        public readonly ?LoggerInterface $securityVerboseLogger = null,
+        public readonly bool $strictCoercion = true,
     ) {
         $this->validatorConfiguration = new ValidatorConfiguration(
             coercion: $this->coercion,
@@ -81,6 +83,7 @@ final readonly class ValidatorDependencies
             maxMultipartBodyBytes: $this->maxMultipartBodyBytes,
             strictStreaming: $this->strictStreaming,
             maxRegexBacktracks: $this->maxRegexBacktracks,
+            strictCoercion: $this->strictCoercion,
         );
 
         $this->statelessValidators = new StatelessValidatorRegistry(
@@ -139,6 +142,7 @@ final readonly class ValidatorDependencies
         $parameterConfig = new ParameterValidationConfig(
             nullableAsType: $this->nullableAsType,
             emptyArrayStrategy: $this->emptyArrayStrategy,
+            strictCoercion: $this->strictCoercion,
         );
 
         return new RequestValidator(

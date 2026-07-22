@@ -10,6 +10,8 @@ use Duyler\OpenApi\Schema\Model\SecurityRequirement;
 use Duyler\OpenApi\Schema\Model\Tags;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\SchemaParserInterface;
+use Duyler\OpenApi\Validator\Exception\InvalidUtf8Exception;
+use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
 use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 use Throwable;
@@ -27,7 +29,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
     protected OpenApiBuildContext $context;
 
-    final public function __construct(
+    public function __construct(
         ?DeprecationLogger $deprecationLogger = null,
     ) {
         $this->context = new OpenApiBuildContext($deprecationLogger ?? new DeprecationLogger());
@@ -50,7 +52,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             }
 
             return $this->buildDocument($data);
-        } catch (InvalidSchemaException $e) {
+        } catch (InvalidSchemaException|InvalidUtf8Exception|SpecTooLargeException $e) {
             throw $e;
         } catch (Throwable $e) {
             throw new InvalidSchemaException(

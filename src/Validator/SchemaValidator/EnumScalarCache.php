@@ -17,6 +17,14 @@ use function random_bytes;
 
 final class EnumScalarCache
 {
+    /**
+     * 2^53 — largest integer that survives a round-trip through IEEE 754
+     * double without precision loss. Used to keep numeric equality (1 == 1.0)
+     * while preventing distinct large int64 values from collapsing to the
+     * same float key (SPEC-05).
+     */
+    private const int SAFE_INT64_FLOAT_BOUNDARY = 9007199254740992;
+
     /** @var WeakMap<Schema, bool> */
     private WeakMap $isScalarEnumCache;
 
@@ -133,7 +141,15 @@ final class EnumScalarCache
             return 'nan:' . bin2hex($bytes);
         }
 
-        /** @var int|float $value */
-        return 'n:' . (string) (float) $value;
+        if (is_int($value)) {
+            if (abs($value) <= self::SAFE_INT64_FLOAT_BOUNDARY) {
+                return 'n:' . (string) (float) $value;
+            }
+
+            return 'n:i:' . (string) $value;
+        }
+
+        /** @var float $value */
+        return 'n:' . (string) $value;
     }
 }

@@ -42,11 +42,19 @@ final readonly class SchemaToArrayConverter
 
     private const array REF_ONLY_FIELDS = ['ref', 'refSummary', 'refDescription'];
 
-    private const array SCHEMA_FIELDS = [
-        'propertyNames', 'unevaluatedItems', 'contains', 'if', 'then', 'else', 'not', 'items',
+    private const array SCHEMA_BOOL_FIELDS = [
+        'unevaluatedProperties',
+        'additionalProperties',
+        'contentSchema',
+        'propertyNames',
+        'unevaluatedItems',
+        'contains',
+        'if',
+        'then',
+        'else',
+        'not',
+        'items',
     ];
-
-    private const array SCHEMA_BOOL_FIELDS = ['unevaluatedProperties', 'additionalProperties', 'contentSchema'];
 
     private const array SCHEMA_LIST_FIELDS = ['allOf', 'anyOf', 'oneOf', 'prefixItems'];
 
@@ -213,12 +221,8 @@ final readonly class SchemaToArrayConverter
             return $schema->hasDefault ? $schema->default : null;
         }
 
-        if (in_array($name, self::SCHEMA_FIELDS, true)) {
-            return $this->schemaToArrayOrNull($this->propertySchema($schema, $name), $visited);
-        }
-
         if (in_array($name, self::SCHEMA_BOOL_FIELDS, true)) {
-            return $this->additionalPropertiesToArray($this->propertySchemaBool($schema, $name), $visited);
+            return $this->schemaOrBoolToArray($this->propertySchemaBool($schema, $name), $visited);
         }
 
         if (in_array($name, self::SCHEMA_LIST_FIELDS, true)) {
@@ -232,9 +236,12 @@ final readonly class SchemaToArrayConverter
         return $this->extractWireValue($schema, $name);
     }
 
-    private function propertySchema(Schema $schema, string $name): ?Schema
+    private function propertySchemaBool(Schema $schema, string $name): Schema|bool|null
     {
         return match ($name) {
+            'unevaluatedProperties' => $schema->unevaluatedProperties,
+            'additionalProperties' => $schema->additionalProperties,
+            'contentSchema' => $schema->contentSchema,
             'propertyNames' => $schema->propertyNames,
             'unevaluatedItems' => $schema->unevaluatedItems,
             'contains' => $schema->contains,
@@ -243,16 +250,6 @@ final readonly class SchemaToArrayConverter
             'else' => $schema->else,
             'not' => $schema->not,
             'items' => $schema->items,
-            default => null,
-        };
-    }
-
-    private function propertySchemaBool(Schema $schema, string $name): Schema|bool|null
-    {
-        return match ($name) {
-            'unevaluatedProperties' => $schema->unevaluatedProperties,
-            'additionalProperties' => $schema->additionalProperties,
-            'contentSchema' => $schema->contentSchema,
             default => null,
         };
     }
@@ -287,19 +284,7 @@ final readonly class SchemaToArrayConverter
     /**
      * @param WeakMap<Schema, int> $visited
      */
-    private function schemaToArrayOrNull(?Schema $schema, WeakMap $visited): ?array
-    {
-        if (null === $schema) {
-            return null;
-        }
-
-        return $this->toSnapshotArray($schema, $visited);
-    }
-
-    /**
-     * @param WeakMap<Schema, int> $visited
-     */
-    private function additionalPropertiesToArray(Schema|bool|null $value, WeakMap $visited): array|bool|null
+    private function schemaOrBoolToArray(Schema|bool|null $value, WeakMap $visited): array|bool|null
     {
         if ($value instanceof Schema) {
             return $this->toSnapshotArray($value, $visited);

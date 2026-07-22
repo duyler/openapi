@@ -17,6 +17,8 @@ use Override;
 
 use JsonException;
 
+use function array_is_list;
+use function array_map;
 use function bin2hex;
 use function count;
 use function hash;
@@ -26,12 +28,15 @@ use function is_float;
 use function is_int;
 use function is_nan;
 use function is_resource;
+use function is_scalar;
 use function is_string;
 use function json_encode;
+use function ksort;
 use function random_bytes;
 use function serialize;
 
 use const JSON_THROW_ON_ERROR;
+use const SORT_STRING;
 
 final readonly class ArrayLengthValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
@@ -40,6 +45,14 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
     private const int HASH_MODE_THRESHOLD = 100;
 
     private const int MAX_UNIQUE_CHECK = 100000;
+
+    /**
+     * 2^53 — largest integer that survives a round-trip through IEEE 754
+     * double without precision loss. Used to keep numeric equality (1 == 1.0)
+     * while preventing distinct large int64 values from collapsing to the
+     * same float key (SPEC-05).
+     */
+    private const int SAFE_INT64_FLOAT_BOUNDARY = 9007199254740992;
 
     #[Override]
     public function isApplicable(Schema $schema): bool
@@ -98,7 +111,7 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
      */
     private function containsNonScalar(array $data): bool
     {
-        return array_any($data, fn($item) => null !== $item && !is_int($item) && !is_float($item) && !is_string($item) && !is_bool($item));
+        return array_any($data, fn($item) => null !== $item && !is_scalar($item));
     }
 
     /**
@@ -116,13 +129,7 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
             if (false === isset($seen[$key])) {
                 $seen[$key] = true;
                 ++$count;
-
-                if (self::MAX_UNIQUE_CHECK < $count) {
-                    throw new TooManyItemsForUniqueCheckError(
-                        max: self::MAX_UNIQUE_CHECK,
-                        dataPath: $dataPath,
-                    );
-                }
+                $this->enforceUniqueCheckLimit($count, $dataPath);
             }
         }
 
@@ -148,26 +155,14 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
             if (false === isset($buckets[$bucketKey])) {
                 $buckets[$bucketKey] = [$item];
                 ++$count;
-
-                if (self::MAX_UNIQUE_CHECK < $count) {
-                    throw new TooManyItemsForUniqueCheckError(
-                        max: self::MAX_UNIQUE_CHECK,
-                        dataPath: $dataPath,
-                    );
-                }
+                $this->enforceUniqueCheckLimit($count, $dataPath);
                 continue;
             }
 
-            if (false === $this->bucketContainsDuplicate($buckets[$bucketKey], $item)) {
+            if (false === array_any($buckets[$bucketKey], fn($existing) => $this->itemsEqual($item, $existing))) {
                 $buckets[$bucketKey] = [...$buckets[$bucketKey], $item];
                 ++$count;
-
-                if (self::MAX_UNIQUE_CHECK < $count) {
-                    throw new TooManyItemsForUniqueCheckError(
-                        max: self::MAX_UNIQUE_CHECK,
-                        dataPath: $dataPath,
-                    );
-                }
+                $this->enforceUniqueCheckLimit($count, $dataPath);
             }
         }
 
@@ -175,11 +170,15 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
     }
 
     /**
-     * @param list<mixed> $bucket
+     * DoS defence (P-033): abort the unique-items check once the running
+     * unique-count crosses MAX_UNIQUE_CHECK so an attacker-controlled array
+     * cannot grow an unbounded hash table. Idempotent when below the limit.
      */
-    private function bucketContainsDuplicate(array $bucket, mixed $item): bool
+    private function enforceUniqueCheckLimit(int $count, string $dataPath): void
     {
-        return array_any($bucket, fn($existing) => $this->itemsEqual($item, $existing));
+        if (self::MAX_UNIQUE_CHECK < $count) {
+            throw new TooManyItemsForUniqueCheckError(max: self::MAX_UNIQUE_CHECK, dataPath: $dataPath);
+        }
     }
 
     private function itemsEqual(mixed $a, mixed $b): bool
@@ -203,8 +202,16 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
             return 'n:nan:' . bin2hex(random_bytes(8));
         }
 
-        if (is_int($item) || is_float($item)) {
-            return 'n:' . (string) (float) $item;
+        if (is_int($item)) {
+            if (abs($item) <= self::SAFE_INT64_FLOAT_BOUNDARY) {
+                return 'n:' . (string) (float) $item;
+            }
+
+            return 'n:i:' . (string) $item;
+        }
+
+        if (is_float($item)) {
+            return 'n:' . (string) $item;
         }
 
         if (null === $item) {
@@ -236,9 +243,37 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
     private function encodeArrayKey(array $item): string
     {
         try {
-            return json_encode($item, JSON_THROW_ON_ERROR);
+            return json_encode(
+                $this->canonicalizeForEncoding($item),
+                JSON_THROW_ON_ERROR,
+            );
         } catch (JsonException) {
             return serialize($item);
         }
+    }
+
+    /**
+     * Recursively sort associative array keys to produce an order-independent
+     * canonical form. JSON Schema 2020-12 §4.2.2 instance equality treats
+     * object keys as unordered, so {"a":1,"b":2} and {"b":2,"a":1} MUST hash
+     * to the same key in {@see encodeArrayKey}. List arrays preserve element
+     * order (arrays are ordered in §4.2.2).
+     *
+     * @param array<array-key, mixed> $item
+     *
+     * @return array<array-key, mixed>
+     */
+    private function canonicalizeForEncoding(array $item): array
+    {
+        $canonical = array_map(
+            fn(mixed $value): mixed => is_array($value) ? $this->canonicalizeForEncoding($value) : $value,
+            $item,
+        );
+
+        if (!array_is_list($canonical)) {
+            ksort($canonical, SORT_STRING);
+        }
+
+        return $canonical;
     }
 }

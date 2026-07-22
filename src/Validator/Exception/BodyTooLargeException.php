@@ -11,6 +11,8 @@ use function sprintf;
 
 final class BodyTooLargeException extends RuntimeException
 {
+    use SanitizableExceptionTrait;
+
     public function __construct(
         public readonly int $actualBytes,
         public readonly int $maxBytes,

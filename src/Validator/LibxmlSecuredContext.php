@@ -8,6 +8,22 @@ use Closure;
 
 /**
  * Hardened libxml runtime context for XXE-safe XML parsing.
+ *
+ * @danger NOT_THREAD_SAFE
+ *
+ * libxml_use_internal_errors and libxml_set_external_entity_loader are
+ * process-global. Under Swoole coroutines the capture/restore sequence
+ * in {@see run()} races with concurrent XML parsing in other coroutines
+ * (O-006, S-011). Two failure modes:
+ *   1. Coroutine A installs deny-all loader; B captures it as previous;
+ *      A restores; B restores to deny-all -> process-wide XML parsing
+ *      left without an entity loader.
+ *   2. A installs deny-all; B yields inside $work; A restores to the
+ *      default loader; B's $work sees the default loader -> XXE bypass
+ *      for B.
+ *
+ * Recommended mitigations: restrict XML body validation to prefork
+ * workers, or delegate XML parsing to an isolated Swoole\Process worker.
  */
 final readonly class LibxmlSecuredContext
 {

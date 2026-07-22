@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\Response;
 use Duyler\OpenApi\Schema\Model\Headers;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Coercion\IntegerStringNormalizer;
+use Duyler\OpenApi\Validator\Coercion\NumberStringNormalizer;
 use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
@@ -24,7 +25,6 @@ use stdClass;
 use function array_filter;
 use function array_map;
 use function array_values;
-use function floatval;
 use function json_decode;
 use function sprintf;
 use function substr_count;
@@ -120,7 +120,7 @@ final readonly class ResponseHeadersValidator
             );
         }
 
-        return floatval($value);
+        return NumberStringNormalizer::castStringToFloatOrFail($value, $headerName);
     }
 
     private function coerceToBoolean(string $value, string $headerName): bool

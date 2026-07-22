@@ -378,4 +378,37 @@ class PatternValidatorTest extends TestCase
 
         $this->validator->validate('no match here', $schema);
     }
+
+    #[Test]
+    public function length_cap_rejects_pattern_over_1024_bytes(): void
+    {
+        $overLongPattern = '/' . str_repeat('a', 1023) . '/';
+
+        $schema = new Schema(type: 'string', pattern: $overLongPattern);
+
+        $this->expectException(InvalidPatternException::class);
+        $this->expectExceptionMessage('exceeds maximum length of 1024 bytes');
+
+        $this->validator->validate('any', $schema);
+    }
+
+    #[Test]
+    public function length_cap_allows_pattern_at_exact_1024_bytes(): void
+    {
+        $exactLengthPattern = '/' . str_repeat('a', 1022) . '/';
+        $subject = str_repeat('a', 1022);
+
+        $schema = new Schema(type: 'string', pattern: $exactLengthPattern);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate($subject, $schema);
+            $succeeded = true;
+        } catch (InvalidPatternException $e) {
+            self::fail(sprintf('Expected validation to pass at exact length cap, got InvalidPatternException: %s', $e->getMessage()));
+        }
+
+        self::assertTrue($succeeded);
+    }
 }

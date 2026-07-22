@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request;
 
-use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
@@ -102,8 +101,8 @@ final readonly class QueryParser
             return null;
         }
 
-        foreach ($content->mediaTypes as $mediaType => $mediaTypeObject) {
-            return $this->parseByMediaType($rawQueryString, $mediaType, $mediaTypeObject, $parameter->name ?? 'unknown');
+        foreach ($content->mediaTypes as $mediaType => $_) {
+            return $this->parseByMediaType($rawQueryString, $mediaType, $parameter->name ?? 'unknown');
         }
 
         return null;
@@ -257,7 +256,7 @@ final readonly class QueryParser
         return $node;
     }
 
-    private function parseByMediaType(string $raw, string $mediaType, MediaType $mediaTypeObject, string $parameterName): mixed
+    private function parseByMediaType(string $raw, string $mediaType, string $parameterName): mixed
     {
         if ('application/json' === $mediaType) {
             try {

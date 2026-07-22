@@ -17,6 +17,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UriInterface;
 use Throwable;
+use Duyler\OpenApi\Builder\Exception\BuilderException;
 
 use const PHP_URL_PATH;
 use const PHP_URL_QUERY;
@@ -165,6 +166,82 @@ YAML;
         $validator->validateResponse($response, $operation);
 
         $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_throws_builder_exception_when_path_not_found_in_document_paths(): void
+    {
+        $response = $this->createMockResponse(200, '{}', 'application/json');
+        $operation = new Operation('/does-not-exist', 'GET');
+
+        $this->expectException(BuilderException::class);
+        $this->expectExceptionMessage('Path not found: /does-not-exist');
+
+        $this->validator->validateResponse($response, $operation);
+    }
+
+    #[Test]
+    public function validate_throws_builder_exception_when_method_not_found_in_path_item(): void
+    {
+        $response = $this->createMockResponse(200, '{}', 'application/json');
+        $operation = new Operation('/users/{id}', 'DELETE');
+
+        $this->expectException(BuilderException::class);
+        $this->expectExceptionMessage('Method not found: DELETE /users/{id}');
+
+        $this->validator->validateResponse($response, $operation);
+    }
+
+    #[Test]
+    public function validate_handles_webhook_path_lookup_when_operation_path_matches_webhook(): void
+    {
+        $webhookYaml = <<<YAML
+openapi: 3.2.0
+info:
+  title: Webhook response API
+  version: 1.0.0
+webhooks:
+  payment.updated:
+    post:
+      operationId: paymentUpdated
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+              properties:
+                id:
+                  type: string
+      responses:
+        '200':
+          description: Acknowledged
+YAML;
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($webhookYaml)
+            ->build();
+
+        $response = $this->createMockResponse(200, '', '');
+        $operation = new Operation('payment.updated', 'POST');
+
+        $validator->validateResponse($response, $operation);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_propagates_response_validator_exception(): void
+    {
+        $response = $this->createMockResponse(200, '{"name":"John"}', 'application/json');
+        $operation = new Operation('/users/{id}', 'GET');
+
+        $this->expectException(Throwable::class);
+        $this->expectExceptionMessage('Required');
+
+        $this->validator->validateResponse($response, $operation);
     }
 
     private function createMockResponse(

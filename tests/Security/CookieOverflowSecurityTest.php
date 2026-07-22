@@ -69,7 +69,7 @@ final class CookieOverflowSecurityTest extends TestCase
         try {
             $this->validator->parseCookies($cookieHeader);
         } catch (InvalidParameterException $e) {
-            $this->assertSame('cookie', $e->parameterName);
+            $this->assertSame('cookie', $e->parameterName(reveal: true));
 
             throw $e;
         }

@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MaxLengthError;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
 use Duyler\OpenApi\Validator\SchemaValidator\Trait\LengthValidationTrait;
+use Duyler\OpenApi\Validator\Util\Utf16;
 use Override;
 
 use function is_string;
@@ -16,8 +17,6 @@ use function is_string;
 final readonly class StringLengthValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
     use LengthValidationTrait;
-
-    private const string JSON_ENCODING = 'UTF-8';
 
     #[Override]
     public function isApplicable(Schema $schema): bool
@@ -33,7 +32,7 @@ final readonly class StringLengthValidator extends AbstractSchemaValidator imple
         }
 
         $dataPath = $this->getDataPath($context);
-        $length = mb_strlen($data, self::JSON_ENCODING);
+        $length = Utf16::length($data);
 
         $this->validateLength(
             actual: $length,

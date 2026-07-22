@@ -58,6 +58,7 @@ final readonly class PrefixItemsValidator extends AbstractSchemaValidator implem
 
                 try {
                     $validator->validate($value, $schema->prefixItems[$i], $context);
+                    $context->markItemEvaluated($i);
                 } finally {
                     $context->leaveBreadcrumb();
                 }

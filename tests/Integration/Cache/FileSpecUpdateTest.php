@@ -21,9 +21,11 @@ use function array_values;
 use function count;
 use function file_get_contents;
 use function file_put_contents;
+use function filemtime;
 use function implode;
 use function json_encode;
 use function sys_get_temp_dir;
+use function str_repeat;
 use function touch;
 use function uniqid;
 use function unlink;
@@ -179,6 +181,102 @@ YAML;
                 'Spec file change must produce a different cache key (mtime + size hash). got keys: %s',
                 implode(', ', $uniqueKeys),
             ),
+        );
+
+        unlink($tempPath);
+    }
+
+    /**
+     * R3-SEC-003 / S-003 reproducer: two specs that share byte-for-byte
+     * identical size AND an attacker-controlled identical mtime (via
+     * `touch -r`) but differ in content must produce different cache keys.
+     * A metadata-only key (path + mtime + size) collapses to the same
+     * digest and silently serves a cache-poisoned document. The content
+     * hash fix defeats this attack (OWASP ASVS V8.1.3, CWE-349, CWE-1023).
+     */
+    #[Test]
+    public function rebuild_detects_spec_change_when_size_and_mtime_preserved(): void
+    {
+        $tempPath = $this->createTempSpec(50);
+        $storage = [];
+        $requestedKeys = [];
+
+        $cache = new SchemaCache($this->buildRecordingPool($storage, $requestedKeys));
+
+        OpenApiValidatorBuilder::create()
+            ->fromYamlFile($tempPath)
+            ->withCache($cache)
+            ->build();
+
+        // Capture v1 mtime so v2 can be mtime-aligned with it (this is the
+        // `touch -r` step from the S-003 attack timeline).
+        $v1Mtime = filemtime($tempPath);
+        self::assertNotFalse($v1Mtime);
+        $v1Size = filesize($tempPath);
+        self::assertNotFalse($v1Size);
+
+        // Overwrite with a semantically different spec (minLength: 50 vs 99)
+        // that is byte-for-byte identical in length: both digits occupy the
+        // same character slot, so size is unchanged. This is the size-
+        // preserving spec tampering step from the S-003 attack timeline.
+        file_put_contents($tempPath, $this->renderSpec(99));
+        clearstatcache(true, $tempPath);
+
+        // Restore the original mtime to defeat metadata-only cache keys.
+        touch($tempPath, $v1Mtime);
+        clearstatcache(true, $tempPath);
+
+        $v2Size = filesize($tempPath);
+        self::assertNotFalse($v2Size);
+        self::assertSame(
+            $v1Size,
+            $v2Size,
+            'Test precondition: v1 and v2 must be byte-for-byte identical in size (S-003 attack assumes size preservation).',
+        );
+        self::assertSame(
+            $v1Mtime,
+            filemtime($tempPath),
+            'Test precondition: v1 and v2 must share an identical mtime (S-003 attack assumes mtime preservation via touch -r).',
+        );
+
+        OpenApiValidatorBuilder::create()
+            ->fromYamlFile($tempPath)
+            ->withCache($cache)
+            ->build();
+
+        $uniqueKeys = array_values(array_unique($requestedKeys));
+        self::assertGreaterThanOrEqual(
+            2,
+            count($uniqueKeys),
+            'Spec content change must produce a different cache key even when size and mtime are preserved (S-003 cache-poisoning defence, R3-SEC-003).',
+        );
+
+        // Verify semantic difference: minLength 50 (v1) accepts a 70-char
+        // name, minLength 99 (v2) rejects it. The cached document must NOT
+        // be returned for the v2 build (cache-miss by content-hash), so the
+        // v2 validator enforces the v2 contract.
+        $validatorV2 = OpenApiValidatorBuilder::create()
+            ->fromYamlFile($tempPath)
+            ->withCache($cache)
+            ->build();
+
+        $longNameRequest = $this->factory
+            ->createServerRequest('POST', '/users')
+            ->withHeader('Content-Type', 'application/json')
+            ->withBody($this->factory->createStream(
+                json_encode(['name' => str_repeat('x', 70)], JSON_THROW_ON_ERROR),
+            ));
+
+        $rejected = false;
+        try {
+            $validatorV2->validateRequest($longNameRequest);
+        } catch (ValidationException|Throwable) {
+            $rejected = true;
+        }
+
+        self::assertTrue(
+            $rejected,
+            'minLength: 99 (v2) must reject a 70-char name. A cache-hit returning the v1 document (minLength: 50) is a cache-poisoning breach (S-003).',
         );
 
         unlink($tempPath);

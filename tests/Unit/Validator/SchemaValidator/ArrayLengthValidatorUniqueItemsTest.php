@@ -222,4 +222,49 @@ final class ArrayLengthValidatorUniqueItemsTest extends TestCase
 
         $this->validator->validate($data, $schema);
     }
+
+    #[Test]
+    public function unique_items_detects_duplicate_objects_with_different_key_order(): void
+    {
+        $schema = new Schema(type: 'array', items: new Schema(type: 'object'), uniqueItems: true);
+
+        $data = [
+            ['a' => 1, 'b' => 2],
+            ['b' => 2, 'a' => 1],
+        ];
+
+        $this->expectException(DuplicateItemsError::class);
+
+        $this->validator->validate($data, $schema);
+    }
+
+    #[Test]
+    public function unique_items_keeps_list_order_significant(): void
+    {
+        $schema = new Schema(type: 'array', items: new Schema(type: 'array'), uniqueItems: true);
+
+        $data = [
+            [1, 2],
+            [2, 1],
+        ];
+
+        $this->validator->validate($data, $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function unique_items_canonicalizes_nested_objects(): void
+    {
+        $schema = new Schema(type: 'array', items: new Schema(type: 'object'), uniqueItems: true);
+
+        $data = [
+            ['x' => ['a' => 1, 'b' => 2]],
+            ['x' => ['b' => 2, 'a' => 1]],
+        ];
+
+        $this->expectException(DuplicateItemsError::class);
+
+        $this->validator->validate($data, $schema);
+    }
 }

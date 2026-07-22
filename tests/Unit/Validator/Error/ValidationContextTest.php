@@ -182,4 +182,106 @@ class ValidationContextTest extends TestCase
 
         $this->assertSame('/a', $context->breadcrumbs->currentPath());
     }
+
+    #[Test]
+    public function mark_property_evaluated_tracks_unique_names(): void
+    {
+        $context = ValidationContext::create(pool: new ValidatorPool());
+
+        $context->markPropertyEvaluated('name');
+        $context->markPropertyEvaluated('id');
+        $context->markPropertyEvaluated('name');
+
+        $this->assertSame(['name', 'id'], $context->evaluatedPropertyNames());
+    }
+
+    #[Test]
+    public function mark_item_evaluated_tracks_unique_indices(): void
+    {
+        $context = ValidationContext::create(pool: new ValidatorPool());
+
+        $context->markItemEvaluated(0);
+        $context->markItemEvaluated(2);
+        $context->markItemEvaluated(0);
+
+        $this->assertSame([0, 2], $context->evaluatedItemIndices());
+    }
+
+    #[Test]
+    public function has_property_been_evaluated_returns_true_only_for_registered_names(): void
+    {
+        $context = ValidationContext::create(pool: new ValidatorPool());
+        $context->markPropertyEvaluated('known');
+
+        $this->assertTrue($context->hasPropertyBeenEvaluated('known'));
+        $this->assertFalse($context->hasPropertyBeenEvaluated('unknown'));
+    }
+
+    #[Test]
+    public function has_item_been_evaluated_returns_true_only_for_registered_indices(): void
+    {
+        $context = ValidationContext::create(pool: new ValidatorPool());
+        $context->markItemEvaluated(3);
+
+        $this->assertTrue($context->hasItemBeenEvaluated(3));
+        $this->assertFalse($context->hasItemBeenEvaluated(4));
+    }
+
+    #[Test]
+    public function fork_for_branch_starts_with_empty_annotation_state(): void
+    {
+        $parent = ValidationContext::create(pool: new ValidatorPool());
+        $parent->markPropertyEvaluated('parent_only');
+        $parent->markItemEvaluated(0);
+
+        $child = $parent->forkForBranch();
+
+        $this->assertSame([], $child->evaluatedPropertyNames());
+        $this->assertSame([], $child->evaluatedItemIndices());
+    }
+
+    #[Test]
+    public function fork_for_branch_shares_breadcrumbs_and_pool_with_parent(): void
+    {
+        $pool = new ValidatorPool();
+        $parent = ValidationContext::create(pool: $pool);
+        $parent->enterBreadcrumb('users');
+
+        $child = $parent->forkForBranch();
+
+        $this->assertSame($pool, $child->pool);
+        $this->assertSame('/users', $child->breadcrumbs->currentPath());
+    }
+
+    #[Test]
+    public function merge_child_annotations_unions_property_names_and_item_indices(): void
+    {
+        $parent = ValidationContext::create(pool: new ValidatorPool());
+        $parent->markPropertyEvaluated('parent');
+        $parent->markItemEvaluated(0);
+
+        $child = $parent->forkForBranch();
+        $child->markPropertyEvaluated('child');
+        $child->markItemEvaluated(2);
+
+        $parent->mergeChildAnnotations($child);
+
+        $this->assertSame(['parent', 'child'], $parent->evaluatedPropertyNames());
+        $this->assertSame([0, 2], $parent->evaluatedItemIndices());
+    }
+
+    #[Test]
+    public function merge_child_annotations_does_not_mutate_child_state(): void
+    {
+        $parent = ValidationContext::create(pool: new ValidatorPool());
+        $parent->markPropertyEvaluated('parent_only');
+
+        $child = $parent->forkForBranch();
+        $child->markPropertyEvaluated('child_only');
+
+        $parent->mergeChildAnnotations($child);
+
+        $this->assertSame(['child_only'], $child->evaluatedPropertyNames());
+        $this->assertSame(['parent_only', 'child_only'], $parent->evaluatedPropertyNames());
+    }
 }

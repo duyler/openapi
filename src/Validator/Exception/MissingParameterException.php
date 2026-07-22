@@ -11,6 +11,8 @@ use function sprintf;
 
 final class MissingParameterException extends RuntimeException
 {
+    use SanitizableExceptionTrait;
+
     public function __construct(
         public readonly string $location,
         public readonly string $parameterName,

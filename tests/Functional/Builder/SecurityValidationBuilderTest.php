@@ -10,6 +10,7 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 
 final class SecurityValidationBuilderTest extends TestCase
 {
@@ -95,9 +96,9 @@ YAML;
 
             $this->assertCount(1, $errors);
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $errors[0]);
-            $this->assertSame('bearerAuth', $errors[0]->params()['schemeName']);
-            $this->assertSame('http/bearer', $errors[0]->params()['schemeType']);
-            $this->assertSame('Authorization header', $errors[0]->params()['location']);
+            $this->assertSame('bearerAuth', $errors[0]->schemeName(reveal: true));
+            $this->assertSame('http/bearer', $errors[0]->schemeType(reveal: true));
+            $this->assertSame('Authorization header', $errors[0]->location(reveal: true));
         }
     }
 
@@ -167,9 +168,9 @@ YAML;
 
             $this->assertCount(1, $errors);
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $errors[0]);
-            $this->assertSame('apiKey', $errors[0]->params()['schemeName']);
-            $this->assertSame('apiKey', $errors[0]->params()['schemeType']);
-            $this->assertSame('missing header parameter "X-API-Key"', $errors[0]->params()['location']);
+            $this->assertSame('apiKey', $errors[0]->schemeName(reveal: true));
+            $this->assertSame('apiKey', $errors[0]->schemeType(reveal: true));
+            $this->assertSame('missing header parameter "X-API-Key"', $errors[0]->location(reveal: true));
         }
     }
 
@@ -211,9 +212,115 @@ YAML;
 
             $this->assertCount(1, $errors);
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $errors[0]);
-            $this->assertSame('Authorization header', $errors[0]->params()['location']);
+            $this->assertSame('Authorization header', $errors[0]->location(reveal: true));
         }
 
         $this->assertTrue($caught, 'ValidationException should be thrown for wrong scheme prefix');
+    }
+
+    /**
+     * SEC-07 opt-in: withSecurityVerboseLogging() must propagate a PSR-3
+     * logger through the builder DI chain so the security validator
+     * forwards scheme details at debug level when validation fails. The
+     * surfaced exception message stays generic regardless.
+     */
+    #[Test]
+    public function with_security_verbose_logging_propagates_logger_through_builder(): void
+    {
+        $spy = new SecurityVerboseSpyLogger();
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::BEARER_SPEC)
+            ->enableSecurityValidation()
+            ->withSecurityVerboseLogging($spy)
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/users');
+
+        try {
+            $validator->validateRequest($request);
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $exception) {
+            $errors = $exception->getErrors();
+
+            $this->assertCount(1, $errors);
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $errors[0]);
+
+            // SEC-07: surfaced message must remain generic despite verbose
+            // logging being enabled. Opt-in logging does not weaken the
+            // caller-safe contract.
+            $this->assertSame(
+                'Authentication required: missing or invalid credentials',
+                $errors[0]->getMessage(),
+            );
+
+            // Verbose logger must have received the concrete scheme details.
+            $this->assertCount(1, $spy->records);
+            $record = $spy->records[0];
+            $this->assertSame('debug', $record['level']);
+            $this->assertSame('Security validation failed', $record['message']);
+            $this->assertSame([
+                'schemeName' => 'bearerAuth',
+                'schemeType' => 'http/bearer',
+                'location' => 'Authorization header',
+            ], $record['context']);
+        }
+    }
+}
+
+/**
+ * Minimal in-memory PSR-3 spy logger used to assert that
+ * withSecurityVerboseLogging() wires the logger end-to-end.
+ *
+ * @internal
+ */
+final class SecurityVerboseSpyLogger implements LoggerInterface
+{
+    /** @var list<array{level: string, message: string, context: array<string, mixed>}> */
+    public array $records = [];
+
+    public function emergency($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'emergency', 'message' => $message, 'context' => $context];
+    }
+
+    public function alert($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'alert', 'message' => $message, 'context' => $context];
+    }
+
+    public function critical($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'critical', 'message' => $message, 'context' => $context];
+    }
+
+    public function error($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'error', 'message' => $message, 'context' => $context];
+    }
+
+    public function warning($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'warning', 'message' => $message, 'context' => $context];
+    }
+
+    public function notice($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'notice', 'message' => $message, 'context' => $context];
+    }
+
+    public function info($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'info', 'message' => $message, 'context' => $context];
+    }
+
+    public function debug($message, array $context = []): void
+    {
+        $this->records[] = ['level' => 'debug', 'message' => $message, 'context' => $context];
+    }
+
+    public function log($level, $message, array $context = []): void
+    {
+        $this->records[] = ['level' => (string) $level, 'message' => $message, 'context' => $context];
     }
 }

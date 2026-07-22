@@ -46,6 +46,7 @@ final readonly class ResponseBodyValidatorWithContext
         $this->streamingParser = new StreamingContentParser(
             $this->dependencies->logger,
             strictStreaming: $this->configuration->strictStreaming,
+            maxRecords: $this->configuration->maxStreamingRecords,
         );
         $this->exampleValidator = new ExampleValidator();
 
@@ -129,7 +130,7 @@ final readonly class ResponseBodyValidatorWithContext
             $coercionContext = new CoercionContext(
                 schema: $mediaTypeSchema->schema,
                 enabled: true,
-                strict: true,
+                strict: $this->configuration->strictCoercion,
                 nullableAsType: $this->configuration->nullableAsType,
             );
             $parsedBody = $this->typeCoercer->coerce($parsedBody, $coercionContext);

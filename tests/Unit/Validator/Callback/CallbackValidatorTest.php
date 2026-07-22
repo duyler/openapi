@@ -14,6 +14,7 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Callback\CallbackValidator;
 use Duyler\OpenApi\Validator\Callback\Exception\UnknownCallbackException;
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
+use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Request\RequestValidatorInterface;
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -31,8 +32,75 @@ final class CallbackValidatorTest extends TestCase
         $requestValidator = $this->createStub(RequestValidatorInterface::class);
         $requestValidator->method('validate');
 
-        $this->callbackValidator = new CallbackValidator($requestValidator, new PathRegexCache());
+        // Lax mode is opted into explicitly: the historical tests in this
+        // file exercise the routing/matching/resolution logic of the
+        // inner validator with runtime-template expressions treated as
+        // wildcards. Strict-mode defaults are covered separately by
+        // inner_constructor_defaults_to_strict_when_called_without_flag.
+        $this->callbackValidator = new CallbackValidator(
+            $requestValidator,
+            new PathRegexCache(),
+            strictCallbackRuntimeTemplate: false,
+        );
         $this->psrFactory = new Psr17Factory();
+    }
+
+    #[Test]
+    public function inner_constructor_defaults_to_strict_when_called_without_flag(): void
+    {
+        $requestValidator = $this->createStub(RequestValidatorInterface::class);
+        $requestValidator->method('validate');
+
+        // Arrange: omit the third argument — the constructor must default
+        // to strict (fail-closed) to match OpenApiValidatorBuilder.
+        $validator = new CallbackValidator(
+            $requestValidator,
+            new PathRegexCache(),
+        );
+
+        $pathItem = new PathItem(post: new SchemaOperation(operationId: 'myCallback'));
+
+        $document = $this->createDocumentWithComponentCallback(
+            'myCallback',
+            ['{$request.body#/callback_url}' => $pathItem],
+        );
+
+        $request = $this->psrFactory->createServerRequest('POST', '/attacker-controlled-url');
+
+        $this->expectException(UnresolvableCallbackPathException::class);
+        $this->expectExceptionMessage('{$request.body#/callback_url}');
+
+        // Act + Assert: strict default throws on the runtime template.
+        $validator->validate($request, 'myCallback', $document);
+    }
+
+    #[Test]
+    public function inner_constructor_allows_lax_when_strict_false_passed_explicitly(): void
+    {
+        $requestValidator = $this->createStub(RequestValidatorInterface::class);
+        $requestValidator->method('validate');
+
+        // Arrange: explicit opt-out of strict mode — legacy wildcard behaviour.
+        $validator = new CallbackValidator(
+            $requestValidator,
+            new PathRegexCache(),
+            strictCallbackRuntimeTemplate: false,
+        );
+
+        $pathItem = new PathItem(post: new SchemaOperation(operationId: 'myCallback'));
+
+        $document = $this->createDocumentWithComponentCallback(
+            'myCallback',
+            ['{$request.body#/callback_url}' => $pathItem],
+        );
+
+        $request = $this->psrFactory->createServerRequest('POST', '/attacker-controlled-url');
+
+        // Act: legacy wildcard accepts any path.
+        $resolved = $validator->validate($request, 'myCallback', $document);
+
+        // Assert: runtime template falls through to wildcard match.
+        $this->assertSame('myCallback', $resolved->operationId);
     }
 
     #[Test]

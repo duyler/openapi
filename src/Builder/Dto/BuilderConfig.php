@@ -36,6 +36,13 @@ final readonly class BuilderConfig
         public readonly ?bool $strictStreaming = null,
         public readonly ?int $maxRegexBacktracks = null,
         public readonly ?bool $strictCallbackRuntimeTemplate = null,
+        public readonly ?string $externalRefAllowedRoot = null,
+        public readonly ?int $externalRefMaxBytes = null,
+        public readonly ?LoggerInterface $securityVerboseLogger = null,
+        public readonly ?int $maxStreamingRecords = null,
+        public readonly ?bool $strictCoercion = null,
+        public readonly ?int $maxSpecSizeBytes = null,
+        public readonly ?int $maxSpecDepth = null,
     ) {}
 
     public function merge(self $overrides): self
@@ -62,6 +69,13 @@ final readonly class BuilderConfig
             strictStreaming: $overrides->strictStreaming ?? $this->strictStreaming,
             maxRegexBacktracks: $overrides->maxRegexBacktracks ?? $this->maxRegexBacktracks,
             strictCallbackRuntimeTemplate: $overrides->strictCallbackRuntimeTemplate ?? $this->strictCallbackRuntimeTemplate,
+            externalRefAllowedRoot: $overrides->externalRefAllowedRoot ?? $this->externalRefAllowedRoot,
+            externalRefMaxBytes: $overrides->externalRefMaxBytes ?? $this->externalRefMaxBytes,
+            securityVerboseLogger: $overrides->securityVerboseLogger ?? $this->securityVerboseLogger,
+            maxStreamingRecords: $overrides->maxStreamingRecords ?? $this->maxStreamingRecords,
+            strictCoercion: $overrides->strictCoercion ?? $this->strictCoercion,
+            maxSpecSizeBytes: $overrides->maxSpecSizeBytes ?? $this->maxSpecSizeBytes,
+            maxSpecDepth: $overrides->maxSpecDepth ?? $this->maxSpecDepth,
         );
     }
 }

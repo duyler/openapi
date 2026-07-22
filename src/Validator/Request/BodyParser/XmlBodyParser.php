@@ -111,22 +111,7 @@ final readonly class XmlBodyParser
          * @var SimpleXMLElement $child
          */
         foreach ($children as $name => $child) {
-            $childValue = self::elementToValue($child);
-
-            if (false === array_key_exists($name, $result)) {
-                $result[$name] = $childValue;
-                continue;
-            }
-
-            /** @var array<array-key, mixed>|string|null $existing */
-            $existing = $result[$name];
-
-            if (false === is_array($existing) || false === array_key_exists(0, $existing)) {
-                $existing = [$existing];
-            }
-
-            $existing[] = $childValue;
-            $result[$name] = $existing;
+            self::mergeChild($result, $name, self::elementToValue($child));
         }
 
         foreach ($namespaces as $prefix => $namespace) {
@@ -142,23 +127,7 @@ final readonly class XmlBodyParser
              * @var SimpleXMLElement $child
              */
             foreach ($nsChildren as $name => $child) {
-                $key = $prefix . ':' . $name;
-                $childValue = self::elementToValue($child);
-
-                if (false === array_key_exists($key, $result)) {
-                    $result[$key] = $childValue;
-                    continue;
-                }
-
-                /** @var array<array-key, mixed>|string|null $existing */
-                $existing = $result[$key];
-
-                if (false === is_array($existing) || false === array_key_exists(0, $existing)) {
-                    $existing = [$existing];
-                }
-
-                $existing[] = $childValue;
-                $result[$key] = $existing;
+                self::mergeChild($result, $prefix . ':' . $name, self::elementToValue($child));
             }
         }
 
@@ -219,5 +188,31 @@ final readonly class XmlBodyParser
         }
 
         return self::xmlToArray($element);
+    }
+
+    /**
+     * Merges a child value under $key into $result. The first occurrence
+     * is stored as-is; repeated occurrences promote the stored value to a
+     * numeric-indexed list, preserving document order.
+     *
+     * @param array<array-key, mixed> $result
+     */
+    private static function mergeChild(array &$result, string $key, array|string|null $value): void
+    {
+        if (false === array_key_exists($key, $result)) {
+            $result[$key] = $value;
+
+            return;
+        }
+
+        /** @var array<array-key, mixed>|string|null $existing */
+        $existing = $result[$key];
+
+        if (false === is_array($existing) || false === array_key_exists(0, $existing)) {
+            $existing = [$existing];
+        }
+
+        $existing[] = $value;
+        $result[$key] = $existing;
     }
 }

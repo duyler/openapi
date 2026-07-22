@@ -46,10 +46,22 @@ final readonly class CallbackValidator
         'query',
     ];
 
+    /**
+     * @param bool $strictCallbackRuntimeTemplate Defaults to true (fail-closed):
+     *     callback expressions containing runtime templates
+     *     (e.g. `{$request.body#/callback_url}`) that cannot be resolved by
+     *     the validator throw {@see UnresolvableCallbackPathException}
+     *     instead of being treated as wildcards that accept any URL. This
+     *     matches the `OpenApiValidatorBuilder` default and prevents SSRF
+     *     via attacker-controlled runtime templates when the resolved URL
+     *     is used for an outbound HTTP request. Pass false explicitly only
+     *     when callback URLs are validated at the application level (see
+     *     README section "Callbacks" for the security implications).
+     */
     public function __construct(
         private readonly RequestValidatorInterface $requestValidator,
         private readonly PathRegexCache $pathRegexCache,
-        private readonly bool $strictCallbackRuntimeTemplate = false,
+        private readonly bool $strictCallbackRuntimeTemplate = true,
     ) {}
 
     public function validate(

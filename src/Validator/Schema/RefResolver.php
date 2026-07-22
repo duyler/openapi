@@ -47,9 +47,10 @@ final class RefResolver implements RefResolverInterface
 
     public function __construct(
         private readonly ?ExternalRefResolverInterface $externalRefResolver = null,
+        ?FileExternalRefResolver $builtinFileResolver = null,
     ) {
         $this->clear();
-        $this->builtinFileResolver = new FileExternalRefResolver();
+        $this->builtinFileResolver = $builtinFileResolver ?? new FileExternalRefResolver();
     }
 
     #[Override]
@@ -184,14 +185,9 @@ final class RefResolver implements RefResolverInterface
         OpenApiDocument $document,
         int $depth = 0,
     ): bool {
-        if (isset($this->hasDiscriminatorCache[$schema])) {
-            /** @var WeakMap<OpenApiDocument, bool> $docCache */
-            $docCache = $this->hasDiscriminatorCache[$schema];
-        } else {
-            /** @var WeakMap<OpenApiDocument, bool> $docCache */
-            $docCache = new WeakMap();
-            $this->hasDiscriminatorCache[$schema] = $docCache;
-        }
+        /** @var WeakMap<OpenApiDocument, bool> $docCache */
+        $docCache = $this->hasDiscriminatorCache[$schema] ?? new WeakMap();
+        $this->hasDiscriminatorCache[$schema] = $docCache;
 
         if (isset($docCache[$document])) {
             /** @var bool $cached */
@@ -237,14 +233,7 @@ final class RefResolver implements RefResolverInterface
 
         $resolved = $this->resolve($schema->ref, $document);
 
-        $title = $schema->refSummary ?? $resolved->title;
-
-        $description = $schema->refDescription ?? $resolved->description;
-
-        return $resolved->withOverrides(
-            title: $title,
-            description: $description,
-        );
+        return $resolved->withSibling($schema);
     }
 
     #[Override]
@@ -346,8 +335,7 @@ final class RefResolver implements RefResolverInterface
 
     private function baseUriHadAuthority(string $baseUri): bool
     {
-        $schemeEnd = strpos($baseUri, '://');
-        return false !== $schemeEnd;
+        return false !== strpos($baseUri, '://');
     }
 
     /**
@@ -672,7 +660,8 @@ final class RefResolver implements RefResolverInterface
      */
     private function collectSingleSubSchemas(Schema $schema): array
     {
-        return array_values(array_filter([
+        /** @var list<Schema|bool|null> $candidates */
+        $candidates = [
             $schema->items,
             $schema->not,
             $schema->contains,
@@ -684,7 +673,17 @@ final class RefResolver implements RefResolverInterface
             $schema->additionalProperties instanceof Schema ? $schema->additionalProperties : null,
             $schema->unevaluatedProperties instanceof Schema ? $schema->unevaluatedProperties : null,
             $schema->contentSchema instanceof Schema ? $schema->contentSchema : null,
-        ], fn(?Schema $s): bool => null !== $s));
+        ];
+
+        $schemas = [];
+
+        foreach ($candidates as $candidate) {
+            if ($candidate instanceof Schema) {
+                $schemas[] = $candidate;
+            }
+        }
+
+        return $schemas;
     }
 
     /**
@@ -711,9 +710,11 @@ final class RefResolver implements RefResolverInterface
             } catch (ExternalRefSecurityException $e) {
                 throw new UnresolvableRefException(
                     $ref,
-                    'External ref not resolved. Builtin FileExternalRefResolver supports file:// '
-                    . 'scheme only. For http(s):// or ftp:// refs, inject a custom '
-                    . 'ExternalRefResolverInterface implementation.',
+                    'External ref not resolved. Builtin FileExternalRefResolver allows only '
+                    . 'file:// URIs and scheme-less relative paths; every other scheme '
+                    . '(http, https, ftp, php, phar, data, compress.zlib, zip, expect, '
+                    . 'ssh2, rar, ogg, glob, etc.) is rejected. Inject a custom '
+                    . 'ExternalRefResolverInterface implementation to enable other schemes.',
                     previous: $e,
                 );
             }
@@ -743,20 +744,16 @@ final class RefResolver implements RefResolverInterface
         try {
             $result = $this->navigate($document, $parts);
         } catch (UnresolvableRefException $e) {
-            throw new UnresolvableRefException($ref, $e->reason, previous: $e);
+            throw new UnresolvableRefException($ref, $e->reason(), previous: $e);
         }
 
         if (null !== $result->ref) {
             return $this->resolveRef($result->ref, $document, $visited, $depth + 1);
         }
 
-        if (isset($this->cache[$document])) {
-            /** @var RefCache $refCache */
-            $refCache = $this->cache[$document];
-        } else {
-            $refCache = new RefCache();
-            $this->cache[$document] = $refCache;
-        }
+        /** @var RefCache $refCache */
+        $refCache = $this->cache[$document] ?? new RefCache();
+        $this->cache[$document] = $refCache;
         $refCache->map[$ref] = $result;
 
         return [$result, $visited];
@@ -779,7 +776,8 @@ final class RefResolver implements RefResolverInterface
                 throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
             }
 
-            $current = $this->getProperty($current, $parts[$i]);
+            $decodedSegment = str_replace(['~1', '~0'], ['/', '~'], $parts[$i]);
+            $current = $this->getProperty($current, $decodedSegment);
         }
 
         if (

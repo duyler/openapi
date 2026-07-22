@@ -21,6 +21,8 @@ final class MaliciousSchemaTest extends TestCase
 
     private const float MAX_VALIDATION_SECONDS = 0.5;
 
+    private const int SPEC_SIZE_CAP = 5_242_880;
+
     private string $specWithHugeEnum;
 
     #[Override]
@@ -44,6 +46,7 @@ final class MaliciousSchemaTest extends TestCase
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromJsonString($this->specWithHugeEnum)
+            ->withMaxSpecSize(self::SPEC_SIZE_CAP)
             ->build();
 
         $startTime = microtime(true);
@@ -60,6 +63,7 @@ final class MaliciousSchemaTest extends TestCase
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromJsonString($this->specWithHugeEnum)
+            ->withMaxSpecSize(self::SPEC_SIZE_CAP)
             ->build();
 
         $startTime = microtime(true);

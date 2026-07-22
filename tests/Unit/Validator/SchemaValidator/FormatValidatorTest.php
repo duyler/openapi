@@ -89,7 +89,8 @@ class FormatValidatorTest extends TestCase
         self::assertInstanceOf(InvalidFormatException::class, $caught);
         self::assertSame('email', $caught->format);
         self::assertSame('email', $caught->params()['format']);
-        self::assertSame('not-an-email', $caught->params()['value']);
+        self::assertArrayNotHasKey('value', $caught->params());
+        self::assertSame('not-an-email', $caught->value(reveal: true));
         self::assertSame('format', $caught->keyword());
         self::assertSame('', $caught->dataPath());
     }
@@ -112,7 +113,8 @@ class FormatValidatorTest extends TestCase
 
         self::assertInstanceOf(InvalidFormatException::class, $caught);
         self::assertSame('float', $caught->params()['format']);
-        self::assertSame(42, $caught->params()['value']);
+        self::assertArrayNotHasKey('value', $caught->params());
+        self::assertSame(42, $caught->value(reveal: true));
     }
 
     #[Test]

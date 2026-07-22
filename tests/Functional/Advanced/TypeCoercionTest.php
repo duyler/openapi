@@ -424,7 +424,7 @@ YAML;
     {
         $param = new Parameter(schema: new Schema(type: 'boolean'));
 
-        $result = $this->paramCoercer->coerce('maybe', $param, true);
+        $result = $this->paramCoercer->coerce('maybe', $param, true, false);
 
         $this->assertSame(true, $result);
         $this->assertIsBool($result);
@@ -1145,6 +1145,39 @@ YAML;
 
         $this->assertNotNull($caught);
         $this->assertSame('boolean', $caught->params()['expected']);
+    }
+
+    #[Test]
+    public function disable_strict_coercion_allows_legacy_lax_boolean_cast_for_unknown_string(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::TC09_BOOLEAN_SPEC)
+            ->enableCoercion()
+            ->disableStrictCoercion()
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/users?active=admin');
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('/users', $operation->path);
+        $this->assertSame('GET', $operation->method);
+    }
+
+    #[Test]
+    public function strict_coercion_default_throws_type_mismatch_for_unknown_boolean_string(): void
+    {
+        $validator = $this->buildCoercionValidator(self::TC09_BOOLEAN_SPEC);
+
+        $request = $this->psrFactory->createServerRequest('GET', '/users?active=admin');
+
+        try {
+            $validator->validateRequest($request);
+            $this->fail('Expected TypeMismatchError for "admin" against boolean schema in strict mode');
+        } catch (TypeMismatchError $e) {
+            $this->assertSame('boolean', $e->params()['expected']);
+            $this->assertSame('admin', $e->params()['actual']);
+        }
     }
 
     private function buildCoercionValidator(string $yaml): OpenApiValidatorInterface

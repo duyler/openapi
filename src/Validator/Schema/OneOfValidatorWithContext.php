@@ -94,18 +94,22 @@ final readonly class OneOfValidatorWithContext
         $errors = [];
         $abstractErrors = [];
 
+        $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
+
         foreach ($oneOf as $subSchema) {
             if (false === $subSchema instanceof Schema) {
                 continue;
             }
 
+            $childContext = $context->forkForBranch();
+
             try {
                 $allowNull = $context->nullableAsType && ($subSchema->nullable
                     || SchemaValueNormalizer::typeIncludesNull($subSchema->type));
                 $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
-                $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
-                $rootValidator->validateWithContext($normalizedData, $subSchema, $context);
+                $rootValidator->validateWithContext($normalizedData, $subSchema, $childContext);
                 ++$validCount;
+                $context->mergeChildAnnotations($childContext);
             } catch (AbstractValidationError $e) {
                 $abstractErrors[] = $e;
             } catch (InvalidDataTypeException) {
