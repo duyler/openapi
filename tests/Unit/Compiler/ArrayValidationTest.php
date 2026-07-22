@@ -116,6 +116,12 @@ final class ArrayValidationTest extends TestCase
         self::assertStringContainsString('foreach ($data as $index => $item)', $code);
     }
 
+    /**
+     * R4-CORRECTNESS-013: enum checks inside `items` must use the inlined
+     * JsonEquals helper (mirroring the top-level enum path) so int 1 and
+     * float 1.0 are equal per JSON Schema 2020-12 §4.2.2. The previous
+     * strict `in_array(..., true)` path incorrectly distinguished them.
+     */
     #[Test]
     public function compiled_validator_handles_enum_in_arrays(): void
     {
@@ -132,8 +138,9 @@ final class ArrayValidationTest extends TestCase
         $compiler = new ValidatorCompiler();
         $code = $compiler->compile($schema, 'EnumArrayValidator');
 
-        self::assertStringContainsString('in_array($item', $code);
-        self::assertStringContainsString('Invalid enum value in array', $code);
+        self::assertStringContainsString('$this->jsonEquals(', $code);
+        self::assertStringContainsString('Value must be one of', $code);
+        self::assertStringNotContainsString('in_array($item', $code);
     }
 
     /**

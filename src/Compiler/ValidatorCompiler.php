@@ -21,10 +21,10 @@ use function explode;
 use function implode;
 use function in_array;
 use function is_array;
+use function is_bool;
 use function preg_match;
 use function sprintf;
 use function var_export;
-use function is_bool;
 
 /**
  * @experimental
@@ -70,6 +70,7 @@ final readonly class ValidatorCompiler
         OpenApiDocument $document,
     ): string {
         [$resolvedSchema,] = $this->resolveRefs($schema, $document);
+
         return $this->compile($resolvedSchema, $className);
     }
 
@@ -127,37 +128,7 @@ final readonly class ValidatorCompiler
         $code .= '    public function validate(mixed $data): void' . "\n";
         $code .= "    {\n";
 
-        if (null !== $schema->type) {
-            $code .= match (true) {
-                'array' === $schema->type => $this->generateArrayCheck($schema),
-                'object' === $schema->type && null !== $schema->properties => $this->generateNestedObjectCheck($schema),
-                default => $this->generateTypeCheck($schema->type),
-            };
-        }
-
-        if (null !== $schema->enum) {
-            $code .= $this->generateEnumCheck($schema->enum);
-        }
-
-        if (null !== $schema->minLength || null !== $schema->maxLength) {
-            $code .= $this->generateStringLengthCheck($schema);
-        }
-
-        if (null !== $schema->minimum || null !== $schema->maximum) {
-            $code .= $this->generateNumberRangeCheck($schema);
-        }
-
-        if (null !== $schema->pattern) {
-            $code .= $this->generatePatternCheck($schema->pattern);
-        }
-
-        if ($schema->hasConst) {
-            $code .= $this->generateConstCheck($schema->const);
-        }
-
-        if (null !== $schema->multipleOf) {
-            $code .= $this->generateMultipleOfCheck($schema->multipleOf);
-        }
+        $code .= $this->generateConstraintsForSchema($schema, '$data', 0);
 
         $code .= "    }\n";
 
@@ -171,10 +142,144 @@ final readonly class ValidatorCompiler
         return $code;
     }
 
-    private function generateTypeCheck(string|array $type): string
+    /**
+     * Generate validation code for every supported keyword on a single
+     * Schema. Used at the top level (dataVar = '$data') and recursively
+     * for each nested object property and array item so both paths share
+     * the same keyword coverage (R4-CORRECTNESS-004). $itemDepth tracks
+     * foreach nesting so each nested `foreach` emits a distinct loop
+     * variable name, preventing shadowing when arrays nest inside arrays.
+     */
+    private function generateConstraintsForSchema(Schema $schema, string $dataVar, int $itemDepth): string
+    {
+        $code = $this->generateScalarConstraints($schema, $dataVar);
+        $code .= $this->generateArrayLengthConstraints($schema, $dataVar);
+        $code .= $this->generateObjectConstraints($schema, $dataVar, $itemDepth);
+
+        return $code;
+    }
+
+    private function generateScalarConstraints(Schema $schema, string $dataVar): string
     {
         $code = '';
 
+        if (null !== $schema->type) {
+            $code .= $this->generateTypeCheckForValue($schema->type, $dataVar);
+        }
+
+        if (null !== $schema->enum) {
+            $code .= $this->generateEnumCheck($schema->enum, $dataVar);
+        }
+
+        if ($schema->hasConst) {
+            $code .= $this->generateConstCheck($schema->const, $dataVar);
+        }
+
+        if (null !== $schema->minLength || null !== $schema->maxLength) {
+            $code .= $this->generateStringLengthCheck($schema, $dataVar);
+        }
+
+        if ($this->hasNumericRange($schema)) {
+            $code .= $this->generateNumberRangeCheck($schema, $dataVar);
+        }
+
+        if (null !== $schema->pattern) {
+            $code .= $this->generatePatternCheck($schema->pattern, $dataVar);
+        }
+
+        if (null !== $schema->multipleOf) {
+            $code .= $this->generateMultipleOfCheck($schema->multipleOf, $dataVar);
+        }
+
+        return $code;
+    }
+
+    private function hasNumericRange(Schema $schema): bool
+    {
+        return null !== $schema->minimum
+            || null !== $schema->maximum
+            || null !== $schema->exclusiveMinimum
+            || null !== $schema->exclusiveMaximum;
+    }
+
+    private function generateArrayLengthConstraints(Schema $schema, string $dataVar): string
+    {
+        $code = '';
+
+        if (null !== $schema->minItems) {
+            $code .= sprintf("        if (count(%s) < %d) {\n", $dataVar, $schema->minItems);
+            $code .= "            throw new \\RuntimeException('Array too short');\n";
+            $code .= "        }\n\n";
+        }
+
+        if (null !== $schema->maxItems) {
+            $code .= sprintf("        if (count(%s) > %d) {\n", $dataVar, $schema->maxItems);
+            $code .= "            throw new \\RuntimeException('Array too long');\n";
+            $code .= "        }\n\n";
+        }
+
+        if (true === $schema->uniqueItems) {
+            $code .= $this->generateUniqueItemsCheck($dataVar);
+        }
+
+        return $code;
+    }
+
+    private function generateObjectConstraints(Schema $schema, string $dataVar, int $itemDepth): string
+    {
+        $code = '';
+
+        if (null !== $schema->required && [] !== $schema->required) {
+            $code .= $this->generateRequiredCheck($schema->required, $dataVar);
+        }
+
+        if (false === $schema->additionalProperties) {
+            $code .= $this->generateAdditionalPropertiesCheck($schema, $dataVar);
+        }
+
+        if (null !== $schema->properties) {
+            $code .= $this->generatePropertiesConstraints($schema->properties, $dataVar, $itemDepth);
+        }
+
+        if ($schema->items instanceof Schema) {
+            $code .= $this->generateItemsConstraints($schema->items, $dataVar, $itemDepth);
+        }
+
+        return $code;
+    }
+
+    /**
+     * @param array<string, Schema> $properties
+     */
+    private function generatePropertiesConstraints(array $properties, string $dataVar, int $itemDepth): string
+    {
+        $code = '';
+
+        foreach ($properties as $propertyName => $propertySchema) {
+            $safePropertyName = var_export((string) $propertyName, true);
+            $propertyVar = $dataVar . '[' . $safePropertyName . ']';
+            $code .= sprintf("        if (isset(%s)) {\n", $propertyVar);
+            $code .= $this->generateConstraintsForSchema($propertySchema, $propertyVar, $itemDepth);
+            $code .= "        }\n\n";
+        }
+
+        return $code;
+    }
+
+    private function generateItemsConstraints(Schema $itemsSchema, string $dataVar, int $itemDepth): string
+    {
+        $itemVar = 0 === $itemDepth ? '$item' : '$__item_' . $itemDepth;
+        $indexVar = 0 === $itemDepth ? '$index' : '$__index_' . $itemDepth;
+
+        $code = sprintf("        foreach (%s as %s => %s) {\n", $dataVar, $indexVar, $itemVar);
+        $code .= $this->generateConstraintsForSchema($itemsSchema, $itemVar, $itemDepth + 1);
+        $code .= "        }\n\n";
+
+        return $code;
+    }
+
+    private function generateTypeCheckForValue(string|array $type, string $valueVar): string
+    {
         /** @var array<string|null> $rawTypes */
         $rawTypes = is_array($type) ? $type : [$type];
 
@@ -185,8 +290,9 @@ final readonly class ValidatorCompiler
         ));
 
         $checks = [];
+
         foreach ($types as $t) {
-            $checks[] = $this->buildTypeCheckExpression($t, '$data');
+            $checks[] = $this->buildTypeCheckExpression($t, $valueVar);
         }
 
         if ([] === $checks) {
@@ -203,21 +309,28 @@ final readonly class ValidatorCompiler
             ? $checks[0]
             : '(' . implode(' || ', $checks) . ')';
 
-        $code .= sprintf("        if (false === %s) {\n", $condition);
-        $code .= sprintf("            throw new \\RuntimeException('Type mismatch: expected ' . %s . ' but got ' . TypeFormatter::format(\$data));\n", $typesString);
+        $code = sprintf("        if (false === %s) {\n", $condition);
+        $code .= sprintf(
+            "            throw new \\RuntimeException('Type mismatch: expected ' . %s . ' but got ' . TypeFormatter::format(%s));\n",
+            $typesString,
+            $valueVar,
+        );
         $code .= "        }\n\n";
 
         return $code;
     }
 
-    private function generateEnumCheck(array $enum): string
+    /**
+     * @param list<mixed> $enum
+     */
+    private function generateEnumCheck(array $enum, string $valueVar = '$data'): string
     {
         $enumValues = array_map(fn($val) => var_export($val, true), $enum);
         $valuesArray = '[' . implode(', ', $enumValues) . ']';
 
         $code = "        \$__matched = false;\n";
         $code .= sprintf("        foreach (%s as \$__candidate) {\n", $valuesArray);
-        $code .= "            if (\$this->jsonEquals(\$__candidate, \$data)) {\n";
+        $code .= sprintf("            if (\$this->jsonEquals(\$__candidate, %s)) {\n", $valueVar);
         $code .= "                \$__matched = true;\n";
         $code .= "                break;\n";
         $code .= "            }\n";
@@ -229,7 +342,7 @@ final readonly class ValidatorCompiler
         return $code;
     }
 
-    private function generateStringLengthCheck(Schema $schema): string
+    private function generateStringLengthCheck(Schema $schema, string $valueVar = '$data'): string
     {
         $conditions = [];
 
@@ -242,7 +355,7 @@ final readonly class ValidatorCompiler
         }
 
         $condition = implode(' || ', $conditions);
-        $code = $this->generateUtf16LengthComputation();
+        $code = $this->generateUtf16LengthComputation($valueVar);
         $code .= sprintf("        if (%s) {\n", $condition);
         $code .= "            throw new \\RuntimeException('String length validation failed');\n";
         $code .= "        }\n\n";
@@ -256,13 +369,13 @@ final readonly class ValidatorCompiler
      * still matching JSON Schema 2020-12 §6.3.1: supplementary characters
      * (4-byte UTF-8 sequences) count as 2 code units via surrogate pairs.
      */
-    private function generateUtf16LengthComputation(): string
+    private function generateUtf16LengthComputation(string $valueVar = '$data'): string
     {
         $code = "        \$utf16Length = 0;\n";
-        $code .= "        \$utf16Bytes = strlen((string) \$data);\n";
+        $code .= sprintf("        \$utf16Bytes = strlen((string) %s);\n", $valueVar);
         $code .= "        \$utf16Pos = 0;\n";
         $code .= "        while (\$utf16Pos < \$utf16Bytes) {\n";
-        $code .= "            \$utf16Octet = ord(\$data[\$utf16Pos]);\n";
+        $code .= sprintf("            \$utf16Octet = ord(%s[\$utf16Pos]);\n", $valueVar);
         $code .= "            if (\$utf16Octet < 0x80) {\n";
         $code .= "                \$utf16Pos += 1;\n";
         $code .= "                \$utf16Length += 1;\n";
@@ -283,29 +396,28 @@ final readonly class ValidatorCompiler
         return $code;
     }
 
-    private function generateNumberRangeCheck(Schema $schema): string
+    private function generateNumberRangeCheck(Schema $schema, string $valueVar = '$data'): string
     {
-        $code = '';
         $conditions = [];
 
         if (null !== $schema->minimum) {
-            $conditions[] = sprintf('$data < %F', $schema->minimum);
+            $conditions[] = sprintf('%s < %F', $valueVar, $schema->minimum);
         }
 
         if (null !== $schema->maximum) {
-            $conditions[] = sprintf('$data > %F', $schema->maximum);
+            $conditions[] = sprintf('%s > %F', $valueVar, $schema->maximum);
         }
 
         if (null !== $schema->exclusiveMinimum) {
-            $conditions[] = sprintf('$data <= %F', $schema->exclusiveMinimum);
+            $conditions[] = sprintf('%s <= %F', $valueVar, $schema->exclusiveMinimum);
         }
 
         if (null !== $schema->exclusiveMaximum) {
-            $conditions[] = sprintf('$data >= %F', $schema->exclusiveMaximum);
+            $conditions[] = sprintf('%s >= %F', $valueVar, $schema->exclusiveMaximum);
         }
 
         $condition = implode(' || ', $conditions);
-        $code .= sprintf("        if (%s) {\n", $condition);
+        $code = sprintf("        if (%s) {\n", $condition);
         $code .= "            throw new \\RuntimeException('Number range validation failed');\n";
         $code .= "        }\n\n";
 
@@ -346,7 +458,7 @@ final readonly class ValidatorCompiler
      * so the generated standalone class does not depend on the library at
      * runtime.
      */
-    private function generatePatternCheck(string $pattern): string
+    private function generatePatternCheck(string $pattern, string $valueVar = '$data'): string
     {
         $normalizedPattern = new RegexValidator()->normalize($pattern);
         $escapedPattern = var_export($normalizedPattern, true);
@@ -357,7 +469,7 @@ final readonly class ValidatorCompiler
         $code .= sprintf("        ini_set('pcre.backtrack_limit', %s);\n", $limit);
         $code .= "        set_error_handler(static fn(int \$errno) => E_WARNING === \$errno);\n";
         $code .= "        try {\n";
-        $code .= sprintf("            \$result = preg_match(%s, (string) \$data);\n", $escapedPattern);
+        $code .= sprintf("            \$result = preg_match(%s, (string) %s);\n", $escapedPattern, $valueVar);
         $code .= "            if (false === \$result) {\n";
         $code .= "                throw new \\RuntimeException('PCRE error during pattern validation');\n";
         $code .= "            }\n";
@@ -372,18 +484,18 @@ final readonly class ValidatorCompiler
         return $code;
     }
 
-    private function generateConstCheck(mixed $constValue): string
+    private function generateConstCheck(mixed $constValue, string $valueVar = '$data'): string
     {
         $exportedValue = var_export($constValue, true);
 
-        $code = sprintf("        if (false === \$this->jsonEquals(%s, \$data)) {\n", $exportedValue);
-        $code .= "            throw new \\RuntimeException(sprintf('Value must be const: %%s', var_export(\$data, true)));\n";
+        $code = sprintf("        if (false === \$this->jsonEquals(%s, %s)) {\n", $exportedValue, $valueVar);
+        $code .= sprintf("            throw new \\RuntimeException(sprintf('Value must be const: %%s', var_export(%s, true)));\n", $valueVar);
         $code .= "        }\n\n";
 
         return $code;
     }
 
-    private function generateMultipleOfCheck(float $multipleOf): string
+    private function generateMultipleOfCheck(float $multipleOf, string $valueVar = '$data'): string
     {
         if (0.0 === $multipleOf) {
             $errorMessage = var_export('multipleOf must be greater than 0', true);
@@ -396,21 +508,21 @@ final readonly class ValidatorCompiler
         $epsilonStr = var_export(self::RELATIVE_EPSILON_FACTOR, true);
 
         if ((float) (int) $multipleOf === $multipleOf) {
-            $code = $this->generateIntegerMultipleOfCheck(
+            return $this->generateIntegerMultipleOfCheck(
                 intMultipleOf: (int) $multipleOf,
                 floatMultipleOfStr: $multipleOfStr,
                 epsilonStr: $epsilonStr,
                 errorMessage: $errorMessage,
-            );
-        } else {
-            $code = $this->buildFloatQuotientCheck(
-                multipleOfStr: $multipleOfStr,
-                epsilonStr: $epsilonStr,
-                exportedMessage: var_export($errorMessage, true),
+                valueVar: $valueVar,
             );
         }
 
-        return $code . "\n";
+        return $this->buildFloatQuotientCheck(
+            multipleOfStr: $multipleOfStr,
+            epsilonStr: $epsilonStr,
+            exportedMessage: var_export($errorMessage, true),
+            valueVar: $valueVar,
+        ) . "\n";
     }
 
     /**
@@ -423,16 +535,17 @@ final readonly class ValidatorCompiler
         string $floatMultipleOfStr,
         string $epsilonStr,
         string $errorMessage,
+        string $valueVar = '$data',
     ): string {
         $intMultipleOfStr = var_export($intMultipleOf, true);
         $exportedMessage = var_export($errorMessage, true);
 
-        $code = "        if (is_int(\$data)) {\n";
-        $code .= sprintf("            if (0 !== (\$data %% %s)) {\n", $intMultipleOfStr);
+        $code = sprintf("        if (is_int(%s)) {\n", $valueVar);
+        $code .= sprintf("            if (0 !== (%s %% %s)) {\n", $valueVar, $intMultipleOfStr);
         $code .= sprintf("                throw new \\RuntimeException(%s);\n", $exportedMessage);
         $code .= "            }\n";
         $code .= "        } else {\n";
-        $code .= $this->buildFloatQuotientCheck($floatMultipleOfStr, $epsilonStr, $exportedMessage);
+        $code .= $this->buildFloatQuotientCheck($floatMultipleOfStr, $epsilonStr, $exportedMessage, $valueVar);
         $code .= "        }\n";
 
         return $code;
@@ -443,14 +556,45 @@ final readonly class ValidatorCompiler
      * NumericRangeValidator::isMultipleOf float branch exactly, avoiding
      * the precision-loss bug of fmod on large dividends.
      */
-    private function buildFloatQuotientCheck(string $multipleOfStr, string $epsilonStr, string $exportedMessage): string
-    {
-        $code = sprintf("            \$quotient = (float) \$data / %s;\n", $multipleOfStr);
+    private function buildFloatQuotientCheck(
+        string $multipleOfStr,
+        string $epsilonStr,
+        string $exportedMessage,
+        string $valueVar = '$data',
+    ): string {
+        $code = sprintf("            \$quotient = (float) %s / %s;\n", $valueVar, $multipleOfStr);
         $code .= "            \$rounded = round(\$quotient);\n";
         $code .= sprintf("            \$epsilon = %s * max(1.0, abs(\$quotient));\n", $epsilonStr);
         $code .= "            if (abs(\$quotient - \$rounded) >= \$epsilon) {\n";
         $code .= sprintf("                throw new \\RuntimeException(%s);\n", $exportedMessage);
         $code .= "            }\n";
+
+        return $code;
+    }
+
+    /**
+     * Emits the uniqueItems check using the inlined canonicalJsonKey
+     * helper so JSON-equal values (int 1 vs float 1.0, assoc-arrays with
+     * reordered keys) collapse to the same hash key. Mirrors
+     * ArrayLengthValidator::MAX_UNIQUE_CHECK cap of 100000 entries.
+     */
+    private function generateUniqueItemsCheck(string $valueVar = '$data'): string
+    {
+        $code = "        \$__seen = [];\n";
+        $code .= sprintf("        foreach (%s as \$__item) {\n", $valueVar);
+        $code .= "            try {\n";
+        $code .= "                \$__key = \$this->canonicalJsonKey(\$__item);\n";
+        $code .= "            } catch (\\JsonException \$__e) {\n";
+        $code .= "                throw new \\RuntimeException(sprintf('Failed to encode value for uniqueness check: %s', \$__e->getMessage()), 0, \$__e);\n";
+        $code .= "            }\n";
+        $code .= "            if (isset(\$__seen[\$__key])) {\n";
+        $code .= "                throw new \\RuntimeException('Array items must be unique');\n";
+        $code .= "            }\n";
+        $code .= "            \$__seen[\$__key] = true;\n";
+        $code .= "            if (100000 < count(\$__seen)) {\n";
+        $code .= "                throw new \\RuntimeException('Too many items for unique check');\n";
+        $code .= "            }\n";
+        $code .= "        }\n\n";
 
         return $code;
     }
@@ -503,63 +647,13 @@ final readonly class ValidatorCompiler
         return sprintf('%s(%s)', $function, $variable);
     }
 
-    private function generateNestedObjectCheck(Schema $schema, string $dataVar = '$data'): string
-    {
-        if (null === $schema->properties) {
-            return '';
-        }
-
-        $safeVarForError = var_export($dataVar, true);
-        $code = sprintf("        if (false === is_array(%s)) {\n", $dataVar);
-        $code .= sprintf("            throw new \\RuntimeException(sprintf('Expected object for %%s', %s));\n", $safeVarForError);
-        $code .= "        }\n\n";
-
-        foreach ($schema->properties as $propertyName => $propertySchema) {
-            $code .= $this->generatePropertyValidation($propertySchema, (string) $propertyName, $dataVar);
-        }
-
-        if (null !== $schema->required && [] !== $schema->required) {
-            $code .= $this->generateRequiredCheck($schema->required, $dataVar);
-        }
-
-        if (false === $schema->additionalProperties) {
-            $code .= $this->generateAdditionalPropertiesCheck($schema, $dataVar);
-        }
-
-        return $code;
-    }
-
-    private function generatePropertyValidation(
-        Schema $propertySchema,
-        string $propertyName,
-        string $dataVar,
-    ): string {
-        $code = '';
-
-        if (null === $propertySchema->type) {
-            return $code;
-        }
-
-        $safePropertyName = var_export($propertyName, true);
-        $propertyVar = $dataVar . '[' . $safePropertyName . ']';
-
-        $code .= sprintf("        if (isset(%s)) {\n", $propertyVar);
-
-        $code .= ('object' === $propertySchema->type && null !== $propertySchema->properties)
-            ? $this->generateNestedObjectCheck($propertySchema, $propertyVar)
-            : $this->generateTypeCheckForValue($propertySchema->type, $propertyVar);
-
-        $code .= "        }\n\n";
-
-        return $code;
-    }
-
     /**
      * @param list<string> $required
      */
     private function generateRequiredCheck(array $required, string $dataVar): string
     {
         $code = '';
+
         foreach ($required as $propertyName) {
             $safeName = var_export($propertyName, true);
             $code .= sprintf("        if (false === array_key_exists(%s, %s)) {\n", $safeName, $dataVar);
@@ -571,112 +665,6 @@ final readonly class ValidatorCompiler
         }
 
         return $code . "\n";
-    }
-
-    private function generateTypeCheckForValue(string|array $type, string $valueVar): string
-    {
-        /** @var array<string|null> $rawTypes */
-        $rawTypes = is_array($type) ? $type : [$type];
-
-        /** @var list<string> $types */
-        $types = array_values(array_filter(
-            $rawTypes,
-            static fn(mixed $t): bool => null !== $t,
-        ));
-
-        $checks = [];
-
-        foreach ($types as $t) {
-            $checks[] = $this->buildTypeCheckExpression($t, $valueVar);
-        }
-
-        if ([] === $checks) {
-            return '';
-        }
-
-        $safeVarName = var_export($valueVar, true);
-
-        $condition = 1 === count($checks)
-            ? $checks[0]
-            : '(' . implode(' || ', $checks) . ')';
-
-        $code = sprintf("        if (false === %s) {\n", $condition);
-        $code .= sprintf("            throw new \\RuntimeException(sprintf('Type mismatch for %%s', %s));\n", $safeVarName);
-        $code .= "        }\n";
-
-        return $code;
-    }
-
-    private function generateArrayCheck(Schema $schema): string
-    {
-        if (null === $schema->items) {
-            return '';
-        }
-
-        $code = "        if (false === is_array(\$data)) {\n";
-        $code .= "            throw new \\RuntimeException('Expected array');\n";
-        $code .= "        }\n\n";
-
-        if (null !== $schema->minItems) {
-            $code .= sprintf("        if (count(\$data) < %d) {\n", $schema->minItems);
-            $code .= "            throw new \\RuntimeException('Array too short');\n";
-            $code .= "        }\n\n";
-        }
-
-        if (null !== $schema->maxItems) {
-            $code .= sprintf("        if (count(\$data) > %d) {\n", $schema->maxItems);
-            $code .= "            throw new \\RuntimeException('Array too long');\n";
-            $code .= "        }\n\n";
-        }
-
-        if (true === $schema->uniqueItems) {
-            $code .= "        \$__seen = [];\n";
-            $code .= "        foreach (\$data as \$__item) {\n";
-            $code .= "            try {\n";
-            $code .= "                \$__key = \$this->canonicalJsonKey(\$__item);\n";
-            $code .= "            } catch (\\JsonException \$__e) {\n";
-            $code .= "                throw new \\RuntimeException(sprintf('Failed to encode value for uniqueness check: %s', \$__e->getMessage()), 0, \$__e);\n";
-            $code .= "            }\n";
-            $code .= "            if (isset(\$__seen[\$__key])) {\n";
-            $code .= "                throw new \\RuntimeException('Array items must be unique');\n";
-            $code .= "            }\n";
-            $code .= "            \$__seen[\$__key] = true;\n";
-            $code .= "            if (100000 < count(\$__seen)) {\n";
-            $code .= "                throw new \\RuntimeException('Too many items for unique check');\n";
-            $code .= "            }\n";
-            $code .= "        }\n\n";
-        }
-
-        $itemSchema = $schema->items instanceof Schema ? $schema->items : null;
-
-        if (null === $itemSchema) {
-            return $code;
-        }
-
-        $code .= $this->generateItemValidation($itemSchema);
-
-        return $code;
-    }
-
-    private function generateItemValidation(Schema $itemSchema): string
-    {
-        $code = "        foreach (\$data as \$index => \$item) {\n";
-
-        if ('object' === $itemSchema->type && null !== $itemSchema->properties) {
-            $code .= $this->generateNestedObjectCheck($itemSchema, '$item');
-        } elseif (null !== $itemSchema->type) {
-            $code .= $this->generateTypeCheckForValue($itemSchema->type, '$item');
-        }
-
-        if (null !== $itemSchema->enum) {
-            $code .= "            if (false === in_array(\$item, " . var_export($itemSchema->enum, true) . ", true)) {\n";
-            $code .= "                throw new \\RuntimeException('Invalid enum value in array');\n";
-            $code .= "            }\n";
-        }
-
-        $code .= "        }\n\n";
-
-        return $code;
     }
 
     /**
@@ -749,8 +737,8 @@ PHP;
      * `ArrayLengthValidator::itemKey` so the compiled validator stays
      * numerically equivalent to the runtime validator. The
      * `JSON_THROW_ON_ERROR` flag is caught and rethrown as
-     * `RuntimeException` at the call site (see `generateArrayCheck`) so
-     * the README "Compiler Limitations" RuntimeException-only contract
+     * `RuntimeException` at the call site (see `generateUniqueItemsCheck`)
+     * so the README "Compiler Limitations" RuntimeException-only contract
      * is preserved.
      */
     private function renderCanonicalKeyInline(): string
@@ -794,22 +782,26 @@ PHP;
         return $schema->hasConst
             || null !== $schema->enum
             || true === $schema->uniqueItems
-            || $this->schemaHasUniqueItemsInItemsChain($schema);
+            || $this->schemaHasEqualityHelpersInChain($schema);
     }
 
-    private function schemaHasUniqueItemsInItemsChain(Schema $schema): bool
+    private function schemaHasEqualityHelpersInChain(Schema $schema): bool
     {
         if (true === $schema->uniqueItems) {
             return true;
         }
 
-        if ($schema->items instanceof Schema && $this->schemaHasUniqueItemsInItemsChain($schema->items)) {
+        if ($schema->hasConst || null !== $schema->enum) {
+            return true;
+        }
+
+        if ($schema->items instanceof Schema && $this->schemaHasEqualityHelpersInChain($schema->items)) {
             return true;
         }
 
         if (null !== $schema->properties) {
             foreach ($schema->properties as $child) {
-                if ($this->schemaHasUniqueItemsInItemsChain($child)) {
+                if ($this->schemaHasEqualityHelpersInChain($child)) {
                     return true;
                 }
             }
@@ -901,6 +893,12 @@ PHP;
             'contains' => null !== $schema->contains,
             'propertyNames' => null !== $schema->propertyNames,
             'unevaluatedItems' => null !== $schema->unevaluatedItems,
+            'unevaluatedProperties' => null !== $schema->unevaluatedProperties,
+            'dependentSchemas' => null !== $schema->dependentSchemas,
+            'discriminator' => null !== $schema->discriminator,
+            'contentEncoding' => null !== $schema->contentEncoding,
+            'contentMediaType' => null !== $schema->contentMediaType,
+            'contentSchema' => null !== $schema->contentSchema,
             'items (boolean form)' => is_bool($schema->items),
             'contains (boolean form)' => is_bool($schema->contains),
             'propertyNames (boolean form)' => is_bool($schema->propertyNames),

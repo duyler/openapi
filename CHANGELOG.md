@@ -71,6 +71,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   resolution for any unresolved value when `propertyName` is set —
   matching the previously existing behaviour for the `propertyName`
   null path.
+- ValidatorCompiler: emit all supported keywords for nested object
+  `properties` and array `items`, and inline `JsonEquals` for `enum`
+  declared inside `items` (R4-CORRECTNESS-004, R4-CORRECTNESS-013).
+  Previously the compiler emitted only `type` checks (and strict
+  `in_array` for item `enum`) at nested levels, silently ignoring
+  `minLength` / `maxLength` / `pattern` / `minimum` / `maximum` /
+  `multipleOf` / `required` / `additionalProperties: false` / nested
+  `properties` / nested `items`. A new `generateConstraintsForSchema`
+  helper is now shared by top-level and nested paths, so both paths
+  emit the same constraint set. Unsupported keywords
+  (`discriminator`, `dependentSchemas`, `unevaluatedProperties`,
+  `unevaluatedItems`, `contentEncoding`, `contentMediaType`,
+  `contentSchema`, plus the previously detected `format` / `allOf` /
+  `anyOf` / `oneOf` / `not` / `if` / `then` / `else` /
+  `patternProperties` / `minProperties` / `maxProperties` /
+  `prefixItems` / boolean-form schema-typed keywords) are now
+  rejected with `UnsupportedKeywordException` at every depth rather
+  than being silently ignored. Item `enum` checks now use the inlined
+  `jsonEquals` helper so JSON Schema 2020-12 §4.2.2 instance equality
+  (`1` matches enum `[1, 2, 3]`) holds at every depth; the README's
+  previous "known limitation" note for strict `in_array` in items is
+  removed.
 
 ### Security
 - All exception classes shipped by the package now sanitize `__toString()`

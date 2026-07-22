@@ -307,14 +307,11 @@ final class ValidatorCompilerRuntimeEquivalenceTest extends TestCase
     /**
      * Helpers are emitted when `uniqueItems: true` appears inside a nested
      * object property, not at the top level. Guards the recursive walker
-     * `schemaHasUniqueItemsInItemsChain`.
-     *
-     * Known limitation: helpers are emitted via the walker, but the actual
-     * uniqueItems CHECK is NOT generated for nested object properties —
-     * `generatePropertyValidation` only emits type checks for properties,
-     * not array/uniqueItems checks. The helpers are therefore emitted as
-     * dead code in this case. This is a known limitation of the compiler's
-     * property-validation pipeline, tracked for a follow-up task.
+     * `schemaHasEqualityHelpersInItemsChain`. As of R4-CORRECTNESS-004 the
+     * uniqueItems CHECK is also generated for nested object properties
+     * (previously only the helpers were emitted as dead code), so this
+     * test now also guards the inline equality + canonical-key emission
+     * for the nested-array path.
      */
     #[Test]
     public function compiled_helpers_emitted_for_nested_unique_items(): void
