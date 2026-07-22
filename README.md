@@ -545,6 +545,21 @@ $data = ['petType' => 'cat', 'name' => 'Fluffy'];
 $validator->validateSchema($data, '#/components/schemas/Pet');
 ```
 
+Discriminator candidate enumeration follows JSON Schema 2020-12 §10.2.1.1:
+when a schema declares more than one composition keyword (`oneOf`, `anyOf`,
+`allOf`), the discriminator enumerates candidates from **all** non-null
+composition arrays simultaneously. A nested candidate whose own composition
+does not contain the discriminator value no longer aborts the search —
+remaining candidates are tried before the discriminator gives up.
+
+The OpenAPI 3.2 §4.25 `defaultMapping` keyword is honoured as the final
+fallback for **any** unresolved discriminator value, regardless of whether
+`propertyName` is set. When the value is missing from `mapping` and no
+candidate matches via implicit name or nested composition, the validator
+resolves `defaultMapping` instead of raising
+`UnknownDiscriminatorValueException`. When `propertyName` itself is `null`,
+the same `defaultMapping` is applied unconditionally.
+
 ### Event-Driven Validation
 
 Subscribe to validation lifecycle events:

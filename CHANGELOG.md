@@ -58,6 +58,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `$ref` chains terminate through `RefResolver`'s own cycle detection
   plus the existing `ValidationContext::MAX_DEPTH` bound (default 64),
   which surfaces as `SchemaDepthExceededException`.
+- Discriminator validator: enumerate all composition arrays, continue on
+  unresolved nested candidates, and apply `defaultMapping` fallback for
+  unresolved `propertyName` values (R4-CORRECTNESS-002,
+  R4-CORRECTNESS-015, R4-SPEC-002, R4-SPEC-004). The
+  `DiscriminatorValidator::findMatchingSchema` loop now collects
+  candidates from `oneOf` + `anyOf` + `allOf` simultaneously (per JSON
+  Schema 2020-12 §10.2.1.1), wraps the nested-composition recursion in
+  a `try`/`catch (UnknownDiscriminatorValueException)` so a failed
+  nested branch no longer aborts the search for sibling candidates,
+  and falls back to `defaultMapping` (OpenAPI 3.2 §4.25) as the final
+  resolution for any unresolved value when `propertyName` is set —
+  matching the previously existing behaviour for the `propertyName`
+  null path.
 
 ### Security
 - All exception classes shipped by the package now sanitize `__toString()`

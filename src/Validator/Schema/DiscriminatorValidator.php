@@ -130,9 +130,9 @@ final readonly class DiscriminatorValidator
         OpenApiDocument $document,
         string $dataPath,
     ): Schema {
-        $schemas = $schema->oneOf ?? $schema->anyOf ?? $schema->allOf ?? [];
+        $candidates = $this->collectCompositionCandidates($schema);
 
-        foreach ($schemas as $candidateSchema) {
+        foreach ($candidates as $candidateSchema) {
             if (null !== $candidateSchema->ref) {
                 $implicitName = $this->extractSchemaName($candidateSchema->ref);
 
@@ -141,8 +141,12 @@ final readonly class DiscriminatorValidator
                 }
             }
 
-            if (null !== $candidateSchema->oneOf || null !== $candidateSchema->anyOf || null !== $candidateSchema->allOf) {
-                return $this->findMatchingSchema($value, $discriminator, $candidateSchema, $document, $dataPath);
+            if ($this->hasNestedComposition($candidateSchema)) {
+                try {
+                    return $this->findMatchingSchema($value, $discriminator, $candidateSchema, $document, $dataPath);
+                } catch (UnknownDiscriminatorValueException) {
+                    continue;
+                }
             }
         }
 
@@ -155,6 +159,25 @@ final readonly class DiscriminatorValidator
             schema: $schema,
             dataPath: $dataPath,
         );
+    }
+
+    /**
+     * @return list<Schema>
+     */
+    private function collectCompositionCandidates(Schema $schema): array
+    {
+        return [
+            ...($schema->oneOf ?? []),
+            ...($schema->anyOf ?? []),
+            ...($schema->allOf ?? []),
+        ];
+    }
+
+    private function hasNestedComposition(Schema $schema): bool
+    {
+        return null !== $schema->oneOf
+            || null !== $schema->anyOf
+            || null !== $schema->allOf;
     }
 
     private function extractSchemaName(string $ref): string
