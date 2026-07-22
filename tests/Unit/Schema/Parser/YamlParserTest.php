@@ -11,6 +11,9 @@ use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function chr;
+use function ord;
+
 final class YamlParserTest extends TestCase
 {
     private YamlParser $parser;
@@ -471,5 +474,237 @@ YAML;
         $this->expectException(SpecTooLargeException::class);
 
         $parser->parse($oversized);
+    }
+
+    #[Test]
+    public function parse_yaml_exceeding_anchor_count_throws_spec_too_large_exception(): void
+    {
+        $anchorLines = [];
+        for ($i = 0; $i < 200; ++$i) {
+            $anchorLines[] = "a{$i}: &a{$i} value{$i}";
+        }
+        $yaml = "openapi: 3.0.3\ninfo:\n  title: Anchor bomb\n  version: 1.0.0\npaths: {}\n" . implode("\n", $anchorLines) . "\n";
+
+        $this->expectException(SpecTooLargeException::class);
+        $this->expectExceptionMessage('YAML anchor bomb detected: too many anchors');
+
+        $this->parser->parse($yaml);
+    }
+
+    #[Test]
+    public function parse_yaml_exceeding_alias_count_throws_spec_too_large_exception(): void
+    {
+        $anchorLines = [];
+        for ($i = 0; $i < 50; ++$i) {
+            $anchorLines[] = "a{$i}: &a{$i} value{$i}";
+        }
+        $aliasLines = [];
+        for ($i = 0; $i < 1500; ++$i) {
+            $aliasLines[] = '  - *a' . ($i % 50);
+        }
+        $yaml = "openapi: 3.0.3\ninfo:\n  title: Alias bomb\n  version: 1.0.0\npaths: {}\n"
+            . implode("\n", $anchorLines)
+            . "\nbig_list:\n"
+            . implode("\n", $aliasLines)
+            . "\n";
+
+        $this->expectException(SpecTooLargeException::class);
+        $this->expectExceptionMessage('YAML anchor bomb detected: too many aliases');
+
+        $this->parser->parse($yaml);
+    }
+
+    #[Test]
+    public function parse_yaml_with_billion_laughs_payload_throws_before_yaml_parse(): void
+    {
+        $yaml = <<<'YAML'
+openapi: 3.0.3
+info:
+  title: Billion laughs
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    a: &a ["x","x","x","x","x"]
+    b: &b [*a,*a,*a,*a,*a]
+    c: &c [*b,*b,*b,*b,*b]
+    d: &d [*c,*c,*c,*c,*c]
+    e: &e [*d,*d,*d,*d,*d]
+    f: &f [*e,*e,*e,*e,*e]
+    g: &g [*f,*f,*f,*f,*f]
+    h: &h [*g,*g,*g,*g,*g]
+    i: &i [*h,*h,*h,*h,*h]
+    j: &j [*i,*i,*i,*i,*i]
+    k: &k [*j,*j,*j,*j,*j]
+YAML;
+
+        $this->expectException(SpecTooLargeException::class);
+        $this->expectExceptionMessage('YAML anchor bomb detected: alias nesting too deep');
+
+        $this->parser->parse($yaml);
+    }
+
+    #[Test]
+    public function parse_yaml_with_cyrillic_billion_laughs_payload_throws_before_yaml_parse(): void
+    {
+        $cyrillic = ['а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'к', 'л'];
+        $lines = [
+            'openapi: 3.0.3',
+            'info:',
+            '  title: Cyrillic billion laughs',
+            '  version: 1.0.0',
+            'paths: {}',
+            'components:',
+            '  schemas:',
+        ];
+
+        $first = array_shift($cyrillic);
+        $lines[] = "    {$first}: &{$first} [\"x\",\"x\",\"x\",\"x\",\"x\"]";
+        $prev = $first;
+        foreach ($cyrillic as $letter) {
+            $lines[] = "    {$letter}: &{$letter} [*{$prev},*{$prev},*{$prev},*{$prev},*{$prev}]";
+            $prev = $letter;
+        }
+
+        $yaml = implode("\n", $lines) . "\n";
+
+        $this->expectException(SpecTooLargeException::class);
+        $this->expectExceptionMessage('YAML anchor bomb detected: alias nesting too deep');
+
+        $this->parser->parse($yaml);
+    }
+
+    #[Test]
+    public function parse_yaml_with_multiline_billion_laughs_payload_throws_before_yaml_parse(): void
+    {
+        $lines = [
+            'openapi: 3.0.3',
+            'info:',
+            '  title: Multi-line billion laughs',
+            '  version: 1.0.0',
+            'paths: {}',
+            'components:',
+            '  schemas:',
+            '    a: &a',
+            '      - "x"',
+        ];
+
+        foreach (range('b', 'k') as $letter) {
+            $prev = chr(ord($letter) - 1);
+            $lines[] = "    {$letter}: &{$letter}";
+            $lines[] = "      - *{$prev}";
+            $lines[] = "      - *{$prev}";
+        }
+
+        $yaml = implode("\n", $lines) . "\n";
+
+        $this->expectException(SpecTooLargeException::class);
+        $this->expectExceptionMessage('YAML anchor bomb detected: alias nesting too deep');
+
+        $this->parser->parse($yaml);
+    }
+
+    #[Test]
+    public function parse_yaml_with_punctuation_name_billion_laughs_payload_throws_before_yaml_parse(): void
+    {
+        $lines = [
+            'openapi: 3.0.3',
+            'info:',
+            '  title: Punctuation billion laughs',
+            '  version: 1.0.0',
+            'paths: {}',
+            'components:',
+            '  schemas:',
+        ];
+
+        for ($i = 0; $i < 11; ++$i) {
+            $name = ".a{$i}";
+            if (0 === $i) {
+                $lines[] = "    {$name}: &{$name} [\"x\",\"x\",\"x\",\"x\",\"x\"]";
+            } else {
+                $prev = ".a" . ($i - 1);
+                $lines[] = "    {$name}: &{$name} [*{$prev},*{$prev},*{$prev},*{$prev},*{$prev}]";
+            }
+        }
+
+        $yaml = implode("\n", $lines) . "\n";
+
+        $this->expectException(SpecTooLargeException::class);
+        $this->expectExceptionMessage('YAML anchor bomb detected: alias nesting too deep');
+
+        $this->parser->parse($yaml);
+    }
+
+    #[Test]
+    public function parse_yaml_with_whitespace_char_billion_laughs_payload_throws_before_yaml_parse(): void
+    {
+        $lines = [
+            'openapi: 3.0.3',
+            'info:',
+            '  title: Whitespace billion laughs',
+            '  version: 1.0.0',
+            'paths: {}',
+            'components:',
+            '  schemas:',
+        ];
+
+        for ($i = 0; $i < 11; ++$i) {
+            $name = "\x0Cn{$i}";
+            if (0 === $i) {
+                $lines[] = "    schema{$i}: &{$name} [\"x\",\"x\",\"x\",\"x\",\"x\"]";
+            } else {
+                $prev = "\x0Cn" . ($i - 1);
+                $lines[] = "    schema{$i}: &{$name} [*{$prev},*{$prev},*{$prev},*{$prev},*{$prev}]";
+            }
+        }
+
+        $yaml = implode("\n", $lines) . "\n";
+
+        $this->expectException(SpecTooLargeException::class);
+        $this->expectExceptionMessage('YAML anchor bomb detected: alias nesting too deep');
+
+        $this->parser->parse($yaml);
+    }
+
+    #[Test]
+    public function parse_yaml_with_legitimate_anchor_deduplication_accepted(): void
+    {
+        $lines = [
+            'openapi: 3.0.3',
+            'info:',
+            '  title: Legit dedup',
+            '  version: 1.0.0',
+            'paths: {}',
+            'components:',
+            '  schemas:',
+        ];
+
+        for ($i = 0; $i < 50; ++$i) {
+            $lines[] = "    Base{$i}: &base_{$i}";
+            $lines[] = '      type: integer';
+            $lines[] = "      description: 'Base schema {$i}'";
+        }
+
+        for ($i = 0; $i < 30; ++$i) {
+            $lines[] = "    Schema{$i}:";
+            $lines[] = '      type: object';
+            $lines[] = '      properties:';
+            $lines[] = '        f1: *base_' . (($i * 4) % 50);
+            $lines[] = '        f2: *base_' . (($i * 4 + 1) % 50);
+            $lines[] = '        f3: *base_' . (($i * 4 + 2) % 50);
+            $lines[] = '        f4: *base_' . (($i * 4 + 3) % 50);
+        }
+
+        $yaml = implode("\n", $lines) . "\n";
+
+        $document = $this->parser->parse($yaml);
+
+        $this->assertSame('3.0.3', $document->openapi);
+        $this->assertNotNull($document->components);
+        $this->assertNotNull($document->components->schemas);
+        $this->assertArrayHasKey('Base0', $document->components->schemas);
+        $this->assertArrayHasKey('Base49', $document->components->schemas);
+        $this->assertArrayHasKey('Schema0', $document->components->schemas);
+        $this->assertArrayHasKey('Schema29', $document->components->schemas);
     }
 }

@@ -184,6 +184,13 @@ final class ValidatorCompilerTest extends TestCase
         $this->assertStringContainsString('is_array($data)', $code);
     }
 
+    /**
+     * R4-CORRECTNESS-004: `discriminator` is an OpenAPI-specific routing
+     * hint that the experimental compiler cannot honour (no runtime
+     * composition evaluation). It MUST throw `UnsupportedKeywordException`
+     * rather than silently producing a validator that ignores the
+     * discriminator and accepts every composition branch.
+     */
     #[Test]
     public function compile_schema_with_discriminator(): void
     {
@@ -197,9 +204,9 @@ final class ValidatorCompilerTest extends TestCase
             ],
         );
 
-        $code = $compiler->compile($schema, 'DiscriminatorSchema');
+        $this->expectException(UnsupportedKeywordException::class);
 
-        $this->assertStringContainsString('is_array($data)', $code);
+        $compiler->compile($schema, 'DiscriminatorSchema');
     }
 
     #[Test]

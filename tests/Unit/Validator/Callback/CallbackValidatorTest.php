@@ -15,11 +15,14 @@ use Duyler\OpenApi\Validator\Callback\CallbackValidator;
 use Duyler\OpenApi\Validator\Callback\Exception\UnknownCallbackException;
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
 use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Request\RequestValidatorInterface;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+
+use function str_repeat;
 
 /** @internal */
 final class CallbackValidatorTest extends TestCase
@@ -429,6 +432,64 @@ final class CallbackValidatorTest extends TestCase
         $this->expectExceptionMessage('not found in components.pathItems');
 
         $this->callbackValidator->validate($request, 'refCallback', $document);
+    }
+
+    #[Test]
+    public function resolve_path_template_with_preg_executor_returns_no_match_on_extra_segment(): void
+    {
+        $requestValidator = $this->createStub(RequestValidatorInterface::class);
+        $requestValidator->method('validate');
+
+        $validator = new CallbackValidator(
+            $requestValidator,
+            new PathRegexCache(),
+            strictCallbackRuntimeTemplate: false,
+            pregExecutor: new PregExecutor(maxBacktracks: 1000),
+        );
+
+        $operation = new SchemaOperation(operationId: 'hookCallback');
+        $pathItem = new PathItem(post: $operation);
+
+        $document = $this->createDocumentWithComponentCallback(
+            'hookCallback',
+            ['/hook/{id}' => $pathItem],
+        );
+
+        $attackerPath = '/hook/' . str_repeat('a', 50) . '!/extra';
+
+        $request = $this->psrFactory->createServerRequest('POST', $attackerPath);
+
+        $this->expectException(UnknownCallbackException::class);
+
+        $validator->validate($request, 'hookCallback', $document);
+    }
+
+    #[Test]
+    public function inner_constructor_accepts_preg_executor_argument(): void
+    {
+        $requestValidator = $this->createStub(RequestValidatorInterface::class);
+        $requestValidator->method('validate');
+
+        $validator = new CallbackValidator(
+            $requestValidator,
+            new PathRegexCache(),
+            strictCallbackRuntimeTemplate: false,
+            pregExecutor: new PregExecutor(maxBacktracks: 500),
+        );
+
+        $operation = new SchemaOperation(operationId: 'pregExecutorCallback');
+        $pathItem = new PathItem(post: $operation);
+
+        $document = $this->createDocumentWithComponentCallback(
+            'pregExecutorCallback',
+            ['/items/{id}' => $pathItem],
+        );
+
+        $request = $this->psrFactory->createServerRequest('POST', '/items/42');
+
+        $resolved = $validator->validate($request, 'pregExecutorCallback', $document);
+
+        $this->assertSame('pregExecutorCallback', $resolved->operationId);
     }
 
     private function createEmptyDocument(): OpenApiDocument

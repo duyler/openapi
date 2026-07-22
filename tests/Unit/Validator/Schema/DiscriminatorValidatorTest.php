@@ -523,4 +523,263 @@ final class DiscriminatorValidatorTest extends TestCase
 
         $this->validator->validate(['petType' => 'Bird'], $petSchema, $document);
     }
+
+    #[Test]
+    public function nested_composition_failure_continues_to_next_candidate(): void
+    {
+        $catSchema = new Schema(
+            type: 'object',
+            required: ['petType', 'name'],
+            properties: [
+                'petType' => new Schema(type: 'string'),
+                'name' => new Schema(type: 'string'),
+            ],
+        );
+
+        $nestedComposition = new Schema(
+            oneOf: [
+                new Schema(
+                    type: 'object',
+                    properties: [
+                        'petType' => new Schema(type: 'string', enum: ['other']),
+                    ],
+                ),
+            ],
+        );
+
+        $petSchema = new Schema(
+            oneOf: [
+                $nestedComposition,
+                new Schema(ref: '#/components/schemas/Cat'),
+            ],
+            discriminator: new Discriminator(propertyName: 'petType'),
+        );
+
+        $document = new OpenApiDocument(
+            '3.2.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                ],
+            ),
+        );
+
+        $catData = ['petType' => 'Cat', 'name' => 'Tom'];
+
+        $exception = null;
+
+        try {
+            $this->validator->validate($catData, $petSchema, $document);
+        } catch (Throwable $e) {
+            $exception = $e;
+        }
+
+        $this->assertNull(
+            $exception,
+            'findMatchingSchema must continue past a nested composition that throws UnknownDiscriminatorValueException',
+        );
+    }
+
+    #[Test]
+    public function discriminator_enumerates_all_composition_arrays(): void
+    {
+        $catSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $dogSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            oneOf: [new Schema(ref: '#/components/schemas/Cat')],
+            anyOf: [new Schema(ref: '#/components/schemas/Dog')],
+            discriminator: new Discriminator(propertyName: 'petType'),
+        );
+
+        $document = new OpenApiDocument(
+            '3.2.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                    'Dog' => $dogSchema,
+                ],
+            ),
+        );
+
+        $dogData = ['petType' => 'Dog'];
+
+        $exception = null;
+
+        try {
+            $this->validator->validate($dogData, $petSchema, $document);
+        } catch (Throwable $e) {
+            $exception = $e;
+        }
+
+        $this->assertNull(
+            $exception,
+            'Discriminator must enumerate candidates from oneOf AND anyOf AND allOf simultaneously',
+        );
+    }
+
+    #[Test]
+    public function default_mapping_fallback_applies_when_propertyName_set_and_value_unresolved(): void
+    {
+        $catSchema = new Schema(
+            type: 'object',
+            required: ['petType', 'name'],
+            properties: [
+                'petType' => new Schema(type: 'string'),
+                'name' => new Schema(type: 'string'),
+            ],
+        );
+
+        $genericSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            oneOf: [new Schema(ref: '#/components/schemas/Cat')],
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+                mapping: ['cat' => '#/components/schemas/Cat'],
+                defaultMapping: '#/components/schemas/Generic',
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.2.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                    'Generic' => $genericSchema,
+                ],
+            ),
+        );
+
+        $unknownData = ['petType' => 'unknown'];
+
+        $exception = null;
+
+        try {
+            $this->validator->validate($unknownData, $petSchema, $document);
+        } catch (Throwable $e) {
+            $exception = $e;
+        }
+
+        $this->assertNull(
+            $exception,
+            'defaultMapping must apply for unresolved propertyName values after candidates are exhausted',
+        );
+    }
+
+    #[Test]
+    public function default_mapping_fallback_applies_when_propertyName_null(): void
+    {
+        $genericSchema = new Schema(
+            type: 'object',
+            required: ['anything'],
+            properties: [
+                'anything' => new Schema(type: 'string'),
+            ],
+        );
+
+        $petSchema = new Schema(
+            discriminator: new Discriminator(
+                defaultMapping: '#/components/schemas/Generic',
+            ),
+        );
+
+        $document = new OpenApiDocument(
+            '3.2.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Generic' => $genericSchema,
+                ],
+            ),
+        );
+
+        $data = ['anything' => 'any'];
+
+        $exception = null;
+
+        try {
+            $this->validator->validate($data, $petSchema, $document);
+        } catch (Throwable $e) {
+            $exception = $e;
+        }
+
+        $this->assertNull(
+            $exception,
+            'defaultMapping must apply via validateWithoutPropertyName when propertyName is null',
+        );
+    }
+
+    #[Test]
+    public function unresolved_value_without_default_mapping_throws_after_composition_exhausted(): void
+    {
+        $catSchema = new Schema(
+            type: 'object',
+            required: ['petType'],
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+        );
+
+        $nestedComposition = new Schema(
+            oneOf: [
+                new Schema(
+                    type: 'object',
+                    properties: [
+                        'petType' => new Schema(type: 'string', enum: ['other']),
+                    ],
+                ),
+            ],
+        );
+
+        $petSchema = new Schema(
+            oneOf: [
+                $nestedComposition,
+                new Schema(ref: '#/components/schemas/Cat'),
+            ],
+            discriminator: new Discriminator(propertyName: 'petType'),
+        );
+
+        $document = new OpenApiDocument(
+            '3.2.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                ],
+            ),
+        );
+
+        $this->expectException(UnknownDiscriminatorValueException::class);
+        $this->expectExceptionMessage('Unknown discriminator value "Bird"');
+
+        $this->validator->validate(['petType' => 'Bird'], $petSchema, $document);
+    }
 }

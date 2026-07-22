@@ -75,7 +75,7 @@ abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterf
         return $this->dependencies->pregExecutor;
     }
 
-    protected function createSchemaValidator(): SchemaValidator
+    protected function createSchemaValidator(): SchemaValidatorInterface
     {
         return $this->dependencies->rootSchemaValidator();
     }

@@ -42,8 +42,9 @@ final readonly class PathFinder
     public function __construct(
         private readonly OpenApiDocument $document,
         PathRegexCache $pathRegexCache = new PathRegexCache(),
+        PregExecutor $pregExecutor = new PregExecutor(),
     ) {
-        $this->pathParser = new PathParser($pathRegexCache);
+        $this->pathParser = new PathParser($pathRegexCache, $pregExecutor);
         [$this->trie, $this->templateOrder] = $this->buildTrie($document->paths?->paths ?? []);
     }
 

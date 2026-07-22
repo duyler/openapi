@@ -7,9 +7,6 @@ namespace Duyler\OpenApi\Validator\Exception;
 use RuntimeException;
 use Throwable;
 
-use function sprintf;
-use function strtoupper;
-
 final class OperationNotFoundException extends RuntimeException
 {
     use SanitizableExceptionTrait;
@@ -21,7 +18,7 @@ final class OperationNotFoundException extends RuntimeException
         ?Throwable $previous = null,
     ) {
         parent::__construct(
-            sprintf('Operation not found: %s %s', strtoupper($method), $requestPath),
+            'No operation matches the request',
             $code,
             $previous,
         );

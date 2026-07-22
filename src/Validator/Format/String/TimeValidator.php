@@ -15,7 +15,7 @@ final readonly class TimeValidator extends AbstractStringFormatValidator
     private const string TIME_PATTERN = '/^'
         . '(?<hour>[01]\d|2[0-3]):(?<minute>[0-5]\d):(?<second>[0-5]\d|60)'
         . '(?:\.\d+)?'
-        . '(?<offset>[Zz]|[+-](?:(?:0\d|1[0-3]):[0-5]\d|14:00))?'
+        . '(?<offset>[Zz]|[+-](?:(?:0\d|1[0-3]):[0-5]\d|14:00))'
         . '$/';
 
     /** @var list<string> */

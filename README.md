@@ -134,6 +134,35 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
+#### YAML Anchor / Alias Caps (Billion-Laughs Defence)
+
+`YamlParser` enforces three orthogonal pre-parse caps on YAML anchor (`&name`)
+and alias (`*name`) constructs to block the "billion laughs" expansion bomb
+(CWE-400, CWE-770) **before** the Symfony YAML parser materialises the expanded
+document. The pre-parse scan runs after the size check and before
+`Symfony\Component\Yaml\Yaml::parse()`, so an attacker-controlled 1 KB payload
+can never reach the parser even when its expanded in-memory size would exceed
+the process `memory_limit`.
+
+| Cap | Default | Rationale |
+|-----|---------|-----------|
+| `YamlParser::MAX_ANCHORS` | 100 | Real OpenAPI specs use fewer than 20 anchors for schema deduplication. The regex scanner uses `[^ \t,\[\]\{\}\n]+` with `/u` flag, exactly mirroring Symfony YAML's `Inline::parseAnchor` reject set — so any character Symfony accepts as an anchor-name character (Cyrillic, CJK, dots, colons, pipes, FF, VT, NBSP, etc.) is counted. |
+| `YamlParser::MAX_ALIASES` | 1000 | Real OpenAPI specs use fewer than 50 alias references. Symfony YAML's own `maxAliasesForCollections` (default 128) remains active as defense-in-depth for collection aliases that slip past the pre-parse scan. |
+| `YamlParser::MAX_ALIAS_DEPTH` | 10 | DAG-based longest-chain heuristic. Each anchor's value range is determined by indentation (from the anchor's declaration line to the next anchor at the same or lower indentation). Aliases within that range that reference other declared anchors become DAG edges; the longest path is the chain depth. Catches both same-line (flow-style `b: &b [*a]`) and multi-line (`b: &b\n  - *a`) billion-laughs variants. Real billion-laughs payloads use 5-7 chain levels; 10 leaves conservative headroom for legitimate deduplication. |
+
+Exceeding any cap throws `SpecTooLargeException` (a `\RuntimeException`
+subclass) with a sanitised message that discloses only the metric, the actual
+count, and the cap — never the attacker payload (CWE-209). The caps are
+compile-time `public const int` values; runtime configurability is tracked as
+a separate follow-up.
+
+Known heuristic limitation: the byte-level regex scanner cannot distinguish
+anchor/alias tokens from literal `&` / `*` characters inside double-quoted
+YAML strings (for example `description: "User & Admin"`). The conservative
+identifier pattern (`&[A-Za-z0-9_-]+`) rejects the common `& ` case but a
+false positive on `&Word` is possible; treat such specs as trusted or
+pre-process them before passing to the parser.
+
 ### External `$ref` Resolution
 
 The validator supports external `$ref` references for `file://` URIs and
@@ -545,6 +574,21 @@ $data = ['petType' => 'cat', 'name' => 'Fluffy'];
 $validator->validateSchema($data, '#/components/schemas/Pet');
 ```
 
+Discriminator candidate enumeration follows JSON Schema 2020-12 §10.2.1.1:
+when a schema declares more than one composition keyword (`oneOf`, `anyOf`,
+`allOf`), the discriminator enumerates candidates from **all** non-null
+composition arrays simultaneously. A nested candidate whose own composition
+does not contain the discriminator value no longer aborts the search —
+remaining candidates are tried before the discriminator gives up.
+
+The OpenAPI 3.2 §4.25 `defaultMapping` keyword is honoured as the final
+fallback for **any** unresolved discriminator value, regardless of whether
+`propertyName` is set. When the value is missing from `mapping` and no
+candidate matches via implicit name or nested composition, the validator
+resolves `defaultMapping` instead of raising
+`UnknownDiscriminatorValueException`. When `propertyName` itself is `null`,
+the same `defaultMapping` is applied unconditionally.
+
 ### Event-Driven Validation
 
 Subscribe to validation lifecycle events:
@@ -800,7 +844,7 @@ $compilationCache = new CompilationCache($pool, ttl: 3600); // 1-hour TTL
 
 #### Compiler Limitations
 
-The compiler does not support all JSON Schema keywords. If a schema uses unsupported keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `patternProperties`, `format`, `minProperties`, `maxProperties`, `prefixItems`, the boolean form of `items`/`contains`/`propertyNames`/`if`/`then`/`else`/`not`/`unevaluatedItems`, or `additionalProperties` as a Schema — the bool `true`/`false` form is supported), the compiler throws `UnsupportedKeywordException`. See the Limitations section below for details.
+The compiler does not support all JSON Schema keywords. If a schema uses unsupported keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `patternProperties`, `format`, `minProperties`, `maxProperties`, `prefixItems`, `discriminator`, `dependentSchemas`, `unevaluatedProperties`, `unevaluatedItems`, `contentEncoding`, `contentMediaType`, `contentSchema`, the boolean form of `items`/`contains`/`propertyNames`/`if`/`then`/`else`/`not`/`unevaluatedItems`, or `additionalProperties` as a Schema — the bool `true`/`false` form is supported), the compiler throws `UnsupportedKeywordException`. Unsupported keywords are detected anywhere in the schema tree (top-level, nested `properties`, or `items`); the compiler never silently emits a validator that ignores them. See the Limitations section below for details.
 
 `prefixItems` is rejected with `UnsupportedKeywordException` during compilation — positional item validation is not generated. Use the runtime validator for `prefixItems` enforcement.
 
@@ -808,8 +852,9 @@ For supported keywords, the generated code matches runtime-validator semantics f
 
 - `type: integer` accepts whole floats (`3.0`) per JSON Schema 2020-12 §4.2.3, and rejects non-whole floats (`3.14`, `Inf`, `NaN`).
 - `multipleOf` uses the integer modulus path (`%`) when both operands are integers, and falls back to a quotient-plus-relative-epsilon check (`1e-9 * max(1.0, abs($quotient))`) for float operands — matching `NumericRangeValidator::isMultipleOf` so large dividends (e.g. `1e20 / 0.1`) do not lose precision the way `fmod` does.
-- Top-level `const`, `enum`, and `uniqueItems` keywords use an inlined copy of `JsonEquals::equals` / `JsonEquals::arraysEqual` so the compiled validator honours JSON Schema 2020-12 §4.2.2 instance equality: `1` and `1.0` are equal; object keys are unordered; bool is distinct from int. Mixed int/float comparisons above the 2^53 IEEE 754 boundary are rejected as unequal (mirrors `JsonEquals::SAFE_INT64_FLOAT_BOUNDARY`). For `uniqueItems`, the inline `canonicalJsonKey` helper canonicalises whole-float-to-int and `ksort`s object keys before hashing, so `[1, 1.0]` and `[{a:1,b:2}, {b:2,a:1}]` are detected as duplicates; an associative-array `isset` lookup gives O(n) enforcement with a `100000` unique-entry cap matching `ArrayLengthValidator::MAX_UNIQUE_CHECK`. `JsonException` from `json_encode` is converted to `RuntimeException` so the standalone-validator contract (only generic `RuntimeException` is thrown) is preserved. Note: `enum` checks inside `items` (array item schemas) still use strict `in_array`; this is a known limitation tracked for a follow-up task.
-- `pattern` is matched inside an inlined defensive wrapper that lowers `pcre.backtrack_limit` to `10_000` for the duration of the call (mirroring `PregExecutor::DEFAULT_MAX_BACKTRACKS`) and restores the previous value inside a `try`/`finally`. This bounds execution time for catastrophic-backtracking patterns such as `(a+)+` (CWE-1333, CWE-400) without breaking the standalone-validator contract: no library code is emitted into the generated class. PCRE errors (`preg_match === false`) are disambiguated from no-match (`0`) via distinct `RuntimeException` messages.
+- Top-level `const`, `enum`, and `uniqueItems` keywords use an inlined copy of `JsonEquals::equals` / `JsonEquals::arraysEqual` so the compiled validator honours JSON Schema 2020-12 §4.2.2 instance equality: `1` and `1.0` are equal; object keys are unordered; bool is distinct from int. Mixed int/float comparisons above the 2^53 IEEE 754 boundary are rejected as unequal (mirrors `JsonEquals::SAFE_INT64_FLOAT_BOUNDARY`). For `uniqueItems`, the inline `canonicalJsonKey` helper canonicalises whole-float-to-int and `ksort`s object keys before hashing, so `[1, 1.0]` and `[{a:1,b:2}, {b:2,a:1}]` are detected as duplicates; an associative-array `isset` lookup gives O(n) enforcement with a `100000` unique-entry cap matching `ArrayLengthValidator::MAX_UNIQUE_CHECK`. `JsonException` from `json_encode` is converted to `RuntimeException` so the standalone-validator contract (only generic `RuntimeException` is thrown) is preserved. The same inlined `jsonEquals` is used for `enum` and `const` checks inside array `items` and nested object `properties`, so instance equality (`1` matches enum `[1, 2, 3]`) holds at every depth (R4-CORRECTNESS-013).
+- `pattern` is matched inside an inlined defensive wrapper that lowers `pcre.backtrack_limit` to `10_000` for the duration of the call (mirroring `PregExecutor::DEFAULT_MAX_BACKTRACKS`) and restores the previous value inside a `try`/`finally`. This bounds execution time for catastrophic-backtracking patterns such as `(a+)+` (CWE-1333, CWE-400) without breaking the standalone-validator contract: no library code is emitted into the generated class. PCRE errors (`preg_match === false`) are disambiguated from no-match (`0`) via distinct `RuntimeException` messages. The same wrapper is emitted for `pattern` declared on nested object properties and array `items`, so the ReDoS defence applies at every depth.
+- Nested `properties` and `items` enforce the same supported-keyword subset as the top-level schema (R4-CORRECTNESS-004). `type`, `enum`, `const`, `minLength`, `maxLength`, `pattern`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`, `minItems`, `maxItems`, `uniqueItems`, `required`, `additionalProperties: false`, `properties`, and `items` are all emitted for nested properties and array items via a shared `generateConstraintsForSchema` helper, so there is no behavioural asymmetry between top-level and nested paths. Unsupported keywords encountered anywhere in the schema tree (including inside `properties` and `items`) throw `UnsupportedKeywordException` at compile time rather than being silently ignored.
 
 Use the runtime validator when you need the typed error classes (`TypeMismatchError`, `MultipleOfKeywordError`, …); the compiler only emits generic `RuntimeException`.
 
@@ -1036,6 +1081,14 @@ new Schema(pattern: '[invalid')
 - `exclusiveMinimum` / `exclusiveMaximum` - Exclusive ranges
 - `multipleOf` - Numeric division
 
+> **Big-integer support without `bcmath`**: `multipleOf` for int64 values
+> (e.g. snowflake IDs up to `PHP_INT_MAX`) works without the `bcmath`
+> extension via pure-PHP string-based decimal modulus. When `bcmath` is
+> loaded, the validator prefers the faster bcmath path; when it is
+> absent, the validator falls back to the pure-PHP path instead of
+> rejecting the request. This unblocks production deployments on
+> images that ship without `bcmath` (R4-CORRECTNESS-008).
+
 ### Array Validation
 - `items` / `prefixItems` - Array item validation
 - `minItems` / `maxItems` - Array length constraints
@@ -1145,6 +1198,35 @@ preventing a multi-megabyte attacker payload from being amplified into
 logs. The truncated value stays public readonly because it remains
 useful for diagnosing user-facing stream parse failures.
 
+`PathMismatchException`, `OperationNotFoundException`,
+`UnsupportedMediaTypeException`, and `InvalidParameterException` carry
+attacker-controlled values (`$requestPath`, `$template`, `$method`,
+`$mediaType`, the caller-supplied `$message` argument) but their
+`getMessage()` returns a generic static string
+(`'Request path does not match any declared template'`,
+`'No operation matches the request'`,
+`'Unsupported media type. Supported types: %s'` with the spec-derived
+`$supportedTypes` list, and `'Invalid parameter configuration'`
+respectively) so a PSR-15 middleware that renders the message into an
+HTTP response body, or a PSR-3 logger that writes it into a log file,
+cannot be turned into a reflective XSS or log-injection sink by a
+crafted request path, method, or Content-Type header (R4-SEC-007a/b/c/d,
+CWE-209, CWE-532). `InvalidParameterException` additionally keeps
+`$parameterName` in `protected readonly` and exposes it via the
+`parameterName(bool $reveal = false)` opt-in getter (default returns
+`'<redacted>'`); the constructor's `$message` argument is no longer
+interpolated into `getMessage()` and is dropped after construction.
+The remaining attacker-controlled properties on the three HTTP-side
+exception classes (`PathMismatchException::$requestPath`,
+`PathMismatchException::$template`, `OperationNotFoundException::$requestPath`,
+`OperationNotFoundException::$method`,
+`UnsupportedMediaTypeException::$mediaType`,
+`UnsupportedMediaTypeException::$supportedTypes`) stay `public readonly`
+because they are exception internal state, not message content: a PSR-3
+logger calls `getMessage()` rather than reading properties directly, and
+trusted operator code (verbose formatter, security auditor) needs them
+for diagnostics.
+
 ### Validation Error Reference
 
 All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schemaPath()`, `keyword()`, `message()`, `params()`, and `suggestion()` methods.
@@ -1252,6 +1334,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `ExternalRefSecurityException` | External `$ref` violates builtin resolver security policy (non-allowlisted scheme, path traversal outside the allowed root). Surfaced by `RefResolver` as `UnresolvableRefException` |
 | `ExternalRefTooLargeException` | External `$ref` file exceeds the configured `maxBytes` limit (default 10 MB); extends `\RuntimeException` (not a security policy violation) |
 | `SchemaDepthExceededException` | Maximum schema nesting depth exceeded |
+| `UnsupportedSecuritySchemeException` | Spec declares a security scheme type this library does not validate (`oauth2`, `openIdConnect`, `http/basic`, `http/digest`, `mutualTLS`, or unknown). Thrown by `SecurityValidator::validate()` (surfaced through `validateRequest()` / `validateWebhook()` / `validateCallback()`); extends `\RuntimeException`, **not** wrapped into `ValidationException`. R4-SEC-010 / R4-SPEC-003. |
 | `UnknownValidatorException` | Unknown validator type requested |
 | `VersionNotFoundException` | Requested schema name or version is not registered (thrown by `SchemaRegistry::getOrFail()`) |
 | `SchemaAlreadyRegisteredException` | Schema name+version pair is already registered (thrown by `SchemaRegistry::register()`; use `registerOrReplace()` for explicit overwrite) |
@@ -1324,6 +1407,10 @@ The following format validators are included:
 | `uri-reference` | Absolute or relative URI (RFC 3986 §4.1) | `/path`, `//host/path`, `?q=1`, `#frag` |
 | `uri-template` | URI Template (RFC 6570, balanced expressions) | `https://api.example.com/users/{userId}` |
 | `regex` | Regular expression pattern (ECMA-262 syntax via PCRE) | `^[a-z]+$` |
+
+> The `time` format requires a UTC offset per RFC 3339 §5.6 (`Z`, `+HH:MM`,
+> or `-HH:MM`). Time strings without an offset (e.g., `10:30:00`) are
+> rejected with `InvalidFormatException`.
 
 ### Numeric Formats
 
@@ -1603,6 +1690,31 @@ while ($request = $worker->waitRequest()) {
 
 If the OpenAPI specification changes at runtime, rebuild the validator. The old instances will be garbage-collected when no longer referenced.
 
+#### CI verification
+
+These contracts are verified by `tests/Concurrency/SwooleSharedValidatorTest`
+(Swoole coroutine isolation) and `tests/Concurrency/FrankenPhpThreadedTest`
+(FrankenPHP threaded worker isolation). The Swoole suite runs in a dedicated
+CI matrix job based on `phpswoole/swoole:php8.5` on every push and pull
+request, with a `php -m | grep -q '^swoole$'` fast-fail step that prevents
+the test from silently skipping when the extension is missing (R4-TEST-001).
+
+The FrankenPHP suite (`tests/Concurrency/FrankenPhpThreadedTest`) is
+retained in the repository but is not exercised by CI today. The
+`frankenphp` extension is statically compiled into the Caddy-based
+`frankenphp` binary and is registered with the Zend engine only inside
+the frankenphp worker SAPI (real web requests); it is not available as
+a loadable `.so` and is absent from `php -m` / `frankenphp php-cli -m`
+output regardless of the base image. As a result
+`FrankenPhpThreadedTest::setUp()` calls `markTestSkipped()` under
+`extension_loaded('frankenphp') === false` in CLI SAPI, so a CLI-based
+CI job cannot catch regressions. Coverage of the FrankenPHP threaded
+contract requires a worker-SAPI test harness that boots the frankenphp
+server and runs PHPUnit through an actual worker request; tracked as a
+follow-up to R4-TEST-001. `tests/Concurrency/RoadRunnerTest` runs in
+the main `tests` job without any extension gate because RoadRunner uses
+the prefork model and does not require a runtime extension.
+
 ## Streaming Response Validation
 
 The validator supports three streaming response formats. Each item in the stream is validated individually against the schema defined in `itemSchema` (or `schema` as fallback).
@@ -1797,6 +1909,45 @@ per branch and merge annotations only on successful sub-validation.
 `NotValidator` deliberately contributes an empty annotation set per
 §10.3.4.
 
+`$ref` resolution applies to all schema-typed keywords, not just the
+top-level composition arrays (`allOf` / `anyOf` / `oneOf`). The legacy
+recursion engine wrapped by `RefResolvingSchemaValidator` resolves
+`$ref` on `additionalProperties`, `patternProperties`,
+`unevaluatedProperties`, `unevaluatedItems`, `prefixItems`, `contains`,
+`propertyNames`, `dependentSchemas`, `not`, `if`, `then`, `else`,
+`items`, and `properties` before delegating to the recursion validator,
+so stub `{$ref: '#/...'}` subschemas embedded in any of those keywords
+no longer pass validation as a silent no-op. Circular `$ref` chains are
+bounded by `RefResolver`'s WeakMap cycle guard and the surrounding
+`ValidationContext::MAX_DEPTH` (default 64), which raises
+`SchemaDepthExceededException` instead of looping forever.
+
+Discriminator-routed branches (`discriminator.mapping` resolution) now
+propagate evaluated-property / evaluated-item annotations to the parent
+`ValidationContext` via `forkForBranch` + `mergeChildAnnotations`.
+`unevaluatedProperties: false` and `unevaluatedItems: false` correctly
+exclude properties/items already validated by the discriminator target
+schema (R4-CORRECTNESS-005, R4-SPEC-015).
+
+Known limitation: when a `properties` or `items` subschema is declared
+as `{$ref: '#/...'}` and the resolved target schema allows `null` via
+`type: [..., 'null']` (rather than via an explicit `nullable: true`
+sibling on the `$ref` stub), the validator's pre-normalization step
+(`PropertiesValidatorWithContext` / `PropertiesValidator` /
+`ItemsValidator` / `ItemsValidatorWithContext`) still sees the
+unresolved stub when computing `$allowNull`. Because the stub has no
+`nullable` field and no `type`, `$allowNull` evaluates to `false`, so a
+`null` value on such a property or item is rejected as
+`InvalidDataTypeException` even though it is valid per the resolved
+target. Non-null values are unaffected. To work around this, declare
+`nullable: true` as a sibling of the `$ref` so the pre-normalize step
+sees the allow-null flag, and ensure the resolved target schema also
+allows `null` (via `nullable: true` or `type: [..., 'null']`); the
+sibling `nullable: true` is combined with the resolved target's
+nullability using logical AND semantics
+(`SchemaSiblingMerger`, per OpenAPI 3.x `nullable`
+sibling-extension rules). Tracked for a follow-up fix.
+
 Limitations:
 
 - Annotation tracking works only when validation flows through
@@ -1823,9 +1974,9 @@ Limitations:
 
 ### Validator Compiler
 
-The `ValidatorCompiler` is marked as `@experimental`. It supports a subset of JSON Schema keywords: `type`, `enum`, `const`, `minLength`, `maxLength`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`, `pattern`, `minItems`, `maxItems`, `uniqueItems`, `properties`, `required`, `additionalProperties`, `items`.
+The `ValidatorCompiler` is marked as `@experimental`. It supports a subset of JSON Schema keywords: `type`, `enum`, `const`, `minLength`, `maxLength`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`, `pattern`, `minItems`, `maxItems`, `uniqueItems`, `properties`, `required`, `additionalProperties` (bool form only), `items`. The same subset is enforced at every depth — for nested object `properties` and array `items`, the compiler emits the same constraints as for top-level fields (R4-CORRECTNESS-004).
 
-The compiler does not support composition keywords (`allOf`, `anyOf`, `oneOf`, `not`), conditional keywords (`if`/`then`/`else`), `patternProperties`, `format`, `minProperties`, `maxProperties`, `prefixItems`, or `additionalProperties` as a Schema (the bool `true`/`false` form is supported). The boolean form of `items`, `contains`, `propertyNames`, `if`, `then`, `else`, `not`, and `unevaluatedItems` is also unsupported and throws `UnsupportedKeywordException`; use the runtime validator for these schemas. If any of these are present in a schema, `compile()` throws `UnsupportedKeywordException`.
+The compiler does not support composition keywords (`allOf`, `anyOf`, `oneOf`, `not`), conditional keywords (`if`/`then`/`else`), `patternProperties`, `format`, `minProperties`, `maxProperties`, `prefixItems`, `discriminator`, `dependentSchemas`, `unevaluatedProperties`, `unevaluatedItems`, `contentEncoding`, `contentMediaType`, `contentSchema`, or `additionalProperties` as a Schema (the bool `true`/`false` form is supported). The boolean form of `items`, `contains`, `propertyNames`, `if`, `then`, `else`, `not`, and `unevaluatedItems` is also unsupported and throws `UnsupportedKeywordException`; use the runtime validator for these schemas. Unsupported keywords are detected anywhere in the schema tree (top-level, nested `properties`, or `items`); if any are present, `compile()` throws `UnsupportedKeywordException` rather than silently producing a validator that ignores them.
 
 Generated validators throw generic `RuntimeException` on failure rather than the typed error classes used by the runtime validator.
 
@@ -1843,22 +1994,72 @@ Response body validation does not expand wildcards: media type matching uses lit
 
 ### Security Validation
 
-Security scheme validation is basic. The validator checks that required credentials are present in the request (headers, query parameters, or cookies) but does not verify their correctness or format. Token validation, signature checking, and OAuth flow handling are outside the scope of this library.
+Security scheme validation is basic. The validator checks that required credentials are present in the request (headers, query parameters, or cookies) but does not verify their correctness or format. Token introspection, JWT signature verification, JWKS resolution, and OAuth flow handling are outside the scope of this library.
 
 > **Note:** Security scheme validation is invoked by `validateRequest()`, `validateWebhook()`, and `validateCallback()` when `enableSecurityValidation()` is enabled. If a security scheme is defined at the document or operation level, the validator checks that required credentials are present in the request. If `enableSecurityValidation()` is not called, security validation is skipped (default behavior).
 
 The following security scheme types are supported:
 
-- `http/bearer` - Checks for `Authorization: Bearer ...` header
-- `apiKey` (query, header, cookie) - Checks for the named parameter in the specified location
+- `http/bearer` - Checks for `Authorization: Bearer ...` header (RFC 6750, case-insensitive scheme prefix)
+- `apiKey` (`query`, `header`, `cookie`) - Checks for the named parameter in the specified location
 
-The following scheme types are not supported and will produce an error when encountered:
+The following scheme types are **not supported** and throw `Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException` when encountered in the spec at request-validation time (R4-SEC-010, R4-SPEC-003):
 
-- `http/basic` - Basic authentication
-- `oauth2` - OAuth 2.0 flows
+- `http/basic` - Basic authentication (`Authorization: Basic base64(user:pass)`)
+- `http/digest` - HTTP Digest authentication
+- `oauth2` - OAuth 2.0 flows (authorizationCode, implicit, password, clientCredentials, deviceCode)
 - `openIdConnect` - OpenID Connect Discovery
+- `mutualTLS` - Mutual TLS
+- any other unknown scheme type
 
-By default, security validation failures return a generic error message
+`UnsupportedSecuritySchemeException` extends `\RuntimeException` (it is a
+configuration error, not a credential-validation error). It is **not** wrapped
+into `ValidationException`; it propagates directly from `validateRequest()` /
+`validateWebhook()` / `validateCallback()` and must be caught separately in a
+PSR-15 middleware. The exception message is operator-facing diagnostic content
+(the scheme name and type), but `(string) $e` returns only `getMessage()` —
+file paths and stack traces are not leaked (CWE-209, CWE-497, R3-SEC-INFO-LEAK).
+
+#### AND / OR semantics with unsupported schemes
+
+The OpenAPI `security` keyword is a list of dicts. The outer list is OR
+(any-of); each inner dict is AND (all-of).
+
+- **AND list with one unsupported scheme**: the whole dict fails closed with
+  `UnsupportedSecuritySchemeException`, even if a supported sibling scheme in
+  the same dict would have passed. A spec such as
+  `security: [{oauth2: [read], bearerAuth: []}]` therefore fails for every
+  request — the operator must remove the unsupported scheme from the spec.
+- **OR list with mixed supported and unsupported dicts**: the supported
+  alternative is still tried. A spec such as
+  `security: [{oauth2: [read]}, {bearerAuth: []}]` succeeds for a request
+  that carries a valid `Authorization: Bearer ...` header, because the
+  second OR dict validates. If no OR alternative succeeds, the most recently
+  captured `UnsupportedSecuritySchemeException` is re-thrown (operator-visible
+  configuration error takes priority over credential errors).
+
+#### OAuth2 scope preservation (R4-SPEC-003)
+
+The scopes declared on a security requirement
+(`security: [{OAuth2: [read, write]}]`) are no longer discarded. Even though
+the `oauth2` scheme itself is rejected, the declared scopes are forwarded to
+the configured PSR-3 logger at `debug` level via the entry
+`'Security requirement scopes'` with `{schemeName, schemeType, scopes}` context,
+so trusted operators can audit which scopes the spec demands. Empty scope
+lists (the default for `apiKey`, `http/bearer`) do not trigger the log entry.
+
+#### Migrating an OAuth2 / OpenID Connect spec
+
+Consumers that need full OAuth2 / OpenID Connect token validation must remove
+the unsupported schemes from their spec and validate the token at the
+application layer, or replace this library's security validator with a custom
+PSR-15 middleware that calls an external token introspection endpoint / JWKS
+verifier. There is no extension point in `SecurityValidator` for plugging in a
+custom scheme handler; the diagnostic exception exists precisely so a missing
+handler is detected instead of silently bypassed (R4-SEC-010 secure-by-default).
+
+By default, credential-validation failures (missing `Authorization: Bearer`
+header, missing API key parameter, etc.) return a generic error message
 (`'Authentication required: missing or invalid credentials'`) that does not
 reveal which security scheme was checked or where the credential was expected.
 This prevents unauthenticated callers from learning the API's security

@@ -111,7 +111,7 @@ final class QueryParserParseQueryStringTest extends TestCase
         );
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage('Invalid JSON');
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->parser->parseQueryString('{invalid}', $param);
     }

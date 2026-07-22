@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Security;
 use Duyler\OpenApi\Schema\Model\SecurityRequirement;
 use Duyler\OpenApi\Schema\Model\SecurityScheme;
 use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
+use Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
@@ -252,6 +253,146 @@ final class SecurityValidatorTest extends TestCase
         }
     }
 
+    /**
+     * R4-SEC-016 anti-test: a multi-challenge Authorization header
+     * carrying a fake Bearer prefix followed by a Basic challenge must
+     * not satisfy the Bearer security requirement. Without the `$`
+     * end-anchor the previous regex `/^bearer\s+\S+/i` matched only the
+     * `Bearer fake` prefix and silently accepted the header, allowing
+     * downstream code to extract the Basic challenge as the credential.
+     */
+    #[Test]
+    public function http_bearer_multi_challenge_with_basic_suffix_rejected(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('Authorization', 'Bearer fake, Basic dXNlcjpwYXNz');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        try {
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('bearerAuth', $error->schemeName(reveal: true));
+            $this->assertSame('http/bearer', $error->schemeType(reveal: true));
+            $this->assertSame('Authorization header', $error->location(reveal: true));
+        }
+    }
+
+    /**
+     * R4-SEC-016 anti-test: RFC 7235 §4.1 permits multiple challenges in
+     * a single Authorization header. Two Bearer challenges separated by
+     * a comma is still a multi-challenge header and must be rejected to
+     * prevent the validator from rubber-stamping a prefix.
+     */
+    #[Test]
+    public function http_bearer_multi_challenge_with_duplicate_bearer_rejected(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('Authorization', 'Bearer abc, Bearer def');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+    }
+
+    /**
+     * RFC 7235 header-value semantics: trailing whitespace in the
+     * Authorization value is permitted and must not cause a valid
+     * Bearer credential to be rejected. Requires `\s*$` rather than a
+     * strict `$` anchor.
+     */
+    #[Test]
+    public function http_bearer_with_trailing_whitespace_passes(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('Authorization', 'Bearer valid_token ');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    /**
+     * RFC 6750 §2.1 defines `b64token` as a whitespace-free production.
+     * A second whitespace run inside the token area indicates either a
+     * malformed credential or an attempt to smuggle an additional
+     * value past the validator and must be rejected.
+     */
+    #[Test]
+    public function http_bearer_with_internal_whitespace_in_token_rejected(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('Authorization', 'Bearer fake extra');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+    }
+
+    /**
+     * R4-SEC-016 anti-test: the credential position must not be a
+     * vehicle for arbitrary payloads. Any suffix after the token that
+     * is not whitespace must cause rejection (end-anchored regex).
+     */
+    #[Test]
+    public function http_bearer_with_payload_suffix_after_token_rejected(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('Authorization', 'Bearer fake <script>alert(1)</script>');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+    }
+
     #[Test]
     public function http_basic_returns_unsupported_scheme_error(): void
     {
@@ -267,13 +408,13 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(UnsupportedSecuritySchemeException::class);
 
         $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
     }
 
     #[Test]
-    public function http_basic_error_contains_unsupported_http_scheme_location(): void
+    public function http_basic_throws_unsupported_scheme_exception_with_descriptor(): void
     {
         $request = $this->factory->createServerRequest('GET', '/users')
             ->withHeader('Authorization', 'Basic dXNlcjpwYXNz');
@@ -289,15 +430,14 @@ final class SecurityValidatorTest extends TestCase
 
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
-            $this->fail('Expected ValidationException was not thrown');
-        } catch (ValidationException $e) {
-            $errors = $e->getErrors();
-            $this->assertCount(1, $errors);
-            $error = $errors[0];
-            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('basicAuth', $error->schemeName(reveal: true));
-            $this->assertSame('http/basic', $error->schemeType(reveal: true));
-            $this->assertSame('unsupported http scheme', $error->location(reveal: true));
+            $this->fail('Expected UnsupportedSecuritySchemeException was not thrown');
+        } catch (UnsupportedSecuritySchemeException $e) {
+            $this->assertSame('basicAuth', $e->schemeName);
+            $this->assertSame('http', $e->schemeType);
+            $this->assertSame('basic', $e->httpScheme);
+            $this->assertStringContainsString('http/basic', $e->getMessage());
+            $this->assertStringContainsString('basicAuth', $e->getMessage());
+            $this->assertSame($e->getMessage(), (string) $e);
         }
     }
 
@@ -618,15 +758,14 @@ final class SecurityValidatorTest extends TestCase
 
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
-            $this->fail('Expected ValidationException was not thrown');
-        } catch (ValidationException $e) {
-            $errors = $e->getErrors();
-            $this->assertCount(1, $errors);
-            $error = $errors[0];
-            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
-            $this->assertSame('oauth2Auth', $error->schemeName(reveal: true));
-            $this->assertSame('oauth2', $error->schemeType(reveal: true));
-            $this->assertSame('unsupported scheme type', $error->location(reveal: true));
+            $this->fail('Expected UnsupportedSecuritySchemeException was not thrown');
+        } catch (UnsupportedSecuritySchemeException $e) {
+            $this->assertSame('oauth2Auth', $e->schemeName);
+            $this->assertSame('oauth2', $e->schemeType);
+            $this->assertNull($e->httpScheme);
+            $this->assertStringContainsString('oauth2', $e->getMessage());
+            $this->assertStringContainsString('oauth2Auth', $e->getMessage());
+            $this->assertSame($e->getMessage(), (string) $e);
         }
     }
 

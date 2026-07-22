@@ -87,3 +87,11 @@ jobs:
 
       - name: Run Swoole concurrency tests
         run: php -d memory_limit=512M vendor/bin/phpunit --filter='SwooleSharedValidatorTest' --testdox --colors=always
+
+  # FrankenPHP worker-SAPI concurrency coverage is tracked as a follow-up
+  # to R4-TEST-001. The frankenphp extension is statically compiled into
+  # the frankenphp binary and is only registered with the Zend engine
+  # inside the worker SAPI (real web requests), so `FrankenPhpThreadedTest`
+  # always skips under CLI SAPI and a CLI-based CI job yields no regression
+  # signal. The test class is retained in tests/Concurrency for a future
+  # worker-SAPI harness; see CHANGELOG 0.6.0 for the full rationale.

@@ -66,7 +66,7 @@ final class QueryStringValidatorTest extends TestCase
         );
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage("must use 'content' field");
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->validator->validateParameter($parameter);
     }
@@ -80,7 +80,7 @@ final class QueryStringValidatorTest extends TestCase
         );
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage("requires 'content' field");
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->validator->validateParameter($parameter);
     }
@@ -95,7 +95,7 @@ final class QueryStringValidatorTest extends TestCase
         );
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage("requires 'content' field");
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->validator->validateParameter($parameter);
     }
@@ -273,7 +273,7 @@ final class QueryStringValidatorTest extends TestCase
         $queryString = 'not valid json';
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage('Malformed value');
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->validator->validate($queryString, [$parameter]);
     }

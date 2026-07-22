@@ -95,6 +95,8 @@ final readonly class ValidatorDependencies
             $this->eventDispatcher,
             $this->regexValidator,
             $this->pregExecutor,
+            $this->document,
+            $this->refResolver,
         );
 
         $this->schemaValidatorDependencies = new SchemaValidatorDependencies(
@@ -146,7 +148,7 @@ final readonly class ValidatorDependencies
         );
 
         return new RequestValidator(
-            pathParser: new PathParser($this->pathRegexCache),
+            pathParser: new PathParser($this->pathRegexCache, $this->pregExecutor),
             pathParamsValidator: new PathParametersValidator(
                 schemaValidator: $schemaValidator,
                 deserializer: $deserializer,

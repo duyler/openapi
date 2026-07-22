@@ -8,6 +8,7 @@ use Duyler\OpenApi\Event\ArrayDispatcher;
 use Duyler\OpenApi\Event\ValidationStartedEvent;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\EventDispatcher\StoppableEventInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use RuntimeException;
 
@@ -191,5 +192,108 @@ final class ArrayDispatcherTest extends TestCase
         self::assertNotNull($caught);
         self::assertSame('custom message', $caught->getMessage());
         self::assertSame(42, $caught->getCode());
+    }
+
+    #[Test]
+    public function dispatch_skips_remaining_listeners_when_stoppable_event_propagation_stopped(): void
+    {
+        $event = new class implements StoppableEventInterface {
+            public bool $stopped = false;
+
+            public function stop(): void
+            {
+                $this->stopped = true;
+            }
+
+            public function isPropagationStopped(): bool
+            {
+                return $this->stopped;
+            }
+        };
+
+        $listener1Called = false;
+        $listener2Called = false;
+
+        $listener1 = function (object $event) use (&$listener1Called): void {
+            $listener1Called = true;
+            $event->stop();
+        };
+        $listener2 = function (object $event) use (&$listener2Called): void {
+            $listener2Called = true;
+        };
+
+        $dispatcher = new ArrayDispatcher([$event::class => [$listener1, $listener2]]);
+
+        $dispatcher->dispatch($event);
+
+        self::assertTrue($listener1Called);
+        self::assertFalse($listener2Called);
+    }
+
+    #[Test]
+    public function dispatch_calls_all_listeners_when_stoppable_event_propagation_not_stopped(): void
+    {
+        $event = new class implements StoppableEventInterface {
+            public function isPropagationStopped(): bool
+            {
+                return false;
+            }
+        };
+
+        $callCount = 0;
+        $listener1 = function (object $event) use (&$callCount): void {
+            $callCount++;
+        };
+        $listener2 = function (object $event) use (&$callCount): void {
+            $callCount++;
+        };
+
+        $dispatcher = new ArrayDispatcher([$event::class => [$listener1, $listener2]]);
+
+        $dispatcher->dispatch($event);
+
+        self::assertSame(2, $callCount);
+    }
+
+    #[Test]
+    public function dispatch_calls_all_listeners_when_event_is_not_stoppable(): void
+    {
+        $event = new class {};
+
+        $callCount = 0;
+        $listener1 = function (object $event) use (&$callCount): void {
+            $callCount++;
+        };
+        $listener2 = function (object $event) use (&$callCount): void {
+            $callCount++;
+        };
+
+        $dispatcher = new ArrayDispatcher([$event::class => [$listener1, $listener2]]);
+
+        $dispatcher->dispatch($event);
+
+        self::assertSame(2, $callCount);
+    }
+
+    #[Test]
+    public function dispatch_checks_is_propagation_stopped_before_first_listener(): void
+    {
+        $event = new class implements StoppableEventInterface {
+            public function isPropagationStopped(): bool
+            {
+                return true;
+            }
+        };
+
+        $listenerCalled = false;
+        $listener = function (object $event) use (&$listenerCalled): void {
+            $listenerCalled = true;
+        };
+
+        $dispatcher = new ArrayDispatcher([$event::class => [$listener]]);
+
+        $dispatcher->dispatch($event);
+
+        self::assertFalse($listenerCalled);
     }
 }

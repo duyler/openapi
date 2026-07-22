@@ -110,7 +110,7 @@ YAML;
     public function throw_error_for_unknown_path(): void
     {
         $this->expectException(OperationNotFoundException::class);
-        $this->expectExceptionMessage('Operation not found: GET /unknown');
+        $this->expectExceptionMessage('No operation matches the request');
 
         $this->validator->validateRequest(
             $this->createMockServerRequest('GET', '/unknown'),
@@ -121,7 +121,7 @@ YAML;
     public function throw_error_for_unknown_method(): void
     {
         $this->expectException(OperationNotFoundException::class);
-        $this->expectExceptionMessage('Operation not found: DELETE /users');
+        $this->expectExceptionMessage('No operation matches the request');
 
         $this->validator->validateRequest(
             $this->createMockServerRequest('DELETE', '/users'),
@@ -171,7 +171,7 @@ YAML;
         $validator = $this->createValidator();
 
         $this->expectException(OperationNotFoundException::class);
-        $this->expectExceptionMessage('Operation not found: GET /unknown/path');
+        $this->expectExceptionMessage('No operation matches the request');
 
         $validator->validateRequest($request);
     }

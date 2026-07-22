@@ -334,7 +334,7 @@ YAML;
         }
 
         self::assertInstanceOf(OperationNotFoundException::class, $caught);
-        self::assertStringContainsString('Operation not found', $caught->getMessage());
+        self::assertStringContainsString('No operation matches', $caught->getMessage());
     }
 
     #[Test]
@@ -379,7 +379,7 @@ YAML;
         }
 
         self::assertInstanceOf(OperationNotFoundException::class, $caught);
-        self::assertStringContainsString('Operation not found', $caught->getMessage());
+        self::assertStringContainsString('No operation matches', $caught->getMessage());
     }
 
     #[Test]
@@ -895,7 +895,6 @@ YAML;
         }
 
         self::assertInstanceOf(OperationNotFoundException::class, $caught);
-        self::assertStringContainsString('Operation not found', $caught->getMessage());
-        self::assertStringContainsString('GET /', $caught->getMessage());
+        self::assertStringContainsString('No operation matches', $caught->getMessage());
     }
 }

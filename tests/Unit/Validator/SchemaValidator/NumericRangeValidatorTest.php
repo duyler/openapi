@@ -20,6 +20,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use ReflectionMethod;
 use RuntimeException;
 
 use function extension_loaded;
@@ -27,6 +28,7 @@ use function sprintf;
 
 use const INF;
 use const PHP_INT_MAX;
+use const PHP_INT_MIN;
 use const NAN;
 
 #[CoversClass(NumericRangeValidator::class)]
@@ -555,13 +557,6 @@ class NumericRangeValidatorTest extends TestCase
         self::assertSame(true, $succeeded);
     }
 
-    /**
-     * P-019: For integer data with non-integer multipleOf the float
-     * relative-epsilon check becomes unreliable once the quotient exceeds
-     * ~1e15 (e.g. PHP_INT_MAX / 0.0001). When bcmath is available, the
-     * exact decimal modulus check is used; otherwise fail-closed with
-     * InvalidMultipleOfSchemaException.
-     */
     #[Test]
     public function multiple_of_works_for_small_integers_with_float_step(): void
     {
@@ -579,33 +574,132 @@ class NumericRangeValidatorTest extends TestCase
         self::assertSame(true, $succeeded);
     }
 
+    /**
+     * R4-CORRECTNESS-008: previously, integer data with non-integer
+     * multipleOf and a large quotient (> 1e15) failed closed with
+     * InvalidMultipleOfSchemaException when bcmath was not loaded.
+     * Since R4-CORRECTNESS-008 the pure-PHP decimal string modulus
+     * path handles the case without bcmath. The test exercises both
+     * runtime variants: when bcmath is loaded the validator takes the
+     * fast bcmath branch; when it is absent the pure-PHP slow path
+     * must produce the same result. The shared expectation (pass)
+     * holds for both branches.
+     */
     #[Test]
-    public function multiple_of_large_integer_uses_bcmath_or_throws(): void
+    public function multiple_of_large_integer_with_float_step_passes_with_or_without_bcmath(): void
     {
         $schema = new Schema(type: 'integer', multipleOf: 0.0001);
 
-        if (extension_loaded('bcmath')) {
-            $succeeded = false;
-
-            try {
-                $this->validator->validate(PHP_INT_MAX, $schema);
-                $succeeded = true;
-            } catch (InvalidMultipleOfSchemaException $e) {
-                self::fail(sprintf(
-                    'bcmath available — expected PHP_INT_MAX to pass via bcmod, got: %s',
-                    $e->getMessage(),
-                ));
-            }
-
-            self::assertTrue($succeeded);
-
-            return;
+        try {
+            $this->validator->validate(PHP_INT_MAX, $schema);
+        } catch (RuntimeException $e) {
+            self::fail(sprintf(
+                'Expected PHP_INT_MAX to pass multipleOf:0.0001 (bcmath=%s), got %s: %s',
+                extension_loaded('bcmath') ? 'on' : 'off',
+                $e::class,
+                $e->getMessage(),
+            ));
         }
 
-        $this->expectException(InvalidMultipleOfSchemaException::class);
-        $this->expectExceptionMessage('Cannot reliably check multipleOf');
+        self::assertTrue(true);
+    }
 
-        $this->validator->validate(PHP_INT_MAX, $schema);
+    /**
+     * Regression guard for R4-CORRECTNESS-008: the private helper
+     * isBigIntMultipleOfString is the pure-PHP slow path. Invoking it
+     * directly via reflection forces the slow path even when bcmath is
+     * loaded, so the test pins the contract regardless of the host's
+     * extension set.
+     */
+    #[Test]
+    public function multiple_of_snowflake_id_passes_via_pure_php_string_modulus(): void
+    {
+        $method = new ReflectionMethod($this->validator, 'isBigIntMultipleOfString');
+
+        self::assertTrue($method->invoke($this->validator, 1234567890123456789, 0.01));
+        self::assertTrue($method->invoke($this->validator, 1234567890123456789, 0.001));
+        self::assertTrue($method->invoke($this->validator, PHP_INT_MAX, 0.0001));
+        self::assertTrue($method->invoke($this->validator, PHP_INT_MIN, 0.0001));
+        self::assertTrue($method->invoke($this->validator, 1234567890123456789, 1.5));
+        self::assertFalse($method->invoke($this->validator, 1234567890123456788, 1.5));
+        self::assertFalse($method->invoke($this->validator, 7, 0.3));
+        self::assertTrue($method->invoke($this->validator, -6, 1.5));
+        self::assertFalse($method->invoke($this->validator, -7, 1.5));
+    }
+
+    /**
+     * Parity guard: the public validate() entry point must return the
+     * same verdict whether the request is served by the bcmath branch
+     * or the pure-PHP slow path. Runs as a plain test (no @requires
+     * annotation) so both runtimes contribute to coverage: in the
+     * bcmath-on host the test pins the bcmath branch; in the
+     * bcmath-off host it pins the pure-PHP branch. The expected
+     * verdicts are computed from the mathematical definition of
+     * multipleOf (x mod m == 0), independent of the implementation.
+     */
+    #[Test]
+    public function multiple_of_snowflake_id_public_path_matches_mathematical_definition(): void
+    {
+        $multiples = [
+            [1234567890123456789, 0.01, true],
+            [1234567890123456789, 0.001, true],
+            [1234567890123456789, 1.5, true],
+            [1234567890123456788, 1.5, false],
+            [9223372036854775807, 1, true],
+            [9223372036854775807, 0.5, true],
+        ];
+
+        foreach ($multiples as [$data, $multipleOf, $expected]) {
+            $schema = new Schema(type: 'integer', multipleOf: $multipleOf);
+            $caught = null;
+
+            try {
+                $this->validator->validate($data, $schema);
+                $actual = true;
+            } catch (MultipleOfKeywordError $e) {
+                $caught = $e;
+                $actual = false;
+            }
+
+            self::assertSame(
+                $expected,
+                $actual,
+                sprintf(
+                    'data=%d multipleOf=%s expected=%s got=%s (bcmath=%s, %s)',
+                    $data,
+                    $multipleOf,
+                    $expected ? 'pass' : 'fail',
+                    $actual ? 'pass' : 'fail',
+                    extension_loaded('bcmath') ? 'on' : 'off',
+                    null === $caught ? '' : $caught->getMessage(),
+                ),
+            );
+        }
+    }
+
+    /**
+     * @requires extension bcmath
+     *
+     * Confirms the bcmath branch is taken when the extension is loaded
+     * and produces the same verdict as the pure-PHP slow path. Acts as
+     * a parity contract between the two branches.
+     */
+    #[Test]
+    public function multiple_of_snowflake_id_bcmath_path_parity_with_pure_php_path(): void
+    {
+        $schema = new Schema(type: 'integer', multipleOf: 0.001);
+
+        try {
+            $this->validator->validate(1234567890123456789, $schema);
+        } catch (RuntimeException $e) {
+            self::fail(sprintf(
+                'bcmath path expected to pass for 1234567890123456789 % 0.001, got: %s',
+                $e->getMessage(),
+            ));
+        }
+
+        $method = new ReflectionMethod($this->validator, 'isBigIntMultipleOfString');
+        self::assertTrue($method->invoke($this->validator, 1234567890123456789, 0.001));
     }
 
     #[Test]

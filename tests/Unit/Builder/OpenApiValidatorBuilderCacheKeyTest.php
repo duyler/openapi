@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Unit\Builder;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Cache\SchemaCache;
+use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
@@ -28,6 +29,8 @@ use function sys_get_temp_dir;
 use function touch;
 use function uniqid;
 use function unlink;
+
+use function dirname;
 
 use const PHP_EOL;
 
@@ -69,7 +72,7 @@ YAML;
     }
 
     #[Test]
-    public function string_cache_key_matches_raw_sha256_of_content(): void
+    public function string_cache_key_matches_sha256_of_content_hash_and_parse_config_fingerprint(): void
     {
         $pool = new KeyCapturingPool();
         $cache = new SchemaCache($pool);
@@ -79,7 +82,10 @@ YAML;
             ->withCache($cache)
             ->build();
 
-        $expected = self::CONTENT_KEY_PREFIX . hash('sha256', self::MINIMAL_YAML);
+        $contentHash = hash('sha256', self::MINIMAL_YAML);
+        $fingerprint = 'maxSpecDepth=100|maxSpecSizeBytes=1048576|externalRefAllowedRoot=|externalRefMaxBytes=10485760';
+        $expected = self::CONTENT_KEY_PREFIX . hash('sha256', $contentHash . '|' . $fingerprint);
+
         $uniqueKeys = $this->uniqueKeys($pool->capturedKeys());
 
         self::assertSame($expected, $uniqueKeys[0]);
@@ -330,6 +336,176 @@ YAML;
         } finally {
             $this->safeUnlink($path);
         }
+    }
+
+    /**
+     * R4-SEC-008 anti-test (maxSpecDepth poisoning): caller A caches a
+     * spec under maxSpecDepth=10 (depth=6 fits), caller B with the
+     * stricter maxSpecDepth=5 must NOT receive the cached document —
+     * instead the cache-miss triggers a re-parse that rejects the spec.
+     * Without the parse-config fingerprint, caller B would silently
+     * bypass the depth limit and read the cached document.
+     */
+    #[Test]
+    public function max_spec_depth_change_prevents_cache_poisoning(): void
+    {
+        $spec = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: Depth Poisoning Test
+  version: 1.0.0
+paths: {}
+x-l1:
+  l2:
+    l3:
+      l4:
+        l5:
+          l6:
+            l7: deep
+YAML;
+
+        $pool = new KeyCapturingPool();
+        $cache = new SchemaCache($pool);
+
+        OpenApiValidatorBuilder::create()
+            ->fromYamlString($spec)
+            ->withMaxSpecDepth(10)
+            ->withCache($cache)
+            ->build();
+
+        $poisoningRejected = false;
+        try {
+            OpenApiValidatorBuilder::create()
+                ->fromYamlString($spec)
+                ->withMaxSpecDepth(5)
+                ->withCache($cache)
+                ->build();
+        } catch (SpecTooLargeException) {
+            $poisoningRejected = true;
+        }
+
+        self::assertTrue(
+            $poisoningRejected,
+            'Caller B with stricter maxSpecDepth=5 must NOT receive the cached document '
+            . 'cached under maxSpecDepth=10. The fingerprint-based cache key must force a '
+            . 're-parse that rejects the depth-6 spec (R4-SEC-008 cache-poisoning defence).',
+        );
+    }
+
+    /**
+     * R4-SEC-008 anti-test (externalRefAllowedRoot poisoning): two
+     * callers that differ only in externalRefAllowedRoot must get
+     * distinct cache keys. Without the fingerprint, caller B (root
+     * `/etc`) would receive the document cached by caller A (root
+     * `/safe`), bypassing its (presumably stricter) confinement
+     * boundary.
+     */
+    #[Test]
+    public function external_ref_allowed_root_change_produces_distinct_cache_keys(): void
+    {
+        $root1 = sys_get_temp_dir();
+        $root2 = dirname(__DIR__, 3);
+
+        $pool1 = new KeyCapturingPool();
+        OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::MINIMAL_YAML)
+            ->withExternalRefAllowedRoot($root1)
+            ->withCache(new SchemaCache($pool1))
+            ->build();
+
+        $pool2 = new KeyCapturingPool();
+        OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::MINIMAL_YAML)
+            ->withExternalRefAllowedRoot($root2)
+            ->withCache(new SchemaCache($pool2))
+            ->build();
+
+        $key1 = $this->uniqueKeys($pool1->capturedKeys())[0];
+        $key2 = $this->uniqueKeys($pool2->capturedKeys())[0];
+
+        self::assertNotSame(
+            $root1,
+            $root2,
+            'Test precondition: the two roots must be distinct paths.',
+        );
+        self::assertNotSame(
+            $key1,
+            $key2,
+            'externalRefAllowedRoot is part of the parse-config fingerprint and must '
+            . 'produce a distinct cache key (R4-SEC-008 confinement poisoning defence).',
+        );
+    }
+
+    /**
+     * Stability: two callers with identical parse-config and identical
+     * spec content reuse the same cache key (cache-hit, single parse).
+     * Guards against accidental over-invalidation of the cache.
+     */
+    #[Test]
+    public function identical_parse_config_and_content_reuse_cache_key(): void
+    {
+        $pool = new KeyCapturingPool();
+        $cache = new SchemaCache($pool);
+
+        OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::MINIMAL_YAML)
+            ->withMaxSpecDepth(50)
+            ->withCache($cache)
+            ->build();
+
+        OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::MINIMAL_YAML)
+            ->withMaxSpecDepth(50)
+            ->withCache($cache)
+            ->build();
+
+        $uniqueKeys = $this->uniqueKeys($pool->capturedKeys());
+
+        self::assertCount(
+            1,
+            $uniqueKeys,
+            'Identical parse-config + content must produce a single cache key so the second '
+            . 'build reuses the cached document instead of re-parsing.',
+        );
+    }
+
+    /**
+     * Unrelated-fields: runtime-validation toggles (coercion,
+     * nullableAsType, strictFormats, securityValidation, etc.) must
+     * NOT change the cache key. Two callers that differ only in
+     * runtime-validation flags reuse the cached parse result, because
+     * the parsed document is identical.
+     */
+    #[Test]
+    public function runtime_validation_toggles_do_not_invalidate_cache(): void
+    {
+        $pool = new KeyCapturingPool();
+        $cache = new SchemaCache($pool);
+
+        OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::MINIMAL_YAML)
+            ->enableCoercion()
+            ->enableNullableAsType()
+            ->enableStrictFormats()
+            ->enableSecurityValidation()
+            ->withCache($cache)
+            ->build();
+
+        OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::MINIMAL_YAML)
+            ->disableNullableAsType()
+            ->withCache($cache)
+            ->build();
+
+        $uniqueKeys = $this->uniqueKeys($pool->capturedKeys());
+
+        self::assertCount(
+            1,
+            $uniqueKeys,
+            'Runtime-validation toggles (coercion, nullableAsType, strictFormats, ...) must '
+            . 'NOT invalidate the cache key: the parsed document is identical regardless of '
+            . 'these flags. Including them would cause spurious cache-misses on every toggle.',
+        );
     }
 
     /**

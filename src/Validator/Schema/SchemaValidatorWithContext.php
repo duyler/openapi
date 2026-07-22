@@ -105,7 +105,7 @@ final class SchemaValidatorWithContext
         if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
             $this->validateInternal($data, $schema, $context);
 
-            $this->discriminatorValidator->validate($data, $schema, $this->document);
+            $this->discriminatorValidator->validate($data, $schema, $this->document, '/', $context);
 
             $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
 

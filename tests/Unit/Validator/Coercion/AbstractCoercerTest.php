@@ -11,6 +11,8 @@ use PHPUnit\Framework\TestCase;
 
 use const PHP_INT_MAX;
 use const PHP_INT_MIN;
+use const INF;
+use const NAN;
 
 final class AbstractCoercerTest extends TestCase
 {
@@ -594,6 +596,156 @@ final class AbstractCoercerTest extends TestCase
         $result = $this->coercer->exposedCoerceToInteger(42.0);
 
         $this->assertSame(42, $result);
+    }
+
+    /**
+     * Anti-test for R4-SPEC-005: to verify this test guards against regression,
+     * temporarily restore the unconditional `is_float($value)` rejection in
+     * AbstractCoercer::coerceToIntegerStrict(). Without the JSON Schema 2020-12
+     * §4.2.3 fix, a whole-valued float like 3.0 is rejected even though the
+     * runtime TypeValidator accepts it (asymmetric behavior between coercion
+     * enabled and coercion disabled).
+     */
+    #[Test]
+    public function coerce_to_integer_strict_accepts_whole_float_3_0(): void
+    {
+        $result = $this->coercer->exposedCoerceToIntegerStrict(3.0);
+
+        $this->assertSame(3, $result);
+    }
+
+    #[Test]
+    public function coerce_to_integer_strict_accepts_negative_whole_float(): void
+    {
+        $result = $this->coercer->exposedCoerceToIntegerStrict(-7.0);
+
+        $this->assertSame(-7, $result);
+    }
+
+    #[Test]
+    public function coerce_to_integer_strict_accepts_zero_whole_float(): void
+    {
+        $result = $this->coercer->exposedCoerceToIntegerStrict(0.0);
+
+        $this->assertSame(0, $result);
+    }
+
+    #[Test]
+    public function coerce_to_integer_strict_rejects_fractional_float_with_reason(): void
+    {
+        try {
+            $this->coercer->exposedCoerceToIntegerStrict(3.14);
+            $this->fail('Expected TypeMismatchError was not thrown');
+        } catch (TypeMismatchError $e) {
+            $this->assertSame('Float value has non-zero fractional part', $e->reason());
+        }
+    }
+
+    #[Test]
+    public function coerce_to_integer_strict_rejects_inf_with_reason(): void
+    {
+        try {
+            $this->coercer->exposedCoerceToIntegerStrict(INF);
+            $this->fail('Expected TypeMismatchError was not thrown');
+        } catch (TypeMismatchError $e) {
+            $this->assertSame('Cannot coerce INF to integer', $e->reason());
+        }
+    }
+
+    #[Test]
+    public function coerce_to_integer_strict_rejects_negative_inf_with_reason(): void
+    {
+        try {
+            $this->coercer->exposedCoerceToIntegerStrict(-INF);
+            $this->fail('Expected TypeMismatchError was not thrown');
+        } catch (TypeMismatchError $e) {
+            $this->assertSame('Cannot coerce INF to integer', $e->reason());
+        }
+    }
+
+    #[Test]
+    public function coerce_to_integer_strict_rejects_nan_with_reason(): void
+    {
+        try {
+            $this->coercer->exposedCoerceToIntegerStrict(NAN);
+            $this->fail('Expected TypeMismatchError was not thrown');
+        } catch (TypeMismatchError $e) {
+            $this->assertSame('Cannot coerce NaN to integer', $e->reason());
+        }
+    }
+
+    /**
+     * Anti-test for R4-SPEC-005 safe-integer-range guard: 2^53 + 1
+     * (9007199254740993.0) is silently rounded to 2^53 by IEEE-754 double
+     * precision, so fmod($value, 1.0) === 0.0 even though the value is no
+     * longer exactly representable. Without the |value| < 2^53 guard, the
+     * strict coercion would silently truncate 9007199254740993.0 to
+     * 9007199254740992 with no diagnostic.
+     */
+    #[Test]
+    public function coerce_to_integer_strict_rejects_unsafe_whole_float_above_2_pow_53(): void
+    {
+        try {
+            $this->coercer->exposedCoerceToIntegerStrict(9007199254740993.0);
+            $this->fail('Expected TypeMismatchError was not thrown');
+        } catch (TypeMismatchError $e) {
+            $this->assertSame(
+                'Float value exceeds safe integer range (|value| >= 2^53)',
+                $e->reason(),
+            );
+        }
+    }
+
+    #[Test]
+    public function coerce_to_integer_strict_accepts_safe_boundary_2_pow_53_minus_1(): void
+    {
+        $result = $this->coercer->exposedCoerceToIntegerStrict(9007199254740991.0);
+
+        $this->assertSame(9007199254740991, $result);
+    }
+
+    #[Test]
+    public function coerce_to_integer_strict_rejects_negative_unsafe_whole_float(): void
+    {
+        try {
+            $this->coercer->exposedCoerceToIntegerStrict(-9007199254740993.0);
+            $this->fail('Expected TypeMismatchError was not thrown');
+        } catch (TypeMismatchError $e) {
+            $this->assertSame(
+                'Float value exceeds safe integer range (|value| >= 2^53)',
+                $e->reason(),
+            );
+        }
+    }
+
+    /**
+     * Anti-test for R4-SEC-013 (strict variant): without the floatExceedsInt64Range
+     * guard in coerceToIntegerStrict, a whole-valued float that lands below the
+     * 2^53 safe-range check but exceeds int64 (e.g. (float) PHP_INT_MAX, which
+     * is 9223372036854775808.0 = PHP_INT_MAX + 1 due to IEEE-754 rounding)
+     * would be cast through (int) and wrap around to a negative int with a
+     * PHP 8.5 deprecation notice (TypeError in 9.0).
+     */
+    #[Test]
+    public function coerce_to_integer_strict_rejects_float_at_php_int_max_boundary(): void
+    {
+        try {
+            $this->coercer->exposedCoerceToIntegerStrict((float) PHP_INT_MAX);
+            $this->fail('Expected TypeMismatchError was not thrown');
+        } catch (TypeMismatchError $e) {
+            $this->assertStringContainsString('Float value out of integer range', $e->reason() ?? '');
+        }
+    }
+
+    #[Test]
+    public function coerce_to_integer_strict_rejects_float_at_php_int_min_boundary(): void
+    {
+        try {
+            $this->coercer->exposedCoerceToIntegerStrict((float) PHP_INT_MIN);
+            $this->fail('Expected TypeMismatchError was not thrown');
+        } catch (TypeMismatchError $e) {
+            $this->assertStringContainsString('Float value out of integer range', $e->reason() ?? '');
+        }
     }
 
     #[Test]

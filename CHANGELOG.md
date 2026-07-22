@@ -7,6 +7,340 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.0]
 
+### Added
+- Regression test suites for the P0/P1 bug fixes shipped in the
+  `production-readiness-fixes-r4` series. Each suite lives in
+  `tests/Unit/Regression/R4/` (namespace
+  `Duyler\OpenApi\Test\Unit\Regression\R4`) and is driven end-to-end
+  through `OpenApiValidatorBuilder::create()->...->build()` so that
+  the regression also fires when builder wiring breaks (not just when
+  the underlying validator breaks). The suites cover the specific
+  R4-TEST tickets that previously lacked dedicated test files:
+  - `NestedRefInKeywordsRegressionTest` (R4-TEST-004): data-provider
+    for all 10 schema-typed keywords (`additionalProperties`,
+    `patternProperties`, `unevaluatedProperties`, `unevaluatedItems`,
+    `prefixItems`, `contains`, `propertyNames`, `dependentSchemas`,
+    `not`, `if`/`then`/`else`).
+  - `DiscriminatorNestedCompositionRegressionTest` (R4-TEST-005):
+    nested `oneOf` composition with discriminator, three-level
+    nesting, `unevaluatedProperties: false` propagation, and
+    discriminator target with `additionalProperties: {$ref: ...}`.
+  - `YamlBillionLaughsRegressionTest` (R4-TEST-006): deep-chain and
+    multi-line crafted YAML payloads rejected via the builder with
+    bounded memory; legit anchor/alias dedup accepted.
+  - `ExceptionInfoLeakRegressionTest` (R4-TEST-007): structural
+    assertions that `OperationNotFoundException`,
+    `UnsupportedMediaTypeException`, and `InvalidParameterException`
+    messages raised from `validateRequest()` do not reflect
+    attacker-controlled path / method / Content-Type / parameter
+    values.
+  - `CoercionWholeFloatRegressionTest` (R4-TEST-008): strict
+    coercion accepts `3.0` / `0.0` / `-42.0` as integers via the
+    public request-body path; rejects `3.14` / `-1.5` with
+    `TypeMismatchError`.
+  - `TimeValidatorOffsetRequiredRegressionTest` (R4-TEST-009):
+    data-provider for accepted (Z, z, ±offset, fractional, leap
+    second UTC) and rejected (no offset, leap second non-UTC,
+    out-of-range offset, etc.) `format: time` values through
+    `validateSchema()`.
+  - `WithFormatOrderRegressionTest` (R4-TEST-010): `withFormat()`
+    override and `withMaxRegexBacktracks()` are order-independent
+    for builtin formats when exercised through `validateSchema()`.
+  - `SchemaCacheParseConfigRegressionTest` (R4-TEST-011): the
+    SchemaCache key is keyed by `maxSpecSize` /
+    `externalRefMaxBytes` in addition to the previously-covered
+    `maxSpecDepth` / `externalRefAllowedRoot`; tighter limits never
+    silently receive a document cached under looser limits.
+  - `ArrayDispatcherStoppableRegressionTest` (R4-TEST-012):
+    PSR-14 `StoppableEventInterface` honoured by `ArrayDispatcher`
+    on a standalone wrapper event and on real
+    `ValidationStartedEvent` / `ValidationErrorEvent` /
+    `ValidationFinishedEvent` classes.
+
+### Deprecated
+- The two classes below are deprecated since 0.6.0 and will be removed
+  in 2.0 alongside the parameter-validator migration; see
+  `SchemaValidatorWithContext` (returned by `OpenApiValidatorBuilder::build()`)
+  for the canonical replacement.
+- `Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator` (the legacy
+  stateless JSON Schema dispatcher) is deprecated in 0.6.0 and scheduled
+  for removal in 2.0. It does not resolve `$ref` on its own; when
+  constructed with `document` + `refResolver` it is transparently
+  wrapped by the new internal `RefResolvingSchemaValidator` adapter so
+  nested-keyword `$ref` resolution still works, but direct callers
+  should migrate to
+  `Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext`
+  (returned by `OpenApiValidatorBuilder::build()` and by
+  `Dto\SchemaValidatorDependencies::rootSchemaValidator()`). The class
+  is retained through the 0.6.x / 1.x line because parameter
+  validators (Path / Query / Headers / Cookie) and a small number of
+  internal call sites still construct it directly; those callers will
+  be migrated as part of a separate parameter-validator migration
+  follow-up. The literal `@deprecated` PHPDoc tag is present on the
+  class to surface the migration need through IDE quick-fix and
+  phpdoc generators.
+- `Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies` (the
+  legacy constructor-dependency bag for the stateless dispatcher and
+  its keyword validators) is deprecated in 0.6.0 and scheduled for
+  removal in 2.0, alongside `SchemaValidator`. Direct construction of
+  this bag is retained only for the parameter-validator migration
+  window. New code should use
+  `Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies`, which
+  carries the document + `RefResolver` needed for full `$ref`
+  resolution and exposes the shared `StatelessValidatorRegistry` plus
+  PSR-3 / PSR-14 wiring.
+
+### Fixed
+- **Production readiness series R4**: 37 EI tickets closed across 18 tasks
+  covering correctness, security, spec compliance, PSR-14, and regression
+  test coverage. See individual entries below for details.
+- `NumericRangeValidator::isMultipleOf` no longer throws
+  `InvalidMultipleOfSchemaException::forLargeIntegerWithoutBcmath` for
+  valid int64 values (snowflake IDs, nanosecond timestamps up to
+  `PHP_INT_MAX`) when `bcmath` is not loaded (R4-CORRECTNESS-008).
+  A pure-PHP decimal string-modulus path now handles arbitrary-precision
+  integer modulo against a float `multipleOf` in environments without
+  `bcmath` (alpine Docker images, custom PHP builds). The fast integer
+  modulo path for whole-number `multipleOf` and the bcmath path when
+  the extension is available are unchanged. The
+  `InvalidMultipleOfSchemaException::forLargeIntegerWithoutBcmath`
+  factory is retained as `@deprecated` for backward compatibility with
+  external callers that catch the class explicitly; it is no longer
+  thrown from the validator and will be removed in 2.0.
+- `DiscriminatorValidator::validateAgainstSchema` now forks the parent
+  `ValidationContext` via `forkForBranch` and merges the child's
+  evaluated-property / evaluated-item annotations back via
+  `mergeChildAnnotations` after a successful discriminator-target
+  sub-validation (R4-CORRECTNESS-005, R4-SPEC-015). Previously a fresh
+  `ValidationContext` was created inside `validateAgainstSchema`, so
+  annotations produced by the discriminator target schema never reached
+  the parent context. Adjacent `unevaluatedProperties: false` and
+  `unevaluatedItems: false` constraints on the discriminator-bearing
+  parent schema now correctly honour properties/items already validated
+  by the target schema (JSON Schema 2020-12 §10.3.4 / §11.1.1.3). Failed
+  target sub-validation continues to not contribute annotations, per
+  §10.3.4. The two call sites in `OneOfValidatorWithContext` and
+  `SchemaValidatorWithContext` now thread the parent context through.
+- `TimeValidator` now enforces RFC 3339 §5.6: the `time-offset` component
+  (`Z`, `+HH:MM`, or `-HH:MM`) is required. Time strings without an offset
+  (e.g., `10:30:00`, `10:30:00.123`) are rejected with
+  `InvalidFormatException` (R4-SPEC-006). The previous `TIME_PATTERN` made the
+  offset group optional via a trailing `?`, accepting offset-less inputs that
+  are not valid RFC 3339 `time` productions. This is a breaking change for
+  consumers relying on the lenient behaviour; leap-second inputs (`23:59:60Z`,
+  `23:59:60+00:00`) and all offset-carrying inputs remain valid.
+- `OneOfValidatorWithContext::hasNullableSchema` now considers JSON Schema
+  2020-12 native nullable form `type: ["string", "null"]` in addition to the
+  OAS-extension `nullable: true`. Previously `oneOf` with a subschema using
+  only the native form would reject `data=null` (R4-CORRECTNESS-009).
+- The `http/bearer` security scheme check in `SecurityValidator` now uses
+  an end-anchored regex (`/^bearer\s+\S+\s*$/i`, extracted into the
+  `BEARER_AUTH_PATTERN` class constant). The previous unanchored pattern
+  `/^bearer\s+\S+/i` only verified the prefix and silently accepted
+  multi-challenge `Authorization` headers such as
+  `Bearer fake, Basic dXNlcjpwYXNz`, allowing downstream code to extract
+  the second challenge as the credential (R4-SEC-016). The trailing
+  `\s*$` keeps legitimate RFC 7235 trailing header-value whitespace valid.
+- `coerceToInteger` and `coerceToIntegerStrict` now correctly reject float
+  values that overflow the int64 range near `PHP_INT_MAX` due to IEEE-754
+  imprecision (R4-SEC-013). The previous guard `$value >= (float) PHP_INT_MAX`
+  is replaced by a dedicated `floatExceedsInt64Range()` helper that uses
+  string comparison as defense-in-depth inside the boundary zone
+  `[9.223372036854775E+18, 9.223372036854776E+18]` where only the two
+  representable doubles `(float) PHP_INT_MAX` and `(float) PHP_INT_MIN`
+  can land. This eliminates the residual wrap-around risk where
+  `(float) PHP_INT_MAX = 9223372036854775808.0` (= `PHP_INT_MAX + 1`)
+  passes `>` comparisons but `(int)` cast wraps to a negative value with
+  a PHP 8.5 deprecation notice (TypeError in PHP 9.0).
+- `NumberStringNormalizer::castStringToFloatOrFail` now explicitly rejects
+  values that overflow to INF (e.g. `1e309`, `1e310`, `1e320`) with a
+  clear `'Numeric value overflows IEEE-754 double range (INF)'` reason
+  instead of relying on the precision-loss canonicalize path that
+  produced the misleading `'String value loses precision when converted
+  to float'` message (R4-SEC-014). The DoS cap `abs($exponent) > 320`
+  on the regex is retained for `expandScientificNotation`; the new
+  `is_infinite`/`is_nan` checks run after the `(float)` cast and produce
+  a diagnostic that matches the actual failure mode. NaN (e.g. from a
+  hypothetical numeric `NaN` literal) is rejected with
+  `'Numeric value is NaN'`.
+- `coerceToIntegerStrict` now accepts whole-valued floats (`3.0`,
+  `-7.0`, `0.0`) for `type: integer` per JSON Schema 2020-12 §4.2.3,
+  matching the runtime `TypeValidator` behavior (R4-SPEC-005). Previously
+  the strict coercion rejected every float, creating a behavioral
+  asymmetry: with `enableCoercion()` JSON `3.0` was rejected, while
+  without coercion the same JSON value passed. Floats with non-zero
+  fractional parts (`3.14`) are still rejected with the reason
+  `'Float value has non-zero fractional part'`. INF and NaN are
+  rejected with `'Cannot coerce INF to integer'` / `'Cannot coerce
+  NaN to integer'`. Whole-valued floats outside the IEEE-754 safe
+  integer range (`|value| >= 2^53`, e.g. `9007199254740993.0`) are
+  rejected with `'Float value exceeds safe integer range (|value| >= 2^53)'`
+  to prevent silent precision loss during `(int)` cast; floats that
+  exceed the int64 range are rejected with the same
+  `'Float value out of integer range'` message as the non-strict path.
+- `oauth2`, `openIdConnect`, `http/basic`, `http/digest`, `mutualTLS`, and
+  any unknown OpenAPI security scheme types now throw the new
+  `Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException`
+  (extends `\RuntimeException`) instead of being silently classified as a
+  `MissingSecurityCredentialsError` (R4-SEC-010). The previous behaviour
+  misclassified unsupported schemes as missing credentials, which both
+  misled callers (who believed they only had to supply credentials) and
+  broke AND/OR semantics for mixed security requirements: a spec such as
+  `security: [{oauth2: [read], bearerAuth: []}]` would silently downgrade
+  to bearer-only because the AND-list sibling was swallowed as a missing
+  credential. The exception is thrown from
+  `Duyler\OpenApi\Validator\Security\SecurityValidator::validateScheme()` and
+  `validateHttpScheme()` (the match `default` arm and the non-bearer arm
+  respectively), propagates out of `validateRequest()` /
+  `validateWebhook()` / `validateCallback()`, and is **not** wrapped into
+  `ValidationException` — callers must catch
+  `UnsupportedSecuritySchemeException` separately in their PSR-15
+  middleware. The exception carries `schemeName`, `schemeType`, and (for
+  unsupported `http/*` schemes) the `httpScheme` descriptor as public
+  readonly properties; `(string) $e` returns only `getMessage()` so file
+  paths and stack traces are not leaked (CWE-209, CWE-497). The exception
+  message discloses the scheme name and type because the scheme name comes
+  from the operator-loaded spec, not from the request, and the operator
+  needs the diagnostic to fix the spec.
+- OAuth2 scopes declared on a security requirement are no longer
+  discarded (R4-SPEC-003). `SecurityValidator::validateRequirement()` now
+  binds `foreach ($requirementAlternatives as $schemeName => $scopes)` and
+  forwards non-empty scope lists to the configured PSR-3 logger at `debug`
+  level via the `'Security requirement scopes'` entry with
+  `{schemeName, schemeType, scopes}` context. Today scope validation is
+  still deferred (the `oauth2` scheme type itself is rejected with
+  `UnsupportedSecuritySchemeException`), but the declared scopes are now
+  observable for diagnostic and audit purposes; empty scope lists (the
+  default for `apiKey` and `http/bearer`) do not trigger the log entry.
+- AND / OR semantics for mixed supported and unsupported security
+  requirements are now honoured by `SecurityValidator::validate()`. A
+  dict with one unsupported scheme fails closed for the whole AND-list
+  even when a supported sibling would have passed
+  (`security: [{oauth2: [read], bearerAuth: []}]` →
+  `UnsupportedSecuritySchemeException` for every request). The outer
+  OR-list still tries supported alternatives, so a spec such as
+  `security: [{oauth2: [read]}, {bearerAuth: []}]` succeeds for a request
+  carrying a valid `Authorization: Bearer ...` header. If no OR
+  alternative succeeds, the most recently captured
+  `UnsupportedSecuritySchemeException` is re-thrown so the operator sees
+  the spec-configuration error rather than a downstream credential error.
+- Route `preg_match` calls in `RegexValidator`, `PathParser`,
+  `CallbackValidator` through `PregExecutor` so attacker-controlled
+  patterns and request paths honour the configured `maxRegexBacktracks`
+  (R4-SEC-002/003/004). All three classes now accept an optional
+  `PregExecutor` constructor argument (BC default `new PregExecutor()`
+  preserves third-party consumers); the production path
+  `OpenApiValidatorBuilder::build()` threads the shared configured
+  instance to `RegexValidator`, `PathFinder` (and through it to its
+  internal `PathParser`), `Validator\ValidatorDependencies::buildRequestValidator()`,
+  and the inner `Callback\Validator\CallbackValidator`.
+- Resolve `$ref` inside every schema-typed keyword (`additionalProperties`,
+  `patternProperties`, `unevaluatedProperties`, `unevaluatedItems`,
+  `prefixItems`, `contains`, `propertyNames`, `dependentSchemas`, `not`,
+  `if`, `then`, `else`, `items`, `properties`) before delegating to the
+  legacy recursion engine. Previously the stateless nested-keyword
+  validators received opaque `{$ref: '#/...'}` stubs and produced no
+  applicable validators, so invalid data passed validation as a silent
+  no-op (R4-CORRECTNESS-001, R4-CORRECTNESS-016, R4-SEC-001,
+  R4-SPEC-014, R4-ARCH-001). The shared `RefResolver` (WeakMap-backed
+  cache + cycle guard) is threaded through `StatelessValidatorRegistry`
+  → `ValidatorDependencies` → `SchemaValidator` →
+  `DefaultValidatorRegistry`, and a new internal
+  `RefResolvingSchemaValidator` adapter wraps the legacy dispatcher so
+  the canonical path keeps its annotation-propagation semantics. Circular
+  `$ref` chains terminate through `RefResolver`'s own cycle detection
+  plus the existing `ValidationContext::MAX_DEPTH` bound (default 64),
+  which surfaces as `SchemaDepthExceededException`.
+- Discriminator validator: enumerate all composition arrays, continue on
+  unresolved nested candidates, and apply `defaultMapping` fallback for
+  unresolved `propertyName` values (R4-CORRECTNESS-002,
+  R4-CORRECTNESS-015, R4-SPEC-002, R4-SPEC-004). The
+  `DiscriminatorValidator::findMatchingSchema` loop now collects
+  candidates from `oneOf` + `anyOf` + `allOf` simultaneously (per JSON
+  Schema 2020-12 §10.2.1.1), wraps the nested-composition recursion in
+  a `try`/`catch (UnknownDiscriminatorValueException)` so a failed
+  nested branch no longer aborts the search for sibling candidates,
+  and falls back to `defaultMapping` (OpenAPI 3.2 §4.25) as the final
+  resolution for any unresolved value when `propertyName` is set —
+  matching the previously existing behaviour for the `propertyName`
+  null path.
+- ValidatorCompiler: emit all supported keywords for nested object
+  `properties` and array `items`, and inline `JsonEquals` for `enum`
+  declared inside `items` (R4-CORRECTNESS-004, R4-CORRECTNESS-013).
+  Previously the compiler emitted only `type` checks (and strict
+  `in_array` for item `enum`) at nested levels, silently ignoring
+  `minLength` / `maxLength` / `pattern` / `minimum` / `maximum` /
+  `multipleOf` / `required` / `additionalProperties: false` / nested
+  `properties` / nested `items`. A new `generateConstraintsForSchema`
+  helper is now shared by top-level and nested paths, so both paths
+  emit the same constraint set. Unsupported keywords
+  (`discriminator`, `dependentSchemas`, `unevaluatedProperties`,
+  `unevaluatedItems`, `contentEncoding`, `contentMediaType`,
+  `contentSchema`, plus the previously detected `format` / `allOf` /
+  `anyOf` / `oneOf` / `not` / `if` / `then` / `else` /
+  `patternProperties` / `minProperties` / `maxProperties` /
+  `prefixItems` / boolean-form schema-typed keywords) are now
+  rejected with `UnsupportedKeywordException` at every depth rather
+  than being silently ignored. Item `enum` checks now use the inlined
+  `jsonEquals` helper so JSON Schema 2020-12 §4.2.2 instance equality
+  (`1` matches enum `[1, 2, 3]`) holds at every depth; the README's
+  previous "known limitation" note for strict `in_array` in items is
+  removed.
+- `ArrayDispatcher::dispatch` now respects PSR-14 `StoppableEventInterface`:
+  before each listener call it checks `instanceof StoppableEventInterface`
+  and `$event->isPropagationStopped()`, breaking out of the listener loop
+  when propagation has been requested (R4-PSR-001, PSR-14 §"Stoppable
+  Events"). Previously the dispatcher iterated every registered listener
+  unconditionally, so an event that implemented `StoppableEventInterface`
+  and was stopped by an early listener was still delivered to all
+  subsequent listeners, violating the PSR-14 contract and risking
+  double-processing side effects. Non-stoppable events and listener
+  exceptions propagate exactly as before; the dispatch signature and
+  return value are unchanged. Regression tests cover all four scenarios:
+  stop after the first listener, stoppable event without a stop call,
+  non-stoppable event, and an event arriving already stopped.
+- Rebuild `FormatRegistry` in `OpenApiValidatorBuilder::build()` so
+  builtin format validators (`email`, `uri`, `date-time`, etc.) share
+  the configured `PregExecutor` even when `withFormat()` was called
+  before or after `withMaxRegexBacktracks()` (R4-SEC-009). Previously
+  `withFormat()` materialised the registry eagerly via
+  `BuiltinFormats::create()` with the default `PregExecutor`
+  (`maxBacktracks = 10_000`), and `build()` skipped builtin recreation
+  via `??` whenever the caller had already registered any custom format,
+  silently bypassing the configured ReDoS cap for builtin validators on
+  attacker-controlled subjects. The fix introduces
+  `FormatRegistry::withBase(self $base): self` and switches
+  `withFormat()` to accumulate user-only entries on a fresh registry;
+  `build()` always composes the final registry by layering the
+  user-provided formats over `BuiltinFormats::create($pregExecutor)`, so
+  user-registered formats override builtin ones on `(type, format)`
+  conflicts while the configured `PregExecutor` reaches every builtin
+  validator regardless of call order. Public API of `withFormat()` is
+  unchanged.
+- `OpenApiValidatorBuilder` now includes parse-affecting configuration
+  (`maxSpecDepth`, `maxSpecSizeBytes`, `externalRefAllowedRoot`,
+  `externalRefMaxBytes`) in the `SchemaCache` cache-key hash
+  (R4-SEC-008, R4-SEC-017). Previously the key was derived only from
+  the spec path and content hash, so two callers sharing a PSR-6 pool
+  with different parse-time limits could poison each other's cache:
+  caller A caching under `maxSpecDepth=10` would let caller B
+  (`maxSpecDepth=5`) silently read the cached document and bypass the
+  stricter depth cap; likewise for `externalRefAllowedRoot`
+  (confinement boundary) and `externalRefMaxBytes` (file-size cap).
+  The fix introduces a private `buildParseConfigFingerprint()` helper
+  that produces a stable string-tuple of parse-affecting fields; the
+  tuple is appended to the SHA-256 input of both
+  `generateCacheKeyFromFile` and `generateCacheKeyFromString`. Runtime-
+  validation toggles (`coercion`, `strictCoercion`, `nullableAsType`,
+  `strictStreaming`, `strictFormats`, `securityValidation`,
+  `reportDeprecated`, `errorFormatter`, `logger`, `pool`,
+  `formatRegistry`, `eventDispatcher`, `maxJsonBodyBytes`,
+  `maxMultipartBodyBytes`, `maxRegexBacktracks`, `maxStreamingRecords`,
+  `serverPathResolution`, `strictCallbackRuntimeTemplate`,
+  `securityVerboseLogger`, `specType`) are deliberately excluded
+  because the parsed document is identical regardless of these flags;
+  including them would cause spurious cache-misses on every toggle.
+
 ### Security
 - All exception classes shipped by the package now sanitize `__toString()`
   output to prevent disclosure of server filesystem paths, class names, and
@@ -75,8 +409,88 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   single-quoted PHP string literals, which previously could produce
   parseable-but-malformed messages or escape-sequence injection when the
   key contained bytes that defeated `addslashes`.
+- YAML anchor bomb (billion-laughs) DoS protection in `YamlParser` via
+  pre-parse anchor/alias count and alias-nesting-depth caps
+  (R4-SEC-012, CWE-400, CWE-770). Three orthogonal `public const int`
+  caps (`MAX_ANCHORS = 100`, `MAX_ALIASES = 1000`, `MAX_ALIAS_DEPTH =
+  10`) are enforced by a byte-level regex scan that mirrors Symfony
+  YAML's `parseAnchor` acceptance pattern (`[^\s,\[\]\{\}]+` with `/u`
+  flag), so non-ASCII anchor names (Cyrillic, CJK) and punctuation
+  characters (dots, colons, pipes) are all detected. The scan runs
+  before `Symfony\Component\Yaml\Yaml::parse()`, so an
+  attacker-controlled ~1 KB payload can never reach the parser even
+  when its expanded in-memory size would exceed the process
+  `memory_limit`. The chain-depth heuristic builds a DAG of anchor-to-anchor
+  references (determined by indentation-based value-range scoping) and
+  computes the longest path with cycle detection, catching both
+  same-line flow-style (`b: &b [*a]`) and multi-line block-style
+  (`b: &b\n  - *a`) billion-laughs variants. Symfony YAML's own
+  `maxAliasesForCollections` (default 128) remains active unchanged
+  as defense-in-depth for collection aliases that slip past the
+  pre-parse scan. Exceeding any cap throws
+  `SpecTooLargeException::forAnchorCount` / `forAliasCount` /
+  `forAliasDepth` with a sanitised message that discloses only the
+  metric and counts (never the attacker payload, CWE-209). Real
+  OpenAPI specs use fewer than 20 anchors and 50 aliases, so the
+  conservative caps allow legitimate schema deduplication while
+  rejecting exponential blowup.
+- Sanitize exception messages in `PathMismatchException`,
+  `OperationNotFoundException`, `UnsupportedMediaTypeException`, and
+  `InvalidParameterException` to prevent attacker-controlled request
+  paths, HTTP methods, Content-Type headers, and caller-supplied
+  parameter messages from leaking through `getMessage()` (and
+  therefore through `__toString()`, which `SanitizableExceptionTrait`
+  delegates to `getMessage()`) into PSR-15 middleware responses or
+  PSR-3 log files (R4-SEC-007a/b/c/d, CWE-209, CWE-532). Each
+  `getMessage()` now returns a generic static string
+  (`'Request path does not match any declared template'`,
+  `'No operation matches the request'`,
+  `'Unsupported media type. Supported types: %s'` with the
+  spec-derived `$supportedTypes` list — attacker `mediaType` removed,
+  spec-declared supported types retained — and
+  `'Invalid parameter configuration'`). The attacker-controlled
+  public readonly properties (`PathMismatchException::$requestPath` /
+  `$template`, `OperationNotFoundException::$requestPath` / `$method`,
+  `UnsupportedMediaTypeException::$mediaType` / `$supportedTypes`) are
+  preserved unchanged for trusted-operator diagnostics; only the
+  message content is sanitised. `InvalidParameterException` already
+  exposed `$parameterName` via the opt-in `parameterName(reveal: true)`
+  getter; its constructor's `$message` argument is no longer
+  interpolated into `getMessage()` and is dropped after construction.
 
 ### BREAKING
+- `SecurityValidator` now throws the new
+  `Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException`
+  (extends `\RuntimeException`, **not** `ValidationException`) when the
+  spec declares `oauth2`, `openIdConnect`, `http/basic`, `http/digest`,
+  `mutualTLS`, or any unknown security scheme type (R4-SEC-010 /
+  R4-SPEC-003 — see `### Fixed` above). Previously these schemes were
+  misclassified as a missing-credential `ValidationException` wrapping a
+  `MissingSecurityCredentialsError`, so consumers that catch only
+  `ValidationException` from `validateRequest()` / `validateWebhook()` /
+  `validateCallback()` will now see the new exception bubble through
+  uncaught. Three migration paths:
+
+  1. Remove the unsupported schemes from the spec (the spec was invalid
+     for partial validation all along; the previous behaviour silently
+     bypassed security on those requirements, which is the bug R4-SEC-010
+     fixes).
+  2. Catch `UnsupportedSecuritySchemeException` (or `\RuntimeException`)
+     separately in your PSR-15 middleware and decide how to surface the
+     configuration error to the operator (5xx response, log-and-reject,
+     etc.). The exception is **not** a credential-validation error and
+     must not be reported to the caller with the same shape as
+     `ValidationException`.
+  3. Disable security validation (omit `enableSecurityValidation()` on
+     the builder) and validate OAuth2 / OpenID Connect tokens at the
+     application layer with a dedicated library.
+
+  Direct property access on the new exception (`$e->schemeName`,
+  `$e->schemeType`, `$e->httpScheme`) is `public readonly` (no
+  sanitising getter required — scheme names come from the
+  operator-loaded spec, not from the request, so they are safe to
+  disclose to operators).
+
 - Exception sanitisation changes listed under `### Security` above are
   breaking. Direct property access (`$e->value`, `$e->schemeName`,
   `$e->ref`, `$e->internalTrace`, `$e->parameterName`, `$e->schemeType`,
@@ -85,6 +499,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   etc.). Trusted code that previously relied on `includeSensitiveValues: true`
   on `DetailedFormatter` / `JsonFormatter` continues to work — the
   formatters now call the opt-in getters internally.
+
+- The four exception message changes listed under R4-SEC-007a/b/c/d
+  above are breaking for any caller that string-matched on the previous
+  sprintf-formatted `getMessage()` content of `PathMismatchException`,
+  `OperationNotFoundException`, `UnsupportedMediaTypeException`, or
+  `InvalidParameterException` (e.g. code that did
+  `str_contains($e->getMessage(), $request->getUri()->getPath())` or
+  parsed the method/path out of the old `'Operation not found: %s %s'`
+  format). Replace such matching with reads of the public readonly
+  properties (`$e->requestPath`, `$e->method`, `$e->mediaType`,
+  `$e->template`, `$e->supportedTypes`) or, for `InvalidParameterException`,
+  with the `$e->parameterName(reveal: true)` opt-in getter. The exception
+  hierarchy, constructor signatures, parent classes, and all properties
+  are unchanged; only the `getMessage()` body is sanitised.
 
 - `ValidatorCompiler::generatePatternCheck` now emits an inlined defensive
   wrapper around `preg_match` for the `pattern` keyword, closing R3-SEC-001
@@ -133,6 +561,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `?OpenApiDocument $document` parameter that flows through to
   `generateKey`; existing three-argument callers continue to work for
   any schema that does not transitively contain a `$ref`.
+- `SchemaCache` key format changed to incorporate the parse-config
+  fingerprint (R4-SEC-008, R4-SEC-017 — see `### Fixed` above). The
+  SHA-256 hash input for both `generateCacheKeyFromFile` and
+  `generateCacheKeyFromString` now includes a `maxSpecDepth=…|
+  maxSpecSizeBytes=…|externalRefAllowedRoot=…|externalRefMaxBytes=…`
+  suffix. As a result, every existing cache entry becomes a cache-miss
+  on the first `build()` call after upgrade and the spec is re-parsed
+  once per distinct parse-config. The cache then warms back up
+  normally. Operators upgrading across this change should pre-warm the
+  cache (one `build()` per spec and per parse-config at deploy time) if
+  cold-start cost is significant for the deployment.
 
 ### Added
 - `EmailValidator` now accepts RFC 5321 domain literals
@@ -184,18 +623,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `type:string` accepts arbitrary ASCII strings. The foundation is
   designed for incremental extension by future tasks. (Closes
   R3-TEST-021.)
-- CI matrix extension in `.github/workflows/ci.yml` adds two new jobs
-  that activate the previously-skipped concurrency tests:
-  `swoole_tests` runs `SwooleSharedValidatorTest` inside
-  `phpswoole/swoole:php8.5`; `frankenphp_tests` runs
-  `FrankenPhpThreadedTest` inside `dunglas/frankenphp:latest-php8.5`.
-  Both jobs include an explicit `Verify no tests skipped` step that
-  fails the build if `markTestSkipped` fires despite the extension
-  being loaded, closing the marketing-vs-reality gap where README and
-  PHPDoc promised coroutine/thread isolation that was never verified by
-  CI. (Closes R3-TEST-024, R3-TEST-025.)
+- CI matrix extension in `.github/workflows/ci.yml` adds the
+  `swoole_tests` job that activates the previously-skipped
+  `SwooleSharedValidatorTest` inside `phpswoole/swoole:php8.5`, plus an
+  explicit `Verify Swoole extension loaded` step that fails the build if
+  the extension is missing, closing the marketing-vs-reality gap where
+  README and PHPDoc promised coroutine isolation that was never verified
+  by CI for the Swoole runtime (Closes R3-TEST-024, R3-TEST-025). The
+  matching FrankenPHP job is tracked under R4-TEST-001 in `### Changed`.
 
 ### Changed
+- The `frankenphp_tests` job is removed from `.github/workflows/ci.yml`.
+  The job ran with `continue-on-error: true` and the underlying
+  `FrankenPhpThreadedTest` always skipped under
+  `extension_loaded('frankenphp') === false` in CLI SAPI, because the
+  `frankenphp` extension is statically compiled into the Caddy-based
+  `frankenphp` binary and registered with the Zend engine only inside the
+  worker SAPI (real web requests). The job therefore produced no regression
+  signal while failing the `Install dependencies with composer` step
+  because the base image lacks the `zip` extension and `unzip`. The test
+  class is retained in `tests/Concurrency/FrankenPhpThreadedTest.php` (it
+  skips gracefully when the extension is missing) and will be wired back
+  into CI once a worker-SAPI test harness that boots the frankenphp server
+  and runs PHPUnit through an actual worker request is built. Tracked as a
+  follow-up to R4-TEST-001. The Swoole job (`swoole_tests`) is unchanged
+  and remains the only runtime-conditional concurrency test that actually
+  executes assertions in CI today.
 - Removed all inline `//` comments from `src/` (72 lines across 15 files)
   to comply with `php-best-practices.md` §12 "Comments are strictly
   forbidden; PHPDoc on public API is the only allowed form of in-source

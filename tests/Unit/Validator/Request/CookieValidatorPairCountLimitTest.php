@@ -61,7 +61,7 @@ final class CookieValidatorPairCountLimitTest extends TestCase
         $cookieHeader = implode('; ', $pairs);
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage('Maximum cookie pairs of 100 exceeded');
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->validator->parseCookies($cookieHeader);
     }
@@ -98,7 +98,7 @@ final class CookieValidatorPairCountLimitTest extends TestCase
         $cookieHeader = implode('; ', $pairs);
 
         $this->expectException(InvalidParameterException::class);
-        $this->expectExceptionMessage('Maximum cookie pairs of 100 exceeded');
+        $this->expectExceptionMessage('Invalid parameter configuration');
 
         $this->validator->parseCookieStyle($cookieHeader, $parameter);
     }

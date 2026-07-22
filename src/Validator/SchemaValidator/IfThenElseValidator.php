@@ -62,7 +62,7 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
         mixed $data,
         ?ValidationContext $context,
         bool $ifValid,
-        ?SchemaValidator $validator = null,
+        ?SchemaValidatorInterface $validator = null,
         bool $nullableAsType = true,
     ): void {
         if ($ifValid) {
@@ -121,7 +121,7 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
     }
 
     private function validateIfBranch(
-        SchemaValidator $validator,
+        SchemaValidatorInterface $validator,
         mixed $data,
         Schema $subSchema,
         ?ValidationContext $context,
@@ -153,7 +153,7 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
     }
 
     private function validateThenOrElse(
-        SchemaValidator $validator,
+        SchemaValidatorInterface $validator,
         mixed $data,
         Schema $subSchema,
         ?ValidationContext $context,

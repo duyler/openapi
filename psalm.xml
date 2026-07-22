@@ -15,4 +15,23 @@
             <directory name="vendor" />
         </ignoreFiles>
     </projectFiles>
+
+    <!--
+        Suppression configured at psalm.xml level (per §2 php-best-practices.md:
+        «Допускается настройка в psalm.xml»). The two classes below are intentionally
+        retained as @deprecated legacy adapters in 0.6.0 — the wrapper RefResolvingSchemaValidator
+        transparently preserves their behaviour. Internal callers cannot migrate
+        without a larger parameter-validator refactor (planned for a follow-up task).
+        Removing the @deprecated tag is not an option because tooling (IDE quick-fix,
+        phpdoc generators) needs to surface the deprecation to direct callers.
+        New deprecations MUST NOT be added here without a parallel entry in CHANGELOG.md.
+    -->
+    <issueHandlers>
+        <DeprecatedClass>
+            <errorLevel type="suppress">
+                <referencedClass name="Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator" />
+                <referencedClass name="Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies" />
+            </errorLevel>
+        </DeprecatedClass>
+    </issueHandlers>
 </psalm>

@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Registry\DefaultValidatorRegistry;
 use Duyler\OpenApi\Validator\Registry\ValidatorRegistryInterface;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
+use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -43,6 +45,16 @@ use function array_values;
  *           validation because it also routes discriminator oneOf and
  *           $ref-pre-resolved composition that this legacy dispatcher
  *           cannot handle.
+ *
+ * @deprecated since 0.6.0: this dispatcher does not resolve `$ref` on its
+ *             own. When constructed with `document` + `refResolver`, it is
+ *             transparently wrapped by {@see RefResolvingSchemaValidator}
+ *             so nested-keyword `$ref` resolution still works, but direct
+ *             callers should migrate to {@see SchemaValidatorWithContext}
+ *             (returned by `OpenApiValidatorBuilder::build()` and by
+ *             `Dto\SchemaValidatorDependencies::rootSchemaValidator()`).
+ *             This class will be removed in 2.0 alongside the
+ *             parameter-validator migration.
  */
 final class SchemaValidator implements SchemaValidatorInterface
 {
@@ -61,6 +73,8 @@ final class SchemaValidator implements SchemaValidatorInterface
         private readonly ?EventDispatcherInterface $eventDispatcher = null,
         private readonly RegexValidator $regexValidator = new RegexValidator(),
         private readonly PregExecutor $pregExecutor = new PregExecutor(),
+        ?OpenApiDocument $document = null,
+        ?RefResolverInterface $refResolver = null,
     ) {
         $this->effectiveRegistry = $registry ?? new DefaultValidatorRegistry(
             $this->pool,
@@ -71,6 +85,8 @@ final class SchemaValidator implements SchemaValidatorInterface
             $this->eventDispatcher,
             regexValidator: $this->regexValidator,
             pregExecutor: $this->pregExecutor,
+            document: $document,
+            refResolver: $refResolver,
         );
 
         /** @var WeakMap<Schema, list<SchemaValidatorInterface>> $applicableValidators */

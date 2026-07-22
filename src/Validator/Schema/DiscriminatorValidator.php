@@ -29,11 +29,26 @@ final readonly class DiscriminatorValidator
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
     ) {}
 
+    /**
+     * @param array<array-key, mixed>|int|string|float|bool $data
+     *
+     * When a non-null $context is supplied (canonical SchemaValidatorWithContext
+     * path), evaluated-property / evaluated-item annotations produced by the
+     * discriminator target sub-validation are merged back into it via
+     * forkForBranch + mergeChildAnnotations, so parent schemas declaring
+     * unevaluatedProperties:false / unevaluatedItems:false honour properties
+     * already validated by the target schema (JSON Schema 2020-12 §10.3.4).
+     *
+     * The optional default preserves backward compatibility for direct unit
+     * callers; null triggers a fresh ValidationContext that mirrors the
+     * pre-fix behaviour (annotations isolated and discarded).
+     */
     public function validate(
         array|int|string|float|bool $data,
         Schema $schema,
         OpenApiDocument $document,
         string $dataPath = '/',
+        ?ValidationContext $context = null,
     ): void {
         $discriminator = $schema->discriminator;
 
@@ -41,8 +56,15 @@ final readonly class DiscriminatorValidator
             return;
         }
 
+        $validationContext = $context ?? ValidationContext::create(
+            $this->dependencies->pool,
+            $this->dependencies->errorFormatter,
+            $this->configuration->nullableAsType,
+            $this->configuration->emptyArrayStrategy,
+        );
+
         if (null === $discriminator->propertyName) {
-            $this->validateWithoutPropertyName($data, $discriminator, $document);
+            $this->validateWithoutPropertyName($data, $discriminator, $document, $validationContext);
 
             return;
         }
@@ -50,20 +72,21 @@ final readonly class DiscriminatorValidator
         $value = $this->extractValue($data, $discriminator->propertyName, $dataPath);
         $targetSchema = $this->resolveSchema($value, $discriminator, $schema, $document, $dataPath);
 
-        $this->validateAgainstSchema($data, $targetSchema, $document);
+        $this->validateAgainstSchema($data, $targetSchema, $document, $validationContext);
     }
 
     private function validateWithoutPropertyName(
         array|int|string|float|bool $data,
         Discriminator $discriminator,
         OpenApiDocument $document,
+        ValidationContext $context,
     ): void {
         if (null === $discriminator->defaultMapping) {
             return;
         }
 
         $targetSchema = $this->dependencies->refResolver->resolve($discriminator->defaultMapping, $document);
-        $this->validateAgainstSchema($data, $targetSchema, $document);
+        $this->validateAgainstSchema($data, $targetSchema, $document, $context);
     }
 
     private function buildPath(string $basePath, string $segment): string
@@ -130,9 +153,15 @@ final readonly class DiscriminatorValidator
         OpenApiDocument $document,
         string $dataPath,
     ): Schema {
-        $schemas = $schema->oneOf ?? $schema->anyOf ?? $schema->allOf ?? [];
+        // R4-CORRECTNESS-002/015: enumerate candidates from every composition array
+        // simultaneously (JSON Schema 2020-12 §10.2.1.1), not just the first non-null.
+        $candidates = [
+            ...($schema->oneOf ?? []),
+            ...($schema->anyOf ?? []),
+            ...($schema->allOf ?? []),
+        ];
 
-        foreach ($schemas as $candidateSchema) {
+        foreach ($candidates as $candidateSchema) {
             if (null !== $candidateSchema->ref) {
                 $implicitName = $this->extractSchemaName($candidateSchema->ref);
 
@@ -142,7 +171,11 @@ final readonly class DiscriminatorValidator
             }
 
             if (null !== $candidateSchema->oneOf || null !== $candidateSchema->anyOf || null !== $candidateSchema->allOf) {
-                return $this->findMatchingSchema($value, $discriminator, $candidateSchema, $document, $dataPath);
+                try {
+                    return $this->findMatchingSchema($value, $discriminator, $candidateSchema, $document, $dataPath);
+                } catch (UnknownDiscriminatorValueException) {
+                    continue;
+                }
             }
         }
 
@@ -168,15 +201,13 @@ final readonly class DiscriminatorValidator
         mixed $data,
         Schema $schema,
         OpenApiDocument $document,
+        ValidationContext $context,
     ): void {
         /** @var array<array-key, mixed> $data */
         $rootValidator = $this->dependencies->rootSchemaValidator($document, $this->configuration);
-        $context = ValidationContext::create(
-            $this->dependencies->pool,
-            $this->dependencies->errorFormatter,
-            $this->configuration->nullableAsType,
-            $this->configuration->emptyArrayStrategy,
-        );
-        $rootValidator->validateWithContextIgnoringDiscriminator($data, $schema, $context);
+
+        $child = $context->forkForBranch();
+        $rootValidator->validateWithContextIgnoringDiscriminator($data, $schema, $child);
+        $context->mergeChildAnnotations($child);
     }
 }

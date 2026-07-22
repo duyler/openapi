@@ -7,8 +7,6 @@ namespace Duyler\OpenApi\Validator\Exception;
 use RuntimeException;
 use Throwable;
 
-use function sprintf;
-
 final class InvalidParameterException extends RuntimeException
 {
     use SanitizableExceptionTrait;
@@ -20,7 +18,7 @@ final class InvalidParameterException extends RuntimeException
         ?Throwable $previous = null,
     ) {
         parent::__construct(
-            sprintf('Invalid parameter "%s": %s', $parameterName, $message),
+            'Invalid parameter configuration',
             $code,
             $previous,
         );
@@ -33,19 +31,14 @@ final class InvalidParameterException extends RuntimeException
 
     public static function malformedValue(string $parameterName, string $message, int $code = 0, ?Throwable $previous = null): self
     {
-        return new self(
-            $parameterName,
-            'Malformed value: ' . $message,
-            $code,
-            $previous,
-        );
+        return new self($parameterName, $message, $code, $previous);
     }
 
     /**
-     * Returns the attacker-controlled parameter name (e.g. from a query
-     * string). Pass $reveal = true only from trusted operator code; the
-     * default returns '<redacted>' to prevent reflective serialization
-     * from leaking attacker probes verbatim into logs.
+     * Returns the spec-defined parameter name. Pass $reveal = true only
+     * from trusted operator code; the default returns '<redacted>' to
+     * prevent reflective serialization from leaking attacker probes
+     * verbatim into logs.
      */
     public function parameterName(bool $reveal = false): string
     {

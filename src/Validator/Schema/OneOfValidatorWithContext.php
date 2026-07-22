@@ -80,12 +80,13 @@ final readonly class OneOfValidatorWithContext
 
         $dataPath = $context->breadcrumbs->currentPath();
 
-        $this->discriminatorValidator->validate($data, $schema, $this->document, $dataPath);
+        $this->discriminatorValidator->validate($data, $schema, $this->document, $dataPath, $context);
     }
 
     private function hasNullableSchema(array $oneOf): bool
     {
-        return array_any($oneOf, fn(Schema $subSchema): bool => $subSchema->nullable);
+        return array_any($oneOf, fn(Schema $subSchema): bool => $subSchema->nullable
+            || SchemaValueNormalizer::typeIncludesNull($subSchema->type));
     }
 
     private function validateWithoutDiscriminator(mixed $data, array $oneOf, ValidationContext $context): void
