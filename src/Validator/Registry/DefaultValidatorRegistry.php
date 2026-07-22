@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Registry;
 
+use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Exception\UnknownValidatorException;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
+use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\SchemaValidator\ValidatorFactory;
@@ -40,6 +42,8 @@ final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterf
         private readonly ?EventDispatcherInterface $eventDispatcher = null,
         private readonly RegexValidator $regexValidator = new RegexValidator(),
         private readonly PregExecutor $pregExecutor = new PregExecutor(),
+        private readonly ?OpenApiDocument $document = null,
+        private readonly ?RefResolverInterface $refResolver = null,
     ) {
         $dependencies = new ValidatorDependencies(
             pool: $this->pool,
@@ -51,6 +55,8 @@ final readonly class DefaultValidatorRegistry implements ValidatorRegistryInterf
             registry: $this,
             regexValidator: $this->regexValidator,
             pregExecutor: $this->pregExecutor,
+            document: $this->document,
+            refResolver: $this->refResolver,
         );
 
         $this->validators = new ValidatorFactory($dependencies)->createAll();

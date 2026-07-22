@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.0]
 
+### Deprecated
+- The two classes below are deprecated since 0.6.0 and will be removed
+  in 2.0 alongside the parameter-validator migration; see
+  `SchemaValidatorWithContext` (returned by `OpenApiValidatorBuilder::build()`)
+  for the canonical replacement.
+- `Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator` (the legacy
+  stateless JSON Schema dispatcher) is deprecated in 0.6.0 and scheduled
+  for removal in 2.0. It does not resolve `$ref` on its own; when
+  constructed with `document` + `refResolver` it is transparently
+  wrapped by the new internal `RefResolvingSchemaValidator` adapter so
+  nested-keyword `$ref` resolution still works, but direct callers
+  should migrate to
+  `Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext`
+  (returned by `OpenApiValidatorBuilder::build()` and by
+  `Dto\SchemaValidatorDependencies::rootSchemaValidator()`). The class
+  is retained through the 0.6.x / 1.x line because parameter
+  validators (Path / Query / Headers / Cookie) and a small number of
+  internal call sites still construct it directly; those callers will
+  be migrated as part of a separate parameter-validator migration
+  follow-up. The literal `@deprecated` PHPDoc tag is present on the
+  class to surface the migration need through IDE quick-fix and
+  phpdoc generators.
+- `Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies` (the
+  legacy constructor-dependency bag for the stateless dispatcher and
+  its keyword validators) is deprecated in 0.6.0 and scheduled for
+  removal in 2.0, alongside `SchemaValidator`. Direct construction of
+  this bag is retained only for the parameter-validator migration
+  window. New code should use
+  `Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies`, which
+  carries the document + `RefResolver` needed for full `$ref`
+  resolution and exposes the shared `StatelessValidatorRegistry` plus
+  PSR-3 / PSR-14 wiring.
+
+### Fixed
+- Resolve `$ref` inside every schema-typed keyword (`additionalProperties`,
+  `patternProperties`, `unevaluatedProperties`, `unevaluatedItems`,
+  `prefixItems`, `contains`, `propertyNames`, `dependentSchemas`, `not`,
+  `if`, `then`, `else`, `items`, `properties`) before delegating to the
+  legacy recursion engine. Previously the stateless nested-keyword
+  validators received opaque `{$ref: '#/...'}` stubs and produced no
+  applicable validators, so invalid data passed validation as a silent
+  no-op (R4-CORRECTNESS-001, R4-CORRECTNESS-016, R4-SEC-001,
+  R4-SPEC-014, R4-ARCH-001). The shared `RefResolver` (WeakMap-backed
+  cache + cycle guard) is threaded through `StatelessValidatorRegistry`
+  → `ValidatorDependencies` → `SchemaValidator` →
+  `DefaultValidatorRegistry`, and a new internal
+  `RefResolvingSchemaValidator` adapter wraps the legacy dispatcher so
+  the canonical path keeps its annotation-propagation semantics. Circular
+  `$ref` chains terminate through `RefResolver`'s own cycle detection
+  plus the existing `ValidationContext::MAX_DEPTH` bound (default 64),
+  which surfaces as `SchemaDepthExceededException`.
+
 ### Security
 - All exception classes shipped by the package now sanitize `__toString()`
   output to prevent disclosure of server filesystem paths, class names, and

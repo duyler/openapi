@@ -95,6 +95,8 @@ final readonly class ValidatorDependencies
             $this->eventDispatcher,
             $this->regexValidator,
             $this->pregExecutor,
+            $this->document,
+            $this->refResolver,
         );
 
         $this->schemaValidatorDependencies = new SchemaValidatorDependencies(

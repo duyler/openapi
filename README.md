@@ -1797,6 +1797,38 @@ per branch and merge annotations only on successful sub-validation.
 `NotValidator` deliberately contributes an empty annotation set per
 §10.3.4.
 
+`$ref` resolution applies to all schema-typed keywords, not just the
+top-level composition arrays (`allOf` / `anyOf` / `oneOf`). The legacy
+recursion engine wrapped by `RefResolvingSchemaValidator` resolves
+`$ref` on `additionalProperties`, `patternProperties`,
+`unevaluatedProperties`, `unevaluatedItems`, `prefixItems`, `contains`,
+`propertyNames`, `dependentSchemas`, `not`, `if`, `then`, `else`,
+`items`, and `properties` before delegating to the recursion validator,
+so stub `{$ref: '#/...'}` subschemas embedded in any of those keywords
+no longer pass validation as a silent no-op. Circular `$ref` chains are
+bounded by `RefResolver`'s WeakMap cycle guard and the surrounding
+`ValidationContext::MAX_DEPTH` (default 64), which raises
+`SchemaDepthExceededException` instead of looping forever.
+
+Known limitation: when a `properties` or `items` subschema is declared
+as `{$ref: '#/...'}` and the resolved target schema allows `null` via
+`type: [..., 'null']` (rather than via an explicit `nullable: true`
+sibling on the `$ref` stub), the validator's pre-normalization step
+(`PropertiesValidatorWithContext` / `PropertiesValidator` /
+`ItemsValidator` / `ItemsValidatorWithContext`) still sees the
+unresolved stub when computing `$allowNull`. Because the stub has no
+`nullable` field and no `type`, `$allowNull` evaluates to `false`, so a
+`null` value on such a property or item is rejected as
+`InvalidDataTypeException` even though it is valid per the resolved
+target. Non-null values are unaffected. To work around this, declare
+`nullable: true` as a sibling of the `$ref` so the pre-normalize step
+sees the allow-null flag, and ensure the resolved target schema also
+allows `null` (via `nullable: true` or `type: [..., 'null']`); the
+sibling `nullable: true` is combined with the resolved target's
+nullability using logical AND semantics
+(`SchemaSiblingMerger`, per OpenAPI 3.x `nullable`
+sibling-extension rules). Tracked for a follow-up fix.
+
 Limitations:
 
 - Annotation tracking works only when validation flows through
