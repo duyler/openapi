@@ -21,6 +21,14 @@ use function strtoupper;
 
 final readonly class SecurityValidator
 {
+    /**
+     * Matches RFC 6750 §2.1 Bearer credential `Bearer <b64token>` and
+     * nothing else: the trailing `\s*$` allows optional RFC 7235
+     * header-value whitespace and the end-anchor rejects multi-challenge
+     * headers such as `Bearer fake, Basic dXNlcjpwYXNz` (R4-SEC-016).
+     */
+    private const string BEARER_AUTH_PATTERN = '/^bearer\s+\S+\s*$/i';
+
     private readonly LoggerInterface $logger;
 
     public function __construct(
@@ -147,7 +155,7 @@ final readonly class SecurityValidator
 
         $authorization = $request->getHeaderLine('Authorization');
 
-        if ('' !== $authorization && 1 === $this->pregExecutor->match('/^bearer\s+\S+/i', $authorization)) {
+        if ('' !== $authorization && 1 === $this->pregExecutor->match(self::BEARER_AUTH_PATTERN, $authorization)) {
             return null;
         }
 

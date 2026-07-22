@@ -41,6 +41,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PSR-3 / PSR-14 wiring.
 
 ### Fixed
+- The `http/bearer` security scheme check in `SecurityValidator` now uses
+  an end-anchored regex (`/^bearer\s+\S+\s*$/i`, extracted into the
+  `BEARER_AUTH_PATTERN` class constant). The previous unanchored pattern
+  `/^bearer\s+\S+/i` only verified the prefix and silently accepted
+  multi-challenge `Authorization` headers such as
+  `Bearer fake, Basic dXNlcjpwYXNz`, allowing downstream code to extract
+  the second challenge as the credential (R4-SEC-016). The trailing
+  `\s*$` keeps legitimate RFC 7235 trailing header-value whitespace valid.
 - `coerceToInteger` and `coerceToIntegerStrict` now correctly reject float
   values that overflow the int64 range near `PHP_INT_MAX` due to IEEE-754
   imprecision (R4-SEC-013). The previous guard `$value >= (float) PHP_INT_MAX`
