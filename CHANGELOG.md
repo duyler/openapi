@@ -78,12 +78,17 @@ equality, `$ref` sibling merging, and JSON Pointer escaping.
 
 ### Deprecated
 
-- `Validator\SchemaValidator\SchemaValidator` (legacy stateless JSON Schema
-  dispatcher), removal in 2.0. Migrate to
-  `Validator\Schema\SchemaValidatorWithContext` (returned by builder).
-- `Validator\SchemaValidator\ValidatorDependencies` (legacy constructor
-  dependency bag), removal in 2.0. Migrate to
-  `Validator\Dto\SchemaValidatorDependencies`.
+- `SchemaValidator` and `ValidatorDependencies` (the legacy stateless
+  dispatcher and its dependency bag) are deprecated since 0.6.0.
+  They are retained through the **entire 1.x release line** for backward
+  compatibility with internal composition validators. Removal is
+  scheduled for **2.0** as part of the parameter-validator migration.
+  New code should use `SchemaValidatorWithContext`, the canonical
+  validator wired internally by `OpenApiValidatorBuilder::build()`;
+  direct callers can obtain it via
+  `SchemaValidatorDependencies::rootSchemaValidator()`. Direct
+  construction of `ValidatorDependencies` should migrate to
+  `SchemaValidatorDependencies` (the canonical DTO).
 
 ### Removed
 
