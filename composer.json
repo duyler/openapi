@@ -5,7 +5,14 @@
     "license": "MIT",
     "keywords": [
         "openapi",
-        "swagger"
+        "swagger",
+        "validation",
+        "json-schema",
+        "psr-7",
+        "psr-15",
+        "openapi-3",
+        "api",
+        "http"
     ],
     "authors": [
         {
@@ -14,7 +21,9 @@
         }
     ],
     "support": {
-        "docs": "https://duyler.org/en/docs/openapi/"
+        "docs": "https://duyler.org/en/docs/openapi/",
+        "issues": "https://github.com/duyler/openapi/issues",
+        "source": "https://github.com/duyler/openapi"
     },
     "require": {
         "php": "^8.4",
@@ -57,6 +66,11 @@
     "config": {
         "allow-plugins": {
             "infection/extension-installer": true
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-dev": "1.0.x-dev"
         }
     }
 }
