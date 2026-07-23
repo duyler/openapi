@@ -127,7 +127,7 @@ final class CompilationCache implements CompilationCacheInterface
 
     private function calculateSchemaHash(Schema $schema, string $className, ?OpenApiDocument $document): string
     {
-        $classNameHash = $this->hashClassName($className);
+        $classNameHash = hash('sha256', $className);
         $documentFingerprint = $document !== null ? $this->documentFingerprint($document) : '';
         $cacheKey = $classNameHash . self::KEY_SEPARATOR . $documentFingerprint;
 
@@ -186,11 +186,6 @@ final class CompilationCache implements CompilationCacheInterface
         $this->hashCache[$schema] = $entry;
 
         return $finalHash;
-    }
-
-    private function hashClassName(string $className): string
-    {
-        return hash('sha256', $className);
     }
 
     /**

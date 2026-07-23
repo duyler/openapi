@@ -13,9 +13,9 @@ final readonly class IriValidator extends AbstractStringFormatValidator
     private readonly UriValidator $inner;
 
     public function __construct(
-        private readonly PregExecutor $pregExecutor = new PregExecutor(),
+        PregExecutor $pregExecutor = new PregExecutor(),
     ) {
-        $this->inner = new UriValidator($this->pregExecutor);
+        $this->inner = new UriValidator($pregExecutor);
     }
 
     #[Override]

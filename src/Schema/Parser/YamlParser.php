@@ -9,7 +9,9 @@ use Duyler\OpenApi\Validator\PregExecutor;
 use Override;
 use Symfony\Component\Yaml\Yaml;
 
+use function array_filter;
 use function array_keys;
+use function array_values;
 use function count;
 use function explode;
 use function is_array;
@@ -266,13 +268,9 @@ final class YamlParser extends OpenApiBuilder
             return [];
         }
 
-        $captured = [];
-        array_walk($group, static function (mixed $value) use (&$captured): void {
-            if (is_string($value)) {
-                $captured[] = $value;
-            }
-        });
+        /** @var array<array-key, string> $captured */
+        $captured = array_filter($group, is_string(...));
 
-        return $captured;
+        return array_values($captured);
     }
 }

@@ -35,9 +35,4 @@ final class OpenApiBuildContext
     {
         return version_compare($this->documentVersion, self::DEPRECATION_VERSION, '>=');
     }
-
-    public function isVersion30(): bool
-    {
-        return version_compare($this->documentVersion, '3.1.0', '<');
-    }
 }

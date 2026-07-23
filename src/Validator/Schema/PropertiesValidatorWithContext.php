@@ -45,6 +45,7 @@ final readonly class PropertiesValidatorWithContext
         }
 
         $errors = [];
+        $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
 
         foreach ($schema->properties as $name => $propertySchema) {
             if (false === array_key_exists($name, $data)) {
@@ -60,7 +61,6 @@ final readonly class PropertiesValidatorWithContext
                 $context->enterBreadcrumb($name);
 
                 try {
-                    $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
                     if ($useDiscriminator) {
                         $rootValidator->validateWithContext($value, $propertySchema, $context);
                     } else {

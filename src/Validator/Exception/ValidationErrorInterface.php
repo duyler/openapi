@@ -23,11 +23,6 @@ interface ValidationErrorInterface
 
     public function suggestion(): ?string;
 
-    /**
-     * Get the validation keyword (e.g., 'type', 'minLength', 'format').
-     *
-     * @see keyword()
-     */
     #[Deprecated(message: 'Use keyword() instead. This method will be removed in 2.0.')]
     public function getType(): string;
 }

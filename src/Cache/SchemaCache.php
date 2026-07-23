@@ -22,10 +22,10 @@ final readonly class SchemaCache
      * @param int $ttl Time to live in seconds (default: 3600)
      */
     public function __construct(
-        private readonly CacheItemPoolInterface $pool,
-        private readonly int $ttl = self::DEFAULT_TTL,
+        CacheItemPoolInterface $pool,
+        int $ttl = self::DEFAULT_TTL,
     ) {
-        $this->decorator = new TypedCacheDecorator($pool, $this->ttl);
+        $this->decorator = new TypedCacheDecorator($pool, $ttl);
     }
 
     /**

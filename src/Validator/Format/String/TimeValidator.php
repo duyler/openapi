@@ -45,7 +45,7 @@ final readonly class TimeValidator extends AbstractStringFormatValidator
         }
 
         $isEndOfDay = 23 === (int) $matches['hour'] && 59 === (int) $matches['minute'];
-        $isUtc = in_array($matches['offset'] ?? '', self::UTC_OFFSETS, true);
+        $isUtc = in_array($matches['offset'], self::UTC_OFFSETS, true);
 
         if ($isEndOfDay && $isUtc) {
             return;

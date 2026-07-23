@@ -181,4 +181,70 @@ final class ResponseTest extends TestCase
 
         self::assertArrayNotHasKey('summary', $serialized);
     }
+
+    #[Test]
+    public function json_serialize_ref_object_returns_only_ref(): void
+    {
+        $response = new Response(
+            ref: '#/components/responses/NotFound',
+            description: 'Should be ignored',
+            headers: new Headers([]),
+            content: new Content([]),
+            links: new Links([]),
+        );
+
+        $serialized = $response->jsonSerialize();
+
+        self::assertSame(['$ref' => '#/components/responses/NotFound'], $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_ref_object_includes_summary_sibling(): void
+    {
+        $response = new Response(
+            ref: '#/components/responses/NotFound',
+            refSummary: 'Not Found summary',
+        );
+
+        $serialized = $response->jsonSerialize();
+
+        self::assertSame([
+            '$ref' => '#/components/responses/NotFound',
+            'summary' => 'Not Found summary',
+        ], $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_ref_object_includes_description_sibling(): void
+    {
+        $response = new Response(
+            ref: '#/components/responses/NotFound',
+            refDescription: 'Not Found description',
+        );
+
+        $serialized = $response->jsonSerialize();
+
+        self::assertSame([
+            '$ref' => '#/components/responses/NotFound',
+            'description' => 'Not Found description',
+        ], $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_ref_object_includes_both_siblings(): void
+    {
+        $response = new Response(
+            ref: '#/components/responses/NotFound',
+            refSummary: 'Summary override',
+            refDescription: 'Description override',
+        );
+
+        $serialized = $response->jsonSerialize();
+
+        self::assertSame([
+            '$ref' => '#/components/responses/NotFound',
+            'summary' => 'Summary override',
+            'description' => 'Description override',
+        ], $serialized);
+    }
 }

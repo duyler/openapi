@@ -65,6 +65,14 @@ final class UriTemplateValidatorTest extends TestCase
     }
 
     #[Test]
+    public function uri_template_validator_rejects_excessive_expression_count(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('URI template exceeds maximum expression count');
+        $this->validator->validate(str_repeat('{x}', 1001));
+    }
+
+    #[Test]
     public function uri_template_validator_format_name_is_correct(): void
     {
         $exception = null;

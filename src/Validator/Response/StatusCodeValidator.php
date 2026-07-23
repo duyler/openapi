@@ -34,7 +34,7 @@ final readonly class StatusCodeValidator
 
     private function getRange(int $statusCode): string
     {
-        $firstDigit = (int) floor($statusCode / self::HTTP_STATUS_RANGE_DIVISOR);
+        $firstDigit = intdiv($statusCode, self::HTTP_STATUS_RANGE_DIVISOR);
 
         return $firstDigit . 'XX';
     }

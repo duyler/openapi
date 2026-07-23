@@ -13,11 +13,6 @@ final class InvalidMultipleOfSchemaException extends InvalidArgumentException
 {
     use SanitizableExceptionTrait;
 
-    public function __construct(string $message)
-    {
-        parent::__construct($message);
-    }
-
     public static function forNonPositiveValue(float $multipleOf): self
     {
         return new self(sprintf(
