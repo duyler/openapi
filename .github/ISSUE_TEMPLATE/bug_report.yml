@@ -1,0 +1,53 @@
+name: Bug Report
+description: Report a validation error, crash, or unexpected behaviour
+labels: ["bug"]
+body:
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP version
+      placeholder: "8.4"
+    validations:
+      required: true
+  - type: input
+    id: package-version
+    attributes:
+      label: duyler/openapi version
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: openapi-version
+    attributes:
+      label: OpenAPI spec version
+      placeholder: "3.2"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened? What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal code or schema snippet that triggers the issue. Redact real API keys, tokens, passwords, and internal URLs before submitting.
+      value: |
+        ```php
+        // Code that triggers the issue
+        ```
+        ```yaml
+        # Relevant schema fragment
+        ```
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+      description: Exception class, message, or unexpected behaviour
+    validations:
+      required: true
