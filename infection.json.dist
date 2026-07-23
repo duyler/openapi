@@ -6,6 +6,7 @@
         ]
     },
     "minMsi": 80,
+    "minCoveredMsi": 85,
     "mutators": {
         "@default": true
     },
