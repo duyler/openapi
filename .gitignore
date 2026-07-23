@@ -5,6 +5,7 @@ coverage/
 composer.lock
 /.php-cs-fixer.cache
 /coverage.xml
+/infection.log
 .duyler/
 .DS_Store
 .omo/
