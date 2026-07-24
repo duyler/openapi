@@ -18,60 +18,23 @@ use const PREG_NO_ERROR;
 
 /**
  * Defensive wrapper around preg_match / preg_match_all that lowers the
- * process-wide pcre.backtrack_limit and pcre.recursion_limit before the call
- * and restores the previous values afterwards. Backtracking is the dominant
- * cost factor for catastrophic regular expressions (CWE-1333, CWE-400); an
- * attacker controlling the pattern (for example through a JSON-Schema
- * "pattern" field) can otherwise burn hundreds of milliseconds of CPU per
- * request. pcre.recursion_limit bounds the depth of recursion in PCRE's
- * internal matcher: deeply-nested patterns like `(a|a)*b` or `(.*)*$` can
- * exhaust the C stack on systems with small main-thread stacks (Alpine musl
- * libc defaults to 2 MB; Windows PHP builds to 1 MB) and segfault the worker
- * process. DEFAULT_MAX_RECURSION keeps comfortable headroom on typical 8 MB
- * stacks while still bounding pathological inputs.
+ * process-wide pcre.backtrack_limit and pcre.recursion_limit before each
+ * call and restores the previous values in a try/finally. Catastrophic
+ * backtracking (CWE-1333, CWE-400) on attacker-controlled JSON-Schema
+ * "pattern" fields is the dominant CPU cost factor; recursion_limit
+ * bounds C-stack exhaustion on deeply-nested patterns. PCRE compile
+ * warnings are swallowed and surfaced via the false return value;
+ * non-zero preg_last_error() raises PregRuntimeException instead of
+ * letting callers misread a runtime failure as "no match".
  *
  * @danger NOT_THREAD_SAFE
  *
- * pcre.backtrack_limit and pcre.recursion_limit are both PHP_INI_ALL
- * (process-global). Under Swoole coroutines or threaded FrankenPHP
- * workers, the capture/restore sequence in {@see match()} and
- * {@see matchAll()} races with concurrent preg_match calls in other
- * coroutines that read or write the same ini variables (O-007,
- * S-020). The ReDoS cap may be silently non-functional for an
- * individual coroutine call: coroutine A lowers the limit, B reads
- * the lowered value as "previous", A restores, B restores to the
- * lowered value -> process stuck with the reduced cap. Prefork
- * runtimes (PHP-FPM, RoadRunner, FrankenPHP non-threaded) are
- * unaffected because each worker owns its own ini scope.
- *
- * The wrapper is intentionally dependency-injected: every validator that runs
- * attacker-controlled patterns receives the same immutable instance, configured
- * once by the OpenApiValidatorBuilder. The previous INI values are captured
- * before each call and restored inside a try/finally block so the global state
- * is always returned to its caller-visible value, including when preg_match
- * itself throws or when an inner consumer mutates the limits between
- * invocations.
- *
- * Process-wide global state caveat (R3-SEC-020): pcre.backtrack_limit and
- * pcre.recursion_limit are both PHP_INI_ALL and therefore process-global.
- * Under Swoole coroutines or threaded FrankenPHP workers, a coroutine that
- * mutates either limit races with any concurrent coroutine that reads or
- * writes the same ini variable. The capture/restore inside try/finally does
- * not close this race — it only narrows the window to the duration of the
- * preg_match call itself. Each coroutine or worker should own its own
- * PregExecutor instance (the default in OpenApiValidatorBuilder) and must not
- * rely on the limits being stable across cooperative yield points.
- *
- * PCRE compile errors (malformed pattern) are signalled through a `false`
- * return value mirroring the native contract, and the associated E_WARNING is
- * swallowed via a temporary error handler so callers can branch on the return
- * value without leaking diagnostic noise into PSR-3 logs or PHPUnit output.
- *
- * A non-zero preg_last_error() after the call indicates an internal PCRE
- * failure (backtrack_limit exceeded, recursion_limit exceeded, JIT stack
- * overflow). The return value cannot be trusted in that state, so the wrapper
- * raises a PregRuntimeException rather than silently returning `false`, which
- * callers would otherwise misread as "no match".
+ * Both pcre.* ini variables are PHP_INI_ALL (process-global). Under
+ * Swoole coroutines / threaded FrankenPHP the capture/restore in
+ * {@see match()} and {@see matchAll()} races with concurrent
+ * preg_match calls, and the ReDoS cap may be silently non-functional
+ * for an individual coroutine call (O-007, S-020). Prefork runtimes
+ * are unaffected. See README "Unsafe classes and their contracts".
  */
 final readonly class PregExecutor
 {
