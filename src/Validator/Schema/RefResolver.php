@@ -21,6 +21,7 @@ use Generator;
 use function array_key_exists;
 use function is_array;
 use function is_object;
+use function str_contains;
 use function str_starts_with;
 use function strlen;
 use function strpos;
@@ -335,7 +336,7 @@ final class RefResolver implements RefResolverInterface
 
     private function baseUriHadAuthority(string $baseUri): bool
     {
-        return false !== strpos($baseUri, '://');
+        return str_contains($baseUri, '://');
     }
 
     /**

@@ -99,10 +99,10 @@ final class FormatRegistryTest extends TestCase
     public function with_base_merges_entries_with_user_overriding_base(): void
     {
         $baseValidator = new TestValidator();
-        $base = (new FormatRegistry())->registerFormat('string', 'email', $baseValidator);
+        $base = new FormatRegistry()->registerFormat('string', 'email', $baseValidator);
 
         $userValidator = new TestValidator();
-        $user = (new FormatRegistry())
+        $user = new FormatRegistry()
             ->registerFormat('string', 'phone', $userValidator)
             ->registerFormat('string', 'email', $userValidator);
 
@@ -116,7 +116,7 @@ final class FormatRegistryTest extends TestCase
     public function with_base_preserves_base_only_entries(): void
     {
         $baseValidator = new TestValidator();
-        $base = (new FormatRegistry())->registerFormat('string', 'email', $baseValidator);
+        $base = new FormatRegistry()->registerFormat('string', 'email', $baseValidator);
 
         $user = new FormatRegistry();
 

@@ -42,7 +42,6 @@ use JsonException;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
 use Duyler\OpenApi\Validator\Exception\InvalidUtf8Exception;
 use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
 use Duyler\OpenApi\Validator\JsonDepthLimit;
@@ -50,12 +49,15 @@ use Duyler\OpenApi\Validator\Response\Exception\TooManyRecordsException;
 use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
 
+use Deprecated;
+
 use function dirname;
 use function is_array;
 use function mb_check_encoding;
 use function sprintf;
 use function str_starts_with;
 use function strlen;
+
 use function is_string;
 
 use function array_key_exists;
@@ -345,17 +347,18 @@ final readonly class OpenApiValidatorBuilder
 
     /**
      * Enable strict callback runtime template resolution.
-     *
-     * @deprecated since 1.x, will be removed in 2.0. Strict mode is now the
-     *             default: callback expressions that use runtime templates
-     *             such as `{$request.body#/callback_url}` throw an
-     *             {@see UnresolvableCallbackPathException} by default instead
-     *             of being treated as wildcards that accept any URL. This
-     *             method is retained as a no-op for backward compatibility
-     *             with callers that explicitly opted in. To restore the
-     *             legacy wildcard behaviour, use
-     *             {@see disableStrictCallbackRuntimeTemplate()}.
      */
+    #[Deprecated(message: <<<'TXT'
+    since 1.x, will be removed in 2.0. Strict mode is now the
+                 default: callback expressions that use runtime templates
+                 such as `{$request.body#/callback_url}` throw an
+                 {@see \Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException} by default instead
+                 of being treated as wildcards that accept any URL. This
+                 method is retained as a no-op for backward compatibility
+                 with callers that explicitly opted in. To restore the
+                 legacy wildcard behaviour, use
+                 {@see disableStrictCallbackRuntimeTemplate()}.
+    TXT)]
     public function enableStrictCallbackRuntimeTemplate(): self
     {
         return $this;

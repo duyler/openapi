@@ -68,7 +68,7 @@ final class TooManyContainsValidationsErrorTest extends TestCase
     #[Test]
     public function dataPath_accepts_breadcrumb_and_renders_pointer(): void
     {
-        $breadcrumb = (new Breadcrumb())->append('items')->appendIndex(0);
+        $breadcrumb = new Breadcrumb()->append('items')->appendIndex(0);
 
         $error = new TooManyContainsValidationsError(max: 10_000, dataPath: $breadcrumb);
 
