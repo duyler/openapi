@@ -38,7 +38,7 @@
         "friendsofphp/php-cs-fixer": "^3.80",
         "vimeo/psalm": "^6.10",
         "rector/rector": "^2.0",
-        "infection/infection": "^0.32",
+        "infection/infection": "^0.32 || ^0.34",
         "nyholm/psr7": "^1.8",
         "guzzlehttp/psr7": "^2.6",
         "laminas/laminas-diactoros": "^3.3",
