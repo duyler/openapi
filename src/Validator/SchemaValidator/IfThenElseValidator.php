@@ -45,13 +45,6 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
         $this->routeThenOrElse(schema: $schema, data: $data, context: $context, ifValid: $ifValid, validator: $validator, nullableAsType: $nullableAsType);
     }
 
-    /**
-     * Routes to the `then` or `else` branch based on the `if` validation
-     * result. Handles both Schema-instance branches (delegated to the
-     * recursive validator) and boolean branches per JSON Schema 2020-12
-     * §4.3.2 (`true` always passes; `false` always rejects with a typed
-     * `TypeMismatchError`).
-     */
     private function routeThenOrElse(
         Schema $schema,
         mixed $data,
@@ -85,13 +78,6 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
         }
     }
 
-    /**
-     * Handles boolean-form `then` / `else` branches.
-     *
-     * `true` always passes (no-op); `false` always rejects with a
-     * `TypeMismatchError` so the conditional routing surfaces a typed
-     * failure rather than silently swallowing the rejection.
-     */
     private function applyBooleanBranch(Schema|bool $branch, mixed $data, ?ValidationContext $context, string $keyword): void
     {
         if (true === $branch) {

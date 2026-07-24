@@ -59,11 +59,6 @@ final class SchemaValidatorDependencies
         $this->rootSchemaValidators = $rootSchemaValidators;
     }
 
-    /**
-     * Shared top-level validator bound to a document. First-call-wins on
-     * configuration: within one Validation\ValidatorDependencies both are constant.
-     * Per-request state lives in Error\ValidationContext, passed by argument.
-     */
     public function rootSchemaValidator(
         OpenApiDocument $document,
         ValidatorConfiguration $configuration,

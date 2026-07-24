@@ -95,16 +95,6 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
     }
 
     /**
-     * Returns the list of array indices that have been evaluated by
-     * prefixItems, items, contains, or any in-place applicator whose
-     * annotations were merged into the context (R3-SPEC-002 / R3-SPEC-
-     * 003 / R3-SPEC-004).
-     *
-     * Boolean-form `items: true` evaluates every index >= prefixItems count
-     * (validation passes trivially); `items: false` does NOT register
-     * evaluated indices because validation fails, so annotations do not
-     * apply per JSON Schema 2020-12 §10.3.4.
-     *
      * @param array<array-key, mixed> $data
      *
      * @return list<int>

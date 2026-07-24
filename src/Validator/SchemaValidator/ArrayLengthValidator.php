@@ -46,12 +46,6 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
 
     private const int MAX_UNIQUE_CHECK = 100000;
 
-    /**
-     * 2^53 — largest integer that survives a round-trip through IEEE 754
-     * double without precision loss. Used to keep numeric equality (1 == 1.0)
-     * while preventing distinct large int64 values from collapsing to the
-     * same float key (SPEC-05).
-     */
     private const int SAFE_INT64_FLOAT_BOUNDARY = 9007199254740992;
 
     private const int CACHE_KEY_ENTROPY_BYTES = 8;
@@ -171,11 +165,6 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
         return $count;
     }
 
-    /**
-     * DoS defence (P-033): abort the unique-items check once the running
-     * unique-count crosses MAX_UNIQUE_CHECK so an attacker-controlled array
-     * cannot grow an unbounded hash table. Idempotent when below the limit.
-     */
     private function enforceUniqueCheckLimit(int $count, string $dataPath): void
     {
         if (self::MAX_UNIQUE_CHECK < $count) {
@@ -255,12 +244,6 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
     }
 
     /**
-     * Recursively sort associative array keys to produce an order-independent
-     * canonical form. JSON Schema 2020-12 §4.2.2 instance equality treats
-     * object keys as unordered, so {"a":1,"b":2} and {"b":2,"a":1} MUST hash
-     * to the same key in {@see encodeArrayKey}. List arrays preserve element
-     * order (arrays are ordered in §4.2.2).
-     *
      * @param array<array-key, mixed> $item
      *
      * @return array<array-key, mixed>

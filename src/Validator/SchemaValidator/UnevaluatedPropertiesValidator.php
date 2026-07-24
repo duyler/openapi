@@ -78,16 +78,6 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
     }
 
     /**
-     * Returns the list of object property names evaluated by this
-     * schema's own properties / patternProperties / additionalProperties
-     * keywords plus every property registered by an in-place applicator
-     * (allOf / anyOf / oneOf / if / then / else / $ref / contains) via
-     * ValidationContext annotation-state (R3-SPEC-001 / R3-SPEC-004).
-     *
-     * Annotation-state is only consulted when a non-null context is
-     * supplied; the legacy {@see SchemaValidator}
-     * path passes null and falls back to static analysis only.
-     *
      * @param array<array-key, mixed> $data
      *
      * @return list<string>

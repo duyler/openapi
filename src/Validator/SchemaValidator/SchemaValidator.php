@@ -25,36 +25,10 @@ use function array_filter;
 use function array_values;
 
 /**
- * @internal Legacy stateless JSON Schema dispatcher. Retained only as the recursion engine
- *           invoked by {@see AbstractSchemaValidator::createSchemaValidator()} and by parameter
- *           validators (Path/Query/Headers/Cookie) pending task 14b migration. The canonical
- *           top-level validator is {@see SchemaValidatorWithContext}.
+ * @internal Legacy stateless JSON Schema dispatcher; use {@see SchemaValidatorWithContext} instead.
  *
- *           Annotation tracking (R3-SPEC-001..004): when this dispatcher is
- *           used as the recursion engine inside composition validators
- *           ({@see AllOfValidator}, {@see AnyOfValidator}, {@see NotValidator},
- *           {@see IfThenElseValidator}, {@see ContainsValidator}) it forwards
- *           the supplied {@see ValidationContext} to nested stateless
- *           validators so annotation-state propagation works correctly
- *           across nested allOf/anyOf/if-then-else/$ref. When invoked
- *           directly as a top-level validator (without an externally
- *           supplied context) it creates a fresh context per validate()
- *           call, so annotation tracking still works for direct callers.
- *           The context-aware path through {@see SchemaValidatorWithContext}
- *           remains the canonical entry point for request/response
- *           validation because it also routes discriminator oneOf and
- *           $ref-pre-resolved composition that this legacy dispatcher
- *           cannot handle.
- *
- * @deprecated since 0.6.0: this dispatcher does not resolve `$ref` on its
- *             own. When constructed with `document` + `refResolver`, it is
- *             transparently wrapped by {@see RefResolvingSchemaValidator}
- *             so nested-keyword `$ref` resolution still works, but direct
- *             callers should migrate to {@see SchemaValidatorWithContext}
- *             (returned by `OpenApiValidatorBuilder::build()` and by
- *             `Dto\SchemaValidatorDependencies::rootSchemaValidator()`).
- *             This class will be removed in 2.0 alongside the
- *             parameter-validator migration.
+ * @deprecated since 0.6.0: use {@see SchemaValidatorWithContext} (returned by `OpenApiValidatorBuilder::build()`).
+ *             This class will be removed in 2.0 alongside the parameter-validator migration.
  */
 final class SchemaValidator implements SchemaValidatorInterface
 {
