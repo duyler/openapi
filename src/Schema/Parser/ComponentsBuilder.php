@@ -26,17 +26,6 @@ use function is_array;
 use function strtolower;
 use function is_bool;
 
-/**
- * Builds OpenAPI Components and the object types referenced from it:
- * Response / Header / Link / Callbacks / MediaType / RequestBody / Example /
- * Encoding / Content / Responses / Headers / Links.
- *
- * Depends on SchemaBuilder (schemas/media-types/headers embed schemas),
- * PathItemBuilder (pathItems / parameters / callbacks component maps), and
- * SecuritySchemeBuilder (securitySchemes component map). These siblings are
- * resolved lazily through {@see OpenApiBuildContext} so that circular
- * construction with PathItemBuilder is avoided.
- */
 final readonly class ComponentsBuilder
 {
     private const string DEPRECATION_VERSION = '3.2.0';

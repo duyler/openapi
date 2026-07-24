@@ -11,31 +11,10 @@ use Duyler\OpenApi\Schema\Model\SchemaFieldMetadata;
 use Duyler\OpenApi\Schema\Model\Xml;
 
 use WeakMap;
-use Duyler\OpenApi\Compiler\CompilationCache;
 
 use function count;
 use function in_array;
 
-/**
- * Serialises a {@see Schema} into an array form.
- *
- * Two modes are provided because callers need two different shapes:
- *
- *  - {@see toWireArray()} emits the OpenAPI 3.2 wire format: null fields are
- *    omitted, `$ref` short-circuits the body, `deprecated`/`readOnly`/
- *    `writeOnly`/`nullable` are emitted only when truthy, and `default`/`const`
- *    respect their `hasDefault`/`hasConst` sentinels. This is the form used by
- *    {@see Schema::jsonSerialize()}.
- *
- *  - {@see toSnapshotArray()} emits a complete, null-preserving snapshot used
- *    by {@see CompilationCache} for cache-key hashing.
- *    Nested Schema / Discriminator / Xml objects are recursively flattened and
- *    a WeakMap tracks cycles so recursive schemas hash deterministically.
- *
- * The field iteration list is sourced from {@see SchemaFieldMetadata}, so a
- * new field requires editing only the catalog plus one match arm in
- * {@see extractWireValue()} / {@see extractSnapshotValue()}.
- */
 final readonly class SchemaToArrayConverter
 {
     private const string CIRCULAR_REF_KEY = '__circular_ref__';

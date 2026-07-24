@@ -256,26 +256,11 @@ final readonly class Schema implements JsonSerializable
         );
     }
 
-    /**
-     * JSON Schema 2020-12 §8.2.3: when $ref is present, sibling keywords
-     * are evaluated alongside the referenced schema. This method returns
-     * a new schema where $sibling's constraints are merged into $this
-     * (the resolved schema) per the strategy documented in
-     * {@see SchemaSiblingMerger}. The $ref family is dropped because the
-     * merger is invoked after reference resolution.
-     */
     public function withSibling(Schema $sibling): self
     {
         return new SchemaSiblingMerger()->merge($this, $sibling);
     }
 
-    /**
-     * Returns the string-constraint sub-DTO grouping minLength / maxLength /
-     * pattern. Returns null when no string constraint is declared.
-     *
-     * `format` is intentionally not grouped here: it is shared between string
-     * and numeric schemas and stays on the top-level facade.
-     */
     public function stringConstraints(): ?StringConstraints
     {
         if (null === $this->minLength && null === $this->maxLength && null === $this->pattern) {
@@ -289,11 +274,6 @@ final readonly class Schema implements JsonSerializable
         );
     }
 
-    /**
-     * Returns the numeric-constraint sub-DTO grouping multipleOf / minimum /
-     * maximum / exclusiveMinimum / exclusiveMaximum, or null when none are
-     * declared.
-     */
     public function numericConstraints(): ?NumericConstraints
     {
         if (
@@ -315,11 +295,6 @@ final readonly class Schema implements JsonSerializable
         );
     }
 
-    /**
-     * Returns the array-constraint sub-DTO grouping items / prefixItems /
-     * minItems / maxItems / uniqueItems / contains / minContains / maxContains
-     * / unevaluatedItems, or null when none are declared.
-     */
     public function arrayConstraints(): ?ArrayConstraints
     {
         if (
@@ -349,12 +324,6 @@ final readonly class Schema implements JsonSerializable
         );
     }
 
-    /**
-     * Returns the object-constraint sub-DTO grouping properties / required /
-     * minProperties / maxProperties / additionalProperties /
-     * unevaluatedProperties / patternProperties / dependentSchemas /
-     * propertyNames, or null when none are declared.
-     */
     public function objectConstraints(): ?ObjectConstraints
     {
         if (
@@ -384,10 +353,6 @@ final readonly class Schema implements JsonSerializable
         );
     }
 
-    /**
-     * Returns the composition sub-DTO grouping allOf / anyOf / oneOf / not /
-     * if / then / else, or null when none are declared.
-     */
     public function compositionConstraints(): ?CompositionConstraints
     {
         if (

@@ -4,14 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
-/**
- * Sub-DTO grouping JSON Schema 2020-12 array constraint keywords.
- *
- * - `contains`, `minContains`, `maxContains` are array-presence keywords and
- *   are grouped here for cohesion even though `contains` is a Schema.
- * - `items`, `prefixItems`, `unevaluatedItems` are intentionally grouped here
- *   too because they describe array element shapes.
- */
 final readonly class ArrayConstraints
 {
     /**

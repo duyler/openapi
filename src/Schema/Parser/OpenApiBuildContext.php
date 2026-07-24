@@ -6,9 +6,7 @@ namespace Duyler\OpenApi\Schema\Parser;
 
 use function version_compare;
 
-/**
- * @internal Parser-internal builder context; not part of the public API.
- */
+/** @internal */
 final class OpenApiBuildContext
 {
     private const string DEPRECATION_VERSION = '3.2.0';

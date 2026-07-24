@@ -21,19 +21,6 @@ use function is_string;
 use function sprintf;
 use function version_compare;
 
-/**
- * Parses an OpenAPI 3.2 / JSON Schema 2020-12 wire-form array into a
- * {@see Schema} instance.
- *
- * This is the inverse of {@see SchemaToArrayConverter::toWireArray()}.
- * Centralising the parser here removes the field enumeration from
- * {@see SchemaBuilder::buildSchema()} so adding a new field requires editing
- * only {@see SchemaFieldMetadata} plus the constructor call below.
- *
- * The parser is version-aware (OpenAPI 3.0 / 3.1 / 3.2) for the
- * `exclusiveMinimum` / `exclusiveMaximum` / `type` migrations and routes
- * deprecation warnings through {@see DeprecationLogger}.
- */
 final readonly class SchemaFromArrayConverter
 {
     private const string DEPRECATION_VERSION = '3.2.0';
@@ -136,10 +123,6 @@ final readonly class SchemaFromArrayConverter
     }
 
     /**
-     * Returns the sub-schema value for a schema-typed keyword, passing
-     * boolean values through directly per JSON Schema 2020-12 §4.3.2
-     * (Boolean JSON Schemas). Returns null when the keyword is absent.
-     *
      * @param array<array-key, mixed> $data
      */
     private function schemaOrBoolOrNull(array $data, string $key): Schema|bool|null

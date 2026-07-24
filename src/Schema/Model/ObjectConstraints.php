@@ -4,12 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
-/**
- * Sub-DTO grouping JSON Schema 2020-12 object constraint keywords.
- *
- * - `additionalProperties` and `unevaluatedProperties` accept `Schema|bool|null`
- *   per spec.
- */
 final readonly class ObjectConstraints
 {
     /**

@@ -22,16 +22,6 @@ use function is_array;
 use function is_bool;
 use function is_string;
 
-/**
- * Builds OpenAPI PathItem / Operation / Parameter / Server / Paths / Webhooks
- * and the operation-level callbacks map.
- *
- * Depends on InfoBuilder (ExternalDocs on Operation), SchemaBuilder (schema
- * on Parameter) and ComponentsBuilder (RequestBody / Responses / Callbacks
- * inside Operation). These siblings are resolved lazily through
- * {@see OpenApiBuildContext} so that circular construction with
- * ComponentsBuilder is avoided.
- */
 final readonly class PathItemBuilder
 {
     private const string DEPRECATION_VERSION = '3.2.0';
