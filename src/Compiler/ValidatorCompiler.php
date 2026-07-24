@@ -35,20 +35,8 @@ final readonly class ValidatorCompiler
 
     private const string CLASS_NAME_PATTERN = '/^[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*$/';
 
-    /**
-     * Relative epsilon factor used for the float-path of the multipleOf
-     * check. Mirrors NumericRangeValidator::RELATIVE_EPSILON_FACTOR so the
-     * compiled validator stays numerically equivalent to the runtime one.
-     */
     private const float RELATIVE_EPSILON_FACTOR = 1e-9;
 
-    /**
-     * Backtrack cap inlined into compiled `pattern` checks. Mirrors
-     * PregExecutor::DEFAULT_MAX_BACKTRACKS so the compiled validator stays
-     * semantically equivalent to the runtime validator. Kept as an explicit
-     * literal (not a reference to the runtime constant) so the generated
-     * standalone class does not depend on the library at runtime.
-     */
     private const int COMPILED_MAX_BACKTRACKS = 10_000;
 
     public function compile(Schema $schema, string $className): string
@@ -142,14 +130,6 @@ final readonly class ValidatorCompiler
         return $code;
     }
 
-    /**
-     * Generate validation code for every supported keyword on a single
-     * Schema. Used at the top level (dataVar = '$data') and recursively
-     * for each nested object property and array item so both paths share
-     * the same keyword coverage (R4-CORRECTNESS-004). $itemDepth tracks
-     * foreach nesting so each nested `foreach` emits a distinct loop
-     * variable name, preventing shadowing when arrays nest inside arrays.
-     */
     private function generateConstraintsForSchema(Schema $schema, string $dataVar, int $itemDepth): string
     {
         $code = $this->generateScalarConstraints($schema, $dataVar);
@@ -363,12 +343,6 @@ final readonly class ValidatorCompiler
         return $code;
     }
 
-    /**
-     * Inlines UTF-16 code-unit counting into compiled validators so they
-     * stay standalone (no dependency on the runtime Utf16 helper) while
-     * still matching JSON Schema 2020-12 §6.3.1: supplementary characters
-     * (4-byte UTF-8 sequences) count as 2 code units via surrogate pairs.
-     */
     private function generateUtf16LengthComputation(string $valueVar = '$data'): string
     {
         $code = "        \$utf16Length = 0;\n";
@@ -424,40 +398,6 @@ final readonly class ValidatorCompiler
         return $code;
     }
 
-    /**
-     * Emits the `pattern` keyword check into the generated validator.
-     *
-     * The generated code inlines the defensive wrapper of
-     * Duyler\OpenApi\Validator\PregExecutor::match rather than emitting a
-     * call to it: README's "Validator Compilation" section promises that
-     * compiled validators are "a standalone PHP class without dependency on
-     * the library at runtime", so any external call would break consumer
-     * contracts. The wrapper lowers `pcre.backtrack_limit` for the duration
-     * of the call (defending against catastrophic-backtracking patterns
-     * such as `(a+)+`, CWE-1333 / CWE-400), captures and restores the
-     * previous value inside a try/finally (the limit is process-global),
-     * and disambiguates `false` (PCRE error) from `0` (no match) so that
-     * backtrack-overflow surface as a distinct RuntimeException message
-     * instead of being misreported as a validation failure.
-     *
-     * Observable behaviour at the validator level mirrors the runtime
-     * pattern check: both surface a dedicated exception on PCRE failure
-     * (compile error or backtrack-limit exhausted) and a separate
-     * exception on no-match. `PregExecutor::match` itself returns
-     * `int|false` (0 on no-match, false on compile error) and only
-     * throws `PregRuntimeException` when `preg_last_error()` is non-
-     * zero; the runtime `PatternValidator` converts the 0/false returns
-     * into validation errors. The compiled wrapper collapses these
-     * paths into two `RuntimeException` messages directly, because the
-     * generated validator has no caller to delegate the conversion to.
-     * The internal mechanism otherwise mirrors `PregExecutor::match`
-     * (limit capture, error handler, try/finally restoration).
-     *
-     * The `COMPILED_MAX_BACKTRACKS` constant is kept as an explicit
-     * literal rather than a reference to `PregExecutor::DEFAULT_MAX_BACKTRACKS`
-     * so the generated standalone class does not depend on the library at
-     * runtime.
-     */
     private function generatePatternCheck(string $pattern, string $valueVar = '$data'): string
     {
         $normalizedPattern = new RegexValidator()->normalize($pattern);
@@ -525,11 +465,6 @@ final readonly class ValidatorCompiler
         ) . "\n";
     }
 
-    /**
-     * Int-path: when multipleOf is a whole number, integer operands can use
-     * the exact `%` modulus. Whole floats fall back to the float-path
-     * because `(float) $data` may introduce rounding before the modulus.
-     */
     private function generateIntegerMultipleOfCheck(
         int $intMultipleOf,
         string $floatMultipleOfStr,
@@ -551,11 +486,6 @@ final readonly class ValidatorCompiler
         return $code;
     }
 
-    /**
-     * Float-path: quotient approach with a relative epsilon. Matches
-     * NumericRangeValidator::isMultipleOf float branch exactly, avoiding
-     * the precision-loss bug of fmod on large dividends.
-     */
     private function buildFloatQuotientCheck(
         string $multipleOfStr,
         string $epsilonStr,
@@ -572,12 +502,6 @@ final readonly class ValidatorCompiler
         return $code;
     }
 
-    /**
-     * Emits the uniqueItems check using the inlined canonicalJsonKey
-     * helper so JSON-equal values (int 1 vs float 1.0, assoc-arrays with
-     * reordered keys) collapse to the same hash key. Mirrors
-     * ArrayLengthValidator::MAX_UNIQUE_CHECK cap of 100000 entries.
-     */
     private function generateUniqueItemsCheck(string $valueVar = '$data'): string
     {
         $code = "        \$__seen = [];\n";
@@ -667,15 +591,6 @@ final readonly class ValidatorCompiler
         return $code . "\n";
     }
 
-    /**
-     * Inlines `JsonEquals::equals` / `JsonEquals::arraysEqual` into the
-     * generated validator class as private instance methods so the
-     * standalone-validator contract documented in the README "Validator
-     * Compilation" section is preserved (no library code is emitted as a
-     * call). The runtime SAFE_INT64_FLOAT_BOUNDARY = 2^53 constant is
-     * inlined as a literal so the generated class does not reference any
-     * library constant. Mirrors `src/Validator/Schema/JsonEquals.php`.
-     */
     private function renderJsonEqualsInline(): string
     {
         return <<<'PHP'
@@ -729,18 +644,6 @@ final readonly class ValidatorCompiler
 PHP;
     }
 
-    /**
-     * Inlines a deterministic-key encoder for `uniqueItems` so that
-     * JSON-equal values (int 1 vs float 1.0, assoc-arrays with reordered
-     * keys) collapse to the same hash key. Mirrors the canonicalisation
-     * approach of `ArrayLengthValidator::canonicalizeForEncoding` /
-     * `ArrayLengthValidator::itemKey` so the compiled validator stays
-     * numerically equivalent to the runtime validator. The
-     * `JSON_THROW_ON_ERROR` flag is caught and rethrown as
-     * `RuntimeException` at the call site (see `generateUniqueItemsCheck`)
-     * so the README "Compiler Limitations" RuntimeException-only contract
-     * is preserved.
-     */
     private function renderCanonicalKeyInline(): string
     {
         return <<<'PHP'
@@ -771,12 +674,6 @@ PHP;
 PHP;
     }
 
-    /**
-     * Equality helpers are emitted into the generated class only when at
-     * least one keyword consumes them. Walks the schema tree so that
-     * `uniqueItems: true` nested inside an object property or an array
-     * items chain also triggers emission.
-     */
     private function needsEqualityHelpers(Schema $schema): bool
     {
         if ($schema->hasConst || null !== $schema->enum || true === $schema->uniqueItems) {

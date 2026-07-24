@@ -188,11 +188,6 @@ final class CompilationCache implements CompilationCacheInterface
         return $finalHash;
     }
 
-    /**
-     * Memoized per-process fingerprint of an OpenApiDocument's resolvable
-     * schema content. Only `components.schemas` are hashed because external
-     * `$ref` targets are out of scope for the compiler.
-     */
     private function documentFingerprint(OpenApiDocument $document): string
     {
         if ($this->documentFingerprints->offsetExists($document)) {
@@ -227,14 +222,7 @@ final class CompilationCache implements CompilationCacheInterface
         return $fingerprint;
     }
 
-    /**
-     * In-memory resolution of `#/components/schemas/...` pointers for
-     * cache-key hashing only. Mirrors `ValidatorCompiler::resolveRefs`
-     * cycle-detection so circular `$ref` chains cannot cause a stack
-     * overflow during key generation.
-     *
-     * @param list<string> $visited
-     */
+    /** @param list<string> $visited */
     private function resolveRefsForHash(Schema $schema, OpenApiDocument $document, array $visited): Schema
     {
         if (null !== $schema->ref) {
@@ -284,24 +272,7 @@ final class CompilationCache implements CompilationCacheInterface
         return $schemas[$schemaName];
     }
 
-    /**
-     * Walks the schema tree (properties and items) to determine whether
-     * any node carries a `$ref`. Used to fail-closed when no document
-     * context is supplied: a schema whose top-level shape is `$ref`-free
-     * but whose nested properties or items reference another component
-     * would otherwise be hashed with the literal `$ref` pointer string,
-     * silently colliding across documents that resolve the pointer to
-     * different targets.
-     *
-     * Cycle detection uses a list of visited Schema objects compared
-     * by identity (`in_array` with strict=true), so hand-constructed
-     * cyclic Schema graphs cannot trigger infinite recursion. This is
-     * distinct from the `$visited` list of ref-strings used in
-     * `resolveRefsForHash`, which guards cycle detection during
-     * in-memory resolution against repeated ref-string targets.
-     *
-     * @param list<Schema> $visited
-     */
+    /** @param list<Schema> $visited */
     private function schemaContainsRef(Schema $schema, array $visited): bool
     {
         if (in_array($schema, $visited, true)) {

@@ -715,17 +715,6 @@ final readonly class OpenApiValidatorBuilder
         }
     }
 
-    /**
-     * Fail-closed guard for specs loaded via `fromYamlString()` /
-     * `fromJsonString()`: when the parsed spec contains an external
-     * `$ref` (any ref that does not start with `#/`) and the caller has
-     * not opted into path-confinement via `withExternalRefAllowedRoot()`,
-     * the build aborts with a `BuilderException`. File-loaded specs and
-     * specs that explicitly set an allowed root are not affected — the
-     * builtin `FileExternalRefResolver` already confines resolution for
-     * them. Specs that contain only internal JSON pointer refs (`#/...`)
-     * pass through unchanged for backward compatibility.
-     */
     private function assertExternalRefConfinement(): void
     {
         if (null !== $this->config->externalRefAllowedRoot) {
@@ -751,28 +740,7 @@ final readonly class OpenApiValidatorBuilder
         }
     }
 
-    /**
-     * Walk the parsed spec tree and return the first external `$ref`
-     * value found. An external `$ref` is any string value keyed by
-     * `$ref` that does not start with `#/` (the JSON pointer prefix
-     * marking an in-document reference). Discriminator mapping and
-     * defaultMapping values are also treated as external refs because
-     * `DiscriminatorValidator` resolves them through `RefResolver`
-     * exactly like a `$ref`. The recursion is bounded by
-     * `max(maxSpecDepth, ValidationContext::MAX_DEPTH)` as a second
-     * line of defense: the canonical parsers (`YamlParser`,
-     * `JsonParser`) already reject specs deeper than `maxSpecDepth`
-     * at parse time, but this bound ensures the walker never
-     * stack-overflows even if a parser is misconfigured or bypassed.
-     * Returns null when no external ref is present.
-     *
-     * The $maxDepth bound is computed once by the caller and threaded
-     * through the recursion, because BuilderConfig is readonly and the
-     * bound is therefore constant for the entire walk — recomputing it
-     * per node is wasted work on deeply nested specs.
-     *
-     * @param array<array-key, mixed> $data
-     */
+    /** @param array<array-key, mixed> $data */
     private function detectExternalRefs(array $data, int $depth, int $maxDepth): ?string
     {
         if ($depth > $maxDepth) {
@@ -843,20 +811,7 @@ final readonly class OpenApiValidatorBuilder
         return null;
     }
 
-    /**
-     * Best-effort parse of the raw spec content into a PHP array. Used
-     * only by {@see assertExternalRefConfinement()} to walk the spec
-     * tree before the `OpenApiValidator` is assembled. Bounded by the
-     * same byte-size cap as `YamlParser` for YAML content and the same
-     * UTF-8 check as `JsonParser` for JSON content. The nesting-depth
-     * cap is enforced inside {@see detectExternalRefs()} rather than
-     * here, because that is where unbounded recursion would otherwise
-     * occur. Any parse failure returns an empty array — `loadSpec()`
-     * already surfaces the canonical parse error via `parseSpec()`,
-     * and the walker must not shadow that exception.
-     *
-     * @return array<array-key, mixed>
-     */
+    /** @return array<array-key, mixed> */
     private function parseSpecContentAsArray(string $content): array
     {
         if ('json' === $this->config->specType) {
@@ -889,27 +844,6 @@ final readonly class OpenApiValidatorBuilder
         return is_array($data) ? $data : [];
     }
 
-    /**
-     * Compute the SchemaCache key for a file-loaded spec.
-     *
-     * The key incorporates the realpath, a SHA-256 hash of the file
-     * contents, and a SHA-256 of the parse-config fingerprint. The
-     * content hash prevents cache-poisoning via size-preserving or
-     * mtime-preserving spec tampering (OWASP ASVS V8.1.3, CWE-349,
-     * CWE-1023). The parse-config fingerprint prevents cache-poisoning
-     * when two callers share the same PSR-6 pool with different
-     * parse-time limits (R4-SEC-008, R4-SEC-017): a stricter
-     * maxSpecDepth / maxSpecSizeBytes / externalRefAllowedRoot /
-     * externalRefMaxBytes must NOT silently receive a document that
-     * was cached under looser limits. mtime and size are intentionally
-     * NOT part of the key: they offered no protection once an attacker
-     * controls write-access to the spec file.
-     *
-     * When realpath() returns false (file vanished mid-call), the key
-     * degrades to a hash of the unresolved $path argument plus the
-     * content hash and fingerprint. This preserves uniqueness across
-     * caller-distinct paths even when realpath fails.
-     */
     private function generateCacheKeyFromFile(string $path, string $content): string
     {
         $realPath = realpath($path);
@@ -920,11 +854,6 @@ final readonly class OpenApiValidatorBuilder
         return self::CACHE_KEY_FILE_PREFIX . hash('sha256', $pathComponent . '|' . $contentHash . '|' . $configFingerprint);
     }
 
-    /**
-     * Compute the SchemaCache key for a string-loaded spec. See
-     * {@see generateCacheKeyFromFile()} for the security rationale
-     * behind including the parse-config fingerprint in the hash input.
-     */
     private function generateCacheKeyFromString(string $content): string
     {
         $contentHash = hash('sha256', $content);
@@ -933,23 +862,6 @@ final readonly class OpenApiValidatorBuilder
         return self::CACHE_KEY_CONTENT_PREFIX . hash('sha256', $contentHash . '|' . $configFingerprint);
     }
 
-    /**
-     * Stable, ordered string-tuple of all BuilderConfig fields that
-     * affect the result of parseSpec(). Used as an additional input to
-     * the cache-key hash so two callers with the same spec content but
-     * different parse-configs get distinct cache entries (prevents
-     * cache-poisoning, R4-SEC-008 / R4-SEC-017).
-     *
-     * Only fields that change the parsed OpenApiDocument shape or
-     * reject the spec at parse time are included. Runtime validation
-     * toggles (coercion, strictFormats, nullableAsType, etc.) are
-     * deliberately excluded because they do not affect the cached
-     * document and including them would cause spurious cache-misses
-     * whenever a runtime flag is toggled. The `externalRefAllowedRoot`
-     * value is normalised to the empty string when unset so two
-     * callers with `null` produce the same fingerprint (both mean
-     * "no path-confinement" and behave identically at parse time).
-     */
     private function buildParseConfigFingerprint(): string
     {
         return sprintf(
