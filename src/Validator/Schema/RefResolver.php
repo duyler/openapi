@@ -372,9 +372,6 @@ final class RefResolver implements RefResolverInterface
         return $base;
     }
 
-    /**
-     * RFC 3986 §5.2.3 merge paths.
-     */
     private function mergePaths(string $basePath, string $relativePath): string
     {
         if (str_starts_with($relativePath, '/')) {
@@ -393,9 +390,6 @@ final class RefResolver implements RefResolverInterface
         return substr($basePath, 0, $lastSlash + 1) . $relativePath;
     }
 
-    /**
-     * RFC 3986 §5.2.4 remove dot segments.
-     */
     private function removeDotSegments(string $path): string
     {
         $input = $path;

@@ -31,17 +31,6 @@ final readonly class DiscriminatorValidator
 
     /**
      * @param array<array-key, mixed>|int|string|float|bool $data
-     *
-     * When a non-null $context is supplied (canonical SchemaValidatorWithContext
-     * path), evaluated-property / evaluated-item annotations produced by the
-     * discriminator target sub-validation are merged back into it via
-     * forkForBranch + mergeChildAnnotations, so parent schemas declaring
-     * unevaluatedProperties:false / unevaluatedItems:false honour properties
-     * already validated by the target schema (JSON Schema 2020-12 §10.3.4).
-     *
-     * The optional default preserves backward compatibility for direct unit
-     * callers; null triggers a fresh ValidationContext that mirrors the
-     * pre-fix behaviour (annotations isolated and discarded).
      */
     public function validate(
         array|int|string|float|bool $data,
@@ -153,8 +142,6 @@ final readonly class DiscriminatorValidator
         OpenApiDocument $document,
         string $dataPath,
     ): Schema {
-        // R4-CORRECTNESS-002/015: enumerate candidates from every composition array
-        // simultaneously (JSON Schema 2020-12 §10.2.1.1), not just the first non-null.
         $candidates = [
             ...($schema->oneOf ?? []),
             ...($schema->anyOf ?? []),

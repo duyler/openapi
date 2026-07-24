@@ -67,9 +67,7 @@ final readonly class EmailValidator extends AbstractStringFormatValidator
         $this->dispatchByMatch($m, $data);
     }
 
-    /**
-     * @param array<array-key, mixed> $m named matches from EMAIL_PATTERN
-     */
+    /** @param array<array-key, mixed> $m */
     private function dispatchByMatch(array $m, string $data): void
     {
         $ipLiteral = (string) ($m['ipLiteral'] ?? '');

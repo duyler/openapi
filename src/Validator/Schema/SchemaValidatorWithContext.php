@@ -154,23 +154,9 @@ final class SchemaValidatorWithContext
     }
 
     /**
-     * Pre-resolves $ref in allOf/anyOf/oneOf subschemas so that stateless
-     * composition validators (which have no document context) see real
-     * constraints instead of opaque {$ref: '...'} stubs.
+     * @param WeakMap<Schema, true> $visited
      *
-     * oneOf/anyOf arrays are left untouched when the schema has a discriminator:
-     * DiscriminatorValidator relies on the raw $ref pointers in those arrays
-     * for implicit title-based mapping fallback.
-     *
-     * allOf is always resolved because discriminator selection happens before
-     * allOf merge and allOf never participates in discriminator mapping.
-     *
-     * Recurses into nested composition arrays to handle specs where a
-     * resolved subschema itself contains further composition with $ref.
-     *
-     * @param WeakMap<Schema, true> $visited identity-based cycle guard
-     *
-     * @throws SchemaDepthExceededException if recursion exceeds MAX_DEPTH
+     * @throws SchemaDepthExceededException
      */
     private function resolveCompositionRefs(Schema $schema, WeakMap $visited): Schema
     {
@@ -223,15 +209,6 @@ final class SchemaValidatorWithContext
     }
 
     /**
-     * Resolves $ref in a single composition array and recurses into each
-     * subschema's own composition keywords.
-     *
-     * Subschemas whose resolved target carries a discriminator are left as
-     * $ref stubs: they must be validated via SchemaValidatorWithContext for
-     * discriminator routing, which stateless composition validators never do.
-     * Resolving them in place would expose discriminator + oneOf to stateless
-     * validators that cannot route by discriminator and would error out.
-     *
      * @param list<Schema>|null      $schemas
      * @param WeakMap<Schema, true>  $visited
      *

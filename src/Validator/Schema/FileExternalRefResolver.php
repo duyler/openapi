@@ -162,21 +162,6 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
         return $this->schemaBuilder->buildSchemaFromData($target);
     }
 
-    /**
-     * Open the resolved path with fopen() inside a temporary error handler
-     * (per project §3 categorical ban on the @ operator), fstat the handle
-     * to verify the file is a regular file (rejects /dev/zero, /dev/null,
-     * directories, sockets, FIFOs and any symlink survived past realpath),
-     * drain the contents through a size-capped read loop, and unconditionally
-     * close the handle in a finally block to prevent FD leaks.
-     *
-     * The error handler swallows only E_WARNING (the level fopen emits on
-     * open failures); other levels propagate. We do NOT use filesize(): it
-     * is its own syscall and opens a second TOCTOU window between the size
-     * check and fread.
-     *
-     * @return string File contents, never larger than $this->maxBytes
-     */
     private function readFileWithLimit(string $absolutePath): string
     {
         set_error_handler(static fn(int $errno) => E_WARNING === $errno);
@@ -224,20 +209,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
     }
 
     /**
-     * Drain $handle in bounded chunks until EOF or $maxBytes is reached.
-     * If EOF is not reached when the budget is exhausted, the file is
-     * larger than the configured cap and we throw ExternalRefTooLargeException
-     * to prevent memory exhaustion from attacker-controlled payloads.
-     *
-     * fread signals EOF lazily: feof() returns true only after an fread
-     * that returned empty. When the file size matches maxBytes exactly,
-     * fread consumes the last byte without raising the EOF flag, so the
-     * main loop exits on the $remaining budget with feof still false.
-     * Read one extra byte after the budget is spent to distinguish
-     * "exactly at limit" (empty probe, accept) from "strictly over"
-     * (non-empty probe, reject).
-     *
-     * @param resource $handle Opened file resource
+     * @param resource $handle
      */
     private function readWithLimit($handle, int $maxBytes): string
     {

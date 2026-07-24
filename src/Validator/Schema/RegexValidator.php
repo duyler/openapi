@@ -14,27 +14,12 @@ use function sprintf;
 use function str_split;
 use function strlen;
 
-/**
- * Instance-scoped regex pattern validator and LRU-cached normalizer.
- *
- * Thread-safety: NOT thread-safe. In Swoole coroutines or threaded FrankenPHP,
- * each worker/coroutine must own its own instance (the default in
- * OpenApiValidatorBuilder — one RegexValidator per built document).
- */
 final class RegexValidator
 {
     private const string DELIMITER_CANDIDATES = '#~!|@%+;';
 
     private const int DEFAULT_MAX_SIZE = 512;
 
-    /**
-     * Hard cap on the byte length of a user-supplied pattern passed to
-     * validate(). Patterns beyond this size are rejected before PCRE compiles
-     * them, defending against attacker-controlled specifications that ship a
-     * 100 KB regex designed to burn CPU during compilation. Constant format
-     * patterns inside the library (UUID, email, etc.) are not subject to this
-     * limit because they are static and trusted.
-     */
     private const int MAX_PATTERN_LENGTH = 1024;
 
     /** @var array<string, string> */
@@ -45,12 +30,7 @@ final class RegexValidator
 
     private readonly int $maxSize;
 
-    /**
-     * @param int|null $maxSize Maximum normalized patterns retained before LRU eviction.
-     *                          Null falls back to DEFAULT_MAX_SIZE.
-     *
-     * @throws InvalidArgumentException when $maxSize is less than 1
-     */
+    /** @throws InvalidArgumentException */
     public function __construct(
         ?int $maxSize = null,
         private readonly PregExecutor $pregExecutor = new PregExecutor(),
