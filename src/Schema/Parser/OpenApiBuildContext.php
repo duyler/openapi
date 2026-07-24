@@ -6,6 +6,9 @@ namespace Duyler\OpenApi\Schema\Parser;
 
 use function version_compare;
 
+/**
+ * @internal Parser-internal builder context; not part of the public API.
+ */
 final class OpenApiBuildContext
 {
     private const string DEPRECATION_VERSION = '3.2.0';
@@ -31,10 +34,5 @@ final class OpenApiBuildContext
     public function shouldWarnDeprecation(): bool
     {
         return version_compare($this->documentVersion, self::DEPRECATION_VERSION, '>=');
-    }
-
-    public function isVersion30(): bool
-    {
-        return version_compare($this->documentVersion, '3.1.0', '<');
     }
 }

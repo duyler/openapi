@@ -7,7 +7,9 @@ namespace Duyler\OpenApi\Builder;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
+use Duyler\OpenApi\Validator\Exception\BodyTooLargeException;
 use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
+use Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Link\LinkContext;
 use Duyler\OpenApi\Validator\Link\ResolvedLink;
@@ -16,6 +18,7 @@ use InvalidArgumentException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Deprecated;
+use RuntimeException;
 
 /**
  * OpenAPI validator interface
@@ -41,9 +44,13 @@ interface OpenApiValidatorInterface
      *
      * @param ServerRequestInterface $request HTTP request to validate
      * @return Operation Matched operation from OpenAPI specification
-     * @throws ValidationException If validation fails
-     * @throws OperationNotFoundException If operation not found in specification
-     * @throws BuilderException If specification has no paths defined
+     * @throws ValidationException When the request violates the spec.
+     * @throws OperationNotFoundException When no operation matches the request path/method.
+     * @throws BuilderException When the validator cannot be built.
+     * @throws UnsupportedSecuritySchemeException When the spec declares an unsupported security scheme type.
+     * @throws BodyTooLargeException When the request body exceeds the configured size cap.
+     * @throws RuntimeException For other infrastructure/security failures (UnresolvableRefException,
+     *                           InvalidUtf8Exception, SchemaDepthExceededException, PregRuntimeException, etc.).
      */
     public function validateRequest(ServerRequestInterface $request): Operation;
 

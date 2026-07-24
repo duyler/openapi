@@ -30,10 +30,6 @@ final readonly class Breadcrumb
 
     public function toString(): string
     {
-        if ([] === $this->segments) {
-            return '/';
-        }
-
         return '/' . implode('/', $this->segments);
     }
 

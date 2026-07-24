@@ -45,6 +45,7 @@ final readonly class PropertiesValidatorWithContext
         }
 
         $errors = [];
+        $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
 
         foreach ($schema->properties as $name => $propertySchema) {
             if (false === array_key_exists($name, $data)) {
@@ -53,13 +54,13 @@ final readonly class PropertiesValidatorWithContext
 
             try {
                 $allowNull = $context->nullableAsType && ($propertySchema->nullable
-                    || SchemaValueNormalizer::typeIncludesNull($propertySchema->type));
+                    || SchemaValueNormalizer::typeIncludesNull($propertySchema->type)
+                    || null !== $propertySchema->ref);
                 $value = SchemaValueNormalizer::normalize($data[$name], $allowNull);
 
                 $context->enterBreadcrumb($name);
 
                 try {
-                    $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
                     if ($useDiscriminator) {
                         $rootValidator->validateWithContext($value, $propertySchema, $context);
                     } else {

@@ -848,6 +848,14 @@ exposes the two methods that actually drive pool reuse:
 
 ### Validator Compilation
 
+> **Note (1.0 stability contract):** The `ValidatorCompiler` API is marked
+> `@experimental` and is **not** part of the 1.0 stability guarantee. The
+> compiler's public interface (method signatures, supported keywords, codegen
+> output format) may change in any minor release (1.1, 1.2, ...) without
+> notice. If you depend on the compiler, pin the exact version and test
+> generated code after each upgrade. The runtime validator
+> (`OpenApiValidatorBuilder::build()`) is the stable API surface for 1.0.
+
 Generate optimized validator code:
 
 ```php

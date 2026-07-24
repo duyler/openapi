@@ -121,7 +121,12 @@ final readonly class ValidatorDependencies
             $this->validatorConfiguration,
         );
         $this->requestValidator = $this->buildRequestValidator();
-        $this->responseValidator = $this->buildResponseValidator();
+        $this->responseValidator = new ResponseValidatorWithContext(
+            document: $this->document,
+            dependencies: $this->schemaValidatorDependencies,
+            configuration: $this->validatorConfiguration,
+            pregExecutor: $this->pregExecutor,
+        );
     }
 
     private function buildRequestValidator(): RequestValidator
@@ -194,16 +199,6 @@ final readonly class ValidatorDependencies
                 configuration: $this->validatorConfiguration,
                 pregExecutor: $this->pregExecutor,
             ),
-        );
-    }
-
-    private function buildResponseValidator(): ResponseValidatorWithContext
-    {
-        return new ResponseValidatorWithContext(
-            document: $this->document,
-            dependencies: $this->schemaValidatorDependencies,
-            configuration: $this->validatorConfiguration,
-            pregExecutor: $this->pregExecutor,
         );
     }
 }

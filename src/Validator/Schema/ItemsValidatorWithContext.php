@@ -56,7 +56,8 @@ final readonly class ItemsValidatorWithContext
         $itemSchema = $schema->items;
         $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
         $allowNull = $context->nullableAsType && ($itemSchema->nullable
-            || SchemaValueNormalizer::typeIncludesNull($itemSchema->type));
+            || SchemaValueNormalizer::typeIncludesNull($itemSchema->type)
+            || null !== $itemSchema->ref);
         $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
 
         foreach ($data as $index => $item) {

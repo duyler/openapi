@@ -623,4 +623,171 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $this->assertTrue(true);
     }
+
+    #[Test]
+    public function validate_properties_with_ref_to_nullable_type_accepts_null(): void
+    {
+        // Regression for B1: $ref stub to a target with type: ['string', 'null']
+        // must accept null. Pre-normalize step sees the unresolved stub; the
+        // pre-fix $allowNull calculation rejected null because the stub has no
+        // `nullable` and no `type`. Post-fix the ref check lets null through
+        // so the inner rootSchemaValidator can resolve $ref and accept null
+        // via the resolved target's type.
+        $nullableTargetSchema = new Schema(type: ['string', 'null']);
+
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'value' => new Schema(ref: '#/components/schemas/NullableType'),
+            ],
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Nullable Ref API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'NullableType' => $nullableTargetSchema,
+                ],
+            ),
+        );
+
+        $validator = new PropertiesValidatorWithContext(
+            document: $document,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $this->pool,
+                refResolver: $this->refResolver,
+                statelessValidators: $this->statelessValidators,
+            ),
+        );
+
+        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $validator->validateWithContext(['value' => null], $schema, $nullableContext);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_properties_with_ref_to_non_nullable_type_rejects_null(): void
+    {
+        // Counter-regression: $ref stub to a target with type: 'string'
+        // (non-nullable) must still reject null. The fix lets null past the
+        // pre-normalize step, but the inner rootSchemaValidator must resolve
+        // $ref and let TypeValidator reject null on the resolved target.
+        $nonNullableTargetSchema = new Schema(type: 'string');
+
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'value' => new Schema(ref: '#/components/schemas/NonNullable'),
+            ],
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Non-Nullable Ref API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'NonNullable' => $nonNullableTargetSchema,
+                ],
+            ),
+        );
+
+        $validator = new PropertiesValidatorWithContext(
+            document: $document,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $this->pool,
+                refResolver: $this->refResolver,
+                statelessValidators: $this->statelessValidators,
+            ),
+        );
+
+        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $this->expectException(ValidationException::class);
+
+        $validator->validateWithContext(['value' => null], $schema, $nullableContext);
+    }
+
+    #[Test]
+    public function validate_properties_with_ref_and_sibling_nullable_accepts_null(): void
+    {
+        // README workaround still works: declare `nullable: true` as a sibling
+        // of $ref. Resolved target must also allow null per SchemaSiblingMerger
+        // AND semantics.
+        $nullableTargetSchema = new Schema(type: ['string', 'null']);
+
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'value' => new Schema(ref: '#/components/schemas/NullableType', nullable: true),
+            ],
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Sibling Nullable Ref API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'NullableType' => $nullableTargetSchema,
+                ],
+            ),
+        );
+
+        $validator = new PropertiesValidatorWithContext(
+            document: $document,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $this->pool,
+                refResolver: $this->refResolver,
+                statelessValidators: $this->statelessValidators,
+            ),
+        );
+
+        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $validator->validateWithContext(['value' => null], $schema, $nullableContext);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_properties_with_ref_continues_to_accept_non_null_values(): void
+    {
+        // Non-regression: non-null values for $ref properties must continue
+        // to validate as before. The fix only affects the null-handling path.
+        $nullableTargetSchema = new Schema(type: ['string', 'null']);
+
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'value' => new Schema(ref: '#/components/schemas/NullableType'),
+            ],
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Non-Null Ref API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'NullableType' => $nullableTargetSchema,
+                ],
+            ),
+        );
+
+        $validator = new PropertiesValidatorWithContext(
+            document: $document,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $this->pool,
+                refResolver: $this->refResolver,
+                statelessValidators: $this->statelessValidators,
+            ),
+        );
+
+        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $validator->validateWithContext(['value' => 'hello'], $schema, $nullableContext);
+
+        $this->assertTrue(true);
+    }
 }

@@ -614,4 +614,165 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $this->assertTrue(true);
     }
+
+    #[Test]
+    public function validate_items_with_ref_to_nullable_type_accepts_null(): void
+    {
+        // Regression for B1 (items path): $ref stub to a target with
+        // type: ['string', 'null'] must accept null items. The pre-fix
+        // $allowNull calculation rejected null because the stub has no
+        // `nullable` and no `type`. Post-fix the ref check lets null
+        // through so the inner rootSchemaValidator can resolve $ref and
+        // accept null via the resolved target's type.
+        $nullableTargetSchema = new Schema(type: ['string', 'null']);
+
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(ref: '#/components/schemas/NullableType'),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Nullable Ref Items API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'NullableType' => $nullableTargetSchema,
+                ],
+            ),
+        );
+
+        $validator = new ItemsValidatorWithContext(
+            document: $document,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $this->pool,
+                refResolver: $this->refResolver,
+                statelessValidators: $this->statelessValidators,
+            ),
+        );
+
+        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $validator->validateWithContext([null], $schema, $nullableContext);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_items_with_ref_to_non_nullable_type_rejects_null(): void
+    {
+        // Counter-regression (items path): $ref stub to a target with
+        // type: 'string' (non-nullable) must still reject null. The fix
+        // lets null past the pre-normalize step, but the inner
+        // rootSchemaValidator must resolve $ref and let TypeValidator
+        // reject null on the resolved target.
+        $nonNullableTargetSchema = new Schema(type: 'string');
+
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(ref: '#/components/schemas/NonNullable'),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Non-Nullable Ref Items API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'NonNullable' => $nonNullableTargetSchema,
+                ],
+            ),
+        );
+
+        $validator = new ItemsValidatorWithContext(
+            document: $document,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $this->pool,
+                refResolver: $this->refResolver,
+                statelessValidators: $this->statelessValidators,
+            ),
+        );
+
+        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $this->expectException(ValidationException::class);
+
+        $validator->validateWithContext([null], $schema, $nullableContext);
+    }
+
+    #[Test]
+    public function validate_items_with_ref_and_sibling_nullable_accepts_null(): void
+    {
+        // README workaround still works (items path): declare `nullable: true`
+        // as a sibling of $ref. Resolved target must also allow null per
+        // SchemaSiblingMerger AND semantics.
+        $nullableTargetSchema = new Schema(type: ['string', 'null']);
+
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(ref: '#/components/schemas/NullableType', nullable: true),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Sibling Nullable Ref Items API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'NullableType' => $nullableTargetSchema,
+                ],
+            ),
+        );
+
+        $validator = new ItemsValidatorWithContext(
+            document: $document,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $this->pool,
+                refResolver: $this->refResolver,
+                statelessValidators: $this->statelessValidators,
+            ),
+        );
+
+        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $validator->validateWithContext([null], $schema, $nullableContext);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function validate_items_with_ref_continues_to_accept_non_null_values(): void
+    {
+        // Non-regression (items path): non-null values for $ref items must
+        // continue to validate as before. The fix only affects the null-
+        // handling path.
+        $nullableTargetSchema = new Schema(type: ['string', 'null']);
+
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(ref: '#/components/schemas/NullableType'),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Non-Null Ref Items API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'NullableType' => $nullableTargetSchema,
+                ],
+            ),
+        );
+
+        $validator = new ItemsValidatorWithContext(
+            document: $document,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $this->pool,
+                refResolver: $this->refResolver,
+                statelessValidators: $this->statelessValidators,
+            ),
+        );
+
+        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $validator->validateWithContext(['hello', 'world'], $schema, $nullableContext);
+
+        $this->assertTrue(true);
+    }
 }

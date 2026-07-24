@@ -25,46 +25,39 @@ final readonly class JsonFormatter implements ErrorFormatterInterface
     #[Override]
     public function format(ValidationErrorInterface $error): string
     {
-        $result = json_encode(
-            $this->buildErrorData($error),
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
-        );
-
-        if (false === $result) {
-            throw new ValueError('Failed to encode error data to JSON');
-        }
-
-        return $result;
+        return $this->encode($this->buildErrorData($error));
     }
 
     #[Override]
     public function formatMultiple(array $errors): string
     {
-        $errorsData = [];
-
-        foreach ($errors as $error) {
-            $errorsData[] = $this->buildErrorData($error);
-        }
-
-        $result = json_encode(
-            [
-                'errors' => $errorsData,
-                'count' => count($errors),
-            ],
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
-        );
-
-        if (false === $result) {
-            throw new ValueError('Failed to encode error data to JSON');
-        }
-
-        return $result;
+        return $this->encode([
+            'errors' => array_map($this->buildErrorData(...), $errors),
+            'count' => count($errors),
+        ]);
     }
 
     #[Override]
     public function formatException(ValidationException $exception): string
     {
         return $this->formatMultiple($exception->getErrors());
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function encode(array $data): string
+    {
+        $result = json_encode(
+            $data,
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+        );
+
+        if (false === $result) {
+            throw new ValueError('Failed to encode error data to JSON');
+        }
+
+        return $result;
     }
 
     /**
@@ -85,8 +78,9 @@ final readonly class JsonFormatter implements ErrorFormatterInterface
             'details' => $details,
         ];
 
-        if (null !== $error->suggestion()) {
-            $data['suggestion'] = $error->suggestion();
+        $suggestion = $error->suggestion();
+        if (null !== $suggestion) {
+            $data['suggestion'] = $suggestion;
         }
 
         return $data;

@@ -9,12 +9,16 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: duyler/php-zts:8.5
+      image: ${{ matrix.php-image }}
       options: --user root
 
     strategy:
       matrix:
-        php-image: ['duyler/php-zts:8.5']
+        include:
+          - php-image: 'duyler/php-zts:8.4'
+            php-version: '8.4'
+          - php-image: 'duyler/php-zts:8.5'
+            php-version: '8.5'
 
     steps:
       - name: Checkout
@@ -29,13 +33,13 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ env.COMPOSER_CACHE_DIR }}
-          key: php${{ matrix.php }}-composer-${{ hashFiles('**/composer.json') }}
+          key: php${{ matrix.php-version }}-composer-${{ hashFiles('**/composer.json') }}
           restore-keys: |
-            php${{ matrix.php }}-composer-
+            php${{ matrix.php-version }}-composer-
       - name: Update composer
         run: composer self-update
 
-      - name: Install dependencies with composer php 8.5
+      - name: Install dependencies with composer
         run: composer update --ignore-platform-reqs --prefer-dist --no-interaction --no-progress --optimize-autoloader --ansi
 
       - name: Run tests
@@ -95,3 +99,30 @@ jobs:
   # always skips under CLI SAPI and a CLI-based CI job yields no regression
   # signal. The test class is retained in tests/Concurrency for a future
   # worker-SAPI harness; see CHANGELOG 0.6.0 for the full rationale.
+
+  infection:
+    needs: tests
+    runs-on: ubuntu-latest
+    container:
+      image: duyler/php-zts:8.5
+      options: --user root
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine composer cache directory
+        run: echo "COMPOSER_CACHE_DIR=$(composer config cache-dir)" >> $GITHUB_ENV
+
+      - name: Cache dependencies installed with composer
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.COMPOSER_CACHE_DIR }}
+          key: infection-php8.5-composer-${{ hashFiles('**/composer.json') }}
+          restore-keys: |
+            infection-php8.5-composer-
+
+      - name: Install dependencies with composer
+        run: composer update --ignore-platform-reqs --prefer-dist --no-interaction --no-progress --optimize-autoloader --ansi
+
+      - name: Run Infection
+        run: php -d memory_limit=2G -d pcov.enabled=1 vendor/bin/infection --no-progress --threads=max
