@@ -23,6 +23,8 @@ final readonly class NumberStringNormalizer
 {
     public const string NUMBER_PATTERN = '/^[+-]?\\d+(\\.\\d+)?([eE][+-]?\\d+)?$/';
 
+    private const int MAX_DOUBLE_EXPONENT = 320;
+
     /**
      * Returns the canonical decimal form of a numeric string, or null if the
      * input is not a recognised integer/decimal/scientific value.
@@ -75,7 +77,7 @@ final readonly class NumberStringNormalizer
     {
         if (1 === preg_match('/^[+-]?\\d+(?:\\.\\d+)?[eE](?<exponent>[+-]?\\d+)$/', $value, $matches)) {
             $exponent = (int) $matches['exponent'];
-            if (abs($exponent) > 320) {
+            if (abs($exponent) > self::MAX_DOUBLE_EXPONENT) {
                 throw new TypeMismatchError(
                     expected: 'number',
                     actual: $value,

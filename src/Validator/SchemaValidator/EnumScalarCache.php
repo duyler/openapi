@@ -25,6 +25,8 @@ final class EnumScalarCache
      */
     private const int SAFE_INT64_FLOAT_BOUNDARY = 9007199254740992;
 
+    private const int CACHE_KEY_ENTROPY_BYTES = 16;
+
     /** @var WeakMap<Schema, bool> */
     private WeakMap $isScalarEnumCache;
 
@@ -136,7 +138,7 @@ final class EnumScalarCache
 
         if (is_float($value) && is_nan($value)) {
             /** @var non-empty-string $bytes */
-            $bytes = random_bytes(16);
+            $bytes = random_bytes(self::CACHE_KEY_ENTROPY_BYTES);
 
             return 'nan:' . bin2hex($bytes);
         }

@@ -110,6 +110,8 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
      */
     private const int S_IFREG = 0x8000;
 
+    private const int JSON_DECODE_MAX_DEPTH = 512;
+
     public function __construct(
         private ?string $allowedRoot = null,
         private ExternalSchemaBuilder $schemaBuilder = new ExternalSchemaBuilder(),
@@ -354,7 +356,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
         $data = match ($extension) {
-            'json' => json_decode($contents, true, 512, JSON_THROW_ON_ERROR),
+            'json' => json_decode($contents, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR),
             'yaml', 'yml' => Yaml::parse($contents, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE),
             default => throw new RuntimeException(sprintf('Unsupported file extension: %s', $extension)),
         };

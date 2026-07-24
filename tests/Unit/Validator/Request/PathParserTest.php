@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Request;
 
 use Duyler\OpenApi\Validator\Exception\PathMismatchException;
+use Duyler\OpenApi\Validator\Exception\PregRuntimeException;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\PathParser;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 
+use function is_int;
+use function is_string;
 use function str_repeat;
 
 /** @internal */
@@ -119,5 +123,45 @@ final class PathParserTest extends TestCase
         $parser = new PathParser(new PathRegexCache(), new PregExecutor(maxBacktracks: 500));
 
         $this->assertSame(['id' => '42'], $parser->matchPath('/users/42', '/users/{id}'));
+    }
+
+    #[Test]
+    public function logs_pcre_failure_via_injected_logger_and_returns_null(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())
+            ->method('debug')
+            ->with(
+                'PCRE failure during path parsing',
+                $this->callback(static function (array $context): bool {
+                    return isset($context['pattern'], $context['subject_length'], $context['exception'])
+                        && is_string($context['pattern'])
+                        && is_int($context['subject_length'])
+                        && $context['exception'] instanceof PregRuntimeException;
+                }),
+            );
+
+        $parser = new PathParser(
+            new PathRegexCache(),
+            new PregExecutor(maxBacktracks: 2),
+            $logger,
+        );
+
+        $subject = '/users/' . str_repeat('a', 50) . '/posts/' . str_repeat('b', 50) . '/extra';
+
+        $this->assertNull($parser->tryMatchPath($subject, '/users/{id}/posts/{postId}'));
+    }
+
+    #[Test]
+    public function logger_is_optional_and_null_logger_does_not_emit(): void
+    {
+        $parser = new PathParser(
+            new PathRegexCache(),
+            new PregExecutor(maxBacktracks: 2),
+        );
+
+        $subject = '/users/' . str_repeat('a', 50) . '/posts/' . str_repeat('b', 50) . '/extra';
+
+        $this->assertNull($parser->tryMatchPath($subject, '/users/{id}/posts/{postId}'));
     }
 }

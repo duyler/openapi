@@ -54,6 +54,8 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
      */
     private const int SAFE_INT64_FLOAT_BOUNDARY = 9007199254740992;
 
+    private const int CACHE_KEY_ENTROPY_BYTES = 8;
+
     #[Override]
     public function isApplicable(Schema $schema): bool
     {
@@ -199,7 +201,7 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
         $this->ensureJsonCompatible($item);
 
         if (is_float($item) && is_nan($item)) {
-            return 'n:nan:' . bin2hex(random_bytes(8));
+            return 'n:nan:' . bin2hex(random_bytes(self::CACHE_KEY_ENTROPY_BYTES));
         }
 
         if (is_int($item)) {

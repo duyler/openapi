@@ -23,6 +23,12 @@ use const PHP_INT_MIN;
 
 abstract readonly class AbstractCoercer
 {
+    private const float SAFE_INT64_FLOAT_BOUNDARY = 9007199254740992.0;
+
+    private const float INT64_MIN_FLOAT = 9.223372036854775E+18;
+
+    private const float INT64_MAX_FLOAT = 9.223372036854776E+18;
+
     protected function isValidType(mixed $value, string $type): bool
     {
         return match ($type) {
@@ -223,7 +229,7 @@ abstract readonly class AbstractCoercer
                 );
             }
 
-            if (abs($value) >= 9007199254740992.0) {
+            if (abs($value) >= self::SAFE_INT64_FLOAT_BOUNDARY) {
                 throw new TypeMismatchError(
                     expected: 'integer',
                     actual: sprintf('%.0f', $value),
@@ -319,11 +325,11 @@ abstract readonly class AbstractCoercer
     {
         $absolute = abs($value);
 
-        if ($absolute < 9.223372036854775E+18) {
+        if ($absolute < self::INT64_MIN_FLOAT) {
             return false;
         }
 
-        if ($absolute > 9.223372036854776E+18) {
+        if ($absolute > self::INT64_MAX_FLOAT) {
             return true;
         }
 

@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
 use Duyler\OpenApi\Validator\Exception\BodyTooLargeException;
 use Duyler\OpenApi\Validator\LibxmlSecuredContext;
+use Psr\Log\LoggerInterface;
 use SimpleXMLElement;
 use ValueError;
 
@@ -25,6 +26,7 @@ final readonly class XmlBodyParser
 
     public function __construct(
         private readonly int $maxXmlBytes = self::DEFAULT_MAX_XML_BYTES,
+        private readonly ?LoggerInterface $logger = null,
     ) {}
 
     /**
@@ -55,7 +57,12 @@ final readonly class XmlBodyParser
 
                 return self::xmlToArray($xml);
             });
-        } catch (ValueError) {
+        } catch (ValueError $e) {
+            $this->logger?->debug('XML body parse failure (ValueError), falling back to raw body', [
+                'body_length' => $length,
+                'exception' => $e,
+            ]);
+
             return $body;
         }
     }

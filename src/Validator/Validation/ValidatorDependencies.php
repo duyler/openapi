@@ -112,7 +112,7 @@ final readonly class ValidatorDependencies
                 formParser: new FormBodyParser(new QueryParser()),
                 multipartParser: new MultipartBodyParser(),
                 textParser: new TextBodyParser(),
-                xmlParser: new XmlBodyParser(),
+                xmlParser: new XmlBodyParser(logger: $this->logger),
             ),
         );
 
@@ -153,7 +153,7 @@ final readonly class ValidatorDependencies
         );
 
         return new RequestValidator(
-            pathParser: new PathParser($this->pathRegexCache, $this->pregExecutor),
+            pathParser: new PathParser($this->pathRegexCache, $this->pregExecutor, $this->logger),
             pathParamsValidator: new PathParametersValidator(
                 schemaValidator: $schemaValidator,
                 deserializer: $deserializer,
