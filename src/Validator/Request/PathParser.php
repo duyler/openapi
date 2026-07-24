@@ -45,7 +45,7 @@ final readonly class PathParser
 
         $params = [];
         foreach (array_keys($matches) as $key) {
-            if (!is_string($key)) {
+            if (false === is_string($key)) {
                 continue;
             }
 

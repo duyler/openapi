@@ -131,7 +131,7 @@ final class SchemaValidator implements SchemaValidatorInterface
         $filtered = array_values(array_filter(
             $all,
             static function (SchemaValidatorInterface $v) use ($schema): bool {
-                return !$v instanceof KeywordApplicable || $v->isApplicable($schema);
+                return false === ($v instanceof KeywordApplicable) || $v->isApplicable($schema);
             },
         ));
 

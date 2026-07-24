@@ -122,7 +122,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
     {
         $scheme = $this->extractScheme($ref);
 
-        if (!in_array($scheme, self::ALLOWED_SCHEMES, true)) {
+        if (false === in_array($scheme, self::ALLOWED_SCHEMES, true)) {
             throw new ExternalRefSecurityException(
                 $ref,
                 sprintf(
@@ -144,7 +144,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
         $data = $this->parseContents($contents, $absolutePath);
         $target = $this->navigatePointer($data, $pointer, $absolutePath);
 
-        if (!is_array($target)) {
+        if (false === is_array($target)) {
             $this->logger->debug('External ref target is not a schema object', [
                 'path' => $absolutePath,
                 'pointer' => $pointer,
@@ -333,7 +333,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
             return;
         }
 
-        if (!str_starts_with($realFile, $realRoot . '/')) {
+        if (false === str_starts_with($realFile, $realRoot . '/')) {
             $this->logger->debug('External ref path traversal detected', [
                 'path' => $filePath,
                 'allowedRoot' => $this->allowedRoot,
@@ -359,7 +359,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
             default => throw new RuntimeException(sprintf('Unsupported file extension: %s', $extension)),
         };
 
-        if (!is_array($data)) {
+        if (false === is_array($data)) {
             $this->logger->debug('External ref file does not contain a mapping', [
                 'path' => $filePath,
             ]);
@@ -388,7 +388,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
         foreach ($segments as $segment) {
             $decodedSegment = str_replace(['~1', '~0'], ['/', '~'], $segment);
 
-            if (!is_array($current) || !array_key_exists($decodedSegment, $current)) {
+            if (false === is_array($current) || false === array_key_exists($decodedSegment, $current)) {
                 $this->logger->debug('External ref JSON Pointer segment not found', [
                     'path' => $absolutePath,
                     'segment' => $decodedSegment,

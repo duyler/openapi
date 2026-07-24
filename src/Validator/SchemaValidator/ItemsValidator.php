@@ -19,6 +19,7 @@ use Override;
 use function is_array;
 use function sprintf;
 use function count;
+use function is_bool;
 
 final readonly class ItemsValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
@@ -39,7 +40,7 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
             return;
         }
 
-        if (true === $schema->items || false === $schema->items) {
+        if (is_bool($schema->items)) {
             $this->validateBooleanItems($data, $schema, $context);
 
             return;
@@ -133,7 +134,7 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
     {
         $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
 
-        if (true === $schema->items) {
+        if ($schema->items) {
             $dataCount = count($data);
 
             if (null !== $context) {

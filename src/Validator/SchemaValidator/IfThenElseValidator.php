@@ -15,6 +15,7 @@ use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
 use function sprintf;
+use function is_bool;
 
 final readonly class IfThenElseValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
@@ -31,14 +32,8 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
             return;
         }
 
-        if (true === $schema->if) {
-            $this->routeThenOrElse(schema: $schema, data: $data, context: $context, ifValid: true);
-
-            return;
-        }
-
-        if (false === $schema->if) {
-            $this->routeThenOrElse(schema: $schema, data: $data, context: $context, ifValid: false);
+        if (is_bool($schema->if)) {
+            $this->routeThenOrElse(schema: $schema, data: $data, context: $context, ifValid: $schema->if);
 
             return;
         }

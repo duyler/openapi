@@ -21,6 +21,7 @@ use Duyler\OpenApi\Validator\TypeFormatter;
 
 use function count;
 use function sprintf;
+use function is_bool;
 
 final readonly class ItemsValidatorWithContext
 {
@@ -46,7 +47,7 @@ final readonly class ItemsValidatorWithContext
             return;
         }
 
-        if (true === $schema->items || false === $schema->items) {
+        if (is_bool($schema->items)) {
             $this->validateBooleanItems($data, $schema, $context);
 
             return;
@@ -113,7 +114,7 @@ final readonly class ItemsValidatorWithContext
     {
         $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
 
-        if (true === $schema->items) {
+        if ($schema->items) {
             $dataCount = count($data);
 
             for ($i = $prefixCount; $i < $dataCount; ++$i) {

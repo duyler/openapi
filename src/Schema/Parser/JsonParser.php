@@ -74,7 +74,7 @@ final class JsonParser extends OpenApiBuilder
 
         foreach ($data as $value) {
             /** @var mixed $value */
-            if (!is_array($value)) {
+            if (false === is_array($value)) {
                 continue;
             }
 

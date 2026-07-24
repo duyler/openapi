@@ -303,7 +303,7 @@ final readonly class StreamingContentParser
         $buffer = '';
         $bomStripped = false;
 
-        while (!$stream->eof()) {
+        while (false === $stream->eof()) {
             $chunk = $stream->read(self::STREAM_CHUNK_SIZE);
 
             if ('' === $chunk) {
@@ -438,7 +438,7 @@ final readonly class StreamingContentParser
         $bomStripped = false;
         $recordCount = 0;
 
-        while (!$stream->eof()) {
+        while (false === $stream->eof()) {
             $chunk = $stream->read(self::STREAM_CHUNK_SIZE);
 
             if ('' === $chunk) {

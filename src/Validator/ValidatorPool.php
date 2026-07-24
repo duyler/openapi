@@ -65,7 +65,7 @@ final class ValidatorPool
             );
         }
 
-        if (null !== $lock && (!method_exists($lock, 'lock') || !method_exists($lock, 'unlock'))) {
+        if (null !== $lock && (false === method_exists($lock, 'lock') || false === method_exists($lock, 'unlock'))) {
             throw new InvalidArgumentException(
                 'Lock object must expose both lock() and unlock() methods',
             );

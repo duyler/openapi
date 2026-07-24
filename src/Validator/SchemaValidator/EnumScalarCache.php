@@ -44,7 +44,7 @@ final class EnumScalarCache
 
     public function isScalarLookupEligible(Schema $schema, mixed $data): bool
     {
-        if (!$this->isScalarEnum($schema)) {
+        if (false === $this->isScalarEnum($schema)) {
             return false;
         }
 

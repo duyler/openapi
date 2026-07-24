@@ -59,7 +59,7 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
     {
         return null !== $schema->minItems
             || null !== $schema->maxItems
-            || true === $schema->uniqueItems;
+            || $schema->uniqueItems;
     }
 
     #[Override]
@@ -111,7 +111,7 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
      */
     private function containsNonScalar(array $data): bool
     {
-        return array_any($data, fn($item) => null !== $item && !is_scalar($item));
+        return array_any($data, fn($item) => null !== $item && false === is_scalar($item));
     }
 
     /**
@@ -270,7 +270,7 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
             $item,
         );
 
-        if (!array_is_list($canonical)) {
+        if (false === array_is_list($canonical)) {
             ksort($canonical, SORT_STRING);
         }
 

@@ -130,7 +130,7 @@ final readonly class EmailValidator extends AbstractStringFormatValidator
 
         $ascii = idn_to_ascii($domain, IDNA_NONTRANSITIONAL_TO_ASCII, INTL_IDNA_VARIANT_UTS46, $info);
 
-        if (false === $ascii || !isset($info['errors']) || 0 !== $info['errors']) {
+        if (false === $ascii || false === isset($info['errors']) || 0 !== $info['errors']) {
             return;
         }
 

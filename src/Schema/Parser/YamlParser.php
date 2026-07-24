@@ -89,7 +89,7 @@ final class YamlParser extends OpenApiBuilder
 
         foreach ($data as $value) {
             /** @var mixed $value */
-            if (!is_array($value)) {
+            if (false === is_array($value)) {
                 continue;
             }
 
@@ -264,7 +264,7 @@ final class YamlParser extends OpenApiBuilder
     private function capturedStrings(array $matches): array
     {
         $group = $matches[1] ?? [];
-        if (!is_array($group)) {
+        if (false === is_array($group)) {
             return [];
         }
 
