@@ -21,12 +21,6 @@ use function strtoupper;
 
 final readonly class SecurityValidator
 {
-    /**
-     * Matches RFC 6750 §2.1 Bearer credential `Bearer <b64token>` and
-     * nothing else: the trailing `\s*$` allows optional RFC 7235
-     * header-value whitespace and the end-anchor rejects multi-challenge
-     * headers such as `Bearer fake, Basic dXNlcjpwYXNz` (R4-SEC-016).
-     */
     private const string BEARER_AUTH_PATTERN = '/^bearer\s+\S+\s*$/i';
 
     private readonly LoggerInterface $logger;
@@ -197,15 +191,6 @@ final readonly class SecurityValidator
         );
     }
 
-    /**
-     * SEC-07 / CWE-209: emit a MissingSecurityCredentialsError with a
-     * generic caller-safe message while forwarding the concrete scheme
-     * details (schemeName, schemeType, location) to the PSR-3 logger at
-     * debug level. The details never reach the exception message and
-     * never reach the params() array consumed by error formatters, so
-     * they cannot leak to unauthenticated callers via a PSR-15
-     * middleware that surfaces Throwable messages.
-     */
     private function reportMissingCredentials(
         string $schemeName,
         string $schemeType,

@@ -38,27 +38,12 @@ final readonly class StreamingContentParser
     private const int DEFAULT_MAX_RECORDS = 100_000;
     private const int LOG_RECORD_TRUNCATE_LENGTH = 256;
 
-    /**
-     * W3C Server-Sent Events default event type used when the event field is absent.
-     *
-     * @see https://html.spec.whatwg.org/multipage/server-sent-events.html
-     */
     private const string SSE_DEFAULT_EVENT_TYPE = 'message';
 
-    /**
-     * Line-splitting pattern covering all three line-ending variants allowed by
-     * WHATWG HTML SSE §8.1.1: CRLF, LF, and CR.
-     *
-     * @see https://html.spec.whatwg.org/multipage/server-sent-events.html#parsing-an-event-stream
-     */
     private const string SSE_LINE_SPLIT_PATTERN = '/\r\n|\r|\n/';
 
     private const string NDJSON_LINE_SPLIT_PATTERN = '/\r?\n/';
 
-    /**
-     * Single U+0020 SPACE removed from the start of an SSE field value per
-     * WHATWG HTML SSE §8.2.6 (exactly one, never tabs or other whitespace).
-     */
     private const string SSE_FIELD_SPACE = ' ';
 
     public function __construct(
@@ -286,14 +271,6 @@ final readonly class StreamingContentParser
     }
 
     /**
-     * Chunked line reader shared by NDJSON and SSE stream parsers.
-     *
-     * Reads the stream in fixed-size chunks, strips UTF-8 BOM from the first
-     * chunk, enforces the per-line length cap, and yields each complete line
-     * using the supplied split pattern. After the stream is exhausted, yields
-     * the remaining buffer once (empty string when the stream ends on a line
-     * terminator).
-     *
      * @param non-empty-string $splitPattern
      *
      * @return Generator<int, string, void, void>

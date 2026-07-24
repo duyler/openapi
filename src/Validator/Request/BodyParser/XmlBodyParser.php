@@ -68,11 +68,6 @@ final readonly class XmlBodyParser
     }
 
     /**
-     * Converts a SimpleXMLElement into a nested array where namespaced
-     * nodes keep their prefix in the key (e.g. `atom:link`, `@xsi:type`)
-     * to avoid data loss per RFC 7303. Default-namespace and non-namespaced
-     * nodes are keyed by their local name.
-     *
      * @return array<array-key, mixed>|string|null
      */
     private static function xmlToArray(SimpleXMLElement $xml): array|string|null
@@ -198,10 +193,6 @@ final readonly class XmlBodyParser
     }
 
     /**
-     * Merges a child value under $key into $result. The first occurrence
-     * is stored as-is; repeated occurrences promote the stored value to a
-     * numeric-indexed list, preserving document order.
-     *
      * @param array<array-key, mixed> $result
      */
     private static function mergeChild(array &$result, string $key, array|string|null $value): void

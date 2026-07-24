@@ -184,11 +184,6 @@ final readonly class ParameterDeserializer
         return [$value];
     }
 
-    /**
-     * DoS defence: cap the number of items produced by exploding a single
-     * parameter value. OpenAPI 3.2 §4.8.7 styles never carry semantically
-     * meaningful arrays of this size; anything larger is an attack vector.
-     */
     private function assertWithinItemLimit(string $value, string $separator): void
     {
         if (substr_count($value, $separator) + 1 > self::MAX_PARAMETER_ARRAY_ITEMS) {

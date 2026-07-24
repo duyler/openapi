@@ -71,15 +71,6 @@ final readonly class LinkResolver
         };
     }
 
-    /**
-     * Resolves OpenAPI 3.2 §6.19.2 runtime expressions of two syntactic forms:
-     *  - Named form:   `$<scope>.<path|query|header>.<name>`
-     *  - Pointer form: `$<scope>.<body|header|query>[#/pointer]`
-     *
-     * Returns the literal expression unchanged when neither form matches, so
-     * unsupported expressions stay distinguishable from values that
-     * legitimately resolve to null.
-     */
     private function resolveRuntimeExpression(string $expression, LinkContext $context): mixed
     {
         if (1 === preg_match(
@@ -139,8 +130,6 @@ final readonly class LinkResolver
     }
 
     /**
-     * Performs RFC 9110 case-insensitive lookup of a header value by name.
-     *
      * @param array<string, string|list<string>> $headers
      */
     private function lookupHeader(array $headers, string $name): ?string
