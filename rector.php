@@ -21,8 +21,14 @@ return RectorConfig::configure()
         ArrowFunctionDelegatingCallToFirstClassCallableRector::class,
         ClosureDelegatingCallToFirstClassCallableRector::class,
         ClosureToArrowFunctionRector::class,
-        // Schema::__construct stays PHPDoc-only @deprecated to keep fromConstraintGroups() cascade-free (ADR adr-schema-constructor.md).
+        // PHPDoc-only @deprecated skips — the named-constructors below delegate to the
+        // deprecated constructors, so converting the PHPDoc to #[Deprecated] would
+        // trigger E_DEPRECATED on every internal call. ADRs:
+        //  - adr-schema-constructor.md (Schema 11b)
+        //  - adr-validator-signatures-and-dtos.md (ValidatorDependencies, ValidationContext 18)
         DeprecatedAnnotationToDeprecatedAttributeRector::class => [
             __DIR__ . '/src/Schema/Model/Schema.php',
+            __DIR__ . '/src/Validator/Validation/ValidatorDependencies.php',
+            __DIR__ . '/src/Validator/Error/ValidationContext.php',
         ],
     ]);

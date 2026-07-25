@@ -36,6 +36,7 @@ use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
+use Duyler\OpenApi\Validator\Validation\Internal\ValidatorDependenciesGroup;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -50,6 +51,15 @@ final readonly class ValidatorDependencies
     private readonly SchemaValidatorDependencies $schemaValidatorDependencies;
     private readonly ValidatorConfiguration $validatorConfiguration;
 
+    /**
+     * @deprecated since 1.x, will be removed in 2.0. Use {@see fromGroup()} instead.
+     *             PHPDoc-only deprecation (no {@see \Deprecated} attribute) so {@see fromGroup()}
+     *             can delegate without runtime E_DEPRECATED cascade. See `.ai/reports/adr-validator-signatures-and-dtos.md`.
+     *
+     * @param int $maxJsonBodyBytes       from {@see ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES}
+     * @param int $maxMultipartBodyBytes  from {@see ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES}
+     * @param int $maxRegexBacktracks     from {@see PregExecutor::DEFAULT_MAX_BACKTRACKS}
+     */
     public function __construct(
         public readonly OpenApiDocument $document,
         public readonly ValidatorPool $pool,
@@ -126,6 +136,37 @@ final readonly class ValidatorDependencies
             dependencies: $this->schemaValidatorDependencies,
             configuration: $this->validatorConfiguration,
             pregExecutor: $this->pregExecutor,
+        );
+    }
+
+    public static function fromGroup(ValidatorDependenciesGroup $group): self
+    {
+        $root = $group->root;
+        $options = $group->options;
+        $limits = $group->bodyLimits;
+
+        return new self(
+            document: $root->document,
+            pool: $root->pool,
+            formatRegistry: $root->formatRegistry,
+            errorFormatter: $root->errorFormatter,
+            refResolver: $root->refResolver,
+            coercion: $options->coercion,
+            nullableAsType: $options->nullableAsType,
+            emptyArrayStrategy: $options->emptyArrayStrategy,
+            reportDeprecated: $options->reportDeprecated,
+            logger: $options->logger,
+            eventDispatcher: $options->eventDispatcher,
+            strictFormats: $options->strictFormats,
+            pathRegexCache: $root->pathRegexCache,
+            regexValidator: $root->regexValidator,
+            pregExecutor: $root->pregExecutor,
+            maxJsonBodyBytes: $limits->maxJsonBodyBytes,
+            maxMultipartBodyBytes: $limits->maxMultipartBodyBytes,
+            strictStreaming: $options->strictStreaming,
+            maxRegexBacktracks: $limits->maxRegexBacktracks,
+            securityVerboseLogger: $options->securityVerboseLogger,
+            strictCoercion: $options->strictCoercion,
         );
     }
 

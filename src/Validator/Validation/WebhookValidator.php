@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Validation;
 
 use Duyler\OpenApi\Validator\EventDispatchingTrait;
+use Duyler\OpenApi\Validator\Internal\ValidationEventPayload;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
 use Duyler\OpenApi\Validator\Validation\Internal\ValidatesSecurityTrait;
@@ -38,10 +39,12 @@ final readonly class WebhookValidator
         $method = $request->getMethod();
 
         return $this->withValidationEvents(
-            request: $request,
-            response: null,
-            path: $webhookName,
-            method: $method,
+            new ValidationEventPayload(
+                request: $request,
+                response: null,
+                path: $webhookName,
+                method: $method,
+            ),
             callback: function () use ($request, $webhookName, $method): Operation {
                 $schemaOperation = $this->webhookValidator->validate(
                     $request,

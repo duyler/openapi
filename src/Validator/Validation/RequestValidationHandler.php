@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\Validation;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
 use Duyler\OpenApi\Validator\EventDispatchingTrait;
+use Duyler\OpenApi\Validator\Internal\ValidationEventPayload;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\PathFinder;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
@@ -49,10 +50,12 @@ final readonly class RequestValidationHandler
         $matchedPath = $this->resolveMatchedPath($requestPath);
 
         return $this->withValidationEvents(
-            request: $request,
-            response: null,
-            path: $requestPath,
-            method: $method,
+            new ValidationEventPayload(
+                request: $request,
+                response: null,
+                path: $requestPath,
+                method: $method,
+            ),
             callback: function () use ($request, $requestPath, $matchedPath, $method): Operation {
                 return $this->performValidation($request, $requestPath, $matchedPath, $method);
             },

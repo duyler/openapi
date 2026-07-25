@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Validation;
 
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Validator\EventDispatchingTrait;
+use Duyler\OpenApi\Validator\Internal\ValidationEventPayload;
 use Duyler\OpenApi\Validator\Operation;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -30,10 +31,12 @@ final readonly class ResponseValidationHandler
     public function validate(ResponseInterface $response, Operation $operation): void
     {
         $this->withValidationEvents(
-            request: null,
-            response: $response,
-            path: $operation->path,
-            method: $operation->method,
+            new ValidationEventPayload(
+                request: null,
+                response: $response,
+                path: $operation->path,
+                method: $operation->method,
+            ),
             callback: function () use ($response, $operation): void {
                 $pathItem = $this->context->document->paths?->paths[$operation->path]
                     ?? $this->context->document->webhooks?->webhooks[$operation->path]

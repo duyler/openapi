@@ -16,6 +16,10 @@ use Duyler\OpenApi\Validator\Dto\ValidatorDependencies;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
+use Duyler\OpenApi\Validator\Validation\Internal\BodyLimits;
+use Duyler\OpenApi\Validator\Validation\Internal\RootServices;
+use Duyler\OpenApi\Validator\Validation\Internal\ValidatorDependenciesGroup;
+use Duyler\OpenApi\Validator\Validation\Internal\ValidatorOptions;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
@@ -542,28 +546,36 @@ final readonly class OpenApiValidatorBuilder
         $strictCallbackRuntimeTemplate = $this->config->strictCallbackRuntimeTemplate ?? true;
         $strictCoercion = $this->config->strictCoercion ?? true;
 
-        $context = new ValidationAssembler(
-            document: $document,
-            pool: $pool,
-            formatRegistry: $formatRegistry,
-            errorFormatter: $errorFormatter,
-            refResolver: $refResolver,
-            coercion: $coercion,
-            nullableAsType: $nullableAsType,
-            emptyArrayStrategy: $emptyArrayStrategy,
-            reportDeprecated: $reportDeprecated,
-            logger: $logger,
-            eventDispatcher: $this->config->eventDispatcher,
-            strictFormats: $strictFormats,
-            pathRegexCache: $pathRegexCache,
-            regexValidator: $regexValidator,
-            maxJsonBodyBytes: $maxJsonBodyBytes,
-            maxMultipartBodyBytes: $maxMultipartBodyBytes,
-            strictStreaming: $strictStreaming,
-            maxRegexBacktracks: $maxRegexBacktracks,
-            pregExecutor: $pregExecutor,
-            securityVerboseLogger: $securityVerboseLogger,
-            strictCoercion: $strictCoercion,
+        $context = ValidationAssembler::fromGroup(
+            new ValidatorDependenciesGroup(
+                root: new RootServices(
+                    document: $document,
+                    pool: $pool,
+                    formatRegistry: $formatRegistry,
+                    errorFormatter: $errorFormatter,
+                    refResolver: $refResolver,
+                    pathRegexCache: $pathRegexCache,
+                    regexValidator: $regexValidator,
+                    pregExecutor: $pregExecutor,
+                ),
+                options: new ValidatorOptions(
+                    coercion: $coercion,
+                    nullableAsType: $nullableAsType,
+                    emptyArrayStrategy: $emptyArrayStrategy,
+                    reportDeprecated: $reportDeprecated,
+                    logger: $logger,
+                    eventDispatcher: $this->config->eventDispatcher,
+                    strictFormats: $strictFormats,
+                    strictStreaming: $strictStreaming,
+                    strictCoercion: $strictCoercion,
+                    securityVerboseLogger: $securityVerboseLogger,
+                ),
+                bodyLimits: new BodyLimits(
+                    maxJsonBodyBytes: $maxJsonBodyBytes,
+                    maxMultipartBodyBytes: $maxMultipartBodyBytes,
+                    maxRegexBacktracks: $maxRegexBacktracks,
+                ),
+            ),
         );
 
         return new OpenApiValidator(

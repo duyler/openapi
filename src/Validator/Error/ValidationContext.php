@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\Error;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -45,6 +46,11 @@ final class ValidationContext
     /** @var array<int, true> */
     private array $evaluatedItemIndices = [];
 
+    /**
+     * @deprecated since 1.x, will be removed in 2.0. Use {@see fromInit()} instead.
+     *             PHPDoc-only deprecation (no {@see \Deprecated} attribute) so {@see fromInit()}
+     *             can delegate without runtime E_DEPRECATED cascade. See `.ai/reports/adr-validator-signatures-and-dtos.md`.
+     */
     public function __construct(
         public readonly BreadcrumbManager $breadcrumbs,
         public readonly ValidatorPool $pool,
@@ -55,6 +61,11 @@ final class ValidationContext
         public readonly ?ValidatorMode $mode = null,
     ) {}
 
+    /**
+     * @deprecated since 1.x, will be removed in 2.0. Use {@see fromInit()} instead.
+     *             PHPDoc-only deprecation (no {@see \Deprecated} attribute) so internal callers
+     *             keep working without runtime E_DEPRECATED cascade. See `.ai/reports/adr-validator-signatures-and-dtos.md`.
+     */
     public static function create(
         ValidatorPool $pool,
         ?ErrorFormatterInterface $errorFormatter = null,
@@ -69,6 +80,18 @@ final class ValidationContext
             nullableAsType: $nullableAsType,
             emptyArrayStrategy: $emptyArrayStrategy,
             mode: $mode,
+        );
+    }
+
+    public static function fromInit(ValidationContextInit $init): self
+    {
+        return new self(
+            breadcrumbs: BreadcrumbManager::create(),
+            pool: $init->pool,
+            errorFormatter: $init->errorFormatter ?? new SimpleFormatter(),
+            nullableAsType: $init->nullableAsType,
+            emptyArrayStrategy: $init->emptyArrayStrategy,
+            mode: $init->mode,
         );
     }
 
