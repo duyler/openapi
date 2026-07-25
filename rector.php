@@ -6,6 +6,7 @@ use Rector\CodingStyle\Rector\ArrowFunction\ArrowFunctionDelegatingCallToFirstCl
 use Rector\CodingStyle\Rector\Closure\ClosureDelegatingCallToFirstClassCallableRector;
 use Rector\Config\RectorConfig;
 use Rector\Php74\Rector\Closure\ClosureToArrowFunctionRector;
+use Rector\Php84\Rector\Class_\DeprecatedAnnotationToDeprecatedAttributeRector;
 
 return RectorConfig::configure()
     ->withPaths([
@@ -20,4 +21,8 @@ return RectorConfig::configure()
         ArrowFunctionDelegatingCallToFirstClassCallableRector::class,
         ClosureDelegatingCallToFirstClassCallableRector::class,
         ClosureToArrowFunctionRector::class,
+        // Schema::__construct stays PHPDoc-only @deprecated to keep fromConstraintGroups() cascade-free (ADR adr-schema-constructor.md).
+        DeprecatedAnnotationToDeprecatedAttributeRector::class => [
+            __DIR__ . '/src/Schema/Model/Schema.php',
+        ],
     ]);

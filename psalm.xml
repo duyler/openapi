@@ -25,6 +25,16 @@
         Removing the @deprecated tag is not an option because tooling (IDE quick-fix,
         phpdoc generators) needs to surface the deprecation to direct callers.
         New deprecations MUST NOT be added here without a parallel entry in CHANGELOG.md.
+
+        Schema::__construct / Schema::withOverrides: deprecated in 1.x via ADR
+        `.ai/reports/adr-schema-constructor.md` (task 11b §10). Replaced by
+        `Schema::fromConstraintGroups()` / `Schema::withOverrideGroups()`. The
+        3 internal callers of `withOverrides` (DocumentFingerprinter,
+        ValidatorCompiler, CompositionResolver) plus 35+ callers of `__construct`
+        are tracked for migration in a follow-up task; suppressing here keeps
+        Psalm green during the 1.x deprecation window pending 2.0 removal.
+        IDE / runtime `#[Deprecated]` attribute still surfaces the deprecation
+        to direct callers via PHPStorm / Intelephense / `E_DEPRECATED`.
     -->
     <issueHandlers>
         <DeprecatedClass>
@@ -33,5 +43,11 @@
                 <referencedClass name="Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies" />
             </errorLevel>
         </DeprecatedClass>
+        <DeprecatedMethod>
+            <errorLevel type="suppress">
+                <referencedMethod name="Duyler\OpenApi\Schema\Model\Schema::__construct" />
+                <referencedMethod name="Duyler\OpenApi\Schema\Model\Schema::withOverrides" />
+            </errorLevel>
+        </DeprecatedMethod>
     </issueHandlers>
 </psalm>
