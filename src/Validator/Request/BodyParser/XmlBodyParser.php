@@ -11,6 +11,7 @@ use SimpleXMLElement;
 use ValueError;
 
 use function array_key_exists;
+use function array_merge;
 use function assert;
 use function is_array;
 use function strlen;
@@ -73,10 +74,10 @@ final readonly class XmlBodyParser
     private static function xmlToArray(SimpleXMLElement $xml): array|string|null
     {
         /** @var array<int|string, mixed> $result */
-        $result = [];
-
-        self::collectAttributes($xml, $result);
-        self::collectChildElements($xml, $result);
+        $result = array_merge(
+            self::collectAttributes($xml),
+            self::collectChildElements($xml),
+        );
 
         if ([] === $result) {
             $text = (string) $xml;
@@ -93,10 +94,11 @@ final readonly class XmlBodyParser
     }
 
     /**
-     * @param array<int|string, mixed> $result
+     * @return array<int|string, mixed>
      */
-    private static function collectAttributes(SimpleXMLElement $xml, array &$result): void
+    private static function collectAttributes(SimpleXMLElement $xml): array
     {
+        $result = [];
         $attributes = $xml->attributes();
         assert($attributes instanceof SimpleXMLElement);
 
@@ -126,13 +128,16 @@ final readonly class XmlBodyParser
                 $result['@' . $prefix . ':' . $name] = (string) $value;
             }
         }
+
+        return $result;
     }
 
     /**
-     * @param array<int|string, mixed> $result
+     * @return array<int|string, mixed>
      */
-    private static function collectChildElements(SimpleXMLElement $xml, array &$result): void
+    private static function collectChildElements(SimpleXMLElement $xml): array
     {
+        $result = [];
         $children = $xml->children();
         assert($children instanceof SimpleXMLElement);
 
@@ -141,7 +146,7 @@ final readonly class XmlBodyParser
          * @var SimpleXMLElement $child
          */
         foreach ($children as $name => $child) {
-            self::mergeChild($result, $name, self::elementToValue($child));
+            $result = self::mergeChild($result, $name, self::elementToValue($child));
         }
 
         $namespaces = $xml->getNamespaces(true);
@@ -159,9 +164,11 @@ final readonly class XmlBodyParser
              * @var SimpleXMLElement $child
              */
             foreach ($nsChildren as $name => $child) {
-                self::mergeChild($result, $prefix . ':' . $name, self::elementToValue($child));
+                $result = self::mergeChild($result, $prefix . ':' . $name, self::elementToValue($child));
             }
         }
+
+        return $result;
     }
 
     private static function elementToValue(SimpleXMLElement $element): array|string|null
@@ -211,13 +218,15 @@ final readonly class XmlBodyParser
 
     /**
      * @param array<array-key, mixed> $result
+     *
+     * @return array<array-key, mixed>
      */
-    private static function mergeChild(array &$result, string $key, array|string|null $value): void
+    private static function mergeChild(array $result, string $key, array|string|null $value): array
     {
         if (false === array_key_exists($key, $result)) {
             $result[$key] = $value;
 
-            return;
+            return $result;
         }
 
         /** @var array<array-key, mixed>|string|null $existing */
@@ -229,5 +238,7 @@ final readonly class XmlBodyParser
 
         $existing[] = $value;
         $result[$key] = $existing;
+
+        return $result;
     }
 }

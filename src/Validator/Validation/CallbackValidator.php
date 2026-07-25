@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Validation;
 
-use Duyler\OpenApi\Schema\Model\Operation as SchemaOperation;
 use Duyler\OpenApi\Validator\Callback\CallbackValidator as InnerCallbackValidator;
-use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
 use Duyler\OpenApi\Validator\EventDispatchingTrait;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
+use Duyler\OpenApi\Validator\Validation\Internal\ValidatesSecurityTrait;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
@@ -17,6 +16,7 @@ use Psr\Log\LoggerInterface;
 final readonly class CallbackValidator
 {
     use EventDispatchingTrait;
+    use ValidatesSecurityTrait;
 
     private readonly ?EventDispatcherInterface $eventDispatcher;
     private readonly LoggerInterface $logger;
@@ -66,30 +66,5 @@ final readonly class CallbackValidator
                 return new Operation($callbackName, $method);
             },
         );
-    }
-
-    private function validateSecurity(
-        ServerRequestInterface $request,
-        SchemaOperation $operation,
-        string $callbackName,
-        string $method,
-    ): void {
-        $securityRequirements = $operation->security ?? $this->context->document->security;
-
-        if (null === $securityRequirements) {
-            return;
-        }
-
-        $securitySchemes = $this->context->document->components?->securitySchemes ?? [];
-
-        $securityContext = new SecurityValidationContext(
-            request: $request,
-            path: $callbackName,
-            method: $method,
-            securityRequirements: $securityRequirements,
-            securitySchemes: $securitySchemes,
-        );
-
-        $this->securityValidator->validate($securityContext);
     }
 }

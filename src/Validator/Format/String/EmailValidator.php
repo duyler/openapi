@@ -103,8 +103,8 @@ final readonly class EmailValidator extends AbstractStringFormatValidator
 
     private function validateIpLiteral(string $literal, string $data): void
     {
-        if (1 === $this->pregExecutor->match('/^IPv6:(.+)$/', $literal, $ipv6Match)) {
-            if (false === filter_var($ipv6Match[1], FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+        if (1 === $this->pregExecutor->match('/^IPv6:(?<ipv6>.+)$/', $literal, $ipv6Match)) {
+            if (false === filter_var($ipv6Match['ipv6'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
                 throw new InvalidFormatException('email', $data, 'Invalid email format');
             }
 

@@ -6,24 +6,27 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
-use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
-use Duyler\OpenApi\Validator\Exception\NestedValidationError;
+use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
+use Duyler\OpenApi\Validator\SchemaValidator\Internal\ItemValidationExceptionTrait;
 use Duyler\OpenApi\Validator\SchemaValidator\Internal\ItemValidationState;
 use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
 use function is_array;
-use function sprintf;
 use function count;
 use function is_bool;
 
 final readonly class ItemsValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    use ItemValidationExceptionTrait;
+
+    private const string ITEM_SCHEMA_PATH = '/items';
+
     #[Override]
     public function isApplicable(Schema $schema): bool
     {
@@ -98,47 +101,14 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
             } finally {
                 $state->context->leaveBreadcrumb();
             }
-        } catch (InvalidDataTypeException $e) {
-            $dataPath = $this->getDataPath($state->context);
-
-            throw new ValidationException(
-                sprintf('Item at index %d has invalid data type: %s', $index, $e->getMessage()),
-                previous: $e,
-                errors: [
-                    new TypeMismatchError(
-                        expected: $this->formatSchemaType($state->itemsSchema->type),
-                        actual: TypeFormatter::format($item),
-                        dataPath: $dataPath . '[' . $index . ']',
-                        schemaPath: '/items',
-                    ),
-                ],
-            );
-        } catch (InvalidFormatException $e) {
-            throw $e;
-        } catch (AbstractValidationError $e) {
-            throw new ValidationException(
-                sprintf('Item at index %d validation failed: %s', $index, $e->getMessage()),
-                previous: $e,
-                errors: [$e],
-            );
-        } catch (ValidationException $e) {
-            $dataPath = $this->getDataPath($state->context);
-            $errors = $e->getErrors();
-
-            if ([] === $errors) {
-                $errors = [
-                    new NestedValidationError(
-                        dataPath: $dataPath . '[' . $index . ']',
-                        schemaPath: '/items',
-                        message: $e->getMessage(),
-                    ),
-                ];
-            }
-
-            throw new ValidationException(
-                sprintf('Item at index %d validation failed', $index),
-                previous: $e,
-                errors: $errors,
+        } catch (InvalidDataTypeException|InvalidFormatException|AbstractValidationError|ValidationException $e) {
+            $this->wrapItemValidationException(
+                $e,
+                $index,
+                $item,
+                $state->itemsSchema,
+                self::ITEM_SCHEMA_PATH,
+                $state->context,
             );
         }
     }

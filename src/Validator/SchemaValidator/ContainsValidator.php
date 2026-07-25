@@ -48,7 +48,9 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
         }
 
         if (false === $schema->contains) {
-            $this->enforceBooleanFalseContains($schema, $dataPath);
+            // contains: false forbids any matching item; treat as 0 matches
+            // and apply the standard min/max bounds.
+            $this->enforceContainsBounds(0, $schema, $dataPath);
 
             return;
         }
@@ -61,33 +63,7 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
 
     private function validateBooleanTrueContains(array $data, Schema $schema, ?ValidationContext $context, string $dataPath): void
     {
-        $matchCount = count($data);
-        $effectiveMinContains = $schema->minContains ?? 1;
-
-        if ($matchCount < $effectiveMinContains) {
-            if (0 === $matchCount && 1 === $effectiveMinContains) {
-                throw new ContainsMatchError(
-                    dataPath: $dataPath,
-                    schemaPath: '/contains',
-                );
-            }
-
-            throw new MinContainsError(
-                minContains: $effectiveMinContains,
-                actualCount: $matchCount,
-                dataPath: $dataPath,
-                schemaPath: '/minContains',
-            );
-        }
-
-        if (null !== $schema->maxContains && $matchCount > $schema->maxContains) {
-            throw new MaxContainsError(
-                maxContains: $schema->maxContains,
-                minDetectedCount: $matchCount,
-                dataPath: $dataPath,
-                schemaPath: '/maxContains',
-            );
-        }
+        $this->enforceContainsBounds(count($data), $schema, $dataPath);
 
         $containsContext = $context ?? ValidationContext::create(pool: $this->pool());
 
@@ -95,29 +71,6 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
             /** @var int $index */
             $containsContext->markItemEvaluated($index);
         }
-    }
-
-    private function enforceBooleanFalseContains(Schema $schema, string $dataPath): void
-    {
-        $effectiveMinContains = $schema->minContains ?? 1;
-
-        if (0 === $effectiveMinContains) {
-            return;
-        }
-
-        if (1 === $effectiveMinContains) {
-            throw new ContainsMatchError(
-                dataPath: $dataPath,
-                schemaPath: '/contains',
-            );
-        }
-
-        throw new MinContainsError(
-            minContains: $effectiveMinContains,
-            actualCount: 0,
-            dataPath: $dataPath,
-            schemaPath: '/minContains',
-        );
     }
 
     /**
