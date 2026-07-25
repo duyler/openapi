@@ -30,7 +30,6 @@ final readonly class ArrayTypeHelper
             throw new TypeError('Expected array, got ' . TypeFormatter::format($value));
         }
 
-        /** @var list<mixed> $value */
         return array_values($value);
     }
 

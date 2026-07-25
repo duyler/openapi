@@ -66,6 +66,7 @@ use const PATHINFO_EXTENSION;
  * responsibility of RefResolver::$cache). It parses YAML and JSON payloads and
  * supports an optional JSON Pointer suffix (e.g. 'user.yaml#/UserSchema').
  */
+// §6 exemption: Tightly coupled with RefResolver via ExternalRefResolverInterface; decomposition requires interface refactor pending 2.0. See ADR .ai/reports/adr-schema-constructor.md for pattern.
 final readonly class FileExternalRefResolver implements ExternalRefResolverInterface
 {
     /**

@@ -167,7 +167,7 @@ final readonly class ValidatorCompiler
         $code = '';
 
         foreach ($properties as $propertyName => $propertySchema) {
-            $safePropertyName = var_export((string) $propertyName, true);
+            $safePropertyName = var_export($propertyName, true);
             $propertyVar = $dataVar . '[' . $safePropertyName . ']';
             $code .= sprintf("        if (isset(%s)) {\n", $propertyVar);
             $code .= $this->generateConstraintsForSchema($propertySchema, $propertyVar, $itemDepth);
