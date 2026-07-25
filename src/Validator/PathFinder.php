@@ -121,14 +121,14 @@ final readonly class PathFinder
     {
         $normalizedMethod = strtolower($method);
 
-        $op = $pathItem->getOperation($normalizedMethod);
+        $schemaOperation = $pathItem->getOperation($normalizedMethod);
 
-        if (null !== $op) {
+        if (null !== $schemaOperation) {
             return new Operation(
                 path: $pathPattern,
                 method: $method,
-                operationId: $op->operationId,
-                schemaOperation: $op,
+                operationId: $schemaOperation->operationId,
+                schemaOperation: $schemaOperation,
             );
         }
 

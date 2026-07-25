@@ -214,28 +214,36 @@ final readonly class CookieValidator extends AbstractParameterValidator
     {
         $this->enforcePairCountLimit($cookieHeader);
 
-        $count = 0;
         $pairs = explode(';', $cookieHeader);
+        $count = 0;
 
         foreach ($pairs as $pair) {
-            $pair = trim($pair);
-            if ('' === $pair) {
+            $pairName = $this->extractPairName($pair);
+            if (null === $pairName || $pairName !== $name) {
                 continue;
             }
 
-            $equalsPos = strpos($pair, '=');
-            if (false === $equalsPos) {
-                continue;
-            }
-
-            if (substr($pair, 0, $equalsPos) === $name) {
-                ++$count;
-                if ($count > 1) {
-                    return true;
-                }
+            ++$count;
+            if ($count > 1) {
+                return true;
             }
         }
 
         return false;
+    }
+
+    private function extractPairName(string $pair): ?string
+    {
+        $pair = trim($pair);
+        if ('' === $pair) {
+            return null;
+        }
+
+        $equalsPos = strpos($pair, '=');
+        if (false === $equalsPos) {
+            return null;
+        }
+
+        return substr($pair, 0, $equalsPos);
     }
 }

@@ -57,11 +57,11 @@ final readonly class ItemsValidatorWithContext
         $itemSchema = $schema->items;
         $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
         $allowNull = $context->nullableAsType && ($itemSchema->nullable
-            || SchemaValueNormalizer::typeIncludesNull($itemSchema->type)
+            || SchemaValueNormalizer::doesTypeIncludeNull($itemSchema->type)
             || null !== $itemSchema->ref);
         $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
 
-        foreach ($data as $index => $item) {
+        foreach ($data as $index => $arrayItem) {
             /** @var int $index */
             if ($index < $prefixCount) {
                 continue;
@@ -71,7 +71,7 @@ final readonly class ItemsValidatorWithContext
                 $context->enterBreadcrumbIndex($index);
 
                 try {
-                    $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
+                    $normalizedItem = SchemaValueNormalizer::normalize($arrayItem, $allowNull);
                     if ($useDiscriminator) {
                         $rootValidator->validateWithContext($normalizedItem, $itemSchema, $context);
                     } else {

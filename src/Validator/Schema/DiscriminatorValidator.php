@@ -157,12 +157,9 @@ final readonly class DiscriminatorValidator
                 }
             }
 
-            if (null !== $candidateSchema->oneOf || null !== $candidateSchema->anyOf || null !== $candidateSchema->allOf) {
-                try {
-                    return $this->findMatchingSchema($value, $discriminator, $candidateSchema, $document, $dataPath);
-                } catch (UnknownDiscriminatorValueException) {
-                    continue;
-                }
+            $nested = $this->tryNestedComposition($value, $discriminator, $candidateSchema, $document, $dataPath);
+            if (null !== $nested) {
+                return $nested;
             }
         }
 
@@ -175,6 +172,24 @@ final readonly class DiscriminatorValidator
             schema: $schema,
             dataPath: $dataPath,
         );
+    }
+
+    private function tryNestedComposition(
+        string $value,
+        Discriminator $discriminator,
+        Schema $candidateSchema,
+        OpenApiDocument $document,
+        string $dataPath,
+    ): ?Schema {
+        if (null === $candidateSchema->oneOf && null === $candidateSchema->anyOf && null === $candidateSchema->allOf) {
+            return null;
+        }
+
+        try {
+            return $this->findMatchingSchema($value, $discriminator, $candidateSchema, $document, $dataPath);
+        } catch (UnknownDiscriminatorValueException) {
+            return null;
+        }
     }
 
     private function extractSchemaName(string $ref): string

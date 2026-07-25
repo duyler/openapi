@@ -197,7 +197,7 @@ final class SchemaHelperTest extends TestCase
     {
         $type = 'string';
 
-        $result = SchemaValueNormalizer::typeIncludesNull($type);
+        $result = SchemaValueNormalizer::doesTypeIncludeNull($type);
 
         self::assertFalse($result);
     }
@@ -207,7 +207,7 @@ final class SchemaHelperTest extends TestCase
     {
         $type = null;
 
-        $result = SchemaValueNormalizer::typeIncludesNull($type);
+        $result = SchemaValueNormalizer::doesTypeIncludeNull($type);
 
         self::assertFalse($result);
     }
@@ -217,7 +217,7 @@ final class SchemaHelperTest extends TestCase
     {
         $type = ['string', 'integer'];
 
-        $result = SchemaValueNormalizer::typeIncludesNull($type);
+        $result = SchemaValueNormalizer::doesTypeIncludeNull($type);
 
         self::assertFalse($result);
     }
@@ -227,7 +227,7 @@ final class SchemaHelperTest extends TestCase
     {
         $type = ['string', 'null'];
 
-        $result = SchemaValueNormalizer::typeIncludesNull($type);
+        $result = SchemaValueNormalizer::doesTypeIncludeNull($type);
 
         self::assertTrue($result);
     }
@@ -237,7 +237,7 @@ final class SchemaHelperTest extends TestCase
     {
         $type = ['string', null];
 
-        $result = SchemaValueNormalizer::typeIncludesNull($type);
+        $result = SchemaValueNormalizer::doesTypeIncludeNull($type);
 
         self::assertTrue($result);
     }
@@ -247,7 +247,7 @@ final class SchemaHelperTest extends TestCase
     {
         $type = ['null'];
 
-        $result = SchemaValueNormalizer::typeIncludesNull($type);
+        $result = SchemaValueNormalizer::doesTypeIncludeNull($type);
 
         self::assertTrue($result);
     }

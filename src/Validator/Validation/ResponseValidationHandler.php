@@ -42,8 +42,8 @@ final readonly class ResponseValidationHandler
                     throw new BuilderException(sprintf('Path not found: %s', $operation->path));
                 }
 
-                $op = PathItemHelper::getOperation($pathItem, $operation->method);
-                if (null === $op) {
+                $schemaOperation = PathItemHelper::getOperation($pathItem, $operation->method);
+                if (null === $schemaOperation) {
                     throw new BuilderException(
                         sprintf('Method not found: %s %s', $operation->method, $operation->path),
                     );
@@ -51,7 +51,7 @@ final readonly class ResponseValidationHandler
 
                 $this->logger->info(sprintf('Validating response: %s %s', $operation->method, $operation->path));
 
-                $this->context->responseValidator->validate($response, $op);
+                $this->context->responseValidator->validate($response, $schemaOperation);
             },
             warningMessage: sprintf('Response validation failed: %s %s', $operation->method, $operation->path),
         );

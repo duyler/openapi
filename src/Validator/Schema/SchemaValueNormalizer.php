@@ -53,7 +53,7 @@ final readonly class SchemaValueNormalizer
     /**
      * @param string|array<int, string|null>|null $type
      */
-    public static function typeIncludesNull(string|array|null $type): bool
+    public static function doesTypeIncludeNull(string|array|null $type): bool
     {
         if (false === is_array($type)) {
             return false;

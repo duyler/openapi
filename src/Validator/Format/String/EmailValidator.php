@@ -60,17 +60,17 @@ final readonly class EmailValidator extends AbstractStringFormatValidator
             throw new InvalidFormatException('email', $data, sprintf('Email exceeds RFC 5321 max length (%d)', self::MAX_EMAIL));
         }
 
-        if (1 !== $this->pregExecutor->match(self::EMAIL_PATTERN, $data, $m)) {
+        if (1 !== $this->pregExecutor->match(self::EMAIL_PATTERN, $data, $match)) {
             throw new InvalidFormatException('email', $data, 'Invalid email format');
         }
 
-        $this->dispatchByMatch($m, $data);
+        $this->dispatchByMatch($match, $data);
     }
 
-    /** @param array<array-key, mixed> $m */
-    private function dispatchByMatch(array $m, string $data): void
+    /** @param array<array-key, mixed> $match */
+    private function dispatchByMatch(array $match, string $data): void
     {
-        $ipLiteral = (string) ($m['ipLiteral'] ?? '');
+        $ipLiteral = (string) ($match['ipLiteral'] ?? '');
 
         if ('' !== $ipLiteral) {
             $this->validateIpLiteral($ipLiteral, $data);
@@ -78,23 +78,23 @@ final readonly class EmailValidator extends AbstractStringFormatValidator
             return;
         }
 
-        $unicodeDomain = (string) ($m['unicodeDomain'] ?? '');
+        $unicodeDomain = (string) ($match['unicodeDomain'] ?? '');
 
         if ('' !== $unicodeDomain) {
-            $this->validateSmtpUtf8((string) $m['local'], $unicodeDomain, $data);
+            $this->validateSmtpUtf8((string) $match['local'], $unicodeDomain, $data);
 
             return;
         }
 
-        $unicodeLocal = (string) ($m['unicodeLocal'] ?? '');
+        $unicodeLocal = (string) ($match['unicodeLocal'] ?? '');
 
         if ('' !== $unicodeLocal) {
-            $this->validateSmtpUtf8($unicodeLocal, (string) ($m['dns'] ?? ''), $data);
+            $this->validateSmtpUtf8($unicodeLocal, (string) ($match['dns'] ?? ''), $data);
 
             return;
         }
 
-        $quoted = (string) ($m['quoted'] ?? '');
+        $quoted = (string) ($match['quoted'] ?? '');
 
         if ('' === $quoted && false === filter_var($data, FILTER_VALIDATE_EMAIL)) {
             throw new InvalidFormatException('email', $data, 'Invalid email format');

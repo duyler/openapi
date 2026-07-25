@@ -247,7 +247,7 @@
   </file>
   <file src="src/Validator/Schema/ItemsValidatorWithContext.php">
     <MixedAssignment>
-      <code><![CDATA[$item]]></code>
+      <code><![CDATA[$arrayItem]]></code>
     </MixedAssignment>
   </file>
   <file src="src/Validator/SchemaValidator/ContainsValidator.php">

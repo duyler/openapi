@@ -99,10 +99,10 @@ final readonly class JsonSeqParser implements StreamingFormatParser
         /** @var list<array<int|string, mixed>|null> $items */
         $items = [];
         $buffer = '';
-        $bomStripped = false;
+        $isBomStripped = false;
         $recordCount = 0;
 
-        while (null !== ($chunk = $this->readChunk($stream, $bomStripped))) {
+        while (null !== ($chunk = $this->readChunk($stream, $isBomStripped))) {
             $buffer .= $chunk;
             $this->enforceRecordLength($buffer);
             [$buffer, $items, $recordCount] = $this->consumeCompleteRecords($buffer, $items, $recordCount);
@@ -117,9 +117,9 @@ final readonly class JsonSeqParser implements StreamingFormatParser
      * Reads the next non-empty stream chunk and strips UTF-8 BOM once on the
      * first successful read. Returns null when the stream is exhausted.
      *
-     * @param-out bool $bomStripped
+     * @param-out bool $isBomStripped
      */
-    private function readChunk(StreamInterface $stream, bool &$bomStripped): ?string
+    private function readChunk(StreamInterface $stream, bool &$isBomStripped): ?string
     {
         if ($stream->eof()) {
             return null;
@@ -131,9 +131,9 @@ final readonly class JsonSeqParser implements StreamingFormatParser
             return null;
         }
 
-        if (false === $bomStripped) {
+        if (false === $isBomStripped) {
             $chunk = StreamLineReader::stripBom($chunk);
-            $bomStripped = true;
+            $isBomStripped = true;
         }
 
         return $chunk;

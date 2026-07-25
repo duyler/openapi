@@ -52,7 +52,7 @@ final readonly class PropertiesValidator extends AbstractSchemaValidator impleme
     {
         try {
             $allowNull = $nullableAsType && ($propertySchema->nullable
-                || SchemaValueNormalizer::typeIncludesNull($propertySchema->type));
+                || SchemaValueNormalizer::doesTypeIncludeNull($propertySchema->type));
             $normalized = SchemaValueNormalizer::normalize($value, $allowNull);
 
             if (null === $context) {

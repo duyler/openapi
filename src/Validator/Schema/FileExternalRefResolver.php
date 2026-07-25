@@ -143,8 +143,8 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
 
         $contents = $this->readFileWithLimit($absolutePath);
 
-        $data = $this->parseContents($contents, $absolutePath);
-        $target = $this->navigatePointer($data, $pointer, $absolutePath);
+        $fileData = $this->parseContents($contents, $absolutePath);
+        $target = $this->navigatePointer($fileData, $pointer, $absolutePath);
 
         if (false === is_array($target)) {
             $this->logger->debug('External ref target is not a schema object', [
@@ -327,13 +327,13 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
     {
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
-        $data = match ($extension) {
+        $fileData = match ($extension) {
             'json' => json_decode($contents, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR),
             'yaml', 'yml' => Yaml::parse($contents, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE),
             default => throw new RuntimeException(sprintf('Unsupported file extension: %s', $extension)),
         };
 
-        if (false === is_array($data)) {
+        if (false === is_array($fileData)) {
             $this->logger->debug('External ref file does not contain a mapping', [
                 'path' => $filePath,
             ]);
@@ -341,22 +341,22 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
             throw new RuntimeException('External ref file does not contain a mapping');
         }
 
-        return $data;
+        return $fileData;
     }
 
     /**
-     * @param array<array-key, mixed> $data
+     * @param array<array-key, mixed> $fileData
      *
      * @return mixed
      */
-    private function navigatePointer(array $data, string $pointer, string $absolutePath): mixed
+    private function navigatePointer(array $fileData, string $pointer, string $absolutePath): mixed
     {
         if ('' === $pointer) {
-            return $data;
+            return $fileData;
         }
 
         /** @var mixed $current */
-        $current = $data;
+        $current = $fileData;
         $segments = explode('/', $pointer);
 
         foreach ($segments as $segment) {

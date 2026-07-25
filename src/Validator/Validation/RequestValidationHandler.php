@@ -64,8 +64,8 @@ final readonly class RequestValidationHandler
     {
         $operation = $this->pathFinder->findOperation($matchedPath, $method);
 
-        $op = $operation->schemaOperation;
-        if (null === $op) {
+        $schemaOperation = $operation->schemaOperation;
+        if (null === $schemaOperation) {
             throw new BuilderException(
                 sprintf('Operation schema unavailable: %s %s', $method, $operation->path),
             );
@@ -75,18 +75,18 @@ final readonly class RequestValidationHandler
 
         $validatedRequest = $this->createValidatedRequest($request, $requestPath, $matchedPath);
 
-        $this->context->requestValidator->validate($validatedRequest, $op, $operation->path);
+        $this->context->requestValidator->validate($validatedRequest, $schemaOperation, $operation->path);
 
         if ($this->securityValidation) {
-            $this->runSecurityValidation($request, $op, $operation);
+            $this->runSecurityValidation($request, $schemaOperation, $operation);
         }
 
         return $operation;
     }
 
-    private function runSecurityValidation(ServerRequestInterface $request, \Duyler\OpenApi\Schema\Model\Operation $op, Operation $operation): void
+    private function runSecurityValidation(ServerRequestInterface $request, \Duyler\OpenApi\Schema\Model\Operation $schemaOperation, Operation $operation): void
     {
-        $securityRequirements = $op->security ?? $this->context->document->security;
+        $securityRequirements = $schemaOperation->security ?? $this->context->document->security;
 
         if (null === $securityRequirements) {
             return;

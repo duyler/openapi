@@ -70,9 +70,9 @@ final class SchemaValidatorDependencies
             return $cached;
         }
 
-        $new = new SchemaValidatorWithContext($document, $this, $configuration);
-        $this->rootSchemaValidators[$document] = $new;
+        $validator = new SchemaValidatorWithContext($document, $this, $configuration);
+        $this->rootSchemaValidators[$document] = $validator;
 
-        return $new;
+        return $validator;
     }
 }

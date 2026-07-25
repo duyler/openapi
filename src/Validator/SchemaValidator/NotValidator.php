@@ -51,7 +51,7 @@ final readonly class NotValidator extends AbstractSchemaValidator implements Key
 
         try {
             $allowNull = $nullableAsType && ($notSchema->nullable
-                || SchemaValueNormalizer::typeIncludesNull($notSchema->type));
+                || SchemaValueNormalizer::doesTypeIncludeNull($notSchema->type));
             $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
             $validator->validate($normalizedData, $notSchema, $childContext);
         } catch (InvalidDataTypeException|ValidationException|AbstractValidationError) {
