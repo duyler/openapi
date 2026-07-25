@@ -8,7 +8,6 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Override;
 
-use function assert;
 use function is_array;
 use function is_string;
 
@@ -31,12 +30,24 @@ final readonly class PatternPropertiesValidator extends AbstractSchemaValidator 
             return;
         }
 
-        $regexValidator = $this->regexValidator();
+        /** @var array<string, Schema> $patternProperties */
+        $patternProperties = $schema->patternProperties;
+        $normalizedPatterns = $this->normalizePatterns($patternProperties);
+        $this->applyPatterns($data, $patternProperties, $normalizedPatterns, $context);
+    }
 
+    /**
+     * @param array<string, Schema> $patternProperties
+     *
+     * @return array<string, string>
+     */
+    private function normalizePatterns(array $patternProperties): array
+    {
+        $regexValidator = $this->regexValidator();
         /** @var array<string, string> $normalizedPatterns */
         $normalizedPatterns = [];
 
-        foreach ($schema->patternProperties as $pattern => $propertySchema) {
+        foreach ($patternProperties as $pattern => $propertySchema) {
             if ('' === $pattern) {
                 continue;
             }
@@ -47,8 +58,19 @@ final readonly class PatternPropertiesValidator extends AbstractSchemaValidator 
             $regexValidator->validate($normalized, "pattern property '{$pattern}'");
         }
 
+        return $normalizedPatterns;
+    }
+
+    /**
+     * @param array<array-key, mixed>           $data
+     * @param array<string, Schema>             $patternProperties
+     * @param array<string, string>             $normalizedPatterns
+     */
+    private function applyPatterns(array $data, array $patternProperties, array $normalizedPatterns, ?ValidationContext $context): void
+    {
         $validator = $this->createSchemaValidator();
         $nullableAsType = $context?->nullableAsType ?? true;
+        $pregExecutor = $this->pregExecutor();
 
         /** @var array<string, mixed> $data */
         foreach ($data as $propertyName => $propertyValue) {
@@ -57,24 +79,28 @@ final readonly class PatternPropertiesValidator extends AbstractSchemaValidator 
             }
 
             foreach ($normalizedPatterns as $pattern => $normalizedPattern) {
-                assert('' !== $normalizedPattern);
+                if ('' === $normalizedPattern) {
+                    continue;
+                }
 
-                if (1 === $this->pregExecutor()->match($normalizedPattern, $propertyName)) {
-                    $propertySchema = $schema->patternProperties[$pattern];
+                if (1 !== $pregExecutor->match($normalizedPattern, $propertyName)) {
+                    continue;
+                }
+
+                $propertySchema = $patternProperties[$pattern];
+
+                if (null === $context) {
+                    $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
+                }
+
+                $context->enterBreadcrumb($propertyName);
+
+                try {
                     /** @var array-key|array<array-key, mixed> $propertyValue */
-
-                    if (null === $context) {
-                        $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
-                    }
-
-                    $context->enterBreadcrumb($propertyName);
-
-                    try {
-                        $validator->validate($propertyValue, $propertySchema, $context);
-                        $context->markPropertyEvaluated($propertyName);
-                    } finally {
-                        $context->leaveBreadcrumb();
-                    }
+                    $validator->validate($propertyValue, $propertySchema, $context);
+                    $context->markPropertyEvaluated($propertyName);
+                } finally {
+                    $context->leaveBreadcrumb();
                 }
             }
         }

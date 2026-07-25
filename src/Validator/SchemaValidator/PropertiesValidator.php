@@ -37,52 +37,56 @@ final readonly class PropertiesValidator extends AbstractSchemaValidator impleme
         }
 
         $validator = $this->createSchemaValidator();
+        $nullableAsType = $context?->nullableAsType ?? true;
 
         foreach ($schema->properties as $name => $propertySchema) {
             if (false === array_key_exists($name, $data)) {
                 continue;
             }
 
-            $nullableAsType = $context?->nullableAsType ?? true;
+            $this->validateProperty($data[$name], $name, $propertySchema, $validator, $nullableAsType, $context);
+        }
+    }
+
+    private function validateProperty(mixed $value, string $name, Schema $propertySchema, SchemaValidatorInterface $validator, bool $nullableAsType, ?ValidationContext &$context): void
+    {
+        try {
+            $allowNull = $nullableAsType && ($propertySchema->nullable
+                || SchemaValueNormalizer::typeIncludesNull($propertySchema->type));
+            $normalized = SchemaValueNormalizer::normalize($value, $allowNull);
+
+            if (null === $context) {
+                $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
+            }
+
+            $context->enterBreadcrumb($name);
 
             try {
-                $allowNull = $nullableAsType && ($propertySchema->nullable
-                    || SchemaValueNormalizer::typeIncludesNull($propertySchema->type));
-                $value = SchemaValueNormalizer::normalize($data[$name], $allowNull);
-
-                if (null === $context) {
-                    $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
-                }
-
-                $context->enterBreadcrumb($name);
-
-                try {
-                    $validator->validate($value, $propertySchema, $context);
-                    $context->markPropertyEvaluated($name);
-                } finally {
-                    $context->leaveBreadcrumb();
-                }
-            } catch (InvalidDataTypeException $e) {
-                throw new ValidationException(
-                    sprintf('Property "%s" has invalid data type: %s', $name, $e->getMessage()),
-                    previous: $e,
-                    errors: [$e],
-                );
-            } catch (ValidationException $e) {
-                throw new ValidationException(
-                    sprintf('Property "%s" validation failed', $name),
-                    previous: $e,
-                    errors: $e->getErrors(),
-                );
-            } catch (InvalidFormatException $e) {
-                throw $e;
-            } catch (AbstractValidationError $e) {
-                throw new ValidationException(
-                    sprintf('Property "%s" validation failed', $name),
-                    previous: $e,
-                    errors: [$e],
-                );
+                $validator->validate($normalized, $propertySchema, $context);
+                $context->markPropertyEvaluated($name);
+            } finally {
+                $context->leaveBreadcrumb();
             }
+        } catch (InvalidDataTypeException $e) {
+            throw new ValidationException(
+                sprintf('Property "%s" has invalid data type: %s', $name, $e->getMessage()),
+                previous: $e,
+                errors: [$e],
+            );
+        } catch (ValidationException $e) {
+            throw new ValidationException(
+                sprintf('Property "%s" validation failed', $name),
+                previous: $e,
+                errors: $e->getErrors(),
+            );
+        } catch (InvalidFormatException $e) {
+            throw $e;
+        } catch (AbstractValidationError $e) {
+            throw new ValidationException(
+                sprintf('Property "%s" validation failed', $name),
+                previous: $e,
+                errors: [$e],
+            );
         }
     }
 }

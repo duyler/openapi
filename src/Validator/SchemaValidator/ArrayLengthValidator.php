@@ -189,6 +189,15 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
     {
         $this->ensureJsonCompatible($item);
 
+        if (is_array($item)) {
+            return 'a:' . $this->encodeArrayKey($item);
+        }
+
+        return $this->scalarKey($item);
+    }
+
+    private function scalarKey(mixed $item): string
+    {
         if (is_float($item) && is_nan($item)) {
             return 'n:nan:' . bin2hex(random_bytes(self::CACHE_KEY_ENTROPY_BYTES));
         }
@@ -215,10 +224,6 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
 
         if (is_string($item)) {
             return 's:' . $item;
-        }
-
-        if (is_array($item)) {
-            return 'a:' . $this->encodeArrayKey($item);
         }
 
         return serialize($item);

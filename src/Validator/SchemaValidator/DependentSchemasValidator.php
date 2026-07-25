@@ -39,62 +39,70 @@ final readonly class DependentSchemasValidator extends AbstractSchemaValidator i
             return;
         }
 
-        $nullableAsType = $context?->nullableAsType ?? true;
-
         foreach ($schema->dependentSchemas as $propertyName => $dependentSchema) {
-            if (array_key_exists($propertyName, $data)) {
-                try {
-                    $allowNull = $nullableAsType && ($dependentSchema->nullable
-                        || SchemaValueNormalizer::typeIncludesNull($dependentSchema->type));
-                    $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
-                    $validator = $this->createSchemaValidator();
-                    $validator->validate($normalizedData, $dependentSchema, $context);
-                } catch (InvalidDataTypeException $e) {
-                    $dataPath = $this->getDataPath($context);
-
-                    throw new ValidationException(
-                        sprintf('Dependent schema for property "%s" has invalid data type: %s', $propertyName, $e->getMessage()),
-                        previous: $e,
-                        errors: [
-                            new TypeMismatchError(
-                                expected: $this->formatSchemaType($dependentSchema->type, 'object'),
-                                actual: TypeFormatter::format($data),
-                                dataPath: $dataPath,
-                                schemaPath: '/dependentSchemas/' . $propertyName,
-                            ),
-                        ],
-                    );
-                } catch (InvalidFormatException $e) {
-                    throw $e;
-                } catch (AbstractValidationError $e) {
-                    $dataPath = $this->getDataPath($context);
-
-                    throw new ValidationException(
-                        sprintf('Dependent schema for property "%s" validation failed: %s', $propertyName, $e->getMessage()),
-                        previous: $e,
-                        errors: [$e],
-                    );
-                } catch (ValidationException $e) {
-                    $dataPath = $this->getDataPath($context);
-                    $errors = $e->getErrors();
-
-                    if ([] === $errors) {
-                        $errors = [
-                            new NestedValidationError(
-                                dataPath: $dataPath,
-                                schemaPath: '/dependentSchemas/' . $propertyName,
-                                message: $e->getMessage(),
-                            ),
-                        ];
-                    }
-
-                    throw new ValidationException(
-                        sprintf('Dependent schema for property "%s" validation failed', $propertyName),
-                        previous: $e,
-                        errors: $errors,
-                    );
-                }
+            if (false === array_key_exists($propertyName, $data)) {
+                continue;
             }
+
+            $this->validateDependent($data, $propertyName, $dependentSchema, $context);
+        }
+    }
+
+    /**
+     * @param array<array-key, mixed> $data
+     */
+    private function validateDependent(array $data, string $propertyName, Schema $dependentSchema, ?ValidationContext $context): void
+    {
+        $nullableAsType = $context?->nullableAsType ?? true;
+        $validator = $this->createSchemaValidator();
+
+        try {
+            $allowNull = $nullableAsType && ($dependentSchema->nullable
+                || SchemaValueNormalizer::typeIncludesNull($dependentSchema->type));
+            $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
+            $validator->validate($normalizedData, $dependentSchema, $context);
+        } catch (InvalidDataTypeException $e) {
+            $dataPath = $this->getDataPath($context);
+
+            throw new ValidationException(
+                sprintf('Dependent schema for property "%s" has invalid data type: %s', $propertyName, $e->getMessage()),
+                previous: $e,
+                errors: [
+                    new TypeMismatchError(
+                        expected: $this->formatSchemaType($dependentSchema->type, 'object'),
+                        actual: TypeFormatter::format($data),
+                        dataPath: $dataPath,
+                        schemaPath: '/dependentSchemas/' . $propertyName,
+                    ),
+                ],
+            );
+        } catch (InvalidFormatException $e) {
+            throw $e;
+        } catch (AbstractValidationError $e) {
+            throw new ValidationException(
+                sprintf('Dependent schema for property "%s" validation failed: %s', $propertyName, $e->getMessage()),
+                previous: $e,
+                errors: [$e],
+            );
+        } catch (ValidationException $e) {
+            $dataPath = $this->getDataPath($context);
+            $errors = $e->getErrors();
+
+            if ([] === $errors) {
+                $errors = [
+                    new NestedValidationError(
+                        dataPath: $dataPath,
+                        schemaPath: '/dependentSchemas/' . $propertyName,
+                        message: $e->getMessage(),
+                    ),
+                ];
+            }
+
+            throw new ValidationException(
+                sprintf('Dependent schema for property "%s" validation failed', $propertyName),
+                previous: $e,
+                errors: $errors,
+            );
         }
     }
 }

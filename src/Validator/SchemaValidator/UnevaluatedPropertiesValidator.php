@@ -9,10 +9,15 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
 use Override;
 
+use function array_diff;
 use function array_filter;
+use function array_keys;
+use function array_unique;
+use function array_values;
 use function assert;
 use function is_array;
 use function is_string;
+use function is_bool;
 
 final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
@@ -39,25 +44,7 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
         $stringUnevaluatedProperties = array_filter($unevaluatedProperties, is_string(...));
 
         if ($schema->unevaluatedProperties instanceof Schema) {
-            $validator = $this->createSchemaValidator();
-            $nullableAsType = $context?->nullableAsType ?? true;
-
-            foreach ($stringUnevaluatedProperties as $propertyName) {
-                /** @var array-key|array<array-key, mixed> $value */
-                $value = $data[$propertyName];
-
-                if (null === $context) {
-                    $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
-                }
-
-                $context->enterBreadcrumb($propertyName);
-
-                try {
-                    $validator->validate($value, $schema->unevaluatedProperties, $context);
-                } finally {
-                    $context->leaveBreadcrumb();
-                }
-            }
+            $this->validateUnevaluatedProperties($data, $schema->unevaluatedProperties, $stringUnevaluatedProperties, $context);
 
             return;
         }
@@ -67,13 +54,39 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
         }
 
         if ([] !== $stringUnevaluatedProperties) {
-            $dataPath = $this->getDataPath($context);
             $propertyName = array_values($stringUnevaluatedProperties)[0];
             throw new UnevaluatedPropertyError(
-                dataPath: $dataPath,
+                dataPath: $this->getDataPath($context),
                 schemaPath: '/unevaluatedProperties',
                 propertyName: $propertyName,
             );
+        }
+    }
+
+    /**
+     * @param array<array-key, mixed>           $data
+     * @param array<array-key, string>          $stringUnevaluatedProperties
+     */
+    private function validateUnevaluatedProperties(array $data, Schema $unevaluatedProperties, array $stringUnevaluatedProperties, ?ValidationContext $context): void
+    {
+        $validator = $this->createSchemaValidator();
+        $nullableAsType = $context?->nullableAsType ?? true;
+
+        foreach ($stringUnevaluatedProperties as $propertyName) {
+            /** @var array-key|array<array-key, mixed> $value */
+            $value = $data[$propertyName];
+
+            if (null === $context) {
+                $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
+            }
+
+            $context->enterBreadcrumb($propertyName);
+
+            try {
+                $validator->validate($value, $unevaluatedProperties, $context);
+            } finally {
+                $context->leaveBreadcrumb();
+            }
         }
     }
 
@@ -84,7 +97,7 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
      */
     private function getEvaluatedProperties(Schema $schema, array $data, ?ValidationContext $context): array
     {
-        if (true === $schema->additionalProperties || $schema->additionalProperties instanceof Schema) {
+        if ((is_bool($schema->additionalProperties) && $schema->additionalProperties) || $schema->additionalProperties instanceof Schema) {
             /** @var list<string> $keys */
             $keys = array_keys($data);
 
@@ -102,23 +115,7 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
         }
 
         if (null !== $schema->patternProperties && [] !== $schema->patternProperties) {
-            foreach (array_keys($data) as $propertyName) {
-                if (false === is_string($propertyName)) {
-                    continue;
-                }
-
-                foreach (array_keys($schema->patternProperties) as $pattern) {
-                    if ('' === $pattern) {
-                        continue;
-                    }
-
-                    $normalizedPattern = $this->regexValidator()->normalize($pattern);
-                    assert('' !== $normalizedPattern);
-                    if (1 === $this->pregExecutor()->match($normalizedPattern, $propertyName)) {
-                        $evaluated[] = $propertyName;
-                    }
-                }
-            }
+            $this->collectPatternMatched($schema, $data, $evaluated);
         }
 
         if (null !== $context) {
@@ -131,5 +128,38 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
         $unique = array_values(array_unique($evaluated));
 
         return $unique;
+    }
+
+    /**
+     * @param array<array-key, mixed> $data
+     * @param list<string>            $evaluated
+     */
+    private function collectPatternMatched(Schema $schema, array $data, array &$evaluated): void
+    {
+        $patternProperties = $schema->patternProperties ?? [];
+        if ([] === $patternProperties) {
+            return;
+        }
+
+        $regexValidator = $this->regexValidator();
+        $pregExecutor = $this->pregExecutor();
+
+        foreach (array_keys($data) as $propertyName) {
+            if (false === is_string($propertyName)) {
+                continue;
+            }
+
+            foreach (array_keys($patternProperties) as $pattern) {
+                if ('' === $pattern) {
+                    continue;
+                }
+
+                $normalizedPattern = $regexValidator->normalize($pattern);
+                assert('' !== $normalizedPattern);
+                if (1 === $pregExecutor->match($normalizedPattern, $propertyName)) {
+                    $evaluated[] = $propertyName;
+                }
+            }
+        }
     }
 }

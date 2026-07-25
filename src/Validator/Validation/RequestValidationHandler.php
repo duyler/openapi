@@ -54,41 +54,53 @@ final readonly class RequestValidationHandler
             path: $requestPath,
             method: $method,
             callback: function () use ($request, $requestPath, $matchedPath, $method): Operation {
-                $operation = $this->pathFinder->findOperation($matchedPath, $method);
-
-                $op = $operation->schemaOperation;
-                if (null === $op) {
-                    throw new BuilderException(
-                        sprintf('Operation schema unavailable: %s %s', $method, $operation->path),
-                    );
-                }
-
-                $this->logger->info(sprintf('Validating request: %s %s', $method, $requestPath));
-
-                $validatedRequest = $this->createValidatedRequest($request, $requestPath, $matchedPath);
-
-                $this->context->requestValidator->validate($validatedRequest, $op, $operation->path);
-
-                if ($this->securityValidation) {
-                    $securityRequirements = $op->security ?? $this->context->document->security;
-
-                    if (null !== $securityRequirements) {
-                        $securitySchemes = $this->context->document->components?->securitySchemes ?? [];
-                        $securityContext = new SecurityValidationContext(
-                            request: $request,
-                            path: $operation->path,
-                            method: $operation->method,
-                            securityRequirements: $securityRequirements,
-                            securitySchemes: $securitySchemes,
-                        );
-                        $this->securityValidator->validate($securityContext);
-                    }
-                }
-
-                return $operation;
+                return $this->performValidation($request, $requestPath, $matchedPath, $method);
             },
             warningMessage: sprintf('Request validation failed: %s %s', $method, $requestPath),
         );
+    }
+
+    private function performValidation(ServerRequestInterface $request, string $requestPath, string $matchedPath, string $method): Operation
+    {
+        $operation = $this->pathFinder->findOperation($matchedPath, $method);
+
+        $op = $operation->schemaOperation;
+        if (null === $op) {
+            throw new BuilderException(
+                sprintf('Operation schema unavailable: %s %s', $method, $operation->path),
+            );
+        }
+
+        $this->logger->info(sprintf('Validating request: %s %s', $method, $requestPath));
+
+        $validatedRequest = $this->createValidatedRequest($request, $requestPath, $matchedPath);
+
+        $this->context->requestValidator->validate($validatedRequest, $op, $operation->path);
+
+        if ($this->securityValidation) {
+            $this->runSecurityValidation($request, $op, $operation);
+        }
+
+        return $operation;
+    }
+
+    private function runSecurityValidation(ServerRequestInterface $request, \Duyler\OpenApi\Schema\Model\Operation $op, Operation $operation): void
+    {
+        $securityRequirements = $op->security ?? $this->context->document->security;
+
+        if (null === $securityRequirements) {
+            return;
+        }
+
+        $securitySchemes = $this->context->document->components?->securitySchemes ?? [];
+        $securityContext = new SecurityValidationContext(
+            request: $request,
+            path: $operation->path,
+            method: $operation->method,
+            securityRequirements: $securityRequirements,
+            securitySchemes: $securitySchemes,
+        );
+        $this->securityValidator->validate($securityContext);
     }
 
     private function resolveMatchedPath(string $requestPath): string

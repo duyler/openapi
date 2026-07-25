@@ -12,17 +12,20 @@ use ReflectionMethod;
 use ReflectionNamedType;
 
 use ReflectionClass;
+use Duyler\OpenApi\Validator\Internal\TrieLookup;
 
 use function sprintf;
 
 /**
  * @internal
  *
- * Anti-test for P-043: asserts that PathFinder::lookupTrie uses a
+ * Anti-test for P-043: asserts that TrieLookup::lookupTrie uses a
  * by-reference accumulator (return type void, fourth parameter is
- * passed by reference) and that PathFinder exposes a MAX_TRIE_DEPTH
- * constant. Reverting lookupTrie to the spread-merge form (returns
- * array, no by-reference parameter) breaks the reflection assertion.
+ * passed by reference) and that TrieLookup exposes a MAX_TRIE_DEPTH
+ * constant. Task 17 moved lookupTrie from PathFinder to TrieLookup;
+ * the contract is preserved. Reverting lookupTrie to the spread-merge
+ * form (returns array, no by-reference parameter) breaks the
+ * reflection assertion.
  */
 final class PathFinderAccumulatorTest extends TestCase
 {
@@ -59,7 +62,8 @@ YAML;
 
         $finder = new PathFinder($document);
 
-        $lookupTrie = new ReflectionMethod($finder, 'lookupTrie');
+        $trieLookup = new TrieLookup();
+        $lookupTrie = new ReflectionMethod($trieLookup, 'lookupTrie');
 
         self::assertSame(
             'void',
@@ -105,8 +109,8 @@ YAML;
         $finder = new PathFinder($document);
 
         self::assertTrue(
-            new ReflectionClass($finder)->hasConstant('MAX_TRIE_DEPTH'),
-            'PathFinder must define a MAX_TRIE_DEPTH guard constant (P-043)',
+            new ReflectionClass(TrieLookup::class)->hasConstant('MAX_TRIE_DEPTH'),
+            'TrieLookup must define a MAX_TRIE_DEPTH guard constant (P-043)',
         );
     }
 

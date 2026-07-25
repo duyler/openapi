@@ -13,6 +13,7 @@ use Duyler\OpenApi\Validator\Exception\NestedValidationError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
+use Duyler\OpenApi\Validator\SchemaValidator\Internal\ItemValidationState;
 use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
@@ -46,78 +47,99 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
             return;
         }
 
-        $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
-        $validator = $this->createSchemaValidator();
+        /** @var Schema $itemsSchema */
+        $itemsSchema = $schema->items;
+        $this->validateSchemaItems($data, $itemsSchema, $schema->prefixItems, $context);
+    }
+
+    /**
+     * @param array<int, mixed>             $data
+     * @param list<Schema>|null             $prefixItems
+     */
+    private function validateSchemaItems(array $data, Schema $itemsSchema, ?array $prefixItems, ?ValidationContext $context): void
+    {
+        $prefixCount = null !== $prefixItems ? count($prefixItems) : 0;
         $nullableAsType = $context?->nullableAsType ?? true;
-        $allowNull = $nullableAsType && ($schema->items->nullable
-            || SchemaValueNormalizer::typeIncludesNull($schema->items->type));
+        $allowNull = $nullableAsType && ($itemsSchema->nullable
+            || SchemaValueNormalizer::typeIncludesNull($itemsSchema->type));
+
+        $state = new ItemValidationState(
+            itemsSchema: $itemsSchema,
+            validator: $this->createSchemaValidator(),
+            allowNull: $allowNull,
+            nullableAsType: $nullableAsType,
+            context: $context,
+        );
 
         foreach ($data as $index => $item) {
             if ($index < $prefixCount) {
                 continue;
             }
 
-            try {
-                $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
+            /** @var int $index */
+            $this->validateOneItem($item, $index, $state);
+        }
+    }
 
-                if (null === $context) {
-                    $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
-                }
+    private function validateOneItem(mixed $item, int $index, ItemValidationState $state): void
+    {
+        try {
+            $normalizedItem = SchemaValueNormalizer::normalize($item, $state->allowNull);
 
-                $context->enterBreadcrumbIndex($index);
-
-                try {
-                    $validator->validate($normalizedItem, $schema->items, $context);
-                    /** @var int $index */
-                    $context->markItemEvaluated($index);
-                } finally {
-                    $context->leaveBreadcrumb();
-                }
-            } catch (InvalidDataTypeException $e) {
-                $dataPath = $this->getDataPath($context);
-
-                throw new ValidationException(
-                    sprintf('Item at index %d has invalid data type: %s', $index, $e->getMessage()),
-                    previous: $e,
-                    errors: [
-                        new TypeMismatchError(
-                            expected: $this->formatSchemaType($schema->items->type),
-                            actual: TypeFormatter::format($item),
-                            dataPath: $dataPath . '[' . $index . ']',
-                            schemaPath: '/items',
-                        ),
-                    ],
-                );
-            } catch (InvalidFormatException $e) {
-                throw $e;
-            } catch (AbstractValidationError $e) {
-                $dataPath = $this->getDataPath($context);
-
-                throw new ValidationException(
-                    sprintf('Item at index %d validation failed: %s', $index, $e->getMessage()),
-                    previous: $e,
-                    errors: [$e],
-                );
-            } catch (ValidationException $e) {
-                $dataPath = $this->getDataPath($context);
-                $errors = $e->getErrors();
-
-                if ([] === $errors) {
-                    $errors = [
-                        new NestedValidationError(
-                            dataPath: $dataPath . '[' . $index . ']',
-                            schemaPath: '/items',
-                            message: $e->getMessage(),
-                        ),
-                    ];
-                }
-
-                throw new ValidationException(
-                    sprintf('Item at index %d validation failed', $index),
-                    previous: $e,
-                    errors: $errors,
-                );
+            if (null === $state->context) {
+                $state->context = ValidationContext::create(pool: $this->pool(), nullableAsType: $state->nullableAsType);
             }
+
+            $state->context->enterBreadcrumbIndex($index);
+
+            try {
+                $state->validator->validate($normalizedItem, $state->itemsSchema, $state->context);
+                $state->context->markItemEvaluated($index);
+            } finally {
+                $state->context->leaveBreadcrumb();
+            }
+        } catch (InvalidDataTypeException $e) {
+            $dataPath = $this->getDataPath($state->context);
+
+            throw new ValidationException(
+                sprintf('Item at index %d has invalid data type: %s', $index, $e->getMessage()),
+                previous: $e,
+                errors: [
+                    new TypeMismatchError(
+                        expected: $this->formatSchemaType($state->itemsSchema->type),
+                        actual: TypeFormatter::format($item),
+                        dataPath: $dataPath . '[' . $index . ']',
+                        schemaPath: '/items',
+                    ),
+                ],
+            );
+        } catch (InvalidFormatException $e) {
+            throw $e;
+        } catch (AbstractValidationError $e) {
+            throw new ValidationException(
+                sprintf('Item at index %d validation failed: %s', $index, $e->getMessage()),
+                previous: $e,
+                errors: [$e],
+            );
+        } catch (ValidationException $e) {
+            $dataPath = $this->getDataPath($state->context);
+            $errors = $e->getErrors();
+
+            if ([] === $errors) {
+                $errors = [
+                    new NestedValidationError(
+                        dataPath: $dataPath . '[' . $index . ']',
+                        schemaPath: '/items',
+                        message: $e->getMessage(),
+                    ),
+                ];
+            }
+
+            throw new ValidationException(
+                sprintf('Item at index %d validation failed', $index),
+                previous: $e,
+                errors: $errors,
+            );
         }
     }
 

@@ -4,35 +4,21 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Compiler;
 
-use Duyler\OpenApi\Compiler\Exception\CompilationCacheException;
+use Duyler\OpenApi\Compiler\Internal\DocumentFingerprinter;
+use Duyler\OpenApi\Compiler\Internal\SchemaHasher;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
-use Duyler\OpenApi\Schema\Serializer\SchemaToArrayConverter;
 use InvalidArgumentException;
-use JsonException;
 use Override;
 use Psr\Cache\CacheItemPoolInterface;
 use WeakMap;
 
-use function hash;
-use function in_array;
 use function is_string;
-use function json_encode;
 use function sprintf;
-use function str_starts_with;
-use function substr;
 
-use const JSON_THROW_ON_ERROR;
-use const JSON_UNESCAPED_SLASHES;
-use const JSON_UNESCAPED_UNICODE;
-
-final class CompilationCache implements CompilationCacheInterface
+final readonly class CompilationCache implements CompilationCacheInterface
 {
     public const int DEFAULT_TTL = 86400;
-
-    private const string KEY_SEPARATOR = '|';
-
-    private const int REF_COMPONENTS_SCHEMAS_PREFIX_LENGTH = 21;
 
     /** @var WeakMap<Schema, array<string, string>> */
     private WeakMap $hashCache;
@@ -40,10 +26,12 @@ final class CompilationCache implements CompilationCacheInterface
     /** @var WeakMap<OpenApiDocument, string> */
     private WeakMap $documentFingerprints;
 
+    private SchemaHasher $hasher;
+
     public function __construct(
-        private readonly CacheItemPoolInterface $pool,
-        private readonly string $namespace = 'validator_compilation',
-        private readonly int $ttl = self::DEFAULT_TTL,
+        private CacheItemPoolInterface $pool,
+        private string $namespace = 'validator_compilation',
+        private int $ttl = self::DEFAULT_TTL,
     ) {
         if ($ttl < 1) {
             throw new InvalidArgumentException(
@@ -56,6 +44,8 @@ final class CompilationCache implements CompilationCacheInterface
 
         /** @var WeakMap<OpenApiDocument, string> */
         $this->documentFingerprints = new WeakMap();
+
+        $this->hasher = new SchemaHasher(new DocumentFingerprinter());
     }
 
     #[Override]
@@ -120,183 +110,14 @@ final class CompilationCache implements CompilationCacheInterface
     #[Override]
     public function generateKey(Schema $schema, string $className, ?OpenApiDocument $document = null): string
     {
-        $hash = $this->calculateSchemaHash($schema, $className, $document);
+        $hash = $this->hasher->calculate(
+            $schema,
+            $className,
+            $document,
+            $this->hashCache,
+            $this->documentFingerprints,
+        );
 
         return $this->namespace . '.' . $hash;
-    }
-
-    private function calculateSchemaHash(Schema $schema, string $className, ?OpenApiDocument $document): string
-    {
-        $classNameHash = hash('sha256', $className);
-        $documentFingerprint = null !== $document ? $this->documentFingerprint($document) : '';
-        $cacheKey = $classNameHash . self::KEY_SEPARATOR . $documentFingerprint;
-
-        if ($this->hashCache->offsetExists($schema)) {
-            /** @var array<string, string> $entry */
-            $entry = $this->hashCache[$schema];
-            if (isset($entry[$cacheKey])) {
-                /** @var string */
-                return $entry[$cacheKey];
-            }
-        }
-
-        $resolvedSchema = null !== $document
-            ? $this->resolveRefsForHash($schema, $document, [])
-            : $schema;
-
-        if (null !== $resolvedSchema->ref) {
-            throw new CompilationCacheException(
-                'Schema contains $ref but no document context provided; cannot generate stable cache key',
-            );
-        }
-
-        if (null === $document && $this->schemaContainsRef($schema, [])) {
-            throw new CompilationCacheException(
-                'Schema contains $ref but no document context provided; cannot generate stable cache key',
-            );
-        }
-
-        /** @var WeakMap<Schema, int> $visited */
-        $visited = new WeakMap();
-        $data = new SchemaToArrayConverter()->toSnapshotArray($resolvedSchema, $visited);
-
-        try {
-            $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
-        } catch (JsonException $e) {
-            throw new CompilationCacheException(
-                sprintf('Failed to encode schema for hash: %s', $e->getMessage()),
-                0,
-                $e,
-            );
-        }
-
-        $schemaHash = hash('sha256', $json);
-        $compound = $classNameHash . self::KEY_SEPARATOR . $schemaHash . self::KEY_SEPARATOR . $documentFingerprint;
-        $finalHash = hash('sha256', $compound);
-
-        if (! $this->hashCache->offsetExists($schema)) {
-            /** @var array<string, string> */
-            $this->hashCache[$schema] = [];
-        }
-
-        /** @var array<string, string> $entry */
-        $entry = $this->hashCache[$schema];
-        $entry[$cacheKey] = $finalHash;
-        /** @var array<string, string> */
-        $this->hashCache[$schema] = $entry;
-
-        return $finalHash;
-    }
-
-    private function documentFingerprint(OpenApiDocument $document): string
-    {
-        if ($this->documentFingerprints->offsetExists($document)) {
-            /** @var string */
-            return $this->documentFingerprints[$document];
-        }
-
-        /** @var WeakMap<Schema, int> $visited */
-        $visited = new WeakMap();
-        $converter = new SchemaToArrayConverter();
-        $schemas = $document->components?->schemas ?? [];
-
-        $snapshots = [];
-        foreach ($schemas as $name => $schema) {
-            $snapshots[$name] = $converter->toSnapshotArray($schema, $visited);
-        }
-
-        try {
-            $json = json_encode($snapshots, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
-        } catch (JsonException $e) {
-            throw new CompilationCacheException(
-                sprintf('Failed to encode document components for fingerprint: %s', $e->getMessage()),
-                0,
-                $e,
-            );
-        }
-
-        $fingerprint = hash('sha256', $json);
-
-        $this->documentFingerprints[$document] = $fingerprint;
-
-        return $fingerprint;
-    }
-
-    /** @param list<string> $visited */
-    private function resolveRefsForHash(Schema $schema, OpenApiDocument $document, array $visited): Schema
-    {
-        if (null !== $schema->ref) {
-            if (in_array($schema->ref, $visited, true)) {
-                throw new CompilationCacheException(
-                    sprintf('Circular $ref detected while calculating cache key: %s', $schema->ref),
-                );
-            }
-
-            $visited[] = $schema->ref;
-            $resolved = $this->resolveComponentRef($schema->ref, $document);
-
-            return $this->resolveRefsForHash($resolved, $document, $visited);
-        }
-
-        $resolvedProperties = null;
-        if (null !== $schema->properties) {
-            $resolvedProperties = [];
-            foreach ($schema->properties as $name => $property) {
-                $resolvedProperties[$name] = $this->resolveRefsForHash($property, $document, $visited);
-            }
-        }
-
-        $resolvedItems = $schema->items instanceof Schema
-            ? $this->resolveRefsForHash($schema->items, $document, $visited)
-            : null;
-
-        return $schema->withOverrides(
-            properties: $resolvedProperties,
-            items: $resolvedItems,
-        );
-    }
-
-    private function resolveComponentRef(string $ref, OpenApiDocument $document): Schema
-    {
-        if (false === str_starts_with($ref, '#/components/schemas/')) {
-            throw new CompilationCacheException(sprintf('Unsupported $ref for cache key: %s', $ref));
-        }
-
-        $schemaName = substr($ref, self::REF_COMPONENTS_SCHEMAS_PREFIX_LENGTH);
-        $schemas = $document->components?->schemas ?? [];
-
-        if (false === isset($schemas[$schemaName])) {
-            throw new CompilationCacheException(sprintf('Schema not found: %s', $schemaName));
-        }
-
-        return $schemas[$schemaName];
-    }
-
-    /** @param list<Schema> $visited */
-    private function schemaContainsRef(Schema $schema, array $visited): bool
-    {
-        if (in_array($schema, $visited, true)) {
-            return false;
-        }
-
-        $visited[] = $schema;
-
-        if (null !== $schema->ref) {
-            return true;
-        }
-
-        if (null !== $schema->properties) {
-            foreach ($schema->properties as $property) {
-                if ($this->schemaContainsRef($property, $visited)) {
-                    return true;
-                }
-            }
-        }
-
-        if ($schema->items instanceof Schema && $this->schemaContainsRef($schema->items, $visited)) {
-            return true;
-        }
-
-        return false;
     }
 }

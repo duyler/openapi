@@ -39,40 +39,41 @@ final readonly class ReadOnlyWriteOnlyValidator extends AbstractSchemaValidator
             }
 
             if (ValidatorMode::Request === $context->mode && $propertySchema->readOnly) {
-                $dataPath = $this->getDataPath($context);
-
-                throw new ValidationException(
-                    sprintf(
-                        'Property "%s" is read-only and must not be sent in a request',
-                        $name,
-                    ),
-                    errors: [
-                        new ReadOnlyPropertyError(
-                            dataPath: $dataPath,
-                            schemaPath: '/properties/' . $name . '/readOnly',
-                            propertyName: $name,
-                        ),
-                    ],
-                );
+                throw $this->buildError('readOnly', $name, $context);
             }
 
             if (ValidatorMode::Response === $context->mode && $propertySchema->writeOnly) {
-                $dataPath = $this->getDataPath($context);
-
-                throw new ValidationException(
-                    sprintf(
-                        'Property "%s" is write-only and must not be received in a response',
-                        $name,
-                    ),
-                    errors: [
-                        new WriteOnlyPropertyError(
-                            dataPath: $dataPath,
-                            schemaPath: '/properties/' . $name . '/writeOnly',
-                            propertyName: $name,
-                        ),
-                    ],
-                );
+                throw $this->buildError('writeOnly', $name, $context);
             }
         }
+    }
+
+    private function buildError(string $mode, string $name, ValidationContext $context): ValidationException
+    {
+        $dataPath = $this->getDataPath($context);
+
+        if ('readOnly' === $mode) {
+            return new ValidationException(
+                sprintf('Property "%s" is read-only and must not be sent in a request', $name),
+                errors: [
+                    new ReadOnlyPropertyError(
+                        dataPath: $dataPath,
+                        schemaPath: '/properties/' . $name . '/readOnly',
+                        propertyName: $name,
+                    ),
+                ],
+            );
+        }
+
+        return new ValidationException(
+            sprintf('Property "%s" is write-only and must not be received in a response', $name),
+            errors: [
+                new WriteOnlyPropertyError(
+                    dataPath: $dataPath,
+                    schemaPath: '/properties/' . $name . '/writeOnly',
+                    propertyName: $name,
+                ),
+            ],
+        );
     }
 }

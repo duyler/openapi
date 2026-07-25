@@ -9,27 +9,20 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
-use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
-use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
-use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
-use Duyler\OpenApi\Validator\Exception\ValidationException;
-use Duyler\OpenApi\Validator\SchemaValidator\KeywordApplicable;
+use Duyler\OpenApi\Validator\Schema\Internal\CompositionResolver;
+use Duyler\OpenApi\Validator\Schema\Internal\PropertiesAndItemsDispatcher;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use WeakMap;
 
-use function array_filter;
-use function array_values;
-use function assert;
-use function count;
-use function is_array;
-
-final class SchemaValidatorWithContext
+final readonly class SchemaValidatorWithContext
 {
-    private readonly OneOfValidatorWithContext $oneOfValidator;
-    private readonly DiscriminatorValidator $discriminatorValidator;
-    private readonly PropertiesValidatorWithContext $propertiesValidator;
-    private readonly ItemsValidatorWithContext $itemsValidator;
+    private OneOfValidatorWithContext $oneOfValidator;
+    private DiscriminatorValidator $discriminatorValidator;
+    private PropertiesValidatorWithContext $propertiesValidator;
+    private ItemsValidatorWithContext $itemsValidator;
+    private CompositionResolver $compositionResolver;
+    private PropertiesAndItemsDispatcher $dispatcher;
 
     /** @var WeakMap<Schema, Schema> */
     private WeakMap $resolvedCache;
@@ -38,9 +31,9 @@ final class SchemaValidatorWithContext
     private WeakMap $applicableStatelessValidators;
 
     public function __construct(
-        private readonly OpenApiDocument $document,
-        private readonly SchemaValidatorDependencies $dependencies,
-        private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
+        private OpenApiDocument $document,
+        private SchemaValidatorDependencies $dependencies,
+        private ValidatorConfiguration $configuration = new ValidatorConfiguration(),
     ) {
         $this->oneOfValidator = new OneOfValidatorWithContext($this->document, $this->dependencies, $this->configuration);
         $this->discriminatorValidator = new DiscriminatorValidator($this->dependencies, $this->configuration);
@@ -52,6 +45,14 @@ final class SchemaValidatorWithContext
         /** @var WeakMap<Schema, list<SchemaValidatorInterface>> $applicableStatelessValidators */
         $applicableStatelessValidators = new WeakMap();
         $this->applicableStatelessValidators = $applicableStatelessValidators;
+
+        $this->compositionResolver = new CompositionResolver($this->document, $this->dependencies, $this->resolvedCache);
+        $this->dispatcher = new PropertiesAndItemsDispatcher(
+            $this->dependencies,
+            $this->propertiesValidator,
+            $this->itemsValidator,
+            $this->applicableStatelessValidators,
+        );
     }
 
     public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidatorMode $mode = null): void
@@ -94,7 +95,7 @@ final class SchemaValidatorWithContext
         $schema = $this->resolveRef($schema);
         /** @var WeakMap<Schema, true> $visited */
         $visited = new WeakMap();
-        $schema = $this->resolveCompositionRefs($schema, $visited);
+        $schema = $this->compositionResolver->resolveCompositionRefs($schema, $visited);
 
         if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
             $this->oneOfValidator->validateWithContext($data, $schema, $context);
@@ -103,11 +104,9 @@ final class SchemaValidatorWithContext
         }
 
         if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
-            $this->validateInternal($data, $schema, $context);
-
+            $this->dispatcher->validateInternal($data, $schema, $context);
             $this->discriminatorValidator->validate($data, $schema, $this->document, '/', $context);
-
-            $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
+            $this->dispatcher->dispatchPropertiesAndItems($data, $schema, $context, $useDiscriminator);
 
             return;
         }
@@ -116,32 +115,8 @@ final class SchemaValidatorWithContext
             $this->oneOfValidator->validateWithContextIgnoringDiscriminator($data, $schema, $context);
         }
 
-        $this->validateInternal($data, $schema, $context);
-
-        $this->validatePropertiesAndItems($data, $schema, $context, $useDiscriminator);
-    }
-
-    private function validatePropertiesAndItems(
-        array|int|string|float|bool|null $data,
-        Schema $schema,
-        ValidationContext $context,
-        bool $useDiscriminator,
-    ): void {
-        if (null !== $schema->properties && [] !== $schema->properties && is_array($data)) {
-            if ($useDiscriminator) {
-                $this->propertiesValidator->validateWithContext($data, $schema, $context);
-            } else {
-                $this->propertiesValidator->validateWithContextIgnoringDiscriminator($data, $schema, $context);
-            }
-        }
-
-        if (null !== $schema->items && is_array($data)) {
-            if ($useDiscriminator) {
-                $this->itemsValidator->validateWithContext($data, $schema, $context);
-            } else {
-                $this->itemsValidator->validateWithContextIgnoringDiscriminator($data, $schema, $context);
-            }
-        }
+        $this->dispatcher->validateInternal($data, $schema, $context);
+        $this->dispatcher->dispatchPropertiesAndItems($data, $schema, $context, $useDiscriminator);
     }
 
     private function resolveRef(Schema $schema): Schema
@@ -151,151 +126,5 @@ final class SchemaValidatorWithContext
         }
 
         return $this->dependencies->refResolver->resolveSchemaWithOverride($schema, $this->document);
-    }
-
-    /**
-     * @param WeakMap<Schema, true> $visited
-     *
-     * @throws SchemaDepthExceededException
-     */
-    private function resolveCompositionRefs(Schema $schema, WeakMap $visited): Schema
-    {
-        if (isset($this->resolvedCache[$schema])) {
-            $cached = $this->resolvedCache[$schema];
-            assert(null !== $cached);
-
-            return $cached;
-        }
-
-        if (ValidationContext::MAX_DEPTH <= count($visited)) {
-            throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
-        }
-
-        if ($visited->offsetExists($schema)) {
-            $this->resolvedCache[$schema] = $schema;
-
-            return $schema;
-        }
-
-        $visited[$schema] = true;
-
-        $allOf = $this->resolveCompositionArray($schema->allOf, $visited);
-
-        $hasDiscriminator = null !== $schema->discriminator;
-
-        $anyOf = $hasDiscriminator
-            ? $schema->anyOf
-            : $this->resolveCompositionArray($schema->anyOf, $visited);
-
-        $oneOf = $hasDiscriminator
-            ? $schema->oneOf
-            : $this->resolveCompositionArray($schema->oneOf, $visited);
-
-        if ($allOf === $schema->allOf && $anyOf === $schema->anyOf && $oneOf === $schema->oneOf) {
-            $this->resolvedCache[$schema] = $schema;
-
-            return $schema;
-        }
-
-        $resolved = $schema->withOverrides(
-            allOf: $allOf,
-            anyOf: $anyOf,
-            oneOf: $oneOf,
-        );
-
-        $this->resolvedCache[$schema] = $resolved;
-
-        return $resolved;
-    }
-
-    /**
-     * @param list<Schema>|null      $schemas
-     * @param WeakMap<Schema, true>  $visited
-     *
-     * @return list<Schema>|null
-     */
-    private function resolveCompositionArray(?array $schemas, WeakMap $visited): ?array
-    {
-        if (null === $schemas) {
-            return null;
-        }
-
-        $result = [];
-        $changed = false;
-
-        foreach ($schemas as $subSchema) {
-            $resolved = $subSchema;
-
-            if (null !== $subSchema->ref) {
-                $candidate = $this->dependencies->refResolver->resolveSchemaWithOverride(
-                    $subSchema,
-                    $this->document,
-                );
-
-                if (null === $candidate->discriminator) {
-                    $resolved = $candidate;
-                    $changed = true;
-                }
-            }
-
-            $recursivelyResolved = $this->resolveCompositionRefs($resolved, $visited);
-
-            if ($recursivelyResolved !== $resolved) {
-                $changed = true;
-                $resolved = $recursivelyResolved;
-            }
-
-            $result[] = $resolved;
-        }
-
-        return $changed ? $result : $schemas;
-    }
-
-    private function validateInternal(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context): void
-    {
-        $errors = [];
-
-        if (isset($this->applicableStatelessValidators[$schema])) {
-            /** @var list<SchemaValidatorInterface> $validators */
-            $validators = $this->applicableStatelessValidators[$schema];
-        } else {
-            $validators = $this->computeApplicableStatelessValidators($schema);
-            $this->applicableStatelessValidators[$schema] = $validators;
-        }
-
-        foreach ($validators as $validator) {
-            try {
-                $validator->validate($data, $schema, $context);
-            } catch (InvalidFormatException $e) {
-                throw $e;
-            } catch (AbstractValidationError $e) {
-                $errors[] = $e;
-            }
-        }
-
-        if ([] !== $errors) {
-            throw new ValidationException(
-                'Schema validation failed',
-                errors: $errors,
-            );
-        }
-    }
-
-    /**
-     * @return list<SchemaValidatorInterface>
-     */
-    private function computeApplicableStatelessValidators(Schema $schema): array
-    {
-        $all = $this->dependencies->statelessValidators->getValidators();
-
-        /** @var list<SchemaValidatorInterface> $filtered */
-        $filtered = array_values(array_filter(
-            $all,
-            static function (SchemaValidatorInterface $v) use ($schema): bool {
-                return false === ($v instanceof KeywordApplicable) || $v->isApplicable($schema);
-            },
-        ));
-
-        return $filtered;
     }
 }

@@ -130,6 +130,16 @@ final class EnumScalarCache
             return 's:' . $value;
         }
 
+        if (is_int($value) || is_float($value)) {
+            return $this->numericKey($value);
+        }
+
+        /** @var float $value */
+        return 'n:' . (string) $value;
+    }
+
+    private function numericKey(int|float $value): string
+    {
         if (is_float($value) && is_nan($value)) {
             /** @var non-empty-string $bytes */
             $bytes = random_bytes(self::CACHE_KEY_ENTROPY_BYTES);
@@ -145,7 +155,6 @@ final class EnumScalarCache
             return 'n:i:' . (string) $value;
         }
 
-        /** @var float $value */
         return 'n:' . (string) $value;
     }
 }

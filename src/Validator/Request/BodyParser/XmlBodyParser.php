@@ -75,6 +75,28 @@ final readonly class XmlBodyParser
         /** @var array<int|string, mixed> $result */
         $result = [];
 
+        self::collectAttributes($xml, $result);
+        self::collectChildElements($xml, $result);
+
+        if ([] === $result) {
+            $text = (string) $xml;
+
+            return '' === $text ? null : $text;
+        }
+
+        $text = trim((string) $xml);
+        if ('' !== $text) {
+            $result['#text'] = $text;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<int|string, mixed> $result
+     */
+    private static function collectAttributes(SimpleXMLElement $xml, array &$result): void
+    {
         $attributes = $xml->attributes();
         assert($attributes instanceof SimpleXMLElement);
 
@@ -104,7 +126,13 @@ final readonly class XmlBodyParser
                 $result['@' . $prefix . ':' . $name] = (string) $value;
             }
         }
+    }
 
+    /**
+     * @param array<int|string, mixed> $result
+     */
+    private static function collectChildElements(SimpleXMLElement $xml, array &$result): void
+    {
         $children = $xml->children();
         assert($children instanceof SimpleXMLElement);
 
@@ -115,6 +143,8 @@ final readonly class XmlBodyParser
         foreach ($children as $name => $child) {
             self::mergeChild($result, $name, self::elementToValue($child));
         }
+
+        $namespaces = $xml->getNamespaces(true);
 
         foreach ($namespaces as $prefix => $namespace) {
             if ('' === $prefix) {
@@ -132,19 +162,6 @@ final readonly class XmlBodyParser
                 self::mergeChild($result, $prefix . ':' . $name, self::elementToValue($child));
             }
         }
-
-        if ([] === $result) {
-            $text = (string) $xml;
-
-            return '' === $text ? null : $text;
-        }
-
-        $text = trim((string) $xml);
-        if ('' !== $text) {
-            $result['#text'] = $text;
-        }
-
-        return $result;
     }
 
     private static function elementToValue(SimpleXMLElement $element): array|string|null

@@ -23,6 +23,8 @@ use Duyler\OpenApi\Validator\SchemaValidator\PropertiesValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\StringLengthValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\TypeValidator;
 
+use ReflectionObject;
+
 use function spl_object_id;
 
 /**
@@ -103,8 +105,12 @@ final class SchemaValidatorWithContextHotPathTest extends TestCase
             $this->buildDependencies(),
         );
 
-        $reflection = new ReflectionMethod($rootValidator, 'computeApplicableStatelessValidators');
-        $validators = $reflection->invoke($rootValidator, new Schema(type: 'string'));
+        $validatorReflection = new ReflectionObject($rootValidator);
+        $dispatcherProperty = $validatorReflection->getProperty('dispatcher');
+        $dispatcher = $dispatcherProperty->getValue($rootValidator);
+
+        $reflection = new ReflectionMethod($dispatcher, 'computeApplicableStatelessValidators');
+        $validators = $reflection->invoke($dispatcher, new Schema(type: 'string'));
 
         $keywords = [];
         foreach ($validators as $validator) {
@@ -137,9 +143,13 @@ final class SchemaValidatorWithContextHotPathTest extends TestCase
             $this->buildDependencies(),
         );
 
-        $reflection = new ReflectionMethod($rootValidator, 'computeApplicableStatelessValidators');
+        $validatorReflection = new ReflectionObject($rootValidator);
+        $dispatcherProperty = $validatorReflection->getProperty('dispatcher');
+        $dispatcher = $dispatcherProperty->getValue($rootValidator);
+
+        $reflection = new ReflectionMethod($dispatcher, 'computeApplicableStatelessValidators');
         $validators = $reflection->invoke(
-            $rootValidator,
+            $dispatcher,
             new Schema(type: 'string', minLength: 3),
         );
 
