@@ -80,12 +80,9 @@ final readonly class ScalarConstraints
 
     private function generateTypeCheckForValue(string|array $type, string $valueVar): string
     {
-        /** @var array<string|null> $rawTypes */
-        $rawTypes = is_array($type) ? $type : [$type];
-
         /** @var list<string> $types */
         $types = array_values(array_filter(
-            $rawTypes,
+            is_array($type) ? $type : [$type],
             static fn(mixed $t): bool => null !== $t,
         ));
 
