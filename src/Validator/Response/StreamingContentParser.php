@@ -71,6 +71,10 @@ final readonly class StreamingContentParser
      */
     public function parseStream(StreamInterface $stream, string $contentType): array
     {
+        if ($stream->eof()) {
+            return [];
+        }
+
         return match (true) {
             str_contains($contentType, 'application/jsonl'),
             str_contains($contentType, 'application/x-ndjson') => $this->ndJson->parseStream($stream),
