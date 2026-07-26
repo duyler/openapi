@@ -9,7 +9,6 @@ use Duyler\OpenApi\Schema\Model\Internal\CompositionFields;
 use Duyler\OpenApi\Schema\Model\Internal\ObjectFields;
 use Duyler\OpenApi\Schema\Model\Internal\ScalarFields;
 use Duyler\OpenApi\Schema\Serializer\SchemaToArrayConverter;
-use Deprecated;
 use JsonSerializable;
 use Override;
 
@@ -144,8 +143,16 @@ final readonly class Schema implements JsonSerializable
      * @param list<mixed>|null $enum
      * @param array<string, mixed>|null $examples
      * @param Xml|null $xml
+     *
+     * @deprecated since 1.x, will be removed in 2.0. Use {@see withOverrideGroups()} instead.
+     *             PHPDoc-only deprecation (no {@see Deprecated} attribute) so the 5 internal
+     *             callers (DocumentFingerprinter, ValidatorCompiler, CompositionResolver,
+     *             CompilationCacheTest, SchemaWithOverridesTest) can invoke it without
+     *             triggering a runtime E_DEPRECATED cascade. The attribute will be re-added
+     *             when all internal callers are migrated to {@see withOverrideGroups()},
+     *             or the method is removed in 2.0 — whichever comes first. See
+     *             `.ai/reports/adr-schema-constructor.md`.
      */
-    #[Deprecated(message: 'since 1.x, will be removed in 2.0. Use Schema::withOverrideGroups() instead.')]
     public function withOverrides(
         ?string $ref = null,
         ?string $refSummary = null,

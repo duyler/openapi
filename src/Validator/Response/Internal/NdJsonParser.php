@@ -13,11 +13,14 @@ use Override;
 use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use RuntimeException;
 
 use function assert;
 use function count;
 use function is_array;
 use function json_decode;
+use function sprintf;
+use function strlen;
 use function trim;
 
 use const JSON_THROW_ON_ERROR;
@@ -33,6 +36,13 @@ use const JSON_THROW_ON_ERROR;
  *   and logs a warning under non-strict mode, or throws
  *   MalformedStreamRecordException under strict mode.
  *
+ * The stream path reads chunks directly from the PSR-7 stream rather than
+ * delegating to {@see StreamLineReader::readLines()}. The generator frame
+ * allocated by the previous indirection added ~1.8 KB to the empty-stream
+ * parse path, which broke `parse_stream_empty_ndjson_has_near_zero_memory_growth`
+ * (growth < 2048 bytes). The string path still uses {@see StreamLineReader::stripBom()}
+ * (a stateless static helper) for BOM handling consistency.
+ *
  * @internal
  */
 final readonly class NdJsonParser implements StreamingFormatParser
@@ -46,7 +56,7 @@ final readonly class NdJsonParser implements StreamingFormatParser
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly bool $strictStreaming = false,
         private readonly int $maxRecords = self::DEFAULT_MAX_RECORDS,
-        private readonly StreamLineReader $lineReader = new StreamLineReader(),
+        private readonly int $maxLineLength = StreamLineReader::DEFAULT_MAX_LINE_LENGTH,
     ) {}
 
     #[Override]
@@ -80,13 +90,50 @@ final readonly class NdJsonParser implements StreamingFormatParser
         /** @var list<array<int|string, mixed>|null> $items */
         $items = [];
         $recordCount = 0;
+        $buffer = '';
+        $bomStripped = false;
 
-        foreach ($this->lineReader->readLines($stream, self::NDJSON_LINE_SPLIT_PATTERN) as $line) {
-            $before = count($items);
-            $items = $this->appendItem($items, $line);
-            if (count($items) === $before) {
-                continue;
+        while (!$stream->eof()) {
+            $chunk = $stream->read(StreamLineReader::STREAM_CHUNK_SIZE);
+
+            if ('' === $chunk) {
+                break;
             }
+
+            if (false === $bomStripped) {
+                $chunk = StreamLineReader::stripBom($chunk);
+                $bomStripped = true;
+            }
+
+            $buffer .= $chunk;
+
+            if (strlen($buffer) > $this->maxLineLength) {
+                throw new RuntimeException(sprintf(
+                    'Stream line exceeds maximum allowed length of %d bytes',
+                    $this->maxLineLength,
+                ));
+            }
+
+            $lines = preg_split(self::NDJSON_LINE_SPLIT_PATTERN, $buffer);
+            assert(is_array($lines));
+
+            /** @var string $buffer */
+            $buffer = array_pop($lines);
+
+            foreach ($lines as $line) {
+                $before = count($items);
+                $items = $this->appendItem($items, $line);
+                if (count($items) === $before) {
+                    continue;
+                }
+                ++$recordCount;
+                $this->enforceRecordLimit($recordCount);
+            }
+        }
+
+        $before = count($items);
+        $items = $this->appendItem($items, $buffer);
+        if (count($items) !== $before) {
             ++$recordCount;
             $this->enforceRecordLimit($recordCount);
         }

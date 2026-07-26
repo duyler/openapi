@@ -43,7 +43,7 @@ final readonly class StreamingContentParser
         private readonly int $maxRecords = self::DEFAULT_MAX_RECORDS,
     ) {
         $lineReader = new StreamLineReader($maxLineLength);
-        $this->ndJson = new NdJsonParser($logger, $strictStreaming, $maxRecords, $lineReader);
+        $this->ndJson = new NdJsonParser($logger, $strictStreaming, $maxRecords, $maxLineLength);
         $this->sse = new SseParser($logger, $strictStreaming, $maxRecords, $lineReader);
         $this->jsonSeq = new JsonSeqParser($logger, $maxRecordLength, $strictStreaming, $maxRecords);
     }
