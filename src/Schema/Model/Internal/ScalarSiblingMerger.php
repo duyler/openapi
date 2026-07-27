@@ -15,9 +15,7 @@ use function array_values;
 use function count;
 use function is_array;
 
-/**
- * @internal
- */
+/** @internal */
 final readonly class ScalarSiblingMerger implements SiblingMergerStrategy
 {
     /**

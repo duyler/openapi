@@ -14,9 +14,7 @@ use function is_bool;
 use function max;
 use function min;
 
-/**
- * @internal
- */
+/** @internal */
 final readonly class BoundSiblingMerger implements SiblingMergerStrategy
 {
     /**

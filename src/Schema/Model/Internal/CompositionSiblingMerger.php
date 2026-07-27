@@ -9,9 +9,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use function array_filter;
 use function array_merge;
 
-/**
- * @internal
- */
+/** @internal */
 final readonly class CompositionSiblingMerger implements SiblingMergerStrategy
 {
     public function __construct(
