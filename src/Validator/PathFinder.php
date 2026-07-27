@@ -18,11 +18,7 @@ use function count;
 use function strtolower;
 use function usort;
 
-/**
- * @internal PathFinder is an internal orchestration class; its constructor
- *           signature is not part of the public API. Construct via
- *           OpenApiValidatorBuilder, not directly.
- */
+/** @internal */
 final readonly class PathFinder
 {
     /** @var array<int|string, mixed> */

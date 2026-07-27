@@ -18,18 +18,12 @@ use Override;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use WeakMap;
 
 use function array_filter;
 use function array_values;
 
-/**
- * @internal Legacy stateless JSON Schema dispatcher; use {@see SchemaValidatorWithContext} instead.
- *
- * @deprecated since 0.6.0: use {@see SchemaValidatorWithContext} (returned by `OpenApiValidatorBuilder::build()`).
- *             This class will be removed in 2.0 alongside the parameter-validator migration.
- */
+/** @internal @deprecated since 0.6.0, will be removed in 2.0. */
 final class SchemaValidator implements SchemaValidatorInterface
 {
     private readonly ValidatorRegistryInterface $effectiveRegistry;
