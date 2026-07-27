@@ -7,9 +7,7 @@ namespace Duyler\OpenApi\Validator\Validation\Internal;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\PregExecutor;
 
-/**
- * @internal
- */
+/** @internal */
 final readonly class BodyLimits
 {
     public function __construct(

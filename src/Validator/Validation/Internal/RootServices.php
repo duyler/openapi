@@ -13,9 +13,7 @@ use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
-/**
- * @internal
- */
+/** @internal */
 final readonly class RootServices
 {
     public function __construct(

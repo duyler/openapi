@@ -6,21 +6,9 @@ namespace Duyler\OpenApi\Validator\Validation\Internal;
 
 use Duyler\OpenApi\Schema\Model\Operation as SchemaOperation;
 use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
-use Duyler\OpenApi\Validator\Security\SecurityValidator;
 use Psr\Http\Message\ServerRequestInterface;
 
-/**
- * Shared `validateSecurity()` implementation for runtime validators that
- * surface document-level or operation-level security requirements against
- * a request. Eliminates the previously duplicated 24-line body that existed
- * in both {@see CallbackValidator} and {@see WebhookValidator}.
- *
- * Consumers must expose two readable properties:
- *   - ValidatorDependencies `$context`
- *   - SecurityValidator       `$securityValidator`
- *
- * @internal
- */
+/** @internal */
 trait ValidatesSecurityTrait
 {
     private function validateSecurity(
