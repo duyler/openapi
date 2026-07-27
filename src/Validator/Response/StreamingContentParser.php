@@ -71,7 +71,7 @@ final readonly class StreamingContentParser
      */
     public function parseStream(StreamInterface $stream, string $contentType): array
     {
-        if ($stream->eof()) {
+        if (0 === $stream->getSize()) {
             return [];
         }
 
