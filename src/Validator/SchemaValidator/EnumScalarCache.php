@@ -44,11 +44,7 @@ final class EnumScalarCache
             return false;
         }
 
-        return null === $data
-            || is_int($data)
-            || is_float($data)
-            || is_string($data)
-            || is_bool($data);
+        return $this->isScalarOrNull($data);
     }
 
     public function contains(Schema $schema, mixed $data): bool
@@ -89,7 +85,7 @@ final class EnumScalarCache
     {
         /** @var mixed $value */
         foreach ($enum as $value) {
-            if (null === $value || is_int($value) || is_float($value) || is_string($value) || is_bool($value)) {
+            if ($this->isScalarOrNull($value)) {
                 continue;
             }
 
@@ -156,5 +152,14 @@ final class EnumScalarCache
         }
 
         return 'n:' . (string) $value;
+    }
+
+    private function isScalarOrNull(mixed $value): bool
+    {
+        return null === $value
+            || is_int($value)
+            || is_float($value)
+            || is_string($value)
+            || is_bool($value);
     }
 }

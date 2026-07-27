@@ -110,7 +110,11 @@ final readonly class ScalarSchemaKeywordParser
         $type = TypeHelper::asTypeOrNull($data['type'] ?? null);
 
         if (false === $this->isVersion30() && true === ($data['nullable'] ?? false)) {
-            $baseType = is_array($type) ? array_values($type) : (is_string($type) ? [$type] : []);
+            $baseType = match (true) {
+                is_array($type) => array_values($type),
+                is_string($type) => [$type],
+                default => [],
+            };
 
             if ([] === $baseType) {
                 return $type;

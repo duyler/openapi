@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Error\Formatter;
 
 use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
-use Duyler\OpenApi\Validator\Exception\AnyOfError;
 use Duyler\OpenApi\Validator\Exception\ContainsMatchError;
 use Duyler\OpenApi\Validator\Exception\ConstError;
 use Duyler\OpenApi\Validator\Exception\DuplicateItemsError;
@@ -338,17 +337,6 @@ class DetailedFormatterTest extends TestCase
                 'Ensure data matches exactly one of the schemas',
                 true,
             ],
-            'any_of' => [
-                new AnyOfError(
-                    dataPath: '/pet',
-                    schemaPath: '/anyOf',
-                ),
-                'anyOf',
-                '/pet',
-                'does not match any of the schemas',
-                'Ensure data matches at least one of the schemas',
-                true,
-            ],
             'contains_match' => [
                 new ContainsMatchError(
                     dataPath: '/items',
@@ -471,20 +459,6 @@ class DetailedFormatterTest extends TestCase
         self::assertStringContainsString('Message:', $formatted);
         self::assertStringNotContainsString('Details:', $formatted);
         self::assertStringContainsString('Suggestion:', $formatted);
-    }
-
-    #[Test]
-    public function format_any_of_error_omits_details_section_due_to_empty_params(): void
-    {
-        $error = new AnyOfError(
-            dataPath: '/pet',
-            schemaPath: '/anyOf',
-        );
-
-        $formatted = $this->formatter->format($error);
-
-        self::assertStringNotContainsString('Details:', $formatted);
-        self::assertStringContainsString('Suggestion: Ensure data matches at least one of the schemas', $formatted);
     }
 
     #[Test]

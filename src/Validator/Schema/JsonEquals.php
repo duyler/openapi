@@ -24,7 +24,7 @@ final readonly class JsonEquals
             return $a === $b;
         }
 
-        if ((is_int($a) || is_float($a)) && (is_int($b) || is_float($b))) {
+        if (self::isNumeric($a) && self::isNumeric($b)) {
             if (is_int($a) && is_int($b)) {
                 return $a === $b;
             }
@@ -77,5 +77,10 @@ final readonly class JsonEquals
         }
 
         return true;
+    }
+
+    private static function isNumeric(mixed $value): bool
+    {
+        return is_int($value) || is_float($value);
     }
 }

@@ -224,4 +224,52 @@ final class PathItemBuilderTest extends TestCase
 
         self::assertNotNull($callbacks->callbacks['myCallback'] ?? null);
     }
+
+    #[Test]
+    public function build_parameter_with_string_example_builds_example(): void
+    {
+        $parameter = $this->pathItemBuilder->buildParameter([
+            'name' => 'limit',
+            'in' => 'query',
+            'example' => 'foo',
+        ]);
+
+        self::assertNotNull($parameter->example);
+        self::assertSame('foo', $parameter->example->value);
+    }
+
+    #[Test]
+    public function build_parameter_with_array_example_returns_null_example(): void
+    {
+        $parameter = $this->pathItemBuilder->buildParameter([
+            'name' => 'limit',
+            'in' => 'query',
+            'example' => ['value' => 'foo'],
+        ]);
+
+        self::assertNull($parameter->example);
+    }
+
+    #[Test]
+    public function build_parameter_without_example_returns_null_example(): void
+    {
+        $parameter = $this->pathItemBuilder->buildParameter([
+            'name' => 'limit',
+            'in' => 'query',
+        ]);
+
+        self::assertNull($parameter->example);
+    }
+
+    #[Test]
+    public function build_parameter_with_non_string_scalar_example_returns_null_example(): void
+    {
+        $parameter = $this->pathItemBuilder->buildParameter([
+            'name' => 'limit',
+            'in' => 'query',
+            'example' => 42,
+        ]);
+
+        self::assertNull($parameter->example);
+    }
 }
