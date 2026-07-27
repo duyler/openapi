@@ -38,7 +38,7 @@ final readonly class NotValidator extends AbstractSchemaValidator implements Key
             throw $this->buildNotValidationError($context);
         }
 
-        if (is_bool($schema->not) && $schema->not) {
+        if (is_bool($schema->not)) {
             throw $this->buildNotValidationError($context);
         }
     }
