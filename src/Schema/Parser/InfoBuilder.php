@@ -15,12 +15,6 @@ use function array_map;
 use function array_values;
 use function is_array;
 
-/**
- * Builds OpenAPI Info / Contact / License / ExternalDocs / Tag objects.
- *
- * Group: identity and descriptive metadata that does not depend on schemas,
- * parameters, or components.
- */
 final readonly class InfoBuilder
 {
     public function __construct(private OpenApiBuildContext $context) {}

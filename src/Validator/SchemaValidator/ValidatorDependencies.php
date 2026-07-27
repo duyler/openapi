@@ -17,24 +17,11 @@ use Psr\Log\NullLogger;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 
 /**
- * @internal Legacy constructor-dependency bag for the stateless dispatcher
- *           ({@see SchemaValidator}) and its keyword validators. The
- *           canonical dependency bag is
- *           {@see SchemaValidatorDependencies},
- *           which carries the document + RefResolver needed for full
- *           `$ref` resolution; this legacy bag only gained optional
- *           `document` / `refResolver` fields in 0.6.0 so that the
- *           {@see RefResolvingSchemaValidator} adapter can wrap the
- *           legacy dispatcher without touching every nested-keyword
- *           validator constructor.
+ * @internal Legacy constructor-dependency bag for {@see SchemaValidator}; use
+ *           {@see SchemaValidatorDependencies} instead.
  *
- * @deprecated since 0.6.0: direct construction of this bag is retained
- *             only for the parameter-validator migration window. New
- *             code should use
- *             {@see SchemaValidatorDependencies}
- *             (which exposes the shared `RefResolver`, `StatelessValidatorRegistry`,
- *             and PSR-3 / PSR-14 wiring). This class will be removed in 2.0
- *             alongside {@see SchemaValidator}.
+ * @deprecated since 0.6.0: use {@see SchemaValidatorDependencies}. This class will
+ *             be removed in 2.0 alongside {@see SchemaValidator}.
  */
 final class ValidatorDependencies
 {

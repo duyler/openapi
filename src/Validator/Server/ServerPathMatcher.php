@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Server;
 
 use Duyler\OpenApi\Schema\Model\Server;
+use Psr\Log\LoggerInterface;
 
 use function strlen;
 use function usort;
@@ -22,6 +23,7 @@ final readonly class ServerPathMatcher
     public function __construct(
         array $servers = [],
         private readonly ServerUrlResolver $resolver = new ServerUrlResolver(),
+        private readonly ?LoggerInterface $logger = null,
     ) {
         $sortedServerPaths = $this->resolveServerBasePaths($servers);
         usort($sortedServerPaths, $this->compareByBasePathLength(...));
@@ -76,7 +78,12 @@ final readonly class ServerPathMatcher
     {
         try {
             $resolvedUrl = $this->resolver->resolve($server);
-        } catch (ServerVariableException) {
+        } catch (ServerVariableException $e) {
+            $this->logger?->debug('Server URL template substitution failed', [
+                'server_url' => $server->url,
+                'exception' => $e,
+            ]);
+
             return null;
         }
 

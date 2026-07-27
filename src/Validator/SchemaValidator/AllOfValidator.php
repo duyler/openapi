@@ -10,6 +10,7 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 
 use function count;
+use function sprintf;
 
 final readonly class AllOfValidator extends AbstractCompositionalValidator implements KeywordApplicable
 {
@@ -38,7 +39,7 @@ final readonly class AllOfValidator extends AbstractCompositionalValidator imple
             }
 
             throw new ValidationException(
-                'All of the schemas must match, but ' . count($result->errors) . ' failed',
+                sprintf('All of the schemas must match, but %d failed', count($result->errors)),
                 errors: $allErrors,
             );
         }

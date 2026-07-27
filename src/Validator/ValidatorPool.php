@@ -14,28 +14,14 @@ use function sprintf;
 /**
  * @danger NOT_THREAD_SAFE
  *
- * Shared mutable $cache/$order race without an explicit lock.
- * Swoole\Lock(SWOOLE_MUTEX) is non-reentrant, so nested getOrCreate()
- * calls on the same lock dead-lock (O-004). For coroutine- or
- * threaded-runtimes use {@see forCoroutineRuntime()}.
- *
- * Thread-safety: NOT thread-safe by default.
- *
- * Safe to share across requests in prefork models (PHP-FPM, RoadRunner,
- * FrankenPHP non-threaded) where each worker keeps isolated state.
- *
- * In Swoole with coroutines or FrankenPHP with threaded workers, concurrent
- * getOrCreate() calls race on the check-then-act sequence and may both invoke
- * the factory for the same key. Inject a lock object (e.g. Swoole\Lock, or any
- * object exposing lock()/unlock() methods) via the constructor to serialize
- * access. Without a lock the pool stays prefork-safe but racy under shared
- * state.
- *
- * The $factory passed to getOrCreate() must be non-blocking (no I/O) and
- * non-recursive (no nested getOrCreate() calls); otherwise the pool deadlocks
- * while the lock is held. Swoole\Lock(SWOOLE_MUTEX) is non-reentrant: a
- * factory that recursively re-enters getOrCreate() on the same lock
- * deadlocks the calling coroutine (O-004).
+ * LRU cache of validator instances (default capacity 128). Prefork-safe
+ * (PHP-FPM, RoadRunner, FrankenPHP non-threaded); racy under shared state
+ * in Swoole coroutines / FrankenPHP threaded workers — pass a lock via
+ * the constructor or {@see forCoroutineRuntime()}. The factory passed to
+ * getOrCreate() must be non-blocking and non-recursive: Swoole\Lock is
+ * non-reentrant, so nested getOrCreate() calls on the same lock deadlock
+ * (O-004). See README "Validator Pool" and "Unsafe classes and their
+ * contracts" for the full concurrency contract.
  */
 final class ValidatorPool
 {
@@ -65,7 +51,7 @@ final class ValidatorPool
             );
         }
 
-        if (null !== $lock && (!method_exists($lock, 'lock') || !method_exists($lock, 'unlock'))) {
+        if (null !== $lock && (false === method_exists($lock, 'lock') || false === method_exists($lock, 'unlock'))) {
             throw new InvalidArgumentException(
                 'Lock object must expose both lock() and unlock() methods',
             );

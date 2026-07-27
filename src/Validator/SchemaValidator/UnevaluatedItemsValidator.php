@@ -16,6 +16,7 @@ use function array_flip;
 use function array_values;
 use function count;
 use function is_array;
+use function is_bool;
 
 final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
@@ -36,7 +37,7 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
             return;
         }
 
-        if (true === $schema->unevaluatedItems) {
+        if (is_bool($schema->unevaluatedItems) && $schema->unevaluatedItems) {
             return;
         }
 
@@ -49,34 +50,54 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
         ));
 
         if (false === $schema->unevaluatedItems) {
-            if ([] === $unevaluatedIndices) {
-                return;
-            }
+            $this->rejectUnevaluatedItems($data, $unevaluatedIndices, $this->getDataPath($context));
 
-            $dataPath = $this->getDataPath($context);
-            $errors = [];
+            return;
+        }
 
-            foreach ($unevaluatedIndices as $index) {
-                /** @var array-key|array<array-key, mixed> $item */
-                $item = $data[$index];
-                $errors[] = new TypeMismatchError(
-                    expected: 'nothing (boolean schema false)',
-                    actual: TypeFormatter::format($item),
-                    dataPath: $dataPath . '[' . $index . ']',
-                    schemaPath: '/unevaluatedItems',
-                );
-            }
+        $this->validateUnevaluatedItems($data, $schema->unevaluatedItems, $unevaluatedIndices, $context);
+    }
 
-            throw new ValidationException(
-                'Unevaluated items rejected by unevaluatedItems: false',
-                errors: $errors,
+    /**
+     * @param array<array-key, mixed> $data
+     * @param list<int|string>        $unevaluatedIndices
+     */
+    private function rejectUnevaluatedItems(array $data, array $unevaluatedIndices, string $dataPath): void
+    {
+        if ([] === $unevaluatedIndices) {
+            return;
+        }
+
+        $errors = [];
+
+        foreach ($unevaluatedIndices as $index) {
+            /** @var array-key|array<array-key, mixed> $item */
+            $item = $data[$index];
+            $errors[] = new TypeMismatchError(
+                expected: 'nothing (boolean schema false)',
+                actual: TypeFormatter::format($item),
+                dataPath: $dataPath . '[' . $index . ']',
+                schemaPath: '/unevaluatedItems',
             );
         }
 
+        throw new ValidationException(
+            'Unevaluated items rejected by unevaluatedItems: false',
+            errors: $errors,
+        );
+    }
+
+    /**
+     * @param array<array-key, mixed> $data
+     * @param list<int|string>        $unevaluatedIndices
+     */
+    private function validateUnevaluatedItems(array $data, Schema $unevaluatedItems, array $unevaluatedIndices, ?ValidationContext $context): void
+    {
         $validator = $this->createSchemaValidator();
         $nullableAsType = $context?->nullableAsType ?? true;
 
-        foreach ($unevaluatedIndices as $index) {
+        foreach ($unevaluatedIndices as $idx) {
+            $index = (int) $idx;
             /** @var array-key|array<array-key, mixed> $item */
             $item = $data[$index];
 
@@ -87,7 +108,7 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
             $context->enterBreadcrumbIndex($index);
 
             try {
-                $validator->validate($item, $schema->unevaluatedItems, $context);
+                $validator->validate($item, $unevaluatedItems, $context);
             } finally {
                 $context->leaveBreadcrumb();
             }
@@ -95,16 +116,6 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
     }
 
     /**
-     * Returns the list of array indices that have been evaluated by
-     * prefixItems, items, contains, or any in-place applicator whose
-     * annotations were merged into the context (R3-SPEC-002 / R3-SPEC-
-     * 003 / R3-SPEC-004).
-     *
-     * Boolean-form `items: true` evaluates every index >= prefixItems count
-     * (validation passes trivially); `items: false` does NOT register
-     * evaluated indices because validation fails, so annotations do not
-     * apply per JSON Schema 2020-12 §10.3.4.
-     *
      * @param array<array-key, mixed> $data
      *
      * @return list<int>

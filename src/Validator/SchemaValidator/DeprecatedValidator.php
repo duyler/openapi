@@ -41,20 +41,25 @@ final readonly class DeprecatedValidator extends AbstractSchemaValidator
                 continue;
             }
 
-            $propertyPath = '/' === $dataPath ? '/' . $name : $dataPath . '/' . $name;
-
-            $this->eventDispatcher()?->dispatch(
-                new ValidationWarningEvent(
-                    propertyPath: $propertyPath,
-                    propertyName: $name,
-                    message: sprintf('Property "%s" is deprecated', $name),
-                    schemaRef: $schema->ref,
-                ),
-            );
-
-            $this->logger()->warning(
-                sprintf('Deprecated property "%s" is used at path "%s"', $name, $propertyPath),
-            );
+            $this->emitDeprecationWarning($name, $dataPath, $schema->ref);
         }
+    }
+
+    private function emitDeprecationWarning(string $name, string $dataPath, ?string $schemaRef): void
+    {
+        $propertyPath = '/' === $dataPath ? '/' . $name : $dataPath . '/' . $name;
+
+        $this->eventDispatcher()?->dispatch(
+            new ValidationWarningEvent(
+                propertyPath: $propertyPath,
+                propertyName: $name,
+                message: sprintf('Property "%s" is deprecated', $name),
+                schemaRef: $schemaRef,
+            ),
+        );
+
+        $this->logger()->warning(
+            sprintf('Deprecated property "%s" is used at path "%s"', $name, $propertyPath),
+        );
     }
 }

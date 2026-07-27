@@ -17,11 +17,6 @@ final class ExternalRefSecurityException extends RuntimeException
 {
     use SanitizableExceptionTrait;
 
-    /**
-     * Maximum retained length of attacker-controlled ref strings. Excess
-     * bytes are truncated in the constructor via LogContextSanitizer so
-     * a single exception cannot amplify a multi-megabyte payload.
-     */
     private const int MAX_REF_LENGTH_IN_EXCEPTION = 256;
 
     protected readonly string $ref;

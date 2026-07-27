@@ -24,19 +24,7 @@ final readonly class DetailedFormatter implements ErrorFormatterInterface
         $output = sprintf("Error at %s:\n", $error->dataPath());
         $output .= sprintf("  Message: %s\n", $error->message());
 
-        $details = [];
-        foreach ($error->params() as $key => $value) {
-            if (is_scalar($value)) {
-                $details[$key] = (string) $value;
-            }
-        }
-
-        if ($this->includeSensitiveValues
-            && $error instanceof InvalidFormatException
-            && is_scalar($error->value(reveal: true))
-        ) {
-            $details['value'] = (string) $error->value(reveal: true);
-        }
+        $details = $this->collectDetails($error);
 
         if ([] !== $details) {
             $output .= "  Details:\n";
@@ -68,5 +56,27 @@ final readonly class DetailedFormatter implements ErrorFormatterInterface
     public function formatException(ValidationException $exception): string
     {
         return $this->formatMultiple($exception->getErrors());
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function collectDetails(ValidationErrorInterface $error): array
+    {
+        $details = [];
+        foreach ($error->params() as $key => $value) {
+            if (is_scalar($value)) {
+                $details[$key] = (string) $value;
+            }
+        }
+
+        if ($this->includeSensitiveValues
+            && $error instanceof InvalidFormatException
+            && is_scalar($error->value(reveal: true))
+        ) {
+            $details['value'] = (string) $error->value(reveal: true);
+        }
+
+        return $details;
     }
 }

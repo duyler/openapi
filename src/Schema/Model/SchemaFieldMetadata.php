@@ -4,11 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
-/**
- * Order matters: fields are emitted in the order listed here. The canonical
- * order matches the historical emission produced by the legacy
- * `Schema::jsonSerialize()` to keep the serialised byte output byte-stable.
- */
 final readonly class SchemaFieldMetadata
 {
     /**

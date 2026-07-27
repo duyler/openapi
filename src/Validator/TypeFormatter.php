@@ -12,12 +12,6 @@ use function is_object;
 use function is_resource;
 use function is_string;
 
-/**
- * Formats PHP runtime types using canonical names instead of the legacy
- * labels returned by gettype() (which emits "double", "integer", "NULL").
- *
- * Returned names: int, float, string, bool, array, object, null, resource, unknown.
- */
 final readonly class TypeFormatter
 {
     public static function format(mixed $value): string

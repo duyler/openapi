@@ -12,6 +12,7 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
+use Duyler\OpenApi\Validator\Schema\Internal\CompositionResolver;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -20,6 +21,8 @@ use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use RuntimeException;
 use WeakMap;
+
+use ReflectionObject;
 
 use function spl_object_id;
 use function sprintf;
@@ -97,12 +100,17 @@ final class SchemaValidatorWithContextCacheTest extends TestCase
             ],
         );
 
-        $resolve = new ReflectionMethod($validator, 'resolveCompositionRefs');
-        $firstResolved = $resolve->invoke($validator, $schema, new WeakMap());
+        $resolve = new ReflectionMethod(CompositionResolver::class, 'resolveCompositionRefs');
+
+        $reflection = new ReflectionObject($validator);
+        $resolverProperty = $reflection->getProperty('compositionResolver');
+        $resolver = $resolverProperty->getValue($validator);
+
+        $firstResolved = $resolve->invoke($resolver, $schema, new WeakMap());
         $firstId = spl_object_id($firstResolved);
 
         for ($i = 0; $i < 999; ++$i) {
-            $resolved = $resolve->invoke($validator, $schema, new WeakMap());
+            $resolved = $resolve->invoke($resolver, $schema, new WeakMap());
 
             $this->assertSame($firstId, spl_object_id($resolved));
         }

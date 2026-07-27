@@ -15,15 +15,6 @@ use function is_array;
 use function is_bool;
 use function sprintf;
 
-/**
- * Builds OpenAPI Schema / Discriminator / Xml objects.
- *
- * The heavy lifting of parsing a Schema wire array lives in
- * {@see SchemaFromArrayConverter} (Task 22, P-056). This builder keeps the
- * Schema entry point for the parser pipeline and exposes the standalone
- * Discriminator / Xml constructors that {@see ComponentsBuilder} and
- * {@see PathItemBuilder} need for non-schema object shapes.
- */
 final readonly class SchemaBuilder
 {
     private const string DEPRECATION_VERSION = '3.2.0';

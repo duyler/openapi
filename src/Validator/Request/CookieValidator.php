@@ -61,41 +61,7 @@ final readonly class CookieValidator extends AbstractParameterValidator
 
     public function parseCookieStyle(string $cookieHeader, Parameter $parameter): array|string|null
     {
-        $name = $parameter->name ?? '';
-        $style = $parameter->style ?? 'form';
-        $explode = $parameter->explode;
-
-        if ('cookie' !== $style && 'form' !== $style) {
-            throw new InvalidParameterException(
-                $name,
-                "Cookie parameter style must be 'form' or 'cookie', got '{$style}'",
-            );
-        }
-
-        if ('' === trim($cookieHeader)) {
-            return null;
-        }
-
-        if ($explode && $this->hasMultipleCookies($cookieHeader, $name)) {
-            return $this->parseExplodedValues($cookieHeader, $name);
-        }
-
-        $cookies = $this->parseCookies($cookieHeader);
-        /** @var string|null $value */
-        $value = $cookies[$name] ?? null;
-
-        if (null === $value) {
-            return null;
-        }
-
-        $decodedValue = rawurldecode($value);
-
-        $schemaType = $parameter->schema?->type;
-        if ('array' === $schemaType && str_contains($decodedValue, ',')) {
-            return explode(',', $decodedValue);
-        }
-
-        return $decodedValue;
+        return $this->parseCookieStyleWith($cookieHeader, $parameter, $this->parseCookies($cookieHeader));
     }
 
     public function validateWithHeader(array $data, string $cookieHeader, array $parameterSchemas): void
@@ -105,6 +71,9 @@ final readonly class CookieValidator extends AbstractParameterValidator
             nullableAsType: $this->config->nullableAsType,
             emptyArrayStrategy: $this->config->emptyArrayStrategy,
         );
+
+        $hasHeader = '' !== trim($cookieHeader);
+        $cookies = $hasHeader ? $this->parseCookies($cookieHeader) : [];
 
         foreach ($parameterSchemas as $param) {
             if (false === $param instanceof Parameter) {
@@ -120,7 +89,9 @@ final readonly class CookieValidator extends AbstractParameterValidator
                 continue;
             }
 
-            $value = $this->resolveValue($data, $cookieHeader, $name, $param);
+            $value = $hasHeader
+                ? $this->parseCookieStyleWith($cookieHeader, $param, $cookies)
+                : $this->resolveValueFromData($data, $name);
 
             if (null === $value) {
                 if ($this->isRequired($param, $value)) {
@@ -150,12 +121,52 @@ final readonly class CookieValidator extends AbstractParameterValidator
         return $data[$name] ?? null;
     }
 
-    private function resolveValue(array $data, string $cookieHeader, string $name, Parameter $param): array|int|string|float|bool|null
+    /**
+     * Loop-invariant-friendly variant: accepts pre-parsed cookies so callers
+     * that iterate over multiple parameters can parse the Cookie header once.
+     *
+     * @param array<string, string> $precomputedCookies
+     */
+    private function parseCookieStyleWith(string $cookieHeader, Parameter $parameter, array $precomputedCookies): array|string|null
     {
-        if ('' !== trim($cookieHeader)) {
-            return $this->parseCookieStyle($cookieHeader, $param);
+        $name = $parameter->name ?? '';
+        $style = $parameter->style ?? 'form';
+        $explode = $parameter->explode;
+
+        if ('cookie' !== $style && 'form' !== $style) {
+            throw new InvalidParameterException(
+                $name,
+                sprintf("Cookie parameter style must be 'form' or 'cookie', got '%s'", $style),
+            );
         }
 
+        if ('' === trim($cookieHeader)) {
+            return null;
+        }
+
+        if ($explode && $this->hasMultipleCookies($cookieHeader, $name)) {
+            return $this->parseExplodedValues($cookieHeader, $name);
+        }
+
+        /** @var string|null $value */
+        $value = $precomputedCookies[$name] ?? null;
+
+        if (null === $value) {
+            return null;
+        }
+
+        $decodedValue = rawurldecode($value);
+
+        $schemaType = $parameter->schema?->type;
+        if ('array' === $schemaType && str_contains($decodedValue, ',')) {
+            return explode(',', $decodedValue);
+        }
+
+        return $decodedValue;
+    }
+
+    private function resolveValueFromData(array $data, string $name): array|int|string|float|bool|null
+    {
         /** @var array|int|string|float|bool|null $value */
         $value = $this->findParameter($data, $name);
 
@@ -203,28 +214,36 @@ final readonly class CookieValidator extends AbstractParameterValidator
     {
         $this->enforcePairCountLimit($cookieHeader);
 
-        $count = 0;
         $pairs = explode(';', $cookieHeader);
+        $count = 0;
 
         foreach ($pairs as $pair) {
-            $pair = trim($pair);
-            if ('' === $pair) {
+            $pairName = $this->extractPairName($pair);
+            if (null === $pairName || $pairName !== $name) {
                 continue;
             }
 
-            $equalsPos = strpos($pair, '=');
-            if (false === $equalsPos) {
-                continue;
-            }
-
-            if (substr($pair, 0, $equalsPos) === $name) {
-                ++$count;
-                if ($count > 1) {
-                    return true;
-                }
+            ++$count;
+            if ($count > 1) {
+                return true;
             }
         }
 
         return false;
+    }
+
+    private function extractPairName(string $pair): ?string
+    {
+        $pair = trim($pair);
+        if ('' === $pair) {
+            return null;
+        }
+
+        $equalsPos = strpos($pair, '=');
+        if (false === $equalsPos) {
+            return null;
+        }
+
+        return substr($pair, 0, $equalsPos);
     }
 }

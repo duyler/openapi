@@ -7,15 +7,18 @@ namespace Duyler\OpenApi\Validator\Request;
 use Duyler\OpenApi\Validator\Exception\PathMismatchException;
 use Duyler\OpenApi\Validator\Exception\PregRuntimeException;
 use Duyler\OpenApi\Validator\PregExecutor;
+use Psr\Log\LoggerInterface;
 
 use function array_keys;
 use function is_string;
+use function strlen;
 
 final readonly class PathParser
 {
     public function __construct(
         private readonly PathRegexCache $pathRegexCache,
         private readonly PregExecutor $pregExecutor = new PregExecutor(),
+        private readonly ?LoggerInterface $logger = null,
     ) {}
 
     /** @return array<string, string> Parameter values */
@@ -35,7 +38,13 @@ final readonly class PathParser
 
         try {
             $matchResult = $this->pregExecutor->match($regex, $requestPath, $matches);
-        } catch (PregRuntimeException) {
+        } catch (PregRuntimeException $e) {
+            $this->logger?->debug('PCRE failure during path parsing', [
+                'pattern' => $regex,
+                'subject_length' => strlen($requestPath),
+                'exception' => $e,
+            ]);
+
             return null;
         }
 
@@ -45,7 +54,7 @@ final readonly class PathParser
 
         $params = [];
         foreach (array_keys($matches) as $key) {
-            if (!is_string($key)) {
+            if (false === is_string($key)) {
                 continue;
             }
 

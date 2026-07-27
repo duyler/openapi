@@ -6,22 +6,27 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
-use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
-use Duyler\OpenApi\Validator\Exception\NestedValidationError;
+use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
+use Duyler\OpenApi\Validator\SchemaValidator\Internal\ItemValidationExceptionTrait;
+use Duyler\OpenApi\Validator\SchemaValidator\Internal\ItemValidationState;
 use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
 use function is_array;
-use function sprintf;
 use function count;
+use function is_bool;
 
 final readonly class ItemsValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
+    use ItemValidationExceptionTrait;
+
+    private const string ITEM_SCHEMA_PATH = '/items';
+
     #[Override]
     public function isApplicable(Schema $schema): bool
     {
@@ -39,101 +44,83 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
             return;
         }
 
-        if (true === $schema->items || false === $schema->items) {
+        if (is_bool($schema->items)) {
             $this->validateBooleanItems($data, $schema, $context);
 
             return;
         }
 
-        $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
-        $validator = $this->createSchemaValidator();
+        /** @var Schema $itemsSchema */
+        $itemsSchema = $schema->items;
+        $this->validateSchemaItems($data, $itemsSchema, $schema->prefixItems, $context);
+    }
+
+    /**
+     * @param array<int, mixed>             $data
+     * @param list<Schema>|null             $prefixItems
+     */
+    private function validateSchemaItems(array $data, Schema $itemsSchema, ?array $prefixItems, ?ValidationContext $context): void
+    {
+        $prefixCount = null !== $prefixItems ? count($prefixItems) : 0;
         $nullableAsType = $context?->nullableAsType ?? true;
-        $allowNull = $nullableAsType && ($schema->items->nullable
-            || SchemaValueNormalizer::typeIncludesNull($schema->items->type));
+        $allowNull = $nullableAsType && ($itemsSchema->nullable
+            || SchemaValueNormalizer::doesTypeIncludeNull($itemsSchema->type));
+
+        $state = new ItemValidationState(
+            itemsSchema: $itemsSchema,
+            validator: $this->createSchemaValidator(),
+            allowNull: $allowNull,
+            nullableAsType: $nullableAsType,
+            context: $context,
+        );
 
         foreach ($data as $index => $item) {
             if ($index < $prefixCount) {
                 continue;
             }
 
-            try {
-                $normalizedItem = SchemaValueNormalizer::normalize($item, $allowNull);
+            /** @var int $index */
+            $this->validateOneItem($item, $index, $state);
+        }
+    }
 
-                if (null === $context) {
-                    $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
-                }
+    private function validateOneItem(mixed $item, int $index, ItemValidationState $state): void
+    {
+        try {
+            $normalizedItem = SchemaValueNormalizer::normalize($item, $state->allowNull);
 
-                $context->enterBreadcrumbIndex($index);
-
-                try {
-                    $validator->validate($normalizedItem, $schema->items, $context);
-                    /** @var int $index */
-                    $context->markItemEvaluated($index);
-                } finally {
-                    $context->leaveBreadcrumb();
-                }
-            } catch (InvalidDataTypeException $e) {
-                $dataPath = $this->getDataPath($context);
-
-                throw new ValidationException(
-                    sprintf('Item at index %d has invalid data type: %s', $index, $e->getMessage()),
-                    previous: $e,
-                    errors: [
-                        new TypeMismatchError(
-                            expected: $this->formatSchemaType($schema->items->type),
-                            actual: TypeFormatter::format($item),
-                            dataPath: $dataPath . '[' . $index . ']',
-                            schemaPath: '/items',
-                        ),
-                    ],
-                );
-            } catch (InvalidFormatException $e) {
-                throw $e;
-            } catch (AbstractValidationError $e) {
-                $dataPath = $this->getDataPath($context);
-
-                throw new ValidationException(
-                    sprintf('Item at index %d validation failed: %s', $index, $e->getMessage()),
-                    previous: $e,
-                    errors: [$e],
-                );
-            } catch (ValidationException $e) {
-                $dataPath = $this->getDataPath($context);
-                $errors = $e->getErrors();
-
-                if ([] === $errors) {
-                    $errors = [
-                        new NestedValidationError(
-                            dataPath: $dataPath . '[' . $index . ']',
-                            schemaPath: '/items',
-                            message: $e->getMessage(),
-                        ),
-                    ];
-                }
-
-                throw new ValidationException(
-                    sprintf('Item at index %d validation failed', $index),
-                    previous: $e,
-                    errors: $errors,
-                );
+            if (null === $state->context) {
+                $state->context = ValidationContext::create(pool: $this->pool(), nullableAsType: $state->nullableAsType);
             }
+
+            $state->context->enterBreadcrumbIndex($index);
+
+            try {
+                $state->validator->validate($normalizedItem, $state->itemsSchema, $state->context);
+                $state->context->markItemEvaluated($index);
+            } finally {
+                $state->context->leaveBreadcrumb();
+            }
+        } catch (InvalidDataTypeException|InvalidFormatException|AbstractValidationError|ValidationException $e) {
+            $this->wrapItemValidationException(
+                $e,
+                $index,
+                $item,
+                $state->itemsSchema,
+                self::ITEM_SCHEMA_PATH,
+                $state->context,
+            );
         }
     }
 
     /**
-     * Handles boolean-form `items` per JSON Schema 2020-12 §4.3.2.
-     *
-     * `items: true` accepts every item (no-op); still marks each item as
-     * evaluated so unevaluatedItems does not over-reject. `items: false`
-     * rejects every item at index >= prefixItems count.
-     *
      * @param array<array-key, mixed> $data
      */
     private function validateBooleanItems(array $data, Schema $schema, ?ValidationContext $context): void
     {
         $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
 
-        if (true === $schema->items) {
+        if ($schema->items) {
             $dataCount = count($data);
 
             if (null !== $context) {

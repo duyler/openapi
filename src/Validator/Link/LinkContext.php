@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Link;
 
+use Duyler\OpenApi\Validator\Link\Internal\RequestScope;
+use Duyler\OpenApi\Validator\Link\Internal\ResponseScope;
+
 /**
  * Carries the runtime context required to evaluate OpenAPI 3.2 §6.19.2
  * Runtime Expressions inside Link parameters and request bodies.
@@ -31,4 +34,27 @@ final readonly class LinkContext
         public array $requestHeaders = [],
         public mixed $requestBody = null,
     ) {}
+
+    /**
+     * Type-safe named-constructor splitting the LinkContext fields into
+     * request-scope and response-scope. Prefer this over the constructor
+     * at call-sites that supply fields from both scopes; the constructor
+     * remains the canonical public API documented in the README.
+     *
+     * @see self::__construct()
+     */
+    public static function fromGroups(RequestScope $request, ResponseScope $response): self
+    {
+        return new self(
+            body: $response->body,
+            headers: $response->headers,
+            queryParams: $response->queryParams,
+            url: $request->url,
+            method: $request->method,
+            statusCode: $response->statusCode,
+            pathParams: $request->pathParams,
+            requestHeaders: $request->requestHeaders,
+            requestBody: $request->requestBody,
+        );
+    }
 }

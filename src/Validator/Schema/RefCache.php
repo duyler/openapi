@@ -8,9 +8,7 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
 
-/**
- * @internal Used internally by RefResolver; not part of the public API.
- */
+/** @internal */
 final class RefCache
 {
     /** @var array<string, Schema|Parameter|Response> */

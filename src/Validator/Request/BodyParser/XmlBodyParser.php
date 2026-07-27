@@ -6,10 +6,12 @@ namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
 use Duyler\OpenApi\Validator\Exception\BodyTooLargeException;
 use Duyler\OpenApi\Validator\LibxmlSecuredContext;
+use Psr\Log\LoggerInterface;
 use SimpleXMLElement;
 use ValueError;
 
 use function array_key_exists;
+use function array_merge;
 use function assert;
 use function is_array;
 use function strlen;
@@ -25,6 +27,7 @@ final readonly class XmlBodyParser
 
     public function __construct(
         private readonly int $maxXmlBytes = self::DEFAULT_MAX_XML_BYTES,
+        private readonly ?LoggerInterface $logger = null,
     ) {}
 
     /**
@@ -55,24 +58,47 @@ final readonly class XmlBodyParser
 
                 return self::xmlToArray($xml);
             });
-        } catch (ValueError) {
+        } catch (ValueError $e) {
+            $this->logger?->debug('XML body parse failure (ValueError), falling back to raw body', [
+                'body_length' => $length,
+                'exception' => $e,
+            ]);
+
             return $body;
         }
     }
 
     /**
-     * Converts a SimpleXMLElement into a nested array where namespaced
-     * nodes keep their prefix in the key (e.g. `atom:link`, `@xsi:type`)
-     * to avoid data loss per RFC 7303. Default-namespace and non-namespaced
-     * nodes are keyed by their local name.
-     *
      * @return array<array-key, mixed>|string|null
      */
     private static function xmlToArray(SimpleXMLElement $xml): array|string|null
     {
         /** @var array<int|string, mixed> $result */
-        $result = [];
+        $result = array_merge(
+            self::collectAttributes($xml),
+            self::collectChildElements($xml),
+        );
 
+        if ([] === $result) {
+            $text = (string) $xml;
+
+            return '' === $text ? null : $text;
+        }
+
+        $text = trim((string) $xml);
+        if ('' !== $text) {
+            $result['#text'] = $text;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    private static function collectAttributes(SimpleXMLElement $xml): array
+    {
+        $result = [];
         $attributes = $xml->attributes();
         assert($attributes instanceof SimpleXMLElement);
 
@@ -103,6 +129,15 @@ final readonly class XmlBodyParser
             }
         }
 
+        return $result;
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    private static function collectChildElements(SimpleXMLElement $xml): array
+    {
+        $result = [];
         $children = $xml->children();
         assert($children instanceof SimpleXMLElement);
 
@@ -111,8 +146,10 @@ final readonly class XmlBodyParser
          * @var SimpleXMLElement $child
          */
         foreach ($children as $name => $child) {
-            self::mergeChild($result, $name, self::elementToValue($child));
+            $result = self::mergeChild($result, $name, self::elementToValue($child));
         }
+
+        $namespaces = $xml->getNamespaces(true);
 
         foreach ($namespaces as $prefix => $namespace) {
             if ('' === $prefix) {
@@ -127,19 +164,8 @@ final readonly class XmlBodyParser
              * @var SimpleXMLElement $child
              */
             foreach ($nsChildren as $name => $child) {
-                self::mergeChild($result, $prefix . ':' . $name, self::elementToValue($child));
+                $result = self::mergeChild($result, $prefix . ':' . $name, self::elementToValue($child));
             }
-        }
-
-        if ([] === $result) {
-            $text = (string) $xml;
-
-            return '' === $text ? null : $text;
-        }
-
-        $text = trim((string) $xml);
-        if ('' !== $text) {
-            $result['#text'] = $text;
         }
 
         return $result;
@@ -191,18 +217,16 @@ final readonly class XmlBodyParser
     }
 
     /**
-     * Merges a child value under $key into $result. The first occurrence
-     * is stored as-is; repeated occurrences promote the stored value to a
-     * numeric-indexed list, preserving document order.
-     *
      * @param array<array-key, mixed> $result
+     *
+     * @return array<array-key, mixed>
      */
-    private static function mergeChild(array &$result, string $key, array|string|null $value): void
+    private static function mergeChild(array $result, string $key, array|string|null $value): array
     {
         if (false === array_key_exists($key, $result)) {
             $result[$key] = $value;
 
-            return;
+            return $result;
         }
 
         /** @var array<array-key, mixed>|string|null $existing */
@@ -214,5 +238,7 @@ final readonly class XmlBodyParser
 
         $existing[] = $value;
         $result[$key] = $existing;
+
+        return $result;
     }
 }

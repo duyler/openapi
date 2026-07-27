@@ -258,18 +258,18 @@ YAML;
     #[Test]
     public function string_json_spec_with_external_ref_throws_builder_exception(): void
     {
-        $json = <<<'JSON'
-{
-  "openapi": "3.2.0",
-  "info": { "title": "JSON spec with external ref", "version": "1.0.0" },
-  "paths": {},
-  "components": {
-    "schemas": {
-      "Foo": { "$ref": "shared/bar.json" }
-    }
-  }
-}
-JSON;
+        $json = <<<'JSON_WRAP'
+        {
+          "openapi": "3.2.0",
+          "info": { "title": "JSON spec with external ref", "version": "1.0.0" },
+          "paths": {},
+          "components": {
+            "schemas": {
+              "Foo": { "$ref": "shared/bar.json" }
+            }
+          }
+        }
+        JSON_WRAP;
 
         $builder = OpenApiValidatorBuilder::create()
             ->fromJsonString($json);

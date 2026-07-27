@@ -17,13 +17,9 @@ use function random_bytes;
 
 final class EnumScalarCache
 {
-    /**
-     * 2^53 — largest integer that survives a round-trip through IEEE 754
-     * double without precision loss. Used to keep numeric equality (1 == 1.0)
-     * while preventing distinct large int64 values from collapsing to the
-     * same float key (SPEC-05).
-     */
     private const int SAFE_INT64_FLOAT_BOUNDARY = 9007199254740992;
+
+    private const int CACHE_KEY_ENTROPY_BYTES = 16;
 
     /** @var WeakMap<Schema, bool> */
     private WeakMap $isScalarEnumCache;
@@ -44,15 +40,11 @@ final class EnumScalarCache
 
     public function isScalarLookupEligible(Schema $schema, mixed $data): bool
     {
-        if (!$this->isScalarEnum($schema)) {
+        if (false === $this->isScalarEnum($schema)) {
             return false;
         }
 
-        return null === $data
-            || is_int($data)
-            || is_float($data)
-            || is_string($data)
-            || is_bool($data);
+        return $this->isScalarOrNull($data);
     }
 
     public function contains(Schema $schema, mixed $data): bool
@@ -93,7 +85,7 @@ final class EnumScalarCache
     {
         /** @var mixed $value */
         foreach ($enum as $value) {
-            if (null === $value || is_int($value) || is_float($value) || is_string($value) || is_bool($value)) {
+            if ($this->isScalarOrNull($value)) {
                 continue;
             }
 
@@ -134,9 +126,19 @@ final class EnumScalarCache
             return 's:' . $value;
         }
 
+        if (is_int($value) || is_float($value)) {
+            return $this->numericKey($value);
+        }
+
+        /** @var float $value */
+        return 'n:' . (string) $value;
+    }
+
+    private function numericKey(int|float $value): string
+    {
         if (is_float($value) && is_nan($value)) {
             /** @var non-empty-string $bytes */
-            $bytes = random_bytes(16);
+            $bytes = random_bytes(self::CACHE_KEY_ENTROPY_BYTES);
 
             return 'nan:' . bin2hex($bytes);
         }
@@ -149,7 +151,15 @@ final class EnumScalarCache
             return 'n:i:' . (string) $value;
         }
 
-        /** @var float $value */
         return 'n:' . (string) $value;
+    }
+
+    private function isScalarOrNull(mixed $value): bool
+    {
+        return null === $value
+            || is_int($value)
+            || is_float($value)
+            || is_string($value)
+            || is_bool($value);
     }
 }

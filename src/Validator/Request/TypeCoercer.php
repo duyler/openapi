@@ -11,11 +11,7 @@ use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use function get_object_vars;
 use function in_array;
 use function is_array;
-use function is_bool;
-use function is_float;
-use function is_int;
 use function is_object;
-use function is_string;
 use function is_scalar;
 
 final readonly class TypeCoercer extends AbstractCoercer
@@ -120,7 +116,7 @@ final readonly class TypeCoercer extends AbstractCoercer
             return $value;
         }
 
-        if (is_int($value) || is_string($value) || is_float($value) || is_bool($value)) {
+        if (is_scalar($value)) {
             return $value;
         }
 

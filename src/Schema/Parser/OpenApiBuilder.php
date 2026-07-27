@@ -22,7 +22,6 @@ use function sprintf;
 
 use const FILTER_VALIDATE_URL;
 
-/** Abstract base for {@see JsonParser} and {@see YamlParser}. */
 abstract class OpenApiBuilder implements SchemaParserInterface
 {
     private const string VERSION_PATTERN = '/^3\.[0-2]\.[0-9]+$/';

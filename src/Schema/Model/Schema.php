@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Model\Internal\ArrayFields;
+use Duyler\OpenApi\Schema\Model\Internal\CompositionFields;
+use Duyler\OpenApi\Schema\Model\Internal\ObjectFields;
+use Duyler\OpenApi\Schema\Model\Internal\ScalarFields;
 use Duyler\OpenApi\Schema\Serializer\SchemaToArrayConverter;
 use JsonSerializable;
 use Override;
@@ -50,6 +54,10 @@ final readonly class Schema implements JsonSerializable
      * @param list<mixed>|null $enum
      * @param array<string, mixed>|null $examples
      * @param Xml|null $xml
+     *
+     * @deprecated since 1.x, will be removed in 2.0. Use {@see fromConstraintGroups()} instead.
+     *             PHPDoc-only deprecation (no {@see Deprecated} attribute) so {@see fromConstraintGroups()}
+     *             can delegate without runtime E_DEPRECATED cascade. See `.ai/reports/adr-schema-constructor.md`.
      */
     public function __construct(
         public ?string $ref = null,
@@ -135,6 +143,15 @@ final readonly class Schema implements JsonSerializable
      * @param list<mixed>|null $enum
      * @param array<string, mixed>|null $examples
      * @param Xml|null $xml
+     *
+     * @deprecated since 1.x, will be removed in 2.0. Use {@see withOverrideGroups()} instead.
+     *             PHPDoc-only deprecation (no {@see Deprecated} attribute) so the 5 internal
+     *             callers (DocumentFingerprinter, ValidatorCompiler, CompositionResolver,
+     *             CompilationCacheTest, SchemaWithOverridesTest) can invoke it without
+     *             triggering a runtime E_DEPRECATED cascade. The attribute will be re-added
+     *             when all internal callers are migrated to {@see withOverrideGroups()},
+     *             or the method is removed in 2.0 — whichever comes first. See
+     *             `.ai/reports/adr-schema-constructor.md`.
      */
     public function withOverrides(
         ?string $ref = null,
@@ -257,25 +274,163 @@ final readonly class Schema implements JsonSerializable
     }
 
     /**
-     * JSON Schema 2020-12 §8.2.3: when $ref is present, sibling keywords
-     * are evaluated alongside the referenced schema. This method returns
-     * a new schema where $sibling's constraints are merged into $this
-     * (the resolved schema) per the strategy documented in
-     * {@see SchemaSiblingMerger}. The $ref family is dropped because the
-     * merger is invoked after reference resolution.
+     * Named-constructor that groups the 57 constructor parameters into 4 typed
+     * value-objects ({@see ScalarFields}, {@see ArrayFields}, {@see ObjectFields},
+     * {@see CompositionFields}) plus an explicit `nullable` modifier.
+     *
+     * Prefer this over the deprecated {@see __construct} for new code.
+     *
+     * @param ?bool $nullable when null, falls back to `false` (the historical default)
      */
+    public static function fromConstraintGroups(
+        ScalarFields $scalar,
+        ArrayFields $array,
+        ObjectFields $object,
+        CompositionFields $composition,
+        ?bool $nullable = null,
+    ): self {
+        return new self(
+            ref: $scalar->ref,
+            refSummary: $scalar->refSummary,
+            refDescription: $scalar->refDescription,
+            format: $scalar->format,
+            title: $scalar->title,
+            description: $scalar->description,
+            default: $scalar->default,
+            hasDefault: $scalar->hasDefault ?? false,
+            deprecated: $scalar->deprecated ?? false,
+            readOnly: $scalar->readOnly ?? false,
+            writeOnly: $scalar->writeOnly ?? false,
+            type: $scalar->type,
+            nullable: $nullable ?? false,
+            const: $scalar->const,
+            hasConst: $scalar->hasConst ?? false,
+            multipleOf: $scalar->multipleOf,
+            maximum: $scalar->maximum,
+            exclusiveMaximum: $scalar->exclusiveMaximum,
+            minimum: $scalar->minimum,
+            exclusiveMinimum: $scalar->exclusiveMinimum,
+            maxLength: $scalar->maxLength,
+            minLength: $scalar->minLength,
+            pattern: $scalar->pattern,
+            maxItems: $array->maxItems,
+            minItems: $array->minItems,
+            uniqueItems: $array->uniqueItems,
+            maxProperties: $object->maxProperties,
+            minProperties: $object->minProperties,
+            required: $object->required,
+            allOf: $composition->allOf,
+            anyOf: $composition->anyOf,
+            oneOf: $composition->oneOf,
+            not: $composition->not,
+            discriminator: $scalar->discriminator,
+            properties: $object->properties,
+            additionalProperties: $object->additionalProperties,
+            unevaluatedProperties: $object->unevaluatedProperties,
+            items: $array->items,
+            prefixItems: $array->prefixItems,
+            contains: $array->contains,
+            minContains: $array->minContains,
+            maxContains: $array->maxContains,
+            patternProperties: $object->patternProperties,
+            propertyNames: $object->propertyNames,
+            dependentSchemas: $object->dependentSchemas,
+            if: $composition->if,
+            then: $composition->then,
+            else: $composition->else,
+            unevaluatedItems: $array->unevaluatedItems,
+            example: $scalar->example,
+            examples: $scalar->examples,
+            enum: $scalar->enum,
+            contentEncoding: $scalar->contentEncoding,
+            contentMediaType: $scalar->contentMediaType,
+            contentSchema: $scalar->contentSchema,
+            jsonSchemaDialect: $scalar->jsonSchemaDialect,
+            xml: $scalar->xml,
+        );
+    }
+
+    /**
+     * Override-grouping replacement for the deprecated {@see withOverrides()}.
+     *
+     * Each value-object's non-null field overrides the corresponding field on
+     * `$this`; null fields preserve the existing value (override semantics).
+     * The `nullable` parameter follows the same rule: when null, the existing
+     * `nullable` is preserved; otherwise it is replaced.
+     */
+    public function withOverrideGroups(
+        ScalarFields $scalar,
+        ArrayFields $array,
+        ObjectFields $object,
+        CompositionFields $composition,
+        ?bool $nullable = null,
+    ): self {
+        return new self(
+            ref: $scalar->ref ?? $this->ref,
+            refSummary: $scalar->refSummary ?? $this->refSummary,
+            refDescription: $scalar->refDescription ?? $this->refDescription,
+            format: $scalar->format ?? $this->format,
+            title: $scalar->title ?? $this->title,
+            description: $scalar->description ?? $this->description,
+            default: $scalar->default ?? $this->default,
+            hasDefault: $scalar->hasDefault ?? $this->hasDefault,
+            deprecated: $scalar->deprecated ?? $this->deprecated,
+            readOnly: $scalar->readOnly ?? $this->readOnly,
+            writeOnly: $scalar->writeOnly ?? $this->writeOnly,
+            type: $scalar->type ?? $this->type,
+            nullable: $nullable ?? $this->nullable,
+            const: $scalar->const ?? $this->const,
+            hasConst: $scalar->hasConst ?? $this->hasConst,
+            multipleOf: $scalar->multipleOf ?? $this->multipleOf,
+            maximum: $scalar->maximum ?? $this->maximum,
+            exclusiveMaximum: $scalar->exclusiveMaximum ?? $this->exclusiveMaximum,
+            minimum: $scalar->minimum ?? $this->minimum,
+            exclusiveMinimum: $scalar->exclusiveMinimum ?? $this->exclusiveMinimum,
+            maxLength: $scalar->maxLength ?? $this->maxLength,
+            minLength: $scalar->minLength ?? $this->minLength,
+            pattern: $scalar->pattern ?? $this->pattern,
+            maxItems: $array->maxItems ?? $this->maxItems,
+            minItems: $array->minItems ?? $this->minItems,
+            uniqueItems: $array->uniqueItems ?? $this->uniqueItems,
+            maxProperties: $object->maxProperties ?? $this->maxProperties,
+            minProperties: $object->minProperties ?? $this->minProperties,
+            required: $object->required ?? $this->required,
+            allOf: $composition->allOf ?? $this->allOf,
+            anyOf: $composition->anyOf ?? $this->anyOf,
+            oneOf: $composition->oneOf ?? $this->oneOf,
+            not: $composition->not ?? $this->not,
+            discriminator: $scalar->discriminator ?? $this->discriminator,
+            properties: $object->properties ?? $this->properties,
+            additionalProperties: $object->additionalProperties ?? $this->additionalProperties,
+            unevaluatedProperties: $object->unevaluatedProperties ?? $this->unevaluatedProperties,
+            items: $array->items ?? $this->items,
+            prefixItems: $array->prefixItems ?? $this->prefixItems,
+            contains: $array->contains ?? $this->contains,
+            minContains: $array->minContains ?? $this->minContains,
+            maxContains: $array->maxContains ?? $this->maxContains,
+            patternProperties: $object->patternProperties ?? $this->patternProperties,
+            propertyNames: $object->propertyNames ?? $this->propertyNames,
+            dependentSchemas: $object->dependentSchemas ?? $this->dependentSchemas,
+            if: $composition->if ?? $this->if,
+            then: $composition->then ?? $this->then,
+            else: $composition->else ?? $this->else,
+            unevaluatedItems: $array->unevaluatedItems ?? $this->unevaluatedItems,
+            example: $scalar->example ?? $this->example,
+            examples: $scalar->examples ?? $this->examples,
+            enum: $scalar->enum ?? $this->enum,
+            contentEncoding: $scalar->contentEncoding ?? $this->contentEncoding,
+            contentMediaType: $scalar->contentMediaType ?? $this->contentMediaType,
+            contentSchema: $scalar->contentSchema ?? $this->contentSchema,
+            jsonSchemaDialect: $scalar->jsonSchemaDialect ?? $this->jsonSchemaDialect,
+            xml: $scalar->xml ?? $this->xml,
+        );
+    }
+
     public function withSibling(Schema $sibling): self
     {
         return new SchemaSiblingMerger()->merge($this, $sibling);
     }
 
-    /**
-     * Returns the string-constraint sub-DTO grouping minLength / maxLength /
-     * pattern. Returns null when no string constraint is declared.
-     *
-     * `format` is intentionally not grouped here: it is shared between string
-     * and numeric schemas and stays on the top-level facade.
-     */
     public function stringConstraints(): ?StringConstraints
     {
         if (null === $this->minLength && null === $this->maxLength && null === $this->pattern) {
@@ -289,11 +444,6 @@ final readonly class Schema implements JsonSerializable
         );
     }
 
-    /**
-     * Returns the numeric-constraint sub-DTO grouping multipleOf / minimum /
-     * maximum / exclusiveMinimum / exclusiveMaximum, or null when none are
-     * declared.
-     */
     public function numericConstraints(): ?NumericConstraints
     {
         if (
@@ -315,11 +465,6 @@ final readonly class Schema implements JsonSerializable
         );
     }
 
-    /**
-     * Returns the array-constraint sub-DTO grouping items / prefixItems /
-     * minItems / maxItems / uniqueItems / contains / minContains / maxContains
-     * / unevaluatedItems, or null when none are declared.
-     */
     public function arrayConstraints(): ?ArrayConstraints
     {
         if (
@@ -349,12 +494,6 @@ final readonly class Schema implements JsonSerializable
         );
     }
 
-    /**
-     * Returns the object-constraint sub-DTO grouping properties / required /
-     * minProperties / maxProperties / additionalProperties /
-     * unevaluatedProperties / patternProperties / dependentSchemas /
-     * propertyNames, or null when none are declared.
-     */
     public function objectConstraints(): ?ObjectConstraints
     {
         if (
@@ -384,10 +523,6 @@ final readonly class Schema implements JsonSerializable
         );
     }
 
-    /**
-     * Returns the composition sub-DTO grouping allOf / anyOf / oneOf / not /
-     * if / then / else, or null when none are declared.
-     */
     public function compositionConstraints(): ?CompositionConstraints
     {
         if (

@@ -14,15 +14,6 @@ use function strlen;
 
 use const JSON_THROW_ON_ERROR;
 
-/**
- * Parser for OpenAPI specs delivered as JSON strings or files. Enforces a
- * configurable size cap (default 1 MB, `DEFAULT_MAX_SPEC_BYTES`) and a
- * nesting depth cap (default 100, inherited from
- * `YamlParser::DEFAULT_MAX_SPEC_DEPTH`) before and after `json_decode`
- * respectively, defending against memory exhaustion and stack overflow on
- * attacker-controlled JSON (CWE-400, CWE-770). Closes the SEC-18 size-cap
- * gap that previously left JSON inputs unprotected while YAML was capped.
- */
 final class JsonParser extends OpenApiBuilder
 {
     public const int DEFAULT_MAX_SPEC_BYTES = 1_048_576;
@@ -74,7 +65,7 @@ final class JsonParser extends OpenApiBuilder
 
         foreach ($data as $value) {
             /** @var mixed $value */
-            if (!is_array($value)) {
+            if (false === is_array($value)) {
                 continue;
             }
 

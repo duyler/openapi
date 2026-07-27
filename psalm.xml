@@ -25,6 +25,31 @@
         Removing the @deprecated tag is not an option because tooling (IDE quick-fix,
         phpdoc generators) needs to surface the deprecation to direct callers.
         New deprecations MUST NOT be added here without a parallel entry in CHANGELOG.md.
+
+        Schema::__construct / Schema::withOverrides: deprecated in 1.x via ADR
+        `.ai/reports/adr-schema-constructor.md` (task 11b §10). Replaced by
+        `Schema::fromConstraintGroups()` / `Schema::withOverrideGroups()`. The
+        3 internal callers of `withOverrides` (DocumentFingerprinter,
+        ValidatorCompiler, CompositionResolver) plus 35+ callers of `__construct`
+        are tracked for migration in a follow-up task; suppressing here keeps
+        Psalm green during the 1.x deprecation window pending 2.0 removal.
+        IDE / runtime `#[Deprecated]` attribute still surfaces the deprecation
+        to direct callers via PHPStorm / Intelephense / `E_DEPRECATED`.
+
+        ValidationContext::__construct / ValidationContext::create: deprecated in
+        1.x via ADR `.ai/reports/adr-validator-signatures-and-dtos.md` (task 18 §10).
+        Replaced by `ValidationContext::fromInit(ValidationContextInit $init)`. The
+        16 internal callers of `create()` (SchemaValidator, ItemsValidator,
+        PatternPropertiesValidator, etc.) plus test-suite callers of `__construct`
+        are tracked for migration in a follow-up task; suppressing here keeps
+        Psalm green during the 1.x deprecation window pending 2.0 removal.
+        IDE / runtime still surfaces the deprecation to direct external callers.
+
+        ValidatorDependencies::__construct: deprecated in 1.x via the same ADR
+        (task 18 §10). Replaced by `ValidatorDependencies::fromGroup()`. The
+        single internal caller in `OpenApiValidatorBuilder::build()` has been
+        migrated; suppression retained for any external integrators still using
+        the constructor during the 1.x deprecation window.
     -->
     <issueHandlers>
         <DeprecatedClass>
@@ -33,5 +58,14 @@
                 <referencedClass name="Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies" />
             </errorLevel>
         </DeprecatedClass>
+        <DeprecatedMethod>
+            <errorLevel type="suppress">
+                <referencedMethod name="Duyler\OpenApi\Schema\Model\Schema::__construct" />
+                <referencedMethod name="Duyler\OpenApi\Schema\Model\Schema::withOverrides" />
+                <referencedMethod name="Duyler\OpenApi\Validator\Error\ValidationContext::__construct" />
+                <referencedMethod name="Duyler\OpenApi\Validator\Error\ValidationContext::create" />
+                <referencedMethod name="Duyler\OpenApi\Validator\Validation\ValidatorDependencies::__construct" />
+            </errorLevel>
+        </DeprecatedMethod>
     </issueHandlers>
 </psalm>

@@ -10,30 +10,25 @@ use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\PregExecutor;
+use Duyler\OpenApi\Validator\Security\Internal\ApiKeyValidator;
+use Duyler\OpenApi\Validator\Security\Internal\BearerAuthValidator;
+use Duyler\OpenApi\Validator\Security\Internal\SchemeCredentialReporter;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-use function is_string;
 use function sprintf;
-use function strtolower;
 use function strtoupper;
 
 final readonly class SecurityValidator
 {
-    /**
-     * Matches RFC 6750 §2.1 Bearer credential `Bearer <b64token>` and
-     * nothing else: the trailing `\s*$` allows optional RFC 7235
-     * header-value whitespace and the end-anchor rejects multi-challenge
-     * headers such as `Bearer fake, Basic dXNlcjpwYXNz` (R4-SEC-016).
-     */
-    private const string BEARER_AUTH_PATTERN = '/^bearer\s+\S+\s*$/i';
-
     private readonly LoggerInterface $logger;
 
     public function __construct(
         ?LoggerInterface $logger = null,
         private readonly PregExecutor $pregExecutor = new PregExecutor(),
+        private readonly BearerAuthValidator $bearerValidator = new BearerAuthValidator(new PregExecutor()),
+        private readonly ApiKeyValidator $apiKeyValidator = new ApiKeyValidator(),
     ) {
         $this->logger = $logger ?? new NullLogger();
     }
@@ -96,11 +91,7 @@ final readonly class SecurityValidator
             $scheme = $securitySchemes[$schemeName] ?? null;
 
             if (null === $scheme) {
-                $errors[] = $this->reportMissingCredentials(
-                    $schemeName,
-                    'undefined',
-                    'scheme not found in components/securitySchemes',
-                );
+                $errors[] = $this->reportMissing($schemeName, 'undefined', 'scheme not found in components/securitySchemes');
 
                 continue;
             }
@@ -128,9 +119,11 @@ final readonly class SecurityValidator
         string $schemeName,
         SecurityScheme $scheme,
     ): ?MissingSecurityCredentialsError {
+        $reporter = new SchemeCredentialReporter($schemeName, $this->logger);
+
         return match ($scheme->type) {
-            'http' => $this->validateHttpScheme($request, $schemeName, $scheme),
-            'apiKey' => $this->validateApiKeyScheme($request, $schemeName, $scheme),
+            'http' => $this->bearerValidator->validate($request, $scheme, $reporter),
+            'apiKey' => $this->apiKeyValidator->validate($request, $scheme, $reporter),
             default => throw new UnsupportedSecuritySchemeException(
                 schemeName: $schemeName,
                 schemeType: $scheme->type,
@@ -138,116 +131,8 @@ final readonly class SecurityValidator
         };
     }
 
-    private function validateHttpScheme(
-        ServerRequestInterface $request,
-        string $schemeName,
-        SecurityScheme $scheme,
-    ): ?MissingSecurityCredentialsError {
-        $schemeType = strtolower($scheme->scheme ?? 'bearer');
-
-        if ('bearer' !== $schemeType) {
-            throw new UnsupportedSecuritySchemeException(
-                schemeName: $schemeName,
-                schemeType: 'http',
-                httpScheme: $schemeType,
-            );
-        }
-
-        $authorization = $request->getHeaderLine('Authorization');
-
-        if ('' !== $authorization && 1 === $this->pregExecutor->match(self::BEARER_AUTH_PATTERN, $authorization)) {
-            return null;
-        }
-
-        return $this->reportMissingCredentials(
-            $schemeName,
-            'http/bearer',
-            'Authorization header',
-        );
-    }
-
-    private function validateApiKeyScheme(
-        ServerRequestInterface $request,
-        string $schemeName,
-        SecurityScheme $scheme,
-    ): ?MissingSecurityCredentialsError {
-        $location = $scheme->in ?? 'header';
-        $name = $scheme->name ?? 'X-API-Key';
-
-        /** @var string|null $value */
-        $value = match ($location) {
-            'query' => $this->findQueryCredential($request, $name),
-            'header' => $this->findHeaderCredential($request, $name),
-            'cookie' => $this->findCookieCredential($request, $name),
-            default => null,
-        };
-
-        if (null !== $value && '' !== $value) {
-            return null;
-        }
-
-        $reason = null === $value
-            ? sprintf('missing %s parameter "%s"', $location, $name)
-            : sprintf('empty %s parameter "%s"', $location, $name);
-
-        return $this->reportMissingCredentials(
-            $schemeName,
-            'apiKey',
-            $reason,
-        );
-    }
-
-    /**
-     * SEC-07 / CWE-209: emit a MissingSecurityCredentialsError with a
-     * generic caller-safe message while forwarding the concrete scheme
-     * details (schemeName, schemeType, location) to the PSR-3 logger at
-     * debug level. The details never reach the exception message and
-     * never reach the params() array consumed by error formatters, so
-     * they cannot leak to unauthenticated callers via a PSR-15
-     * middleware that surfaces Throwable messages.
-     */
-    private function reportMissingCredentials(
-        string $schemeName,
-        string $schemeType,
-        string $location,
-    ): MissingSecurityCredentialsError {
-        $this->logger->debug('Security validation failed', [
-            'schemeName' => $schemeName,
-            'schemeType' => $schemeType,
-            'location' => $location,
-        ]);
-
-        return new MissingSecurityCredentialsError(
-            schemeName: $schemeName,
-            schemeType: $schemeType,
-            location: $location,
-        );
-    }
-
-    private function findQueryCredential(ServerRequestInterface $request, string $name): ?string
+    private function reportMissing(string $schemeName, string $schemeType, string $location): MissingSecurityCredentialsError
     {
-        $params = $request->getQueryParams();
-
-        /** @var string|null $value */
-        $value = $params[$name] ?? null;
-
-        return is_string($value) ? $value : null;
-    }
-
-    private function findHeaderCredential(ServerRequestInterface $request, string $name): ?string
-    {
-        $value = $request->getHeaderLine($name);
-
-        return '' === $value ? null : $value;
-    }
-
-    private function findCookieCredential(ServerRequestInterface $request, string $name): ?string
-    {
-        $cookies = $request->getCookieParams();
-
-        /** @var string|null $value */
-        $value = $cookies[$name] ?? null;
-
-        return is_string($value) ? $value : null;
+        return new SchemeCredentialReporter($schemeName, $this->logger)->reportMissing($schemeType, $location);
     }
 }

@@ -16,6 +16,7 @@ use Override;
 
 use function count;
 use function is_array;
+use function is_bool;
 
 final readonly class ContainsValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
@@ -40,72 +41,47 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
 
         $dataPath = $this->getDataPath($context);
 
-        if (true === $schema->contains) {
-            $matchCount = count($data);
-            $effectiveMinContains = $schema->minContains ?? 1;
-
-            if ($matchCount < $effectiveMinContains) {
-                if (0 === $matchCount && 1 === $effectiveMinContains) {
-                    throw new ContainsMatchError(
-                        dataPath: $dataPath,
-                        schemaPath: '/contains',
-                    );
-                }
-
-                throw new MinContainsError(
-                    minContains: $effectiveMinContains,
-                    actualCount: $matchCount,
-                    dataPath: $dataPath,
-                    schemaPath: '/minContains',
-                );
-            }
-
-            if (null !== $schema->maxContains && $matchCount > $schema->maxContains) {
-                throw new MaxContainsError(
-                    maxContains: $schema->maxContains,
-                    minDetectedCount: $matchCount,
-                    dataPath: $dataPath,
-                    schemaPath: '/maxContains',
-                );
-            }
-
-            $containsContext = $context ?? ValidationContext::create(pool: $this->pool());
-
-            foreach (array_keys($data) as $index) {
-                /** @var int $index */
-                $containsContext->markItemEvaluated($index);
-            }
+        if (is_bool($schema->contains) && $schema->contains) {
+            $this->validateBooleanTrueContains($data, $schema, $context, $dataPath);
 
             return;
         }
 
         if (false === $schema->contains) {
-            $effectiveMinContains = $schema->minContains ?? 1;
+            // contains: false forbids any matching item; treat as 0 matches
+            // and apply the standard min/max bounds.
+            $this->enforceContainsBounds(0, $schema, $dataPath);
 
-            if (0 === $effectiveMinContains) {
-                return;
-            }
-
-            if (1 === $effectiveMinContains) {
-                throw new ContainsMatchError(
-                    dataPath: $dataPath,
-                    schemaPath: '/contains',
-                );
-            }
-
-            throw new MinContainsError(
-                minContains: $effectiveMinContains,
-                actualCount: 0,
-                dataPath: $dataPath,
-                schemaPath: '/minContains',
-            );
+            return;
         }
 
+        /** @var Schema $containsSchema */
+        $containsSchema = $schema->contains;
+        $matchCount = $this->countSchemaMatches($data, $containsSchema, $context, $dataPath, $schema->maxContains);
+        $this->enforceContainsBounds($matchCount, $schema, $dataPath);
+    }
+
+    private function validateBooleanTrueContains(array $data, Schema $schema, ?ValidationContext $context, string $dataPath): void
+    {
+        $this->enforceContainsBounds(count($data), $schema, $dataPath);
+
+        $containsContext = $context ?? ValidationContext::create(pool: $this->pool());
+
+        foreach (array_keys($data) as $index) {
+            /** @var int $index */
+            $containsContext->markItemEvaluated($index);
+        }
+    }
+
+    /**
+     * @param array<int, mixed> $data
+     */
+    private function countSchemaMatches(array $data, Schema $containsSchema, ?ValidationContext $context, string $dataPath, ?int $maxContains = null): int
+    {
         $validator = $this->createSchemaValidator();
         $containsContext = $context ?? ValidationContext::create(pool: $this->pool());
 
         $matchCount = 0;
-        $effectiveMinContains = $schema->minContains ?? 1;
 
         foreach ($data as $index => $item) {
             if (self::MAX_CONTAINS_VALIDATIONS <= $matchCount) {
@@ -117,18 +93,25 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
 
             try {
                 /** @var array-key|array<array-key, mixed> $item */
-                $validator->validate($item, $schema->contains, $containsContext);
+                $validator->validate($item, $containsSchema, $containsContext);
                 ++$matchCount;
                 /** @var int $index */
                 $context?->markItemEvaluated($index);
 
-                if (null !== $schema->maxContains && $matchCount > $schema->maxContains) {
+                if (null !== $maxContains && $matchCount > $maxContains) {
                     break;
                 }
             } catch (ValidationException|AbstractValidationError) {
                 continue;
             }
         }
+
+        return $matchCount;
+    }
+
+    private function enforceContainsBounds(int $matchCount, Schema $schema, string $dataPath): void
+    {
+        $effectiveMinContains = $schema->minContains ?? 1;
 
         if ($matchCount < $effectiveMinContains) {
             if (0 === $matchCount && 1 === $effectiveMinContains) {

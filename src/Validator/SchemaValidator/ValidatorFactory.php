@@ -84,7 +84,7 @@ final readonly class ValidatorFactory
     {
         return array_values(array_filter(
             $this->createAll(),
-            fn(int|string $class): bool => !in_array($class, self::CONTEXT_HANDLED_VALIDATORS, true),
+            fn(int|string $class): bool => false === in_array($class, self::CONTEXT_HANDLED_VALIDATORS, true),
             ARRAY_FILTER_USE_KEY,
         ));
     }

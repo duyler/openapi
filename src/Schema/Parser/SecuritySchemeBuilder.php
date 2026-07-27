@@ -11,12 +11,6 @@ use Duyler\OpenApi\Schema\Model\SecurityScheme;
 
 use function is_array;
 
-/**
- * Builds OpenAPI SecurityScheme / OAuthFlows / OAuthFlow objects.
- *
- * Standalone group with no inbound dependencies on other sub-builders.
- * {@see ComponentsBuilder} delegates here for `components.securitySchemes`.
- */
 final readonly class SecuritySchemeBuilder
 {
     public function __construct(private OpenApiBuildContext $context) {}

@@ -86,7 +86,7 @@ final readonly class OneOfValidatorWithContext
     private function hasNullableSchema(array $oneOf): bool
     {
         return array_any($oneOf, fn(Schema $subSchema): bool => $subSchema->nullable
-            || SchemaValueNormalizer::typeIncludesNull($subSchema->type));
+            || SchemaValueNormalizer::doesTypeIncludeNull($subSchema->type));
     }
 
     private function validateWithoutDiscriminator(mixed $data, array $oneOf, ValidationContext $context): void
@@ -106,7 +106,7 @@ final readonly class OneOfValidatorWithContext
 
             try {
                 $allowNull = $context->nullableAsType && ($subSchema->nullable
-                    || SchemaValueNormalizer::typeIncludesNull($subSchema->type));
+                    || SchemaValueNormalizer::doesTypeIncludeNull($subSchema->type));
                 $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
                 $rootValidator->validateWithContext($normalizedData, $subSchema, $childContext);
                 ++$validCount;

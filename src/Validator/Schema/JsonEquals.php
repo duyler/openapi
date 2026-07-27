@@ -16,14 +16,6 @@ use function is_int;
 
 final readonly class JsonEquals
 {
-    /**
-     * 2^53 — largest integer that survives a round-trip through IEEE 754
-     * double without precision loss. Mixed int+float comparisons above
-     * this boundary cannot be decided accurately (the int side loses
-     * precision when cast to float), so equality is rejected as false
-     * to avoid false-positive matches in uniqueItems / const / enum
-     * validation.
-     */
     private const int SAFE_INT64_FLOAT_BOUNDARY = 9007199254740992;
 
     public static function equals(mixed $a, mixed $b): bool
@@ -32,7 +24,7 @@ final readonly class JsonEquals
             return $a === $b;
         }
 
-        if ((is_int($a) || is_float($a)) && (is_int($b) || is_float($b))) {
+        if (self::isNumeric($a) && self::isNumeric($b)) {
             if (is_int($a) && is_int($b)) {
                 return $a === $b;
             }
@@ -85,5 +77,10 @@ final readonly class JsonEquals
         }
 
         return true;
+    }
+
+    private static function isNumeric(mixed $value): bool
+    {
+        return is_int($value) || is_float($value);
     }
 }

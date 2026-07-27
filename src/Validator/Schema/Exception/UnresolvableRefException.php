@@ -13,12 +13,6 @@ final class UnresolvableRefException extends RuntimeException
 {
     use SanitizableExceptionTrait;
 
-    /**
-     * Maximum retained length of attacker-controlled ref strings and
-     * internal navigation traces. Excess bytes are truncated in the
-     * constructor via LogContextSanitizer so a single exception cannot
-     * amplify a multi-megabyte payload into logs or error trackers.
-     */
     private const int MAX_REF_LENGTH_IN_EXCEPTION = 256;
 
     protected readonly string $ref;

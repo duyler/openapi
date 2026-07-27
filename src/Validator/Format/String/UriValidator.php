@@ -43,11 +43,11 @@ final readonly class UriValidator extends AbstractStringFormatValidator
     #[Override]
     protected function validateString(string $data): void
     {
-        if (1 !== $this->pregExecutor->match(self::URI_PATTERN, $data, $m)) {
+        if (1 !== $this->pregExecutor->match(self::URI_PATTERN, $data, $match)) {
             throw new InvalidFormatException('uri', $data, 'Invalid URI format');
         }
 
-        $portValue = (string) ($m['port'] ?? '');
+        $portValue = (string) ($match['port'] ?? '');
         if ('' !== $portValue && (int) $portValue > self::MAX_PORT) {
             throw new InvalidFormatException('uri', $data, 'Invalid URI: port out of range');
         }

@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Security;
 
-use Duyler\OpenApi\Validator\PathFinder;
+use Duyler\OpenApi\Validator\Internal\TrieLookup;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
 /**
- * P-034 regression: PathFinder::lookupTrie must enforce a depth limit
+ * P-034 regression: TrieLookup::lookupTrie must enforce a depth limit
  * (MAX_TRIE_DEPTH = 32) to prevent algorithmic amplification on
  * deeply-branched spec tries. Task 20 introduced the cap alongside the
- * by-reference accumulator; this test pins the contract so it cannot
+ * by-reference accumulator; task 17 moved it to TrieLookup without
+ * changing the contract. This test pins the contract so it cannot
  * regress silently.
  *
  * @internal
@@ -23,11 +24,11 @@ final class PathFinderDepthLimitTest extends TestCase
     #[Test]
     public function max_trie_depth_constant_exists_with_expected_value(): void
     {
-        $reflection = new ReflectionClass(PathFinder::class);
+        $reflection = new ReflectionClass(TrieLookup::class);
 
         self::assertTrue(
             $reflection->hasConstant('MAX_TRIE_DEPTH'),
-            'PathFinder must define MAX_TRIE_DEPTH (P-034)',
+            'TrieLookup must define MAX_TRIE_DEPTH (P-034)',
         );
 
         $value = $reflection->getConstant('MAX_TRIE_DEPTH');
@@ -36,14 +37,14 @@ final class PathFinderDepthLimitTest extends TestCase
         self::assertSame(
             32,
             $value,
-            'PathFinder::MAX_TRIE_DEPTH must equal 32 to bound recursion in lookupTrie',
+            'TrieLookup::MAX_TRIE_DEPTH must equal 32 to bound recursion in lookupTrie',
         );
     }
 
     #[Test]
     public function lookup_trie_method_accepts_depth_parameter(): void
     {
-        $reflection = new ReflectionClass(PathFinder::class);
+        $reflection = new ReflectionClass(TrieLookup::class);
         $method = $reflection->getMethod('lookupTrie');
 
         $parameterNames = array_map(
@@ -54,7 +55,7 @@ final class PathFinderDepthLimitTest extends TestCase
         self::assertContains(
             'depth',
             $parameterNames,
-            'PathFinder::lookupTrie must accept a $depth parameter so recursion can be bounded (P-034)',
+            'TrieLookup::lookupTrie must accept a $depth parameter so recursion can be bounded (P-034)',
         );
     }
 }

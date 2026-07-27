@@ -16,6 +16,7 @@ use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Request\RequestValidatorInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\LoggerInterface;
 
 use function array_key_exists;
 use function assert;
@@ -64,6 +65,7 @@ final readonly class CallbackValidator
         private readonly PathRegexCache $pathRegexCache,
         private readonly bool $strictCallbackRuntimeTemplate = true,
         private readonly PregExecutor $pregExecutor = new PregExecutor(),
+        private readonly ?LoggerInterface $logger = null,
     ) {}
 
     public function validate(
@@ -214,7 +216,13 @@ final readonly class CallbackValidator
 
             try {
                 $matched = 1 === $this->pregExecutor->match($regex, $requestPath);
-            } catch (PregRuntimeException) {
+            } catch (PregRuntimeException $e) {
+                $this->logger?->warning('PCRE failure during callback expression match', [
+                    'callback_expression_length' => strlen($expression),
+                    'expression_contains_runtime_template' => str_contains($expression, '{$'),
+                    'exception' => $e,
+                ]);
+
                 $matched = false;
             }
 

@@ -18,15 +18,7 @@ use function sprintf;
 final readonly class SchemaValueNormalizer
 {
     /**
-     * Normalize data to match SchemaValidatorInterface requirements.
-     *
-     * `\stdClass` is normalized to its public-property view via
-     * get_object_vars() so consumers using `json_decode` without the
-     * associative flag (or plain object casts) do not need an extra
-     * conversion step. Only `\stdClass` is supported — arbitrary objects
-     * still trigger InvalidDataTypeException.
-     *
-     * @throws InvalidDataTypeException if value is not one of supported types
+     * @throws InvalidDataTypeException
      *
      * @return array<int|string, mixed>|int|string|float|bool|null
      */
@@ -59,13 +51,9 @@ final readonly class SchemaValueNormalizer
     }
 
     /**
-     * Returns true when type is an array that permits null via OAS 3.1 type-array
-     * syntax, e.g. type: [string, null]. Both PHP null (YAML ~) and the string
-     * 'null' (explicit JSON null marker) are accepted, matching TypeHelper::asTypeOrNull.
-     *
      * @param string|array<int, string|null>|null $type
      */
-    public static function typeIncludesNull(string|array|null $type): bool
+    public static function doesTypeIncludeNull(string|array|null $type): bool
     {
         if (false === is_array($type)) {
             return false;

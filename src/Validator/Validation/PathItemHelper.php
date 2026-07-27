@@ -9,11 +9,11 @@ use Duyler\OpenApi\Schema\Model\PathItem;
 
 final readonly class PathItemHelper
 {
-    public static function getOperation(PathItem $pathItem, string $method): ?Operation
+    public static function getOperation(PathItem $pathItem, string $httpMethod): ?Operation
     {
-        $method = strtolower($method);
+        $httpMethod = strtolower($httpMethod);
 
-        $standardOperation = $pathItem->getOperation($method);
+        $standardOperation = $pathItem->getOperation($httpMethod);
 
         if (null !== $standardOperation) {
             return $standardOperation;
@@ -21,7 +21,7 @@ final readonly class PathItemHelper
 
         if (null !== $pathItem->additionalOperations) {
             foreach ($pathItem->additionalOperations as $opMethod => $operation) {
-                if (strtolower($opMethod) === $method) {
+                if (strtolower($opMethod) === $httpMethod) {
                     return $operation;
                 }
             }

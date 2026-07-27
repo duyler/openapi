@@ -38,7 +38,7 @@ final readonly class SchemaCache
     {
         $value = $this->decorator->get($key, OpenApiDocument::class);
 
-        assert($value === null || $value instanceof OpenApiDocument);
+        assert(null === $value || $value instanceof OpenApiDocument);
 
         return $value;
     }

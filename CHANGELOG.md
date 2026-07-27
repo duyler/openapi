@@ -7,26 +7,116 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Preparation for the 1.0.0 stable release. Tracking-only section; populate
-each subsection as work lands on `dev`.
+Preparation for the 1.0.0 stable release. This section tracks work that
+landed on `dev` after the 0.6.0 release cut. All entries below are
+internal-only unless explicitly marked as public API.
 
 ### Added
-- _(nothing yet)_
+
+- `Schema::fromConstraintGroups()` named constructor — an alternative to
+  the 56-parameter `withOverrides()` constructor. The legacy constructor
+  is retained (PHPDoc-only `@deprecated`, no runtime attribute) so the 5
+  internal callers do not trigger an `E_DEPRECATED` cascade; it will be
+  removed in 2.0. See `.ai/reports/adr-schema-constructor.md`.
+- Post-refactor behavioral snapshot tests for 3 risk zones
+  (`tests/Integration/PostRefactorBehavioralSnapshotTest.php`) covering
+  discriminator annotation propagation, streaming-content parser edge
+  cases, and `oneOf` nullable handling.
+- CI: PHP 8.4 matrix job and Infection mutation-testing job with
+  MSI thresholds aligned to the current mutation score.
+- Community-health files: `SECURITY.md`, issue/PR templates,
+  `.github/dependabot.yml`, `.editorconfig`.
+- `// §6 exemption:` marker on `FileExternalRefResolver` documenting the
+  ADR-gated decision to keep the class as a single 317-LOC unit (tightly
+  coupled with `RefResolver` via `ExternalRefResolverInterface`).
 
 ### Changed
-- _(nothing yet)_
+
+- **Internal decomposition (§6)** — 16 oversized classes refactored into
+  cohesive collaborators. Public API signatures are unchanged; the splits
+  extract private/internal helpers and strategy objects:
+  - `OpenApiValidatorBuilder` → 3 internal collaborators.
+  - `ValidatorCompiler` → scalar+pattern+utf16 and array+equality+object+
+    keyword internal collaborators.
+  - `SchemaSiblingMerger` → 3 strategy collaborators
+    (`ScalarSiblingMerger`, `BoundSiblingMerger`, `CompositionSiblingMerger`).
+  - `StreamingContentParser` → 3 format-specific parsers
+    (`NdJsonParser`, `SseParser`, `JsonSeqParser`) + `StreamLineReader`.
+  - `RefResolver` → `UriResolver` + `DocumentNavigator` +
+    `DiscriminatorDetector`.
+  - 4 `SchemaParser`/`SchemaSerializer` oversized classes decomposed.
+  - 6 oversized `Validator` classes: long methods extracted via
+    extract-method.
+- **Validator signatures + DTO grouping (§10)** — `EventDispatchingTrait`
+  refactored; validator constructor signatures and DTO grouping aligned
+  with `SchemaValidatorDependencies` as the canonical DTO.
+- **Codebase-wide code-style cleanup** (386 violations from the
+  `.ai/research/code-style-violations.md` audit, closed across 22
+  partitioned tasks):
+  - §3 Yoda canonical form applied across 28 sites in 17 files.
+  - §5 magic values extracted into named constants.
+  - §7 redundancy: `&$` reference accumulators, duplicated code,
+    `sprintf` consolidation, loop-invariant hoists, regex normalization.
+  - §9 nesting flattened via guard clauses; §4 naming aligned with
+    domain concepts; §10 exception `$code`/`$previous` convention
+    standardised.
+  - §12 forbidden PHPDoc removed across all modules (167 stale
+    restating-the-code comments). `ValidatorPool`, `PregExecutor`, and
+    `LibxmlSecuredContext` shrunk as a side effect; `TypeFormatter`
+    deleted (consolidated into its single remaining caller).
+  - §11 silent catches now emit PSR-3 log entries at the boundary.
+- **AI-slop removal pass** — dead `UriScheme` enum and `AnyOfError`
+  exception class deleted; `TypeCoercer` 4-predicate OR replaced with
+  `is_scalar()`; `JsonEquals` and `EnumScalarCache` boolean expressions
+  extracted into `isNumeric()` / `isScalarOrNull()` helpers; nested
+  ternaries in `ScalarSchemaKeywordParser` and `PathItemBuilder`
+  flattened to `match(true)` / early-return helpers.
+- Rector + PHP-CS-Fixer PHP 8.4 modernisation sweep applied.
 
 ### Deprecated
-- _(nothing yet)_
+
+- `Schema::withOverrides()` (56-param constructor) — PHPDoc-only
+  `@deprecated since 1.x, will be removed in 2.0`. Use
+  `Schema::fromConstraintGroups()` or `Schema::withOverrideGroups()`.
+  The `#[Deprecated]` attribute was replaced with a `@deprecated` PHPDoc
+  so the 5 internal callers do not trigger a runtime `E_DEPRECATED`
+  cascade; the attribute will be reinstated when all internal callers
+  migrate, or in 2.0 — whichever comes first.
 
 ### Removed
-- _(nothing yet)_
+
+- `Duyler\OpenApi\Validator\Schema\UriScheme` enum — speculative code,
+  zero references in `src/` or `tests/`.
+- `Duyler\OpenApi\Validator\Exception\AnyOfError` exception class —
+  `AnyOfValidator` throws plain `ValidationException` (not `AnyOfError`),
+  so the typed exception was never reachable from production code.
+  Stale `AnyOfError` row removed from the README Composition Errors
+  table; `DetailedFormatterTest` fixture and dataset entry cleaned up.
+- `Duyler\OpenApi\Validator\TypeFormatter` — consolidated into its
+  single remaining caller during §12 PHPDoc cleanup.
 
 ### Fixed
-- _(nothing yet)_
+
+- `null` is now accepted for `$ref` properties/items when the resolved
+  target schema allows `null` via `type: [..., 'null']` (previously only
+  an explicit `nullable: true` sibling on the stub was honoured).
+- `NdJsonParser` memory regression on empty streams — the generator
+  frame allocated by `StreamLineReader::readLines()` indirection added
+  ~1.8 KB to the empty-stream parse path and broke the
+  `parse_stream_empty_ndjson_has_near_zero_memory_growth` budget. The
+  parser now reads chunks directly from the PSR-7 stream; the string
+  path still uses `StreamLineReader::stripBom()` for BOM handling.
+- `StreamingContentParser::parseStream()` short-circuits empty streams
+  via `getSize()` before delegating, eliminating PCOV overhead on the
+  empty-body path.
+- `NotValidator` — removed redundant `$schema->not` truthy check after
+  `is_bool($schema->not)` narrowing (Psalm `RedundantCondition`).
+- Infection CI job no longer OOMs; MSI thresholds realigned with the
+  current mutation score so the gate is neither green-by-default nor
+  unreachable.
 
 ### Security
-- _(nothing yet)_
+- _(nothing since 0.6.0)_
 
 ## [0.6.0] - 2026-07-22
 

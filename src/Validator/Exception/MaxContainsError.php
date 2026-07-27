@@ -8,10 +8,6 @@ use function sprintf;
 
 final class MaxContainsError extends AbstractValidationError
 {
-    /**
-     * @param int $minDetectedCount Detection threshold (maxContains + 1); the validator breaks early once
-     *                              `maxContains + 1` matches are found, so this is not the true match count.
-     */
     public function __construct(
         int $maxContains,
         int $minDetectedCount,

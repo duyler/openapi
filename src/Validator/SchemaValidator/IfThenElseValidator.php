@@ -15,6 +15,7 @@ use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
 use function sprintf;
+use function is_bool;
 
 final readonly class IfThenElseValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
@@ -31,14 +32,8 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
             return;
         }
 
-        if (true === $schema->if) {
-            $this->routeThenOrElse(schema: $schema, data: $data, context: $context, ifValid: true);
-
-            return;
-        }
-
-        if (false === $schema->if) {
-            $this->routeThenOrElse(schema: $schema, data: $data, context: $context, ifValid: false);
+        if (is_bool($schema->if)) {
+            $this->routeThenOrElse(schema: $schema, data: $data, context: $context, ifValid: $schema->if);
 
             return;
         }
@@ -50,13 +45,6 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
         $this->routeThenOrElse(schema: $schema, data: $data, context: $context, ifValid: $ifValid, validator: $validator, nullableAsType: $nullableAsType);
     }
 
-    /**
-     * Routes to the `then` or `else` branch based on the `if` validation
-     * result. Handles both Schema-instance branches (delegated to the
-     * recursive validator) and boolean branches per JSON Schema 2020-12
-     * §4.3.2 (`true` always passes; `false` always rejects with a typed
-     * `TypeMismatchError`).
-     */
     private function routeThenOrElse(
         Schema $schema,
         mixed $data,
@@ -66,40 +54,32 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
         bool $nullableAsType = true,
     ): void {
         if ($ifValid) {
-            if (null === $schema->then) {
-                return;
-            }
-
-            if ($schema->then instanceof Schema) {
-                $this->validateThenOrElse($validator ?? $this->createSchemaValidator(), $data, $schema->then, $context, $nullableAsType);
-            } else {
-                $this->applyBooleanBranch($schema->then, $data, $context, 'then');
-            }
+            $this->applyBranch($schema->then, $data, $context, $validator, $nullableAsType, 'then');
 
             return;
         }
 
-        if (null === $schema->else) {
-            return;
-        }
-
-        if ($schema->else instanceof Schema) {
-            $this->validateThenOrElse($validator ?? $this->createSchemaValidator(), $data, $schema->else, $context, $nullableAsType);
-        } else {
-            $this->applyBooleanBranch($schema->else, $data, $context, 'else');
-        }
+        $this->applyBranch($schema->else, $data, $context, $validator, $nullableAsType, 'else');
     }
 
-    /**
-     * Handles boolean-form `then` / `else` branches.
-     *
-     * `true` always passes (no-op); `false` always rejects with a
-     * `TypeMismatchError` so the conditional routing surfaces a typed
-     * failure rather than silently swallowing the rejection.
-     */
+    private function applyBranch(Schema|bool|null $branch, mixed $data, ?ValidationContext $context, ?SchemaValidatorInterface $validator, bool $nullableAsType, string $keyword): void
+    {
+        if (null === $branch) {
+            return;
+        }
+
+        if ($branch instanceof Schema) {
+            $this->validateThenOrElse($validator ?? $this->createSchemaValidator(), $data, $branch, $context, $nullableAsType);
+
+            return;
+        }
+
+        $this->applyBooleanBranch($branch, $data, $context, $keyword);
+    }
+
     private function applyBooleanBranch(Schema|bool $branch, mixed $data, ?ValidationContext $context, string $keyword): void
     {
-        if (true === $branch) {
+        if (is_bool($branch) && $branch) {
             return;
         }
 
@@ -178,7 +158,7 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
     private function normalizeFor(mixed $data, Schema $subSchema, bool $nullableAsType): array|int|string|float|bool|null
     {
         $allowNull = $nullableAsType && ($subSchema->nullable
-            || SchemaValueNormalizer::typeIncludesNull($subSchema->type));
+            || SchemaValueNormalizer::doesTypeIncludeNull($subSchema->type));
 
         return SchemaValueNormalizer::normalize($data, $allowNull);
     }

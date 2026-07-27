@@ -8,8 +8,7 @@ use Duyler\OpenApi\Event\ValidationErrorEvent;
 use Duyler\OpenApi\Event\ValidationFinishedEvent;
 use Duyler\OpenApi\Event\ValidationStartedEvent;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
+use Duyler\OpenApi\Validator\Internal\ValidationEventPayload;
 use Throwable;
 
 trait EventDispatchingTrait
@@ -27,23 +26,19 @@ trait EventDispatchingTrait
      * @return T
      */
     private function withValidationEvents(
-        ?ServerRequestInterface $request,
-        ?ResponseInterface $response,
-        string $path,
-        string $method,
+        ValidationEventPayload $payload,
         callable $callback,
         ?string $warningMessage = null,
-        ?string $schemaRef = null,
     ): mixed {
         $startTime = microtime(true);
 
         $this->dispatchValidationEvent(
             new ValidationStartedEvent(
-                request: $request,
-                path: $path,
-                method: $method,
-                response: $response,
-                schemaRef: $schemaRef,
+                request: $payload->request,
+                path: $payload->path,
+                method: $payload->method,
+                response: $payload->response,
+                schemaRef: $payload->schemaRef,
             ),
         );
 
@@ -52,13 +47,9 @@ trait EventDispatchingTrait
 
             $this->dispatchValidationEvent(
                 $this->createFinishedEvent(
-                    $request,
-                    $response,
-                    $path,
-                    $method,
+                    $payload,
                     true,
                     microtime(true) - $startTime,
-                    $schemaRef,
                 ),
             );
 
@@ -66,13 +57,9 @@ trait EventDispatchingTrait
         } catch (Throwable $e) {
             $this->dispatchValidationEvent(
                 $this->createFinishedEvent(
-                    $request,
-                    $response,
-                    $path,
-                    $method,
+                    $payload,
                     false,
                     microtime(true) - $startTime,
-                    $schemaRef,
                 ),
             );
 
@@ -83,12 +70,12 @@ trait EventDispatchingTrait
 
                 $this->dispatchValidationEvent(
                     new ValidationErrorEvent(
-                        request: $request,
-                        path: $path,
-                        method: $method,
+                        request: $payload->request,
+                        path: $payload->path,
+                        method: $payload->method,
                         exception: $e,
-                        response: $response,
-                        schemaRef: $schemaRef,
+                        response: $payload->response,
+                        schemaRef: $payload->schemaRef,
                     ),
                 );
             }
@@ -98,22 +85,18 @@ trait EventDispatchingTrait
     }
 
     private function createFinishedEvent(
-        ?ServerRequestInterface $request,
-        ?ResponseInterface $response,
-        string $path,
-        string $method,
+        ValidationEventPayload $payload,
         bool $success,
         float $duration,
-        ?string $schemaRef = null,
     ): ValidationFinishedEvent {
         return new ValidationFinishedEvent(
-            request: $request,
-            path: $path,
-            method: $method,
+            request: $payload->request,
+            path: $payload->path,
+            method: $payload->method,
             success: $success,
             duration: $duration,
-            response: $response,
-            schemaRef: $schemaRef,
+            response: $payload->response,
+            schemaRef: $payload->schemaRef,
         );
     }
 }

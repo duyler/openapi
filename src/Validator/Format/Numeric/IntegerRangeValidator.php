@@ -19,13 +19,6 @@ final readonly class IntegerRangeValidator implements FormatValidatorInterface
         private readonly int $max,
     ) {}
 
-    /**
-     * Format validators narrow within the declared type. For `type: integer`
-     * combined with `format: int32`, the type keyword already guarantees an
-     * int by the time this validator runs; non-int values are passed through
-     * silently and handled by the type validator. Range enforcement fires
-     * only for ints outside [min, max].
-     */
     #[Override]
     public function validate(mixed $data): void
     {

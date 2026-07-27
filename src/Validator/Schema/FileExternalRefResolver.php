@@ -66,6 +66,7 @@ use const PATHINFO_EXTENSION;
  * responsibility of RefResolver::$cache). It parses YAML and JSON payloads and
  * supports an optional JSON Pointer suffix (e.g. 'user.yaml#/UserSchema').
  */
+// §6 exemption: Tightly coupled with RefResolver via ExternalRefResolverInterface; decomposition requires interface refactor pending 2.0. See ADR .ai/reports/adr-schema-constructor.md for pattern.
 final readonly class FileExternalRefResolver implements ExternalRefResolverInterface
 {
     /**
@@ -110,6 +111,8 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
      */
     private const int S_IFREG = 0x8000;
 
+    private const int JSON_DECODE_MAX_DEPTH = 512;
+
     public function __construct(
         private ?string $allowedRoot = null,
         private ExternalSchemaBuilder $schemaBuilder = new ExternalSchemaBuilder(),
@@ -122,7 +125,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
     {
         $scheme = $this->extractScheme($ref);
 
-        if (!in_array($scheme, self::ALLOWED_SCHEMES, true)) {
+        if (false === in_array($scheme, self::ALLOWED_SCHEMES, true)) {
             throw new ExternalRefSecurityException(
                 $ref,
                 sprintf(
@@ -141,10 +144,10 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
 
         $contents = $this->readFileWithLimit($absolutePath);
 
-        $data = $this->parseContents($contents, $absolutePath);
-        $target = $this->navigatePointer($data, $pointer, $absolutePath);
+        $fileData = $this->parseContents($contents, $absolutePath);
+        $target = $this->navigatePointer($fileData, $pointer, $absolutePath);
 
-        if (!is_array($target)) {
+        if (false === is_array($target)) {
             $this->logger->debug('External ref target is not a schema object', [
                 'path' => $absolutePath,
                 'pointer' => $pointer,
@@ -160,21 +163,6 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
         return $this->schemaBuilder->buildSchemaFromData($target);
     }
 
-    /**
-     * Open the resolved path with fopen() inside a temporary error handler
-     * (per project §3 categorical ban on the @ operator), fstat the handle
-     * to verify the file is a regular file (rejects /dev/zero, /dev/null,
-     * directories, sockets, FIFOs and any symlink survived past realpath),
-     * drain the contents through a size-capped read loop, and unconditionally
-     * close the handle in a finally block to prevent FD leaks.
-     *
-     * The error handler swallows only E_WARNING (the level fopen emits on
-     * open failures); other levels propagate. We do NOT use filesize(): it
-     * is its own syscall and opens a second TOCTOU window between the size
-     * check and fread.
-     *
-     * @return string File contents, never larger than $this->maxBytes
-     */
     private function readFileWithLimit(string $absolutePath): string
     {
         set_error_handler(static fn(int $errno) => E_WARNING === $errno);
@@ -222,20 +210,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
     }
 
     /**
-     * Drain $handle in bounded chunks until EOF or $maxBytes is reached.
-     * If EOF is not reached when the budget is exhausted, the file is
-     * larger than the configured cap and we throw ExternalRefTooLargeException
-     * to prevent memory exhaustion from attacker-controlled payloads.
-     *
-     * fread signals EOF lazily: feof() returns true only after an fread
-     * that returned empty. When the file size matches maxBytes exactly,
-     * fread consumes the last byte without raising the EOF flag, so the
-     * main loop exits on the $remaining budget with feof still false.
-     * Read one extra byte after the budget is spent to distinguish
-     * "exactly at limit" (empty probe, accept) from "strictly over"
-     * (non-empty probe, reject).
-     *
-     * @param resource $handle Opened file resource
+     * @param resource $handle
      */
     private function readWithLimit($handle, int $maxBytes): string
     {
@@ -333,7 +308,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
             return;
         }
 
-        if (!str_starts_with($realFile, $realRoot . '/')) {
+        if (false === str_starts_with($realFile, $realRoot . '/')) {
             $this->logger->debug('External ref path traversal detected', [
                 'path' => $filePath,
                 'allowedRoot' => $this->allowedRoot,
@@ -353,13 +328,13 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
     {
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
-        $data = match ($extension) {
-            'json' => json_decode($contents, true, 512, JSON_THROW_ON_ERROR),
+        $fileData = match ($extension) {
+            'json' => json_decode($contents, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR),
             'yaml', 'yml' => Yaml::parse($contents, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE),
             default => throw new RuntimeException(sprintf('Unsupported file extension: %s', $extension)),
         };
 
-        if (!is_array($data)) {
+        if (false === is_array($fileData)) {
             $this->logger->debug('External ref file does not contain a mapping', [
                 'path' => $filePath,
             ]);
@@ -367,28 +342,28 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
             throw new RuntimeException('External ref file does not contain a mapping');
         }
 
-        return $data;
+        return $fileData;
     }
 
     /**
-     * @param array<array-key, mixed> $data
+     * @param array<array-key, mixed> $fileData
      *
      * @return mixed
      */
-    private function navigatePointer(array $data, string $pointer, string $absolutePath): mixed
+    private function navigatePointer(array $fileData, string $pointer, string $absolutePath): mixed
     {
         if ('' === $pointer) {
-            return $data;
+            return $fileData;
         }
 
         /** @var mixed $current */
-        $current = $data;
+        $current = $fileData;
         $segments = explode('/', $pointer);
 
         foreach ($segments as $segment) {
             $decodedSegment = str_replace(['~1', '~0'], ['/', '~'], $segment);
 
-            if (!is_array($current) || !array_key_exists($decodedSegment, $current)) {
+            if (false === is_array($current) || false === array_key_exists($decodedSegment, $current)) {
                 $this->logger->debug('External ref JSON Pointer segment not found', [
                     'path' => $absolutePath,
                     'segment' => $decodedSegment,

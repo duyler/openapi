@@ -185,13 +185,19 @@ final readonly class NumericRangeValidator extends AbstractSchemaValidator imple
         for ($i = 0; $i < $len; ++$i) {
             $remainder .= $dividend[$i];
             $remainder = ltrim($remainder, '0') ?: '0';
+            $remainder = $this->subtractDivisorFromRemainder($remainder, $divisor);
+        }
 
-            for ($k = 0; $k < self::MAX_DECIMAL_SUBTRACTIONS_PER_DIGIT; ++$k) {
-                if ($this->decimalCmp($remainder, $divisor) < 0) {
-                    break;
-                }
-                $remainder = $this->decimalSub($remainder, $divisor);
+        return $remainder;
+    }
+
+    private function subtractDivisorFromRemainder(string $remainder, string $divisor): string
+    {
+        for ($k = 0; $k < self::MAX_DECIMAL_SUBTRACTIONS_PER_DIGIT; ++$k) {
+            if ($this->decimalCmp($remainder, $divisor) < 0) {
+                break;
             }
+            $remainder = $this->decimalSub($remainder, $divisor);
         }
 
         return $remainder;

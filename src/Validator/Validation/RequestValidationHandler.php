@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\Validation;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
 use Duyler\OpenApi\Validator\EventDispatchingTrait;
+use Duyler\OpenApi\Validator\Internal\ValidationEventPayload;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\PathFinder;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
@@ -37,6 +38,7 @@ final readonly class RequestValidationHandler
         $this->securityValidator = new SecurityValidator($context->securityVerboseLogger, $context->pregExecutor);
         $this->serverPathMatcher = new ServerPathMatcher(
             $context->document->servers?->servers ?? [],
+            logger: $this->logger,
         );
     }
 
@@ -48,46 +50,60 @@ final readonly class RequestValidationHandler
         $matchedPath = $this->resolveMatchedPath($requestPath);
 
         return $this->withValidationEvents(
-            request: $request,
-            response: null,
-            path: $requestPath,
-            method: $method,
+            new ValidationEventPayload(
+                request: $request,
+                response: null,
+                path: $requestPath,
+                method: $method,
+            ),
             callback: function () use ($request, $requestPath, $matchedPath, $method): Operation {
-                $operation = $this->pathFinder->findOperation($matchedPath, $method);
-
-                $op = $operation->schemaOperation;
-                if (null === $op) {
-                    throw new BuilderException(
-                        sprintf('Operation schema unavailable: %s %s', $method, $operation->path),
-                    );
-                }
-
-                $this->logger->info(sprintf('Validating request: %s %s', $method, $requestPath));
-
-                $validatedRequest = $this->createValidatedRequest($request, $requestPath, $matchedPath);
-
-                $this->context->requestValidator->validate($validatedRequest, $op, $operation->path);
-
-                if ($this->securityValidation) {
-                    $securityRequirements = $op->security ?? $this->context->document->security;
-
-                    if (null !== $securityRequirements) {
-                        $securitySchemes = $this->context->document->components?->securitySchemes ?? [];
-                        $securityContext = new SecurityValidationContext(
-                            request: $request,
-                            path: $operation->path,
-                            method: $operation->method,
-                            securityRequirements: $securityRequirements,
-                            securitySchemes: $securitySchemes,
-                        );
-                        $this->securityValidator->validate($securityContext);
-                    }
-                }
-
-                return $operation;
+                return $this->performValidation($request, $requestPath, $matchedPath, $method);
             },
             warningMessage: sprintf('Request validation failed: %s %s', $method, $requestPath),
         );
+    }
+
+    private function performValidation(ServerRequestInterface $request, string $requestPath, string $matchedPath, string $method): Operation
+    {
+        $operation = $this->pathFinder->findOperation($matchedPath, $method);
+
+        $schemaOperation = $operation->schemaOperation;
+        if (null === $schemaOperation) {
+            throw new BuilderException(
+                sprintf('Operation schema unavailable: %s %s', $method, $operation->path),
+            );
+        }
+
+        $this->logger->info(sprintf('Validating request: %s %s', $method, $requestPath));
+
+        $validatedRequest = $this->createValidatedRequest($request, $requestPath, $matchedPath);
+
+        $this->context->requestValidator->validate($validatedRequest, $schemaOperation, $operation->path);
+
+        if ($this->securityValidation) {
+            $this->runSecurityValidation($request, $schemaOperation, $operation);
+        }
+
+        return $operation;
+    }
+
+    private function runSecurityValidation(ServerRequestInterface $request, \Duyler\OpenApi\Schema\Model\Operation $schemaOperation, Operation $operation): void
+    {
+        $securityRequirements = $schemaOperation->security ?? $this->context->document->security;
+
+        if (null === $securityRequirements) {
+            return;
+        }
+
+        $securitySchemes = $this->context->document->components?->securitySchemes ?? [];
+        $securityContext = new SecurityValidationContext(
+            request: $request,
+            path: $operation->path,
+            method: $operation->method,
+            securityRequirements: $securityRequirements,
+            securitySchemes: $securitySchemes,
+        );
+        $this->securityValidator->validate($securityContext);
     }
 
     private function resolveMatchedPath(string $requestPath): string

@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 final class TooManyItemsForUniqueCheckErrorTest extends TestCase
 {
-    private const MAX = 100000;
+    private const int MAX = 100000;
 
     #[Test]
     public function keyword_returns_uniqueItems(): void
@@ -62,7 +62,7 @@ final class TooManyItemsForUniqueCheckErrorTest extends TestCase
     #[Test]
     public function dataPath_accepts_breadcrumb_and_renders_as_string(): void
     {
-        $breadcrumb = (new Breadcrumb())->append('items');
+        $breadcrumb = new Breadcrumb()->append('items');
 
         $exception = new TooManyItemsForUniqueCheckError(
             max: self::MAX,

@@ -6,14 +6,20 @@ namespace Duyler\OpenApi\Builder;
 
 use Duyler\OpenApi\Builder\Dto\BuilderConfig;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
+use Duyler\OpenApi\Builder\Internal\CacheKeyBuilder;
+use Duyler\OpenApi\Builder\Internal\ExternalRefDetector;
+use Duyler\OpenApi\Builder\Internal\SpecLoader;
 use Duyler\OpenApi\Cache\SchemaCache;
 use Duyler\OpenApi\Schema\OpenApiDocument;
-use Duyler\OpenApi\Schema\Parser\DeprecationLogger;
-use Duyler\OpenApi\Schema\Parser\JsonParser;
-use Duyler\OpenApi\Schema\Parser\YamlParser;
+use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
+use Duyler\OpenApi\Validator\Dto\ValidatorDependencies;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
+use Duyler\OpenApi\Validator\Validation\Internal\BodyLimits;
+use Duyler\OpenApi\Validator\Validation\Internal\RootServices;
+use Duyler\OpenApi\Validator\Validation\Internal\ValidatorDependenciesGroup;
+use Duyler\OpenApi\Validator\Validation\Internal\ValidatorOptions;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
@@ -26,9 +32,6 @@ use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
-use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
-use Duyler\OpenApi\Validator\Dto\ValidatorDependencies;
-use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Validation\CallbackValidator;
 use Duyler\OpenApi\Validator\Validation\RequestValidationHandler;
 use Duyler\OpenApi\Validator\Validation\ResponseValidationHandler;
@@ -36,37 +39,19 @@ use Duyler\OpenApi\Validator\Validation\SchemaValidatorAdapter;
 use Duyler\OpenApi\Validator\Validation\ValidatorDependencies as ValidationAssembler;
 use Duyler\OpenApi\Validator\Validation\WebhookValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
-use Exception;
 use InvalidArgumentException;
-use JsonException;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
-use Duyler\OpenApi\Validator\Exception\InvalidUtf8Exception;
-use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
-use Duyler\OpenApi\Validator\JsonDepthLimit;
-use Duyler\OpenApi\Validator\Response\Exception\TooManyRecordsException;
-use Symfony\Component\Yaml\Exception\ParseException;
-use Symfony\Component\Yaml\Yaml;
+
+use Deprecated;
 
 use function dirname;
-use function is_array;
-use function mb_check_encoding;
+use function realpath;
 use function sprintf;
-use function str_starts_with;
-use function strlen;
-use function is_string;
-
-use function array_key_exists;
-
-use const JSON_THROW_ON_ERROR;
 
 final readonly class OpenApiValidatorBuilder
 {
-    private const string CACHE_KEY_FILE_PREFIX = 'openapi_spec_file_';
-    private const string CACHE_KEY_CONTENT_PREFIX = 'openapi_spec_content_';
-
     private function __construct(
         private BuilderConfig $config,
     ) {}
@@ -345,17 +330,18 @@ final readonly class OpenApiValidatorBuilder
 
     /**
      * Enable strict callback runtime template resolution.
-     *
-     * @deprecated since 1.x, will be removed in 2.0. Strict mode is now the
-     *             default: callback expressions that use runtime templates
-     *             such as `{$request.body#/callback_url}` throw an
-     *             {@see UnresolvableCallbackPathException} by default instead
-     *             of being treated as wildcards that accept any URL. This
-     *             method is retained as a no-op for backward compatibility
-     *             with callers that explicitly opted in. To restore the
-     *             legacy wildcard behaviour, use
-     *             {@see disableStrictCallbackRuntimeTemplate()}.
      */
+    #[Deprecated(message: <<<'TXT'
+    since 1.x, will be removed in 2.0. Strict mode is now the
+                 default: callback expressions that use runtime templates
+                 such as `{$request.body#/callback_url}` throw an
+                 {@see \Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException} by default instead
+                 of being treated as wildcards that accept any URL. This
+                 method is retained as a no-op for backward compatibility
+                 with callers that explicitly opted in. To restore the
+                 legacy wildcard behaviour, use
+                 {@see disableStrictCallbackRuntimeTemplate()}.
+    TXT)]
     public function enableStrictCallbackRuntimeTemplate(): self
     {
         return $this;
@@ -396,11 +382,7 @@ final readonly class OpenApiValidatorBuilder
      */
     public function withExternalRefMaxBytes(int $bytes): self
     {
-        if ($bytes <= 0) {
-            throw new InvalidArgumentException(
-                'External ref max bytes must be a positive integer',
-            );
-        }
+        $this->assertPositiveInteger($bytes, 'External ref max bytes must be a positive integer');
 
         return $this->with(new BuilderConfig(externalRefMaxBytes: $bytes));
     }
@@ -421,11 +403,7 @@ final readonly class OpenApiValidatorBuilder
      */
     public function withMaxStreamingRecords(int $max): self
     {
-        if ($max <= 0) {
-            throw new InvalidArgumentException(
-                'Max streaming records must be a positive integer',
-            );
-        }
+        $this->assertPositiveInteger($max, 'Max streaming records must be a positive integer');
 
         return $this->with(new BuilderConfig(maxStreamingRecords: $max));
     }
@@ -447,11 +425,7 @@ final readonly class OpenApiValidatorBuilder
      */
     public function withMaxSpecSize(int $bytes): self
     {
-        if ($bytes <= 0) {
-            throw new InvalidArgumentException(
-                'Max spec size must be a positive integer',
-            );
-        }
+        $this->assertPositiveInteger($bytes, 'Max spec size must be a positive integer');
 
         return $this->with(new BuilderConfig(maxSpecSizeBytes: $bytes));
     }
@@ -473,30 +447,73 @@ final readonly class OpenApiValidatorBuilder
      */
     public function withMaxSpecDepth(int $depth): self
     {
-        if ($depth <= 0) {
-            throw new InvalidArgumentException(
-                'Max spec depth must be a positive integer',
-            );
-        }
+        $this->assertPositiveInteger($depth, 'Max spec depth must be a positive integer');
 
         return $this->with(new BuilderConfig(maxSpecDepth: $depth));
     }
 
     /**
-     * Build the validator from the configured spec. The internal call
-     * order is significant: `loadSpec()` runs first to surface the
-     * canonical parse error via `parseSpec()`, then
-     * `assertExternalRefConfinement()` runs to fail-closed on
-     * string-loaded specs that contain an external `$ref`. The guard
-     * silently passes on a parse failure because `loadSpec()` has
-     * already thrown — do not reorder these calls.
+     * Terminal method: materialises the spec via {@see SpecLoader}, asserts
+     * external `$ref` confinement via {@see ExternalRefDetector}, then wires
+     * the validator dependencies and returns an {@see OpenApiValidatorInterface}.
+     *
+     * Call order is significant: the loader runs first to surface the
+     * canonical parse error, then the confinement guard fail-closes on
+     * string-loaded specs that contain an external `$ref`. Do not reorder.
      */
     public function build(): OpenApiValidatorInterface
     {
-        $document = $this->loadSpec();
+        $document = $this->specLoader()->load();
 
-        $this->assertExternalRefConfinement();
+        $this->externalRefDetector()->assertConfinement();
 
+        return $this->assembleValidator($document);
+    }
+
+    private function with(BuilderConfig $overrides): self
+    {
+        return new self($this->config->merge($overrides));
+    }
+
+    private function resolveSpecPath(string $path): string
+    {
+        $realPath = realpath($path);
+        if (false === $realPath) {
+            throw new BuilderException(sprintf('Spec file does not exist: %s', $path));
+        }
+
+        return $realPath;
+    }
+
+    private function assertPositiveInteger(int $value, string $message): void
+    {
+        if ($value <= 0) {
+            throw new InvalidArgumentException($message);
+        }
+    }
+
+    private function specLoader(): SpecLoader
+    {
+        return new SpecLoader($this->config, new CacheKeyBuilder($this->config));
+    }
+
+    private function externalRefDetector(): ExternalRefDetector
+    {
+        return new ExternalRefDetector($this->config);
+    }
+
+    /**
+     * Reflection-compatibility delegate retained for existing cache-key
+     * regression tests that invoke this private method on a fresh builder.
+     * Forwards to {@see CacheKeyBuilder::forFile} without behaviour change.
+     */
+    private function generateCacheKeyFromFile(string $path, string $content): string
+    {
+        return new CacheKeyBuilder($this->config)->forFile($path, $content);
+    }
+
+    private function assembleValidator(OpenApiDocument $document): OpenApiValidatorInterface
+    {
         $maxRegexBacktracks = $this->config->maxRegexBacktracks ?? ValidatorConfiguration::DEFAULT_MAX_REGEX_BACKTRACKS;
         $pregExecutor = new PregExecutor($maxRegexBacktracks);
         $pool = $this->config->pool ?? new ValidatorPool();
@@ -529,28 +546,36 @@ final readonly class OpenApiValidatorBuilder
         $strictCallbackRuntimeTemplate = $this->config->strictCallbackRuntimeTemplate ?? true;
         $strictCoercion = $this->config->strictCoercion ?? true;
 
-        $context = new ValidationAssembler(
-            document: $document,
-            pool: $pool,
-            formatRegistry: $formatRegistry,
-            errorFormatter: $errorFormatter,
-            refResolver: $refResolver,
-            coercion: $coercion,
-            nullableAsType: $nullableAsType,
-            emptyArrayStrategy: $emptyArrayStrategy,
-            reportDeprecated: $reportDeprecated,
-            logger: $logger,
-            eventDispatcher: $this->config->eventDispatcher,
-            strictFormats: $strictFormats,
-            pathRegexCache: $pathRegexCache,
-            regexValidator: $regexValidator,
-            maxJsonBodyBytes: $maxJsonBodyBytes,
-            maxMultipartBodyBytes: $maxMultipartBodyBytes,
-            strictStreaming: $strictStreaming,
-            maxRegexBacktracks: $maxRegexBacktracks,
-            pregExecutor: $pregExecutor,
-            securityVerboseLogger: $securityVerboseLogger,
-            strictCoercion: $strictCoercion,
+        $context = ValidationAssembler::fromGroup(
+            new ValidatorDependenciesGroup(
+                root: new RootServices(
+                    document: $document,
+                    pool: $pool,
+                    formatRegistry: $formatRegistry,
+                    errorFormatter: $errorFormatter,
+                    refResolver: $refResolver,
+                    pathRegexCache: $pathRegexCache,
+                    regexValidator: $regexValidator,
+                    pregExecutor: $pregExecutor,
+                ),
+                options: new ValidatorOptions(
+                    coercion: $coercion,
+                    nullableAsType: $nullableAsType,
+                    emptyArrayStrategy: $emptyArrayStrategy,
+                    reportDeprecated: $reportDeprecated,
+                    logger: $logger,
+                    eventDispatcher: $this->config->eventDispatcher,
+                    strictFormats: $strictFormats,
+                    strictStreaming: $strictStreaming,
+                    strictCoercion: $strictCoercion,
+                    securityVerboseLogger: $securityVerboseLogger,
+                ),
+                bodyLimits: new BodyLimits(
+                    maxJsonBodyBytes: $maxJsonBodyBytes,
+                    maxMultipartBodyBytes: $maxMultipartBodyBytes,
+                    maxRegexBacktracks: $maxRegexBacktracks,
+                ),
+            ),
         );
 
         return new OpenApiValidator(
@@ -591,370 +616,6 @@ final readonly class OpenApiValidatorBuilder
                 cache: $this->config->cache,
                 eventDispatcher: $this->config->eventDispatcher,
             ),
-        );
-    }
-
-    private function with(BuilderConfig $overrides): self
-    {
-        return new self($this->config->merge($overrides));
-    }
-
-    private function resolveSpecPath(string $path): string
-    {
-        $realPath = realpath($path);
-        if (false === $realPath) {
-            throw new BuilderException(sprintf('Spec file does not exist: %s', $path));
-        }
-
-        return $realPath;
-    }
-
-    private function loadSpec(): OpenApiDocument
-    {
-        if (null !== $this->config->specPath) {
-            return $this->loadSpecFromFile();
-        }
-
-        if (null !== $this->config->specContent) {
-            return $this->loadSpecFromString();
-        }
-
-        throw new BuilderException(
-            'Spec not loaded. Call fromYamlFile(), fromJsonFile(), fromYamlString(), or fromJsonString() first.',
-        );
-    }
-
-    private function loadSpecFromFile(): OpenApiDocument
-    {
-        if (null === $this->config->specPath || null === $this->config->specType) {
-            throw new BuilderException('Spec path or type not set');
-        }
-
-        if (false === is_file($this->config->specPath)) {
-            throw new BuilderException(sprintf('Spec file does not exist: %s', $this->config->specPath));
-        }
-
-        $content = file_get_contents($this->config->specPath);
-
-        if (false === $content) {
-            throw new BuilderException(sprintf('Failed to read spec file: %s', $this->config->specPath));
-        }
-
-        $cacheKey = $this->generateCacheKeyFromFile($this->config->specPath, $content);
-
-        if (null !== $this->config->cache) {
-            $cachedDocument = $this->config->cache->get($cacheKey);
-            if (null !== $cachedDocument) {
-                return $cachedDocument;
-            }
-        }
-
-        $document = $this->parseSpec($content);
-
-        if (null !== $this->config->cache) {
-            $this->config->cache->set($cacheKey, $document);
-        }
-
-        return $document;
-    }
-
-    private function loadSpecFromString(): OpenApiDocument
-    {
-        if (null === $this->config->specContent || null === $this->config->specType) {
-            throw new BuilderException('Spec content or type not set');
-        }
-
-        $cacheKey = $this->generateCacheKeyFromString($this->config->specContent);
-
-        if (null !== $this->config->cache) {
-            $cachedDocument = $this->config->cache->get($cacheKey);
-            if (null !== $cachedDocument) {
-                return $cachedDocument;
-            }
-        }
-
-        $document = $this->parseSpec($this->config->specContent);
-
-        if (null !== $this->config->cache) {
-            $this->config->cache->set($cacheKey, $document);
-        }
-
-        return $document;
-    }
-
-    private function parseSpec(string $content): OpenApiDocument
-    {
-        try {
-            $deprecationLogger = new DeprecationLogger($this->config->logger ?? new NullLogger(), $this->config->reportDeprecated ?? true);
-
-            $parser = match ($this->config->specType) {
-                'yaml' => new YamlParser(
-                    $deprecationLogger,
-                    $this->config->maxSpecSizeBytes ?? YamlParser::DEFAULT_MAX_SPEC_BYTES,
-                    $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
-                ),
-                'json' => new JsonParser(
-                    $deprecationLogger,
-                    $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
-                    $this->config->maxSpecSizeBytes ?? JsonParser::DEFAULT_MAX_SPEC_BYTES,
-                ),
-                default => throw new BuilderException(sprintf('Unsupported spec type: %s', $this->config->specType ?? 'none')),
-            };
-
-            return $parser->parse($content);
-        } catch (InvalidUtf8Exception|SpecTooLargeException $e) {
-            throw $e;
-        } catch (Exception $e) {
-            throw new BuilderException(
-                sprintf('Failed to parse spec: %s', $e->getMessage()),
-                previous: $e,
-            );
-        }
-    }
-
-    /**
-     * Fail-closed guard for specs loaded via `fromYamlString()` /
-     * `fromJsonString()`: when the parsed spec contains an external
-     * `$ref` (any ref that does not start with `#/`) and the caller has
-     * not opted into path-confinement via `withExternalRefAllowedRoot()`,
-     * the build aborts with a `BuilderException`. File-loaded specs and
-     * specs that explicitly set an allowed root are not affected — the
-     * builtin `FileExternalRefResolver` already confines resolution for
-     * them. Specs that contain only internal JSON pointer refs (`#/...`)
-     * pass through unchanged for backward compatibility.
-     */
-    private function assertExternalRefConfinement(): void
-    {
-        if (null !== $this->config->externalRefAllowedRoot) {
-            return;
-        }
-
-        if (null === $this->config->specContent) {
-            return;
-        }
-
-        $parsedSpec = $this->parseSpecContentAsArray($this->config->specContent);
-        $specDepth = $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH;
-        $maxDepth = max($specDepth, ValidationContext::MAX_DEPTH);
-        $externalRef = $this->detectExternalRefs($parsedSpec, 0, $maxDepth);
-
-        if (null !== $externalRef) {
-            throw new BuilderException(sprintf(
-                'Spec contains external $ref "%s" but externalRefAllowedRoot is not set. '
-                . 'Call withExternalRefAllowedRoot($path) after fromYamlString/fromJsonString, '
-                . 'or remove the external $ref from the spec.',
-                $externalRef,
-            ));
-        }
-    }
-
-    /**
-     * Walk the parsed spec tree and return the first external `$ref`
-     * value found. An external `$ref` is any string value keyed by
-     * `$ref` that does not start with `#/` (the JSON pointer prefix
-     * marking an in-document reference). Discriminator mapping and
-     * defaultMapping values are also treated as external refs because
-     * `DiscriminatorValidator` resolves them through `RefResolver`
-     * exactly like a `$ref`. The recursion is bounded by
-     * `max(maxSpecDepth, ValidationContext::MAX_DEPTH)` as a second
-     * line of defense: the canonical parsers (`YamlParser`,
-     * `JsonParser`) already reject specs deeper than `maxSpecDepth`
-     * at parse time, but this bound ensures the walker never
-     * stack-overflows even if a parser is misconfigured or bypassed.
-     * Returns null when no external ref is present.
-     *
-     * The $maxDepth bound is computed once by the caller and threaded
-     * through the recursion, because BuilderConfig is readonly and the
-     * bound is therefore constant for the entire walk — recomputing it
-     * per node is wasted work on deeply nested specs.
-     *
-     * @param array<array-key, mixed> $data
-     */
-    private function detectExternalRefs(array $data, int $depth, int $maxDepth): ?string
-    {
-        if ($depth > $maxDepth) {
-            return null;
-        }
-
-        if (array_key_exists('$ref', $data)) {
-            /** @var mixed $ref */
-            $ref = $data['$ref'];
-
-            if (is_string($ref) && !str_starts_with($ref, '#/')) {
-                return $ref;
-            }
-        }
-
-        if (array_key_exists('discriminator', $data)) {
-            /** @var mixed $discriminatorRaw */
-            $discriminatorRaw = $data['discriminator'];
-
-            if (is_array($discriminatorRaw)) {
-                /** @var array<array-key, mixed> $discriminator */
-                $discriminator = $discriminatorRaw;
-
-                if (array_key_exists('defaultMapping', $discriminator)) {
-                    /** @var mixed $defaultMapping */
-                    $defaultMapping = $discriminator['defaultMapping'];
-
-                    if (is_string($defaultMapping) && !str_starts_with($defaultMapping, '#/')) {
-                        return $defaultMapping;
-                    }
-                }
-
-                if (array_key_exists('mapping', $discriminator)) {
-                    /** @var mixed $mappingRaw */
-                    $mappingRaw = $discriminator['mapping'];
-
-                    if (is_array($mappingRaw)) {
-                        /** @var array<array-key, mixed> $mapping */
-                        $mapping = $mappingRaw;
-
-                        foreach ($mapping as $mappingRef) {
-                            /** @var mixed $mappingRef */
-                            if (!is_string($mappingRef)) {
-                                continue;
-                            }
-
-                            if (!str_starts_with($mappingRef, '#/')) {
-                                return $mappingRef;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        foreach ($data as $value) {
-            /** @var mixed $value */
-            if (!is_array($value)) {
-                continue;
-            }
-
-            $nested = $this->detectExternalRefs($value, $depth + 1, $maxDepth);
-            if (null !== $nested) {
-                return $nested;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Best-effort parse of the raw spec content into a PHP array. Used
-     * only by {@see assertExternalRefConfinement()} to walk the spec
-     * tree before the `OpenApiValidator` is assembled. Bounded by the
-     * same byte-size cap as `YamlParser` for YAML content and the same
-     * UTF-8 check as `JsonParser` for JSON content. The nesting-depth
-     * cap is enforced inside {@see detectExternalRefs()} rather than
-     * here, because that is where unbounded recursion would otherwise
-     * occur. Any parse failure returns an empty array — `loadSpec()`
-     * already surfaces the canonical parse error via `parseSpec()`,
-     * and the walker must not shadow that exception.
-     *
-     * @return array<array-key, mixed>
-     */
-    private function parseSpecContentAsArray(string $content): array
-    {
-        if ('json' === $this->config->specType) {
-            if (false === mb_check_encoding($content, 'UTF-8')) {
-                return [];
-            }
-
-            try {
-                /** @var mixed $data */
-                $data = json_decode($content, true, JsonDepthLimit::Trusted->value, JSON_THROW_ON_ERROR);
-            } catch (JsonException) {
-                return [];
-            }
-
-            return is_array($data) ? $data : [];
-        }
-
-        $maxBytes = $this->config->maxSpecSizeBytes ?? YamlParser::DEFAULT_MAX_SPEC_BYTES;
-        if (strlen($content) > $maxBytes) {
-            return [];
-        }
-
-        try {
-            /** @var mixed $data */
-            $data = Yaml::parse($content, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
-        } catch (ParseException) {
-            return [];
-        }
-
-        return is_array($data) ? $data : [];
-    }
-
-    /**
-     * Compute the SchemaCache key for a file-loaded spec.
-     *
-     * The key incorporates the realpath, a SHA-256 hash of the file
-     * contents, and a SHA-256 of the parse-config fingerprint. The
-     * content hash prevents cache-poisoning via size-preserving or
-     * mtime-preserving spec tampering (OWASP ASVS V8.1.3, CWE-349,
-     * CWE-1023). The parse-config fingerprint prevents cache-poisoning
-     * when two callers share the same PSR-6 pool with different
-     * parse-time limits (R4-SEC-008, R4-SEC-017): a stricter
-     * maxSpecDepth / maxSpecSizeBytes / externalRefAllowedRoot /
-     * externalRefMaxBytes must NOT silently receive a document that
-     * was cached under looser limits. mtime and size are intentionally
-     * NOT part of the key: they offered no protection once an attacker
-     * controls write-access to the spec file.
-     *
-     * When realpath() returns false (file vanished mid-call), the key
-     * degrades to a hash of the unresolved $path argument plus the
-     * content hash and fingerprint. This preserves uniqueness across
-     * caller-distinct paths even when realpath fails.
-     */
-    private function generateCacheKeyFromFile(string $path, string $content): string
-    {
-        $realPath = realpath($path);
-        $pathComponent = false === $realPath ? $path : $realPath;
-        $contentHash = hash('sha256', $content);
-        $configFingerprint = $this->buildParseConfigFingerprint();
-
-        return self::CACHE_KEY_FILE_PREFIX . hash('sha256', $pathComponent . '|' . $contentHash . '|' . $configFingerprint);
-    }
-
-    /**
-     * Compute the SchemaCache key for a string-loaded spec. See
-     * {@see generateCacheKeyFromFile()} for the security rationale
-     * behind including the parse-config fingerprint in the hash input.
-     */
-    private function generateCacheKeyFromString(string $content): string
-    {
-        $contentHash = hash('sha256', $content);
-        $configFingerprint = $this->buildParseConfigFingerprint();
-
-        return self::CACHE_KEY_CONTENT_PREFIX . hash('sha256', $contentHash . '|' . $configFingerprint);
-    }
-
-    /**
-     * Stable, ordered string-tuple of all BuilderConfig fields that
-     * affect the result of parseSpec(). Used as an additional input to
-     * the cache-key hash so two callers with the same spec content but
-     * different parse-configs get distinct cache entries (prevents
-     * cache-poisoning, R4-SEC-008 / R4-SEC-017).
-     *
-     * Only fields that change the parsed OpenApiDocument shape or
-     * reject the spec at parse time are included. Runtime validation
-     * toggles (coercion, strictFormats, nullableAsType, etc.) are
-     * deliberately excluded because they do not affect the cached
-     * document and including them would cause spurious cache-misses
-     * whenever a runtime flag is toggled. The `externalRefAllowedRoot`
-     * value is normalised to the empty string when unset so two
-     * callers with `null` produce the same fingerprint (both mean
-     * "no path-confinement" and behave identically at parse time).
-     */
-    private function buildParseConfigFingerprint(): string
-    {
-        return sprintf(
-            'maxSpecDepth=%d|maxSpecSizeBytes=%d|externalRefAllowedRoot=%s|externalRefMaxBytes=%d',
-            $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
-            $this->config->maxSpecSizeBytes ?? YamlParser::DEFAULT_MAX_SPEC_BYTES,
-            $this->config->externalRefAllowedRoot ?? '',
-            $this->config->externalRefMaxBytes ?? FileExternalRefResolver::DEFAULT_MAX_REF_BYTES,
         );
     }
 }

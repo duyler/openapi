@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Validation;
 
-use Duyler\OpenApi\Schema\Model\Operation as SchemaOperation;
-use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
 use Duyler\OpenApi\Validator\EventDispatchingTrait;
+use Duyler\OpenApi\Validator\Internal\ValidationEventPayload;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
+use Duyler\OpenApi\Validator\Validation\Internal\ValidatesSecurityTrait;
 use Duyler\OpenApi\Validator\Webhook\WebhookValidator as InnerWebhookValidator;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -17,6 +17,7 @@ use Psr\Log\LoggerInterface;
 final readonly class WebhookValidator
 {
     use EventDispatchingTrait;
+    use ValidatesSecurityTrait;
 
     private readonly ?EventDispatcherInterface $eventDispatcher;
     private readonly LoggerInterface $logger;
@@ -38,10 +39,12 @@ final readonly class WebhookValidator
         $method = $request->getMethod();
 
         return $this->withValidationEvents(
-            request: $request,
-            response: null,
-            path: $webhookName,
-            method: $method,
+            new ValidationEventPayload(
+                request: $request,
+                response: null,
+                path: $webhookName,
+                method: $method,
+            ),
             callback: function () use ($request, $webhookName, $method): Operation {
                 $schemaOperation = $this->webhookValidator->validate(
                     $request,
@@ -56,30 +59,5 @@ final readonly class WebhookValidator
                 return new Operation($webhookName, $method);
             },
         );
-    }
-
-    private function validateSecurity(
-        ServerRequestInterface $request,
-        SchemaOperation $operation,
-        string $webhookName,
-        string $method,
-    ): void {
-        $securityRequirements = $operation->security ?? $this->context->document->security;
-
-        if (null === $securityRequirements) {
-            return;
-        }
-
-        $securitySchemes = $this->context->document->components?->securitySchemes ?? [];
-
-        $securityContext = new SecurityValidationContext(
-            request: $request,
-            path: $webhookName,
-            method: $method,
-            securityRequirements: $securityRequirements,
-            securitySchemes: $securitySchemes,
-        );
-
-        $this->securityValidator->validate($securityContext);
     }
 }
