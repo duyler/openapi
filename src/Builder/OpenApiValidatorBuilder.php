@@ -502,11 +502,6 @@ final readonly class OpenApiValidatorBuilder
         return new ExternalRefDetector($this->config);
     }
 
-    /**
-     * Reflection-compatibility delegate retained for existing cache-key
-     * regression tests that invoke this private method on a fresh builder.
-     * Forwards to {@see CacheKeyBuilder::forFile} without behaviour change.
-     */
     private function generateCacheKeyFromFile(string $path, string $content): string
     {
         return new CacheKeyBuilder($this->config)->forFile($path, $content);
