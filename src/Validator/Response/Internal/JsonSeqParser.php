@@ -25,23 +25,7 @@ use function trim;
 
 use const JSON_THROW_ON_ERROR;
 
-/**
- * JSON Text Sequences (application/json-seq, RFC 7464) parser.
- *
- * Semantics preserved from the original StreamingContentParser:
- * - UTF-8 BOM stripped from body before parsing.
- * - Each record is prefixed by a record separator byte (0x1E); the trailing
- *   record MAY omit the separator.
- * - Empty records (consecutive separators, or whitespace-only record body)
- *   are skipped without contributing to the record-count cap.
- * - Each non-empty record is json_decoded; on failure the parser yields null
- *   and logs a warning under non-strict mode, or throws
- *   MalformedStreamRecordException under strict mode.
- * - Stream parsing keeps an internal buffer chunked on the separator; a
- *   record body exceeding maxRecordLength throws RuntimeException.
- *
- * @internal
- */
+/** @internal */
 final readonly class JsonSeqParser implements StreamingFormatParser
 {
     public const string RECORD_SEPARATOR = "\x1E";
@@ -113,12 +97,7 @@ final readonly class JsonSeqParser implements StreamingFormatParser
         return $items;
     }
 
-    /**
-     * Reads the next non-empty stream chunk and strips UTF-8 BOM once on the
-     * first successful read. Returns null when the stream is exhausted.
-     *
-     * @param-out bool $isBomStripped
-     */
+    /** @param-out bool $isBomStripped */
     private function readChunk(StreamInterface $stream, bool &$isBomStripped): ?string
     {
         if ($stream->eof()) {
@@ -150,10 +129,6 @@ final readonly class JsonSeqParser implements StreamingFormatParser
     }
 
     /**
-     * Splits the buffer on the record separator and appends every complete
-     * record. Returns the trailing partial record as the new buffer plus the
-     * updated items list and record count.
-     *
      * @param list<array<int|string, mixed>|null> $items
      *
      * @return array{0: string, 1: list<array<int|string, mixed>|null>, 2: int}
@@ -177,9 +152,6 @@ final readonly class JsonSeqParser implements StreamingFormatParser
     }
 
     /**
-     * Flushes the trailing partial record left in the buffer after the stream
-     * is exhausted.
-     *
      * @param list<array<int|string, mixed>|null> $items
      *
      * @return array{0: list<array<int|string, mixed>|null>, 1: int}

@@ -15,15 +15,7 @@ use function str_starts_with;
 use function strlen;
 use function substr;
 
-/**
- * Reads a PSR-7 stream chunk-by-chunk and yields complete lines, so that
- * NDJSON and SSE parsers do not need to materialise the entire body in
- * memory. UTF-8 BOM, when present, is stripped from the first chunk exactly
- * once — the boolean flag is local to one read pass, matching the original
- * in-place behaviour.
- *
- * @internal
- */
+/** @internal */
 final readonly class StreamLineReader
 {
     public const string UTF8_BOM = "\xEF\xBB\xBF";
@@ -62,12 +54,6 @@ final readonly class StreamLineReader
         yield $buffer;
     }
 
-    /**
-     * Strips a leading UTF-8 BOM (EF BB BF) if present. Used by both the
-     * streaming reader (per-chunk on first chunk) and the format parsers
-     * (per-body before the in-memory split), so that BOM handling stays
-     * consistent across the two code paths.
-     */
     public static function stripBom(string $body): string
     {
         if (str_starts_with($body, self::UTF8_BOM)) {
@@ -77,12 +63,7 @@ final readonly class StreamLineReader
         return $body;
     }
 
-    /**
-     * Reads the next non-empty stream chunk and strips UTF-8 BOM once on the
-     * first successful read. Returns null when the stream is exhausted.
-     *
-     * @param-out bool $bomStripped
-     */
+    /** @param-out bool $bomStripped */
     private function readChunk(StreamInterface $stream, bool &$bomStripped): ?string
     {
         if ($stream->eof()) {

@@ -25,26 +25,7 @@ use function substr;
 
 use const JSON_THROW_ON_ERROR;
 
-/**
- * Server-Sent Events (text/event-stream) parser.
- *
- * WHATWG HTML SSE semantics preserved from the original StreamingContentParser:
- * - UTF-8 BOM stripped from body before parsing.
- * - Comment lines (leading U+003A COLON) ignored.
- * - One leading U+0020 SPACE stripped from each field value; further
- *   leading spaces preserved verbatim.
- * - Multi-line `data:` fields concatenated with U+000A LF.
- * - `data:` value auto-JSON-decoded when feasible; raw string kept on
- *   failure under non-strict mode, MalformedStreamRecordException under strict.
- * - `event:` defaults to W3C `'message'` when `data:` is present without
- *   an explicit `event:`.
- * - `retry:` value parsed as integer milliseconds when composed exclusively
- *   of ASCII digits; non-numeric values ignored.
- * - Empty line dispatches the accumulated event; a trailing unflushed event
- *   is emitted at end-of-input.
- *
- * @internal
- */
+/** @internal */
 final readonly class SseParser implements StreamingFormatParser
 {
     private const string SSE_LINE_SPLIT_PATTERN = '/\r\n|\r|\n/';

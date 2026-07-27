@@ -25,26 +25,7 @@ use function trim;
 
 use const JSON_THROW_ON_ERROR;
 
-/**
- * NDJSON / JSON Lines (application/jsonl, application/x-ndjson) parser.
- *
- * Semantics preserved from the original StreamingContentParser:
- * - UTF-8 BOM stripped from body before parsing.
- * - Empty (whitespace-only) lines skipped without contributing to the
- *   record-count cap.
- * - Each non-empty line is json_decoded; on failure the parser yields null
- *   and logs a warning under non-strict mode, or throws
- *   MalformedStreamRecordException under strict mode.
- *
- * The stream path reads chunks directly from the PSR-7 stream rather than
- * delegating to {@see StreamLineReader::readLines()}. The generator frame
- * allocated by the previous indirection added ~1.8 KB to the empty-stream
- * parse path, which broke `parse_stream_empty_ndjson_has_near_zero_memory_growth`
- * (growth < 2048 bytes). The string path still uses {@see StreamLineReader::stripBom()}
- * (a stateless static helper) for BOM handling consistency.
- *
- * @internal
- */
+/** @internal */
 final readonly class NdJsonParser implements StreamingFormatParser
 {
     private const string NDJSON_LINE_SPLIT_PATTERN = '/\r?\n/';
