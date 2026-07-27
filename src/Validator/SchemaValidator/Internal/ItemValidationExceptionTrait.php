@@ -14,29 +14,15 @@ use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\TypeFormatter;
 use Throwable;
-use Duyler\OpenApi\Validator\SchemaValidator\ItemsValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\PrefixItemsValidator;
 
 use function sprintf;
 
-/**
- * Wraps exceptions thrown while validating a single array item
- * (items / prefixItems) into a ValidationException anchored at the
- * item's data-path and schema-path. Eliminates the duplicated
- * four-branch catch chain that previously existed in both
- * {@see ItemsValidator}
- * and {@see PrefixItemsValidator}.
- *
- * @internal
- */
+/** @internal */
 trait ItemValidationExceptionTrait
 {
     /**
-     * @param non-empty-string $schemaPath e.g. '/items' or '/prefixItems/{i}'
-     *
-     * @throws Throwable always re-throws either the original exception (for
-     *                   InvalidFormatException and any unrecognised type) or
-     *                   a new ValidationException wrapping the failure.
+     * @param non-empty-string $schemaPath
+     * @throws Throwable
      */
     private function wrapItemValidationException(
         Throwable $e,
