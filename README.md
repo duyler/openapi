@@ -2119,6 +2119,38 @@ $response = $factory->createResponse(200)
 $validator->validateResponse($response, $operation);
 ```
 
+### Memory Profile
+
+Streaming response validation is **not constant-memory**. Each decoded
+record (NDJSON line, SSE event, JSON Text Sequences record) is fully
+materialised in memory before schema validation runs, and the
+validator retains the decoded records until the response stream is
+exhausted or the `maxStreamingRecords` cap is reached.
+
+For typical JSON-line payloads (~470 bytes per record after decode),
+the measured peak memory consumption is **~47 MB at the default cap
+of 100 000 records**. The cost is linear in `record_count ×
+avg_record_size`; larger records or higher caps scale accordingly.
+
+Individual record schema validation is constant-time per record, but
+the overall memory footprint of a single `validateResponse()` call
+against a streaming body is **O(N)** in the number of decoded
+records — there is no incremental GC between records.
+
+#### Mitigations
+
+- **`withMaxStreamingRecords(int $max)`** lowers the cap below the
+  default 100 000 when the validator runs in a memory-constrained
+  worker. Once the cap is reached, parsing stops and the validator
+  throws `TooManyRecordsException` (the response is rejected, never
+  partially accepted).
+- **Filter at the source** — if you control the upstream service,
+  prefer paginating the response and validating each page separately
+  over a single long-running stream.
+- **Use separate worker pools** for streaming endpoints with
+  different memory budgets; the `maxStreamingRecords` cap is
+  per-builder, not per-process.
+
 ### Error Handling in Streams
 
 When a stream item fails to parse (invalid JSON), the parser logs a warning and yields `null` for that item. The validator skips `null` items. When a parsed item fails schema validation, a `ValidationException` is thrown immediately.
