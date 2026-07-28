@@ -19,6 +19,8 @@ use Duyler\OpenApi\Schema\Model\Schema;
  * object keys, bool distinct from int, and the IEEE 754 boundary
  * `9007199254740992` (2^53) above which mixed int/float comparisons are
  * rejected as unequal.
+ *
+ * @internal
  */
 final readonly class EqualityHelpers
 {

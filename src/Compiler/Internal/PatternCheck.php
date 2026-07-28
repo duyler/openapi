@@ -24,6 +24,8 @@ use function var_export;
  *   execute, even when the validator throws;
  * - `preg_match === false` (PCRE compile error) is disambiguated from
  *   `preg_match === 0` (no match) via distinct `RuntimeException` messages.
+ *
+ * @internal
  */
 final readonly class PatternCheck
 {
