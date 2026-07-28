@@ -175,12 +175,15 @@ name), `operationId` (nullable, populated when the spec declares one), and
 `'METHOD /path'` (e.g. `'GET /users/42'`), and `Operation::countPlaceholders(): int`
 returns the number of `{...}` placeholders in the template path.
 
-The concrete `OpenApiValidator` instance returned by `build()` (which
-implements `OpenApiValidatorInterface`) additionally exposes six
-read-only introspection accessors that return the resolved builder
-configuration. These are stable public API, intended for diagnostic
-surfaces, middleware that needs to inspect the active validator, and
-test fixtures:
+The concrete `OpenApiValidator` instance returned by `build()` implements
+both `OpenApiValidatorInterface` and `IntrospectableOpenApiValidatorInterface`.
+The latter extends the former with six read-only introspection accessors
+that return the resolved builder configuration. These are stable public
+API, intended for diagnostic surfaces, middleware that needs to inspect
+the active validator, and test fixtures. Callers that need these
+accessors should type-hint `IntrospectableOpenApiValidatorInterface`;
+callers that only need the standard validation surface can continue
+to type-hint `OpenApiValidatorInterface`.
 
 | Method | Returns | Purpose |
 |--------|---------|---------|
@@ -191,9 +194,11 @@ test fixtures:
 | `getErrorFormatter()` | `ErrorFormatterInterface` | The configured formatter |
 | `getCache()` | `?SchemaCache` | The configured PSR-6 cache, or `null` when caching is disabled |
 
-The accessors are not part of `OpenApiValidatorInterface`; callers that
-only type-hint the interface will not see them. Use the concrete class
-(`OpenApiValidator`) when you need them.
+The accessors are part of `IntrospectableOpenApiValidatorInterface`
+(which extends `OpenApiValidatorInterface`); callers that need them
+should type-hint `IntrospectableOpenApiValidatorInterface`. Callers
+that only type-hint `OpenApiValidatorInterface` will not see them
+(interface segregation — see the stability contract below).
 
 The `OpenApiDocument` returned by `getDocument()` is a `final readonly`
 value object implementing `JsonSerializable`. Its fields map to the

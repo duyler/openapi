@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator;
 
-use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
+use Duyler\OpenApi\Builder\IntrospectableOpenApiValidatorInterface;
 use Duyler\OpenApi\Cache\SchemaCache;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
@@ -21,11 +21,11 @@ use Psr\Http\Message\ServerRequestInterface;
 use function sprintf;
 
 /**
- * Concrete {@see OpenApiValidatorInterface} implementation returned by
+ * Concrete {@see IntrospectableOpenApiValidatorInterface} implementation returned by
  * {@see OpenApiValidatorBuilder::build()}. Exposes six read-only
- * introspection accessors in addition to the interface contract.
+ * introspection accessors in addition to the base interface contract.
  */
-final readonly class OpenApiValidator implements OpenApiValidatorInterface
+final readonly class OpenApiValidator implements IntrospectableOpenApiValidatorInterface
 {
     public function __construct(
         private readonly OpenApiDocument $document,
@@ -39,31 +39,37 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         return $this->document;
     }
 
+    #[Override]
     public function getPool(): ValidatorPool
     {
         return $this->dependencies->pool;
     }
 
+    #[Override]
     public function isCoercion(): bool
     {
         return $this->configuration->coercion;
     }
 
+    #[Override]
     public function isNullableAsType(): bool
     {
         return $this->configuration->nullableAsType;
     }
 
+    #[Override]
     public function getEmptyArrayStrategy(): EmptyArrayStrategy
     {
         return $this->configuration->emptyArrayStrategy;
     }
 
+    #[Override]
     public function getErrorFormatter(): ErrorFormatterInterface
     {
         return $this->dependencies->errorFormatter;
     }
 
+    #[Override]
     public function getCache(): ?SchemaCache
     {
         return $this->dependencies->cache;
