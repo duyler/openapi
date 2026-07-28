@@ -10,9 +10,7 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/**
- * @internal
- */
+/** @internal */
 final readonly class ValidatorOptions
 {
     public function __construct(

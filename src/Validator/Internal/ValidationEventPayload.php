@@ -7,9 +7,7 @@ namespace Duyler\OpenApi\Validator\Internal;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/**
- * @internal
- */
+/** @internal */
 final readonly class ValidationEventPayload
 {
     public function __construct(

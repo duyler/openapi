@@ -48,8 +48,6 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
         }
 
         if (false === $schema->contains) {
-            // contains: false forbids any matching item; treat as 0 matches
-            // and apply the standard min/max bounds.
             $this->enforceContainsBounds(0, $schema, $dataPath);
 
             return;

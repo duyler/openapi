@@ -6,9 +6,7 @@ namespace Duyler\OpenApi\Schema\Model\Internal;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 
-/**
- * @internal
- */
+/** @internal */
 final readonly class SiblingMergeContext
 {
     public function __construct(

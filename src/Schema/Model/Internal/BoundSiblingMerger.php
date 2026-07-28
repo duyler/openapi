@@ -14,9 +14,7 @@ use function is_bool;
 use function max;
 use function min;
 
-/**
- * @internal
- */
+/** @internal */
 final readonly class BoundSiblingMerger implements SiblingMergerStrategy
 {
     /**
@@ -124,8 +122,6 @@ final readonly class BoundSiblingMerger implements SiblingMergerStrategy
             return false;
         }
 
-        // §3 fix: original yoda-style `true === X` violated §3 rule.
-        // After false === check above, is_bool narrows to `true` only — redundant `&& X` removed (Psalm hint).
         if (is_bool($sibling)) {
             return $resolved;
         }

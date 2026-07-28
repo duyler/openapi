@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Validation\Internal;
 
-/**
- * @internal
- */
+/** @internal */
 final readonly class ValidatorDependenciesGroup
 {
     public function __construct(
