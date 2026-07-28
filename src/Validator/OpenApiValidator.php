@@ -88,6 +88,17 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         return $this->dependencies->errorFormatter->formatMultiple($e->getErrors());
     }
 
+    /**
+     * Reset the validator's in-memory caches and per-instance memoization.
+     *
+     * Prefork-only contract: safe to call when no concurrent validation
+     * is in progress (always true in prefork models — PHP-FPM,
+     * RoadRunner, FrankenPHP non-threaded). Racy under Swoole coroutines
+     * or FrankenPHP threaded workers — concurrent `validateRequest()`
+     * calls may read from a cache that is being cleared, causing torn
+     * reads or silent re-validation. Use per-coroutine/per-worker
+     * validator instances instead of reset().
+     */
     #[Override]
     public function reset(): void
     {

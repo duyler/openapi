@@ -1782,6 +1782,24 @@ per-class mitigation.
 | `Duyler\OpenApi\Validator\ValidatorPool` | Shared mutable `$cache`/`$order` and check-then-act sequence in `getOrCreate()` | Construct via `ValidatorPool::forCoroutineRuntime($lock, $maxSize)` with a `Swoole\Lock` (or any object exposing `lock()`/`unlock()`); never recurse into `getOrCreate()` from inside the factory closure | Swoole coroutines, FrankenPHP threaded workers |
 | `Duyler\OpenApi\Validator\LibxmlSecuredContext` | Process-global `libxml_use_internal_errors` and `libxml_set_external_entity_loader` captured/restored inside `run()` | Run XML body validation (`contentMediaType: application/xml`) in a prefork worker or delegate XML parsing to an isolated `Swoole\Process` worker; under coroutines the helper may either bypass XXE protection for one coroutine or disable the entity loader process-wide | Swoole coroutines, FrankenPHP threaded workers |
 | `Duyler\OpenApi\Validator\PregExecutor` | Process-global `pcre.backtrack_limit` and `pcre.recursion_limit` mutated via `ini_set` in `match()`/`matchAll()` | Prefer prefork workers; each coroutine should own its own `PregExecutor` instance (the default) and must not assume the ReDoS cap applies to a specific call when coroutines yield inside `preg_match` | Swoole coroutines, FrankenPHP threaded workers |
+| `Duyler\OpenApi\Validator\Request\PathRegexCache` | Mutable memoization of compiled path regex | Construct per-coroutine or per-worker; do not share across coroutines without external lock | Swoole coroutines, FrankenPHP threaded workers |
+| `Duyler\OpenApi\Validator\Schema\RegexValidator` | In-process cache of compiled JSON Schema `pattern` regex | Per-coroutine/per-worker instance; external lock for shared use | Swoole coroutines, FrankenPHP threaded workers |
+| `Duyler\OpenApi\Validator\Schema\RefResolver` | WeakMap-based `$ref` resolution cache | Per-coroutine/per-worker; never share across coroutines (resolved refs may point to stale schema) | Swoole coroutines, FrankenPHP threaded workers |
+| `Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext` | Per-instance `ValidationContext` and dispatch cache | Per-coroutine/per-worker; reset() clears caches that other coroutines may be reading | Swoole coroutines, FrankenPHP threaded workers |
+| `Duyler\OpenApi\Validator\SchemaValidator\EnumScalarCache` | Per-instance WeakMap-based enum result memoization | Per-coroutine/per-worker; WeakMap entries are not isolated across coroutines sharing one instance | Swoole coroutines, FrankenPHP threaded workers |
+| `Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator` | Legacy dispatcher with in-memory type dispatch table | Per-coroutine/per-worker; do not share legacy SchemaValidator across coroutines | Swoole coroutines, FrankenPHP threaded workers |
+| `Duyler\OpenApi\Compiler\CompilationCache` | PSR-6-backed compiled-validator cache; in-memory hit memoization | Per-coroutine/per-worker instance; PSR-6 backend is shared-safe but local memo is racy | Swoole coroutines, FrankenPHP threaded workers |
+
+The seven classes above are racy under shared mutable state (Swoole
+coroutines, FrankenPHP threaded workers) because they keep in-memory
+caches keyed by schema/data identity. They are NOT marked
+`@danger NOT_THREAD_SAFE` in source code (unlike `ValidatorPool`,
+`LibxmlSecuredContext`, and `PregExecutor`) because the racy state is
+performance memoization, not correctness-critical. Cache miss
+recomputes the correct result; cache hit from another coroutine
+returns a correct value but may cause torn reads under concurrent
+mutation. Construct one instance per coroutine/per worker to avoid
+the race entirely.
 
 ##### O-004 — nested `getOrCreate()` deadlocks under `Swoole\Lock(SWOOLE_MUTEX)`
 
@@ -1831,6 +1849,16 @@ requires per-coroutine validator construction.
 
 The prefork model (one request per worker process, no shared mutable state) is
 the safest option and requires no extra configuration.
+
+The `OpenApiValidator::reset()` method is **prefork-only**. It clears
+the validator's in-memory caches (`ValidatorPool`, `PathRegexCache`,
+`RefResolver`, and `RegexValidator`) and is safe to call once at
+worker startup before requests begin. Under Swoole coroutines or
+FrankenPHP threaded workers, calling `reset()` while other coroutines
+are mid-validation causes torn reads from a cleared cache — construct
+a fresh validator per coroutine instead. The
+`OpenApiValidatorInterface::reset()` declaration does not change, but
+callers must enforce prefork-only usage themselves.
 
 ```php
 // Build once at worker startup
