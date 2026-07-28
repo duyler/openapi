@@ -8,8 +8,11 @@ use Duyler\OpenApi\Validator\SchemaValidator\DependentSchemasValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+use Duyler\OpenApi\Validator\Exception\MinLengthError;
 use Duyler\OpenApi\Validator\Exception\NestedValidationError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -241,6 +244,148 @@ class DependentSchemasValidatorTest extends TestCase
 
             self::assertCount(1, $errors);
             self::assertInstanceOf(NestedValidationError::class, $errors[0]);
+        }
+    }
+
+    #[Test]
+    public function rethrow_invalid_format_exception_from_dependent_schema_without_wrapping(): void
+    {
+        $dependentSchema = new Schema(
+            type: 'object',
+            properties: [
+                'email' => new Schema(type: 'string', format: 'email'),
+            ],
+        );
+        $schema = new Schema(
+            type: 'object',
+            dependentSchemas: ['trigger' => $dependentSchema],
+        );
+
+        $this->expectException(InvalidFormatException::class);
+
+        $this->validator->validate([
+            'trigger' => 'active',
+            'email' => 'not-an-email',
+        ], $schema);
+    }
+
+    #[Test]
+    public function wrap_abstract_validation_error_from_dependent_schema_branch(): void
+    {
+        $dependentSchema = new Schema(
+            type: 'object',
+            properties: [
+                'name' => new Schema(type: 'string', minLength: 5),
+            ],
+        );
+        $schema = new Schema(
+            type: 'object',
+            dependentSchemas: ['trigger' => $dependentSchema],
+        );
+
+        try {
+            $this->validator->validate([
+                'trigger' => 'active',
+                'name' => 'abc',
+            ], $schema);
+            self::fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+
+            self::assertCount(1, $errors);
+            self::assertInstanceOf(MinLengthError::class, $errors[0]);
+            self::assertStringContainsString('validation failed', $e->getMessage());
+        }
+    }
+
+    #[Test]
+    public function apply_dependent_schema_with_nullable_property_inside_accepts_null_value(): void
+    {
+        $dependentSchema = new Schema(
+            type: 'object',
+            properties: [
+                'optional' => new Schema(type: ['string', 'null']),
+            ],
+        );
+        $schema = new Schema(
+            type: 'object',
+            dependentSchemas: ['trigger' => $dependentSchema],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $this->validator->validate([
+            'trigger' => 'active',
+            'optional' => null,
+        ], $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function apply_dependent_schema_declared_nullable_via_nullable_flag(): void
+    {
+        $dependentSchema = new Schema(
+            type: 'object',
+            nullable: true,
+        );
+        $schema = new Schema(
+            type: 'object',
+            dependentSchemas: ['trigger' => $dependentSchema],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $this->validator->validate(['trigger' => 'active'], $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function apply_dependent_schema_with_nested_composition_any_of_branch(): void
+    {
+        $dependentSchema = new Schema(
+            type: 'object',
+            properties: [
+                'value' => new Schema(
+                    anyOf: [
+                        new Schema(type: 'integer'),
+                        new Schema(type: 'string'),
+                    ],
+                ),
+            ],
+        );
+        $schema = new Schema(
+            type: 'object',
+            dependentSchemas: ['trigger' => $dependentSchema],
+        );
+
+        $this->validator->validate([
+            'trigger' => 'active',
+            'value' => 'hello',
+        ], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validation_exception_with_existing_errors_passes_them_through_unchanged(): void
+    {
+        $dependentSchema = new Schema(
+            type: 'object',
+            required: ['missing1', 'missing2'],
+        );
+        $schema = new Schema(
+            type: 'object',
+            dependentSchemas: ['trigger' => $dependentSchema],
+        );
+
+        try {
+            $this->validator->validate(['trigger' => 'active'], $schema);
+            self::fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            self::assertStringContainsString('validation failed', $e->getMessage());
+            self::assertNotEmpty($e->getErrors());
         }
     }
 }
