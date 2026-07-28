@@ -8,12 +8,15 @@ use Duyler\OpenApi\Validator\SchemaValidator\DependentSchemasValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Exception\NestedValidationError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+
+use const NAN;
 
 #[CoversClass(DependentSchemasValidator::class)]
 class DependentSchemasValidatorTest extends TestCase
@@ -203,6 +206,41 @@ class DependentSchemasValidatorTest extends TestCase
             ], $schema);
         } finally {
             fclose($resource);
+        }
+    }
+
+    #[Test]
+    public function nested_validator_throwing_plain_validation_exception_is_wrapped_in_nested_validation_error(): void
+    {
+        $dependentSchema = new Schema(
+            type: 'object',
+            properties: [
+                'value' => new Schema(
+                    oneOf: [
+                        new Schema(minimum: 0),
+                        new Schema(maximum: 100),
+                    ],
+                ),
+            ],
+        );
+        $schema = new Schema(
+            type: 'object',
+            dependentSchemas: [
+                'trigger' => $dependentSchema,
+            ],
+        );
+
+        try {
+            $this->validator->validate([
+                'trigger' => 'active',
+                'value' => NAN,
+            ], $schema);
+            self::fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+
+            self::assertCount(1, $errors);
+            self::assertInstanceOf(NestedValidationError::class, $errors[0]);
         }
     }
 }
