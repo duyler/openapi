@@ -189,13 +189,17 @@ and alias (`*name`) constructs to block the "billion laughs" expansion bomb
 document. The pre-parse scan runs after the size check and before
 `Symfony\Component\Yaml\Yaml::parse()`, so an attacker-controlled 1 KB payload
 can never reach the parser even when its expanded in-memory size would exceed
-the process `memory_limit`.
+the process `memory_limit`. A fourth post-parse cap (`MAX_EXPANSION_BYTES`)
+acts as defense-in-depth for bombs whose chain depth slips under the DAG
+heuristic but whose horizontal expansion (high arity at low depth) would
+produce an oversized in-memory payload after `Yaml::parse()`.
 
 | Cap | Default | Rationale |
 |-----|---------|-----------|
 | `YamlParser::MAX_ANCHORS` | 100 | Real OpenAPI specs use fewer than 20 anchors for schema deduplication. The regex scanner uses `[^ \t,\[\]\{\}\n]+` with `/u` flag, exactly mirroring Symfony YAML's `Inline::parseAnchor` reject set — so any character Symfony accepts as an anchor-name character (Cyrillic, CJK, dots, colons, pipes, FF, VT, NBSP, etc.) is counted. |
 | `YamlParser::MAX_ALIASES` | 1000 | Real OpenAPI specs use fewer than 50 alias references. Symfony YAML's own `maxAliasesForCollections` (default 128) remains active as defense-in-depth for collection aliases that slip past the pre-parse scan. |
-| `YamlParser::MAX_ALIAS_DEPTH` | 10 | DAG-based longest-chain heuristic. Each anchor's value range is determined by indentation (from the anchor's declaration line to the next anchor at the same or lower indentation). Aliases within that range that reference other declared anchors become DAG edges; the longest path is the chain depth. Catches both same-line (flow-style `b: &b [*a]`) and multi-line (`b: &b\n  - *a`) billion-laughs variants. Real billion-laughs payloads use 5-7 chain levels; 10 leaves conservative headroom for legitimate deduplication. |
+| `YamlParser::MAX_ALIAS_DEPTH` | **4** | DAG-based longest-chain heuristic. Each anchor's value range is determined by indentation (from the anchor's declaration line to the next anchor at the same or lower indentation). Aliases within that range that reference other declared anchors become DAG edges; the longest path is the chain depth. Catches both same-line (flow-style `b: &b [*a]`) and multi-line (`b: &b\n  - *a`) billion-laughs variants. Real billion-laughs payloads use 5-7 chain levels; **4 rejects all known chain-bomb variants while preserving legitimate 4-level dedup patterns** (1→2→4→8 aliases, ≤10⁴ expanded elements — covers any reasonable spec). |
+| `YamlParser::MAX_EXPANSION_BYTES` | **5_000_000** | Post-parse defense-in-depth cap. Catches horizontal bombs (high arity × low chain depth) that bypass the DAG heuristic. Compares `strlen(serialize($parsed))` against the cap and throws `SpecTooLargeException` after `Symfony\Component\Yaml\Yaml::parse()` returns. Real OpenAPI specs serialize to <2 MB after expansion. |
 
 Exceeding any cap throws `SpecTooLargeException` (a `\RuntimeException`
 subclass) with a sanitised message that discloses only the metric, the actual

@@ -18,6 +18,8 @@ use function is_array;
 use function is_string;
 use function ltrim;
 use function min;
+use function serialize;
+use function str_replace;
 use function strlen;
 
 final class YamlParser extends OpenApiBuilder
@@ -27,18 +29,26 @@ final class YamlParser extends OpenApiBuilder
     public const int DEFAULT_MAX_SPEC_DEPTH = 100;
 
     /**
-     * Conservative caps for YAML anchor/alias expansion bombs
-     * (billion-laughs attack, CWE-400, CWE-770). Real OpenAPI specs
-     * typically use fewer than 20 anchors and 50 aliases for schema
-     * deduplication; these caps allow legitimate deduplication while
-     * rejecting exponential blowup before the Symfony YAML parser
-     * materialises the expanded document.
+     * Pre-parse caps for YAML anchor/alias expansion bombs (billion-laughs
+     * attack, CWE-400, CWE-770). Real OpenAPI specs typically use fewer
+     * than 20 anchors and 50 aliases for schema deduplication; these caps
+     * allow legitimate deduplication while rejecting exponential blowup
+     * before the Symfony YAML parser materialises the expanded document.
      */
     public const int MAX_ANCHORS = 100;
 
     public const int MAX_ALIASES = 1000;
 
-    public const int MAX_ALIAS_DEPTH = 10;
+    public const int MAX_ALIAS_DEPTH = 4;
+
+    /**
+     * Post-parse defense-in-depth cap: measures strlen(serialize($parsed))
+     * AFTER Yaml::parse() returns. Catches horizontal bombs (high arity x
+     * low chain depth) that slip the pre-parse DAG heuristic; the
+     * materialisation cost is the accepted tradeoff, bounded by the
+     * pre-parse caps above.
+     */
+    public const int MAX_EXPANSION_BYTES = 5_000_000;
 
     private readonly PregExecutor $pregExecutor;
 
@@ -63,6 +73,11 @@ final class YamlParser extends OpenApiBuilder
 
         /** @var mixed $data */
         $data = Yaml::parse($content, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
+
+        $serializedSize = strlen(serialize($data));
+        if ($serializedSize > self::MAX_EXPANSION_BYTES) {
+            throw SpecTooLargeException::forExpansionSize(self::MAX_EXPANSION_BYTES, $serializedSize);
+        }
 
         if (is_array($data)) {
             $depth = $this->calculateDepth($data);
@@ -104,20 +119,27 @@ final class YamlParser extends OpenApiBuilder
 
     private function assertNoAnchorBomb(string $content): void
     {
-        $anchorCount = $this->countAnchors($content);
+        $normalized = $this->normalizeLineEndings($content);
+
+        $anchorCount = $this->countAnchors($normalized);
         if ($anchorCount > self::MAX_ANCHORS) {
             throw SpecTooLargeException::forAnchorCount(self::MAX_ANCHORS, $anchorCount);
         }
 
-        $aliasCount = $this->countAliases($content);
+        $aliasCount = $this->countAliases($normalized);
         if ($aliasCount > self::MAX_ALIASES) {
             throw SpecTooLargeException::forAliasCount(self::MAX_ALIASES, $aliasCount);
         }
 
-        $aliasDepth = $this->estimateAliasNestingDepth($content);
+        $aliasDepth = $this->estimateAliasNestingDepth($normalized);
         if ($aliasDepth > self::MAX_ALIAS_DEPTH) {
             throw SpecTooLargeException::forAliasDepth(self::MAX_ALIAS_DEPTH, $aliasDepth);
         }
+    }
+
+    private function normalizeLineEndings(string $content): string
+    {
+        return str_replace(["\r\n", "\r"], "\n", $content);
     }
 
     private function countAnchors(string $content): int

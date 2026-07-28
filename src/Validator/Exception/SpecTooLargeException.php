@@ -83,4 +83,17 @@ final class SpecTooLargeException extends RuntimeException
             $previous,
         );
     }
+
+    public static function forExpansionSize(int $cap, int $actual, int $code = 0, ?Throwable $previous = null): self
+    {
+        return new self(
+            sprintf(
+                'Expanded YAML payload of %d bytes exceeds the cap of %d bytes',
+                $actual,
+                $cap,
+            ),
+            $code,
+            $previous,
+        );
+    }
 }
