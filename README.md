@@ -29,6 +29,74 @@ OpenAPI 3.2 validator for PHP 8.4+
 - **Schema Registry** - Manage multiple schema versions
 - **Validator Compilation** (experimental) - Generate optimized validator code for basic schemas (see Limitations)
 
+## Stability / Backward Compatibility
+
+This package follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
+The 1.x line is the long-term stable line; 2.0 will be the next breaking
+release with no scheduled date.
+
+### What is covered by the 1.0 stability guarantee
+
+A symbol is part of the BC contract **if and only if** all of the
+following are true:
+
+- It is in a non-`Internal` namespace (any top-level namespace component
+  that is NOT `Internal` — e.g. `Builder`, `Validator`, `Schema`,
+  `Compiler` top-level; `*\Internal` subnamespaces are excluded).
+- It does not carry the `@internal` marker in its PHPDoc.
+- It does not carry the `@experimental` marker in its PHPDoc
+  (currently only `Duyler\OpenApi\Compiler\ValidatorCompiler`).
+
+For symbols matching the criteria above, the following are locked
+for the entire 1.x lifecycle:
+
+- Class, interface, trait, and enum existence (no removals, no renames).
+- Method signatures (parameter names, types, defaults, order).
+- Constructor parameter signatures (see the `Schema` exception below).
+- Method behaviour for documented inputs (no silent semantic changes).
+- Exception types thrown for documented error conditions.
+
+### What is NOT covered
+
+- **`*\Internal` namespaces** (e.g. `Builder\Internal`, `Compiler\Internal`,
+  `Validator\Internal`, `Schema\Model\Internal`) — these classes are private
+  implementation details and may change in any minor release. They are
+  additionally marked `@internal` so static analyzers
+  (psalm/internal_plugin, PHPStan bleeding-edge) flag user dependencies
+  on them.
+- **`@experimental` symbols** — currently `ValidatorCompiler` and its
+  generated code shape. The compiler's public interface (method
+  signatures, supported keywords, codegen output format) may change
+  in any minor release (1.1, 1.2, ...) without notice. Pin the exact
+  version if you depend on it.
+- **Constructor parameters as named arguments** — the `Schema` model
+  class has a 57-parameter constructor (locked at the structural
+  level: positional arguments are stable), but passing arguments by
+  name is **not** part of the BC contract because PHP allows parameter
+  rename to break named-argument callers. Use positional construction
+  or the builder for forward compatibility.
+- **Protected methods on abstract classes** — these are extension
+  points but their signatures may change in minor releases if the
+  concrete subclass contract does not break.
+- **Private state and trait internals** — implementation details.
+
+### Deprecation policy
+
+Symbols scheduled for removal in 2.0 are marked `@deprecated <version>
+in PHPDoc with a documented replacement. Deprecated symbols remain in
+1.x without behavioural change; they are removed in the next major
+release. Currently deprecated symbols are listed in the [CHANGELOG](CHANGELOG.md).
+
+### Patch releases (1.0.x)
+
+Patch releases contain bug fixes and security patches only. No new
+features, no BC breaks, no deprecation additions.
+
+### Minor releases (1.x.0)
+
+Minor releases may add new features, deprecate existing symbols, or
+expand supported PHP versions. No BC breaks against the contract above.
+
 ## Installation
 
 ```bash
