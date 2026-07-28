@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when a string value is shorter than the schema's minLength constraint. */
 final class MinLengthError extends AbstractValidationError
 {
     public function __construct(

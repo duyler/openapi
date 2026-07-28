@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Exception;
 
+/** Thrown when data matches the schema forbidden by the not keyword. */
 final class NotValidationError extends AbstractValidationError
 {
     public function __construct(

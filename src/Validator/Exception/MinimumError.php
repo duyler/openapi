@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when a numeric value is below the schema's minimum or exclusiveMinimum constraint. */
 final class MinimumError extends AbstractValidationError
 {
     public function __construct(

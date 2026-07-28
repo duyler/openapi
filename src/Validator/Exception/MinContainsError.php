@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when too few items match the schema's contains constraint (minContains). */
 final class MinContainsError extends AbstractValidationError
 {
     public function __construct(

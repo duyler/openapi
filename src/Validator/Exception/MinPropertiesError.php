@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when an object has fewer properties than the schema's minProperties constraint. */
 final class MinPropertiesError extends AbstractValidationError
 {
     public function __construct(

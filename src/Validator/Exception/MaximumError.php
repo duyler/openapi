@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when a numeric value exceeds the schema's maximum or exclusiveMaximum constraint. */
 final class MaximumError extends AbstractValidationError
 {
     public function __construct(

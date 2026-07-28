@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when a writeOnly property is returned in a response payload. */
 final class WriteOnlyPropertyError extends AbstractValidationError
 {
     public function __construct(

@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when an object exceeds the schema's maxProperties constraint. */
 final class MaxPropertiesError extends AbstractValidationError
 {
     public function __construct(

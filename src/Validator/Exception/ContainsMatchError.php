@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Exception;
 
+/** Thrown when an array has no items matching the schema's contains constraint. */
 final class ContainsMatchError extends AbstractValidationError
 {
     public function __construct(

@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when an object contains a property not evaluated by any adjacent in-place applicator (unevaluatedProperties). */
 final class UnevaluatedPropertyError extends AbstractValidationError
 {
     public function __construct(

@@ -50,6 +50,11 @@ use function dirname;
 use function realpath;
 use function sprintf;
 
+/**
+ * Fluent immutable builder for {@see OpenApiValidator} instances.
+ *
+ * Entry point: {@see create()}. Terminal method: {@see build()}.
+ */
 final readonly class OpenApiValidatorBuilder
 {
     private function __construct(

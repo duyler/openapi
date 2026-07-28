@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when a readOnly property is sent in a request payload. */
 final class ReadOnlyPropertyError extends AbstractValidationError
 {
     public function __construct(

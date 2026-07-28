@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when too many items match the schema's contains constraint (maxContains). */
 final class MaxContainsError extends AbstractValidationError
 {
     public function __construct(

@@ -20,6 +20,11 @@ use Psr\Http\Message\ServerRequestInterface;
 
 use function sprintf;
 
+/**
+ * Concrete {@see OpenApiValidatorInterface} implementation returned by
+ * {@see OpenApiValidatorBuilder::build()}. Exposes six read-only
+ * introspection accessors in addition to the interface contract.
+ */
 final readonly class OpenApiValidator implements OpenApiValidatorInterface
 {
     public function __construct(

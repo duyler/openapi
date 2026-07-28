@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when data matches multiple oneOf schemas (must match exactly one). */
 final class OneOfError extends AbstractValidationError
 {
     public function __construct(
