@@ -136,7 +136,7 @@ internal-only unless explicitly marked as public API.
     `LibxmlSecuredContext` shrunk as a side effect; `TypeFormatter`
     deleted (consolidated into its single remaining caller).
   - §11 silent catches now emit PSR-3 log entries at the boundary.
-- **AI-slop removal pass** — dead `UriScheme` enum and `AnyOfError`
+- **Dead-code removal pass** — dead `UriScheme` enum and `AnyOfError`
   exception class deleted; `TypeCoercer` 4-predicate OR replaced with
   `is_scalar()`; `JsonEquals` and `EnumScalarCache` boolean expressions
   extracted into `isNumeric()` / `isScalarOrNull()` helpers; nested
