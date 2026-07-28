@@ -677,6 +677,7 @@ fail-closes on unresolvable callback expressions.
 - Set `symfony/yaml` requirement to `^7.0`.
 
 [Unreleased]: https://github.com/duyler/openapi/compare/0.6.0...HEAD
+[0.7.0]: https://github.com/duyler/openapi/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/duyler/openapi/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/duyler/openapi/compare/0.4.1...0.5.0
 [0.4.1]: https://github.com/duyler/openapi/compare/0.4.0...0.4.1
