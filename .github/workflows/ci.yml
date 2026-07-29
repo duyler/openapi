@@ -90,7 +90,7 @@ jobs:
         run: php -m | grep -q '^swoole$' || (echo "Swoole extension not loaded" && exit 1)
 
       - name: Run Swoole concurrency tests
-        run: php -d memory_limit=512M vendor/bin/phpunit --filter='SwooleSharedValidatorTest' --testdox --colors=always
+        run: php -d memory_limit=512M vendor/bin/phpunit --filter='(SwooleSharedValidatorTest|ValidatorPoolTest)' --testdox --colors=always
 
   # FrankenPHP worker-SAPI concurrency coverage is tracked as a follow-up
   # to R4-TEST-001. The frankenphp extension is statically compiled into

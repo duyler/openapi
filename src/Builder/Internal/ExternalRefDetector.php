@@ -38,6 +38,8 @@ use const JSON_THROW_ON_ERROR;
  * File-loaded specs skip the scan: their `externalRefAllowedRoot` is auto
  * derived from `dirname(realpath($path))` and the `FileExternalRefResolver`
  * enforces the boundary at resolution time.
+ *
+ * @internal
  */
 final readonly class ExternalRefDetector
 {

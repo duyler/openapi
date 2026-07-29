@@ -15,6 +15,8 @@ use function var_export;
  * the ValidatorCompiler. Property recursion and items iteration stay in
  * the orchestrator because they traverse the schema tree via the shared
  * recursive `generateConstraintsForSchema` entry point.
+ *
+ * @internal
  */
 final readonly class ObjectConstraints
 {

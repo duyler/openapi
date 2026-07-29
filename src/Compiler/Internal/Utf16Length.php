@@ -11,6 +11,8 @@ use function sprintf;
  * minLength/maxLength validation. The compiled loop walks UTF-8 bytes once
  * and converts each code point to its UTF-16 length (1 or 2 code units for
  * code points outside the BMP).
+ *
+ * @internal
  */
 final readonly class Utf16Length
 {

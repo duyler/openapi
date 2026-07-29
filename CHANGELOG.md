@@ -5,6 +5,77 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - YYYY-MM-DD
+
+First stable release. The 1.x line is the long-term stable line
+following [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
+See the [Stability / Backward Compatibility](README.md#stability--backward-compatibility)
+section in the README for the full BC contract.
+
+### Added
+
+- Stable public API surface for the `OpenApiValidatorBuilder`, `OpenApiValidator`,
+  `OpenApiValidatorInterface`, `Schema`, and `OpenApiDocument` classes.
+- `OpenApiValidatorInterface` extended with introspection accessors
+  (`getPool`, `isCoercion`, `isNullableAsType`, `getEmptyArrayStrategy`,
+  `getErrorFormatter`, `getCache`) — see `IntrospectableOpenApiValidatorInterface`.
+- BC policy section in README documenting what is and is not covered by
+  the 1.0 stability guarantee.
+- YAML billion-laughs defense: `MAX_ALIAS_DEPTH = 4` (lowered from 10),
+  `MAX_EXPANSION_BYTES = 5_000_000` post-parse size cap.
+- Symfony YAML constraint tightened to `^7.4 || ^8.1` (LTS + current
+  only; EOL versions 7.0-7.3 and 8.0 are rejected).
+- Streaming response validation for NDJSON, SSE, and JSON Text Sequences
+  with `withMaxStreamingRecords()` cap (default 100 000).
+- `OpenApiValidator::reset()` documented as prefork-only (racy under
+  Swoole coroutines and FrankenPHP threaded workers).
+- 7 racy memoization classes documented in README "Unsafe classes and
+  their contracts" table.
+- 12 `Internal\` namespace classes marked `@internal` for static
+  analyzer enforcement.
+
+### Changed
+
+- `composer` constraint `symfony/yaml`: `^7.0 || ^8.0` → `^7.4 || ^8.1`.
+- `YamlParser::MAX_ALIAS_DEPTH`: `10` → `4` (chain bomb DoS fix).
+- CI Swoole job filter expanded from `SwooleSharedValidatorTest` to
+  `(SwooleSharedValidatorTest|ValidatorPoolTest)` — coroutine test
+  now under regression protection.
+
+### Deprecated
+
+The following symbols are marked `@deprecated` and scheduled for removal
+in 2.0. They remain functional in 1.x with no behavioural change.
+
+- `OpenApiValidatorInterface::getFormattedErrors()` — use
+  `ErrorFormatterInterface::formatException()` instead.
+- `OpenApiValidatorInterface::getType()` on validation errors — use
+  `keyword()` instead.
+- `OpenApiValidatorBuilder::enableStrictCallbackRuntimeTemplate()` —
+  no-op since strict mode became the default (SEC-09).
+- `OpenApiValidatorBuilder::enableNullableAsType()` — nullable
+  validation is now on by default.
+- `SchemaValidator` (legacy stateless dispatcher) — use
+  `SchemaValidatorWithContext` for full annotation coverage.
+
+### Security
+
+- Fixed YAML chain billion-laughs DoS (CVSS 7.5, CWE-400 / CWE-770):
+  a 505-byte anchor-chain payload previously caused ~17 s CPU and
+  ~1.5 GB RAM per parse. With `MAX_ALIAS_DEPTH = 4` and the new
+  post-parse size cap, the same payload is rejected in <100 ms.
+  Reported by the 1.0 production readiness audit.
+- Tightened Symfony YAML version constraint to exclude EOL versions
+  (7.0-7.3, 8.0) that no longer receive security patches.
+
+### Acknowledgments
+
+The 1.0 release was prepared with the help of a multi-agent
+production readiness audit covering API stability, test coverage,
+security, performance, documentation, concurrency, dependencies,
+and tech debt. See `.ai/research/1.0-production-readiness-audit.md`
+for the full audit report. Thanks to all [GitHub contributors](https://github.com/duyler/openapi/graphs/contributors).
+
 ## [0.7.0]
 
 Preparation for the 1.0.0 stable release. This section tracks work that
@@ -65,7 +136,7 @@ internal-only unless explicitly marked as public API.
     `LibxmlSecuredContext` shrunk as a side effect; `TypeFormatter`
     deleted (consolidated into its single remaining caller).
   - §11 silent catches now emit PSR-3 log entries at the boundary.
-- **AI-slop removal pass** — dead `UriScheme` enum and `AnyOfError`
+- **Dead-code removal pass** — dead `UriScheme` enum and `AnyOfError`
   exception class deleted; `TypeCoercer` 4-predicate OR replaced with
   `is_scalar()`; `JsonEquals` and `EnumScalarCache` boolean expressions
   extracted into `isNumeric()` / `isScalarOrNull()` helpers; nested
@@ -676,7 +747,9 @@ fail-closes on unresolvable callback expressions.
 ### Changed
 - Set `symfony/yaml` requirement to `^7.0`.
 
-[Unreleased]: https://github.com/duyler/openapi/compare/0.6.0...HEAD
+[Unreleased]: https://github.com/duyler/openapi/compare/1.0.0...HEAD
+[1.0.0]: https://github.com/duyler/openapi/compare/0.7.0...1.0.0
+[0.7.0]: https://github.com/duyler/openapi/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/duyler/openapi/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/duyler/openapi/compare/0.4.1...0.5.0
 [0.4.1]: https://github.com/duyler/openapi/compare/0.4.0...0.4.1

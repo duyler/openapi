@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when an array has fewer items than the schema's minItems constraint. */
 final class MinItemsError extends AbstractValidationError
 {
     public function __construct(

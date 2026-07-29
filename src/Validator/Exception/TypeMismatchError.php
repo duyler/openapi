@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when the data type does not match the schema-declared type. */
 final class TypeMismatchError extends AbstractValidationError
 {
     public function __construct(

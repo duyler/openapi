@@ -19,6 +19,8 @@ use function is_bool;
  * UnsupportedKeywordException rather than silently emitting a validator
  * that ignores the keyword. Detection is recursive — unsupported
  * keywords inside nested `properties` or `items` are also reported.
+ *
+ * @internal
  */
 final readonly class UnsupportedKeywordDetector
 {

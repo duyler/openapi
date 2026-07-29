@@ -20,7 +20,10 @@ use Duyler\OpenApi\Validator\Validation\WebhookValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\OpenApiValidator;
 
+/** @internal wired by {@see OpenApiValidatorBuilder} and consumed by {@see OpenApiValidator}; the public 1.0 surface is {@see \Duyler\OpenApi\Validator\Validation\ValidatorDependencies}. */
 final readonly class ValidatorDependencies
 {
     public function __construct(

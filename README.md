@@ -29,6 +29,74 @@ OpenAPI 3.2 validator for PHP 8.4+
 - **Schema Registry** - Manage multiple schema versions
 - **Validator Compilation** (experimental) - Generate optimized validator code for basic schemas (see Limitations)
 
+## Stability / Backward Compatibility
+
+This package follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
+The 1.x line is the long-term stable line; 2.0 will be the next breaking
+release with no scheduled date.
+
+### What is covered by the 1.0 stability guarantee
+
+A symbol is part of the BC contract **if and only if** all of the
+following are true:
+
+- It is in a non-`Internal` namespace (any top-level namespace component
+  that is NOT `Internal` — e.g. `Builder`, `Validator`, `Schema`,
+  `Compiler` top-level; `*\Internal` subnamespaces are excluded).
+- It does not carry the `@internal` marker in its PHPDoc.
+- It does not carry the `@experimental` marker in its PHPDoc
+  (currently only `Duyler\OpenApi\Compiler\ValidatorCompiler`).
+
+For symbols matching the criteria above, the following are locked
+for the entire 1.x lifecycle:
+
+- Class, interface, trait, and enum existence (no removals, no renames).
+- Method signatures (parameter names, types, defaults, order).
+- Constructor parameter signatures (see the `Schema` exception below).
+- Method behaviour for documented inputs (no silent semantic changes).
+- Exception types thrown for documented error conditions.
+
+### What is NOT covered
+
+- **`*\Internal` namespaces** (e.g. `Builder\Internal`, `Compiler\Internal`,
+  `Validator\Internal`, `Schema\Model\Internal`) — these classes are private
+  implementation details and may change in any minor release. They are
+  additionally marked `@internal` so static analyzers
+  (psalm/internal_plugin, PHPStan bleeding-edge) flag user dependencies
+  on them.
+- **`@experimental` symbols** — currently `ValidatorCompiler` and its
+  generated code shape. The compiler's public interface (method
+  signatures, supported keywords, codegen output format) may change
+  in any minor release (1.1, 1.2, ...) without notice. Pin the exact
+  version if you depend on it.
+- **Constructor parameters as named arguments** — the `Schema` model
+  class has a 57-parameter constructor (locked at the structural
+  level: positional arguments are stable), but passing arguments by
+  name is **not** part of the BC contract because PHP allows parameter
+  rename to break named-argument callers. Use positional construction
+  or the builder for forward compatibility.
+- **Protected methods on abstract classes** — these are extension
+  points but their signatures may change in minor releases if the
+  concrete subclass contract does not break.
+- **Private state and trait internals** — implementation details.
+
+### Deprecation policy
+
+Symbols scheduled for removal in 2.0 are marked `@deprecated <version>
+in PHPDoc with a documented replacement. Deprecated symbols remain in
+1.x without behavioural change; they are removed in the next major
+release. Currently deprecated symbols are listed in the [CHANGELOG](CHANGELOG.md).
+
+### Patch releases (1.0.x)
+
+Patch releases contain bug fixes and security patches only. No new
+features, no BC breaks, no deprecation additions.
+
+### Minor releases (1.x.0)
+
+Minor releases may add new features, deprecate existing symbols, or
+expand supported PHP versions. No BC breaks against the contract above.
+
 ## Installation
 
 ```bash
@@ -107,12 +175,15 @@ name), `operationId` (nullable, populated when the spec declares one), and
 `'METHOD /path'` (e.g. `'GET /users/42'`), and `Operation::countPlaceholders(): int`
 returns the number of `{...}` placeholders in the template path.
 
-The concrete `OpenApiValidator` instance returned by `build()` (which
-implements `OpenApiValidatorInterface`) additionally exposes six
-read-only introspection accessors that return the resolved builder
-configuration. These are stable public API, intended for diagnostic
-surfaces, middleware that needs to inspect the active validator, and
-test fixtures:
+The concrete `OpenApiValidator` instance returned by `build()` implements
+both `OpenApiValidatorInterface` and `IntrospectableOpenApiValidatorInterface`.
+The latter extends the former with six read-only introspection accessors
+that return the resolved builder configuration. These are stable public
+API, intended for diagnostic surfaces, middleware that needs to inspect
+the active validator, and test fixtures. Callers that need these
+accessors should type-hint `IntrospectableOpenApiValidatorInterface`;
+callers that only need the standard validation surface can continue
+to type-hint `OpenApiValidatorInterface`.
 
 | Method | Returns | Purpose |
 |--------|---------|---------|
@@ -123,9 +194,11 @@ test fixtures:
 | `getErrorFormatter()` | `ErrorFormatterInterface` | The configured formatter |
 | `getCache()` | `?SchemaCache` | The configured PSR-6 cache, or `null` when caching is disabled |
 
-The accessors are not part of `OpenApiValidatorInterface`; callers that
-only type-hint the interface will not see them. Use the concrete class
-(`OpenApiValidator`) when you need them.
+The accessors are part of `IntrospectableOpenApiValidatorInterface`
+(which extends `OpenApiValidatorInterface`); callers that need them
+should type-hint `IntrospectableOpenApiValidatorInterface`. Callers
+that only type-hint `OpenApiValidatorInterface` will not see them
+(interface segregation — see the stability contract below).
 
 The `OpenApiDocument` returned by `getDocument()` is a `final readonly`
 value object implementing `JsonSerializable`. Its fields map to the
@@ -189,13 +262,17 @@ and alias (`*name`) constructs to block the "billion laughs" expansion bomb
 document. The pre-parse scan runs after the size check and before
 `Symfony\Component\Yaml\Yaml::parse()`, so an attacker-controlled 1 KB payload
 can never reach the parser even when its expanded in-memory size would exceed
-the process `memory_limit`.
+the process `memory_limit`. A fourth post-parse cap (`MAX_EXPANSION_BYTES`)
+acts as defense-in-depth for bombs whose chain depth slips under the DAG
+heuristic but whose horizontal expansion (high arity at low depth) would
+produce an oversized in-memory payload after `Yaml::parse()`.
 
 | Cap | Default | Rationale |
 |-----|---------|-----------|
 | `YamlParser::MAX_ANCHORS` | 100 | Real OpenAPI specs use fewer than 20 anchors for schema deduplication. The regex scanner uses `[^ \t,\[\]\{\}\n]+` with `/u` flag, exactly mirroring Symfony YAML's `Inline::parseAnchor` reject set — so any character Symfony accepts as an anchor-name character (Cyrillic, CJK, dots, colons, pipes, FF, VT, NBSP, etc.) is counted. |
 | `YamlParser::MAX_ALIASES` | 1000 | Real OpenAPI specs use fewer than 50 alias references. Symfony YAML's own `maxAliasesForCollections` (default 128) remains active as defense-in-depth for collection aliases that slip past the pre-parse scan. |
-| `YamlParser::MAX_ALIAS_DEPTH` | 10 | DAG-based longest-chain heuristic. Each anchor's value range is determined by indentation (from the anchor's declaration line to the next anchor at the same or lower indentation). Aliases within that range that reference other declared anchors become DAG edges; the longest path is the chain depth. Catches both same-line (flow-style `b: &b [*a]`) and multi-line (`b: &b\n  - *a`) billion-laughs variants. Real billion-laughs payloads use 5-7 chain levels; 10 leaves conservative headroom for legitimate deduplication. |
+| `YamlParser::MAX_ALIAS_DEPTH` | **4** | DAG-based longest-chain heuristic. Each anchor's value range is determined by indentation (from the anchor's declaration line to the next anchor at the same or lower indentation). Aliases within that range that reference other declared anchors become DAG edges; the longest path is the chain depth. Catches both same-line (flow-style `b: &b [*a]`) and multi-line (`b: &b\n  - *a`) billion-laughs variants. Real billion-laughs payloads use 5-7 chain levels; **4 rejects all known chain-bomb variants while preserving legitimate 4-level dedup patterns** (1→2→4→8 aliases, ≤10⁴ expanded elements — covers any reasonable spec). |
+| `YamlParser::MAX_EXPANSION_BYTES` | **5_000_000** | Post-parse defense-in-depth cap. Catches horizontal bombs (high arity × low chain depth) that bypass the DAG heuristic. Compares `strlen(serialize($parsed))` against the cap and throws `SpecTooLargeException` after `Symfony\Component\Yaml\Yaml::parse()` returns. Real OpenAPI specs serialize to <2 MB after expansion. |
 
 Exceeding any cap throws `SpecTooLargeException` (a `\RuntimeException`
 subclass) with a sanitised message that discloses only the metric, the actual
@@ -1778,6 +1855,24 @@ per-class mitigation.
 | `Duyler\OpenApi\Validator\ValidatorPool` | Shared mutable `$cache`/`$order` and check-then-act sequence in `getOrCreate()` | Construct via `ValidatorPool::forCoroutineRuntime($lock, $maxSize)` with a `Swoole\Lock` (or any object exposing `lock()`/`unlock()`); never recurse into `getOrCreate()` from inside the factory closure | Swoole coroutines, FrankenPHP threaded workers |
 | `Duyler\OpenApi\Validator\LibxmlSecuredContext` | Process-global `libxml_use_internal_errors` and `libxml_set_external_entity_loader` captured/restored inside `run()` | Run XML body validation (`contentMediaType: application/xml`) in a prefork worker or delegate XML parsing to an isolated `Swoole\Process` worker; under coroutines the helper may either bypass XXE protection for one coroutine or disable the entity loader process-wide | Swoole coroutines, FrankenPHP threaded workers |
 | `Duyler\OpenApi\Validator\PregExecutor` | Process-global `pcre.backtrack_limit` and `pcre.recursion_limit` mutated via `ini_set` in `match()`/`matchAll()` | Prefer prefork workers; each coroutine should own its own `PregExecutor` instance (the default) and must not assume the ReDoS cap applies to a specific call when coroutines yield inside `preg_match` | Swoole coroutines, FrankenPHP threaded workers |
+| `Duyler\OpenApi\Validator\Request\PathRegexCache` | Mutable memoization of compiled path regex | Construct per-coroutine or per-worker; do not share across coroutines without external lock | Swoole coroutines, FrankenPHP threaded workers |
+| `Duyler\OpenApi\Validator\Schema\RegexValidator` | In-process cache of compiled JSON Schema `pattern` regex | Per-coroutine/per-worker instance; external lock for shared use | Swoole coroutines, FrankenPHP threaded workers |
+| `Duyler\OpenApi\Validator\Schema\RefResolver` | WeakMap-based `$ref` resolution cache | Per-coroutine/per-worker; never share across coroutines (resolved refs may point to stale schema) | Swoole coroutines, FrankenPHP threaded workers |
+| `Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext` | Per-instance `ValidationContext` and dispatch cache | Per-coroutine/per-worker; reset() clears caches that other coroutines may be reading | Swoole coroutines, FrankenPHP threaded workers |
+| `Duyler\OpenApi\Validator\SchemaValidator\EnumScalarCache` | Per-instance WeakMap-based enum result memoization | Per-coroutine/per-worker; WeakMap entries are not isolated across coroutines sharing one instance | Swoole coroutines, FrankenPHP threaded workers |
+| `Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator` | Legacy dispatcher with in-memory type dispatch table | Per-coroutine/per-worker; do not share legacy SchemaValidator across coroutines | Swoole coroutines, FrankenPHP threaded workers |
+| `Duyler\OpenApi\Compiler\CompilationCache` | PSR-6-backed compiled-validator cache; in-memory hit memoization | Per-coroutine/per-worker instance; PSR-6 backend is shared-safe but local memo is racy | Swoole coroutines, FrankenPHP threaded workers |
+
+The seven classes above are racy under shared mutable state (Swoole
+coroutines, FrankenPHP threaded workers) because they keep in-memory
+caches keyed by schema/data identity. They are NOT marked
+`@danger NOT_THREAD_SAFE` in source code (unlike `ValidatorPool`,
+`LibxmlSecuredContext`, and `PregExecutor`) because the racy state is
+performance memoization, not correctness-critical. Cache miss
+recomputes the correct result; cache hit from another coroutine
+returns a correct value but may cause torn reads under concurrent
+mutation. Construct one instance per coroutine/per worker to avoid
+the race entirely.
 
 ##### O-004 — nested `getOrCreate()` deadlocks under `Swoole\Lock(SWOOLE_MUTEX)`
 
@@ -1827,6 +1922,16 @@ requires per-coroutine validator construction.
 
 The prefork model (one request per worker process, no shared mutable state) is
 the safest option and requires no extra configuration.
+
+The `OpenApiValidator::reset()` method is **prefork-only**. It clears
+the validator's in-memory caches (`ValidatorPool`, `PathRegexCache`,
+`RefResolver`, and `RegexValidator`) and is safe to call once at
+worker startup before requests begin. Under Swoole coroutines or
+FrankenPHP threaded workers, calling `reset()` while other coroutines
+are mid-validation causes torn reads from a cleared cache — construct
+a fresh validator per coroutine instead. The
+`OpenApiValidatorInterface::reset()` declaration does not change, but
+callers must enforce prefork-only usage themselves.
 
 ```php
 // Build once at worker startup
@@ -2018,6 +2123,38 @@ $response = $factory->createResponse(200)
 
 $validator->validateResponse($response, $operation);
 ```
+
+### Memory Profile
+
+Streaming response validation is **not constant-memory**. Each decoded
+record (NDJSON line, SSE event, JSON Text Sequences record) is fully
+materialised in memory before schema validation runs, and the
+validator retains the decoded records until the response stream is
+exhausted or the `maxStreamingRecords` cap is reached.
+
+For typical JSON-line payloads (~470 bytes per record after decode),
+the measured peak memory consumption is **~47 MB at the default cap
+of 100 000 records**. The cost is linear in `record_count ×
+avg_record_size`; larger records or higher caps scale accordingly.
+
+Individual record schema validation is constant-time per record, but
+the overall memory footprint of a single `validateResponse()` call
+against a streaming body is **O(N)** in the number of decoded
+records — there is no incremental GC between records.
+
+#### Mitigations
+
+- **`withMaxStreamingRecords(int $max)`** lowers the cap below the
+  default 100 000 when the validator runs in a memory-constrained
+  worker. Once the cap is reached, parsing stops and the validator
+  throws `TooManyRecordsException` (the response is rejected, never
+  partially accepted).
+- **Filter at the source** — if you control the upstream service,
+  prefer paginating the response and validating each page separately
+  over a single long-running stream.
+- **Use separate worker pools** for streaming endpoints with
+  different memory budgets; the `maxStreamingRecords` cap is
+  per-builder, not per-process.
 
 ### Error Handling in Streams
 

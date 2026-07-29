@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when an array contains duplicate items despite uniqueItems: true. */
 final class DuplicateItemsError extends AbstractValidationError
 {
     public function __construct(

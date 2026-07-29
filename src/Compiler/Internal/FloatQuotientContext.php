@@ -7,6 +7,8 @@ namespace Duyler\OpenApi\Compiler\Internal;
 /**
  * Carries the float-path inputs for ScalarConstraints::buildFloatQuotient
  * so the collaborator method signature stays at one parameter (§10 rule of three).
+ *
+ * @internal
  */
 final readonly class FloatQuotientContext
 {

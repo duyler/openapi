@@ -19,6 +19,7 @@ use function file_get_contents;
 use function is_file;
 use function sprintf;
 
+/** @internal */
 final readonly class SpecLoader
 {
     public function __construct(

@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when an object contains a property not allowed by additionalProperties: false. */
 final class AdditionalPropertyError extends AbstractValidationError
 {
     public function __construct(

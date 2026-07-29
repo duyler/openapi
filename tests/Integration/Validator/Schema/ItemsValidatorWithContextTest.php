@@ -775,4 +775,131 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $this->assertTrue(true);
     }
+
+    #[Test]
+    public function validate_items_with_boolean_true_schema_evaluates_all_indices(): void
+    {
+        $schema = new Schema(
+            type: 'array',
+            items: true,
+            prefixItems: [new Schema(type: 'integer')],
+        );
+
+        $data = [42, 'anything', true, null];
+
+        $this->validator->validateWithContext($data, $schema, $this->context);
+
+        $this->assertTrue($this->context->hasItemBeenEvaluated(1));
+        $this->assertTrue($this->context->hasItemBeenEvaluated(2));
+        $this->assertTrue($this->context->hasItemBeenEvaluated(3));
+        $this->assertFalse($this->context->hasItemBeenEvaluated(0));
+    }
+
+    #[Test]
+    public function validate_items_with_boolean_false_schema_rejects_all_extra_items(): void
+    {
+        $schema = new Schema(
+            type: 'array',
+            items: false,
+            prefixItems: [new Schema(type: 'integer')],
+        );
+
+        $data = [42, 'rejected', 'also rejected'];
+
+        try {
+            $this->validator->validateWithContext($data, $schema, $this->context);
+            $this->fail('Expected ValidationException for items: false');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertCount(2, $errors);
+            $this->assertSame('Items rejected by items: false', $e->getMessage());
+        }
+    }
+
+    #[Test]
+    public function validate_items_with_boolean_true_schema_without_prefix_items_evaluates_all(): void
+    {
+        $schema = new Schema(
+            type: 'array',
+            items: true,
+        );
+
+        $data = [1, 2, 3];
+
+        $this->validator->validateWithContext($data, $schema, $this->context);
+
+        $this->assertTrue($this->context->hasItemBeenEvaluated(0));
+        $this->assertTrue($this->context->hasItemBeenEvaluated(1));
+        $this->assertTrue($this->context->hasItemBeenEvaluated(2));
+    }
+
+    #[Test]
+    public function validate_items_with_boolean_false_schema_and_no_prefix_items_rejects_everything(): void
+    {
+        $schema = new Schema(
+            type: 'array',
+            items: false,
+        );
+
+        try {
+            $this->validator->validateWithContext(['a', 'b'], $schema, $this->context);
+            $this->fail('Expected ValidationException for items: false without prefixItems');
+        } catch (ValidationException $e) {
+            $this->assertSame('Items rejected by items: false', $e->getMessage());
+            $this->assertCount(2, $e->getErrors());
+        }
+    }
+
+    #[Test]
+    public function validate_with_context_ignoring_discriminator_skips_discriminator_routing(): void
+    {
+        $catSchema = new Schema(
+            type: 'object',
+            title: 'Cat',
+            properties: [
+                'petType' => new Schema(type: 'string'),
+            ],
+            required: ['petType'],
+        );
+
+        $petSchema = new Schema(
+            type: 'object',
+            discriminator: new Discriminator(
+                propertyName: 'petType',
+                mapping: ['cat' => '#/components/schemas/Cat'],
+            ),
+            oneOf: [new Schema(ref: '#/components/schemas/Cat')],
+        );
+
+        $schema = new Schema(
+            type: 'array',
+            items: new Schema(ref: '#/components/schemas/Pet'),
+        );
+
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Pet' => $petSchema,
+                    'Cat' => $catSchema,
+                ],
+            ),
+        );
+
+        $validator = new ItemsValidatorWithContext(
+            document: $document,
+            dependencies: new SchemaValidatorDependencies(
+                pool: $this->pool,
+                refResolver: $this->refResolver,
+                statelessValidators: $this->statelessValidators,
+            ),
+        );
+
+        $data = [['petType' => 'cat']];
+
+        $validator->validateWithContextIgnoringDiscriminator($data, $schema, $this->context);
+
+        $this->assertTrue(true);
+    }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
@@ -463,5 +464,108 @@ class PrefixItemsValidatorTest extends TestCase
         $this->expectExceptionMessage('Item at index 0 validation failed');
 
         $this->validator->validate(['string_value', 42], $schema);
+    }
+
+    #[Test]
+    public function rethrow_invalid_format_exception_from_prefix_item_without_wrapping(): void
+    {
+        $prefixSchema = new Schema(type: 'string', format: 'email');
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$prefixSchema],
+        );
+
+        $this->expectException(InvalidFormatException::class);
+
+        $this->validator->validate(['not-an-email'], $schema);
+    }
+
+    #[Test]
+    public function validate_prefix_item_creates_context_when_none_supplied(): void
+    {
+        $prefixSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$prefixSchema],
+        );
+
+        $this->validator->validate(['hello'], $schema, null);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_prefix_item_with_composition_one_of_branch_resolves_correctly(): void
+    {
+        $prefixSchema = new Schema(
+            oneOf: [
+                new Schema(type: 'integer'),
+                new Schema(type: 'string'),
+            ],
+        );
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$prefixSchema],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $succeeded = false;
+
+        try {
+            $this->validator->validate([42], $schema, $context);
+            $this->validator->validate(['hello'], $schema, $context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertTrue($succeeded);
+    }
+
+    #[Test]
+    public function validate_prefix_item_with_nullable_type_union_accepts_null_at_position(): void
+    {
+        $prefixSchema = new Schema(type: ['string', 'null']);
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$prefixSchema, new Schema(type: 'integer')],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+
+        $this->validator->validate([null, 42], $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_prefix_item_min_items_above_prefix_count_validates_only_available_positions(): void
+    {
+        $prefixSchema1 = new Schema(type: 'string');
+        $prefixSchema2 = new Schema(type: 'integer');
+        $prefixSchema3 = new Schema(type: 'boolean');
+        $schema = new Schema(
+            type: 'array',
+            minItems: 5,
+            prefixItems: [$prefixSchema1, $prefixSchema2, $prefixSchema3],
+        );
+
+        $this->validator->validate(['hello', 42, true], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_prefix_item_without_trailing_items_keyword_allows_extra_untyped_items(): void
+    {
+        $prefixSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'array',
+            prefixItems: [$prefixSchema],
+        );
+
+        $this->validator->validate(['hello', 42, true, ['nested'], null], $schema);
+
+        $this->expectNotToPerformAssertions();
     }
 }

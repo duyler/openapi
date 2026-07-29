@@ -12,6 +12,7 @@ use function hash;
 use function realpath;
 use function sprintf;
 
+/** @internal */
 final readonly class CacheKeyBuilder
 {
     public const string FILE_PREFIX = 'openapi_spec_file_';

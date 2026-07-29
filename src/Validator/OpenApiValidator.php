@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator;
 
-use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
+use Duyler\OpenApi\Builder\IntrospectableOpenApiValidatorInterface;
 use Duyler\OpenApi\Cache\SchemaCache;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
@@ -20,7 +20,12 @@ use Psr\Http\Message\ServerRequestInterface;
 
 use function sprintf;
 
-final readonly class OpenApiValidator implements OpenApiValidatorInterface
+/**
+ * Concrete {@see IntrospectableOpenApiValidatorInterface} implementation returned by
+ * {@see OpenApiValidatorBuilder::build()}. Exposes six read-only
+ * introspection accessors in addition to the base interface contract.
+ */
+final readonly class OpenApiValidator implements IntrospectableOpenApiValidatorInterface
 {
     public function __construct(
         private readonly OpenApiDocument $document,
@@ -34,31 +39,37 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         return $this->document;
     }
 
+    #[Override]
     public function getPool(): ValidatorPool
     {
         return $this->dependencies->pool;
     }
 
+    #[Override]
     public function isCoercion(): bool
     {
         return $this->configuration->coercion;
     }
 
+    #[Override]
     public function isNullableAsType(): bool
     {
         return $this->configuration->nullableAsType;
     }
 
+    #[Override]
     public function getEmptyArrayStrategy(): EmptyArrayStrategy
     {
         return $this->configuration->emptyArrayStrategy;
     }
 
+    #[Override]
     public function getErrorFormatter(): ErrorFormatterInterface
     {
         return $this->dependencies->errorFormatter;
     }
 
+    #[Override]
     public function getCache(): ?SchemaCache
     {
         return $this->dependencies->cache;
@@ -88,6 +99,17 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         return $this->dependencies->errorFormatter->formatMultiple($e->getErrors());
     }
 
+    /**
+     * Reset the validator's in-memory caches and per-instance memoization.
+     *
+     * Prefork-only contract: safe to call when no concurrent validation
+     * is in progress (always true in prefork models — PHP-FPM,
+     * RoadRunner, FrankenPHP non-threaded). Racy under Swoole coroutines
+     * or FrankenPHP threaded workers — concurrent `validateRequest()`
+     * calls may read from a cache that is being cleared, causing torn
+     * reads or silent re-validation. Use per-coroutine/per-worker
+     * validator instances instead of reset().
+     */
     #[Override]
     public function reset(): void
     {

@@ -21,6 +21,8 @@ use function var_export;
  * collaborator holds no mutable state and is constructed fresh per
  * compile() call. It delegates UTF-16 length computation to Utf16Length
  * and pattern matching to PatternCheck.
+ *
+ * @internal
  */
 final readonly class ScalarConstraints
 {

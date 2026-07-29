@@ -7,6 +7,8 @@ namespace Duyler\OpenApi\Compiler\Internal;
 /**
  * Carries the integer-path inputs for ScalarConstraints::generateMultipleOf
  * so the collaborator method signature stays at one parameter (§10 rule of three).
+ *
+ * @internal
  */
 final readonly class MultipleOfContext
 {

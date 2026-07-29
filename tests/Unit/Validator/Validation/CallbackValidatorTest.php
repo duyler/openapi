@@ -17,6 +17,7 @@ use Duyler\OpenApi\Schema\Model\SecurityScheme;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Callback\Exception\UnknownCallbackException;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
+use Duyler\OpenApi\Validator\Exception\RefResolutionException;
 use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
@@ -265,6 +266,184 @@ final class CallbackValidatorTest extends TestCase
         $this->expectException(UnknownCallbackException::class);
 
         $validator->validate($request, 'missingCallback');
+    }
+
+    #[Test]
+    public function validate_resolves_callback_path_item_via_components_path_items_ref(): void
+    {
+        $callbackOperation = new SchemaOperation(operationId: 'myCallback');
+        $resolvedPathItem = new PathItem(post: $callbackOperation);
+        $refPathItem = new PathItem(ref: '#/components/pathItems/CallbackRef');
+
+        $document = new OpenApiDocument(
+            openapi: '3.2.0',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(
+                callbacks: [
+                    'myCallback' => new Callbacks([
+                        'myCallback' => ['/cb/literal' => $refPathItem],
+                    ]),
+                ],
+                pathItems: ['CallbackRef' => $resolvedPathItem],
+            ),
+        );
+        $context = $this->buildDependencies($document);
+        $validator = new CallbackValidator($context, securityValidation: false);
+
+        $request = $this->psrFactory->createServerRequest('POST', '/cb/literal');
+
+        $operation = $validator->validate($request, 'myCallback');
+
+        $this->assertSame('myCallback', $operation->path);
+    }
+
+    #[Test]
+    public function validate_throws_ref_resolution_exception_for_unsupported_ref_prefix(): void
+    {
+        $refPathItem = new PathItem(ref: '#/components/schemas/NotAPathItem');
+
+        $document = new OpenApiDocument(
+            openapi: '3.2.0',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(
+                callbacks: [
+                    'myCallback' => new Callbacks([
+                        'myCallback' => ['/cb/literal' => $refPathItem],
+                    ]),
+                ],
+            ),
+        );
+        $context = $this->buildDependencies($document);
+        $validator = new CallbackValidator($context, securityValidation: false);
+
+        $request = $this->psrFactory->createServerRequest('POST', '/cb/literal');
+
+        $this->expectException(RefResolutionException::class);
+        $this->expectExceptionMessage('Unsupported callback $ref');
+
+        $validator->validate($request, 'myCallback');
+    }
+
+    #[Test]
+    public function validate_throws_ref_resolution_exception_when_path_item_ref_target_missing(): void
+    {
+        $refPathItem = new PathItem(ref: '#/components/pathItems/Missing');
+
+        $document = new OpenApiDocument(
+            openapi: '3.2.0',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(
+                callbacks: [
+                    'myCallback' => new Callbacks([
+                        'myCallback' => ['/cb/literal' => $refPathItem],
+                    ]),
+                ],
+                pathItems: ['OtherRef' => new PathItem(post: new SchemaOperation(operationId: 'other'))],
+            ),
+        );
+        $context = $this->buildDependencies($document);
+        $validator = new CallbackValidator($context, securityValidation: false);
+
+        $request = $this->psrFactory->createServerRequest('POST', '/cb/literal');
+
+        $this->expectException(RefResolutionException::class);
+        $this->expectExceptionMessage('not found in components.pathItems');
+
+        $validator->validate($request, 'myCallback');
+    }
+
+    #[Test]
+    public function validate_matches_https_callback_url_by_path_component(): void
+    {
+        $callbackOperation = new SchemaOperation(operationId: 'myCallback');
+        $callbackPathItem = new PathItem(post: $callbackOperation);
+
+        $document = new OpenApiDocument(
+            openapi: '3.2.0',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(
+                callbacks: [
+                    'myCallback' => new Callbacks([
+                        'myCallback' => ['https://api.example.com/cb/https-callback' => $callbackPathItem],
+                    ]),
+                ],
+            ),
+        );
+        $context = $this->buildDependencies($document);
+        $validator = new CallbackValidator($context, securityValidation: false);
+
+        $request = $this->psrFactory->createServerRequest('POST', '/cb/https-callback');
+
+        $operation = $validator->validate($request, 'myCallback');
+
+        $this->assertSame('myCallback', $operation->path);
+    }
+
+    #[Test]
+    public function validate_rejects_https_callback_url_with_mismatched_path(): void
+    {
+        $callbackOperation = new SchemaOperation(operationId: 'myCallback');
+        $callbackPathItem = new PathItem(post: $callbackOperation);
+
+        $document = new OpenApiDocument(
+            openapi: '3.2.0',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(
+                callbacks: [
+                    'myCallback' => new Callbacks([
+                        'myCallback' => ['https://api.example.com/cb/expected' => $callbackPathItem],
+                    ]),
+                ],
+            ),
+        );
+        $context = $this->buildDependencies($document);
+        $validator = new CallbackValidator($context, securityValidation: false);
+
+        $request = $this->psrFactory->createServerRequest('POST', '/cb/different');
+
+        $this->expectException(UnknownCallbackException::class);
+
+        $validator->validate($request, 'myCallback');
+    }
+
+    #[Test]
+    public function validate_matches_callback_with_curly_brace_path_template(): void
+    {
+        $callbackOperation = new SchemaOperation(operationId: 'myCallback');
+        $callbackPathItem = new PathItem(post: $callbackOperation);
+
+        $document = new OpenApiDocument(
+            openapi: '3.2.0',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(
+                callbacks: [
+                    'myCallback' => new Callbacks([
+                        'myCallback' => ['/cb/{id}' => $callbackPathItem],
+                    ]),
+                ],
+            ),
+        );
+        $context = $this->buildDependencies($document);
+        $validator = new CallbackValidator($context, securityValidation: false);
+
+        $request = $this->psrFactory->createServerRequest('POST', '/cb/42');
+
+        $operation = $validator->validate($request, 'myCallback');
+
+        $this->assertSame('myCallback', $operation->path);
+    }
+
+    #[Test]
+    public function validate_strict_mode_rejects_runtime_template_with_exception(): void
+    {
+        $context = $this->buildDependencies($this->buildDocumentWithCallback());
+        $validator = new CallbackValidator($context, securityValidation: false, strictCallbackRuntimeTemplate: true);
+
+        $request = $this->psrFactory->createServerRequest('POST', '/attacker-url');
+
+        $this->expectException(UnresolvableCallbackPathException::class);
+
+        $validator->validate($request, 'myCallback');
     }
 
     private function buildDocumentWithCallback(): OpenApiDocument

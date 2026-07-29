@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when a required property is missing from the data. */
 final class RequiredError extends AbstractValidationError
 {
     public function __construct(

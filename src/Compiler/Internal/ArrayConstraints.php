@@ -16,6 +16,8 @@ use function sprintf;
  * requires it (enum / const / uniqueItems). Items iteration (the
  * `foreach` + recursive constraint emission) is owned by the
  * orchestrator because it recurses through the full schema tree.
+ *
+ * @internal
  */
 final readonly class ArrayConstraints
 {

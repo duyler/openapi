@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when a numeric value is not a multiple of the schema's multipleOf constraint. */
 final class MultipleOfKeywordError extends AbstractValidationError
 {
     public function __construct(

@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when an array exceeds the schema's maxItems constraint. */
 final class MaxItemsError extends AbstractValidationError
 {
     public function __construct(

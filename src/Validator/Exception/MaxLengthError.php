@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when a string value exceeds the schema's maxLength constraint. */
 final class MaxLengthError extends AbstractValidationError
 {
     public function __construct(

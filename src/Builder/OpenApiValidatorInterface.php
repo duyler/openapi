@@ -142,7 +142,12 @@ interface OpenApiValidatorInterface
      * Reset internal state for hot-reload scenarios.
      *
      * Clears validator pool cache and ref resolver cache.
-     * Safe to call between requests in long-running processes.
+     *
+     * Prefork-only contract: safe to call when no concurrent validation
+     * is in progress (always true in prefork models — PHP-FPM,
+     * RoadRunner, FrankenPHP non-threaded). Racy under Swoole coroutines
+     * or FrankenPHP threaded workers — construct a fresh validator per
+     * coroutine/per worker instead of calling reset() mid-flight.
      */
     public function reset(): void;
 }

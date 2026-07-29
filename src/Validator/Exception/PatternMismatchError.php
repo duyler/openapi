@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Exception;
 
 use function sprintf;
 
+/** Thrown when a string value fails the schema's pattern (regex) constraint. */
 final class PatternMismatchError extends AbstractValidationError
 {
     public function __construct(

@@ -8,8 +8,10 @@ use Duyler\OpenApi\Validator\SchemaValidator\ItemsValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\MaximumError;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
+use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -255,6 +257,136 @@ class ItemsValidatorTest extends TestCase
 
         $context = ValidationContext::create($this->pool, nullableAsType: true);
         $this->validator->validate([1, 2, 3], $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_items_with_boolean_true_marks_items_evaluated_with_context(): void
+    {
+        $schema = new Schema(
+            type: 'array',
+            items: true,
+            prefixItems: [new Schema(type: 'integer')],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $this->validator->validate([42, 'anything', true], $schema, $context);
+
+        self::assertTrue($context->hasItemBeenEvaluated(1));
+        self::assertTrue($context->hasItemBeenEvaluated(2));
+        self::assertFalse($context->hasItemBeenEvaluated(0));
+    }
+
+    #[Test]
+    public function validate_items_with_boolean_true_without_context_does_not_track_evaluation(): void
+    {
+        $schema = new Schema(
+            type: 'array',
+            items: true,
+        );
+
+        $this->validator->validate([1, 2, 3], $schema, null);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_items_with_boolean_false_throws_type_mismatch_for_each_extra_item(): void
+    {
+        $schema = new Schema(
+            type: 'array',
+            items: false,
+            prefixItems: [new Schema(type: 'integer')],
+        );
+
+        $caught = null;
+
+        try {
+            $this->validator->validate([42, 'rejected', 'also rejected'], $schema);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $caught = $e;
+        }
+
+        $errors = $caught->getErrors();
+
+        self::assertCount(2, $errors);
+        self::assertInstanceOf(TypeMismatchError::class, $errors[0]);
+        self::assertInstanceOf(TypeMismatchError::class, $errors[1]);
+        self::assertSame('Items rejected by items: false', $caught->getMessage());
+    }
+
+    #[Test]
+    public function validate_items_with_boolean_false_and_no_prefix_items_rejects_everything(): void
+    {
+        $schema = new Schema(
+            type: 'array',
+            items: false,
+        );
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Items rejected by items: false');
+
+        $this->validator->validate(['a', 'b', 'c'], $schema);
+    }
+
+    #[Test]
+    public function validate_items_with_boolean_false_and_empty_data_passes(): void
+    {
+        $schema = new Schema(
+            type: 'array',
+            items: false,
+        );
+
+        $this->validator->validate([], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function rethrow_invalid_format_exception_from_items_validation_without_wrapping(): void
+    {
+        $itemSchema = new Schema(type: 'string', format: 'email');
+        $schema = new Schema(
+            type: 'array',
+            items: $itemSchema,
+        );
+
+        $this->expectException(InvalidFormatException::class);
+
+        $this->validator->validate(['not-an-email'], $schema);
+    }
+
+    #[Test]
+    public function validate_items_with_nested_one_of_composition_per_item(): void
+    {
+        $itemSchema = new Schema(
+            oneOf: [
+                new Schema(type: 'integer'),
+                new Schema(type: 'string'),
+            ],
+        );
+        $schema = new Schema(
+            type: 'array',
+            items: $itemSchema,
+        );
+
+        $this->validator->validate([1, 'two', 3, 'four'], $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_items_legacy_invocation_without_context_creates_internal_context(): void
+    {
+        $itemSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            type: 'array',
+            items: $itemSchema,
+        );
+
+        $this->validator->validate(['hello', 'world'], $schema, null);
 
         $this->expectNotToPerformAssertions();
     }
