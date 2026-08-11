@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- OpenAPI 3.0 `nullable: true` is no longer discarded when a schema is
+  reached through `$ref`. `ScalarSiblingMerger::merge()` combined the `$ref`
+  stub's `nullable` flag with the resolved target's using a logical AND, and
+  because `Schema::$nullable` defaults to `false` a bare `{$ref: ...}` stub
+  always evaluated `false && true` — erasing the target's nullability, so a
+  legitimate `null` was rejected by `TypeValidator`. The flag now merges with
+  OR: per OpenAPI 3.0 a `nullable` sibling next to `$ref` can only widen the
+  target, and there is no spelling for "narrow this to non-nullable" (#64).
+
 ## [0.7.0]
 
 Preparation for the 1.0.0 stable release. This section tracks work that

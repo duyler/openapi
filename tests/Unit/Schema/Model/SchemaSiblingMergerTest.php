@@ -108,29 +108,29 @@ final class SchemaSiblingMergerTest extends TestCase
     }
 
     #[Test]
-    public function merge_nullable_and_when_resolved_rejects_null(): void
+    public function merge_nullable_widens_when_only_sibling_allows_null(): void
     {
         $resolved = new Schema(type: 'string', nullable: false);
         $sibling = new Schema(nullable: true);
 
         $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
 
-        self::assertFalse($merged->nullable);
+        self::assertTrue($merged->nullable);
     }
 
     #[Test]
-    public function merge_nullable_and_when_sibling_rejects_null(): void
+    public function merge_nullable_keeps_resolved_when_sibling_omits_nullable(): void
     {
         $resolved = new Schema(type: 'string', nullable: true);
         $sibling = new Schema(nullable: false);
 
         $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
 
-        self::assertFalse($merged->nullable);
+        self::assertTrue($merged->nullable);
     }
 
     #[Test]
-    public function merge_nullable_and_when_both_allow_null(): void
+    public function merge_nullable_when_both_allow_null(): void
     {
         $resolved = new Schema(type: 'string', nullable: true);
         $sibling = new Schema(nullable: true);
