@@ -1456,6 +1456,58 @@ YAML;
     }
 
     /**
+     * A non-exploded `form` array parameter -- the JSON:API `include` shape --
+     * accepts any number of items, including one and none.
+     */
+    #[Test]
+    #[DataProvider('provideFormArrayItemCounts')]
+    public function form_array_accepts_any_item_count(string $uri): void
+    {
+        $yaml = <<<YAML
+openapi: 3.0.0
+info:
+  title: Include API
+  version: 1.0.0
+paths:
+  /articles:
+    get:
+      parameters:
+        - name: include
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: OK
+YAML;
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->build();
+
+        $operation = $validator->validateRequest(
+            $this->psrFactory->createServerRequest('GET', $uri),
+        );
+
+        $this->assertSame('/articles', $operation->path);
+    }
+
+    /**
+     * @return array<non-empty-string, array{non-empty-string}>
+     */
+    public static function provideFormArrayItemCounts(): array
+    {
+        return [
+            'two items' => ['/articles?include=author,comments'],
+            'one item' => ['/articles?include=author'],
+            'no items' => ['/articles?include='],
+        ];
+    }
+
+    /**
      * @return array<non-empty-string, array{non-empty-string, non-empty-string}>
      */
     public static function provideSpecialCharacterCases(): array

@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- An array-typed `form` parameter no longer rejects a single value.
+  `ParameterDeserializer::deserializeForm()` decided whether a
+  non-exploded value was an array by looking for a comma instead of at
+  the declared schema type, so `?include=author,comments` deserialized
+  to a list while `?include=author` stayed a string and failed the
+  `type: array` check with `TypeMismatchError`. Form now routes on the
+  schema type through `splitBySeparator()` — as `simple`, `matrix`,
+  `label` and `cookie` already did — yielding a one item list for a
+  lone value and an empty list for `?include=`. The comma heuristic
+  remains for parameters that declare no array type, and `explode`
+  handling is unchanged. (#58)
+
 ## [0.7.0]
 
 Preparation for the 1.0.0 stable release. This section tracks work that
