@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Coercion;
 
+use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Coercion\Internal\BooleanCoercer;
 use Duyler\OpenApi\Validator\Coercion\Internal\IntegerCoercer;
 use Duyler\OpenApi\Validator\Coercion\Internal\NumberCoercer;
 use Duyler\OpenApi\Validator\Coercion\Internal\StringCoercer;
+
+use function array_key_exists;
+use function is_array;
 
 abstract readonly class AbstractCoercer
 {
@@ -56,5 +60,59 @@ abstract readonly class AbstractCoercer
     protected function coerceToString(mixed $value): string|int|float|bool|array|null
     {
         return $this->stringCoercer->coerce($value);
+    }
+
+    /**
+     * @param callable(mixed, Schema): (array<array-key, mixed>|int|string|float|bool|null) $recurse
+     */
+    protected function coerceDeclaredProperties(mixed $value, Schema $schema, callable $recurse): mixed
+    {
+        if (false === is_array($value)) {
+            return $value;
+        }
+
+        $properties = $schema->properties;
+
+        if (null === $properties) {
+            return $value;
+        }
+
+        /** @var array<array-key, mixed> $coerced */
+        $coerced = $value;
+
+        foreach ($properties as $name => $propertySchema) {
+            if (false === array_key_exists($name, $value)) {
+                continue;
+            }
+
+            $coerced[$name] = $recurse($value[$name], $propertySchema);
+        }
+
+        return $coerced;
+    }
+
+    /**
+     * @param callable(mixed, Schema): (array<array-key, mixed>|int|string|float|bool|null) $recurse
+     */
+    protected function coerceDeclaredItems(mixed $value, Schema $schema, callable $recurse): mixed
+    {
+        if (false === is_array($value)) {
+            return $value;
+        }
+
+        $itemsSchema = $schema->items instanceof Schema ? $schema->items : null;
+
+        if (null === $itemsSchema) {
+            return $value;
+        }
+
+        $coerced = [];
+
+        /** @var mixed $item */
+        foreach ($value as $item) {
+            $coerced[] = $recurse($item, $itemsSchema);
+        }
+
+        return $coerced;
     }
 }

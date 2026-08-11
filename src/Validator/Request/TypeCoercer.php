@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Coercion\AbstractCoercer;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 
@@ -57,23 +58,30 @@ final readonly class TypeCoercer extends AbstractCoercer
             return $this->normalizeValue($value);
         }
 
-        $schema = $param->schema;
+        return $this->coerceBySchema($value, $param->schema, $strict);
+    }
+
+    private function coerceBySchema(mixed $value, Schema $schema, bool $strict): array|int|string|float|bool|null
+    {
+        if (null === $value) {
+            return null;
+        }
 
         if (null === $schema->type) {
             return $this->normalizeValue($value);
         }
 
         if (is_array($schema->type)) {
-            return $this->coerceUnionType($value, $schema->type, $strict);
+            return $this->coerceUnionType($value, $schema->type, $schema, $strict);
         }
 
-        return $this->coerceToType($value, $schema->type, $strict);
+        return $this->coerceToType($value, $schema->type, $schema, $strict);
     }
 
     /**
      * @param array<int, string> $types
      */
-    private function coerceUnionType(mixed $value, array $types, bool $strict): array|int|string|float|bool
+    private function coerceUnionType(mixed $value, array $types, Schema $schema, bool $strict): array|int|string|float|bool|null
     {
         foreach ($types as $type) {
             if ('null' === $type) {
@@ -81,7 +89,7 @@ final readonly class TypeCoercer extends AbstractCoercer
             }
 
             try {
-                $coerced = $this->coerceToType($value, $type, $strict);
+                $coerced = $this->coerceToType($value, $type, $schema, $strict);
             } catch (TypeMismatchError) {
                 continue;
             }
@@ -94,18 +102,23 @@ final readonly class TypeCoercer extends AbstractCoercer
         return $this->normalizeValue($value);
     }
 
-    private function coerceToType(mixed $value, string $type, bool $strict): array|int|string|float|bool
+    private function coerceToType(mixed $value, string $type, Schema $schema, bool $strict): array|int|string|float|bool|null
     {
         if (false === is_scalar($value) && false === is_array($value)) {
             return $this->normalizeValue($value);
         }
 
-        /** @var array<array-key, mixed>|int|string|float|bool */
+        $recurse = fn(mixed $nested, Schema $nestedSchema): array|int|string|float|bool|null
+            => $this->coerceBySchema($nested, $nestedSchema, $strict);
+
+        /** @var array<array-key, mixed>|int|string|float|bool|null */
         return match ($type) {
             'integer' => $strict ? $this->coerceToIntegerStrict($value) : $this->coerceToInteger($value),
             'number' => $strict ? $this->coerceToNumberStrict($value) : $this->coerceToNumber($value),
             'boolean' => $strict ? $this->coerceToBooleanStrict($value) : $this->coerceToBoolean($value),
             'string' => $this->coerceToString($value),
+            'object' => $this->coerceDeclaredProperties($value, $schema, $recurse),
+            'array' => $this->coerceDeclaredItems($value, $schema, $recurse),
             default => $this->normalizeValue($value),
         };
     }

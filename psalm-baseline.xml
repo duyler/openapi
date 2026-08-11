@@ -225,11 +225,6 @@
       <code><![CDATA[$data]]></code>
     </MixedArgumentTypeCoercion>
   </file>
-  <file src="src/Validator/Request/RequestBodyCoercer.php">
-    <MixedAssignment>
-      <code><![CDATA[$item]]></code>
-    </MixedAssignment>
-  </file>
   <file src="src/Validator/Response/ResponseTypeCoercer.php">
     <MixedAssignment>
       <code><![CDATA[$item]]></code>
