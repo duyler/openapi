@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\Webhook;
 use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Internal\PathItemParameterMerger;
 use Duyler\OpenApi\Validator\Request\RequestValidatorInterface;
 use Duyler\OpenApi\Validator\Webhook\Exception\UnknownWebhookException;
 use Psr\Http\Message\ServerRequestInterface;
@@ -58,6 +59,6 @@ final readonly class WebhookValidator
             );
         }
 
-        return $operation;
+        return PathItemParameterMerger::merge($webhook, $operation);
     }
 }

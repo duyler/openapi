@@ -9,6 +9,7 @@ use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\Internal\CandidatePrioritizer;
+use Duyler\OpenApi\Validator\Internal\PathItemParameterMerger;
 use Duyler\OpenApi\Validator\Internal\TrieBuilder;
 use Duyler\OpenApi\Validator\Internal\TrieLookup;
 use Duyler\OpenApi\Validator\Request\PathParser;
@@ -124,7 +125,7 @@ final readonly class PathFinder
                 path: $pathPattern,
                 method: $method,
                 operationId: $schemaOperation->operationId,
-                schemaOperation: $schemaOperation,
+                schemaOperation: PathItemParameterMerger::merge($pathItem, $schemaOperation),
             );
         }
 
@@ -135,7 +136,7 @@ final readonly class PathFinder
                         path: $pathPattern,
                         method: $method,
                         operationId: $additionalOp->operationId,
-                        schemaOperation: $additionalOp,
+                        schemaOperation: PathItemParameterMerger::merge($pathItem, $additionalOp),
                     );
                 }
             }
