@@ -38,7 +38,7 @@ final readonly class ScalarSiblingMerger implements SiblingMergerStrategy
         return [
             'format' => $this->mergeFormat($resolved->format, $sibling->format),
             'type' => $this->mergeType($resolved->type, $sibling->type),
-            'nullable' => $sibling->nullable && $resolved->nullable,
+            'nullable' => $sibling->nullable || $resolved->nullable,
             'const' => $sibling->hasConst ? $sibling->const : $resolved->const,
             'hasConst' => $sibling->hasConst || $resolved->hasConst,
             'multipleOf' => $this->mergeNullableIdentical($resolved->multipleOf, $sibling->multipleOf),

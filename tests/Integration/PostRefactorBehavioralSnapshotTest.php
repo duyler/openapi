@@ -355,23 +355,25 @@ final class PostRefactorBehavioralSnapshotTest extends TestCase
     }
 
     // ---------------------------------------------------------------------
-    // Zone 2: SchemaSiblingMerger — AND-merge semantics
+    // Zone 2: SchemaSiblingMerger — merge semantics
     // ---------------------------------------------------------------------
 
     #[Test]
-    public function sibling_merger_nullable_AND_semantics_sibling_false_blocks_null(): void
+    public function sibling_merger_nullable_widening_semantics_sibling_false_keeps_null(): void
     {
         $resolved = new Schema(type: 'string', nullable: true);
         $sibling = new Schema(nullable: false);
 
         $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
 
-        // AND semantics: both must allow null for the merge to allow null.
-        self::assertFalse($merged->nullable);
+        // Widening semantics: a `nullable` sibling next to `$ref` can only add
+        // null to the target. `nullable: false` is indistinguishable from an
+        // omitted flag, so it never removes the target's nullability.
+        self::assertTrue($merged->nullable);
     }
 
     #[Test]
-    public function sibling_merger_nullable_AND_semantics_both_true_allows_null(): void
+    public function sibling_merger_nullable_widening_semantics_both_true_allows_null(): void
     {
         $resolved = new Schema(type: 'string', nullable: true);
         $sibling = new Schema(nullable: true);
