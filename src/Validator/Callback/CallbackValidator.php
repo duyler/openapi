@@ -14,6 +14,7 @@ use Duyler\OpenApi\Validator\Exception\RefResolutionException;
 use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
+use Duyler\OpenApi\Validator\Internal\PathItemParameterMerger;
 use Duyler\OpenApi\Validator\Request\RequestValidatorInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
@@ -177,7 +178,7 @@ final readonly class CallbackValidator
             $operation = $resolved->getOperation($method);
 
             if (null !== $operation) {
-                return [$operation, $pathTemplate];
+                return [PathItemParameterMerger::merge($resolved, $operation), $pathTemplate];
             }
         }
 
