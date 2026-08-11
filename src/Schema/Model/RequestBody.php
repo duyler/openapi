@@ -10,6 +10,9 @@ use Override;
 final readonly class RequestBody implements JsonSerializable
 {
     public function __construct(
+        public ?string $ref = null,
+        public ?string $refSummary = null,
+        public ?string $refDescription = null,
         public ?string $description = null,
         public ?Content $content = null,
         public bool $required = false,
@@ -18,6 +21,20 @@ final readonly class RequestBody implements JsonSerializable
     #[Override]
     public function jsonSerialize(): array
     {
+        if (null !== $this->ref) {
+            $data = ['$ref' => $this->ref];
+
+            if (null !== $this->refSummary) {
+                $data['summary'] = $this->refSummary;
+            }
+
+            if (null !== $this->refDescription) {
+                $data['description'] = $this->refDescription;
+            }
+
+            return $data;
+        }
+
         $data = [];
 
         if (null !== $this->description) {

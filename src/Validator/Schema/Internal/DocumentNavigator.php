@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Schema\Internal;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
@@ -44,7 +45,7 @@ final readonly class DocumentNavigator
      * @throws SchemaDepthExceededException
      * @throws UnresolvableRefException
      *
-     * @return array{Schema|Parameter|Response, array<string, bool>}
+     * @return array{Schema|Parameter|RequestBody|Response, array<string, bool>}
      */
     public function resolveRef(
         string $ref,
@@ -92,7 +93,7 @@ final readonly class DocumentNavigator
         array $parts,
         int $depth = 0,
         int $maxDepth = ValidationContext::MAX_DEPTH,
-    ): Schema|Parameter|Response {
+    ): Schema|Parameter|RequestBody|Response {
         $count = count($parts);
 
         for ($i = 0; $i < $count; ++$i) {
@@ -107,6 +108,7 @@ final readonly class DocumentNavigator
         if (
             $current instanceof Schema
             || $current instanceof Parameter
+            || $current instanceof RequestBody
             || $current instanceof Response
         ) {
             return $current;
@@ -114,7 +116,7 @@ final readonly class DocumentNavigator
 
         throw new UnresolvableRefException(
             '',
-            'Target is not a Schema, Parameter, or Response',
+            'Target is not a Schema, Parameter, RequestBody, or Response',
         );
     }
 
@@ -166,7 +168,7 @@ final readonly class DocumentNavigator
     }
 
     /** @param array<int, string> $parts */
-    private function navigateThrowing(string $ref, OpenApiDocument $document, array $parts): Schema|Parameter|Response
+    private function navigateThrowing(string $ref, OpenApiDocument $document, array $parts): Schema|Parameter|RequestBody|Response
     {
         try {
             return $this->navigate($document, $parts);
@@ -176,7 +178,7 @@ final readonly class DocumentNavigator
     }
 
     /** @param WeakMap<OpenApiDocument, RefCache> $cache */
-    private function lookupCached(OpenApiDocument $document, string $ref, WeakMap $cache): Schema|Parameter|Response|null
+    private function lookupCached(OpenApiDocument $document, string $ref, WeakMap $cache): Schema|Parameter|RequestBody|Response|null
     {
         if (false === isset($cache[$document])) {
             return null;
@@ -189,7 +191,7 @@ final readonly class DocumentNavigator
     }
 
     /** @param WeakMap<OpenApiDocument, RefCache> $cache */
-    private function storeCached(OpenApiDocument $document, string $ref, Schema|Parameter|Response $result, WeakMap $cache): void
+    private function storeCached(OpenApiDocument $document, string $ref, Schema|Parameter|RequestBody|Response $result, WeakMap $cache): void
     {
         /** @var RefCache $refCache */
         $refCache = $cache[$document] ?? new RefCache();
@@ -200,7 +202,7 @@ final readonly class DocumentNavigator
     /**
      * @param array<string, bool> $visited
      *
-     * @return array{Schema|Parameter|Response, array<string, bool>}
+     * @return array{Schema|Parameter|RequestBody|Response, array<string, bool>}
      */
     private function resolveExternalRef(string $ref, array $visited): array
     {

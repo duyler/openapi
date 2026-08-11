@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
@@ -32,6 +33,18 @@ interface RefResolverInterface
         OpenApiDocument $document,
         int $depth = 0,
     ): Parameter;
+
+    /**
+     * @param string $ref JSON Pointer reference (e.g., '#/components/requestBodies/UserBody')
+     * @param int $depth Current recursion depth
+     * @throws Exception\UnresolvableRefException
+     * @throws SchemaDepthExceededException
+     */
+    public function resolveRequestBody(
+        string $ref,
+        OpenApiDocument $document,
+        int $depth = 0,
+    ): RequestBody;
 
     /**
      * @param string $ref JSON Pointer reference (e.g., '#/components/responses/SuccessResponse')
@@ -112,6 +125,17 @@ interface RefResolverInterface
         Parameter $parameter,
         OpenApiDocument $document,
     ): Parameter;
+
+    /**
+     * Resolve request body reference with summary/description override
+     *
+     * @param RequestBody $requestBody Request body with potential $ref and override values
+     * @throws Exception\UnresolvableRefException
+     */
+    public function resolveRequestBodyWithOverride(
+        RequestBody $requestBody,
+        OpenApiDocument $document,
+    ): RequestBody;
 
     /**
      * Resolve response reference with summary/description override
