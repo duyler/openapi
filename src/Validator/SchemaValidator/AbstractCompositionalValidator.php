@@ -32,6 +32,7 @@ abstract readonly class AbstractCompositionalValidator extends AbstractSchemaVal
         $validCount = 0;
         $errors = [];
         $abstractErrors = [];
+        $capped = false;
         $dataPath = $this->getDataPath($context);
 
         foreach ($schemas as $subSchema) {
@@ -39,6 +40,10 @@ abstract readonly class AbstractCompositionalValidator extends AbstractSchemaVal
 
             if ($outcome->matched) {
                 ++$validCount;
+                continue;
+            }
+
+            if ($capped) {
                 continue;
             }
 
@@ -55,7 +60,8 @@ abstract readonly class AbstractCompositionalValidator extends AbstractSchemaVal
                         dataPath: $dataPath,
                     );
 
-                    return new ValidationResult($validCount, $errors, $abstractErrors);
+                    $capped = true;
+                    break;
                 }
             }
         }

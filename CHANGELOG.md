@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `anyOf`/`oneOf` no longer depend on branch declaration order. The
+  `MAX_COMPOSITION_ERRORS` cap in `AbstractCompositionalValidator` used
+  `return` to stop collecting errors, which also abandoned the remaining
+  branches — so a branch that would match went unevaluated whenever
+  earlier branches produced 20+ errors, and `anyOf` reported "At least
+  one of the schemas must match, but none did". The cap now bounds error
+  collection only; every branch is still evaluated. Error output is
+  unchanged (20 errors plus one `TooManyErrorsError`). (#54)
+
 ## [0.7.0]
 
 Preparation for the 1.0.0 stable release. This section tracks work that
@@ -676,7 +689,8 @@ fail-closes on unresolvable callback expressions.
 ### Changed
 - Set `symfony/yaml` requirement to `^7.0`.
 
-[Unreleased]: https://github.com/duyler/openapi/compare/0.6.0...HEAD
+[Unreleased]: https://github.com/duyler/openapi/compare/0.7.0...HEAD
+[0.7.0]: https://github.com/duyler/openapi/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/duyler/openapi/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/duyler/openapi/compare/0.4.1...0.5.0
 [0.4.1]: https://github.com/duyler/openapi/compare/0.4.0...0.4.1
