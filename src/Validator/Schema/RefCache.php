@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
 
 /** @internal */
 final class RefCache
 {
-    /** @var array<string, Schema|Parameter|Response> */
+    /** @var array<string, Schema|Parameter|RequestBody|Response> */
     public array $map = [];
 }

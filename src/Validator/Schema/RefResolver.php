@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
@@ -125,6 +126,17 @@ final class RefResolver implements RefResolverInterface
     }
 
     #[Override]
+    public function resolveRequestBody(string $ref, OpenApiDocument $document, int $depth = 0): RequestBody
+    {
+        [$result,] = $this->navigator->resolveRef($ref, $document, [], $this->cache, $depth);
+        if (false === $result instanceof RequestBody) {
+            throw new UnresolvableRefException($ref, 'Expected RequestBody but got ' . $result::class);
+        }
+
+        return $result;
+    }
+
+    #[Override]
     public function resolveResponse(string $ref, OpenApiDocument $document, int $depth = 0): Response
     {
         [$result,] = $this->navigator->resolveRef($ref, $document, [], $this->cache, $depth);
@@ -221,6 +233,26 @@ final class RefResolver implements RefResolverInterface
             examples: $resolved->examples,
             example: $resolved->example,
             content: $resolved->content,
+        );
+    }
+
+    #[Override]
+    public function resolveRequestBodyWithOverride(
+        RequestBody $requestBody,
+        OpenApiDocument $document,
+    ): RequestBody {
+        if (null === $requestBody->ref) {
+            return $requestBody;
+        }
+        $resolved = $this->resolveRequestBody($requestBody->ref, $document);
+
+        return new RequestBody(
+            ref: null,
+            refSummary: null,
+            refDescription: null,
+            description: $requestBody->refDescription ?? $resolved->description,
+            content: $resolved->content,
+            required: $resolved->required,
         );
     }
 
