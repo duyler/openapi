@@ -343,8 +343,12 @@ YAML;
         $this->assertSame('/test', $operation->path);
     }
 
+    /**
+     * A lone value is a one item list, not a scalar, so the schema it fails
+     * is `minItems` rather than `type`.
+     */
     #[Test]
-    public function header_array_type_with_single_value_throws_type_mismatch(): void
+    public function header_array_type_with_single_value_throws_min_items(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.1.0
@@ -377,7 +381,7 @@ YAML;
         $request = $this->psrFactory->createServerRequest('GET', '/test')
             ->withHeader('X-Tags', 'solo');
 
-        $this->expectException(TypeMismatchError::class);
+        $this->expectException(MinItemsError::class);
         $validator->validateRequest($request);
     }
 
