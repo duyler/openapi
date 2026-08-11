@@ -47,6 +47,10 @@ final readonly class OneOfValidatorWithContext
             return;
         }
 
+        if (null === $data && SchemaValueNormalizer::isNullableSchema($schema, $context->nullableAsType)) {
+            return;
+        }
+
         if ($useDiscriminator && null !== $schema->discriminator) {
             $this->validateWithDiscriminator($data, $schema, $context);
             return;

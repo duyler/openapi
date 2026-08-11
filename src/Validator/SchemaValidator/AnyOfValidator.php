@@ -24,6 +24,10 @@ final readonly class AnyOfValidator extends AbstractCompositionalValidator imple
             return;
         }
 
+        if ($this->acceptsNullAsNullable($data, $schema, $context)) {
+            return;
+        }
+
         $result = $this->validateSchemas($schema->anyOf, $data, $context, 'anyOf');
 
         if (0 === $result->validCount) {

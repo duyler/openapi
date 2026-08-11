@@ -27,6 +27,10 @@ final readonly class AllOfValidator extends AbstractCompositionalValidator imple
             return;
         }
 
+        if ($this->acceptsNullAsNullable($data, $schema, $context)) {
+            return;
+        }
+
         $result = $this->validateSchemas($schema->allOf, $data, $context, 'allOf');
 
         if ([] !== $result->errors || [] !== $result->abstractErrors) {
