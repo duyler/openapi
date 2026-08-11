@@ -50,8 +50,7 @@ final readonly class NotValidator extends AbstractSchemaValidator implements Key
         $childContext = null !== $context ? $context->forkForBranch() : null;
 
         try {
-            $allowNull = $nullableAsType && ($notSchema->nullable
-                || SchemaValueNormalizer::doesTypeIncludeNull($notSchema->type));
+            $allowNull = SchemaValueNormalizer::allowsNull($notSchema, $nullableAsType);
             $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
             $validator->validate($normalizedData, $notSchema, $childContext);
         } catch (InvalidDataTypeException|ValidationException|AbstractValidationError) {
