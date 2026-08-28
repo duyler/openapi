@@ -40,7 +40,7 @@
         "rector/rector": "^2.0",
         "infection/infection": "^0.32",
         "nyholm/psr7": "^1.8",
-        "guzzlehttp/psr7": "^2.6",
+        "guzzlehttp/psr7": "^2.6 || ^3.0",
         "laminas/laminas-diactoros": "^3.3",
         "giorgiosironi/eris": "^1.0"
     },
