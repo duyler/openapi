@@ -149,6 +149,17 @@ internal-only unless explicitly marked as public API.
   empty-body path.
 - `NotValidator` — removed redundant `$schema->not` truthy check after
   `is_bool($schema->not)` narrowing (Psalm `RedundantCondition`).
+- Composition branch errors are no longer lost, duplicated, or
+  inconsistent between keywords (#52). A `ValidationException` thrown by
+  `allOf`/`anyOf`/`oneOf` now always carries a structured error list:
+  a value rejected during branch normalization (typically `null` against
+  a non-nullable branch) synthesises a `TypeMismatchError` with the
+  branch `dataPath`/`schemaPath` instead of an empty list; `allOf` no
+  longer reports each branch error twice; and the `allOf` message counts
+  the branches that did not match rather than one of two error buckets.
+  `BranchOutcome` and `ValidationResult` carry a single canonical error
+  list (`ValidationResult::$abstractErrors` merged into `$errors`, new
+  `$failedCount`), so no caller can double-count.
 - Infection CI job no longer OOMs; MSI thresholds realigned with the
   current mutation score so the gate is neither green-by-default nor
   unreachable.

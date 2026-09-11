@@ -12,10 +12,15 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\DiscriminatorDataError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
+use Duyler\OpenApi\Validator\Exception\NestedValidationError;
 use Duyler\OpenApi\Validator\Exception\OneOfError;
+use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\TypeFormatter;
 
+use function implode;
 use function is_array;
+use function sprintf;
 
 final readonly class OneOfValidatorWithContext
 {
@@ -87,6 +92,18 @@ final readonly class OneOfValidatorWithContext
         $this->discriminatorValidator->validate($data, $schema, $this->document, $dataPath, $context);
     }
 
+    /**
+     * @param string|array<int, string|null>|null $type
+     */
+    private function formatSchemaType(string|array|null $type): string
+    {
+        return match (true) {
+            null === $type => 'object',
+            is_array($type) => implode('|', $type),
+            default => $type,
+        };
+    }
+
     private function hasNullableSchema(array $oneOf): bool
     {
         return array_any($oneOf, fn(Schema $subSchema): bool => $subSchema->nullable
@@ -97,16 +114,16 @@ final readonly class OneOfValidatorWithContext
     {
         $validCount = 0;
         $errors = [];
-        $abstractErrors = [];
 
         $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
 
-        foreach ($oneOf as $subSchema) {
+        foreach ($oneOf as $index => $subSchema) {
             if (false === $subSchema instanceof Schema) {
                 continue;
             }
 
             $childContext = $context->forkForBranch();
+            $schemaPath = sprintf('/oneOf/%d', $index);
 
             try {
                 $allowNull = SchemaValueNormalizer::allowsNull($subSchema, $context->nullableAsType);
@@ -115,27 +132,33 @@ final readonly class OneOfValidatorWithContext
                 ++$validCount;
                 $context->mergeChildAnnotations($childContext);
             } catch (AbstractValidationError $e) {
-                $abstractErrors[] = $e;
+                $errors[] = $e;
             } catch (InvalidDataTypeException) {
-                continue;
-            } catch (ValidationException $e) {
-                $errors[] = new ValidationException(
-                    message: 'Invalid data for oneOf schema: ' . $e->getMessage(),
-                    previous: $e,
-                    errors: $e->getErrors(),
+                $errors[] = new TypeMismatchError(
+                    expected: $this->formatSchemaType($subSchema->type),
+                    actual: TypeFormatter::format($data),
+                    dataPath: $context->breadcrumbs->currentPath(),
+                    schemaPath: $schemaPath,
                 );
+            } catch (ValidationException $e) {
+                $branchErrors = $e->getErrors();
+
+                if ([] === $branchErrors) {
+                    $branchErrors = [new NestedValidationError(
+                        dataPath: $context->breadcrumbs->currentPath(),
+                        schemaPath: $schemaPath,
+                        message: $e->getMessage(),
+                    )];
+                }
+
+                $errors = [...$errors, ...$branchErrors];
             }
         }
 
         if (0 === $validCount) {
-            $allErrors = $abstractErrors;
-            foreach ($errors as $error) {
-                $allErrors = [...$allErrors, ...$error->getErrors()];
-            }
-
             throw new ValidationException(
                 'Exactly one of schemas must match, but none did',
-                errors: $allErrors,
+                errors: $errors,
             );
         }
 

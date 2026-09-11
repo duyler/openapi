@@ -33,7 +33,7 @@ final readonly class AnyOfValidator extends AbstractCompositionalValidator imple
         if (0 === $result->validCount) {
             throw new ValidationException(
                 'At least one of the schemas must match, but none did',
-                errors: $result->abstractErrors,
+                errors: $result->errors,
             );
         }
     }
