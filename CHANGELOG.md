@@ -5,7 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.2]
+
+### Fixed
+
+- `nullable: true` is now honoured when it sits beside a composition keyword
+  instead of only on the branch schemas, so the standard OAS 3.0 workaround
+  for a nullable `$ref` — `{allOf: [$ref], nullable: true}` — accepts `null`.
+  `AllOfValidator`, `AnyOfValidator`, `OneOfValidator`,
+  `OneOfValidatorWithContext` and `IfThenElseValidator` short-circuit when the
+  schema carrying the keyword is nullable, rather than dispatching `null` into
+  branches that reject it. `anyOf`/`oneOf` treat this as the keyword being
+  satisfied, not as a matching branch, so `oneOf` still enforces exactly-one
+  for non-null data. A `null` member of an OAS 3.1 `type` union is ordinary
+  JSON Schema and keeps composing — only `nullable: true` waives branches, and
+  only while `nullableAsType` is enabled (#50).
+
+## [0.7.1]
 
 ### Fixed
 

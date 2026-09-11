@@ -32,6 +32,10 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
             return;
         }
 
+        if ($this->acceptsNullAsNullable($data, $schema, $context)) {
+            return;
+        }
+
         if (is_bool($schema->if)) {
             $this->routeThenOrElse(schema: $schema, data: $data, context: $context, ifValid: $schema->if);
 

@@ -51,6 +51,11 @@ final readonly class SchemaValueNormalizer
         ));
     }
 
+    public static function isNullableSchema(Schema $schema, bool $nullableAsType): bool
+    {
+        return $nullableAsType && $schema->nullable;
+    }
+
     /**
      * Decides whether the pre-check may hand a null to $schema.
      *
