@@ -51,8 +51,7 @@ final readonly class PropertiesValidator extends AbstractSchemaValidator impleme
     private function validateProperty(mixed $value, string $name, Schema $propertySchema, SchemaValidatorInterface $validator, bool $nullableAsType, ?ValidationContext &$context): void
     {
         try {
-            $allowNull = $nullableAsType && ($propertySchema->nullable
-                || SchemaValueNormalizer::doesTypeIncludeNull($propertySchema->type));
+            $allowNull = SchemaValueNormalizer::allowsNull($propertySchema, $nullableAsType);
             $normalized = SchemaValueNormalizer::normalize($value, $allowNull);
 
             if (null === $context) {
