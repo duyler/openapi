@@ -161,8 +161,7 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
      */
     private function normalizeFor(mixed $data, Schema $subSchema, bool $nullableAsType): array|int|string|float|bool|null
     {
-        $allowNull = $nullableAsType && ($subSchema->nullable
-            || SchemaValueNormalizer::doesTypeIncludeNull($subSchema->type));
+        $allowNull = SchemaValueNormalizer::allowsNull($subSchema, $nullableAsType);
 
         return SchemaValueNormalizer::normalize($data, $allowNull);
     }

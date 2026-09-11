@@ -57,6 +57,27 @@ final readonly class SchemaValueNormalizer
     }
 
     /**
+     * Decides whether the pre-check may hand a null to $schema.
+     *
+     * A composition or $ref node carries neither type nor nullable of its
+     * own — both live in the branches or in the resolved target — so null
+     * is deferred to them instead of being rejected here.
+     */
+    public static function allowsNull(Schema $schema, bool $nullableAsType = true): bool
+    {
+        if (false === $nullableAsType) {
+            return false;
+        }
+
+        return $schema->nullable
+            || self::doesTypeIncludeNull($schema->type)
+            || null !== $schema->ref
+            || null !== $schema->allOf
+            || null !== $schema->anyOf
+            || null !== $schema->oneOf;
+    }
+
+    /**
      * @param string|array<int, string|null>|null $type
      */
     public static function doesTypeIncludeNull(string|array|null $type): bool

@@ -63,8 +63,7 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
     {
         $prefixCount = null !== $prefixItems ? count($prefixItems) : 0;
         $nullableAsType = $context?->nullableAsType ?? true;
-        $allowNull = $nullableAsType && ($itemsSchema->nullable
-            || SchemaValueNormalizer::doesTypeIncludeNull($itemsSchema->type));
+        $allowNull = SchemaValueNormalizer::allowsNull($itemsSchema, $nullableAsType);
 
         $state = new ItemValidationState(
             itemsSchema: $itemsSchema,
