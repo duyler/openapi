@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.3]
 
 ### Fixed
 
@@ -17,6 +17,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one of the schemas must match, but none did". The cap now bounds error
   collection only; every branch is still evaluated. Error output is
   unchanged (20 errors plus one `TooManyErrorsError`). (#54)
+
+## [0.7.2]
+
+### Fixed
+
+- `nullable: true` is now honoured when it sits beside a composition keyword
+  instead of only on the branch schemas, so the standard OAS 3.0 workaround
+  for a nullable `$ref` — `{allOf: [$ref], nullable: true}` — accepts `null`.
+  `AllOfValidator`, `AnyOfValidator`, `OneOfValidator`,
+  `OneOfValidatorWithContext` and `IfThenElseValidator` short-circuit when the
+  schema carrying the keyword is nullable, rather than dispatching `null` into
+  branches that reject it. `anyOf`/`oneOf` treat this as the keyword being
+  satisfied, not as a matching branch, so `oneOf` still enforces exactly-one
+  for non-null data. A `null` member of an OAS 3.1 `type` union is ordinary
+  JSON Schema and keeps composing — only `nullable: true` waives branches, and
+  only while `nullableAsType` is enabled (#50).
+
+## [0.7.1]
+
+### Fixed
+
+- A `null` permitted by a branch of an `allOf`/`anyOf`/`oneOf` is no longer
+  rejected before any branch runs. The null pre-check that guards property
+  and item validation computed `$allowNull` from the immediate schema node,
+  but a composition node carries no `type` and no `nullable` — both live in
+  its branches — so `InvalidDataTypeException` fired before a single branch
+  was evaluated. This made every nullable attribute unrepresentable in
+  JSON:API-style documents, where resources are modelled as `allOf`
+  compositions. Composition and `$ref` nodes now defer the decision to the
+  branch or resolved target, which already evaluates `nullable` correctly.
+  Nulls no branch permits are still rejected, and now carry the failing
+  branch's data path instead of a pathless error (#66).
+- The same rule was implemented nine times and the copies disagreed — only
+  two consulted `$ref`, so a `$ref` property that accepted `null` in one code
+  path was rejected in another. All nine now delegate to a single
+  `SchemaValueNormalizer::allowsNull()` helper, closing the divergence across
+  `properties`, `items`, `prefixItems`, `dependentSchemas`, `if`/`then`/
+  `else`, `not`, and composition branches (#66).
 
 ## [0.7.0]
 
@@ -124,6 +162,17 @@ internal-only unless explicitly marked as public API.
   empty-body path.
 - `NotValidator` — removed redundant `$schema->not` truthy check after
   `is_bool($schema->not)` narrowing (Psalm `RedundantCondition`).
+- Composition branch errors are no longer lost, duplicated, or
+  inconsistent between keywords (#52). A `ValidationException` thrown by
+  `allOf`/`anyOf`/`oneOf` now always carries a structured error list:
+  a value rejected during branch normalization (typically `null` against
+  a non-nullable branch) synthesises a `TypeMismatchError` with the
+  branch `dataPath`/`schemaPath` instead of an empty list; `allOf` no
+  longer reports each branch error twice; and the `allOf` message counts
+  the branches that did not match rather than one of two error buckets.
+  `BranchOutcome` and `ValidationResult` carry a single canonical error
+  list (`ValidationResult::$abstractErrors` merged into `$errors`, new
+  `$failedCount`), so no caller can double-count.
 - Infection CI job no longer OOMs; MSI thresholds realigned with the
   current mutation score so the gate is neither green-by-default nor
   unreachable.

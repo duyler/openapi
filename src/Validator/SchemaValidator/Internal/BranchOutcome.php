@@ -4,19 +4,17 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\SchemaValidator\Internal;
 
-use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
-use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Exception\ValidationErrorInterface;
 
 /** @internal */
 final readonly class BranchOutcome
 {
     /**
-     * @param list<ValidationException>      $errors
-     * @param list<AbstractValidationError>  $abstractErrors
+     * @param list<ValidationErrorInterface> $errors Canonical error list for the branch,
+     *                                               empty only when the branch matched.
      */
     public function __construct(
         public bool $matched,
         public array $errors,
-        public array $abstractErrors,
     ) {}
 }

@@ -32,6 +32,10 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
             return;
         }
 
+        if ($this->acceptsNullAsNullable($data, $schema, $context)) {
+            return;
+        }
+
         if (is_bool($schema->if)) {
             $this->routeThenOrElse(schema: $schema, data: $data, context: $context, ifValid: $schema->if);
 
@@ -157,8 +161,7 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
      */
     private function normalizeFor(mixed $data, Schema $subSchema, bool $nullableAsType): array|int|string|float|bool|null
     {
-        $allowNull = $nullableAsType && ($subSchema->nullable
-            || SchemaValueNormalizer::doesTypeIncludeNull($subSchema->type));
+        $allowNull = SchemaValueNormalizer::allowsNull($subSchema, $nullableAsType);
 
         return SchemaValueNormalizer::normalize($data, $allowNull);
     }

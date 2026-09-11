@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Schema;
 
+use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use stdClass;
 
@@ -48,6 +49,32 @@ final readonly class SchemaValueNormalizer
             'Data must be array, int, string, float or bool, %s given',
             $typeDescription,
         ));
+    }
+
+    public static function isNullableSchema(Schema $schema, bool $nullableAsType): bool
+    {
+        return $nullableAsType && $schema->nullable;
+    }
+
+    /**
+     * Decides whether the pre-check may hand a null to $schema.
+     *
+     * A composition or $ref node carries neither type nor nullable of its
+     * own — both live in the branches or in the resolved target — so null
+     * is deferred to them instead of being rejected here.
+     */
+    public static function allowsNull(Schema $schema, bool $nullableAsType = true): bool
+    {
+        if (false === $nullableAsType) {
+            return false;
+        }
+
+        return $schema->nullable
+            || self::doesTypeIncludeNull($schema->type)
+            || null !== $schema->ref
+            || null !== $schema->allOf
+            || null !== $schema->anyOf
+            || null !== $schema->oneOf;
     }
 
     /**

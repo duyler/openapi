@@ -270,4 +270,35 @@ class OneOfValidatorTest extends TestCase
 
         $this->expectNotToPerformAssertions();
     }
+
+    #[Test]
+    public function oneOf_passes_when_parent_schema_is_nullable_and_data_is_null(): void
+    {
+        $schema = new Schema(
+            nullable: true,
+            oneOf: [
+                new Schema(type: 'object', required: ['id']),
+                new Schema(type: 'object', required: ['name']),
+            ],
+        );
+
+        $this->validator->validate(null, $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function oneOf_rejects_null_when_parent_nullable_is_not_honored(): void
+    {
+        $schema = new Schema(
+            nullable: true,
+            oneOf: [new Schema(type: 'object', required: ['id'])],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: false);
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate(null, $schema, $context);
+    }
 }
