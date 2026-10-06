@@ -141,9 +141,9 @@ final class CompositionBranchOrderIndependenceTest extends TestCase
 
         self::assertNotNull($caught, 'allOf must fail when any branch fails');
         self::assertSame(
-            'All of the schemas must match, but 2 failed',
+            'All of the schemas must match, but 3 failed',
             $caught->getMessage(),
-            'Branches failing after the cap are still evaluated, but their errors are no longer collected',
+            'Branches failing after the cap are still evaluated and counted, but their errors are no longer collected',
         );
     }
 
