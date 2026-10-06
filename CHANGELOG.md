@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `anyOf`/`oneOf`/`allOf` evaluate every branch again once the composition error cap is reached. A merge had restored the early `return` in `validateSchemas()`, so a matching branch declared after the cap was never counted. Only error collection stops at the cap; `allOf` now reports the true number of failed branches (#54)
+
 ## [0.7.3]
 
 ### Fixed
