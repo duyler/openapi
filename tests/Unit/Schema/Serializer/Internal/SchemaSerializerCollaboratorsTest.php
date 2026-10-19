@@ -19,8 +19,8 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-use WeakMap;
 use LogicException;
+use WeakMap;
 
 #[CoversClass(ScalarSchemaSerializer::class)]
 #[CoversClass(ArraySchemaSerializer::class)]
@@ -40,12 +40,45 @@ final class SchemaSerializerCollaboratorsTest extends TestCase
     }
 
     #[Test]
-    public function scalar_serializer_extract_wire_default_uses_has_default_sentinel(): void
+    public function scalar_serializer_extract_sentinel_uses_has_default_flag(): void
     {
         $serializer = new ScalarSchemaSerializer();
         $schema = new Schema(hasDefault: true, default: null);
 
-        self::assertNull($serializer->extractWire($schema, 'default'));
+        $sentinel = $serializer->extractSentinel($schema, self::fieldByName('default'));
+
+        self::assertNotNull($sentinel);
+        self::assertNull($sentinel->value);
+    }
+
+    #[Test]
+    public function scalar_serializer_extract_sentinel_wraps_const_value_when_flag_set(): void
+    {
+        $serializer = new ScalarSchemaSerializer();
+        $schema = new Schema(hasConst: true, const: 'fixed');
+
+        $sentinel = $serializer->extractSentinel($schema, self::fieldByName('const'));
+
+        self::assertNotNull($sentinel);
+        self::assertSame('fixed', $sentinel->value);
+    }
+
+    #[Test]
+    public function scalar_serializer_extract_sentinel_returns_null_when_flag_absent(): void
+    {
+        $serializer = new ScalarSchemaSerializer();
+        $schema = new Schema(default: 'orphan');
+
+        self::assertNull($serializer->extractSentinel($schema, self::fieldByName('default')));
+    }
+
+    #[Test]
+    public function scalar_serializer_extract_sentinel_returns_null_for_non_sentinel_field(): void
+    {
+        $serializer = new ScalarSchemaSerializer();
+        $schema = new Schema(title: 'User');
+
+        self::assertNull($serializer->extractSentinel($schema, self::fieldByName('title')));
     }
 
     #[Test]
@@ -76,6 +109,24 @@ final class SchemaSerializerCollaboratorsTest extends TestCase
             ['name' => 'user', 'namespace' => 'urn:example', 'prefix' => null, 'attribute' => null, 'wrapped' => null, 'nodeType' => null],
             $result,
         );
+    }
+
+    #[Test]
+    public function scalar_serializer_extract_snapshot_returns_null_for_default_without_flag(): void
+    {
+        $serializer = new ScalarSchemaSerializer();
+        $schema = new Schema(default: 'orphan');
+
+        self::assertNull($serializer->extractSnapshot($schema, self::fieldByName('default')));
+    }
+
+    #[Test]
+    public function scalar_serializer_extract_snapshot_returns_null_for_const_without_flag(): void
+    {
+        $serializer = new ScalarSchemaSerializer();
+        $schema = new Schema(const: 'orphan');
+
+        self::assertNull($serializer->extractSnapshot($schema, self::fieldByName('const')));
     }
 
     #[Test]

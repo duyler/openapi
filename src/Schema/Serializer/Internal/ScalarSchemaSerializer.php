@@ -17,13 +17,11 @@ final readonly class ScalarSchemaSerializer
         return match ($name) {
             'title' => $schema->title,
             'description' => $schema->description,
-            'default' => $schema->hasDefault ? $schema->default : null,
             'deprecated' => $schema->deprecated ?: null,
             'readOnly' => $schema->readOnly ?: null,
             'writeOnly' => $schema->writeOnly ?: null,
             'type' => $schema->type,
             'nullable' => $schema->nullable ?: null,
-            'const' => $schema->hasConst ? $schema->const : null,
             'multipleOf' => $schema->multipleOf,
             'maximum' => $schema->maximum,
             'exclusiveMaximum' => $schema->exclusiveMaximum,
@@ -55,11 +53,20 @@ final readonly class ScalarSchemaSerializer
             return $this->xmlToArray($schema->xml);
         }
 
-        if ('default' === $field->name) {
-            return $schema->hasDefault ? $schema->default : null;
+        if ($field->hasSentinel) {
+            return $this->extractSentinel($schema, $field)?->value;
         }
 
         return $this->extractWire($schema, $field->name);
+    }
+
+    public function extractSentinel(Schema $schema, FieldMetadata $field): ?SentinelValue
+    {
+        return match ($field->name) {
+            'default' => $schema->hasDefault ? new SentinelValue($schema->default) : null,
+            'const' => $schema->hasConst ? new SentinelValue($schema->const) : null,
+            default => null,
+        };
     }
 
     public function discriminatorToArray(?Discriminator $discriminator): ?array

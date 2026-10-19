@@ -94,6 +94,27 @@ final class SchemaToArrayConverterTest extends TestCase
     }
 
     #[Test]
+    public function default_omitted_when_has_default_flag_absent(): void
+    {
+        $schema = new Schema(default: 'orphan', type: 'string');
+
+        $result = new SchemaToArrayConverter()->toWireArray($schema);
+
+        self::assertArrayNotHasKey('default', $result);
+        self::assertSame(['type' => 'string'], $result);
+    }
+
+    #[Test]
+    public function const_omitted_when_has_const_flag_absent(): void
+    {
+        $schema = new Schema(const: 'orphan');
+
+        $result = new SchemaToArrayConverter()->toWireArray($schema);
+
+        self::assertSame([], $result);
+    }
+
+    #[Test]
     public function all_relevant_fields_serialized_correctly(): void
     {
         $nested = new Schema(type: 'string');

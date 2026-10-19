@@ -51,21 +51,17 @@ final readonly class SchemaToArrayConverter
                 continue;
             }
 
-            if ('default' === $field->name) {
-                if ($schema->hasDefault) {
-                    $data[$field->openApiName] = $schema->default;
+            if ($field->hasSentinel) {
+                $sentinel = $this->scalarSerializer->extractSentinel($schema, $field);
+
+                if (null !== $sentinel) {
+                    $data[$field->openApiName] = $sentinel->value;
                 }
+
                 continue;
             }
 
-            if ('const' === $field->name) {
-                if ($schema->hasConst) {
-                    $data[$field->openApiName] = $schema->const;
-                }
-                continue;
-            }
-
-            $value = $this->extractWireValue($schema, $field->name);
+            $value = $this->extractWireValue($schema, $field);
 
             if (null !== $value) {
                 $data[$field->openApiName] = $value;
@@ -106,13 +102,14 @@ final readonly class SchemaToArrayConverter
         return $data;
     }
 
-    private function extractWireValue(Schema $schema, string $name): mixed
+    private function extractWireValue(Schema $schema, FieldMetadata $field): mixed
     {
-        return match ($this->categoryOf($name)) {
-            'scalar' => $this->scalarSerializer->extractWire($schema, $name),
-            'array' => $this->arraySerializer->extractWireValue($schema, $name),
-            'object' => $this->objectSerializer->extractWireValue($schema, $name),
-            'composition' => $this->compositionSerializer->extractWireValue($schema, $name),
+        return match ($field->category) {
+            FieldMetadata::CATEGORY_ARRAY => $this->arraySerializer->extractWireValue($schema, $field->name),
+            FieldMetadata::CATEGORY_OBJECT => $this->objectSerializer->extractWireValue($schema, $field->name),
+            FieldMetadata::CATEGORY_COMPOSITION => $this->compositionSerializer->extractWireValue($schema, $field->name),
+            FieldMetadata::CATEGORY_FLAT, FieldMetadata::CATEGORY_STRING, FieldMetadata::CATEGORY_NUMERIC
+                => $this->scalarSerializer->extractWire($schema, $field->name),
             default => null,
         };
     }
@@ -132,19 +129,6 @@ final readonly class SchemaToArrayConverter
             FieldMetadata::CATEGORY_COMPOSITION
                 => $this->compositionSerializer->extractSnapshot($schema, $field, $context),
             default => null,
-        };
-    }
-
-    private function categoryOf(string $fieldName): string
-    {
-        return match ($fieldName) {
-            'maxItems', 'minItems', 'uniqueItems', 'minContains', 'maxContains',
-            'items', 'contains', 'prefixItems', 'unevaluatedItems' => 'array',
-            'maxProperties', 'minProperties', 'required',
-            'properties', 'additionalProperties', 'unevaluatedProperties',
-            'patternProperties', 'propertyNames', 'dependentSchemas', 'contentSchema' => 'object',
-            'allOf', 'anyOf', 'oneOf', 'not', 'if', 'then', 'else' => 'composition',
-            default => 'scalar',
         };
     }
 
