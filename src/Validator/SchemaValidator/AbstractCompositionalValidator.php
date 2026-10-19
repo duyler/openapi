@@ -47,11 +47,11 @@ abstract readonly class AbstractCompositionalValidator extends AbstractSchemaVal
                 continue;
             }
 
+            ++$failedCount;
+
             if ($capped) {
                 continue;
             }
-
-            ++$failedCount;
 
             foreach ($outcome->errors as $error) {
                 $errors[] = $error;
@@ -63,7 +63,6 @@ abstract readonly class AbstractCompositionalValidator extends AbstractSchemaVal
                     );
 
                     $capped = true;
-
                     break;
                 }
             }

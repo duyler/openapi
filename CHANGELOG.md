@@ -71,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   failing open. Webhooks and callbacks are covered too, since both validate
   through `RequestValidator`. Per OAS 3.1+, a `description` sibling of
   `$ref` overrides the referenced description (#56).
+- `anyOf`/`oneOf`/`allOf` evaluate every branch again once the composition error cap is reached. A merge had restored the early `return` in `validateSchemas()`, so a matching branch declared after the cap was never counted. Only error collection stops at the cap; `allOf` now reports the true number of failed branches (#54)
 
 ## [0.7.3]
 
