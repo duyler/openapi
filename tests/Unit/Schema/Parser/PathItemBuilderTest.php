@@ -9,8 +9,10 @@ use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\Parser\OpenApiBuildContext;
 use Duyler\OpenApi\Schema\Parser\PathItemBuilder;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use stdClass;
 
 final class PathItemBuilderTest extends TestCase
 {
@@ -239,6 +241,42 @@ final class PathItemBuilderTest extends TestCase
     }
 
     #[Test]
+    public function build_parameter_with_scalar_example_builds_example(): void
+    {
+        $parameter = $this->pathItemBuilder->buildParameter([
+            'name' => 'limit',
+            'in' => 'query',
+            'example' => 42,
+        ]);
+
+        self::assertNotNull($parameter->example);
+        self::assertSame(42, $parameter->example->value);
+    }
+
+    #[Test]
+    #[DataProvider('non_string_scalar_example_provider')]
+    public function build_parameter_with_non_string_scalar_example_wraps_value(mixed $value): void
+    {
+        $parameter = $this->pathItemBuilder->buildParameter([
+            'name' => 'limit',
+            'in' => 'query',
+            'example' => $value,
+        ]);
+
+        self::assertNotNull($parameter->example);
+        self::assertSame($value, $parameter->example->value);
+    }
+
+    public static function non_string_scalar_example_provider(): array
+    {
+        return [
+            'int' => [42],
+            'float' => [1.5],
+            'bool' => [true],
+        ];
+    }
+
+    #[Test]
     public function build_parameter_with_array_example_returns_null_example(): void
     {
         $parameter = $this->pathItemBuilder->buildParameter([
@@ -262,14 +300,27 @@ final class PathItemBuilderTest extends TestCase
     }
 
     #[Test]
-    public function build_parameter_with_non_string_scalar_example_returns_null_example(): void
+    public function build_parameter_with_explicit_null_example_returns_null_example(): void
     {
         $parameter = $this->pathItemBuilder->buildParameter([
             'name' => 'limit',
             'in' => 'query',
-            'example' => 42,
+            'example' => null,
         ]);
 
         self::assertNull($parameter->example);
+    }
+
+    #[Test]
+    public function build_parameter_with_object_example_throws_invalid_schema_exception(): void
+    {
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Inline example must be a scalar or null, got object.');
+
+        $this->pathItemBuilder->buildParameter([
+            'name' => 'limit',
+            'in' => 'query',
+            'example' => new stdClass(),
+        ]);
     }
 }

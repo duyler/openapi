@@ -6,7 +6,6 @@ namespace Duyler\OpenApi\Schema\Parser;
 
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
 use Duyler\OpenApi\Schema\Model\Callbacks;
-use Duyler\OpenApi\Schema\Model\Example;
 use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Parameters;
@@ -16,18 +15,23 @@ use Duyler\OpenApi\Schema\Model\SecurityRequirement;
 use Duyler\OpenApi\Schema\Model\Server;
 use Duyler\OpenApi\Schema\Model\Servers;
 use Duyler\OpenApi\Schema\Model\Webhooks;
+use Duyler\OpenApi\Schema\Parser\Internal\InlineExampleResolver;
 
 use function array_map;
 use function array_values;
 use function is_array;
 use function is_bool;
-use function is_string;
 
 final readonly class PathItemBuilder
 {
     private const string DEPRECATION_VERSION = '3.2.0';
 
-    public function __construct(private OpenApiBuildContext $context) {}
+    private readonly InlineExampleResolver $inlineExampleResolver;
+
+    public function __construct(private OpenApiBuildContext $context)
+    {
+        $this->inlineExampleResolver = new InlineExampleResolver();
+    }
 
     public function buildPaths(array $data): Paths
     {
@@ -148,7 +152,7 @@ final readonly class PathItemBuilder
                 ? $schemaBuilder->buildSchema($data['schema'])
                 : null,
             examples: isset($data['examples']) ? TypeHelper::asStringMixedMapOrNull($data['examples']) : null,
-            example: $this->resolveInlineExample($data, $componentsBuilder),
+            example: isset($data['example']) ? $this->inlineExampleResolver->resolve($data['example']) : null,
             content: isset($data['content']) ? $componentsBuilder->buildContent(TypeHelper::asArray($data['content'])) : null,
         );
     }
@@ -189,18 +193,5 @@ final readonly class PathItemBuilder
     public function buildCallbacks(array $data): Callbacks
     {
         return $this->context->componentsBuilder->buildCallbacksMap($data);
-    }
-
-    private function resolveInlineExample(array $data, ComponentsBuilder $componentsBuilder): ?Example
-    {
-        if (!isset($data['example']) || is_array($data['example'])) {
-            return null;
-        }
-
-        if (!is_string($data['example'])) {
-            return null;
-        }
-
-        return $componentsBuilder->buildExample(['value' => $data['example']]);
     }
 }

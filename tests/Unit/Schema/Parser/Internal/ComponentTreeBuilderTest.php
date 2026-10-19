@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Schema\Parser\Internal;
 
+use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
 use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\Encoding;
 use Duyler\OpenApi\Schema\Model\Example;
@@ -13,8 +14,10 @@ use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Parser\Internal\ComponentTreeBuilder;
 use Duyler\OpenApi\Schema\Parser\OpenApiBuildContext;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use stdClass;
 
 #[CoversClass(ComponentTreeBuilder::class)]
 final class ComponentTreeBuilderTest extends TestCase
@@ -87,6 +90,67 @@ final class ComponentTreeBuilderTest extends TestCase
         ]);
 
         $this->addToAssertionCount(1);
+    }
+
+    #[Test]
+    #[DataProvider('scalar_example_provider')]
+    public function build_media_type_with_scalar_example_builds_example(mixed $value): void
+    {
+        $media = $this->builder->buildMediaType(['example' => $value]);
+
+        self::assertNotNull($media->example);
+        self::assertSame($value, $media->example->value);
+    }
+
+    public static function scalar_example_provider(): array
+    {
+        return [
+            'int' => [42],
+            'float' => [1.5],
+            'bool' => [true],
+            'string' => ['foo'],
+        ];
+    }
+
+    #[Test]
+    public function build_media_type_with_array_example_returns_null_example(): void
+    {
+        $media = $this->builder->buildMediaType([
+            'example' => ['value' => 'foo'],
+        ]);
+
+        self::assertNull($media->example);
+    }
+
+    #[Test]
+    public function build_media_type_without_example_returns_null_example(): void
+    {
+        $media = $this->builder->buildMediaType([
+            'schema' => ['type' => 'object'],
+        ]);
+
+        self::assertNull($media->example);
+    }
+
+    #[Test]
+    public function build_media_type_with_explicit_null_example_returns_null_example(): void
+    {
+        $media = $this->builder->buildMediaType([
+            'example' => null,
+        ]);
+
+        self::assertNull($media->example);
+    }
+
+    #[Test]
+    public function build_media_type_with_object_example_throws_invalid_schema_exception(): void
+    {
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Inline example must be a scalar or null, got object.');
+
+        $this->builder->buildMediaType([
+            'example' => new stdClass(),
+        ]);
     }
 
     #[Test]

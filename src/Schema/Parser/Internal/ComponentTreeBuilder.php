@@ -26,7 +26,12 @@ final readonly class ComponentTreeBuilder
 {
     private const string DEPRECATION_VERSION = '3.2.0';
 
-    public function __construct(private OpenApiBuildContext $context) {}
+    private readonly InlineExampleResolver $inlineExampleResolver;
+
+    public function __construct(private OpenApiBuildContext $context)
+    {
+        $this->inlineExampleResolver = new InlineExampleResolver();
+    }
 
     public function buildRequestBody(array $data): RequestBody
     {
@@ -69,9 +74,7 @@ final readonly class ComponentTreeBuilder
             encoding: $this->nullable($data, 'encoding', $this->buildEncodingMap(...)),
             itemEncoding: $this->nullable($data, 'itemEncoding', $this->buildEncoding(...)),
             prefixEncoding: $this->nullable($data, 'prefixEncoding', $this->buildPrefixEncoding(...)),
-            example: isset($data['example']) && false === is_array($data['example'])
-                ? $this->buildExample(['value' => $data['example']])
-                : null,
+            example: isset($data['example']) ? $this->inlineExampleResolver->resolve($data['example']) : null,
             examples: isset($data['examples']) && is_array($data['examples']) ? TypeHelper::asStringMixedMapOrNull($data['examples']) : null,
         );
     }
