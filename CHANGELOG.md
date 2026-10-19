@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Path Item level `parameters` are now enforced during request validation.
+  `PathItem.parameters` were parsed into the schema model but never reached
+  `RequestValidator`, so `required` and `schema` constraints on parameters
+  hoisted to the path item — the place the specification encourages for
+  parameters shared by every operation under a path — were silently ignored
+  for every location (`path`, `query`, `header`, `cookie`). Path item
+  parameters are now merged into the operation's parameter set when the
+  operation is resolved, with an operation level parameter overriding the
+  path level one on matching `name` + `in`. The same merge is applied to
+  webhooks and callbacks, which are Path Item objects as well. (#61)
 - An array-typed `form` parameter no longer rejects a single value.
   `ParameterDeserializer::deserializeForm()` decided whether a
   non-exploded value was an array by looking for a comma instead of at
