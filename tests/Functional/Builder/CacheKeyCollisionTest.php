@@ -18,6 +18,7 @@ use DateTimeInterface;
 
 use function array_key_exists;
 use function count;
+use function str_ends_with;
 
 final class CacheKeyCollisionTest extends TestCase
 {
@@ -215,6 +216,8 @@ YAML;
 
 final class RecordingCachePool implements CacheItemPoolInterface
 {
+    private const string CONFINEMENT_KEY_SUFFIX = '_confinement';
+
     /** @var array<string, mixed> */
     private array $values = [];
 
@@ -240,7 +243,9 @@ final class RecordingCachePool implements CacheItemPoolInterface
             return new InMemoryCacheItem($key, $value, $hit);
         }
 
-        $this->missCount++;
+        if (false === str_ends_with($key, self::CONFINEMENT_KEY_SUFFIX)) {
+            $this->missCount++;
+        }
         $this->values[$key] = null;
 
         return new InMemoryCacheItem($key, null, false);
@@ -297,7 +302,10 @@ final class RecordingCachePool implements CacheItemPoolInterface
         $key = $item->getKey();
         $this->values[$key] = $item->get();
         $this->savedFlag[$key] = true;
-        $this->savedKeys[] = $key;
+
+        if (false === str_ends_with($key, self::CONFINEMENT_KEY_SUFFIX)) {
+            $this->savedKeys[] = $key;
+        }
 
         return true;
     }
@@ -339,7 +347,7 @@ final class RecordingCachePool implements CacheItemPoolInterface
     {
         $keys = [];
         foreach ($this->requestedKeys as $key) {
-            if (str_starts_with($key, 'openapi_spec_content_')) {
+            if (str_starts_with($key, 'openapi_spec_content_') && !str_ends_with($key, self::CONFINEMENT_KEY_SUFFIX)) {
                 $keys[$key] = true;
             }
         }

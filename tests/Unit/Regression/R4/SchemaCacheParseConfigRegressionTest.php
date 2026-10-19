@@ -20,6 +20,7 @@ use function array_filter;
 use function array_key_exists;
 use function array_unique;
 use function array_values;
+use function str_ends_with;
 
 /**
  * Regression suite for R4-SEC-008 / R4-TEST-011: the SchemaCache key
@@ -46,6 +47,8 @@ openapi: 3.2.0
 info: { title: T, version: '1' }
 paths: {}
 YAML;
+
+    private const string CONFINEMENT_KEY_SUFFIX = '_confinement';
 
     #[Test]
     public function stricter_max_spec_size_with_shared_cache_forces_reject_on_cache_miss(): void
@@ -139,7 +142,8 @@ YAML;
         $unique = array_values(array_unique($pool->capturedKeys()));
         $contentKeys = array_values(array_filter(
             $unique,
-            static fn(string $key): bool => str_starts_with($key, 'openapi_spec_content_'),
+            static fn(string $key): bool => str_starts_with($key, 'openapi_spec_content_')
+                && !str_ends_with($key, self::CONFINEMENT_KEY_SUFFIX),
         ));
 
         return $contentKeys;

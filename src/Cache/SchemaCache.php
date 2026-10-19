@@ -62,4 +62,29 @@ final readonly class SchemaCache
     {
         return $this->decorator->has($key);
     }
+
+    /**
+     * Retrieve cached confinement verdict.
+     *
+     * @param string $key Cache key
+     * @return ConfinementVerdict|null Cached verdict or null if not found
+     */
+    public function getConfinement(string $key): ?ConfinementVerdict
+    {
+        $value = $this->decorator->get($key, ConfinementVerdict::class);
+
+        assert(null === $value || $value instanceof ConfinementVerdict);
+
+        return $value;
+    }
+
+    /**
+     * Store the clean confinement verdict under the given cache key.
+     *
+     * @param string $key Cache key
+     */
+    public function setConfinement(string $key): void
+    {
+        $this->decorator->set($key, ConfinementVerdict::clean());
+    }
 }

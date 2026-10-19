@@ -24,6 +24,7 @@ use function glob;
 use function hash;
 use function is_file;
 use function sha1;
+use function str_ends_with;
 use function strlen;
 use function sys_get_temp_dir;
 use function touch;
@@ -46,6 +47,7 @@ YAML;
 
     private const string FILE_KEY_PREFIX = 'openapi_spec_file_';
     private const string CONTENT_KEY_PREFIX = 'openapi_spec_content_';
+    private const string CONFINEMENT_KEY_SUFFIX = '_confinement';
 
     #[Test]
     public function string_cache_key_uses_sha256_length(): void
@@ -518,6 +520,10 @@ YAML;
         $seen = [];
 
         foreach ($keys as $key) {
+            if (str_ends_with($key, self::CONFINEMENT_KEY_SUFFIX)) {
+                continue;
+            }
+
             if (false === array_key_exists($key, $seen)) {
                 $seen[$key] = true;
             }

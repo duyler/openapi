@@ -1667,6 +1667,15 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
+When `withCache()` is enabled, the external-`$ref` confinement verdict for
+string-loaded specs (`fromYamlString()` / `fromJsonString()`) is cached
+alongside the document (same pool and TTL, key suffixed with `_confinement`).
+The verdict is derived from the same bytes and limits as the document, so it
+is invalidated automatically whenever the spec content or the size/depth
+limits (`withMaxSpecSize()` / `withMaxSpecDepth()`) change. A failing verdict
+(an external `$ref` without `withExternalRefAllowedRoot()`) is never cached —
+the exception is raised again on every subsequent `build()`.
+
 `SchemaCache` uses a PSR-6 cache pool keyed by a SHA-256 hash of the spec
 file path and content (or raw content for string-loaded specs). The
 content-hash defends against cache-poisoning via size-preserving or
