@@ -185,7 +185,7 @@ final class OperationTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_externalDocs(): void
+    public function json_serialize_includes_external_docs(): void
     {
         $operation = new Operation(
             externalDocs: new ExternalDocs(url: 'https://docs.example.com'),
@@ -211,7 +211,7 @@ final class OperationTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_requestBody(): void
+    public function json_serialize_includes_request_body(): void
     {
         $operation = new Operation(
             requestBody: new RequestBody(

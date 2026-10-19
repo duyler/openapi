@@ -100,7 +100,7 @@ final class SchemaKeywordParsersTest extends TestCase
     }
 
     #[Test]
-    public function array_parser_returns_items_prefixItems_contains(): void
+    public function array_parser_returns_items_prefix_items_contains(): void
     {
         $parser = new ArraySchemaKeywordParser();
         $recurse = static fn(bool|array $data): Schema => new Schema(type: 'nested');
@@ -156,7 +156,7 @@ final class SchemaKeywordParsersTest extends TestCase
     }
 
     #[Test]
-    public function composition_parser_returns_ref_allOf_oneOf(): void
+    public function composition_parser_returns_ref_all_of_one_of(): void
     {
         $parser = new CompositionSchemaKeywordParser();
         $recurse = static fn(bool|array $data): Schema => new Schema(type: 'nested');

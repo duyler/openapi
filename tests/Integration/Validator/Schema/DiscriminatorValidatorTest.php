@@ -649,7 +649,7 @@ YAML;
     }
 
     #[Test]
-    public function validate_with_oneOf_and_discriminator_no_mapping(): void
+    public function validate_with_one_of_and_discriminator_no_mapping(): void
     {
         $catSchema = new Schema(
             title: 'Cat',

@@ -384,7 +384,7 @@ final class PostRefactorBehavioralSnapshotTest extends TestCase
     }
 
     #[Test]
-    public function sibling_merger_type_conflict_clears_type_and_wraps_in_allOf(): void
+    public function sibling_merger_type_conflict_clears_type_and_wraps_in_all_of(): void
     {
         $resolved = new Schema(type: 'string');
         $sibling = new Schema(type: 'integer');
@@ -400,7 +400,7 @@ final class PostRefactorBehavioralSnapshotTest extends TestCase
     }
 
     #[Test]
-    public function sibling_merger_format_conflict_clears_format_and_wraps_in_allOf(): void
+    public function sibling_merger_format_conflict_clears_format_and_wraps_in_all_of(): void
     {
         $resolved = new Schema(type: 'string', format: 'email');
         $sibling = new Schema(format: 'uri');
@@ -446,7 +446,7 @@ final class PostRefactorBehavioralSnapshotTest extends TestCase
     }
 
     #[Test]
-    public function sibling_merger_anyOf_on_both_sides_wraps_in_allOf_not_concatenates(): void
+    public function sibling_merger_any_of_on_both_sides_wraps_in_all_of_not_concatenates(): void
     {
         $resolvedA = new Schema(type: 'string');
         $resolvedB = new Schema(type: 'integer');

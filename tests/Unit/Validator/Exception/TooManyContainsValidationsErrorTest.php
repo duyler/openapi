@@ -20,7 +20,7 @@ final class TooManyContainsValidationsErrorTest extends TestCase
     }
 
     #[Test]
-    public function schemaPath_is_contains_pointer(): void
+    public function schema_path_is_contains_pointer(): void
     {
         $error = new TooManyContainsValidationsError(max: 10_000, dataPath: '/items');
 
@@ -47,7 +47,7 @@ final class TooManyContainsValidationsErrorTest extends TestCase
     }
 
     #[Test]
-    public function suggestion_points_to_maxItems_bound(): void
+    public function suggestion_points_to_max_items_bound(): void
     {
         $error = new TooManyContainsValidationsError(max: 10_000, dataPath: '/items');
 
@@ -58,7 +58,7 @@ final class TooManyContainsValidationsErrorTest extends TestCase
     }
 
     #[Test]
-    public function dataPath_passes_through_string_form(): void
+    public function data_path_passes_through_string_form(): void
     {
         $error = new TooManyContainsValidationsError(max: 10_000, dataPath: '/items/0');
 
@@ -66,7 +66,7 @@ final class TooManyContainsValidationsErrorTest extends TestCase
     }
 
     #[Test]
-    public function dataPath_accepts_breadcrumb_and_renders_pointer(): void
+    public function data_path_accepts_breadcrumb_and_renders_pointer(): void
     {
         $breadcrumb = new Breadcrumb()->append('items')->appendIndex(0);
 

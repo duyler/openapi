@@ -128,7 +128,7 @@ final class ExampleTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_externalValue(): void
+    public function json_serialize_includes_external_value(): void
     {
         $example = new Example(
             externalValue: 'https://example.com/example',

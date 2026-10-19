@@ -308,7 +308,7 @@ YAML;
     }
 
     #[Test]
-    public function validateRequest_with_multiple_additional_operations(): void
+    public function validate_request_with_multiple_additional_operations(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0

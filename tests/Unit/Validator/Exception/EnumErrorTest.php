@@ -24,7 +24,7 @@ final class EnumErrorTest extends TestCase
     }
 
     #[Test]
-    public function dataPath_returns_correct_value(): void
+    public function data_path_returns_correct_value(): void
     {
         $exception = new EnumError(
             allowedValues: ['red', 'green', 'blue'],
@@ -37,7 +37,7 @@ final class EnumErrorTest extends TestCase
     }
 
     #[Test]
-    public function schemaPath_returns_correct_value(): void
+    public function schema_path_returns_correct_value(): void
     {
         $exception = new EnumError(
             allowedValues: ['red', 'green', 'blue'],
@@ -96,7 +96,7 @@ final class EnumErrorTest extends TestCase
     }
 
     #[Test]
-    public function getType_returns_enum(): void
+    public function get_type_returns_enum(): void
     {
         $exception = new EnumError(
             allowedValues: ['red', 'green', 'blue'],

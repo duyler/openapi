@@ -463,7 +463,7 @@ JSON;
     }
 
     #[Test]
-    public function fromJsonFile_loads_file(): void
+    public function from_json_file_loads_file(): void
     {
         $tempFile = sys_get_temp_dir() . '/test_openapi.json';
         file_put_contents($tempFile, '{"openapi":"3.0.3","info":{"title":"JSON Test","version":"1.0.0"},"paths":{}}');
@@ -479,7 +479,7 @@ JSON;
     }
 
     #[Test]
-    public function withEventDispatcher_returns_new_builder(): void
+    public function with_event_dispatcher_returns_new_builder(): void
     {
         $yaml = "openapi: 3.0.3\ninfo:\n  title: Test\n  version: 1.0.0\npaths: []";
 

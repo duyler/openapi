@@ -39,7 +39,7 @@ final class AbstractValidationErrorTest extends TestCase
     }
 
     #[Test]
-    public function dataPath_returns_correct_value_for_string(): void
+    public function data_path_returns_correct_value_for_string(): void
     {
         $exception = new ConstError(
             expected: 'test',
@@ -52,7 +52,7 @@ final class AbstractValidationErrorTest extends TestCase
     }
 
     #[Test]
-    public function dataPath_returns_correct_value_for_nested(): void
+    public function data_path_returns_correct_value_for_nested(): void
     {
         $exception = new EnumError(
             allowedValues: ['a', 'b'],
@@ -65,7 +65,7 @@ final class AbstractValidationErrorTest extends TestCase
     }
 
     #[Test]
-    public function schemaPath_returns_correct_value(): void
+    public function schema_path_returns_correct_value(): void
     {
         $exception = new ConstError(
             expected: 'test',
@@ -173,7 +173,7 @@ final class AbstractValidationErrorTest extends TestCase
 
     #[Test]
     #[IgnoreDeprecations]
-    public function getType_matches_keyword_for_all_subclasses(): void
+    public function get_type_matches_keyword_for_all_subclasses(): void
     {
         $constException = new ConstError(
             expected: 'test',

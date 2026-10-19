@@ -22,7 +22,7 @@ final class DeepObjectValidationTest extends TestCase
     }
 
     #[Test]
-    public function test_deep_object_simple(): void
+    public function deep_object_simple(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -67,7 +67,7 @@ YAML;
     }
 
     #[Test]
-    public function test_deep_object_nested(): void
+    public function deep_object_nested(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -112,7 +112,7 @@ YAML;
     }
 
     #[Test]
-    public function test_deep_object_url_encoded(): void
+    public function deep_object_url_encoded(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -152,7 +152,7 @@ YAML;
     }
 
     #[Test]
-    public function test_deep_object_against_schema(): void
+    public function deep_object_against_schema(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -197,7 +197,7 @@ YAML;
     }
 
     #[Test]
-    public function test_deep_object_invalid_value_rejected(): void
+    public function deep_object_invalid_value_rejected(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -244,7 +244,7 @@ YAML;
     }
 
     #[Test]
-    public function test_deep_object_missing_required_property(): void
+    public function deep_object_missing_required_property(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0

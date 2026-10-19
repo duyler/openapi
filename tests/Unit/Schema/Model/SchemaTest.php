@@ -206,7 +206,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_allOf(): void
+    public function json_serialize_includes_all_of(): void
     {
         $schema = new Schema(
             allOf: [
@@ -222,7 +222,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_anyOf(): void
+    public function json_serialize_includes_any_of(): void
     {
         $schema = new Schema(
             anyOf: [
@@ -238,7 +238,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_oneOf(): void
+    public function json_serialize_includes_one_of(): void
     {
         $schema = new Schema(
             oneOf: [
@@ -310,7 +310,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_multipleOf(): void
+    public function json_serialize_includes_multiple_of(): void
     {
         $schema = new Schema(
             type: 'number',
@@ -352,7 +352,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_exclusiveMaximum(): void
+    public function json_serialize_includes_exclusive_maximum(): void
     {
         $schema = new Schema(
             type: 'number',
@@ -366,7 +366,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_exclusiveMinimum(): void
+    public function json_serialize_includes_exclusive_minimum(): void
     {
         $schema = new Schema(
             type: 'number',
@@ -380,7 +380,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_maxLength(): void
+    public function json_serialize_includes_max_length(): void
     {
         $schema = new Schema(
             type: 'string',
@@ -394,7 +394,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_minLength(): void
+    public function json_serialize_includes_min_length(): void
     {
         $schema = new Schema(
             type: 'string',
@@ -422,7 +422,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_maxItems(): void
+    public function json_serialize_includes_max_items(): void
     {
         $schema = new Schema(
             type: 'array',
@@ -436,7 +436,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_minItems(): void
+    public function json_serialize_includes_min_items(): void
     {
         $schema = new Schema(
             type: 'array',
@@ -450,7 +450,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_uniqueItems(): void
+    public function json_serialize_includes_unique_items(): void
     {
         $schema = new Schema(
             type: 'array',
@@ -464,7 +464,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_maxProperties(): void
+    public function json_serialize_includes_max_properties(): void
     {
         $schema = new Schema(
             type: 'object',
@@ -478,7 +478,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_minProperties(): void
+    public function json_serialize_includes_min_properties(): void
     {
         $schema = new Schema(
             type: 'object',
@@ -492,7 +492,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_additionalProperties(): void
+    public function json_serialize_includes_additional_properties(): void
     {
         $schema = new Schema(
             type: 'object',
@@ -506,7 +506,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_unevaluatedProperties(): void
+    public function json_serialize_includes_unevaluated_properties(): void
     {
         $schema = new Schema(
             type: 'object',
@@ -520,7 +520,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_prefixItems(): void
+    public function json_serialize_includes_prefix_items(): void
     {
         $schema = new Schema(
             type: 'array',
@@ -551,7 +551,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_minContains(): void
+    public function json_serialize_includes_min_contains(): void
     {
         $schema = new Schema(
             type: 'array',
@@ -567,7 +567,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_maxContains(): void
+    public function json_serialize_includes_max_contains(): void
     {
         $schema = new Schema(
             type: 'array',
@@ -583,7 +583,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_patternProperties(): void
+    public function json_serialize_includes_pattern_properties(): void
     {
         $schema = new Schema(
             type: 'object',
@@ -599,7 +599,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_propertyNames(): void
+    public function json_serialize_includes_property_names(): void
     {
         $schema = new Schema(
             type: 'object',
@@ -613,7 +613,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_dependentSchemas(): void
+    public function json_serialize_includes_dependent_schemas(): void
     {
         $schema = new Schema(
             type: 'object',
@@ -668,7 +668,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_unevaluatedItems(): void
+    public function json_serialize_includes_unevaluated_items(): void
     {
         $schema = new Schema(
             type: 'array',
@@ -710,7 +710,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_contentEncoding(): void
+    public function json_serialize_includes_content_encoding(): void
     {
         $schema = new Schema(
             type: 'string',
@@ -724,7 +724,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_contentMediaType(): void
+    public function json_serialize_includes_content_media_type(): void
     {
         $schema = new Schema(
             type: 'string',
@@ -738,7 +738,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_contentSchema_as_bool(): void
+    public function json_serialize_includes_content_schema_as_bool(): void
     {
         $schema = new Schema(
             type: 'string',
@@ -753,7 +753,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_contentSchema_as_schema(): void
+    public function json_serialize_includes_content_schema_as_schema(): void
     {
         $contentSchema = new Schema(type: 'object');
         $schema = new Schema(
@@ -814,7 +814,7 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_jsonSchemaDialect(): void
+    public function json_serialize_includes_json_schema_dialect(): void
     {
         $schema = new Schema(
             type: 'object',

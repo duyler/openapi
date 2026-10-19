@@ -332,7 +332,7 @@ final class DiscriminatorValidatorTest extends TestCase
     }
 
     #[Test]
-    public function inline_schema_without_ref_in_oneOf_is_skipped_during_implicit_mapping(): void
+    public function inline_schema_without_ref_in_one_of_is_skipped_during_implicit_mapping(): void
     {
         $catSchema = new Schema(
             type: 'object',
@@ -376,7 +376,7 @@ final class DiscriminatorValidatorTest extends TestCase
     }
 
     #[Test]
-    public function discriminator_with_allOf_ref_resolves_correctly(): void
+    public function discriminator_with_all_of_ref_resolves_correctly(): void
     {
         $catSchema = new Schema(
             type: 'object',
@@ -430,7 +430,7 @@ final class DiscriminatorValidatorTest extends TestCase
     }
 
     #[Test]
-    public function discriminator_with_allOf_and_nested_oneOf(): void
+    public function discriminator_with_all_of_and_nested_one_of(): void
     {
         $catSchema = new Schema(
             type: 'object',
@@ -488,7 +488,7 @@ final class DiscriminatorValidatorTest extends TestCase
     }
 
     #[Test]
-    public function discriminator_with_allOf_unknown_value_throws_unknown_exception(): void
+    public function discriminator_with_all_of_unknown_value_throws_unknown_exception(): void
     {
         $catSchema = new Schema(
             type: 'object',
@@ -636,7 +636,7 @@ final class DiscriminatorValidatorTest extends TestCase
     }
 
     #[Test]
-    public function default_mapping_fallback_applies_when_propertyName_set_and_value_unresolved(): void
+    public function default_mapping_fallback_applies_when_property_name_set_and_value_unresolved(): void
     {
         $catSchema = new Schema(
             type: 'object',
@@ -693,7 +693,7 @@ final class DiscriminatorValidatorTest extends TestCase
     }
 
     #[Test]
-    public function default_mapping_fallback_applies_when_propertyName_null(): void
+    public function default_mapping_fallback_applies_when_property_name_null(): void
     {
         $genericSchema = new Schema(
             type: 'object',

@@ -1196,7 +1196,7 @@ final class StreamingContentParserTest extends TestCase
      * 100_001 records → TooManyRecordsException with max=100_000.
      */
     #[Test]
-    public function test_ndjson_record_count_limit_enforced(): void
+    public function ndjson_record_count_limit_enforced(): void
     {
         $body = implode("\n", $this->generateNdJsonLines(100_001));
 
@@ -1211,7 +1211,7 @@ final class StreamingContentParserTest extends TestCase
      * Boundary case for the off-by-one in the limit check.
      */
     #[Test]
-    public function test_ndjson_record_count_under_limit(): void
+    public function ndjson_record_count_under_limit(): void
     {
         $body = implode("\n", $this->generateNdJsonLines(100_000));
 
@@ -1224,7 +1224,7 @@ final class StreamingContentParserTest extends TestCase
      * SEC-10: SSE non-streaming parser enforces the default record cap.
      */
     #[Test]
-    public function test_sse_record_count_limit_enforced(): void
+    public function sse_record_count_limit_enforced(): void
     {
         $body = $this->generateSseBody(100_001);
 
@@ -1238,7 +1238,7 @@ final class StreamingContentParserTest extends TestCase
      * the default record cap.
      */
     #[Test]
-    public function test_json_seq_record_count_limit_enforced(): void
+    public function json_seq_record_count_limit_enforced(): void
     {
         $body = $this->generateJsonSeqBody(100_001);
 
@@ -1252,7 +1252,7 @@ final class StreamingContentParserTest extends TestCase
      * raises TooManyRecordsException with max=10.
      */
     #[Test]
-    public function test_custom_max_records(): void
+    public function custom_max_records(): void
     {
         $parser = new StreamingContentParser(maxRecords: 10);
         $body = implode("\n", $this->generateNdJsonLines(11));
@@ -1271,7 +1271,7 @@ final class StreamingContentParserTest extends TestCase
      * 10 records → no exception.
      */
     #[Test]
-    public function test_custom_max_records_boundary_at_limit(): void
+    public function custom_max_records_boundary_at_limit(): void
     {
         $parser = new StreamingContentParser(maxRecords: 10);
         $body = implode("\n", $this->generateNdJsonLines(10));
@@ -1285,7 +1285,7 @@ final class StreamingContentParserTest extends TestCase
      * SEC-10: SSE custom limit enforced.
      */
     #[Test]
-    public function test_custom_max_records_sse(): void
+    public function custom_max_records_sse(): void
     {
         $parser = new StreamingContentParser(maxRecords: 10);
         $body = $this->generateSseBody(11);
@@ -1299,7 +1299,7 @@ final class StreamingContentParserTest extends TestCase
      * SEC-10: JSON-seq custom limit enforced.
      */
     #[Test]
-    public function test_custom_max_records_json_seq(): void
+    public function custom_max_records_json_seq(): void
     {
         $parser = new StreamingContentParser(maxRecords: 10);
         $body = $this->generateJsonSeqBody(11);
@@ -1315,7 +1315,7 @@ final class StreamingContentParserTest extends TestCase
      * for chunked stream parsing too.
      */
     #[Test]
-    public function test_streaming_variant_enforces_limit_ndjson(): void
+    public function streaming_variant_enforces_limit_ndjson(): void
     {
         $parser = new StreamingContentParser(maxRecords: 10);
         $body = implode("\n", $this->generateNdJsonLines(11));
@@ -1332,7 +1332,7 @@ final class StreamingContentParserTest extends TestCase
      * SEC-10: SSE streaming variant enforces the cap.
      */
     #[Test]
-    public function test_streaming_variant_enforces_limit_sse(): void
+    public function streaming_variant_enforces_limit_sse(): void
     {
         $parser = new StreamingContentParser(maxRecords: 10);
         $body = $this->generateSseBody(11);
@@ -1349,7 +1349,7 @@ final class StreamingContentParserTest extends TestCase
      * SEC-10: JSON Text Sequence streaming variant enforces the cap.
      */
     #[Test]
-    public function test_streaming_variant_enforces_limit_json_seq(): void
+    public function streaming_variant_enforces_limit_json_seq(): void
     {
         $parser = new StreamingContentParser(maxRecords: 10);
         $body = $this->generateJsonSeqBody(11);
@@ -1367,7 +1367,7 @@ final class StreamingContentParserTest extends TestCase
      * (`data:` lines accumulated into one event) counts as one record.
      */
     #[Test]
-    public function test_sse_counts_events_not_lines(): void
+    public function sse_counts_events_not_lines(): void
     {
         $parser = new StreamingContentParser(maxRecords: 2);
         // Two multi-line events, each composed of 3 data lines → 2 records.
@@ -1383,7 +1383,7 @@ final class StreamingContentParserTest extends TestCase
      * SEC-10: NDJSON empty lines do not count toward the cap.
      */
     #[Test]
-    public function test_empty_lines_do_not_count_toward_limit(): void
+    public function empty_lines_do_not_count_toward_limit(): void
     {
         $parser = new StreamingContentParser(maxRecords: 3);
         // 3 records interleaved with blank lines — must succeed.
@@ -1399,7 +1399,7 @@ final class StreamingContentParserTest extends TestCase
      * count toward the cap.
      */
     #[Test]
-    public function test_json_seq_empty_items_do_not_count_toward_limit(): void
+    public function json_seq_empty_items_do_not_count_toward_limit(): void
     {
         $parser = new StreamingContentParser(maxRecords: 3);
         $body = "\x1E\x1E{\"a\":1}\x1E\x1E{\"b\":2}\x1E\x1E{\"c\":3}\x1E\x1E";
@@ -1415,7 +1415,7 @@ final class StreamingContentParserTest extends TestCase
      * only, not on in-flight accumulation.
      */
     #[Test]
-    public function test_sse_trailing_unflushed_event_counts_after_limit_check(): void
+    public function sse_trailing_unflushed_event_counts_after_limit_check(): void
     {
         $parser = new StreamingContentParser(maxRecords: 2);
         // 2 completed events (each terminated by blank line) + 1 trailing
@@ -1433,7 +1433,7 @@ final class StreamingContentParserTest extends TestCase
      * not count toward the cap.
      */
     #[Test]
-    public function test_sse_comments_do_not_count_toward_limit(): void
+    public function sse_comments_do_not_count_toward_limit(): void
     {
         $parser = new StreamingContentParser(maxRecords: 2);
         // 2 events with multiple comment lines around them — must succeed.
@@ -1449,7 +1449,7 @@ final class StreamingContentParserTest extends TestCase
      * unflushed event when the body ends without a terminating blank line.
      */
     #[Test]
-    public function test_streaming_sse_trailing_unflushed_event_counts_after_limit_check(): void
+    public function streaming_sse_trailing_unflushed_event_counts_after_limit_check(): void
     {
         $parser = new StreamingContentParser(maxRecords: 2);
         // 2 completed events + 1 trailing event without terminating blank
@@ -1468,7 +1468,7 @@ final class StreamingContentParserTest extends TestCase
      * SEC-10: SSE streaming variant counts events, not lines.
      */
     #[Test]
-    public function test_streaming_sse_counts_events_not_lines(): void
+    public function streaming_sse_counts_events_not_lines(): void
     {
         $parser = new StreamingContentParser(maxRecords: 2);
         $body = "event: first\ndata: a\ndata: b\ndata: c\n\n"

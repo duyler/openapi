@@ -13,7 +13,7 @@ use stdClass;
 final class TypeGuarantorTest extends TestCase
 {
     #[Test]
-    public function ensureValidType_returns_array_as_is(): void
+    public function ensure_valid_type_returns_array_as_is(): void
     {
         $value = [1, 2, 3];
         $result = TypeGuarantor::ensureValidType($value);
@@ -22,7 +22,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_array_with_nullable_as_type_true(): void
+    public function ensure_valid_type_returns_array_with_nullable_as_type_true(): void
     {
         $value = ['key' => 'value'];
         $result = TypeGuarantor::ensureValidType($value, true);
@@ -31,7 +31,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_array_with_nullable_as_type_false(): void
+    public function ensure_valid_type_returns_array_with_nullable_as_type_false(): void
     {
         $value = [1, 2, 3];
         $result = TypeGuarantor::ensureValidType($value, false);
@@ -40,7 +40,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_null_when_nullable_as_type_true(): void
+    public function ensure_valid_type_returns_null_when_nullable_as_type_true(): void
     {
         $result = TypeGuarantor::ensureValidType(null, true);
 
@@ -48,7 +48,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_null_when_nullable_as_type_false(): void
+    public function ensure_valid_type_returns_null_when_nullable_as_type_false(): void
     {
         $result = TypeGuarantor::ensureValidType(null, false);
 
@@ -56,7 +56,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_throws_type_error_for_object(): void
+    public function ensure_valid_type_throws_type_error_for_object(): void
     {
         $value = new stdClass();
 
@@ -67,7 +67,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_throws_type_error_for_resource(): void
+    public function ensure_valid_type_throws_type_error_for_resource(): void
     {
         $resource = fopen('php://memory', 'r');
 
@@ -82,7 +82,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_int_as_is(): void
+    public function ensure_valid_type_returns_int_as_is(): void
     {
         $value = 42;
         $result = TypeGuarantor::ensureValidType($value);
@@ -91,7 +91,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_int_with_nullable_as_type_true(): void
+    public function ensure_valid_type_returns_int_with_nullable_as_type_true(): void
     {
         $value = 42;
         $result = TypeGuarantor::ensureValidType($value, true);
@@ -100,7 +100,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_int_with_nullable_as_type_false(): void
+    public function ensure_valid_type_returns_int_with_nullable_as_type_false(): void
     {
         $value = 42;
         $result = TypeGuarantor::ensureValidType($value, false);
@@ -109,7 +109,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_string_as_is(): void
+    public function ensure_valid_type_returns_string_as_is(): void
     {
         $value = 'test';
         $result = TypeGuarantor::ensureValidType($value);
@@ -118,7 +118,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_string_with_nullable_as_type_true(): void
+    public function ensure_valid_type_returns_string_with_nullable_as_type_true(): void
     {
         $value = 'hello';
         $result = TypeGuarantor::ensureValidType($value, true);
@@ -127,7 +127,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_string_with_nullable_as_type_false(): void
+    public function ensure_valid_type_returns_string_with_nullable_as_type_false(): void
     {
         $value = 'world';
         $result = TypeGuarantor::ensureValidType($value, false);
@@ -136,7 +136,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_float_as_is(): void
+    public function ensure_valid_type_returns_float_as_is(): void
     {
         $value = 3.14;
         $result = TypeGuarantor::ensureValidType($value);
@@ -145,7 +145,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_float_with_nullable_as_type_true(): void
+    public function ensure_valid_type_returns_float_with_nullable_as_type_true(): void
     {
         $value = 2.5;
         $result = TypeGuarantor::ensureValidType($value, true);
@@ -154,7 +154,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_float_with_nullable_as_type_false(): void
+    public function ensure_valid_type_returns_float_with_nullable_as_type_false(): void
     {
         $value = 1.75;
         $result = TypeGuarantor::ensureValidType($value, false);
@@ -163,7 +163,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_bool_as_is(): void
+    public function ensure_valid_type_returns_bool_as_is(): void
     {
         $value = true;
         $result = TypeGuarantor::ensureValidType($value);
@@ -172,7 +172,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_bool_false_as_is(): void
+    public function ensure_valid_type_returns_bool_false_as_is(): void
     {
         $value = false;
         $result = TypeGuarantor::ensureValidType($value);
@@ -181,7 +181,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_bool_with_nullable_as_type_true(): void
+    public function ensure_valid_type_returns_bool_with_nullable_as_type_true(): void
     {
         $value = true;
         $result = TypeGuarantor::ensureValidType($value, true);
@@ -190,7 +190,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_returns_bool_with_nullable_as_type_false(): void
+    public function ensure_valid_type_returns_bool_with_nullable_as_type_false(): void
     {
         $value = false;
         $result = TypeGuarantor::ensureValidType($value, false);
@@ -199,7 +199,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_converts_empty_array_as_is(): void
+    public function ensure_valid_type_converts_empty_array_as_is(): void
     {
         $value = [];
         $result = TypeGuarantor::ensureValidType($value);
@@ -209,7 +209,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_converts_nested_array_as_is(): void
+    public function ensure_valid_type_converts_nested_array_as_is(): void
     {
         $value = [['nested' => 'value']];
         $result = TypeGuarantor::ensureValidType($value);
@@ -219,7 +219,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_converts_assoc_array_as_is(): void
+    public function ensure_valid_type_converts_assoc_array_as_is(): void
     {
         $value = ['key' => 'value', 'number' => 42];
         $result = TypeGuarantor::ensureValidType($value);
@@ -229,7 +229,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_converts_numeric_string_to_string(): void
+    public function ensure_valid_type_converts_numeric_string_to_string(): void
     {
         $value = '123';
         $result = TypeGuarantor::ensureValidType($value);
@@ -238,7 +238,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensureValidType_default_nullable_as_type_is_true(): void
+    public function ensure_valid_type_default_nullable_as_type_is_true(): void
     {
         $result = TypeGuarantor::ensureValidType(null);
 

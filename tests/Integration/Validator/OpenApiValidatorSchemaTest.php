@@ -32,7 +32,7 @@ components:
 YAML;
 
     #[Test]
-    public function validateSchema_succeeds_on_valid_data(): void
+    public function validate_schema_succeeds_on_valid_data(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SCHEMA_YAML)
@@ -48,7 +48,7 @@ YAML;
     }
 
     #[Test]
-    public function validateSchema_throws_on_invalid_format(): void
+    public function validate_schema_throws_on_invalid_format(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SCHEMA_YAML)
@@ -64,7 +64,7 @@ YAML;
     }
 
     #[Test]
-    public function validateSchema_throws_on_missing_required_field(): void
+    public function validate_schema_throws_on_missing_required_field(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SCHEMA_YAML)

@@ -227,7 +227,7 @@ class AnyOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function anyOf_passes_when_multiple_nullable_schemas_match_null(): void
+    public function any_of_passes_when_multiple_nullable_schemas_match_null(): void
     {
         $schema = new Schema(
             anyOf: [
@@ -243,7 +243,7 @@ class AnyOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function anyOf_passes_when_parent_schema_is_nullable_and_data_is_null(): void
+    public function any_of_passes_when_parent_schema_is_nullable_and_data_is_null(): void
     {
         $schema = new Schema(
             nullable: true,
@@ -256,7 +256,7 @@ class AnyOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function anyOf_rejects_null_when_parent_nullable_is_not_honored(): void
+    public function any_of_rejects_null_when_parent_nullable_is_not_honored(): void
     {
         $schema = new Schema(
             nullable: true,

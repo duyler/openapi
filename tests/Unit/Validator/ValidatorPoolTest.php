@@ -22,7 +22,7 @@ final class ValidatorPoolTest extends TestCase
     }
 
     #[Test]
-    public function getOrCreate_creates_new_instance(): void
+    public function get_or_create_creates_new_instance(): void
     {
         $instance = $this->pool->getOrCreate('key_a', fn() => new stdClass());
 
@@ -30,7 +30,7 @@ final class ValidatorPoolTest extends TestCase
     }
 
     #[Test]
-    public function getOrCreate_returns_same_instance_for_same_key(): void
+    public function get_or_create_returns_same_instance_for_same_key(): void
     {
         $instance1 = $this->pool->getOrCreate('key_a', fn() => new stdClass());
         $instance2 = $this->pool->getOrCreate('key_a', fn() => new stdClass());
@@ -39,7 +39,7 @@ final class ValidatorPoolTest extends TestCase
     }
 
     #[Test]
-    public function getOrCreate_returns_different_instances_for_different_keys(): void
+    public function get_or_create_returns_different_instances_for_different_keys(): void
     {
         $instance1 = $this->pool->getOrCreate('key_a', fn() => new stdClass());
         $instance2 = $this->pool->getOrCreate('key_b', fn() => new stdClass());
@@ -48,7 +48,7 @@ final class ValidatorPoolTest extends TestCase
     }
 
     #[Test]
-    public function getOrCreate_does_not_call_factory_on_cache_hit(): void
+    public function get_or_create_does_not_call_factory_on_cache_hit(): void
     {
         $callCount = 0;
         $factory = function () use (&$callCount) {
@@ -64,7 +64,7 @@ final class ValidatorPoolTest extends TestCase
     }
 
     #[Test]
-    public function getOrCreate_returns_strictly_same_object(): void
+    public function get_or_create_returns_strictly_same_object(): void
     {
         $object = new stdClass();
         $object->value = 42;

@@ -202,7 +202,7 @@ class AllOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function allOf_propagates_nested_validation_exceptions(): void
+    public function all_of_propagates_nested_validation_exceptions(): void
     {
         $schema = new Schema(
             allOf: [
@@ -226,7 +226,7 @@ class AllOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function allOf_propagates_invalid_data_type_errors(): void
+    public function all_of_propagates_invalid_data_type_errors(): void
     {
         $schema = new Schema(
             allOf: [new Schema(type: 'string')],
@@ -242,7 +242,7 @@ class AllOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function allOf_passes_when_parent_schema_is_nullable_and_data_is_null(): void
+    public function all_of_passes_when_parent_schema_is_nullable_and_data_is_null(): void
     {
         $schema = new Schema(
             nullable: true,
@@ -255,7 +255,7 @@ class AllOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function allOf_rejects_null_when_parent_nullable_is_not_honored(): void
+    public function all_of_rejects_null_when_parent_nullable_is_not_honored(): void
     {
         $schema = new Schema(
             nullable: true,

@@ -14,7 +14,7 @@ final class TooManyItemsForUniqueCheckErrorTest extends TestCase
     private const int MAX = 100000;
 
     #[Test]
-    public function keyword_returns_uniqueItems(): void
+    public function keyword_returns_unique_items(): void
     {
         $exception = $this->build();
 
@@ -22,7 +22,7 @@ final class TooManyItemsForUniqueCheckErrorTest extends TestCase
     }
 
     #[Test]
-    public function schemaPath_returns_uniqueItems_pointer(): void
+    public function schema_path_returns_unique_items_pointer(): void
     {
         $exception = $this->build();
 
@@ -49,7 +49,7 @@ final class TooManyItemsForUniqueCheckErrorTest extends TestCase
     }
 
     #[Test]
-    public function suggestion_advises_maxItems(): void
+    public function suggestion_advises_max_items(): void
     {
         $exception = $this->build();
 
@@ -60,7 +60,7 @@ final class TooManyItemsForUniqueCheckErrorTest extends TestCase
     }
 
     #[Test]
-    public function dataPath_accepts_breadcrumb_and_renders_as_string(): void
+    public function data_path_accepts_breadcrumb_and_renders_as_string(): void
     {
         $breadcrumb = new Breadcrumb()->append('items');
 

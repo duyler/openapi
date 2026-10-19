@@ -108,7 +108,7 @@ class PrefixItemsValidatorTest extends TestCase
     }
 
     #[Test]
-    public function prefixItems_does_not_validate_remaining_items(): void
+    public function prefix_items_does_not_validate_remaining_items(): void
     {
         $prefixSchema = new Schema(type: 'string');
         $itemsSchema = new Schema(type: 'integer');

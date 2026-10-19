@@ -128,7 +128,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_creates_unique_hash_for_schema(): void
+    public function generate_key_creates_unique_hash_for_schema(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -152,7 +152,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_creates_different_hash_for_different_schemas(): void
+    public function generate_key_creates_different_hash_for_different_schemas(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -174,7 +174,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_includes_namespace(): void
+    public function generate_key_includes_namespace(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -187,7 +187,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_with_custom_namespace(): void
+    public function generate_key_with_custom_namespace(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool, 'custom_namespace');
@@ -200,7 +200,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_hashes_all_schema_properties(): void
+    public function generate_key_hashes_all_schema_properties(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -228,7 +228,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_different_for_nested_schemas(): void
+    public function generate_key_different_for_nested_schemas(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -254,7 +254,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_different_for_array_schemas(): void
+    public function generate_key_different_for_array_schemas(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -276,7 +276,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_handles_null_properties(): void
+    public function generate_key_handles_null_properties(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -291,7 +291,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_no_collision_for_previously_excluded_format(): void
+    public function generate_key_no_collision_for_previously_excluded_format(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -306,7 +306,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_no_collision_for_previously_excluded_title(): void
+    public function generate_key_no_collision_for_previously_excluded_title(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -321,7 +321,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_no_collision_for_previously_excluded_description(): void
+    public function generate_key_no_collision_for_previously_excluded_description(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -336,7 +336,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_no_collision_for_previously_excluded_deprecated(): void
+    public function generate_key_no_collision_for_previously_excluded_deprecated(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -351,7 +351,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_no_collision_for_previously_excluded_nullable(): void
+    public function generate_key_no_collision_for_previously_excluded_nullable(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -366,7 +366,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_no_collision_for_previously_excluded_default(): void
+    public function generate_key_no_collision_for_previously_excluded_default(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -381,7 +381,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_no_collision_for_previously_excluded_const(): void
+    public function generate_key_no_collision_for_previously_excluded_const(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -396,7 +396,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_no_collision_for_previously_excluded_discriminator(): void
+    public function generate_key_no_collision_for_previously_excluded_discriminator(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -417,7 +417,7 @@ final class CompilationCacheTest extends TestCase
     }
 
     #[Test]
-    public function generateKey_no_collision_for_previously_excluded_readOnly_writeOnly(): void
+    public function generate_key_no_collision_for_previously_excluded_read_only_write_only(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -613,7 +613,7 @@ final class CompilationCacheTest extends TestCase
      * calls for the same object must return the same value.
      */
     #[Test]
-    public function generateKey_handles_self_referential_schema(): void
+    public function generate_key_handles_self_referential_schema(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -637,7 +637,7 @@ final class CompilationCacheTest extends TestCase
      * the original JsonException available via getPrevious().
      */
     #[Test]
-    public function generateKey_wraps_json_exception_in_compilation_cache_exception(): void
+    public function generate_key_wraps_json_exception_in_compilation_cache_exception(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -720,7 +720,7 @@ final class CompilationCacheTest extends TestCase
      * recycling after GC).
      */
     #[Test]
-    public function generateKey_cyclic_schema_different_instances_yields_same_hash(): void
+    public function generate_key_cyclic_schema_different_instances_yields_same_hash(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);
@@ -742,7 +742,7 @@ final class CompilationCacheTest extends TestCase
      * is unreachable, which cannot happen mid-call).
      */
     #[Test]
-    public function generateKey_cyclic_schema_survives_gc_between_calls(): void
+    public function generate_key_cyclic_schema_survives_gc_between_calls(): void
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $cache = new CompilationCache($pool);

@@ -29,7 +29,7 @@ final class TagTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_externalDocs(): void
+    public function json_serialize_includes_external_docs(): void
     {
         $tag = new Tag(
             name: 'users',

@@ -152,7 +152,7 @@ final class ErrorFormattingTest extends FunctionalTestCase
     }
 
     #[Test]
-    public function range_error_minLength_formatting(): void
+    public function range_error_min_length_formatting(): void
     {
         $schema = new Schema(
             type: 'string',
@@ -168,7 +168,7 @@ final class ErrorFormattingTest extends FunctionalTestCase
     }
 
     #[Test]
-    public function range_error_maxLength_formatting(): void
+    public function range_error_max_length_formatting(): void
     {
         $schema = new Schema(
             type: 'string',

@@ -241,7 +241,7 @@ class OneOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function oneOf_throws_when_multiple_nullable_schemas_match_null(): void
+    public function one_of_throws_when_multiple_nullable_schemas_match_null(): void
     {
         $schema = new Schema(
             oneOf: [
@@ -258,7 +258,7 @@ class OneOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function oneOf_passes_when_single_nullable_schema_matches_null(): void
+    public function one_of_passes_when_single_nullable_schema_matches_null(): void
     {
         $schema = new Schema(
             oneOf: [
@@ -274,7 +274,7 @@ class OneOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function oneOf_passes_when_parent_schema_is_nullable_and_data_is_null(): void
+    public function one_of_passes_when_parent_schema_is_nullable_and_data_is_null(): void
     {
         $schema = new Schema(
             nullable: true,
@@ -290,7 +290,7 @@ class OneOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function oneOf_rejects_null_when_parent_nullable_is_not_honored(): void
+    public function one_of_rejects_null_when_parent_nullable_is_not_honored(): void
     {
         $schema = new Schema(
             nullable: true,

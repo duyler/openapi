@@ -161,7 +161,7 @@ final class LinkTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_operationId(): void
+    public function json_serialize_includes_operation_id(): void
     {
         $link = new Link(
             operationId: 'getUserById',
@@ -174,7 +174,7 @@ final class LinkTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_requestBody(): void
+    public function json_serialize_includes_request_body(): void
     {
         $link = new Link(
             requestBody: new RequestBody(
