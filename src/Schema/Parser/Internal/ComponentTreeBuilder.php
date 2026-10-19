@@ -30,6 +30,14 @@ final readonly class ComponentTreeBuilder
 
     public function buildRequestBody(array $data): RequestBody
     {
+        if (isset($data['$ref'])) {
+            return new RequestBody(
+                ref: TypeHelper::asString($data['$ref']),
+                refSummary: TypeHelper::asStringOrNull($data['summary'] ?? null),
+                refDescription: TypeHelper::asStringOrNull($data['description'] ?? null),
+            );
+        }
+
         return new RequestBody(
             description: TypeHelper::asStringOrNull($data['description'] ?? null),
             content: $this->nullable($data, 'content', $this->buildContent(...)),

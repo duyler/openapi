@@ -19,6 +19,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   operation is resolved, with an operation level parameter overriding the
   path level one on matching `name` + `in`. The same merge is applied to
   webhooks and callbacks, which are Path Item objects as well. (#61)
+- An array-typed `form` parameter no longer rejects a single value.
+  `ParameterDeserializer::deserializeForm()` decided whether a
+  non-exploded value was an array by looking for a comma instead of at
+  the declared schema type, so `?include=author,comments` deserialized
+  to a list while `?include=author` stayed a string and failed the
+  `type: array` check with `TypeMismatchError`. Form now routes on the
+  schema type through `splitBySeparator()` — as `simple`, `matrix`,
+  `label` and `cookie` already did — yielding a one item list for a
+  lone value and an empty list for `?include=`. The comma heuristic
+  remains for parameters that declare no array type, and `explode`
+  handling is unchanged. (#58)
+- A `requestBody` that is a Reference Object is now resolved instead of
+  silently discarded, so the referenced body is actually validated. The
+  parser dropped `$ref` — it read only `description`, `content` and
+  `required` — which produced an empty `RequestBody`, and
+  `RequestBodyValidatorWithContext` then returned at its
+  `null === $requestBody->content` early exit. Every request body behind a
+  `$ref` was therefore unvalidated: malformed payloads passed and
+  `required: true` was not enforced, with no exception or warning. Reference
+  support is now wired through all five layers that `Parameter` and
+  `Response` already used — `RequestBody` gains `ref`/`refSummary`/
+  `refDescription`, `ComponentTreeBuilder::buildRequestBody()` branches on
+  `$ref`, `DocumentNavigator` accepts `#/components/requestBodies/*` targets,
+  and `RefResolverInterface` gains `resolveRequestBody()` and
+  `resolveRequestBodyWithOverride()`. Chained and dangling references behave
+  as they do for responses: chains follow through, and an unresolvable or
+  wrongly-typed pointer throws `UnresolvableRefException` rather than
+  failing open. Webhooks and callbacks are covered too, since both validate
+  through `RequestValidator`. Per OAS 3.1+, a `description` sibling of
+  `$ref` overrides the referenced description (#56).
 
 ## [0.7.3]
 
