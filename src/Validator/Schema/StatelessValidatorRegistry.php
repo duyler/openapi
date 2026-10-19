@@ -7,7 +7,6 @@ namespace Duyler\OpenApi\Validator\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
-use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -28,8 +27,6 @@ final readonly class StatelessValidatorRegistry
         bool $reportDeprecated = false,
         LoggerInterface $logger = new NullLogger(),
         ?EventDispatcherInterface $eventDispatcher = null,
-        RegexValidator $regexValidator = new RegexValidator(),
-        PregExecutor $pregExecutor = new PregExecutor(),
         ?OpenApiDocument $document = null,
         ?RefResolverInterface $refResolver = null,
     ) {
@@ -42,8 +39,6 @@ final readonly class StatelessValidatorRegistry
             formatRegistry: $formatRegistry,
             strictFormats: $strictFormats,
             reportDeprecated: $reportDeprecated,
-            regexValidator: $regexValidator,
-            pregExecutor: $pregExecutor,
             document: null === $refResolver ? null : $document,
         );
 

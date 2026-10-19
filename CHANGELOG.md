@@ -85,6 +85,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `$ref` overrides the referenced description (#56).
 - `anyOf`/`oneOf`/`allOf` evaluate every branch again once the composition error cap is reached. A merge had restored the early `return` in `validateSchemas()`, so a matching branch declared after the cap was never counted. Only error collection stops at the cap; `allOf` now reports the true number of failed branches (#54)
 
+### Removed
+
+- **BC break for direct integrators.** The deprecated schema-validation stack
+  (`@deprecated since 0.6.0`) is deleted: `SchemaValidator\SchemaValidator`,
+  `SchemaValidator\ValidatorDependencies` (the legacy constructor-dependency
+  bag), `SchemaValidator\ValidatorFactory`, `Registry\DefaultValidatorRegistry`,
+  `Registry\ValidatorRegistryInterface` and `Exception\UnknownValidatorException`.
+  Custom validator/registry injection through these classes is removed with no
+  replacement; the 29 builtin validators are the complete set.
+  All five internal consumption points had already migrated to
+  `SchemaValidatorWithContext` / `StatelessValidatorDispatcher` / the
+  `SchemaValidatorDependencies` DTO; nothing in `src/` referenced the legacy
+  classes. Integrate through `OpenApiValidatorBuilder` or construct validators
+  against `SchemaValidatorDependencies` — validators now take that DTO in their
+  constructors instead of the removed bag. The one shared keyword-applicability
+  filter now lives in `Schema\Internal\ApplicableValidators`, and the single
+  `items: true|false` implementation lives in
+  `SchemaValidator\Internal\BooleanItemsValidator`.
+- `Validation\ValidatorDependencies` is renamed to `Validation\ValidationStack`
+  (and `Validation\Internal\ValidatorDependenciesGroup` to
+  `Validation\Internal\ValidationGroup`) — one short `ValidatorDependencies` name
+  remains, the `Dto\ValidatorDependencies` service container. The class was never
+  README-documented; the only caller is `OpenApiValidatorBuilder`, which is
+  updated. The 21-parameter constructor keeps its PHPDoc-only `@deprecated`
+  (1.x window, `fromGroup()` replacement) — no `#[Deprecated]` attribute, so no
+  runtime `E_DEPRECATED` cascade.
+- The optional `regexValidator` / `pregExecutor` constructor parameters of
+  `Schema\StatelessValidatorRegistry` are removed — the canonical defaults live
+  on `SchemaValidatorDependencies`. With custom instances injected through
+  `ValidationStack`/`Builder` (`maxRegexBacktracks`, shared `PregExecutor`), the
+  stateless registry's schema-level validators now use the default instances;
+  request/response/context paths keep the injected ones.
+- The optional `?PregExecutor` constructor parameters of
+  `ResponseValidatorWithContext`, `ResponseBodyValidatorWithContext` and
+  `RequestBodyValidatorWithContext` are removed: header and body validation now
+  resolve their regex executor from a single source,
+  `SchemaValidatorDependencies::pregExecutor`, so direct construction can no
+  longer mix two instances.
+
 ## [0.7.3]
 
 ### Fixed

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\JsonDepthLimit;
 use Duyler\OpenApi\Validator\LibxmlSecuredContext;
@@ -34,7 +35,7 @@ final readonly class ContentMediaTypeValidator implements KeywordApplicable
     private const int XML_PARSE_OPTIONS = LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING;
 
     public function __construct(
-        private readonly ValidatorDependencies $dependencies,
+        private readonly SchemaValidatorDependencies $dependencies,
     ) {}
 
     #[Override]

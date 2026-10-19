@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Functional\Schema;
 
+use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Schema\Model\Schema;
-use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\Test;
@@ -36,13 +39,18 @@ use function count;
 final class SchemaValidationTest extends TestCase
 {
     private ValidatorPool $pool;
-    private SchemaValidator $validator;
+    private SchemaValidatorInterface $validator;
 
     #[Override]
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new SchemaValidator($this->pool, BuiltinFormats::create());
+        $this->validator = new SchemaValidatorDependencies(
+            pool: $this->pool,
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()),
+            formatRegistry: BuiltinFormats::create(),
+        )->rootStatelessValidator();
     }
 
     #[Test]

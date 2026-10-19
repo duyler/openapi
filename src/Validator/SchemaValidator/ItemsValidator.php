@@ -9,12 +9,11 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
-use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
+use Duyler\OpenApi\Validator\SchemaValidator\Internal\BooleanItemsValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\Internal\ItemValidationExceptionTrait;
 use Duyler\OpenApi\Validator\SchemaValidator\Internal\ItemValidationState;
-use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
 use function is_array;
@@ -45,7 +44,7 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
         }
 
         if (is_bool($schema->items)) {
-            $this->validateBooleanItems($data, $schema, $context);
+            BooleanItemsValidator::validate($data, $schema, $context);
 
             return;
         }
@@ -108,49 +107,6 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
                 $state->itemsSchema,
                 self::ITEM_SCHEMA_PATH,
                 $state->context,
-            );
-        }
-    }
-
-    /**
-     * @param array<array-key, mixed> $data
-     */
-    private function validateBooleanItems(array $data, Schema $schema, ?ValidationContext $context): void
-    {
-        $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
-
-        if ($schema->items) {
-            $dataCount = count($data);
-
-            if (null !== $context) {
-                for ($i = $prefixCount; $i < $dataCount; ++$i) {
-                    $context->markItemEvaluated($i);
-                }
-            }
-
-            return;
-        }
-
-        $dataPath = $this->getDataPath($context);
-        $errors = [];
-        $dataCount = count($data);
-
-        for ($i = $prefixCount; $i < $dataCount; ++$i) {
-            /** @var mixed $rejectedItem */
-            $rejectedItem = $data[$i];
-
-            $errors[] = new TypeMismatchError(
-                expected: 'nothing (boolean schema false)',
-                actual: TypeFormatter::format($rejectedItem),
-                dataPath: $dataPath . '[' . $i . ']',
-                schemaPath: '/items',
-            );
-        }
-
-        if ([] !== $errors) {
-            throw new ValidationException(
-                'Items rejected by items: false',
-                errors: $errors,
             );
         }
     }

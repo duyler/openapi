@@ -27,7 +27,6 @@ use Duyler\OpenApi\Validator\SchemaValidator\DependentSchemasValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ItemsValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\PrefixItemsValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ReadOnlyWriteOnlyValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -66,7 +65,7 @@ final class ValidationExceptionErrorsTest extends TestCase
     #[Test]
     public function read_only_violation_has_errors_array(): void
     {
-        $validator = new ReadOnlyWriteOnlyValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new ReadOnlyWriteOnlyValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'object',
             properties: [
@@ -96,7 +95,7 @@ final class ValidationExceptionErrorsTest extends TestCase
     #[Test]
     public function write_only_violation_has_errors_array(): void
     {
-        $validator = new ReadOnlyWriteOnlyValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new ReadOnlyWriteOnlyValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'object',
             properties: [
@@ -244,7 +243,7 @@ final class ValidationExceptionErrorsTest extends TestCase
     #[Test]
     public function items_validator_invalid_item_has_errors_array(): void
     {
-        $validator = new ItemsValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new ItemsValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'array',
             items: new Schema(type: 'string'),
@@ -273,7 +272,7 @@ final class ValidationExceptionErrorsTest extends TestCase
     #[Test]
     public function items_validator_validation_failure_propagates_errors(): void
     {
-        $validator = new ItemsValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new ItemsValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'array',
             items: new Schema(
@@ -306,7 +305,7 @@ final class ValidationExceptionErrorsTest extends TestCase
     #[Test]
     public function prefix_items_validator_invalid_item_has_errors_array(): void
     {
-        $validator = new PrefixItemsValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new PrefixItemsValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'array',
             prefixItems: [new Schema(type: 'string')],
@@ -334,7 +333,7 @@ final class ValidationExceptionErrorsTest extends TestCase
     #[Test]
     public function prefix_items_validator_validation_failure_propagates_errors(): void
     {
-        $validator = new PrefixItemsValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new PrefixItemsValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'array',
             prefixItems: [
@@ -359,7 +358,7 @@ final class ValidationExceptionErrorsTest extends TestCase
     #[Test]
     public function dependent_schemas_validator_invalid_has_errors_array(): void
     {
-        $validator = new DependentSchemasValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new DependentSchemasValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'object',
             dependentSchemas: [
@@ -396,7 +395,7 @@ final class ValidationExceptionErrorsTest extends TestCase
     #[Test]
     public function dependent_schemas_validator_validation_failure_propagates_errors(): void
     {
-        $validator = new DependentSchemasValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new DependentSchemasValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'object',
             dependentSchemas: [
@@ -422,7 +421,7 @@ final class ValidationExceptionErrorsTest extends TestCase
     #[Test]
     public function dependent_schemas_validator_fallback_when_inner_exception_has_no_errors(): void
     {
-        $validator = new DependentSchemasValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new DependentSchemasValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'object',
             dependentSchemas: [
@@ -452,7 +451,7 @@ final class ValidationExceptionErrorsTest extends TestCase
     #[Test]
     public function items_validator_fallback_when_inner_exception_has_no_errors(): void
     {
-        $validator = new ItemsValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new ItemsValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'array',
             items: new Schema(
@@ -480,7 +479,7 @@ final class ValidationExceptionErrorsTest extends TestCase
     #[Test]
     public function prefix_items_validator_fallback_when_inner_exception_has_no_errors(): void
     {
-        $validator = new PrefixItemsValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new PrefixItemsValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'array',
             prefixItems: [
@@ -510,7 +509,7 @@ final class ValidationExceptionErrorsTest extends TestCase
     #[Test]
     public function items_validator_scalar_type_mismatch_wraps_in_validation_exception(): void
     {
-        $validator = new ItemsValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new ItemsValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'array',
             items: new Schema(type: 'integer'),
@@ -538,7 +537,7 @@ final class ValidationExceptionErrorsTest extends TestCase
     #[Test]
     public function prefix_items_validator_scalar_type_mismatch_wraps_in_validation_exception(): void
     {
-        $validator = new PrefixItemsValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new PrefixItemsValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'array',
             prefixItems: [new Schema(type: 'integer')],
@@ -565,7 +564,7 @@ final class ValidationExceptionErrorsTest extends TestCase
     #[Test]
     public function dependent_schemas_validator_type_mismatch_wraps_in_validation_exception(): void
     {
-        $validator = new DependentSchemasValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new DependentSchemasValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(
             type: 'object',
             dependentSchemas: [

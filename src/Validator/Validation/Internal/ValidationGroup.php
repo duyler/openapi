@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Validation\Internal;
 
 /** @internal */
-final readonly class ValidatorDependenciesGroup
+final readonly class ValidationGroup
 {
     public function __construct(
         public readonly RootServices $root,

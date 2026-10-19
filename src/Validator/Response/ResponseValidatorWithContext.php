@@ -11,7 +11,6 @@ use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Exception\UndefinedResponseException;
-use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorDispatcher;
 use Duyler\OpenApi\Schema\Model\Response;
 use Psr\Http\Message\ResponseInterface;
@@ -31,9 +30,7 @@ final readonly class ResponseValidatorWithContext
         private readonly OpenApiDocument $document,
         private readonly SchemaValidatorDependencies $dependencies,
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
-        ?PregExecutor $pregExecutor = null,
     ) {
-        $resolvedPregExecutor = $pregExecutor ?? new PregExecutor($this->configuration->maxRegexBacktracks);
         $this->statusCodeValidator = new StatusCodeValidator();
 
         $schemaValidator = new StatelessValidatorDispatcher(
@@ -52,7 +49,6 @@ final readonly class ResponseValidatorWithContext
             document: $this->document,
             dependencies: $this->dependencies,
             configuration: $this->configuration,
-            pregExecutor: $resolvedPregExecutor,
         );
     }
 

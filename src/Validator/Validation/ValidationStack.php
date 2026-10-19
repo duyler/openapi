@@ -36,13 +36,13 @@ use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorDispatcher;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
-use Duyler\OpenApi\Validator\Validation\Internal\ValidatorDependenciesGroup;
+use Duyler\OpenApi\Validator\Validation\Internal\ValidationGroup;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-final readonly class ValidatorDependencies
+final readonly class ValidationStack
 {
     public readonly RequestValidator $requestValidator;
     public readonly ResponseValidatorWithContext $responseValidator;
@@ -103,8 +103,6 @@ final readonly class ValidatorDependencies
             $this->reportDeprecated,
             $this->logger,
             $this->eventDispatcher,
-            $this->regexValidator,
-            $this->pregExecutor,
             $this->document,
             $this->refResolver,
         );
@@ -140,11 +138,10 @@ final readonly class ValidatorDependencies
             document: $this->document,
             dependencies: $this->schemaValidatorDependencies,
             configuration: $this->validatorConfiguration,
-            pregExecutor: $this->pregExecutor,
         );
     }
 
-    public static function fromGroup(ValidatorDependenciesGroup $group): self
+    public static function fromGroup(ValidationGroup $group): self
     {
         $root = $group->root;
         $options = $group->options;
@@ -251,7 +248,6 @@ final readonly class ValidatorDependencies
             document: $this->document,
             dependencies: $this->schemaValidatorDependencies,
             configuration: $this->validatorConfiguration,
-            pregExecutor: $this->pregExecutor,
         );
     }
 }

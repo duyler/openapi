@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Compiler;
 
+use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Compiler\ValidatorCompiler;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
-use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -169,7 +171,12 @@ final class ValidatorCompilerIntegerMultipleOfTest extends TestCase
     private function runtimeAccepts(Schema $schema, mixed $data): bool
     {
         $pool = new ValidatorPool();
-        $validator = new SchemaValidator($pool, BuiltinFormats::create());
+        $validator = new SchemaValidatorDependencies(
+            pool: $pool,
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
+            formatRegistry: BuiltinFormats::create(),
+        )->rootStatelessValidator();
 
         try {
             $validator->validate($data, $schema);

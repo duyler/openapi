@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Compiler;
 
+use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Compiler\ValidatorCompiler;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\ArrayLengthValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -344,7 +346,7 @@ final class ValidatorCompilerRuntimeEquivalenceTest extends TestCase
     public function compiled_unique_items_runtime_equivalence_for_edge_cases(): void
     {
         $runtimeValidator = new ArrayLengthValidator(
-            new ValidatorDependencies(pool: new ValidatorPool(), formatRegistry: BuiltinFormats::create()),
+            new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), BuiltinFormats::create()), pool: new ValidatorPool(), formatRegistry: BuiltinFormats::create()),
         );
         $schema = new Schema(
             type: 'array',

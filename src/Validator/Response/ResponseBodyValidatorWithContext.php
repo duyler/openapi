@@ -13,7 +13,6 @@ use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Example\ExampleValidator;
 use Duyler\OpenApi\Validator\Example\ValidatesExamplesTrait;
-use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
 use Duyler\OpenApi\Validator\Request\MediaTypeMatcher;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
@@ -37,11 +36,8 @@ final readonly class ResponseBodyValidatorWithContext
         private readonly OpenApiDocument $document,
         private readonly SchemaValidatorDependencies $dependencies,
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
-        ?PregExecutor $pregExecutor = null,
     ) {
-        $this->negotiator = new ContentTypeNegotiator(
-            $pregExecutor ?? new PregExecutor($this->configuration->maxRegexBacktracks),
-        );
+        $this->negotiator = new ContentTypeNegotiator($this->dependencies->pregExecutor);
         $this->typeCoercer = new ResponseTypeCoercer();
         $this->streamingParser = new StreamingContentParser(
             $this->dependencies->logger,

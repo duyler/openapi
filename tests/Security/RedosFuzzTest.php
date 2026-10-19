@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Security;
 
+use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\PatternMismatchError;
 use Duyler\OpenApi\Validator\Format\String\EmailValidator;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\Format\String\UriValidator;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\SchemaValidator\ContentMediaTypeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\PatternValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
@@ -56,7 +58,7 @@ final class RedosFuzzTest extends TestCase
     public function redos_catastrophic_pattern_aborted_within_backtrack_limit(): void
     {
         $pregExecutor = new PregExecutor(maxBacktracks: 10_000);
-        $validator = new PatternValidator(new ValidatorDependencies($this->pool, BuiltinFormats::create($pregExecutor), pregExecutor: $pregExecutor));
+        $validator = new PatternValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create($pregExecutor)), pool: $this->pool, formatRegistry: BuiltinFormats::create($pregExecutor), pregExecutor: $pregExecutor));
 
         $schema = new Schema(type: 'string', pattern: '^(a+)+$');
         $payload = str_repeat('a', 30) . 'b';
@@ -93,7 +95,7 @@ final class RedosFuzzTest extends TestCase
     public function redos_content_type_validator_aborts_on_pathological_urlencoded(): void
     {
         $pregExecutor = new PregExecutor(maxBacktracks: 10_000);
-        $validator = new ContentMediaTypeValidator(new ValidatorDependencies(pool: new ValidatorPool(), formatRegistry: new FormatRegistry(), pregExecutor: $pregExecutor));
+        $validator = new ContentMediaTypeValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), new FormatRegistry()), pool: new ValidatorPool(), formatRegistry: new FormatRegistry(), pregExecutor: $pregExecutor));
 
         $schema = new Schema(contentMediaType: 'application/x-www-form-urlencoded');
         $payload = str_repeat('a=1&', 50_000) . 'broken';
@@ -142,7 +144,7 @@ final class RedosFuzzTest extends TestCase
     public function complex_pattern_with_moderate_backtracking_still_works(): void
     {
         $pregExecutor = new PregExecutor(maxBacktracks: 10_000);
-        $validator = new PatternValidator(new ValidatorDependencies($this->pool, BuiltinFormats::create($pregExecutor), pregExecutor: $pregExecutor));
+        $validator = new PatternValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create($pregExecutor)), pool: $this->pool, formatRegistry: BuiltinFormats::create($pregExecutor), pregExecutor: $pregExecutor));
 
         $schema = new Schema(type: 'string', pattern: '/^[a-z0-9_-]{3,16}$/');
 
@@ -159,7 +161,7 @@ final class RedosFuzzTest extends TestCase
     #[Test]
     public function urlencoded_validator_accepts_well_formed_payload(): void
     {
-        $validator = new ContentMediaTypeValidator(new ValidatorDependencies(pool: new ValidatorPool(), formatRegistry: new FormatRegistry(), pregExecutor: new PregExecutor()));
+        $validator = new ContentMediaTypeValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), new FormatRegistry()), pool: new ValidatorPool(), formatRegistry: new FormatRegistry(), pregExecutor: new PregExecutor()));
         $schema = new Schema(contentMediaType: 'application/x-www-form-urlencoded');
 
         $succeeded = false;
@@ -175,7 +177,7 @@ final class RedosFuzzTest extends TestCase
     #[Test]
     public function urlencoded_validator_rejects_payload_with_too_many_pairs(): void
     {
-        $validator = new ContentMediaTypeValidator(new ValidatorDependencies(pool: new ValidatorPool(), formatRegistry: new FormatRegistry(), pregExecutor: new PregExecutor()));
+        $validator = new ContentMediaTypeValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), new FormatRegistry()), pool: new ValidatorPool(), formatRegistry: new FormatRegistry(), pregExecutor: new PregExecutor()));
         $schema = new Schema(contentMediaType: 'application/x-www-form-urlencoded');
 
         $payload = str_repeat('a=1&', 1_500);

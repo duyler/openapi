@@ -12,11 +12,13 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Exception\EnumError;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
+use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
-use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -26,15 +28,17 @@ final class RefResolverOverrideTest extends TestCase
 {
     private RefResolver $resolver;
     private OpenApiDocument $document;
-    private SchemaValidator $schemaValidator;
+    private SchemaValidatorInterface $schemaValidator;
 
     protected function setUp(): void
     {
         $this->resolver = new RefResolver();
-        $this->schemaValidator = new SchemaValidator(
-            new ValidatorPool(),
-            BuiltinFormats::create(),
-        );
+        $this->schemaValidator = new SchemaValidatorDependencies(
+            pool: new ValidatorPool(),
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), BuiltinFormats::create()),
+            formatRegistry: BuiltinFormats::create(),
+        )->rootStatelessValidator();
 
         $this->document = new OpenApiDocument(
             openapi: '3.2.0',

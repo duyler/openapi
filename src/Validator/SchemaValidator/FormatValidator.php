@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Override;
@@ -16,7 +17,7 @@ use function sprintf;
 final readonly class FormatValidator implements KeywordApplicable
 {
     public function __construct(
-        private readonly ValidatorDependencies $dependencies,
+        private readonly SchemaValidatorDependencies $dependencies,
     ) {}
 
     #[Override]

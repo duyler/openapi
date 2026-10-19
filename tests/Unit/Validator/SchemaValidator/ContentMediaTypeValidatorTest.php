@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
+use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\ContentMediaTypeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\InvalidContentMediaTypeException;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -37,7 +39,7 @@ class ContentMediaTypeValidatorTest extends TestCase
     #[Override]
     protected function setUp(): void
     {
-        $this->validator = new ContentMediaTypeValidator(new ValidatorDependencies(pool: new ValidatorPool(), formatRegistry: new FormatRegistry()));
+        $this->validator = new ContentMediaTypeValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), new FormatRegistry()), pool: new ValidatorPool(), formatRegistry: new FormatRegistry()));
     }
 
     #[Test]

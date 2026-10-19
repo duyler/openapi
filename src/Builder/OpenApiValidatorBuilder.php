@@ -18,7 +18,7 @@ use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Validation\Internal\BodyLimits;
 use Duyler\OpenApi\Validator\Validation\Internal\RootServices;
-use Duyler\OpenApi\Validator\Validation\Internal\ValidatorDependenciesGroup;
+use Duyler\OpenApi\Validator\Validation\Internal\ValidationGroup;
 use Duyler\OpenApi\Validator\Validation\Internal\ValidatorOptions;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
@@ -36,7 +36,7 @@ use Duyler\OpenApi\Validator\Validation\CallbackValidator;
 use Duyler\OpenApi\Validator\Validation\RequestValidationHandler;
 use Duyler\OpenApi\Validator\Validation\ResponseValidationHandler;
 use Duyler\OpenApi\Validator\Validation\SchemaValidatorAdapter;
-use Duyler\OpenApi\Validator\Validation\ValidatorDependencies as ValidationAssembler;
+use Duyler\OpenApi\Validator\Validation\ValidationStack;
 use Duyler\OpenApi\Validator\Validation\WebhookValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use InvalidArgumentException;
@@ -541,8 +541,8 @@ final readonly class OpenApiValidatorBuilder
         $strictCallbackRuntimeTemplate = $this->config->strictCallbackRuntimeTemplate ?? true;
         $strictCoercion = $this->config->strictCoercion ?? true;
 
-        $context = ValidationAssembler::fromGroup(
-            new ValidatorDependenciesGroup(
+        $context = ValidationStack::fromGroup(
+            new ValidationGroup(
                 root: new RootServices(
                     document: $document,
                     pool: $pool,

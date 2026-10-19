@@ -22,7 +22,7 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Validation\CallbackValidator;
-use Duyler\OpenApi\Validator\Validation\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Validation\ValidationStack;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -345,8 +345,8 @@ final class CallbackValidatorTest extends TestCase
     private function buildDependencies(
         OpenApiDocument $document,
         ?EventDispatcherInterface $dispatcher = null,
-    ): ValidatorDependencies {
-        return new ValidatorDependencies(
+    ): ValidationStack {
+        return new ValidationStack(
             document: $document,
             pool: new ValidatorPool(),
             formatRegistry: new FormatRegistry(),

@@ -6,14 +6,11 @@ namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
-use Duyler\OpenApi\Validator\SchemaValidator\KeywordApplicable;
+use Duyler\OpenApi\Validator\Schema\Internal\ApplicableValidators;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 use WeakMap;
-
-use function array_filter;
-use function array_values;
 
 final class StatelessValidatorDispatcher implements SchemaValidatorInterface
 {
@@ -55,22 +52,18 @@ final class StatelessValidatorDispatcher implements SchemaValidatorInterface
      */
     private function applicableValidators(Schema $schema): array
     {
-        if ($this->applicableValidators->offsetExists($schema)) {
-            /** @var list<SchemaValidatorInterface> $cached */
-            $cached = $this->applicableValidators[$schema];
+        /** @var list<SchemaValidatorInterface> $cached */
+        $cached = $this->applicableValidators[$schema] ?? $this->computeApplicableValidators($schema);
+        $this->applicableValidators[$schema] = $cached;
 
-            return $cached;
-        }
+        return $cached;
+    }
 
-        /** @var list<SchemaValidatorInterface> $applicable */
-        $applicable = array_values(array_filter(
-            $this->validators,
-            static function (SchemaValidatorInterface $validator) use ($schema): bool {
-                return false === ($validator instanceof KeywordApplicable) || $validator->isApplicable($schema);
-            },
-        ));
-        $this->applicableValidators[$schema] = $applicable;
-
-        return $applicable;
+    /**
+     * @return list<SchemaValidatorInterface>
+     */
+    private function computeApplicableValidators(Schema $schema): array
+    {
+        return ApplicableValidators::filter($this->validators, $schema);
     }
 }

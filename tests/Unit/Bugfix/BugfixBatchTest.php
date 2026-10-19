@@ -28,10 +28,9 @@ use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\AdditionalPropertiesValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\SchemaValidator\ConstValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\NumericRangeValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Webhook\WebhookValidator;
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -44,7 +43,6 @@ use NumberTypeValidatorB19;
 use PatternExportValidatorB13;
 use UnicodeLengthValidatorB12;
 use Duyler\OpenApi\Schema\Model\Components;
-use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use stdClass;
 
@@ -209,7 +207,7 @@ final class BugfixBatchTest extends TestCase
     public function b14_const_null_validates_null_data(): void
     {
         $pool = new ValidatorPool();
-        $validator = new ConstValidator(new ValidatorDependencies(pool: $pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new ConstValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()), pool: $pool, formatRegistry: BuiltinFormats::create()));
 
         $schema = new Schema(type: 'null', const: null, hasConst: true);
 
@@ -222,7 +220,7 @@ final class BugfixBatchTest extends TestCase
     public function b14_const_null_rejects_non_null_data(): void
     {
         $pool = new ValidatorPool();
-        $validator = new ConstValidator(new ValidatorDependencies(pool: $pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new ConstValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()), pool: $pool, formatRegistry: BuiltinFormats::create()));
 
         $schema = new Schema(type: 'string', const: null, hasConst: true);
 
@@ -235,7 +233,7 @@ final class BugfixBatchTest extends TestCase
     public function b14_const_not_set_skips_validation(): void
     {
         $pool = new ValidatorPool();
-        $validator = new ConstValidator(new ValidatorDependencies(pool: $pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new ConstValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()), pool: $pool, formatRegistry: BuiltinFormats::create()));
 
         $schema = new Schema(type: 'string', const: null, hasConst: false);
 
@@ -248,7 +246,7 @@ final class BugfixBatchTest extends TestCase
     public function b15_additional_properties_ignores_pattern_properties(): void
     {
         $pool = new ValidatorPool();
-        $validator = new AdditionalPropertiesValidator(new ValidatorDependencies(pool: $pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new AdditionalPropertiesValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()), pool: $pool, formatRegistry: BuiltinFormats::create()));
 
         $schema = new Schema(
             type: 'object',
@@ -273,7 +271,7 @@ final class BugfixBatchTest extends TestCase
     public function b15_additional_properties_rejects_non_pattern_extra_keys(): void
     {
         $pool = new ValidatorPool();
-        $validator = new AdditionalPropertiesValidator(new ValidatorDependencies(pool: $pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new AdditionalPropertiesValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()), pool: $pool, formatRegistry: BuiltinFormats::create()));
 
         $schema = new Schema(
             type: 'object',
@@ -342,7 +340,7 @@ final class BugfixBatchTest extends TestCase
     public function b18_multiple_of_zero_throws_error(): void
     {
         $pool = new ValidatorPool();
-        $validator = new NumericRangeValidator(new ValidatorDependencies(pool: $pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new NumericRangeValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()), pool: $pool, formatRegistry: BuiltinFormats::create()));
 
         $schema = new Schema(type: 'number', multipleOf: 0.0);
 
@@ -462,7 +460,12 @@ final class BugfixBatchTest extends TestCase
     public function b08_cookie_validator_uses_separate_strict_flag(): void
     {
         $pool = new ValidatorPool();
-        $schemaValidator = new SchemaValidator($pool, BuiltinFormats::create());
+        $schemaValidator = new SchemaValidatorDependencies(
+            pool: $pool,
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
+            formatRegistry: BuiltinFormats::create(),
+        )->rootStatelessValidator();
         $deserializer = new ParameterDeserializer();
         $coercer = new TypeCoercer();
 
@@ -486,7 +489,12 @@ final class BugfixBatchTest extends TestCase
     public function b08_abstract_parameter_validator_uses_separate_strict_flag(): void
     {
         $pool = new ValidatorPool();
-        $schemaValidator = new SchemaValidator($pool, BuiltinFormats::create());
+        $schemaValidator = new SchemaValidatorDependencies(
+            pool: $pool,
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
+            formatRegistry: BuiltinFormats::create(),
+        )->rootStatelessValidator();
         $deserializer = new ParameterDeserializer();
         $coercer = new TypeCoercer();
 

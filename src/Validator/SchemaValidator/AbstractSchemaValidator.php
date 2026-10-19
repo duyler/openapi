@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
@@ -19,7 +20,7 @@ use function is_array;
 abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterface
 {
     public function __construct(
-        protected readonly ValidatorDependencies $dependencies,
+        protected readonly SchemaValidatorDependencies $dependencies,
     ) {}
 
     protected function acceptsNullAsNullable(mixed $data, Schema $schema, ?ValidationContext $context): bool
@@ -85,6 +86,6 @@ abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterf
 
     protected function createSchemaValidator(): SchemaValidatorInterface
     {
-        return $this->dependencies->rootSchemaValidator();
+        return $this->dependencies->rootStatelessValidator();
     }
 }

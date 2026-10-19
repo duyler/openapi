@@ -16,21 +16,21 @@ use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\Validation\Internal\BodyLimits;
 use Duyler\OpenApi\Validator\Validation\Internal\RootServices;
-use Duyler\OpenApi\Validator\Validation\Internal\ValidatorDependenciesGroup;
+use Duyler\OpenApi\Validator\Validation\Internal\ValidationGroup;
 use Duyler\OpenApi\Validator\Validation\Internal\ValidatorOptions;
-use Duyler\OpenApi\Validator\Validation\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Validation\ValidationStack;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
-#[CoversClass(ValidatorDependenciesGroup::class)]
+#[CoversClass(ValidationGroup::class)]
 #[CoversClass(RootServices::class)]
 #[CoversClass(ValidatorOptions::class)]
 #[CoversClass(BodyLimits::class)]
-#[CoversClass(ValidatorDependencies::class)]
-final class ValidatorDependenciesGroupTest extends TestCase
+#[CoversClass(ValidationStack::class)]
+final class ValidationGroupTest extends TestCase
 {
     private const string SIMPLE_YAML = <<<YAML
 openapi: 3.0.3
@@ -50,7 +50,7 @@ YAML;
     {
         $document = $this->buildDocument();
 
-        $group = new ValidatorDependenciesGroup(
+        $group = new ValidationGroup(
             root: new RootServices(
                 document: $document,
                 pool: new ValidatorPool(),
@@ -61,7 +61,7 @@ YAML;
             options: new ValidatorOptions(),
         );
 
-        $deps = ValidatorDependencies::fromGroup($group);
+        $deps = ValidationStack::fromGroup($group);
 
         self::assertSame($document, $deps->document);
         self::assertSame($group->root->pool, $deps->pool);
@@ -90,7 +90,7 @@ YAML;
     {
         $document = $this->buildDocument();
 
-        $group = new ValidatorDependenciesGroup(
+        $group = new ValidationGroup(
             root: new RootServices(
                 document: $document,
                 pool: new ValidatorPool(),
@@ -115,7 +115,7 @@ YAML;
             ),
         );
 
-        $deps = ValidatorDependencies::fromGroup($group);
+        $deps = ValidationStack::fromGroup($group);
 
         self::assertTrue($deps->coercion);
         self::assertFalse($deps->nullableAsType);
