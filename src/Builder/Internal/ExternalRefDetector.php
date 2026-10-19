@@ -41,6 +41,8 @@ use const JSON_THROW_ON_ERROR;
  */
 final readonly class ExternalRefDetector
 {
+    public const string CONFINEMENT_KEY_SUFFIX = '_confinement';
+
     public function __construct(
         private BuilderConfig $config,
     ) {}
@@ -55,6 +57,17 @@ final readonly class ExternalRefDetector
             return;
         }
 
+        $confinementKey = null;
+
+        if (null !== $this->config->cache) {
+            $confinementKey = new CacheKeyBuilder($this->config)
+                ->forString($this->config->specContent) . self::CONFINEMENT_KEY_SUFFIX;
+
+            if (null !== $this->config->cache->getConfinement($confinementKey)) {
+                return;
+            }
+        }
+
         $parsedSpec = $this->parseSpecContentAsArray($this->config->specContent);
         $specDepth = $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH;
         $maxDepth = max($specDepth, ValidationContext::MAX_DEPTH);
@@ -67,6 +80,10 @@ final readonly class ExternalRefDetector
                 . 'or remove the external $ref from the spec.',
                 $externalRef,
             ));
+        }
+
+        if (null !== $this->config->cache && null !== $confinementKey) {
+            $this->config->cache->setConfinement($confinementKey);
         }
     }
 

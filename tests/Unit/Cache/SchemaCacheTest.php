@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Cache;
 
+use Duyler\OpenApi\Cache\ConfinementVerdict;
 use Duyler\OpenApi\Cache\SchemaCache;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\OpenApiDocument;
@@ -185,6 +186,64 @@ final class SchemaCacheTest extends TestCase
         $result = $cache->has('test_key');
 
         self::assertFalse($result);
+    }
+
+    #[Test]
+    public function get_confinement_delegates_to_decorators_expected_type(): void
+    {
+        $pool = $this->createMockCachePool();
+        $verdict = ConfinementVerdict::clean();
+
+        $cacheItem = $this->createStub(CacheItemInterface::class);
+        $cacheItem
+            ->method('isHit')
+            ->willReturn(true);
+        $cacheItem
+            ->method('get')
+            ->willReturn($verdict);
+
+        $pool
+            ->expects($this->once())
+            ->method('getItem')
+            ->with('test_key')
+            ->willReturn($cacheItem);
+
+        $cache = new SchemaCache($pool);
+        $result = $cache->getConfinement('test_key');
+
+        self::assertSame($verdict, $result);
+    }
+
+    #[Test]
+    public function set_confinement_saves_clean_verdict(): void
+    {
+        $pool = $this->createMockCachePool();
+
+        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem
+            ->expects($this->once())
+            ->method('set')
+            ->with(self::isInstanceOf(ConfinementVerdict::class))
+            ->willReturnSelf();
+        $cacheItem
+            ->expects($this->once())
+            ->method('expiresAfter')
+            ->with(3600)
+            ->willReturnSelf();
+
+        $pool
+            ->expects($this->once())
+            ->method('getItem')
+            ->with('test_key')
+            ->willReturn($cacheItem);
+
+        $pool
+            ->expects($this->once())
+            ->method('save')
+            ->with($cacheItem);
+
+        $cache = new SchemaCache($pool, 3600);
+        $cache->setConfinement('test_key');
     }
 
     #[Test]

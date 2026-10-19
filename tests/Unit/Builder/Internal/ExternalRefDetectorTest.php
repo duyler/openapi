@@ -7,14 +7,36 @@ namespace Duyler\OpenApi\Test\Unit\Builder\Internal;
 use Duyler\OpenApi\Builder\Dto\BuilderConfig;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\Internal\ExternalRefDetector;
+use Duyler\OpenApi\Cache\ConfinementVerdict;
+use Duyler\OpenApi\Cache\SchemaCache;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Cache\CacheItemInterface;
+use Psr\Cache\CacheItemPoolInterface;
+
+use DateInterval;
+use DateTimeInterface;
+
+use function array_key_exists;
+use function str_ends_with;
 
 /**
  * @internal
  */
 final class ExternalRefDetectorTest extends TestCase
 {
+    private const string GUILTY_YAML = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: Guilty spec with external ref
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Passwd:
+      $ref: 'file:///etc/passwd'
+YAML;
+
     #[Test]
     public function assert_confinement_passes_when_allowed_root_is_set(): void
     {
@@ -289,6 +311,48 @@ YAML;
     }
 
     #[Test]
+    public function assert_confinement_silently_passes_on_yaml_parse_exception(): void
+    {
+        $detector = new ExternalRefDetector(new BuilderConfig(
+            specContent: "openapi: 'unclosed single quote",
+            specType: 'yaml',
+        ));
+
+        $detector->assertConfinement();
+
+        $this->addToAssertionCount(1);
+    }
+
+    #[Test]
+    public function assert_confinement_passes_on_non_string_discriminator_mapping_value(): void
+    {
+        $yaml = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: Non-string discriminator mapping value
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Pet:
+      type: object
+      discriminator:
+        propertyName: petType
+        mapping:
+          int: 123
+YAML;
+
+        $detector = new ExternalRefDetector(new BuilderConfig(
+            specContent: $yaml,
+            specType: 'yaml',
+        ));
+
+        $detector->assertConfinement();
+
+        $this->addToAssertionCount(1);
+    }
+
+    #[Test]
     public function assert_confinement_silently_passes_on_unparseable_json(): void
     {
         $detector = new ExternalRefDetector(new BuilderConfig(
@@ -389,5 +453,338 @@ YAML;
         $this->expectExceptionMessage('../../../etc/passwd');
 
         $detectorWithoutRoot->assertConfinement();
+    }
+
+    #[Test]
+    public function assert_confinement_writes_clean_verdict_on_first_call(): void
+    {
+        $pool = new ConfinementCountingPool();
+
+        $detector = new ExternalRefDetector(new BuilderConfig(
+            specContent: $this->cleanSpecYaml('Clean verdict'),
+            specType: 'yaml',
+            cache: new SchemaCache($pool),
+        ));
+
+        $detector->assertConfinement();
+
+        $confinementKeys = $pool->confinementKeys();
+        self::assertCount(1, $confinementKeys, 'Exactly one confinement key must be persisted after the first call.');
+        self::assertSame(1, $pool->writeCount);
+        self::assertInstanceOf(ConfinementVerdict::class, $pool->value($confinementKeys[0]));
+    }
+
+    #[Test]
+    public function assert_confinement_returns_from_cache_on_second_call(): void
+    {
+        $pool = new ConfinementCountingPool();
+        $cache = new SchemaCache($pool);
+        $specContent = $this->cleanSpecYaml('Cache hit verdict');
+
+        $firstDetector = new ExternalRefDetector(new BuilderConfig(
+            specContent: $specContent,
+            specType: 'yaml',
+            cache: $cache,
+        ));
+
+        $firstDetector->assertConfinement();
+
+        $readCountAfterFirstCall = $pool->readCount;
+        $writeCountAfterFirstCall = $pool->writeCount;
+
+        $secondDetector = new ExternalRefDetector(new BuilderConfig(
+            specContent: $specContent,
+            specType: 'yaml',
+            cache: $cache,
+        ));
+
+        $secondDetector->assertConfinement();
+
+        self::assertGreaterThan($readCountAfterFirstCall, $pool->readCount, 'Second call must read the verdict from the pool.');
+        self::assertSame($writeCountAfterFirstCall, $pool->writeCount, 'Second call must not rewrite the verdict.');
+    }
+
+    #[Test]
+    public function assert_confinement_does_not_cache_guilty_verdict(): void
+    {
+        $pool = new ConfinementCountingPool();
+
+        $detector = new ExternalRefDetector(new BuilderConfig(
+            specContent: self::GUILTY_YAML,
+            specType: 'yaml',
+            cache: new SchemaCache($pool),
+        ));
+
+        try {
+            $detector->assertConfinement();
+            self::fail('Guilty spec must throw BuilderException.');
+        } catch (BuilderException $exception) {
+            self::assertStringContainsString('file:///etc/passwd', $exception->getMessage());
+        }
+
+        self::assertSame([], $pool->confinementKeys(), 'Guilty verdict must never be written to the pool.');
+        self::assertSame(0, $pool->writeCount);
+    }
+
+    #[Test]
+    public function assert_confinement_guilty_verdict_throws_again_on_second_call(): void
+    {
+        $pool = new ConfinementCountingPool();
+
+        $detector = new ExternalRefDetector(new BuilderConfig(
+            specContent: self::GUILTY_YAML,
+            specType: 'yaml',
+            cache: new SchemaCache($pool),
+        ));
+
+        try {
+            $detector->assertConfinement();
+            self::fail('First call on the guilty spec must throw BuilderException.');
+        } catch (BuilderException $exception) {
+            self::assertStringContainsString('file:///etc/passwd', $exception->getMessage());
+        }
+
+        try {
+            $detector->assertConfinement();
+            self::fail('Second call on the guilty spec must throw BuilderException again.');
+        } catch (BuilderException $exception) {
+            self::assertStringContainsString('file:///etc/passwd', $exception->getMessage());
+        }
+
+        self::assertSame(0, $pool->writeCount, 'Guilty verdict must not be cached between the calls.');
+    }
+
+    #[Test]
+    public function assert_confinement_uses_content_hash_in_key(): void
+    {
+        $pool = new ConfinementCountingPool();
+        $cache = new SchemaCache($pool);
+
+        $firstDetector = new ExternalRefDetector(new BuilderConfig(
+            specContent: $this->cleanSpecYaml('Content hash first'),
+            specType: 'yaml',
+            cache: $cache,
+        ));
+
+        $secondDetector = new ExternalRefDetector(new BuilderConfig(
+            specContent: $this->cleanSpecYaml('Content hash second'),
+            specType: 'yaml',
+            cache: $cache,
+        ));
+
+        $firstDetector->assertConfinement();
+        $secondDetector->assertConfinement();
+
+        self::assertCount(2, $pool->confinementKeys(), 'Different spec content must produce different confinement keys.');
+    }
+
+    #[Test]
+    public function assert_confinement_key_includes_spec_limits_fingerprint(): void
+    {
+        $pool = new ConfinementCountingPool();
+        $cache = new SchemaCache($pool);
+        $specContent = $this->cleanSpecYaml('Fingerprint limits');
+
+        $defaultLimitsDetector = new ExternalRefDetector(new BuilderConfig(
+            specContent: $specContent,
+            specType: 'yaml',
+            cache: $cache,
+        ));
+
+        $customLimitsDetector = new ExternalRefDetector(new BuilderConfig(
+            specContent: $specContent,
+            specType: 'yaml',
+            cache: $cache,
+            maxSpecDepth: 50,
+        ));
+
+        $defaultLimitsDetector->assertConfinement();
+        $customLimitsDetector->assertConfinement();
+
+        self::assertCount(2, $pool->confinementKeys(), 'maxSpecDepth change must produce a different confinement key.');
+    }
+
+    #[Test]
+    public function assert_confinement_skips_cache_when_allowed_root_is_set(): void
+    {
+        $pool = new ConfinementCountingPool();
+
+        $detector = new ExternalRefDetector(new BuilderConfig(
+            specContent: self::GUILTY_YAML,
+            specType: 'yaml',
+            externalRefAllowedRoot: '/var/specs',
+            cache: new SchemaCache($pool),
+        ));
+
+        $detector->assertConfinement();
+
+        self::assertSame(0, $pool->readCount, 'Inactive guard must not read from the pool.');
+        self::assertSame(0, $pool->writeCount, 'Inactive guard must not write to the pool.');
+    }
+
+    #[Test]
+    public function assert_confinement_skips_cache_when_spec_content_is_null(): void
+    {
+        $pool = new ConfinementCountingPool();
+
+        $detector = new ExternalRefDetector(new BuilderConfig(
+            specPath: '/var/specs/openapi.yaml',
+            specType: 'yaml',
+            cache: new SchemaCache($pool),
+        ));
+
+        $detector->assertConfinement();
+
+        self::assertSame(0, $pool->readCount, 'File-loaded spec must not read from the pool.');
+        self::assertSame(0, $pool->writeCount, 'File-loaded spec must not write to the pool.');
+    }
+
+    private function cleanSpecYaml(string $title): string
+    {
+        return <<<YAML
+openapi: 3.2.0
+info:
+  title: {$title}
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Foo:
+      type: object
+    Bar:
+      \$ref: '#/components/schemas/Foo'
+YAML;
+    }
+}
+
+final class ConfinementCountingPool implements CacheItemPoolInterface
+{
+    public int $readCount = 0;
+    public int $writeCount = 0;
+
+    /** @var array<string, mixed> */
+    private array $values = [];
+
+    /** @return list<string> */
+    public function confinementKeys(): array
+    {
+        $keys = [];
+        foreach (array_keys($this->values) as $key) {
+            if (str_ends_with($key, ExternalRefDetector::CONFINEMENT_KEY_SUFFIX)) {
+                $keys[] = $key;
+            }
+        }
+
+        return $keys;
+    }
+
+    public function value(string $key): mixed
+    {
+        return $this->values[$key] ?? null;
+    }
+
+    public function getItem(string $key): CacheItemInterface
+    {
+        ++$this->readCount;
+
+        return new ConfinementCountingItem($key, $this->values[$key] ?? null, array_key_exists($key, $this->values));
+    }
+
+    /** @param list<string> $keys */
+    public function getItems(array $keys = []): array
+    {
+        $items = [];
+        foreach ($keys as $key) {
+            $items[$key] = $this->getItem($key);
+        }
+
+        return $items;
+    }
+
+    public function hasItem(string $key): bool
+    {
+        return array_key_exists($key, $this->values);
+    }
+
+    public function clear(): bool
+    {
+        $this->values = [];
+
+        return true;
+    }
+
+    public function deleteItem(string $key): bool
+    {
+        unset($this->values[$key]);
+
+        return true;
+    }
+
+    public function deleteItems(array $keys): bool
+    {
+        foreach ($keys as $key) {
+            unset($this->values[$key]);
+        }
+
+        return true;
+    }
+
+    public function save(CacheItemInterface $item): bool
+    {
+        ++$this->writeCount;
+        $this->values[$item->getKey()] = $item->get();
+
+        return true;
+    }
+
+    public function saveDeferred(CacheItemInterface $item): bool
+    {
+        return $this->save($item);
+    }
+
+    public function commit(): bool
+    {
+        return true;
+    }
+}
+
+final class ConfinementCountingItem implements CacheItemInterface
+{
+    public function __construct(
+        private readonly string $key,
+        private mixed $value,
+        private readonly bool $hit,
+    ) {}
+
+    public function getKey(): string
+    {
+        return $this->key;
+    }
+
+    public function get(): mixed
+    {
+        return $this->value;
+    }
+
+    public function isHit(): bool
+    {
+        return $this->hit;
+    }
+
+    public function set(mixed $value): static
+    {
+        $this->value = $value;
+
+        return $this;
+    }
+
+    public function expiresAt(?DateTimeInterface $expiration): static
+    {
+        return $this;
+    }
+
+    public function expiresAfter(int|DateInterval|null $time): static
+    {
+        return $this;
     }
 }

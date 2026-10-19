@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- String-loaded specs (`fromYamlString()` / `fromJsonString()`) no longer pay a
+  second, cache-bypassing parse on every `build()` for the external-`$ref`
+  confinement guard. The clean confinement verdict is now cached under the
+  document cache key with a `_confinement` suffix (SHA-256 of the spec content
+  plus the size/depth limits fingerprint), sharing the pool and TTL of the
+  cached document, so hot-path builds perform no spec re-parse. A verdict that
+  finds an external `$ref` is never cached — the `BuilderException` reproduces
+  on every build. Specs loaded from files and configurations without
+  `withCache()` are unaffected. (#68)
+
 ### Fixed
 
 - OpenAPI 3.0 `nullable: true` is no longer discarded when a schema is
