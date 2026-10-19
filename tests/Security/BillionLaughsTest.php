@@ -10,9 +10,13 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Throwable;
 
+use function json_encode;
 use function memory_get_usage;
 use function sprintf;
 use function str_repeat;
+use function strlen;
+
+use const JSON_THROW_ON_ERROR;
 
 /**
  * P-097: real Billion Laughs attack. The existing XmlSecurityTest covers
@@ -46,15 +50,15 @@ final class BillionLaughsTest extends TestCase
         $xml = $this->buildBillionLaughs(8);
 
         $before = memory_get_usage();
+        $result = null;
         $caught = null;
         try {
-            $this->parser->parse($xml);
+            $result = $this->parser->parse($xml);
         } catch (Throwable $e) {
             $caught = $e;
         }
-        $after = memory_get_usage();
 
-        $delta = $after - $before;
+        $delta = memory_get_usage() - $before;
 
         self::assertLessThan(
             20 * 1024 * 1024,
@@ -62,12 +66,11 @@ final class BillionLaughsTest extends TestCase
             sprintf('Memory delta must stay under 20 MB during an 8-level billion laughs attack; got %.2f MB.', $delta / 1024 / 1024),
         );
 
-        // The parser must NOT have surfaced the expanded entity payload as
-        // legitimate field data — either it rejected the document, or it
-        // returned the raw body without expansion.
+        $isResultBounded = null === $result || strlen(json_encode($result, JSON_THROW_ON_ERROR)) < 1_048_576;
+
         self::assertTrue(
-            null !== $caught || true,
-            'Billion laughs payload must not crash the worker.',
+            null !== $caught || $isResultBounded,
+            'Parser must reject the billion laughs document or return a bounded result without entity expansion.',
         );
     }
 
