@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Schema\Parser\Internal;
 
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
+use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Parser\Internal\ArraySchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\Internal\CompositionSchemaKeywordParser;
@@ -181,6 +182,44 @@ final class SchemaKeywordParsersTest extends TestCase
 
         self::assertNull($args['ref']);
         self::assertNull($args['refSummary']);
+    }
+
+    #[Test]
+    public function composition_parser_builds_discriminator_with_mapping(): void
+    {
+        $parser = new CompositionSchemaKeywordParser();
+        $recurse = static fn(bool|array $data): Schema => new Schema(type: 'nested');
+
+        $args = $parser->build([
+            'discriminator' => [
+                'propertyName' => 'petType',
+                'mapping' => [
+                    'dog' => '#/components/schemas/Dog',
+                    'cat' => '#/components/schemas/Cat',
+                ],
+                'defaultMapping' => 'dog',
+            ],
+        ], $recurse);
+
+        $discriminator = $args['discriminator'];
+
+        self::assertInstanceOf(Discriminator::class, $discriminator);
+        self::assertSame('petType', $discriminator->propertyName);
+        self::assertSame('#/components/schemas/Dog', $discriminator->mapping['dog']);
+        self::assertSame('#/components/schemas/Cat', $discriminator->mapping['cat']);
+        self::assertSame('dog', $discriminator->defaultMapping);
+    }
+
+    #[Test]
+    public function composition_parser_builds_discriminator_with_empty_array(): void
+    {
+        $args = new CompositionSchemaKeywordParser()->build(['discriminator' => []], static fn(): Schema => new Schema());
+
+        $discriminator = $args['discriminator'];
+
+        self::assertNull($discriminator->propertyName);
+        self::assertNull($discriminator->mapping);
+        self::assertNull($discriminator->defaultMapping);
     }
 
     #[Test]

@@ -66,6 +66,17 @@ final class XmlSchemaKeywordParserTest extends TestCase
     }
 
     #[Test]
+    public function build_under_3_2_warns_on_wrapped_deprecation(): void
+    {
+        $logger = new DeprecationLogger(enabled: true);
+        $parser = new XmlSchemaKeywordParser('3.2.0', $logger);
+
+        $parser->build(['name' => 'user', 'wrapped' => true]);
+
+        $this->addToAssertionCount(1);
+    }
+
+    #[Test]
     public function build_under_3_1_skips_attribute_deprecation_warning(): void
     {
         $parser = new XmlSchemaKeywordParser('3.1.0');
