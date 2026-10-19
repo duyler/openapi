@@ -13,6 +13,8 @@ use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Schema;
 
+use function array_keys;
+
 #[CoversClass(Parameter::class)]
 final class ParameterTest extends TestCase
 {
@@ -205,5 +207,53 @@ final class ParameterTest extends TestCase
 
         self::assertIsArray($serialized);
         self::assertArrayHasKey('content', $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_ref_object_returns_only_ref(): void
+    {
+        $parameter = new Parameter(
+            ref: '#/components/parameters/LimitParam',
+            name: 'Should be ignored',
+            in: 'query',
+            description: 'Should be ignored',
+        );
+
+        $serialized = $parameter->jsonSerialize();
+
+        self::assertSame(['$ref' => '#/components/parameters/LimitParam'], $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_ref_object_includes_summary_and_description_siblings(): void
+    {
+        $parameter = new Parameter(
+            ref: '#/components/parameters/LimitParam',
+            refSummary: 'Limit summary',
+            refDescription: 'Limit description',
+            name: 'Should be ignored',
+        );
+
+        $serialized = $parameter->jsonSerialize();
+
+        self::assertSame([
+            '$ref' => '#/components/parameters/LimitParam',
+            'summary' => 'Limit summary',
+            'description' => 'Limit description',
+        ], $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_ref_object_places_ref_as_first_key(): void
+    {
+        $parameter = new Parameter(
+            ref: '#/components/parameters/LimitParam',
+            refSummary: 'Limit summary',
+            refDescription: 'Limit description',
+        );
+
+        $serialized = $parameter->jsonSerialize();
+
+        self::assertSame(['$ref', 'summary', 'description'], array_keys($serialized));
     }
 }

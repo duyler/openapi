@@ -14,6 +14,9 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function array_key_first;
+use function array_keys;
+
 #[CoversClass(Response::class)]
 final class ResponseTest extends TestCase
 {
@@ -246,5 +249,20 @@ final class ResponseTest extends TestCase
             'summary' => 'Summary override',
             'description' => 'Description override',
         ], $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_ref_object_places_ref_as_first_key(): void
+    {
+        $response = new Response(
+            ref: '#/components/responses/NotFound',
+            refSummary: 'Summary override',
+            refDescription: 'Description override',
+        );
+
+        $serialized = $response->jsonSerialize();
+
+        self::assertSame('$ref', array_key_first($serialized));
+        self::assertSame(['$ref', 'summary', 'description'], array_keys($serialized));
     }
 }

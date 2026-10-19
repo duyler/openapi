@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Serializer\Internal\RefSerializer;
 use JsonSerializable;
 use Override;
 
@@ -23,18 +24,10 @@ final readonly class Response implements JsonSerializable
     #[Override]
     public function jsonSerialize(): array
     {
-        if (null !== $this->ref) {
-            $data = ['$ref' => $this->ref];
+        $refData = new RefSerializer()->toWireForm($this->ref, $this->refSummary, $this->refDescription);
 
-            if (null !== $this->refSummary) {
-                $data['summary'] = $this->refSummary;
-            }
-
-            if (null !== $this->refDescription) {
-                $data['description'] = $this->refDescription;
-            }
-
-            return $data;
+        if (null !== $refData) {
+            return $refData;
         }
 
         $data = [];

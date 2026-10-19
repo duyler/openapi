@@ -12,6 +12,8 @@ use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\Model\Schema;
 
+use function array_keys;
+
 #[CoversClass(RequestBody::class)]
 final class RequestBodyTest extends TestCase
 {
@@ -99,5 +101,52 @@ final class RequestBodyTest extends TestCase
         self::assertIsArray($serialized);
         self::assertArrayNotHasKey('description', $serialized);
         self::assertArrayNotHasKey('content', $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_ref_object_returns_only_ref(): void
+    {
+        $requestBody = new RequestBody(
+            ref: '#/components/requestBodies/UserBody',
+            description: 'Should be ignored',
+            required: true,
+        );
+
+        $serialized = $requestBody->jsonSerialize();
+
+        self::assertSame(['$ref' => '#/components/requestBodies/UserBody'], $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_ref_object_includes_summary_and_description_siblings(): void
+    {
+        $requestBody = new RequestBody(
+            ref: '#/components/requestBodies/UserBody',
+            refSummary: 'User body summary',
+            refDescription: 'User body description',
+            description: 'Should be ignored',
+        );
+
+        $serialized = $requestBody->jsonSerialize();
+
+        self::assertSame([
+            '$ref' => '#/components/requestBodies/UserBody',
+            'summary' => 'User body summary',
+            'description' => 'User body description',
+        ], $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_ref_object_places_ref_as_first_key(): void
+    {
+        $requestBody = new RequestBody(
+            ref: '#/components/requestBodies/UserBody',
+            refSummary: 'User body summary',
+            refDescription: 'User body description',
+        );
+
+        $serialized = $requestBody->jsonSerialize();
+
+        self::assertSame(['$ref', 'summary', 'description'], array_keys($serialized));
     }
 }

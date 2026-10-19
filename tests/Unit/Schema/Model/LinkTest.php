@@ -13,6 +13,9 @@ use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\Model\Server;
 
+use function array_key_first;
+use function array_keys;
+
 #[CoversClass(Link::class)]
 final class LinkTest extends TestCase
 {
@@ -117,6 +120,44 @@ final class LinkTest extends TestCase
 
         self::assertIsArray($serialized);
         self::assertArrayHasKey('$ref', $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_ref_object_keeps_siblings(): void
+    {
+        $link = new Link(
+            operationRef: '#/operations/getUser',
+            ref: '#/components/links/UserLink',
+            description: 'cross-ref link',
+            parameters: ['id' => '$response.body#/id'],
+        );
+
+        $serialized = $link->jsonSerialize();
+
+        self::assertSame(
+            [
+                '$ref' => '#/components/links/UserLink',
+                'operationRef' => '#/operations/getUser',
+                'description' => 'cross-ref link',
+                'parameters' => ['id' => '$response.body#/id'],
+            ],
+            $serialized,
+        );
+    }
+
+    #[Test]
+    public function json_serialize_ref_object_places_ref_as_first_key(): void
+    {
+        $link = new Link(
+            operationRef: '#/operations/getUser',
+            ref: '#/components/links/UserLink',
+            description: 'cross-ref link',
+        );
+
+        $serialized = $link->jsonSerialize();
+
+        self::assertSame('$ref', array_key_first($serialized));
+        self::assertSame(['$ref', 'operationRef', 'description'], array_keys($serialized));
     }
 
     #[Test]

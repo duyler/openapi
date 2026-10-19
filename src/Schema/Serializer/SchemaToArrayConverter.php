@@ -10,6 +10,7 @@ use Duyler\OpenApi\Schema\Model\SchemaFieldMetadata;
 use Duyler\OpenApi\Schema\Serializer\Internal\ArraySchemaSerializer;
 use Duyler\OpenApi\Schema\Serializer\Internal\CompositionSchemaSerializer;
 use Duyler\OpenApi\Schema\Serializer\Internal\ObjectSchemaSerializer;
+use Duyler\OpenApi\Schema\Serializer\Internal\RefSerializer;
 use Duyler\OpenApi\Schema\Serializer\Internal\ScalarSchemaSerializer;
 use Duyler\OpenApi\Schema\Serializer\Internal\SnapshotContext;
 
@@ -30,23 +31,16 @@ final readonly class SchemaToArrayConverter
         private ArraySchemaSerializer $arraySerializer = new ArraySchemaSerializer(),
         private ObjectSchemaSerializer $objectSerializer = new ObjectSchemaSerializer(),
         private CompositionSchemaSerializer $compositionSerializer = new CompositionSchemaSerializer(),
+        private RefSerializer $refSerializer = new RefSerializer(),
     ) {}
 
     /** @return array<string, mixed> */
     public function toWireArray(Schema $schema): array
     {
-        if (null !== $schema->ref) {
-            $data = ['$ref' => $schema->ref];
+        $refData = $this->refSerializer->toWireForm($schema->ref, $schema->refSummary, $schema->refDescription);
 
-            if (null !== $schema->refSummary) {
-                $data['summary'] = $schema->refSummary;
-            }
-
-            if (null !== $schema->refDescription) {
-                $data['description'] = $schema->refDescription;
-            }
-
-            return $data;
+        if (null !== $refData) {
+            return $refData;
         }
 
         /** @var array<string, mixed> $data */
