@@ -29,6 +29,8 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use WeakMap;
 
+use function array_values;
+
 /**
  * @psalm-type StatelessValidatorList = list<SchemaValidatorInterface>
  */
@@ -77,20 +79,15 @@ final class SchemaValidatorDependencies
      */
     public function createStatelessList(): array
     {
-        $dependencies = new ValidatorDependencies(
-            pool: $this->pool,
-            formatRegistry: $this->formatRegistry,
-            strictFormats: $this->strictFormats,
-            logger: $this->logger,
-            reportDeprecated: $this->reportDeprecated,
-            eventDispatcher: $this->eventDispatcher,
-            regexValidator: $this->regexValidator,
-            pregExecutor: $this->pregExecutor,
-            document: $this->document,
-            refResolver: $this->refResolver,
-        );
+        return new ValidatorFactory($this->createDependencies())->createStatelessList();
+    }
 
-        return new ValidatorFactory($dependencies)->createStatelessList();
+    /**
+     * @return list<SchemaValidatorInterface>
+     */
+    public function createFullList(): array
+    {
+        return array_values(new ValidatorFactory($this->createDependencies())->createAll());
     }
 
     public function rootSchemaValidator(
@@ -108,5 +105,21 @@ final class SchemaValidatorDependencies
         $this->rootSchemaValidators[$document] = $validator;
 
         return $validator;
+    }
+
+    private function createDependencies(): ValidatorDependencies
+    {
+        return new ValidatorDependencies(
+            pool: $this->pool,
+            formatRegistry: $this->formatRegistry,
+            strictFormats: $this->strictFormats,
+            logger: $this->logger,
+            reportDeprecated: $this->reportDeprecated,
+            eventDispatcher: $this->eventDispatcher,
+            regexValidator: $this->regexValidator,
+            pregExecutor: $this->pregExecutor,
+            document: $this->document,
+            refResolver: $this->refResolver,
+        );
     }
 }

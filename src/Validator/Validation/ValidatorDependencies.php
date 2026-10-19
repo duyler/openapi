@@ -34,8 +34,8 @@ use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorDispatcher;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
-use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
 use Duyler\OpenApi\Validator\Validation\Internal\ValidatorDependenciesGroup;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -124,6 +124,11 @@ final readonly class ValidatorDependencies
                 textParser: new TextBodyParser(),
                 xmlParser: new XmlBodyParser(logger: $this->logger),
             ),
+            strictFormats: $this->strictFormats,
+            reportDeprecated: $this->reportDeprecated,
+            regexValidator: $this->regexValidator,
+            pregExecutor: $this->pregExecutor,
+            document: $this->document,
         );
 
         $this->schemaValidatorWithContext = $this->schemaValidatorDependencies->rootSchemaValidator(
@@ -172,26 +177,11 @@ final readonly class ValidatorDependencies
 
     private function buildRequestValidator(): RequestValidator
     {
+        $queryParser = new QueryParser();
+        $schemaValidator = $this->buildStatelessSchemaValidator();
+        $parameterConfig = $this->buildParameterValidationConfig();
         $deserializer = new ParameterDeserializer();
         $coercer = new TypeCoercer();
-
-        $queryParser = new QueryParser();
-        $schemaValidator = new SchemaValidator(
-            $this->pool,
-            $this->formatRegistry,
-            strictFormats: $this->strictFormats,
-            logger: $this->logger,
-            reportDeprecated: $this->reportDeprecated,
-            eventDispatcher: $this->eventDispatcher,
-            regexValidator: $this->regexValidator,
-            pregExecutor: $this->pregExecutor,
-        );
-
-        $parameterConfig = new ParameterValidationConfig(
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            strictCoercion: $this->strictCoercion,
-        );
 
         return new RequestValidator(
             pathParser: new PathParser($this->pathRegexCache, $this->pregExecutor, $this->logger),
@@ -234,12 +224,34 @@ final readonly class ValidatorDependencies
                 coercion: $this->coercion,
                 config: $parameterConfig,
             ),
-            bodyValidator: new RequestBodyValidatorWithContext(
-                document: $this->document,
-                dependencies: $this->schemaValidatorDependencies,
-                configuration: $this->validatorConfiguration,
-                pregExecutor: $this->pregExecutor,
-            ),
+            bodyValidator: $this->buildRequestBodyValidator(),
+        );
+    }
+
+    private function buildStatelessSchemaValidator(): StatelessValidatorDispatcher
+    {
+        return new StatelessValidatorDispatcher(
+            validators: $this->schemaValidatorDependencies->createFullList(),
+            pool: $this->pool,
+        );
+    }
+
+    private function buildParameterValidationConfig(): ParameterValidationConfig
+    {
+        return new ParameterValidationConfig(
+            nullableAsType: $this->nullableAsType,
+            emptyArrayStrategy: $this->emptyArrayStrategy,
+            strictCoercion: $this->strictCoercion,
+        );
+    }
+
+    private function buildRequestBodyValidator(): RequestBodyValidatorWithContext
+    {
+        return new RequestBodyValidatorWithContext(
+            document: $this->document,
+            dependencies: $this->schemaValidatorDependencies,
+            configuration: $this->validatorConfiguration,
+            pregExecutor: $this->pregExecutor,
         );
     }
 }
