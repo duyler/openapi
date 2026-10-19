@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- An array-typed `form` parameter no longer rejects a single value.
+  `ParameterDeserializer::deserializeForm()` decided whether a
+  non-exploded value was an array by looking for a comma instead of at
+  the declared schema type, so `?include=author,comments` deserialized
+  to a list while `?include=author` stayed a string and failed the
+  `type: array` check with `TypeMismatchError`. Form now routes on the
+  schema type through `splitBySeparator()` — as `simple`, `matrix`,
+  `label` and `cookie` already did — yielding a one item list for a
+  lone value and an empty list for `?include=`. The comma heuristic
+  remains for parameters that declare no array type, and `explode`
+  handling is unchanged. (#58)
 - A `requestBody` that is a Reference Object is now resolved instead of
   silently discarded, so the referenced body is actually validated. The
   parser dropped `$ref` — it read only `description`, `content` and

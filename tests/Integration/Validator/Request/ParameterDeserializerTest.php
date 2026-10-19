@@ -276,6 +276,70 @@ final class ParameterDeserializerTest extends TestCase
     }
 
     #[Test]
+    public function deserialize_form_array_single_value_returns_single_element_array(): void
+    {
+        $param = new Parameter(
+            name: 'tags',
+            in: 'query',
+            style: 'form',
+            explode: false,
+            schema: new Schema(type: 'array'),
+        );
+
+        $result = $this->deserializer->deserialize('solo', $param);
+
+        $this->assertSame(['solo'], $result);
+    }
+
+    #[Test]
+    public function deserialize_form_array_with_comma_separated_values_returns_array(): void
+    {
+        $param = new Parameter(
+            name: 'tags',
+            in: 'query',
+            style: 'form',
+            explode: false,
+            schema: new Schema(type: 'array'),
+        );
+
+        $result = $this->deserializer->deserialize('blue,black,brown', $param);
+
+        $this->assertSame(['blue', 'black', 'brown'], $result);
+    }
+
+    #[Test]
+    public function deserialize_form_array_empty_value_returns_empty_array(): void
+    {
+        $param = new Parameter(
+            name: 'tags',
+            in: 'query',
+            style: 'form',
+            explode: false,
+            schema: new Schema(type: 'array'),
+        );
+
+        $result = $this->deserializer->deserialize('', $param);
+
+        $this->assertSame([], $result);
+    }
+
+    #[Test]
+    public function deserialize_form_array_with_nullable_type_union_returns_array(): void
+    {
+        $param = new Parameter(
+            name: 'tags',
+            in: 'query',
+            style: 'form',
+            explode: false,
+            schema: new Schema(type: ['array', 'null']),
+        );
+
+        $result = $this->deserializer->deserialize('solo', $param);
+
+        $this->assertSame(['solo'], $result);
+    }
+
+    #[Test]
     public function deserialize_unknown_style_returns_value(): void
     {
         $param = new Parameter(name: 'test', in: 'query', style: 'madeUpStyle');
