@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Schema\Parser\Internal;
 
+use Closure;
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
 use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\Schema;
@@ -11,16 +12,20 @@ use Duyler\OpenApi\Schema\Parser\Internal\ArraySchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\Internal\CompositionSchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\Internal\ObjectSchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\Internal\ScalarSchemaKeywordParser;
+use Duyler\OpenApi\Schema\Parser\Internal\SchemaKeywordAccumulator;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 use function is_array;
+use function sprintf;
 
 #[CoversClass(ScalarSchemaKeywordParser::class)]
 #[CoversClass(ArraySchemaKeywordParser::class)]
 #[CoversClass(ObjectSchemaKeywordParser::class)]
 #[CoversClass(CompositionSchemaKeywordParser::class)]
+#[CoversClass(SchemaKeywordAccumulator::class)]
 final class SchemaKeywordParsersTest extends TestCase
 {
     #[Test]
@@ -229,5 +234,181 @@ final class SchemaKeywordParsersTest extends TestCase
         $this->expectExceptionMessage('Expected array or boolean for schema keyword "not"');
 
         new CompositionSchemaKeywordParser()->build(['not' => 'invalid'], static fn(): Schema => new Schema());
+    }
+
+    #[Test]
+    public function array_parser_keyword_accepts_schema_bool_and_null(): void
+    {
+        $parser = new ArraySchemaKeywordParser();
+        $recurse = static fn(bool|array $data): Schema => new Schema(type: 'nested');
+
+        $args = $parser->build([
+            'items' => ['a' => 1],
+            'contains' => true,
+            'unevaluatedItems' => false,
+        ], $recurse);
+
+        self::assertInstanceOf(Schema::class, $args['items']);
+        self::assertTrue($args['contains']);
+        self::assertFalse($args['unevaluatedItems']);
+        self::assertNull($parser->build(['items' => null], $recurse)['items']);
+    }
+
+    #[Test]
+    #[DataProvider('garbage_keyword_value_provider')]
+    public function array_parser_throws_on_garbage_keyword_value(mixed $value, string $type): void
+    {
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Expected array or boolean for schema keyword "items", got ' . $type);
+
+        new ArraySchemaKeywordParser()->build(['items' => $value], static fn(): Schema => new Schema());
+    }
+
+    #[Test]
+    #[DataProvider('garbage_keyword_value_provider')]
+    public function composition_parser_throws_on_garbage_keyword_value(mixed $value, string $type): void
+    {
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Expected array or boolean for schema keyword "not", got ' . $type);
+
+        new CompositionSchemaKeywordParser()->build(['not' => $value], static fn(): Schema => new Schema());
+    }
+
+    #[Test]
+    public function array_parser_schema_list_builds_schemas_from_bool_and_array_elements(): void
+    {
+        $args = new ArraySchemaKeywordParser()->build(
+            ['prefixItems' => [['type' => 'integer'], false]],
+            static fn(bool|array $data): Schema => new Schema(type: 'nested'),
+        );
+
+        self::assertCount(2, $args['prefixItems']);
+        self::assertInstanceOf(Schema::class, $args['prefixItems'][0]);
+        self::assertInstanceOf(Schema::class, $args['prefixItems'][1]);
+    }
+
+    #[Test]
+    public function array_parser_schema_list_throws_on_garbage_element(): void
+    {
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Expected array or boolean for schema keyword "prefixItems", got int');
+
+        new ArraySchemaKeywordParser()->build(
+            ['prefixItems' => [['type' => 'string'], 42]],
+            static fn(): Schema => new Schema(),
+        );
+    }
+
+    #[Test]
+    public function array_parser_schema_list_throws_invalid_schema_exception_on_non_array_value(): void
+    {
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Expected array for schema keyword "prefixItems", got int');
+
+        new ArraySchemaKeywordParser()->build(
+            ['prefixItems' => 42],
+            static fn(): Schema => new Schema(),
+        );
+    }
+
+    #[Test]
+    public function composition_parser_schema_list_throws_on_garbage_element(): void
+    {
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Expected array or boolean for schema keyword "allOf", got int');
+
+        new CompositionSchemaKeywordParser()->build(
+            ['allOf' => [['type' => 'string'], 42]],
+            static fn(): Schema => new Schema(),
+        );
+    }
+
+    #[Test]
+    #[DataProvider('garbage_keyword_value_provider')]
+    public function object_parser_throws_on_garbage_property_names(mixed $value, string $type): void
+    {
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Expected array or boolean for schema keyword "propertyNames", got ' . $type);
+
+        new ObjectSchemaKeywordParser()->build(['propertyNames' => $value], static fn(): Schema => new Schema());
+    }
+
+    #[Test]
+    #[DataProvider('garbage_optional_schema_keyword_provider')]
+    public function object_parser_throws_on_garbage_optional_schema_keyword(string $key, mixed $value): void
+    {
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Expected array or boolean for schema keyword "' . $key . '", got');
+
+        new ObjectSchemaKeywordParser()->build([$key => $value], static fn(): Schema => new Schema());
+    }
+
+    #[Test]
+    public function object_parser_optional_schema_accepts_schema_bool_null(): void
+    {
+        $parser = new ObjectSchemaKeywordParser();
+        $recurse = static fn(bool|array $data): Schema => new Schema(type: 'nested');
+
+        $args = $parser->build([
+            'additionalProperties' => ['a' => 1],
+            'unevaluatedProperties' => true,
+            'contentSchema' => false,
+        ], $recurse);
+
+        self::assertInstanceOf(Schema::class, $args['additionalProperties']);
+        self::assertTrue($args['unevaluatedProperties']);
+        self::assertFalse($args['contentSchema']);
+        self::assertNull($parser->build(['contentSchema' => null], $recurse)['contentSchema']);
+    }
+
+    #[Test]
+    public function same_input_same_outcome_across_keyword_parsers(): void
+    {
+        $recurse = static fn(): Schema => new Schema();
+
+        $outcomes = [
+            'items' => $this->outcome(static fn(): array => new ArraySchemaKeywordParser()->build(['items' => 42], $recurse)),
+            'propertyNames' => $this->outcome(static fn(): array => new ObjectSchemaKeywordParser()->build(['propertyNames' => 42], $recurse)),
+            'additionalProperties' => $this->outcome(static fn(): array => new ObjectSchemaKeywordParser()->build(['additionalProperties' => 42], $recurse)),
+            'unevaluatedProperties' => $this->outcome(static fn(): array => new ObjectSchemaKeywordParser()->build(['unevaluatedProperties' => 42], $recurse)),
+            'contentSchema' => $this->outcome(static fn(): array => new ObjectSchemaKeywordParser()->build(['contentSchema' => 42], $recurse)),
+            'not' => $this->outcome(static fn(): array => new CompositionSchemaKeywordParser()->build(['not' => 42], $recurse)),
+            'allOf element' => $this->outcome(static fn(): array => new CompositionSchemaKeywordParser()->build(['allOf' => [['type' => 'string'], 42]], $recurse)),
+            'prefixItems element' => $this->outcome(static fn(): array => new ArraySchemaKeywordParser()->build(['prefixItems' => [['type' => 'string'], 42]], $recurse)),
+        ];
+
+        foreach ($outcomes as $keyword => $outcome) {
+            self::assertSame(InvalidSchemaException::class, $outcome, sprintf('Keyword "%s" outcome mismatch', $keyword));
+        }
+    }
+
+    public static function garbage_keyword_value_provider(): array
+    {
+        return [
+            'int' => [42, 'int'],
+            'float' => [1.5, 'float'],
+            'string' => ['str', 'string'],
+        ];
+    }
+
+    public static function garbage_optional_schema_keyword_provider(): array
+    {
+        return [
+            'additionalProperties int' => ['additionalProperties', 42],
+            'additionalProperties string' => ['additionalProperties', 'str'],
+            'unevaluatedProperties int' => ['unevaluatedProperties', 0],
+            'contentSchema string' => ['contentSchema', 'str'],
+        ];
+    }
+
+    private function outcome(Closure $build): string
+    {
+        try {
+            $build();
+
+            return 'no-exception';
+        } catch (InvalidSchemaException) {
+            return InvalidSchemaException::class;
+        }
     }
 }

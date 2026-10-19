@@ -44,11 +44,6 @@
       <code><![CDATA[array<string, T>]]></code>
     </MixedReturnTypeCoercion>
   </file>
-  <file src="src/Schema/Parser/Internal/ArraySchemaKeywordParser.php">
-    <MixedAssignment>
-      <code><![CDATA[$value]]></code>
-    </MixedAssignment>
-  </file>
   <file src="src/Schema/Parser/Internal/ComponentTreeBuilder.php">
     <ArgumentTypeCoercion>
       <code><![CDATA[$this->buildPrefixEncoding(...)]]></code>
@@ -81,9 +76,6 @@
     <MixedArgumentTypeCoercion>
       <code><![CDATA[TypeHelper::asArray($data['discriminator'])]]></code>
     </MixedArgumentTypeCoercion>
-    <MixedAssignment>
-      <code><![CDATA[$value]]></code>
-    </MixedAssignment>
   </file>
   <file src="src/Schema/Parser/Internal/CompositionTypeHelper.php">
     <MixedAssignment>
@@ -96,7 +88,6 @@
     </MixedArgument>
     <MixedAssignment>
       <code><![CDATA[$schema]]></code>
-      <code><![CDATA[$value]]></code>
     </MixedAssignment>
     <MixedReturnTypeCoercion>
       <code><![CDATA[$properties]]></code>
