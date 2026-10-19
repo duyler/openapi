@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A non-string type nested inside a parameter schema is no longer
+  unsatisfiable. `TypeCoercer` coerced only the top-level schema type,
+  so `object` and `array` parameters handed their un-coerced members to
+  the schema validator: `?page[limit]=3` against `page: {type: object,
+  properties: {limit: {type: integer}}}` could not pass for any value a
+  client could send, since query, path, header and cookie values arrive
+  as strings and coercion is the only path to a non-string leaf. Type
+  dispatch is now `Schema`-oriented and recurses through `properties`
+  and `items`, so `?page[limit]=3`, `?filter[enabled]=true` and
+  `?ids=1,2,3` coerce to `['limit' => 3]`, `['enabled' => true]` and
+  `[1, 2, 3]`. The traversal is shared with `RequestBodyCoercer` — which
+  already recursed for request bodies — through
+  `AbstractCoercer::coerceDeclaredProperties()` and
+  `AbstractCoercer::coerceDeclaredItems()` rather than duplicated. (#60)
 - Path Item level `parameters` are now enforced during request validation.
   `PathItem.parameters` were parsed into the schema model but never reached
   `RequestValidator`, so `required` and `schema` constraints on parameters

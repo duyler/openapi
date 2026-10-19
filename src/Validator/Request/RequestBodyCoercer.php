@@ -9,7 +9,6 @@ use Duyler\OpenApi\Validator\Coercion\AbstractCoercer;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 
-use function array_key_exists;
 use function is_array;
 use function is_string;
 
@@ -91,50 +90,22 @@ final readonly class RequestBodyCoercer extends AbstractCoercer
 
     private function coerceToObject(mixed $value, Schema $schema, bool $strict, bool $nullableAsType): array|int|string|float|bool|null
     {
-        if (false === is_array($value)) {
-            /** @var array|int|string|float|bool|null $value */
-            return $value;
-        }
-
-        $properties = $schema->properties ?? null;
-
-        if (null === $properties) {
-            return $value;
-        }
-
-        /** @var array<string, mixed> $coerced */
-        $coerced = $value;
-
-        foreach ($properties as $name => $propertySchema) {
-            if (false === array_key_exists($name, $value)) {
-                continue;
-            }
-
-            $coerced[$name] = $this->coerceInternal($value[$name], $propertySchema, $strict, $nullableAsType);
-        }
-
-        return $coerced;
+        /** @var array|int|string|float|bool|null */
+        return $this->coerceDeclaredProperties($value, $schema, $this->recursion($strict, $nullableAsType));
     }
 
     private function coerceToArray(mixed $value, Schema $schema, bool $strict, bool $nullableAsType): array|int|string|float|bool|null
     {
-        if (false === is_array($value)) {
-            /** @var array|int|string|float|bool|null $value */
-            return $value;
-        }
+        /** @var array|int|string|float|bool|null */
+        return $this->coerceDeclaredItems($value, $schema, $this->recursion($strict, $nullableAsType));
+    }
 
-        $itemsSchema = $schema->items instanceof Schema ? $schema->items : null;
-
-        if (null === $itemsSchema) {
-            return $value;
-        }
-
-        $coerced = [];
-
-        foreach ($value as $item) {
-            $coerced[] = $this->coerceInternal($item, $itemsSchema, $strict, $nullableAsType);
-        }
-
-        return $coerced;
+    /**
+     * @return callable(mixed, Schema): (array|int|string|float|bool|null)
+     */
+    private function recursion(bool $strict, bool $nullableAsType): callable
+    {
+        return fn(mixed $value, Schema $schema): array|int|string|float|bool|null
+            => $this->coerceInternal($value, $schema, $strict, $nullableAsType);
     }
 }
