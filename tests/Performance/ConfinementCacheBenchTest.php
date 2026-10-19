@@ -7,13 +7,9 @@ namespace Duyler\OpenApi\Test\Performance;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Cache\SchemaCache;
+use Duyler\OpenApi\Test\Support\Psr6ArrayCacheStub;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Cache\CacheItemInterface;
-use Psr\Cache\CacheItemPoolInterface;
-
-use DateInterval;
-use DateTimeInterface;
 
 use function count;
 use function hrtime;
@@ -21,7 +17,6 @@ use function implode;
 use function sort;
 use function sprintf;
 use function strlen;
-use function array_key_exists;
 
 /**
  * Regression budget for issue #68: with a warm confinement verdict cache,
@@ -49,7 +44,7 @@ final class ConfinementCacheBenchTest extends TestCase
     public function cached_string_spec_build_avoids_confinement_reparse(): void
     {
         $spec = $this->generateLargeYamlSpec();
-        $pool = new BenchCountingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
         $build = static fn(): OpenApiValidatorInterface => OpenApiValidatorBuilder::create()
             ->fromYamlString($spec)
@@ -145,120 +140,5 @@ final class ConfinementCacheBenchTest extends TestCase
         $count = count($samples);
 
         return $samples[(int) ($count / 2)];
-    }
-}
-
-final class BenchCountingPool implements CacheItemPoolInterface
-{
-    public int $readCount = 0;
-    public int $writeCount = 0;
-
-    /** @var array<string, mixed> */
-    private array $values = [];
-
-    public function getItem(string $key): CacheItemInterface
-    {
-        ++$this->readCount;
-
-        return new BenchCountingItem($key, $this->values[$key] ?? null, array_key_exists($key, $this->values));
-    }
-
-    /** @param list<string> $keys */
-    public function getItems(array $keys = []): array
-    {
-        $out = [];
-        foreach ($keys as $key) {
-            $out[$key] = $this->getItem($key);
-        }
-
-        return $out;
-    }
-
-    public function hasItem(string $key): bool
-    {
-        return array_key_exists($key, $this->values);
-    }
-
-    public function clear(): bool
-    {
-        $this->values = [];
-
-        return true;
-    }
-
-    public function deleteItem(string $key): bool
-    {
-        unset($this->values[$key]);
-
-        return true;
-    }
-
-    /** @param list<string> $keys */
-    public function deleteItems(array $keys): bool
-    {
-        foreach ($keys as $key) {
-            unset($this->values[$key]);
-        }
-
-        return true;
-    }
-
-    public function save(CacheItemInterface $item): bool
-    {
-        ++$this->writeCount;
-        $this->values[$item->getKey()] = $item->get();
-
-        return true;
-    }
-
-    public function saveDeferred(CacheItemInterface $item): bool
-    {
-        return $this->save($item);
-    }
-
-    public function commit(): bool
-    {
-        return true;
-    }
-}
-
-final class BenchCountingItem implements CacheItemInterface
-{
-    public function __construct(
-        private readonly string $key,
-        private mixed $value,
-        private readonly bool $hit,
-    ) {}
-
-    public function getKey(): string
-    {
-        return $this->key;
-    }
-
-    public function get(): mixed
-    {
-        return $this->value;
-    }
-
-    public function isHit(): bool
-    {
-        return $this->hit;
-    }
-
-    public function set(mixed $value): static
-    {
-        $this->value = $value;
-
-        return $this;
-    }
-
-    public function expiresAt(?DateTimeInterface $expiration): static
-    {
-        return $this;
-    }
-
-    public function expiresAfter(int|DateInterval|null $time): static
-    {
-        return $this;
     }
 }

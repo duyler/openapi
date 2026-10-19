@@ -6,21 +6,16 @@ namespace Duyler\OpenApi\Test\Unit\Regression\R4;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Cache\SchemaCache;
+use Duyler\OpenApi\Test\Support\Psr6ArrayCacheStub;
 use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
-use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Cache\CacheItemInterface;
-use Psr\Cache\CacheItemPoolInterface;
-
-use DateInterval;
-use DateTimeInterface;
 
 use function array_filter;
-use function array_key_exists;
 use function array_unique;
 use function array_values;
 use function str_ends_with;
+use function str_starts_with;
 
 /**
  * Regression suite for R4-SEC-008 / R4-TEST-011: the SchemaCache key
@@ -53,7 +48,7 @@ YAML;
     #[Test]
     public function stricter_max_spec_size_with_shared_cache_forces_reject_on_cache_miss(): void
     {
-        $sharedPool = new KeyCapturingPool();
+        $sharedPool = new Psr6ArrayCacheStub();
         $sharedCache = new SchemaCache($sharedPool);
 
         OpenApiValidatorBuilder::create()
@@ -131,7 +126,7 @@ YAML;
      */
     private function captureKeys(callable $configure): array
     {
-        $pool = new KeyCapturingPool();
+        $pool = new Psr6ArrayCacheStub();
 
         $builder = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SMALL_SPEC)
@@ -147,154 +142,5 @@ YAML;
         ));
 
         return $contentKeys;
-    }
-}
-
-final class KeyCapturingPool implements CacheItemPoolInterface
-{
-    /** @var array<string, mixed> */
-    private array $values = [];
-
-    /** @var list<string> */
-    private array $keys = [];
-
-    #[Override]
-    public function getItem(string $key): CacheItemInterface
-    {
-        $this->keys[] = $key;
-
-        if (array_key_exists($key, $this->values)) {
-            return new CapturedItem($key, $this->values[$key], true);
-        }
-
-        return new CapturedItem($key, null, false);
-    }
-
-    /**
-     * @param array<array-key, string> $keys
-     *
-     * @return array<string, CacheItemInterface>
-     */
-    #[Override]
-    public function getItems(array $keys = []): array
-    {
-        $result = [];
-
-        foreach ($keys as $key) {
-            $result[$key] = $this->getItem($key);
-        }
-
-        return $result;
-    }
-
-    #[Override]
-    public function hasItem(string $key): bool
-    {
-        return array_key_exists($key, $this->values);
-    }
-
-    #[Override]
-    public function clear(): bool
-    {
-        $this->values = [];
-        $this->keys = [];
-
-        return true;
-    }
-
-    #[Override]
-    public function deleteItem(string $key): bool
-    {
-        unset($this->values[$key]);
-
-        return true;
-    }
-
-    /**
-     * @param array<array-key, string> $keys
-     */
-    #[Override]
-    public function deleteItems(array $keys): bool
-    {
-        foreach ($keys as $key) {
-            unset($this->values[$key]);
-        }
-
-        return true;
-    }
-
-    #[Override]
-    public function save(CacheItemInterface $item): bool
-    {
-        $this->values[$item->getKey()] = $item->get();
-
-        return true;
-    }
-
-    #[Override]
-    public function saveDeferred(CacheItemInterface $item): bool
-    {
-        return $this->save($item);
-    }
-
-    #[Override]
-    public function commit(): bool
-    {
-        return true;
-    }
-
-    /**
-     * @return list<string>
-     */
-    public function capturedKeys(): array
-    {
-        return $this->keys;
-    }
-}
-
-final class CapturedItem implements CacheItemInterface
-{
-    public function __construct(
-        private readonly string $key,
-        private mixed $value,
-        private readonly bool $hit,
-    ) {}
-
-    #[Override]
-    public function getKey(): string
-    {
-        return $this->key;
-    }
-
-    #[Override]
-    public function get(): mixed
-    {
-        return $this->value;
-    }
-
-    #[Override]
-    public function isHit(): bool
-    {
-        return $this->hit;
-    }
-
-    #[Override]
-    public function set(mixed $value): static
-    {
-        $this->value = $value;
-
-        return $this;
-    }
-
-    #[Override]
-    public function expiresAt(?DateTimeInterface $expiration): static
-    {
-        return $this;
-    }
-
-    #[Override]
-    public function expiresAfter(int|DateInterval|null $time): static
-    {
-        return $this;
     }
 }

@@ -7,15 +7,10 @@ namespace Duyler\OpenApi\Test\Integration\Cache;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Cache\SchemaCache;
+use Duyler\OpenApi\Test\Support\Psr6ArrayCacheStub;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Cache\CacheItemInterface;
-use Psr\Cache\CacheItemPoolInterface;
 
-use DateInterval;
-use DateTimeInterface;
-
-use function array_key_exists;
 use function implode;
 use function sprintf;
 use function strlen;
@@ -44,7 +39,7 @@ final class StringSpecConfinementCacheTest extends TestCase
     public function string_spec_confinement_cache_reuses_entries_across_builds(): void
     {
         $spec = $this->generateYamlSpec();
-        $pool = new SpecConfinementPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
         $build = static fn(): OpenApiValidatorInterface => OpenApiValidatorBuilder::create()
             ->fromYamlString($spec)
@@ -141,120 +136,5 @@ final class StringSpecConfinementCacheTest extends TestCase
         }
 
         return implode("\n", $lines) . "\n";
-    }
-}
-
-final class SpecConfinementPool implements CacheItemPoolInterface
-{
-    public int $readCount = 0;
-    public int $writeCount = 0;
-
-    /** @var array<string, mixed> */
-    private array $values = [];
-
-    public function getItem(string $key): CacheItemInterface
-    {
-        ++$this->readCount;
-
-        return new SpecConfinementItem($key, $this->values[$key] ?? null, array_key_exists($key, $this->values));
-    }
-
-    /** @param list<string> $keys */
-    public function getItems(array $keys = []): array
-    {
-        $out = [];
-        foreach ($keys as $key) {
-            $out[$key] = $this->getItem($key);
-        }
-
-        return $out;
-    }
-
-    public function hasItem(string $key): bool
-    {
-        return array_key_exists($key, $this->values);
-    }
-
-    public function clear(): bool
-    {
-        $this->values = [];
-
-        return true;
-    }
-
-    public function deleteItem(string $key): bool
-    {
-        unset($this->values[$key]);
-
-        return true;
-    }
-
-    /** @param list<string> $keys */
-    public function deleteItems(array $keys): bool
-    {
-        foreach ($keys as $key) {
-            unset($this->values[$key]);
-        }
-
-        return true;
-    }
-
-    public function save(CacheItemInterface $item): bool
-    {
-        ++$this->writeCount;
-        $this->values[$item->getKey()] = $item->get();
-
-        return true;
-    }
-
-    public function saveDeferred(CacheItemInterface $item): bool
-    {
-        return $this->save($item);
-    }
-
-    public function commit(): bool
-    {
-        return true;
-    }
-}
-
-final class SpecConfinementItem implements CacheItemInterface
-{
-    public function __construct(
-        private readonly string $key,
-        private mixed $value,
-        private readonly bool $hit,
-    ) {}
-
-    public function getKey(): string
-    {
-        return $this->key;
-    }
-
-    public function get(): mixed
-    {
-        return $this->value;
-    }
-
-    public function isHit(): bool
-    {
-        return $this->hit;
-    }
-
-    public function set(mixed $value): static
-    {
-        $this->value = $value;
-
-        return $this;
-    }
-
-    public function expiresAt(?DateTimeInterface $expiration): static
-    {
-        return $this;
-    }
-
-    public function expiresAfter(int|DateInterval|null $time): static
-    {
-        return $this;
     }
 }

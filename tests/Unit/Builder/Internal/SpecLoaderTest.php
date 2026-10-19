@@ -9,22 +9,16 @@ use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\Internal\CacheKeyBuilder;
 use Duyler\OpenApi\Builder\Internal\SpecLoader;
 use Duyler\OpenApi\Cache\SchemaCache;
+use Duyler\OpenApi\Test\Support\Psr6ArrayCacheStub;
 use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Cache\CacheItemInterface;
-use Psr\Cache\CacheItemPoolInterface;
-
-use DateInterval;
-use DateTimeInterface;
 
 use function file_put_contents;
 use function is_file;
 use function sys_get_temp_dir;
 use function uniqid;
 use function unlink;
-
-use function array_key_exists;
 
 use const DIRECTORY_SEPARATOR;
 
@@ -189,7 +183,7 @@ JSON;
     #[Test]
     public function load_caches_document_on_first_call_for_string_spec(): void
     {
-        $pool = new CountingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
 
         $loader = $this->buildLoader(new BuilderConfig(
@@ -217,7 +211,7 @@ JSON;
         $path = $this->writeTempFile(self::MINIMAL_YAML);
 
         try {
-            $pool = new CountingPool();
+            $pool = new Psr6ArrayCacheStub();
             $cache = new SchemaCache($pool);
 
             $first = $this->buildLoader(new BuilderConfig(
@@ -241,7 +235,7 @@ JSON;
     #[Test]
     public function load_with_distinct_fingerprint_misses_cache(): void
     {
-        $pool = new CountingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
 
         $this->buildLoader(new BuilderConfig(
@@ -290,119 +284,5 @@ JSON;
         if (is_file($path)) {
             unlink($path);
         }
-    }
-}
-
-final class CountingPool implements CacheItemPoolInterface
-{
-    public int $readCount = 0;
-    public int $writeCount = 0;
-
-    /** @var array<string, mixed> */
-    private array $values = [];
-
-    public function getItem(string $key): CacheItemInterface
-    {
-        ++$this->readCount;
-
-        return new CountingItem($key, $this->values[$key] ?? null, array_key_exists($key, $this->values));
-    }
-
-    /** @param list<string> $keys */
-    public function getItems(array $keys = []): array
-    {
-        $out = [];
-        foreach ($keys as $k) {
-            $out[$k] = $this->getItem($k);
-        }
-
-        return $out;
-    }
-
-    public function hasItem(string $key): bool
-    {
-        return array_key_exists($key, $this->values);
-    }
-
-    public function clear(): bool
-    {
-        $this->values = [];
-
-        return true;
-    }
-
-    public function deleteItem(string $key): bool
-    {
-        unset($this->values[$key]);
-
-        return true;
-    }
-
-    public function deleteItems(array $keys): bool
-    {
-        foreach ($keys as $k) {
-            unset($this->values[$k]);
-        }
-
-        return true;
-    }
-
-    public function save(CacheItemInterface $item): bool
-    {
-        ++$this->writeCount;
-        $this->values[$item->getKey()] = $item->get();
-
-        return true;
-    }
-
-    public function saveDeferred(CacheItemInterface $item): bool
-    {
-        return $this->save($item);
-    }
-
-    public function commit(): bool
-    {
-        return true;
-    }
-}
-
-final class CountingItem implements CacheItemInterface
-{
-    public function __construct(
-        private readonly string $key,
-        private mixed $value,
-        private readonly bool $hit,
-    ) {}
-
-    public function getKey(): string
-    {
-        return $this->key;
-    }
-
-    public function get(): mixed
-    {
-        return $this->value;
-    }
-
-    public function isHit(): bool
-    {
-        return $this->hit;
-    }
-
-    public function set(mixed $value): static
-    {
-        $this->value = $value;
-
-        return $this;
-    }
-
-    public function expiresAt(?DateTimeInterface $expiration): static
-    {
-        return $this;
-    }
-
-    public function expiresAfter(int|DateInterval|null $time): static
-    {
-        return $this;
     }
 }

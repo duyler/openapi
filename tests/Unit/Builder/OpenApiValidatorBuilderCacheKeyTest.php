@@ -6,14 +6,11 @@ namespace Duyler\OpenApi\Test\Unit\Builder;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Cache\SchemaCache;
+use Duyler\OpenApi\Test\Support\Psr6ArrayCacheStub;
 use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Cache\CacheItemInterface;
-use Psr\Cache\CacheItemPoolInterface;
 
-use DateInterval;
-use DateTimeInterface;
 use ReflectionMethod;
 
 use function array_key_exists;
@@ -52,7 +49,7 @@ YAML;
     #[Test]
     public function string_cache_key_uses_sha256_length(): void
     {
-        $pool = new KeyCapturingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
 
         OpenApiValidatorBuilder::create()
@@ -76,7 +73,7 @@ YAML;
     #[Test]
     public function string_cache_key_matches_sha256_of_content_hash_and_parse_config_fingerprint(): void
     {
-        $pool = new KeyCapturingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
 
         OpenApiValidatorBuilder::create()
@@ -96,7 +93,7 @@ YAML;
     #[Test]
     public function string_cache_key_is_not_xxh64_length(): void
     {
-        $pool = new KeyCapturingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
 
         OpenApiValidatorBuilder::create()
@@ -116,7 +113,7 @@ YAML;
         $path = $this->writeTempSpec(self::MINIMAL_YAML);
 
         try {
-            $pool = new KeyCapturingPool();
+            $pool = new Psr6ArrayCacheStub();
             $cache = new SchemaCache($pool);
 
             OpenApiValidatorBuilder::create()
@@ -146,7 +143,7 @@ YAML;
         $path = $this->writeTempSpec(self::MINIMAL_YAML);
 
         try {
-            $pool1 = new KeyCapturingPool();
+            $pool1 = new Psr6ArrayCacheStub();
             OpenApiValidatorBuilder::create()
                 ->fromYamlFile($path)
                 ->withCache(new SchemaCache($pool1))
@@ -155,7 +152,7 @@ YAML;
 
             touch($path, time() + 100);
 
-            $pool2 = new KeyCapturingPool();
+            $pool2 = new Psr6ArrayCacheStub();
             OpenApiValidatorBuilder::create()
                 ->fromYamlFile($path)
                 ->withCache(new SchemaCache($pool2))
@@ -178,7 +175,7 @@ YAML;
         $path = $this->writeTempSpec(self::MINIMAL_YAML);
 
         try {
-            $pool1 = new KeyCapturingPool();
+            $pool1 = new Psr6ArrayCacheStub();
             OpenApiValidatorBuilder::create()
                 ->fromYamlFile($path)
                 ->withCache(new SchemaCache($pool1))
@@ -189,7 +186,7 @@ YAML;
             $this->writeTempSpec($appended, $path);
             touch($path, time() + 200);
 
-            $pool2 = new KeyCapturingPool();
+            $pool2 = new Psr6ArrayCacheStub();
             OpenApiValidatorBuilder::create()
                 ->fromYamlFile($path)
                 ->withCache(new SchemaCache($pool2))
@@ -208,14 +205,14 @@ YAML;
         $path = $this->writeTempSpec(self::MINIMAL_YAML);
 
         try {
-            $pool1 = new KeyCapturingPool();
+            $pool1 = new Psr6ArrayCacheStub();
             OpenApiValidatorBuilder::create()
                 ->fromYamlFile($path)
                 ->withCache(new SchemaCache($pool1))
                 ->build();
             $key1 = $this->uniqueKeys($pool1->capturedKeys())[0];
 
-            $pool2 = new KeyCapturingPool();
+            $pool2 = new Psr6ArrayCacheStub();
             OpenApiValidatorBuilder::create()
                 ->fromYamlFile($path)
                 ->withCache(new SchemaCache($pool2))
@@ -234,7 +231,7 @@ YAML;
         $path = $this->writeTempSpec(self::MINIMAL_YAML);
 
         try {
-            $pool = new KeyCapturingPool();
+            $pool = new Psr6ArrayCacheStub();
             OpenApiValidatorBuilder::create()
                 ->fromYamlFile($path)
                 ->withCache(new SchemaCache($pool))
@@ -366,7 +363,7 @@ x-l1:
             l7: deep
 YAML;
 
-        $pool = new KeyCapturingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
 
         OpenApiValidatorBuilder::create()
@@ -408,14 +405,14 @@ YAML;
         $root1 = sys_get_temp_dir();
         $root2 = dirname(__DIR__, 3);
 
-        $pool1 = new KeyCapturingPool();
+        $pool1 = new Psr6ArrayCacheStub();
         OpenApiValidatorBuilder::create()
             ->fromYamlString(self::MINIMAL_YAML)
             ->withExternalRefAllowedRoot($root1)
             ->withCache(new SchemaCache($pool1))
             ->build();
 
-        $pool2 = new KeyCapturingPool();
+        $pool2 = new Psr6ArrayCacheStub();
         OpenApiValidatorBuilder::create()
             ->fromYamlString(self::MINIMAL_YAML)
             ->withExternalRefAllowedRoot($root2)
@@ -446,7 +443,7 @@ YAML;
     #[Test]
     public function identical_parse_config_and_content_reuse_cache_key(): void
     {
-        $pool = new KeyCapturingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
 
         OpenApiValidatorBuilder::create()
@@ -481,7 +478,7 @@ YAML;
     #[Test]
     public function runtime_validation_toggles_do_not_invalidate_cache(): void
     {
-        $pool = new KeyCapturingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
 
         OpenApiValidatorBuilder::create()
@@ -560,136 +557,5 @@ YAML;
         if (is_file($path)) {
             unlink($path);
         }
-    }
-}
-
-final class KeyCapturingPool implements CacheItemPoolInterface
-{
-    /** @var array<string, mixed> */
-    private array $values = [];
-
-    /** @var list<string> */
-    private array $keys = [];
-
-    public function getItem(string $key): CacheItemInterface
-    {
-        $this->keys[] = $key;
-
-        if (array_key_exists($key, $this->values)) {
-            return new CapturedItem($key, $this->values[$key], true);
-        }
-
-        return new CapturedItem($key, null, false);
-    }
-
-    /**
-     * @param list<string> $keys
-     *
-     * @return array<string, CacheItemInterface>
-     */
-    public function getItems(array $keys = []): array
-    {
-        $result = [];
-
-        foreach ($keys as $key) {
-            $result[$key] = $this->getItem($key);
-        }
-
-        return $result;
-    }
-
-    public function hasItem(string $key): bool
-    {
-        return array_key_exists($key, $this->values);
-    }
-
-    public function clear(): bool
-    {
-        $this->values = [];
-        $this->keys = [];
-
-        return true;
-    }
-
-    public function deleteItem(string $key): bool
-    {
-        unset($this->values[$key]);
-
-        return true;
-    }
-
-    public function deleteItems(array $keys): bool
-    {
-        foreach ($keys as $key) {
-            unset($this->values[$key]);
-        }
-
-        return true;
-    }
-
-    public function save(CacheItemInterface $item): bool
-    {
-        $this->values[$item->getKey()] = $item->get();
-
-        return true;
-    }
-
-    public function saveDeferred(CacheItemInterface $item): bool
-    {
-        return $this->save($item);
-    }
-
-    public function commit(): bool
-    {
-        return true;
-    }
-
-    /**
-     * @return list<string>
-     */
-    public function capturedKeys(): array
-    {
-        return $this->keys;
-    }
-}
-
-final class CapturedItem implements CacheItemInterface
-{
-    public function __construct(
-        private readonly string $key,
-        private mixed $value,
-        private readonly bool $hit,
-    ) {}
-
-    public function getKey(): string
-    {
-        return $this->key;
-    }
-
-    public function get(): mixed
-    {
-        return $this->value;
-    }
-
-    public function isHit(): bool
-    {
-        return $this->hit;
-    }
-
-    public function set(mixed $value): static
-    {
-        $this->value = $value;
-
-        return $this;
-    }
-
-    public function expiresAt(?DateTimeInterface $expiration): static
-    {
-        return $this;
-    }
-
-    public function expiresAfter(int|DateInterval|null $time): static
-    {
-        return $this;
     }
 }
