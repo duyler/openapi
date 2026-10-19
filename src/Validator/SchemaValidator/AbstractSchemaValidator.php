@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
+use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
+use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -19,6 +21,12 @@ abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterf
     public function __construct(
         protected readonly ValidatorDependencies $dependencies,
     ) {}
+
+    protected function acceptsNullAsNullable(mixed $data, Schema $schema, ?ValidationContext $context): bool
+    {
+        return null === $data
+            && SchemaValueNormalizer::isNullableSchema($schema, $context?->nullableAsType ?? true);
+    }
 
     protected function getDataPath(?ValidationContext $context): string
     {

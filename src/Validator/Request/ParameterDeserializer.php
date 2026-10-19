@@ -32,7 +32,7 @@ final readonly class ParameterDeserializer
 
         if (is_array($normalized)) {
             return 'form' === $style
-                ? $this->deserializeForm($normalized, $param->explode)
+                ? $this->deserializeForm($normalized, $param)
                 : $normalized;
         }
 
@@ -41,7 +41,7 @@ final readonly class ParameterDeserializer
             'matrix' => $this->deserializeMatrix($normalized, $param),
             'label' => $this->deserializeLabel($normalized, $param),
             'simple' => $this->deserializeSimple($normalized, $param),
-            'form' => $this->deserializeForm($normalized, $param->explode),
+            'form' => $this->deserializeForm($normalized, $param),
             'pipeDelimited' => $this->deserializePipeDelimited($normalized),
             'spaceDelimited' => $this->deserializeSpaceDelimited($normalized),
             'cookie' => $this->deserializeCookie($normalized, $param),
@@ -103,10 +103,10 @@ final readonly class ParameterDeserializer
         return $this->splitBySeparator($value, ',');
     }
 
-    private function deserializeForm(array|string $value, bool $explode): array|int|string
+    private function deserializeForm(array|string $value, Parameter $param): array|int|string
     {
         if (is_array($value)) {
-            if ($explode) {
+            if ($param->explode) {
                 return $value;
             }
 
@@ -114,7 +114,15 @@ final readonly class ParameterDeserializer
             return implode(',', $value);
         }
 
-        if (false === $explode && str_contains($value, ',')) {
+        if ($param->explode) {
+            return $value;
+        }
+
+        if ($this->isArrayType($param)) {
+            return $this->splitBySeparator($value, ',');
+        }
+
+        if (str_contains($value, ',')) {
             $this->assertWithinItemLimit($value, ',');
 
             return explode(',', $value);

@@ -8,6 +8,7 @@ use Duyler\OpenApi\Validator\SchemaValidator\AllOfValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
@@ -236,5 +237,33 @@ class AllOfValidatorTest extends TestCase
             $errors = $e->getErrors();
             self::assertGreaterThan(0, count($errors));
         }
+    }
+
+    #[Test]
+    public function allOf_passes_when_parent_schema_is_nullable_and_data_is_null(): void
+    {
+        $schema = new Schema(
+            nullable: true,
+            allOf: [new Schema(type: 'object', required: ['id'])],
+        );
+
+        $this->validator->validate(null, $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function allOf_rejects_null_when_parent_nullable_is_not_honored(): void
+    {
+        $schema = new Schema(
+            nullable: true,
+            allOf: [new Schema(type: 'object', required: ['id'])],
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: false);
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate(null, $schema, $context);
     }
 }

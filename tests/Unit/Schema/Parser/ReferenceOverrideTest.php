@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Schema\Parser;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
@@ -16,6 +17,7 @@ use PHPUnit\Framework\TestCase;
 
 #[CoversClass(Schema::class)]
 #[CoversClass(Parameter::class)]
+#[CoversClass(RequestBody::class)]
 #[CoversClass(Response::class)]
 #[CoversClass(RefResolver::class)]
 #[CoversClass(JsonParser::class)]
@@ -112,6 +114,41 @@ final class ReferenceOverrideTest extends TestCase
         self::assertNotNull($response);
         self::assertSame('#/components/responses/Success', $response->ref);
         self::assertSame('Override summary', $response->refSummary);
+    }
+
+    #[Test]
+    public function request_body_reference_can_override_summary(): void
+    {
+        $json = '{"openapi":"3.2.0","info":{"title":"Test","version":"1.0"},"components":{"requestBodies":{"UserBody":{"description":"Original description","content":{"application/json":{"schema":{"type":"object"}}}}}},"paths":{"/test":{"post":{"requestBody":{"$ref":"#/components/requestBodies/UserBody","summary":"Override summary"},"responses":{"201":{"description":"Created"}}}}}}';
+
+        $document = $this->parser->parse($json);
+
+        $requestBody = $document->paths?->paths['/test']->post?->requestBody;
+
+        self::assertNotNull($requestBody);
+        self::assertSame('#/components/requestBodies/UserBody', $requestBody->ref);
+        self::assertSame('Override summary', $requestBody->refSummary);
+    }
+
+    #[Test]
+    public function request_body_ref_serializes_only_reference_fields(): void
+    {
+        $requestBody = new RequestBody(
+            ref: '#/components/requestBodies/UserBody',
+            refSummary: 'Override summary',
+            refDescription: 'Override description',
+            description: 'Should not appear',
+            required: true,
+        );
+
+        $serialized = $requestBody->jsonSerialize();
+
+        self::assertCount(3, $serialized);
+        self::assertArrayHasKey('$ref', $serialized);
+        self::assertArrayHasKey('summary', $serialized);
+        self::assertArrayHasKey('description', $serialized);
+        self::assertSame('Override description', $serialized['description']);
+        self::assertArrayNotHasKey('required', $serialized);
     }
 
     #[Test]

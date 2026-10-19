@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
@@ -41,7 +42,7 @@ final readonly class TypeValidator extends AbstractSchemaValidator implements Ke
 
         $nullableAsType = $context?->nullableAsType ?? true;
 
-        if (null === $data && $schema->nullable && $nullableAsType) {
+        if (null === $data && SchemaValueNormalizer::isNullableSchema($schema, $nullableAsType)) {
             return;
         }
 

@@ -55,6 +55,11 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
             return;
         }
 
+        $requestBody = $this->dependencies->refResolver->resolveRequestBodyWithOverride(
+            $requestBody,
+            $this->document,
+        );
+
         if ($requestBody->required && '' === trim($body)) {
             throw new MissingRequestBodyException();
         }

@@ -25,12 +25,16 @@ final readonly class OneOfValidator extends AbstractCompositionalValidator imple
             return;
         }
 
+        if ($this->acceptsNullAsNullable($data, $schema, $context)) {
+            return;
+        }
+
         $result = $this->validateSchemas($schema->oneOf, $data, $context, 'oneOf');
 
         if (0 === $result->validCount) {
             throw new ValidationException(
                 'Exactly one of the schemas must match, but none did',
-                errors: $result->abstractErrors,
+                errors: $result->errors,
             );
         }
 

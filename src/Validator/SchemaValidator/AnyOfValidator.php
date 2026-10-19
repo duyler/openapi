@@ -24,12 +24,16 @@ final readonly class AnyOfValidator extends AbstractCompositionalValidator imple
             return;
         }
 
+        if ($this->acceptsNullAsNullable($data, $schema, $context)) {
+            return;
+        }
+
         $result = $this->validateSchemas($schema->anyOf, $data, $context, 'anyOf');
 
         if (0 === $result->validCount) {
             throw new ValidationException(
                 'At least one of the schemas must match, but none did',
-                errors: $result->abstractErrors,
+                errors: $result->errors,
             );
         }
     }

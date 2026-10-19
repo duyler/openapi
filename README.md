@@ -1846,28 +1846,18 @@ If the OpenAPI specification changes at runtime, rebuild the validator. The old 
 
 #### CI verification
 
-These contracts are verified by `tests/Concurrency/SwooleSharedValidatorTest`
-(Swoole coroutine isolation) and `tests/Concurrency/FrankenPhpThreadedTest`
-(FrankenPHP threaded worker isolation). The Swoole suite runs in a dedicated
-CI matrix job based on `phpswoole/swoole:php8.5` on every push and pull
-request, with a `php -m | grep -q '^swoole$'` fast-fail step that prevents
-the test from silently skipping when the extension is missing (R4-TEST-001).
-
-The FrankenPHP suite (`tests/Concurrency/FrankenPhpThreadedTest`) is
-retained in the repository but is not exercised by CI today. The
+The concurrency contracts above are documented guidance for coroutine and
+threaded runtimes; they are not exercised by this repository's test suite.
+The extension-gated suites that previously covered them
+(`SwooleSharedValidatorTest`, `FrankenPhpThreadedTest`) were removed: the
 `frankenphp` extension is statically compiled into the Caddy-based
-`frankenphp` binary and is registered with the Zend engine only inside
-the frankenphp worker SAPI (real web requests); it is not available as
-a loadable `.so` and is absent from `php -m` / `frankenphp php-cli -m`
-output regardless of the base image. As a result
-`FrankenPhpThreadedTest::setUp()` calls `markTestSkipped()` under
-`extension_loaded('frankenphp') === false` in CLI SAPI, so a CLI-based
-CI job cannot catch regressions. Coverage of the FrankenPHP threaded
-contract requires a worker-SAPI test harness that boots the frankenphp
-server and runs PHPUnit through an actual worker request; tracked as a
-follow-up to R4-TEST-001. `tests/Concurrency/RoadRunnerTest` runs in
-the main `tests` job without any extension gate because RoadRunner uses
-the prefork model and does not require a runtime extension.
+`frankenphp` binary and is registered with the Zend engine only inside the
+frankenphp worker SAPI (real web requests), so it is absent from any
+CLI-based run, and the dedicated Swoole CI matrix job was retired. Both
+suites could therefore only report skipped results and provided no
+regression signal. `tests/Concurrency/RoadRunnerTest` runs in the main
+`tests` job without any extension gate because RoadRunner uses the prefork
+model and does not require a runtime extension.
 
 ## Streaming Response Validation
 

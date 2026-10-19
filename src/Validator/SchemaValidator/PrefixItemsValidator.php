@@ -63,8 +63,7 @@ final readonly class PrefixItemsValidator extends AbstractSchemaValidator implem
         }
 
         try {
-            $allowNull = $state->nullableAsType && ($subSchema->nullable
-                || SchemaValueNormalizer::doesTypeIncludeNull($subSchema->type));
+            $allowNull = SchemaValueNormalizer::allowsNull($subSchema, $state->nullableAsType);
             $value = SchemaValueNormalizer::normalize($item, $allowNull);
 
             if (null === $state->context) {
