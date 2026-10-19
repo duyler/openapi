@@ -6,14 +6,12 @@ namespace Duyler\OpenApi\Test\Integration\Validator\Webhook;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
+use Duyler\OpenApi\Test\Support\Psr7RequestFactory;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
-use Nyholm\Psr7\Factory\Psr17Factory;
-use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * Covers webhook edge cases:
@@ -93,20 +91,12 @@ webhooks:
           description: Acknowledged
 YAML;
 
-    private Psr17Factory $factory;
-
-    #[Override]
-    protected function setUp(): void
-    {
-        $this->factory = new Psr17Factory();
-    }
-
     #[Test]
     public function wh_04_webhook_with_valid_bearer_token_returns_operation(): void
     {
         $validator = $this->buildSecurityValidator();
 
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook',
             '{"eventId":"evt_123"}',
             ['Authorization' => 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test'],
@@ -128,7 +118,7 @@ YAML;
     {
         $validator = $this->buildSecurityValidator();
 
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook',
             '{"eventId":"evt_456"}',
         );
@@ -144,7 +134,7 @@ YAML;
     {
         $validator = $this->buildCoercionValidator();
 
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook?version=42&amount=99.5',
             '{"orderId":"ord_123"}',
         );
@@ -160,7 +150,7 @@ YAML;
     {
         $validator = $this->buildCoercionValidator();
 
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook?version=abc&amount=99.5',
             '{"orderId":"ord_123"}',
         );
@@ -175,7 +165,7 @@ YAML;
     {
         $validator = $this->buildCoercionValidator();
 
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook?version=0&amount=99.5',
             '{"orderId":"ord_123"}',
         );
@@ -190,7 +180,7 @@ YAML;
     {
         $validator = $this->buildCoercionValidator();
 
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook?version=2&amount=-5',
             '{"orderId":"ord_123"}',
         );
@@ -205,7 +195,7 @@ YAML;
     {
         $validator = $this->buildCoercionValidator();
 
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook?version=1&amount=0',
             '{"orderId":"ord_456"}',
         );
@@ -230,26 +220,5 @@ YAML;
             ->fromYamlString(self::COERCION_SPEC)
             ->enableCoercion()
             ->build();
-    }
-
-    /**
-     * @param array<string, string> $headers
-     */
-    private function createWebhookRequest(
-        string $uri,
-        string $body,
-        array $headers = ['Content-Type' => 'application/json'],
-    ): ServerRequestInterface {
-        $request = $this->factory->createServerRequest('POST', $uri);
-
-        foreach ($headers as $name => $value) {
-            $request = $request->withHeader($name, $value);
-        }
-
-        if (!isset($headers['Content-Type'])) {
-            $request = $request->withHeader('Content-Type', 'application/json');
-        }
-
-        return $request->withBody($this->factory->createStream($body));
     }
 }

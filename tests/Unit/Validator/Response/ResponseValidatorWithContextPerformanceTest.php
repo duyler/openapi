@@ -5,20 +5,18 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Response;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Test\Support\StreamStubHelper;
+use Duyler\OpenApi\Test\Support\Psr7RequestStubFactory;
 use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
-use Psr\Http\Message\UriInterface;
 
 #[CoversClass(ResponseValidatorWithContext::class)]
 final class ResponseValidatorWithContextPerformanceTest extends TestCase
 {
-    use StreamStubHelper;
+    use Psr7RequestStubFactory;
 
     #[Test]
     public function repeated_validate_does_not_create_redundant_objects(): void
@@ -65,9 +63,9 @@ YAML;
             ->build();
 
         $operation = $validator->validateRequest(
-            $this->createPsr7Request(
-                '/users',
+            $this->createStubRequest(
                 'POST',
+                '/users',
                 ['Content-Type' => 'application/json'],
                 '{"name": "John", "email": "john@example.com"}',
             ),
@@ -119,7 +117,7 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $operation = $validator->validateRequest($this->createPsr7Request('/items', 'GET'));
+        $operation = $validator->validateRequest($this->createStubRequest('GET', '/items'));
 
         $iterations = 100;
         $start = microtime(true);
@@ -132,45 +130,6 @@ YAML;
         $avgMs = ((microtime(true) - $start) * 1000.0) / (float) $iterations;
 
         $this->assertLessThan(10.0, $avgMs, 'Repeated response validation avg should be under 10ms');
-    }
-
-    private function createPsr7Request(
-        string $uri,
-        string $method,
-        array $headers = [],
-        string $body = '',
-    ): ServerRequestInterface {
-        /** @var ServerRequestInterface $request */
-        $request = $this->createStub(ServerRequestInterface::class);
-
-        $request->method('getMethod')->willReturn($method);
-
-        $uriMock = $this->createStub(UriInterface::class);
-        $uriMock->method('getPath')->willReturn($uri);
-        $uriMock->method('getQuery')->willReturn('');
-
-        $request->method('getUri')->willReturn($uriMock);
-        $request->method('getHeaders')->willReturn($headers);
-        $request->method('getHeaderLine')->willReturnCallback(function (string $name): string {
-            if ('Content-Type' === $name) {
-                return 'application/json';
-            }
-
-            if ('Cookie' === $name) {
-                return '';
-            }
-
-            return '';
-        });
-        $request->method('getCookieParams')->willReturn([]);
-
-        $stream = $this->createStub(StreamInterface::class);
-        $stream->method('__toString')->willReturn($body);
-        $this->configureReadableStream($stream, $body);
-
-        $request->method('getBody')->willReturn($stream);
-
-        return $request;
     }
 
     private function createPsr7Response(

@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator;
 
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\SpecBuilders;
 use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\PathFinder;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -34,7 +35,7 @@ YAML;
     #[Test]
     public function find_operation_throws_operation_not_found_for_unknown_path(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::TEST_SPEC_YAML);
 
         $this->expectException(OperationNotFoundException::class);
 
@@ -44,7 +45,7 @@ YAML;
     #[Test]
     public function find_operation_throws_operation_not_found_for_unknown_method(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::TEST_SPEC_YAML);
 
         $this->expectException(OperationNotFoundException::class);
 
@@ -54,7 +55,7 @@ YAML;
     #[Test]
     public function operation_not_found_exception_contains_path_method_and_sanitised_message(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::TEST_SPEC_YAML);
 
         try {
             $finder->findOperation('/users/42', 'PUT');
@@ -86,15 +87,5 @@ YAML)
         $this->expectExceptionMessage('No paths defined in OpenAPI specification');
 
         $finder->findOperation('/users', 'GET');
-    }
-
-    private function createPathFinder(): PathFinder
-    {
-        $document = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::TEST_SPEC_YAML)
-            ->build()
-            ->getDocument();
-
-        return new PathFinder($document);
     }
 }

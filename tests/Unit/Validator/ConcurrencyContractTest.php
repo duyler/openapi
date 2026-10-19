@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator;
 
+use Duyler\OpenApi\Test\Support\CountingLock;
 use Duyler\OpenApi\Validator\LibxmlSecuredContext;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -96,7 +97,7 @@ final class ConcurrencyContractTest extends TestCase
     #[Test]
     public function validator_pool_for_coroutine_runtime_factory_accepts_lock_with_methods(): void
     {
-        $lock = $this->createCountingLock();
+        $lock = new CountingLock();
 
         $pool = ValidatorPool::forCoroutineRuntime($lock);
 
@@ -106,7 +107,7 @@ final class ConcurrencyContractTest extends TestCase
     #[Test]
     public function validator_pool_for_coroutine_runtime_factory_propagates_max_size(): void
     {
-        $lock = $this->createCountingLock();
+        $lock = new CountingLock();
 
         $pool = ValidatorPool::forCoroutineRuntime($lock, maxSize: 64);
 
@@ -118,7 +119,7 @@ final class ConcurrencyContractTest extends TestCase
     #[Test]
     public function validator_pool_acquire_lock_invokes_lock_once_per_get_or_create(): void
     {
-        $lock = $this->createCountingLock();
+        $lock = new CountingLock();
         $pool = ValidatorPool::forCoroutineRuntime($lock);
 
         $pool->getOrCreate('shared', static fn(): stdClass => new stdClass());
@@ -131,7 +132,7 @@ final class ConcurrencyContractTest extends TestCase
     #[Test]
     public function validator_pool_release_lock_invoked_on_clear(): void
     {
-        $lock = $this->createCountingLock();
+        $lock = new CountingLock();
         $pool = ValidatorPool::forCoroutineRuntime($lock);
 
         $pool->clear();
@@ -221,24 +222,5 @@ final class ConcurrencyContractTest extends TestCase
                 str_repeat("\n", 1),
             ),
         );
-    }
-
-    private function createCountingLock(): object
-    {
-        return new class {
-            public int $lockCount = 0;
-
-            public int $unlockCount = 0;
-
-            public function lock(): void
-            {
-                ++$this->lockCount;
-            }
-
-            public function unlock(): void
-            {
-                ++$this->unlockCount;
-            }
-        };
     }
 }

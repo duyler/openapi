@@ -9,13 +9,14 @@ use Duyler\OpenApi\Event\ArrayDispatcher;
 use Duyler\OpenApi\Event\ValidationErrorEvent;
 use Duyler\OpenApi\Event\ValidationFinishedEvent;
 use Duyler\OpenApi\Event\ValidationStartedEvent;
+use Duyler\OpenApi\Test\Support\Psr7RequestFactory;
+use Duyler\OpenApi\Test\Support\TestEventBuilders;
 use Duyler\OpenApi\Validator\Exception\RequiredError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\ServerRequestInterface;
 
 final class FullCycleEventsTest extends TestCase
 {
@@ -93,7 +94,7 @@ YAML;
             ->withEventDispatcher($dispatcher)
             ->build();
 
-        $validator->validateRequest($this->createItemRequest('{"name":"widget"}'));
+        $validator->validateRequest(Psr7RequestFactory::createJsonRequest('POST', '/items', '{"name":"widget"}'));
 
         self::assertSame(['started', 'finished'], $sequence);
         self::assertNotNull($startedEvent);
@@ -122,7 +123,7 @@ YAML;
             ->withEventDispatcher($dispatcher)
             ->build();
 
-        $operation = $validator->validateRequest($this->createItemRequest('{"name":"widget"}'));
+        $operation = $validator->validateRequest(Psr7RequestFactory::createJsonRequest('POST', '/items', '{"name":"widget"}'));
 
         $sequence = [];
         $startedEvent = null;
@@ -146,14 +147,18 @@ YAML;
     public function full_request_response_cycle_emits_four_events_two_pairs(): void
     {
         $sequence = [];
-        $dispatcher = $this->buildSequenceDispatcher($sequence);
+        $dispatcher = TestEventBuilders::sequenceDispatcher($sequence, [
+            ValidationStartedEvent::class,
+            ValidationFinishedEvent::class,
+            ValidationErrorEvent::class,
+        ]);
 
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::CYCLE_SPEC)
             ->withEventDispatcher($dispatcher)
             ->build();
 
-        $operation = $validator->validateRequest($this->createItemRequest('{"name":"widget"}'));
+        $operation = $validator->validateRequest(Psr7RequestFactory::createJsonRequest('POST', '/items', '{"name":"widget"}'));
 
         $response = $this->factory->createResponse(201)
             ->withHeader('Content-Type', 'application/json')
@@ -183,7 +188,7 @@ YAML;
 
         $caught = null;
         try {
-            $validator->validateRequest($this->createItemRequest('{}'));
+            $validator->validateRequest(Psr7RequestFactory::createJsonRequest('POST', '/items', '{}'));
             self::fail('Expected ValidationException for missing required "name" property');
         } catch (ValidationException $e) {
             $caught = $e;
@@ -219,7 +224,7 @@ YAML;
             ->withEventDispatcher($dispatcher)
             ->build();
 
-        $operation = $validator->validateRequest($this->createItemRequest('{"name":"widget"}'));
+        $operation = $validator->validateRequest(Psr7RequestFactory::createJsonRequest('POST', '/items', '{"name":"widget"}'));
         $sequence = [];
 
         $invalidResponse = $this->factory->createResponse(201)
@@ -246,13 +251,6 @@ YAML;
         self::assertCount(1, $errors);
         self::assertInstanceOf(RequiredError::class, $errors[0]);
         self::assertSame('name', $errors[0]->params()['property']);
-    }
-
-    private function createItemRequest(string $body): ServerRequestInterface
-    {
-        return $this->factory->createServerRequest('POST', '/items')
-            ->withHeader('Content-Type', 'application/json')
-            ->withBody($this->factory->createStream($body));
     }
 
     /**
@@ -284,30 +282,6 @@ YAML;
                 static function (ValidationErrorEvent $e) use (&$sequence, &$error): void {
                     $sequence[] = 'error';
                     $error = $e;
-                },
-            ],
-        ]);
-    }
-
-    /**
-     * @param list<string> $sequence
-     */
-    private function buildSequenceDispatcher(array &$sequence): ArrayDispatcher
-    {
-        return new ArrayDispatcher([
-            ValidationStartedEvent::class => [
-                static function () use (&$sequence): void {
-                    $sequence[] = 'started';
-                },
-            ],
-            ValidationFinishedEvent::class => [
-                static function () use (&$sequence): void {
-                    $sequence[] = 'finished';
-                },
-            ],
-            ValidationErrorEvent::class => [
-                static function () use (&$sequence): void {
-                    $sequence[] = 'error';
                 },
             ],
         ]);

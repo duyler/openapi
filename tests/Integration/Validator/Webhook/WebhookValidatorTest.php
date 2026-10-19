@@ -17,7 +17,7 @@ use Duyler\OpenApi\Schema\Model\Responses;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Model\Webhooks;
 use Duyler\OpenApi\Schema\OpenApiDocument;
-use Duyler\OpenApi\Test\Support\StreamStubHelper;
+use Duyler\OpenApi\Test\Support\Psr7RequestStubFactory;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
@@ -47,16 +47,13 @@ use Exception;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\StreamInterface;
-use Psr\Http\Message\UriInterface;
 use stdClass;
 use TypeError;
 
 /** @internal */
 final class WebhookValidatorTest extends TestCase
 {
-    use StreamStubHelper;
+    use Psr7RequestStubFactory;
 
     private WebhookValidator $webhookValidator;
 
@@ -159,11 +156,11 @@ final class WebhookValidatorTest extends TestCase
     #[Test]
     public function validate_valid_webhook_request(): void
     {
-        $request = $this->createPsr7RequestForWebhook(
+        $request = $this->createStubRequest(
             method: 'POST',
             headers: ['Content-Type' => 'application/json'],
             body: '{"payment_id":"123e4567-e89b-12d3-a456-426614174000","status":"completed","amount":99.99}',
-            webhookName: 'payment.updated',
+            uri: 'payment.updated',
         );
 
         $document = $this->createWebhookDocument();
@@ -176,7 +173,7 @@ final class WebhookValidatorTest extends TestCase
     #[Test]
     public function validate_throws_for_unknown_webhook(): void
     {
-        $request = $this->createPsr7RequestForWebhook(method: 'POST', webhookName: 'unknown.webhook');
+        $request = $this->createStubRequest(method: 'POST', uri: 'unknown.webhook');
 
         $document = $this->createWebhookDocument();
 
@@ -189,7 +186,7 @@ final class WebhookValidatorTest extends TestCase
     #[Test]
     public function validate_throws_for_invalid_method(): void
     {
-        $request = $this->createPsr7RequestForWebhook(method: 'GET', webhookName: 'payment.updated');
+        $request = $this->createStubRequest(method: 'GET', uri: 'payment.updated');
 
         $document = $this->createWebhookDocument();
 
@@ -201,18 +198,18 @@ final class WebhookValidatorTest extends TestCase
     #[Test]
     public function validate_with_different_webhooks(): void
     {
-        $request1 = $this->createPsr7RequestForWebhook(
+        $request1 = $this->createStubRequest(
             method: 'POST',
             headers: ['Content-Type' => 'application/json'],
             body: '{"payment_id":"123","status":"pending","amount":50}',
-            webhookName: 'payment.updated',
+            uri: 'payment.updated',
         );
 
-        $request2 = $this->createPsr7RequestForWebhook(
+        $request2 = $this->createStubRequest(
             method: 'POST',
             headers: ['Content-Type' => 'application/json'],
             body: '{"subscription_id":"sub_123","user_id":456,"renewed_at":"2024-01-01T00:00:00Z"}',
-            webhookName: 'subscription.renewed',
+            uri: 'subscription.renewed',
         );
 
         $document = $this->createWebhookDocument();
@@ -227,11 +224,11 @@ final class WebhookValidatorTest extends TestCase
     #[Test]
     public function validate_throws_for_missing_required_field(): void
     {
-        $request = $this->createPsr7RequestForWebhook(
+        $request = $this->createStubRequest(
             method: 'POST',
             headers: ['Content-Type' => 'application/json'],
             body: '{"payment_id":"123","status":"completed"}',
-            webhookName: 'payment.updated',
+            uri: 'payment.updated',
         );
 
         $document = $this->createWebhookDocument();
@@ -244,12 +241,12 @@ final class WebhookValidatorTest extends TestCase
     #[Test]
     public function validate_with_query_parameters(): void
     {
-        $request = $this->createPsr7RequestForWebhook(
+        $request = $this->createStubRequest(
             method: 'POST',
             queryParams: ['verify' => 'true'],
             headers: ['Content-Type' => 'application/json'],
             body: '{"payment_id":"123","status":"completed","amount":50}',
-            webhookName: 'payment.updated',
+            uri: 'payment.updated',
         );
 
         $operation = new Operation(
@@ -294,14 +291,14 @@ final class WebhookValidatorTest extends TestCase
     #[Test]
     public function validate_with_headers(): void
     {
-        $request = $this->createPsr7RequestForWebhook(
+        $request = $this->createStubRequest(
             method: 'POST',
             headers: [
                 'Content-Type' => 'application/json',
                 'X-Webhook-Signature' => 'signature123',
             ],
             body: '{"payment_id":"123","status":"completed","amount":50}',
-            webhookName: 'payment.updated',
+            uri: 'payment.updated',
         );
 
         $operation = new Operation(
@@ -347,11 +344,11 @@ final class WebhookValidatorTest extends TestCase
     #[Test]
     public function validate_with_put_method(): void
     {
-        $request = $this->createPsr7RequestForWebhook(
+        $request = $this->createStubRequest(
             method: 'PUT',
             headers: ['Content-Type' => 'application/json'],
             body: '{"payment_id":"123","status":"updated","amount":75}',
-            webhookName: 'payment.updated',
+            uri: 'payment.updated',
         );
 
         $operation = new Operation(
@@ -390,11 +387,11 @@ final class WebhookValidatorTest extends TestCase
     #[Test]
     public function validate_with_patch_method(): void
     {
-        $request = $this->createPsr7RequestForWebhook(
+        $request = $this->createStubRequest(
             method: 'PATCH',
             headers: ['Content-Type' => 'application/json'],
             body: '{"payment_id":"123","status":"partial"}',
-            webhookName: 'payment.updated',
+            uri: 'payment.updated',
         );
 
         $operation = new Operation(
@@ -429,9 +426,9 @@ final class WebhookValidatorTest extends TestCase
     #[Test]
     public function validate_with_delete_method(): void
     {
-        $request = $this->createPsr7RequestForWebhook(
+        $request = $this->createStubRequest(
             method: 'DELETE',
-            webhookName: 'payment.deleted',
+            uri: 'payment.deleted',
         );
 
         $operation = new Operation();
@@ -453,9 +450,9 @@ final class WebhookValidatorTest extends TestCase
     #[Test]
     public function validate_with_options_method(): void
     {
-        $request = $this->createPsr7RequestForWebhook(
+        $request = $this->createStubRequest(
             method: 'OPTIONS',
-            webhookName: 'payment.options',
+            uri: 'payment.options',
         );
 
         $operation = new Operation();
@@ -476,9 +473,9 @@ final class WebhookValidatorTest extends TestCase
     #[Test]
     public function validate_with_head_method(): void
     {
-        $request = $this->createPsr7RequestForWebhook(
+        $request = $this->createStubRequest(
             method: 'HEAD',
-            webhookName: 'payment.head',
+            uri: 'payment.head',
         );
 
         $operation = new Operation();
@@ -499,9 +496,9 @@ final class WebhookValidatorTest extends TestCase
     #[Test]
     public function validate_with_trace_method(): void
     {
-        $request = $this->createPsr7RequestForWebhook(
+        $request = $this->createStubRequest(
             method: 'TRACE',
-            webhookName: 'payment.trace',
+            uri: 'payment.trace',
         );
 
         $operation = new Operation();
@@ -539,7 +536,7 @@ final class WebhookValidatorTest extends TestCase
             ]),
         );
 
-        $request = $this->createPsr7RequestForWebhook(method: 'POST', webhookName: 'test.webhook');
+        $request = $this->createStubRequest(method: 'POST', uri: 'test.webhook');
 
         $this->expectException(TypeError::class);
 
@@ -599,74 +596,5 @@ final class WebhookValidatorTest extends TestCase
                 'subscription.renewed' => new PathItem(post: $subscriptionOperation),
             ]),
         );
-    }
-
-    private function createPsr7Request(
-        string $method,
-        string $uri,
-        array $queryParams = [],
-        array $headers = [],
-        array $cookies = [],
-        string $body = '',
-        string $contentType = 'application/json',
-    ): ServerRequestInterface {
-        $request = $this->createStub(ServerRequestInterface::class);
-
-        $request->method('getMethod')->willReturn($method);
-
-        $uriMock = $this->createStub(UriInterface::class);
-        $uriMock->method('getPath')->willReturn($uri);
-        $uriMock->method('getQuery')->willReturn(http_build_query($queryParams));
-
-        $request->method('getUri')->willReturn($uriMock);
-        $request->method('getQueryParams')->willReturn($queryParams);
-        $request->method('getHeaders')->willReturn($headers);
-        $request->method('getHeaderLine')->willReturnMap([
-            ['Cookie', http_build_query($cookies, '', '; ')],
-            ['Content-Type', $contentType],
-        ]);
-        $request->method('getCookieParams')->willReturn($cookies);
-
-        $bodyMock = $this->createStub(StreamInterface::class);
-        $bodyMock->method('__toString')->willReturn($body);
-        $this->configureReadableStream($bodyMock, $body);
-        $request->method('getBody')->willReturn($bodyMock);
-
-        return $request;
-    }
-
-    private function createPsr7RequestForWebhook(
-        string $method,
-        array $queryParams = [],
-        array $headers = [],
-        array $cookies = [],
-        string $body = '',
-        string $contentType = 'application/json',
-        string $webhookName = '',
-    ): ServerRequestInterface {
-        $request = $this->createStub(ServerRequestInterface::class);
-
-        $request->method('getMethod')->willReturn($method);
-
-        $path = '' !== $webhookName ? $webhookName : 'webhook';
-        $uriMock = $this->createStub(UriInterface::class);
-        $uriMock->method('getPath')->willReturn($path);
-        $uriMock->method('getQuery')->willReturn(http_build_query($queryParams));
-
-        $request->method('getUri')->willReturn($uriMock);
-        $request->method('getQueryParams')->willReturn($queryParams);
-        $request->method('getHeaders')->willReturn($headers);
-        $request->method('getHeaderLine')->willReturnMap([
-            ['Cookie', http_build_query($cookies, '', '; ')],
-            ['Content-Type', $contentType],
-        ]);
-        $request->method('getCookieParams')->willReturn($cookies);
-
-        $bodyMock = $this->createStub(StreamInterface::class);
-        $bodyMock->method('__toString')->willReturn($body);
-        $this->configureReadableStream($bodyMock, $body);
-        $request->method('getBody')->willReturn($bodyMock);
-
-        return $request;
     }
 }

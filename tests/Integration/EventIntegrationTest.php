@@ -9,17 +9,14 @@ use Duyler\OpenApi\Event\ArrayDispatcher;
 use Duyler\OpenApi\Event\ValidationErrorEvent;
 use Duyler\OpenApi\Event\ValidationFinishedEvent;
 use Duyler\OpenApi\Event\ValidationStartedEvent;
-use Duyler\OpenApi\Test\Support\StreamStubHelper;
+use Duyler\OpenApi\Test\Support\Psr7RequestStubFactory;
 use Exception;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\StreamInterface;
-use Psr\Http\Message\UriInterface;
 
 final class EventIntegrationTest extends TestCase
 {
-    use StreamStubHelper;
+    use Psr7RequestStubFactory;
 
     #[Test]
     public function validation_started_event_dispatched(): void
@@ -40,7 +37,7 @@ final class EventIntegrationTest extends TestCase
             ->withEventDispatcher($dispatcher)
             ->build();
 
-        $request = $this->createPsr7Request('/pets', 'GET');
+        $request = $this->createStubRequest('GET', '/pets');
         try {
             $validator->validateRequest($request);
         } catch (Exception) {
@@ -66,7 +63,7 @@ final class EventIntegrationTest extends TestCase
             ->withEventDispatcher($dispatcher)
             ->build();
 
-        $request = $this->createPsr7Request('/pets', 'GET');
+        $request = $this->createStubRequest('GET', '/pets');
         try {
             $validator->validateRequest($request);
         } catch (Exception) {
@@ -94,7 +91,7 @@ final class EventIntegrationTest extends TestCase
             ->withEventDispatcher($dispatcher)
             ->build();
 
-        $request = $this->createPsr7Request('/pets', 'POST', [], '{}');
+        $request = $this->createStubRequest('POST', '/pets', ['Content-Type' => 'application/json'], '{}');
 
         $this->expectException(Exception::class);
         $validator->validateRequest($request);
@@ -124,7 +121,7 @@ final class EventIntegrationTest extends TestCase
             ->withEventDispatcher($dispatcher)
             ->build();
 
-        $request = $this->createPsr7Request('/pets', 'GET');
+        $request = $this->createStubRequest('GET', '/pets');
         try {
             $validator->validateRequest($request);
         } catch (Exception) {
@@ -150,68 +147,12 @@ final class EventIntegrationTest extends TestCase
             ->withEventDispatcher($dispatcher)
             ->build();
 
-        $request = $this->createPsr7Request('/pets', 'GET');
+        $request = $this->createStubRequest('GET', '/pets');
         try {
             $validator->validateRequest($request);
         } catch (Exception) {
         }
 
         self::assertTrue($success);
-    }
-
-    private function createPsr7Request(
-        string $uri,
-        string $method,
-        array $headers = [],
-        string $body = '',
-    ): object {
-        $request = $this->createStub(ServerRequestInterface::class);
-
-        $request
-            ->method('getMethod')
-            ->willReturn($method);
-
-        $uriMock = $this->createStub(UriInterface::class);
-        $uriMock
-            ->method('getPath')
-            ->willReturn($uri);
-        $uriMock
-            ->method('getQuery')
-            ->willReturn('');
-
-        $request
-            ->method('getUri')
-            ->willReturn($uriMock);
-
-        $request
-            ->method('getHeaders')
-            ->willReturn($headers);
-
-        $request
-            ->method('getHeaderLine')
-            ->willReturnCallback(function ($headerName) use ($headers) {
-                if ('Content-Type' === $headerName) {
-                    return 'application/json';
-                }
-
-                if ('Cookie' === $headerName) {
-                    return '';
-                }
-
-                return '';
-            });
-
-        $stream = $this->createStub(StreamInterface::class);
-        $stream
-            ->method('__toString')
-            ->willReturn($body);
-
-        $this->configureReadableStream($stream, $body);
-
-        $request
-            ->method('getBody')
-            ->willReturn($stream);
-
-        return $request;
     }
 }

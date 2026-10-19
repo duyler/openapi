@@ -5,21 +5,19 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Benchmark;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Test\Support\StreamStubHelper;
+use Duyler\OpenApi\Test\Support\Psr7RequestStubFactory;
 use Duyler\OpenApi\Validator\Request\PathParser;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
-use Psr\Http\Message\UriInterface;
 
 use function sprintf;
 
 final class PerformanceBenchmarkTest extends TestCase
 {
-    use StreamStubHelper;
+    use Psr7RequestStubFactory;
 
     #[Test]
     public function object_allocations_per_request(): void
@@ -69,9 +67,9 @@ YAML;
         $memoryBefore = memory_get_usage();
 
         for ($i = 0; $i < 50; $i++) {
-            $request = $this->createPsr7Request(
-                '/users',
+            $request = $this->createStubRequest(
                 'POST',
+                '/users',
                 ['Content-Type' => 'application/json'],
                 '{"name": "John", "email": "john@example.com"}',
             );
@@ -112,7 +110,7 @@ YAML;
         $start = microtime(true);
 
         for ($i = 0; $i < $iterations; $i++) {
-            $request = $this->createPsr7Request('/ping', 'GET');
+            $request = $this->createStubRequest('GET', '/ping');
             $validator->validateRequest($request);
         }
 
@@ -180,9 +178,9 @@ YAML;
         $start = microtime(true);
 
         for ($i = 0; $i < $iterations; $i++) {
-            $request = $this->createPsr7Request(
-                '/users',
+            $request = $this->createStubRequest(
                 'POST',
+                '/users',
                 ['Content-Type' => 'application/json'],
                 '{"name": "John Doe", "email": "john@example.com", "age": 30, "role": "admin"}',
             );
@@ -205,7 +203,7 @@ YAML;
         $start = microtime(true);
 
         for ($i = 0; $i < $iterations; $i++) {
-            $request = $this->createPsr7Request('/pets', 'GET');
+            $request = $this->createStubRequest('GET', '/pets');
             $validator->validateRequest($request);
         }
 
@@ -249,14 +247,14 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $request = $this->createPsr7Request('/items/42', 'GET');
+        $request = $this->createStubRequest('GET', '/items/42');
         $validator->validateRequest($request);
 
         $iterations = 200;
         $start = microtime(true);
 
         for ($i = 0; $i < $iterations; $i++) {
-            $request = $this->createPsr7Request('/items/42', 'GET');
+            $request = $this->createStubRequest('GET', '/items/42');
             $validator->validateRequest($request);
         }
 
@@ -303,67 +301,6 @@ YAML;
 
         self::assertLessThan(100, $duration, '100-route tryMatchPath scan should be under 100ms');
         self::assertLessThan(1_000_000, $memoryGrowth, 'Memory growth for path scanning should be minimal');
-    }
-
-    private function createPsr7Request(
-        string $uri,
-        string $method,
-        array $headers = [],
-        string $body = '',
-    ): ServerRequestInterface {
-        /** @var ServerRequestInterface $request */
-        $request = $this->createStub(ServerRequestInterface::class);
-
-        $request
-            ->method('getMethod')
-            ->willReturn($method);
-
-        $uriMock = $this->createStub(UriInterface::class);
-        $uriMock
-            ->method('getPath')
-            ->willReturn($uri);
-        $uriMock
-            ->method('getQuery')
-            ->willReturn('');
-
-        $request
-            ->method('getUri')
-            ->willReturn($uriMock);
-
-        $request
-            ->method('getHeaders')
-            ->willReturn($headers);
-
-        $request
-            ->method('getHeaderLine')
-            ->willReturnCallback(function (string $headerName): string {
-                if ('Content-Type' === $headerName) {
-                    return 'application/json';
-                }
-
-                if ('Cookie' === $headerName) {
-                    return '';
-                }
-
-                return '';
-            });
-
-        $request
-            ->method('getCookieParams')
-            ->willReturn([]);
-
-        $stream = $this->createStub(StreamInterface::class);
-        $stream
-            ->method('__toString')
-            ->willReturn($body);
-
-        $this->configureReadableStream($stream, $body);
-
-        $request
-            ->method('getBody')
-            ->willReturn($stream);
-
-        return $request;
     }
 
     private function createPsr7Response(

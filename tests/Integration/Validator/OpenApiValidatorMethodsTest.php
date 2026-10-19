@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Integration\Validator;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use Duyler\OpenApi\Test\Support\Psr7RequestFactory;
 use Duyler\OpenApi\Validator\Operation;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
 
 final class OpenApiValidatorMethodsTest extends TestCase
 {
@@ -71,225 +73,7 @@ paths:
           description: Trace
 YAML;
 
-    #[Test]
-    public function validateRequest_with_post_method(): void
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::ALL_METHODS_YAML)
-            ->build();
-
-        $request = new Psr17Factory()
-            ->createServerRequest('POST', '/test')
-            ->withHeader('Content-Type', 'application/json')
-            ->withBody(new Psr17Factory()->createStream('{"data":"test"}'));
-
-        $operation = $validator->validateRequest($request);
-        $this->assertSame('POST', $operation->method);
-    }
-
-    #[Test]
-    public function validateRequest_with_put_method(): void
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::ALL_METHODS_YAML)
-            ->build();
-
-        $request = new Psr17Factory()
-            ->createServerRequest('PUT', '/test')
-            ->withHeader('Content-Type', 'application/json')
-            ->withBody(new Psr17Factory()->createStream('{"data":"test"}'));
-
-        $operation = $validator->validateRequest($request);
-        $this->assertSame('PUT', $operation->method);
-    }
-
-    #[Test]
-    public function validateRequest_with_patch_method(): void
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::ALL_METHODS_YAML)
-            ->build();
-
-        $request = new Psr17Factory()
-            ->createServerRequest('PATCH', '/test')
-            ->withHeader('Content-Type', 'application/json')
-            ->withBody(new Psr17Factory()->createStream('{"data":"test"}'));
-
-        $operation = $validator->validateRequest($request);
-        $this->assertSame('PATCH', $operation->method);
-    }
-
-    #[Test]
-    public function validateRequest_with_delete_method(): void
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::ALL_METHODS_YAML)
-            ->build();
-
-        $request = new Psr17Factory()
-            ->createServerRequest('DELETE', '/test');
-
-        $operation = $validator->validateRequest($request);
-        $this->assertSame('DELETE', $operation->method);
-    }
-
-    #[Test]
-    public function validateRequest_with_options_method(): void
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::ALL_METHODS_YAML)
-            ->build();
-
-        $request = new Psr17Factory()
-            ->createServerRequest('OPTIONS', '/test');
-
-        $operation = $validator->validateRequest($request);
-        $this->assertSame('OPTIONS', $operation->method);
-    }
-
-    #[Test]
-    public function validateRequest_with_head_method(): void
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::ALL_METHODS_YAML)
-            ->build();
-
-        $request = new Psr17Factory()
-            ->createServerRequest('HEAD', '/test');
-
-        $operation = $validator->validateRequest($request);
-        $this->assertSame('HEAD', $operation->method);
-    }
-
-    #[Test]
-    public function validateRequest_with_trace_method(): void
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::ALL_METHODS_YAML)
-            ->build();
-
-        $request = new Psr17Factory()
-            ->createServerRequest('TRACE', '/test');
-
-        $operation = $validator->validateRequest($request);
-        $this->assertSame('TRACE', $operation->method);
-    }
-
-    #[Test]
-    public function validateResponse_with_post_method(): void
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::ALL_METHODS_YAML)
-            ->build();
-
-        $operation = new Operation('/test', 'POST');
-        $response = new Psr17Factory()
-            ->createResponse(201)
-            ->withHeader('Content-Type', 'application/json')
-            ->withBody(new Psr17Factory()->createStream('{"success":true}'));
-
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
-    }
-
-    #[Test]
-    public function validateResponse_with_put_method(): void
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::ALL_METHODS_YAML)
-            ->build();
-
-        $operation = new Operation('/test', 'PUT');
-        $response = new Psr17Factory()
-            ->createResponse(200)
-            ->withHeader('Content-Type', 'application/json')
-            ->withBody(new Psr17Factory()->createStream('{"success":true}'));
-
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
-    }
-
-    #[Test]
-    public function validateResponse_with_patch_method(): void
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::ALL_METHODS_YAML)
-            ->build();
-
-        $operation = new Operation('/test', 'PATCH');
-        $response = new Psr17Factory()
-            ->createResponse(200)
-            ->withHeader('Content-Type', 'application/json')
-            ->withBody(new Psr17Factory()->createStream('{"success":true}'));
-
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
-    }
-
-    #[Test]
-    public function validateResponse_with_delete_method(): void
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::ALL_METHODS_YAML)
-            ->build();
-
-        $operation = new Operation('/test', 'DELETE');
-        $response = new Psr17Factory()
-            ->createResponse(204);
-
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
-    }
-
-    #[Test]
-    public function validateResponse_with_options_method(): void
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::ALL_METHODS_YAML)
-            ->build();
-
-        $operation = new Operation('/test', 'OPTIONS');
-        $response = new Psr17Factory()
-            ->createResponse(200);
-
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
-    }
-
-    #[Test]
-    public function validateResponse_with_head_method(): void
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::ALL_METHODS_YAML)
-            ->build();
-
-        $operation = new Operation('/test', 'HEAD');
-        $response = new Psr17Factory()
-            ->createResponse(200);
-
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
-    }
-
-    #[Test]
-    public function validateResponse_with_trace_method(): void
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::ALL_METHODS_YAML)
-            ->build();
-
-        $operation = new Operation('/test', 'TRACE');
-        $response = new Psr17Factory()
-            ->createResponse(200);
-
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
-    }
-
-    #[Test]
-    public function validateRequest_with_query_method(): void
-    {
-        $yaml = <<<YAML
+    private const string QUERY_SEARCH_YAML = <<<YAML
 openapi: 3.2.0
 info:
   title: Test API
@@ -309,23 +93,7 @@ paths:
           description: Search results
 YAML;
 
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString($yaml)
-            ->build();
-
-        $request = new Psr17Factory()
-            ->createServerRequest('QUERY', '/search')
-            ->withHeader('Content-Type', 'application/json')
-            ->withBody(new Psr17Factory()->createStream('{"query":"test"}'));
-
-        $operation = $validator->validateRequest($request);
-        $this->assertSame('QUERY', $operation->method);
-    }
-
-    #[Test]
-    public function validateRequest_with_additional_operation_copy(): void
-    {
-        $yaml = <<<YAML
+    private const string COPY_OPERATION_YAML = <<<YAML
 openapi: 3.2.0
 info:
   title: Test API
@@ -340,44 +108,203 @@ paths:
             description: Copied
 YAML;
 
+    #[Test]
+    #[DataProvider('httpMethodValidationProvider')]
+    public function validate_request_and_response_per_http_method(
+        string $yaml,
+        string $side,
+        string $method,
+        string $path,
+        ?string $contentType = null,
+        ?string $body = null,
+        int $responseStatus = 200,
+    ): void {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString($yaml)
             ->build();
 
-        $request = new Psr17Factory()
-            ->createServerRequest('COPY', '/resource');
+        if ('response' === $side) {
+            $operation = new Operation($path, $method);
+            $response = new Psr17Factory()->createResponse($responseStatus);
+
+            if (null !== $contentType) {
+                $response = $response->withHeader('Content-Type', $contentType);
+            }
+
+            if (null !== $body) {
+                $response = $response->withBody(new Psr17Factory()->createStream($body));
+            }
+
+            $validator->validateResponse($response, $operation);
+            self::expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $request = Psr7RequestFactory::createRequest(
+            $method,
+            $path,
+            null === $contentType ? [] : ['Content-Type' => $contentType],
+            $body ?? '',
+        );
 
         $operation = $validator->validateRequest($request);
-        $this->assertSame('COPY', $operation->method);
+        self::assertSame($method, $operation->method);
     }
 
-    #[Test]
-    public function validateRequest_with_additional_operation_case_insensitive(): void
+    public static function httpMethodValidationProvider(): iterable
     {
-        $yaml = <<<YAML
-openapi: 3.2.0
-info:
-  title: Test API
-  version: 1.0.0
-paths:
-  /resource:
-    additionalOperations:
-      COPY:
-        summary: Copy resource
-        responses:
-          '201':
-            description: Copied
-YAML;
+        yield 'request post' => [
+            'yaml' => self::ALL_METHODS_YAML,
+            'side' => 'request',
+            'method' => 'POST',
+            'path' => '/test',
+            'contentType' => 'application/json',
+            'body' => '{"data":"test"}',
+        ];
 
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString($yaml)
-            ->build();
+        yield 'request put' => [
+            'yaml' => self::ALL_METHODS_YAML,
+            'side' => 'request',
+            'method' => 'PUT',
+            'path' => '/test',
+            'contentType' => 'application/json',
+            'body' => '{"data":"test"}',
+        ];
 
-        $request = new Psr17Factory()
-            ->createServerRequest('copy', '/resource');
+        yield 'request patch' => [
+            'yaml' => self::ALL_METHODS_YAML,
+            'side' => 'request',
+            'method' => 'PATCH',
+            'path' => '/test',
+            'contentType' => 'application/json',
+            'body' => '{"data":"test"}',
+        ];
 
-        $operation = $validator->validateRequest($request);
-        $this->assertSame('copy', $operation->method);
+        yield 'request delete' => [
+            'yaml' => self::ALL_METHODS_YAML,
+            'side' => 'request',
+            'method' => 'DELETE',
+            'path' => '/test',
+        ];
+
+        yield 'request options' => [
+            'yaml' => self::ALL_METHODS_YAML,
+            'side' => 'request',
+            'method' => 'OPTIONS',
+            'path' => '/test',
+        ];
+
+        yield 'request head' => [
+            'yaml' => self::ALL_METHODS_YAML,
+            'side' => 'request',
+            'method' => 'HEAD',
+            'path' => '/test',
+        ];
+
+        yield 'request trace' => [
+            'yaml' => self::ALL_METHODS_YAML,
+            'side' => 'request',
+            'method' => 'TRACE',
+            'path' => '/test',
+        ];
+
+        yield 'request query' => [
+            'yaml' => self::QUERY_SEARCH_YAML,
+            'side' => 'request',
+            'method' => 'QUERY',
+            'path' => '/search',
+            'contentType' => 'application/json',
+            'body' => '{"query":"test"}',
+        ];
+
+        yield 'request copy' => [
+            'yaml' => self::COPY_OPERATION_YAML,
+            'side' => 'request',
+            'method' => 'COPY',
+            'path' => '/resource',
+        ];
+
+        yield 'request copy case insensitive' => [
+            'yaml' => self::COPY_OPERATION_YAML,
+            'side' => 'request',
+            'method' => 'copy',
+            'path' => '/resource',
+        ];
+
+        yield 'response post' => [
+            'yaml' => self::ALL_METHODS_YAML,
+            'side' => 'response',
+            'method' => 'POST',
+            'path' => '/test',
+            'contentType' => 'application/json',
+            'body' => '{"success":true}',
+            'responseStatus' => 201,
+        ];
+
+        yield 'response put' => [
+            'yaml' => self::ALL_METHODS_YAML,
+            'side' => 'response',
+            'method' => 'PUT',
+            'path' => '/test',
+            'contentType' => 'application/json',
+            'body' => '{"success":true}',
+        ];
+
+        yield 'response patch' => [
+            'yaml' => self::ALL_METHODS_YAML,
+            'side' => 'response',
+            'method' => 'PATCH',
+            'path' => '/test',
+            'contentType' => 'application/json',
+            'body' => '{"success":true}',
+        ];
+
+        yield 'response delete' => [
+            'yaml' => self::ALL_METHODS_YAML,
+            'side' => 'response',
+            'method' => 'DELETE',
+            'path' => '/test',
+            'responseStatus' => 204,
+        ];
+
+        yield 'response options' => [
+            'yaml' => self::ALL_METHODS_YAML,
+            'side' => 'response',
+            'method' => 'OPTIONS',
+            'path' => '/test',
+        ];
+
+        yield 'response head' => [
+            'yaml' => self::ALL_METHODS_YAML,
+            'side' => 'response',
+            'method' => 'HEAD',
+            'path' => '/test',
+        ];
+
+        yield 'response trace' => [
+            'yaml' => self::ALL_METHODS_YAML,
+            'side' => 'response',
+            'method' => 'TRACE',
+            'path' => '/test',
+        ];
+
+        yield 'response query' => [
+            'yaml' => self::QUERY_SEARCH_YAML,
+            'side' => 'response',
+            'method' => 'QUERY',
+            'path' => '/search',
+            'contentType' => 'application/json',
+            'body' => '{"results":[]}',
+        ];
+
+        yield 'response copy' => [
+            'yaml' => self::COPY_OPERATION_YAML,
+            'side' => 'response',
+            'method' => 'COPY',
+            'path' => '/resource',
+            'responseStatus' => 201,
+        ];
     }
 
     #[Test]
@@ -412,83 +339,16 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $copyRequest = new Psr17Factory()->createServerRequest('COPY', '/resource');
+        $copyRequest = Psr7RequestFactory::createRequest('COPY', '/resource');
         $copyOperation = $validator->validateRequest($copyRequest);
-        $this->assertSame('COPY', $copyOperation->method);
+        self::assertSame('COPY', $copyOperation->method);
 
-        $moveRequest = new Psr17Factory()->createServerRequest('MOVE', '/resource');
+        $moveRequest = Psr7RequestFactory::createRequest('MOVE', '/resource');
         $moveOperation = $validator->validateRequest($moveRequest);
-        $this->assertSame('MOVE', $moveOperation->method);
+        self::assertSame('MOVE', $moveOperation->method);
 
-        $purgeRequest = new Psr17Factory()->createServerRequest('PURGE', '/resource');
+        $purgeRequest = Psr7RequestFactory::createRequest('PURGE', '/resource');
         $purgeOperation = $validator->validateRequest($purgeRequest);
-        $this->assertSame('PURGE', $purgeOperation->method);
-    }
-
-    #[Test]
-    public function validateResponse_with_query_method(): void
-    {
-        $yaml = <<<YAML
-openapi: 3.2.0
-info:
-  title: Test API
-  version: 1.0.0
-paths:
-  /search:
-    query:
-      summary: Search with body
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Search results
-YAML;
-
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString($yaml)
-            ->build();
-
-        $operation = new Operation('/search', 'QUERY');
-        $response = new Psr17Factory()
-            ->createResponse(200)
-            ->withHeader('Content-Type', 'application/json')
-            ->withBody(new Psr17Factory()->createStream('{"results":[]}'));
-
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
-    }
-
-    #[Test]
-    public function validateResponse_with_additional_operation(): void
-    {
-        $yaml = <<<YAML
-openapi: 3.2.0
-info:
-  title: Test API
-  version: 1.0.0
-paths:
-  /resource:
-    additionalOperations:
-      COPY:
-        summary: Copy resource
-        responses:
-          '201':
-            description: Copied
-YAML;
-
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString($yaml)
-            ->build();
-
-        $operation = new Operation('/resource', 'COPY');
-        $response = new Psr17Factory()
-            ->createResponse(201);
-
-        $validator->validateResponse($response, $operation);
-        $this->expectNotToPerformAssertions();
+        self::assertSame('PURGE', $purgeOperation->method);
     }
 }

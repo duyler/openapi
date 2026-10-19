@@ -5,16 +5,13 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Performance;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Test\Support\StreamStubHelper;
+use Duyler\OpenApi\Test\Support\Psr7RequestStubFactory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\StreamInterface;
-use Psr\Http\Message\UriInterface;
 
 final class ValidationBenchTest extends TestCase
 {
-    use StreamStubHelper;
+    use Psr7RequestStubFactory;
 
     #[Test]
     public function benchmark_simple_validation(): void
@@ -57,9 +54,9 @@ YAML;
         $start = microtime(true);
 
         for ($i = 0; $i < $iterations; $i++) {
-            $request = $this->createPsr7Request(
-                '/users',
+            $request = $this->createStubRequest(
                 'POST',
+                '/users',
                 ['Content-Type' => 'application/json'],
                 '{"name": "John Doe", "email": "john@example.com"}',
             );
@@ -113,62 +110,5 @@ YAML;
         $avgDuration = $duration / (float) $iterations;
 
         self::assertLessThan(5, $avgDuration, 'Average schema validation should be under 5ms');
-    }
-
-    private function createPsr7Request(
-        string $uri,
-        string $method,
-        array $headers = [],
-        string $body = '',
-    ): ServerRequestInterface {
-        /** @var ServerRequestInterface $request */
-        $request = $this->createStub(ServerRequestInterface::class);
-
-        $request
-            ->method('getMethod')
-            ->willReturn($method);
-
-        $uriMock = $this->createStub(UriInterface::class);
-        $uriMock
-            ->method('getPath')
-            ->willReturn($uri);
-        $uriMock
-            ->method('getQuery')
-            ->willReturn('');
-
-        $request
-            ->method('getUri')
-            ->willReturn($uriMock);
-
-        $request
-            ->method('getHeaders')
-            ->willReturn($headers);
-
-        $request
-            ->method('getHeaderLine')
-            ->willReturnCallback(function (string $headerName): string {
-                if ('Content-Type' === $headerName) {
-                    return 'application/json';
-                }
-
-                if ('Cookie' === $headerName) {
-                    return '';
-                }
-
-                return '';
-            });
-
-        $stream = $this->createStub(StreamInterface::class);
-        $stream
-            ->method('__toString')
-            ->willReturn($body);
-
-        $this->configureReadableStream($stream, $body);
-
-        $request
-            ->method('getBody')
-            ->willReturn($stream);
-
-        return $request;
     }
 }

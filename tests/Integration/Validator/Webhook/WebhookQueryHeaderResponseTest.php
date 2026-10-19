@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Integration\Validator\Webhook;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
+use Duyler\OpenApi\Test\Support\Psr7RequestFactory;
 use Duyler\OpenApi\Validator\Exception\EnumError;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
@@ -17,7 +18,6 @@ use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
 
 use function sprintf;
 
@@ -147,7 +147,7 @@ YAML;
     {
         $validator = $this->buildQueryValidator();
 
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook?status=success&page=2',
             '{"paymentId":"pay_123"}',
         );
@@ -163,7 +163,7 @@ YAML;
     {
         $validator = $this->buildQueryValidator();
 
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook?status=pending',
             '{"paymentId":"pay_456"}',
         );
@@ -179,7 +179,7 @@ YAML;
     {
         $validator = $this->buildQueryValidator();
 
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook',
             '{"paymentId":"pay_123"}',
         );
@@ -195,7 +195,7 @@ YAML;
     {
         $validator = $this->buildQueryValidator();
 
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook?status=unknown',
             '{"paymentId":"pay_123"}',
         );
@@ -210,7 +210,7 @@ YAML;
     {
         $validator = $this->buildQueryValidator();
 
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook?status=success&page=0',
             '{"paymentId":"pay_123"}',
         );
@@ -225,7 +225,7 @@ YAML;
     {
         $validator = $this->buildHeaderValidator();
 
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook',
             '{"eventId":"evt_123"}',
             ['X-Signature' => 'abc123def456', 'X-Event-Type' => 'payment.completed'],
@@ -242,7 +242,7 @@ YAML;
     {
         $validator = $this->buildHeaderValidator();
 
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook',
             '{"eventId":"evt_123"}',
             ['X-Event-Type' => 'payment.completed'],
@@ -259,7 +259,7 @@ YAML;
     {
         $validator = $this->buildHeaderValidator();
 
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook',
             '{"eventId":"evt_123"}',
             ['X-Signature' => 'abc123', 'X-Event-Type' => 'invalid.type'],
@@ -275,7 +275,7 @@ YAML;
     {
         $validator = $this->buildFullCycleValidator();
 
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook',
             '{"orderId":"ord_123"}',
         );
@@ -372,27 +372,6 @@ YAML;
         return $builder->build();
     }
 
-    /**
-     * @param array<string, string> $headers
-     */
-    private function createWebhookRequest(
-        string $uri,
-        string $body,
-        array $headers = ['Content-Type' => 'application/json'],
-    ): ServerRequestInterface {
-        $request = $this->factory->createServerRequest('POST', $uri);
-
-        foreach ($headers as $name => $value) {
-            $request = $request->withHeader($name, $value);
-        }
-
-        if (!isset($headers['Content-Type'])) {
-            $request = $request->withHeader('Content-Type', 'application/json');
-        }
-
-        return $request->withBody($this->factory->createStream($body));
-    }
-
     private function createJsonResponse(int $status, string $body): ResponseInterface
     {
         return $this->factory->createResponse($status)
@@ -402,7 +381,7 @@ YAML;
 
     private function validateOrderWebhook(OpenApiValidatorInterface $validator): Operation
     {
-        $request = $this->createWebhookRequest(
+        $request = Psr7RequestFactory::createWebhookRequest(
             '/webhook',
             '{"orderId":"ord_123"}',
         );

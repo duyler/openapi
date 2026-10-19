@@ -5,17 +5,14 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Performance;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Test\Support\StreamStubHelper;
+use Duyler\OpenApi\Test\Support\Psr7RequestStubFactory;
 use Exception;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\StreamInterface;
-use Psr\Http\Message\UriInterface;
 
 final class MemoryLeakTest extends TestCase
 {
-    use StreamStubHelper;
+    use Psr7RequestStubFactory;
 
     #[Test]
     public function no_memory_leak_on_repeated_validation(): void
@@ -27,7 +24,7 @@ final class MemoryLeakTest extends TestCase
         $initialMemory = memory_get_usage();
 
         for ($i = 0; $i < 100; $i++) {
-            $request = $this->createPsr7Request('/pets', 'GET');
+            $request = $this->createStubRequest('GET', '/pets');
             try {
                 $validator->validateRequest($request);
             } catch (Exception) {
@@ -69,7 +66,7 @@ final class MemoryLeakTest extends TestCase
         $initialMemory = memory_get_usage();
 
         for ($i = 0; $i < 100; $i++) {
-            $request = $this->createPsr7Request('/pets', 'GET');
+            $request = $this->createStubRequest('GET', '/pets');
             try {
                 $validator->validateRequest($request);
             } catch (Exception) {
@@ -85,62 +82,5 @@ final class MemoryLeakTest extends TestCase
         $growth = ($finalMemory - $initialMemory) / (float) $initialMemory * 100;
 
         self::assertLessThan(30, $growth, 'Pool should not accumulate objects indefinitely');
-    }
-
-    private function createPsr7Request(
-        string $uri,
-        string $method,
-        array $headers = [],
-        string $body = '',
-    ): ServerRequestInterface {
-        /** @var ServerRequestInterface $request */
-        $request = $this->createStub(ServerRequestInterface::class);
-
-        $request
-            ->method('getMethod')
-            ->willReturn($method);
-
-        $uriMock = $this->createStub(UriInterface::class);
-        $uriMock
-            ->method('getPath')
-            ->willReturn($uri);
-        $uriMock
-            ->method('getQuery')
-            ->willReturn('');
-
-        $request
-            ->method('getUri')
-            ->willReturn($uriMock);
-
-        $request
-            ->method('getHeaders')
-            ->willReturn($headers);
-
-        $request
-            ->method('getHeaderLine')
-            ->willReturnCallback(function (string $headerName) use ($headers): string {
-                if ('Content-Type' === $headerName) {
-                    return 'application/json';
-                }
-
-                if ('Cookie' === $headerName) {
-                    return '';
-                }
-
-                return '';
-            });
-
-        $stream = $this->createStub(StreamInterface::class);
-        $stream
-            ->method('__toString')
-            ->willReturn($body);
-
-        $this->configureReadableStream($stream, $body);
-
-        $request
-            ->method('getBody')
-            ->willReturn($stream);
-
-        return $request;
     }
 }

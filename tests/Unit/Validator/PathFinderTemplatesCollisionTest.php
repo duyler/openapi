@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator;
 
-use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\SpecBuilders;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\PathFinder;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -55,7 +55,7 @@ YAML;
     #[Test]
     public function literal_templates_segment_does_not_collide_with_ending_path(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::COLLISION_SPEC_YAML);
 
         $operation = $finder->findOperation('/api', 'GET');
 
@@ -67,7 +67,7 @@ YAML;
     #[Test]
     public function literal_templates_segment_matches_correctly(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::COLLISION_SPEC_YAML);
 
         $operation = $finder->findOperation('/api/__templates__/list', 'GET');
 
@@ -79,22 +79,12 @@ YAML;
     #[Test]
     public function existing_path_matching_tests_pass(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::COLLISION_SPEC_YAML);
 
         $staticOperation = $finder->findOperation('/users/admin', 'GET');
         $parametrizedOperation = $finder->findOperation('/users/42', 'GET');
 
         $this->assertSame('/users/admin', $staticOperation->path);
         $this->assertSame('/users/{id}', $parametrizedOperation->path);
-    }
-
-    private function createPathFinder(): PathFinder
-    {
-        $document = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::COLLISION_SPEC_YAML)
-            ->build()
-            ->getDocument();
-
-        return new PathFinder($document);
     }
 }

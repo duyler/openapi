@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Registry;
 
 use Duyler\OpenApi\Registry\SchemaRegistry;
-use Duyler\OpenApi\Schema\Model\InfoObject;
-use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Test\Support\SpecBuilders;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
@@ -29,11 +28,11 @@ final class SchemaRegistryPrecompiledTest extends TestCase
     {
         $registry = new SchemaRegistry();
 
-        $docV1 = $this->createDocumentWithTitle('v1');
-        $docV2 = $this->createDocumentWithTitle('v2');
-        $docV3 = $this->createDocumentWithTitle('v3');
-        $docV4 = $this->createDocumentWithTitle('v4');
-        $docV5 = $this->createDocumentWithTitle('v5');
+        $docV1 = SpecBuilders::documentWithTitle(title: 'v1', openapiVersion: '3.2.0');
+        $docV2 = SpecBuilders::documentWithTitle(title: 'v2', openapiVersion: '3.2.0');
+        $docV3 = SpecBuilders::documentWithTitle(title: 'v3', openapiVersion: '3.2.0');
+        $docV4 = SpecBuilders::documentWithTitle(title: 'v4', openapiVersion: '3.2.0');
+        $docV5 = SpecBuilders::documentWithTitle(title: 'v5', openapiVersion: '3.2.0');
 
         $registry = $registry
             ->register('api', '2.1.0', $docV1)
@@ -82,8 +81,8 @@ final class SchemaRegistryPrecompiledTest extends TestCase
     {
         $registry = new SchemaRegistry();
 
-        $apiDoc = $this->createDocumentWithTitle('api');
-        $webDoc = $this->createDocumentWithTitle('web');
+        $apiDoc = SpecBuilders::documentWithTitle(title: 'api', openapiVersion: '3.2.0');
+        $webDoc = SpecBuilders::documentWithTitle(title: 'web', openapiVersion: '3.2.0');
 
         $registry = $registry
             ->register('api', '1.0.0', $apiDoc)
@@ -105,13 +104,5 @@ final class SchemaRegistryPrecompiledTest extends TestCase
 
         /** @var array<string, mixed> $value */
         return $property->getValue($registry);
-    }
-
-    private function createDocumentWithTitle(string $title): OpenApiDocument
-    {
-        return new OpenApiDocument(
-            openapi: '3.2.0',
-            info: new InfoObject(title: $title, version: '1.0.0'),
-        );
     }
 }
