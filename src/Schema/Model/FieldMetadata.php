@@ -16,7 +16,7 @@ final readonly class FieldMetadata
     public function __construct(
         public string $name,
         public string $openApiName,
-        public string $category,
+        public ?string $category = null,
         public bool $hasSentinel = false,
     ) {}
 }
