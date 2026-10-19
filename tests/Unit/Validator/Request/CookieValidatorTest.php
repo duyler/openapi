@@ -151,6 +151,29 @@ final class CookieValidatorTest extends TestCase
     }
 
     #[Test]
+    public function validate_decodes_url_encoded_data_values(): void
+    {
+        $cookies = ['tag' => 'php%20ame'];
+        $parameterSchemas = [
+            new Parameter(
+                name: 'tag',
+                in: 'cookie',
+                schema: new Schema(type: 'string', pattern: '/^php ame$/'),
+            ),
+        ];
+
+        $succeeded = false;
+        try {
+            $this->validator->validate($cookies, $parameterSchemas);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
     public function throw_error_for_invalid_type(): void
     {
         $cookies = ['count' => '10'];

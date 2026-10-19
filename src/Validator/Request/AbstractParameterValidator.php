@@ -47,10 +47,10 @@ abstract readonly class AbstractParameterValidator
             }
 
             /** @var string|null $value */
-            $value = $this->findParameter($data, $name);
+            $value = $this->resolveValue($data, $param);
 
             if (null === $value) {
-                if ($this->isRequired($param, $value)) {
+                if ($this->isRequired($param)) {
                     throw new MissingParameterException($location, $name);
                 }
                 continue;
@@ -67,9 +67,9 @@ abstract readonly class AbstractParameterValidator
 
     abstract protected function getLocation(): string;
 
-    abstract protected function findParameter(array $data, string $name): mixed;
+    abstract protected function resolveValue(array $data, Parameter $param): mixed;
 
-    protected function isRequired(Parameter $param, mixed $value): bool
+    protected function isRequired(Parameter $param): bool
     {
         return $param->required;
     }

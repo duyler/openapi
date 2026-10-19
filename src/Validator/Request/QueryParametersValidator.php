@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request;
 
+use Duyler\OpenApi\Schema\Model\Parameter;
 use Override;
 
 final readonly class QueryParametersValidator extends AbstractParameterValidator
@@ -15,8 +16,8 @@ final readonly class QueryParametersValidator extends AbstractParameterValidator
     }
 
     #[Override]
-    protected function findParameter(array $data, string $name): mixed
+    protected function resolveValue(array $data, Parameter $param): mixed
     {
-        return $data[$name] ?? null;
+        return $data[$param->name ?? ''] ?? null;
     }
 }
