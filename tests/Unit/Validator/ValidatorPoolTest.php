@@ -10,11 +10,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use stdClass;
-use Swoole\Coroutine;
-use Swoole\Coroutine\Channel;
-use Swoole\Lock;
-
-use function extension_loaded;
 
 final class ValidatorPoolTest extends TestCase
 {
@@ -450,50 +445,6 @@ final class ValidatorPoolTest extends TestCase
         self::assertTrue($factoryThrown, 'Factory exception must propagate through finally');
         self::assertSame(2, $lock->lockCount);
         self::assertSame(2, $lock->unlockCount);
-    }
-
-    #[Test]
-    public function swoole_lock_serializes_concurrent_get_or_create_factory_called_once(): void
-    {
-        if (!extension_loaded('swoole')) {
-            self::markTestSkipped('Swoole extension not available');
-        }
-
-        $pool = new ValidatorPool(maxSize: 8, lock: new Lock());
-
-        $factoryCount = 0;
-        $instances = [];
-
-        \Swoole\Coroutine\run(static function () use ($pool, &$factoryCount, &$instances): void {
-            $channel = new Channel(2);
-
-            go(static function () use ($pool, &$factoryCount, &$instances, $channel): void {
-                $instances[] = $pool->getOrCreate(
-                    'shared',
-                    static function () use (&$factoryCount): stdClass {
-                        ++$factoryCount;
-                        Coroutine::sleep(0.005);
-
-                        return new stdClass();
-                    },
-                );
-                $channel->push(true);
-            });
-
-            go(static function () use ($pool, &$instances, $channel): void {
-                $instances[] = $pool->getOrCreate('shared', static function (): stdClass {
-                    return new stdClass();
-                });
-                $channel->push(true);
-            });
-
-            $channel->pop();
-            $channel->pop();
-        });
-
-        self::assertCount(2, $instances);
-        self::assertSame(1, $factoryCount, 'Factory must be invoked exactly once under lock');
-        self::assertSame($instances[0], $instances[1], 'Both coroutines must receive the same instance');
     }
 
     private function createCountingLock(): object

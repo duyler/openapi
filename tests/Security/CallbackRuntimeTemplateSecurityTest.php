@@ -18,6 +18,7 @@ use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Request\RequestValidatorInterface;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Override;
+use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -174,6 +175,7 @@ YAML;
     }
 
     #[Test]
+    #[IgnoreDeprecations]
     public function builder_enable_strict_is_backward_compatible_noop(): void
     {
         $validator = OpenApiValidatorBuilder::create()

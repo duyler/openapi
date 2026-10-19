@@ -17,6 +17,111 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   legitimate `null` was rejected by `TypeValidator`. The flag now merges with
   OR: per OpenAPI 3.0 a `nullable` sibling next to `$ref` can only widen the
   target, and there is no spelling for "narrow this to non-nullable" (#64).
+- A non-string type nested inside a parameter schema is no longer
+  unsatisfiable. `TypeCoercer` coerced only the top-level schema type,
+  so `object` and `array` parameters handed their un-coerced members to
+  the schema validator: `?page[limit]=3` against `page: {type: object,
+  properties: {limit: {type: integer}}}` could not pass for any value a
+  client could send, since query, path, header and cookie values arrive
+  as strings and coercion is the only path to a non-string leaf. Type
+  dispatch is now `Schema`-oriented and recurses through `properties`
+  and `items`, so `?page[limit]=3`, `?filter[enabled]=true` and
+  `?ids=1,2,3` coerce to `['limit' => 3]`, `['enabled' => true]` and
+  `[1, 2, 3]`. The traversal is shared with `RequestBodyCoercer` — which
+  already recursed for request bodies — through
+  `AbstractCoercer::coerceDeclaredProperties()` and
+  `AbstractCoercer::coerceDeclaredItems()` rather than duplicated. (#60)
+- Path Item level `parameters` are now enforced during request validation.
+  `PathItem.parameters` were parsed into the schema model but never reached
+  `RequestValidator`, so `required` and `schema` constraints on parameters
+  hoisted to the path item — the place the specification encourages for
+  parameters shared by every operation under a path — were silently ignored
+  for every location (`path`, `query`, `header`, `cookie`). Path item
+  parameters are now merged into the operation's parameter set when the
+  operation is resolved, with an operation level parameter overriding the
+  path level one on matching `name` + `in`. The same merge is applied to
+  webhooks and callbacks, which are Path Item objects as well. (#61)
+- An array-typed `form` parameter no longer rejects a single value.
+  `ParameterDeserializer::deserializeForm()` decided whether a
+  non-exploded value was an array by looking for a comma instead of at
+  the declared schema type, so `?include=author,comments` deserialized
+  to a list while `?include=author` stayed a string and failed the
+  `type: array` check with `TypeMismatchError`. Form now routes on the
+  schema type through `splitBySeparator()` — as `simple`, `matrix`,
+  `label` and `cookie` already did — yielding a one item list for a
+  lone value and an empty list for `?include=`. The comma heuristic
+  remains for parameters that declare no array type, and `explode`
+  handling is unchanged. (#58)
+- A `requestBody` that is a Reference Object is now resolved instead of
+  silently discarded, so the referenced body is actually validated. The
+  parser dropped `$ref` — it read only `description`, `content` and
+  `required` — which produced an empty `RequestBody`, and
+  `RequestBodyValidatorWithContext` then returned at its
+  `null === $requestBody->content` early exit. Every request body behind a
+  `$ref` was therefore unvalidated: malformed payloads passed and
+  `required: true` was not enforced, with no exception or warning. Reference
+  support is now wired through all five layers that `Parameter` and
+  `Response` already used — `RequestBody` gains `ref`/`refSummary`/
+  `refDescription`, `ComponentTreeBuilder::buildRequestBody()` branches on
+  `$ref`, `DocumentNavigator` accepts `#/components/requestBodies/*` targets,
+  and `RefResolverInterface` gains `resolveRequestBody()` and
+  `resolveRequestBodyWithOverride()`. Chained and dangling references behave
+  as they do for responses: chains follow through, and an unresolvable or
+  wrongly-typed pointer throws `UnresolvableRefException` rather than
+  failing open. Webhooks and callbacks are covered too, since both validate
+  through `RequestValidator`. Per OAS 3.1+, a `description` sibling of
+  `$ref` overrides the referenced description (#56).
+
+## [0.7.3]
+
+### Fixed
+
+- `anyOf`/`oneOf` no longer depend on branch declaration order. The
+  `MAX_COMPOSITION_ERRORS` cap in `AbstractCompositionalValidator` used
+  `return` to stop collecting errors, which also abandoned the remaining
+  branches — so a branch that would match went unevaluated whenever
+  earlier branches produced 20+ errors, and `anyOf` reported "At least
+  one of the schemas must match, but none did". The cap now bounds error
+  collection only; every branch is still evaluated. Error output is
+  unchanged (20 errors plus one `TooManyErrorsError`). (#54)
+
+## [0.7.2]
+
+### Fixed
+
+- `nullable: true` is now honoured when it sits beside a composition keyword
+  instead of only on the branch schemas, so the standard OAS 3.0 workaround
+  for a nullable `$ref` — `{allOf: [$ref], nullable: true}` — accepts `null`.
+  `AllOfValidator`, `AnyOfValidator`, `OneOfValidator`,
+  `OneOfValidatorWithContext` and `IfThenElseValidator` short-circuit when the
+  schema carrying the keyword is nullable, rather than dispatching `null` into
+  branches that reject it. `anyOf`/`oneOf` treat this as the keyword being
+  satisfied, not as a matching branch, so `oneOf` still enforces exactly-one
+  for non-null data. A `null` member of an OAS 3.1 `type` union is ordinary
+  JSON Schema and keeps composing — only `nullable: true` waives branches, and
+  only while `nullableAsType` is enabled (#50).
+
+## [0.7.1]
+
+### Fixed
+
+- A `null` permitted by a branch of an `allOf`/`anyOf`/`oneOf` is no longer
+  rejected before any branch runs. The null pre-check that guards property
+  and item validation computed `$allowNull` from the immediate schema node,
+  but a composition node carries no `type` and no `nullable` — both live in
+  its branches — so `InvalidDataTypeException` fired before a single branch
+  was evaluated. This made every nullable attribute unrepresentable in
+  JSON:API-style documents, where resources are modelled as `allOf`
+  compositions. Composition and `$ref` nodes now defer the decision to the
+  branch or resolved target, which already evaluates `nullable` correctly.
+  Nulls no branch permits are still rejected, and now carry the failing
+  branch's data path instead of a pathless error (#66).
+- The same rule was implemented nine times and the copies disagreed — only
+  two consulted `$ref`, so a `$ref` property that accepted `null` in one code
+  path was rejected in another. All nine now delegate to a single
+  `SchemaValueNormalizer::allowsNull()` helper, closing the divergence across
+  `properties`, `items`, `prefixItems`, `dependentSchemas`, `if`/`then`/
+  `else`, `not`, and composition branches (#66).
 
 ## [0.7.0]
 
@@ -124,6 +229,17 @@ internal-only unless explicitly marked as public API.
   empty-body path.
 - `NotValidator` — removed redundant `$schema->not` truthy check after
   `is_bool($schema->not)` narrowing (Psalm `RedundantCondition`).
+- Composition branch errors are no longer lost, duplicated, or
+  inconsistent between keywords (#52). A `ValidationException` thrown by
+  `allOf`/`anyOf`/`oneOf` now always carries a structured error list:
+  a value rejected during branch normalization (typically `null` against
+  a non-nullable branch) synthesises a `TypeMismatchError` with the
+  branch `dataPath`/`schemaPath` instead of an empty list; `allOf` no
+  longer reports each branch error twice; and the `allOf` message counts
+  the branches that did not match rather than one of two error buckets.
+  `BranchOutcome` and `ValidationResult` carry a single canonical error
+  list (`ValidationResult::$abstractErrors` merged into `$errors`, new
+  `$failedCount`), so no caller can double-count.
 - Infection CI job no longer OOMs; MSI thresholds realigned with the
   current mutation score so the gate is neither green-by-default nor
   unreachable.
@@ -689,7 +805,8 @@ fail-closes on unresolvable callback expressions.
 ### Changed
 - Set `symfony/yaml` requirement to `^7.0`.
 
-[Unreleased]: https://github.com/duyler/openapi/compare/0.6.0...HEAD
+[Unreleased]: https://github.com/duyler/openapi/compare/0.7.0...HEAD
+[0.7.0]: https://github.com/duyler/openapi/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/duyler/openapi/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/duyler/openapi/compare/0.4.1...0.5.0
 [0.4.1]: https://github.com/duyler/openapi/compare/0.4.0...0.4.1

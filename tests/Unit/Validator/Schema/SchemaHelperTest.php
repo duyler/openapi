@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Schema;
 
 use DateTime;
+use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use stdClass;
@@ -250,5 +252,39 @@ final class SchemaHelperTest extends TestCase
         $result = SchemaValueNormalizer::doesTypeIncludeNull($type);
 
         self::assertTrue($result);
+    }
+
+    #[Test]
+    #[DataProvider('allowsNullProvider')]
+    public function allows_null_reads_the_whole_node(Schema $schema, bool $expected): void
+    {
+        $result = SchemaValueNormalizer::allowsNull($schema);
+
+        self::assertSame($expected, $result);
+    }
+
+    /**
+     * @return iterable<string, array{Schema, bool}>
+     */
+    public static function allowsNullProvider(): iterable
+    {
+        yield 'bare string' => [new Schema(type: 'string'), false];
+        yield 'nullable string' => [new Schema(type: 'string', nullable: true), true];
+        yield 'type array including null' => [new Schema(type: ['string', 'null']), true];
+        yield 'ref' => [new Schema(ref: '#/components/schemas/Anything'), true];
+        yield 'allOf' => [new Schema(allOf: [new Schema(type: 'string')]), true];
+        yield 'anyOf' => [new Schema(anyOf: [new Schema(type: 'string')]), true];
+        yield 'oneOf' => [new Schema(oneOf: [new Schema(type: 'string')]), true];
+        yield 'not is not a deferral' => [new Schema(not: new Schema(type: 'string')), false];
+    }
+
+    #[Test]
+    public function allows_null_defers_nothing_when_nullable_is_not_a_type(): void
+    {
+        $schema = new Schema(allOf: [new Schema(type: 'string', nullable: true)]);
+
+        $result = SchemaValueNormalizer::allowsNull($schema, nullableAsType: false);
+
+        self::assertFalse($result);
     }
 }

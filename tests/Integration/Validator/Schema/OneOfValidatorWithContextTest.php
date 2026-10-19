@@ -24,6 +24,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
+use function array_map;
 use function sprintf;
 
 final class OneOfValidatorWithContextTest extends TestCase
@@ -412,6 +413,118 @@ final class OneOfValidatorWithContextTest extends TestCase
             self::fail('Expected ValidationException');
         } catch (ValidationException $e) {
             self::assertSame('Exactly one of schemas must match, but none did', $e->getMessage());
+        }
+    }
+
+    #[Test]
+    public function validate_reports_structured_errors_when_null_is_rejected_by_every_branch(): void
+    {
+        $schema = new Schema(
+            oneOf: [
+                new Schema(type: 'object', required: ['type', 'id']),
+            ],
+        );
+
+        try {
+            $this->validator->validateWithContextIgnoringDiscriminator(null, $schema, $this->context);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            self::assertNotEmpty($e->getErrors());
+            self::assertSame('type', $e->getErrors()[0]->keyword());
+            self::assertSame('/', $e->getErrors()[0]->dataPath());
+            self::assertSame('/oneOf/0', $e->getErrors()[0]->schemaPath());
+        }
+    }
+
+    #[Test]
+    public function validate_reports_each_branch_error_exactly_once(): void
+    {
+        $schema = new Schema(
+            oneOf: [
+                new Schema(type: 'object', required: ['name']),
+            ],
+        );
+
+        try {
+            $this->validator->validateWithContextIgnoringDiscriminator(['other' => 'value'], $schema, $this->context);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            self::assertCount(1, $e->getErrors());
+            self::assertSame('required', $e->getErrors()[0]->keyword());
+        }
+    }
+
+    /**
+     * @return iterable<string, array{Schema, string}>
+     */
+    public static function rejectedNullBranchProvider(): iterable
+    {
+        yield 'untyped branch' => [new Schema(required: ['a']), 'object'];
+        yield 'scalar type' => [new Schema(type: 'string'), 'string'];
+        yield 'type array' => [new Schema(type: ['string', 'integer']), 'string|integer'];
+    }
+
+    #[Test]
+    #[DataProvider('rejectedNullBranchProvider')]
+    public function validate_names_the_branch_type_when_null_is_rejected(Schema $branch, string $expectedType): void
+    {
+        $schema = new Schema(oneOf: [$branch]);
+
+        try {
+            $this->validator->validateWithContextIgnoringDiscriminator(null, $schema, $this->context);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            self::assertCount(1, $e->getErrors());
+            self::assertSame(
+                sprintf('Expected type "%s", but got "null" at /', $expectedType),
+                $e->getErrors()[0]->message(),
+            );
+        }
+    }
+
+    #[Test]
+    public function validate_accumulates_errors_from_every_failing_branch(): void
+    {
+        $schema = new Schema(
+            oneOf: [
+                new Schema(type: 'object', required: ['a'], properties: ['a' => new Schema(type: 'integer')]),
+                new Schema(type: 'object', required: ['b']),
+            ],
+        );
+
+        try {
+            $this->validator->validateWithContextIgnoringDiscriminator(['a' => 'not-an-int'], $schema, $this->context);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $keywords = array_map(
+                static fn($error): string => $error->keyword(),
+                $e->getErrors(),
+            );
+
+            self::assertSame(['type', 'required'], $keywords);
+        }
+    }
+
+    #[Test]
+    public function validate_preserves_every_error_reported_by_a_single_branch(): void
+    {
+        $schema = new Schema(
+            oneOf: [
+                new Schema(
+                    type: 'object',
+                    properties: ['a' => new Schema(type: 'integer')],
+                    additionalProperties: false,
+                ),
+            ],
+        );
+
+        try {
+            $this->validator->validateWithContextIgnoringDiscriminator(['x' => 1, 'y' => 2], $schema, $this->context);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            self::assertCount(2, $e->getErrors());
+            self::assertSame('additionalProperties', $e->getErrors()[0]->keyword());
+            self::assertSame('additionalProperties', $e->getErrors()[1]->keyword());
         }
     }
 

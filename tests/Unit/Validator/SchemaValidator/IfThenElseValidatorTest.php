@@ -8,6 +8,8 @@ use Duyler\OpenApi\Validator\SchemaValidator\IfThenElseValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\MaximumError;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
@@ -155,5 +157,35 @@ class IfThenElseValidatorTest extends TestCase
         $this->validator->validate(5, $schema);
 
         $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function skip_branches_when_parent_schema_is_nullable_and_data_is_null(): void
+    {
+        $schema = new Schema(
+            nullable: true,
+            if: new Schema(type: 'string'),
+            else: new Schema(type: 'object', required: ['id']),
+        );
+
+        $this->validator->validate(null, $schema);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function apply_branches_to_null_when_parent_nullable_is_not_honored(): void
+    {
+        $schema = new Schema(
+            nullable: true,
+            if: new Schema(type: 'string'),
+            else: new Schema(type: 'object', required: ['id']),
+        );
+
+        $context = ValidationContext::create($this->pool, nullableAsType: false);
+
+        $this->expectException(InvalidDataTypeException::class);
+
+        $this->validator->validate(null, $schema, $context);
     }
 }
