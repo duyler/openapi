@@ -14,16 +14,24 @@ use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
+use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\QueryParser;
+use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
+use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
+use Duyler\OpenApi\Validator\SchemaValidator\ValidatorFactory;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use WeakMap;
 
+/**
+ * @psalm-type StatelessValidatorList = list<SchemaValidatorInterface>
+ */
 final class SchemaValidatorDependencies
 {
     public readonly LoggerInterface $logger;
@@ -43,6 +51,11 @@ final class SchemaValidatorDependencies
         ?ErrorFormatterInterface $errorFormatter = null,
         ?FormatRegistry $formatRegistry = null,
         ?BodyParser $bodyParser = null,
+        public readonly bool $strictFormats = false,
+        public readonly bool $reportDeprecated = false,
+        public readonly RegexValidator $regexValidator = new RegexValidator(),
+        public readonly PregExecutor $pregExecutor = new PregExecutor(),
+        public readonly ?OpenApiDocument $document = null,
     ) {
         $this->logger = $logger ?? new NullLogger();
         $this->errorFormatter = $errorFormatter ?? new SimpleFormatter();
@@ -57,6 +70,27 @@ final class SchemaValidatorDependencies
         /** @var WeakMap<OpenApiDocument, SchemaValidatorWithContext> $rootSchemaValidators */
         $rootSchemaValidators = new WeakMap();
         $this->rootSchemaValidators = $rootSchemaValidators;
+    }
+
+    /**
+     * @return StatelessValidatorList
+     */
+    public function createStatelessList(): array
+    {
+        $dependencies = new ValidatorDependencies(
+            pool: $this->pool,
+            formatRegistry: $this->formatRegistry,
+            strictFormats: $this->strictFormats,
+            logger: $this->logger,
+            reportDeprecated: $this->reportDeprecated,
+            eventDispatcher: $this->eventDispatcher,
+            regexValidator: $this->regexValidator,
+            pregExecutor: $this->pregExecutor,
+            document: $this->document,
+            refResolver: $this->refResolver,
+        );
+
+        return new ValidatorFactory($dependencies)->createStatelessList();
     }
 
     public function rootSchemaValidator(
