@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
 use JsonSerializable;
 use Override;
 
@@ -19,40 +20,25 @@ final readonly class Example implements JsonSerializable
         public ?string $serializedExample = null,
     ) {}
 
+    /**
+     * @return list<FieldMetadata>
+     */
+    public static function wireFields(): array
+    {
+        return [
+            new FieldMetadata('summary', 'summary'),
+            new FieldMetadata('description', 'description'),
+            new FieldMetadata('value', 'value'),
+            new FieldMetadata('dataValue', 'dataValue'),
+            new FieldMetadata('serializedValue', 'serializedValue'),
+            new FieldMetadata('externalValue', 'externalValue'),
+            new FieldMetadata('serializedExample', 'serializedExample'),
+        ];
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
-        /** @var array<string, mixed> $data */
-        $data = [];
-
-        if (null !== $this->summary) {
-            $data['summary'] = $this->summary;
-        }
-
-        if (null !== $this->description) {
-            $data['description'] = $this->description;
-        }
-
-        if (null !== $this->value) {
-            $data['value'] = $this->value;
-        }
-
-        if (null !== $this->dataValue) {
-            $data['dataValue'] = $this->dataValue;
-        }
-
-        if (null !== $this->serializedValue) {
-            $data['serializedValue'] = $this->serializedValue;
-        }
-
-        if (null !== $this->externalValue) {
-            $data['externalValue'] = $this->externalValue;
-        }
-
-        if (null !== $this->serializedExample) {
-            $data['serializedExample'] = $this->serializedExample;
-        }
-
-        return $data;
+        return ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

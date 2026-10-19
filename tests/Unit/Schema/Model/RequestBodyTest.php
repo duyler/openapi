@@ -149,4 +149,24 @@ final class RequestBodyTest extends TestCase
 
         self::assertSame(['$ref', 'summary', 'description'], array_keys($serialized));
     }
+
+    #[Test]
+    public function json_serialize_emits_fields_in_wire_order(): void
+    {
+        $content = new Content(mediaTypes: ['application/json' => new MediaType()]);
+
+        $requestBody = new RequestBody(
+            description: 'Description',
+            content: $content,
+            required: true,
+        );
+
+        $serialized = $requestBody->jsonSerialize();
+
+        self::assertSame([
+            'description' => 'Description',
+            'content' => $content,
+            'required' => true,
+        ], $serialized);
+    }
 }

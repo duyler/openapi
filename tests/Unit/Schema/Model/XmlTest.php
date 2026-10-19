@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Schema\Model;
 
+use Duyler\OpenApi\Schema\Model\Enum\XmlNodeType;
 use Duyler\OpenApi\Schema\Model\Xml;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -187,5 +188,29 @@ final class XmlTest extends TestCase
         self::assertFalse(Xml::isValidNodeType('ELEMENT'));
         self::assertFalse(Xml::isValidNodeType(''));
         self::assertFalse(Xml::isValidNodeType('Element'));
+    }
+
+    #[Test]
+    public function json_serialize_emits_fields_in_wire_order(): void
+    {
+        $xml = new Xml(
+            name: 'user',
+            namespace: 'urn:example',
+            prefix: 'u',
+            attribute: false,
+            wrapped: true,
+            nodeType: XmlNodeType::Element->value,
+        );
+
+        $serialized = $xml->jsonSerialize();
+
+        self::assertSame([
+            'name' => 'user',
+            'namespace' => 'urn:example',
+            'prefix' => 'u',
+            'attribute' => false,
+            'wrapped' => true,
+            'nodeType' => 'element',
+        ], $serialized);
     }
 }

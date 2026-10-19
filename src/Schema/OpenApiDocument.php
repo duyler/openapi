@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema;
 
+use Duyler\OpenApi\Schema\Model\FieldMetadata;
+use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
 use JsonSerializable;
 use Override;
 
@@ -23,50 +25,29 @@ final readonly class OpenApiDocument implements JsonSerializable
         public ?string $self = null,
     ) {}
 
+    /**
+     * @return list<FieldMetadata>
+     */
+    public static function wireFields(): array
+    {
+        return [
+            new FieldMetadata('openapi', 'openapi'),
+            new FieldMetadata('info', 'info'),
+            new FieldMetadata('jsonSchemaDialect', 'jsonSchemaDialect'),
+            new FieldMetadata('servers', 'servers'),
+            new FieldMetadata('paths', 'paths'),
+            new FieldMetadata('webhooks', 'webhooks'),
+            new FieldMetadata('components', 'components'),
+            new FieldMetadata('security', 'security'),
+            new FieldMetadata('tags', 'tags'),
+            new FieldMetadata('externalDocs', 'externalDocs'),
+            new FieldMetadata('self', '$self'),
+        ];
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [
-            'openapi' => $this->openapi,
-            'info' => $this->info,
-        ];
-
-        if (null !== $this->jsonSchemaDialect) {
-            $data['jsonSchemaDialect'] = $this->jsonSchemaDialect;
-        }
-
-        if (null !== $this->servers) {
-            $data['servers'] = $this->servers;
-        }
-
-        if (null !== $this->paths) {
-            $data['paths'] = $this->paths;
-        }
-
-        if (null !== $this->webhooks) {
-            $data['webhooks'] = $this->webhooks;
-        }
-
-        if (null !== $this->components) {
-            $data['components'] = $this->components;
-        }
-
-        if (null !== $this->security) {
-            $data['security'] = $this->security;
-        }
-
-        if (null !== $this->tags) {
-            $data['tags'] = $this->tags;
-        }
-
-        if (null !== $this->externalDocs) {
-            $data['externalDocs'] = $this->externalDocs;
-        }
-
-        if (null !== $this->self) {
-            $data['$self'] = $this->self;
-        }
-
-        return $data;
+        return ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

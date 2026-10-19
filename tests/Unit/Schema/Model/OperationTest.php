@@ -266,4 +266,49 @@ final class OperationTest extends TestCase
         self::assertIsArray($serialized);
         self::assertArrayHasKey('servers', $serialized);
     }
+
+    #[Test]
+    public function json_serialize_emits_fields_in_wire_order(): void
+    {
+        $tags = ['users'];
+        $externalDocs = new ExternalDocs(url: 'https://example.com/docs');
+        $parameters = new Parameters([]);
+        $requestBody = new RequestBody(description: 'Body');
+        $responses = new Responses([]);
+        $callbacks = new Callbacks([]);
+        $security = new SecurityRequirement([]);
+        $servers = new Servers([]);
+
+        $operation = new Operation(
+            tags: $tags,
+            summary: 'Summary',
+            description: 'Description',
+            externalDocs: $externalDocs,
+            operationId: 'listUsers',
+            parameters: $parameters,
+            requestBody: $requestBody,
+            responses: $responses,
+            callbacks: $callbacks,
+            deprecated: true,
+            security: $security,
+            servers: $servers,
+        );
+
+        $serialized = $operation->jsonSerialize();
+
+        self::assertSame([
+            'tags' => $tags,
+            'summary' => 'Summary',
+            'description' => 'Description',
+            'externalDocs' => $externalDocs,
+            'operationId' => 'listUsers',
+            'parameters' => $parameters,
+            'requestBody' => $requestBody,
+            'responses' => $responses,
+            'callbacks' => $callbacks,
+            'deprecated' => true,
+            'security' => $security,
+            'servers' => $servers,
+        ], $serialized);
+    }
 }

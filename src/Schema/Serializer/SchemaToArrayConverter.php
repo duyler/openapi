@@ -19,6 +19,7 @@ use WeakMap;
 
 use function count;
 use function in_array;
+use function ucfirst;
 
 final readonly class SchemaToArrayConverter
 {
@@ -96,8 +97,13 @@ final readonly class SchemaToArrayConverter
             $data[$field->name] = $this->extractSnapshotValue($schema, $field, $context);
         }
 
-        $data['hasDefault'] = $schema->hasDefault;
-        $data['hasConst'] = $schema->hasConst;
+        foreach (SchemaFieldMetadata::fields() as $field) {
+            if (false === $field->hasSentinel) {
+                continue;
+            }
+
+            $data['has' . ucfirst($field->name)] = null !== $this->scalarSerializer->extractSentinel($schema, $field);
+        }
 
         return $data;
     }

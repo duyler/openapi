@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
 use JsonSerializable;
 use Override;
 
@@ -36,55 +37,29 @@ final readonly class Components implements JsonSerializable
         public ?array $mediaTypes = null,
     ) {}
 
+    /**
+     * @return list<FieldMetadata>
+     */
+    public static function wireFields(): array
+    {
+        return [
+            new FieldMetadata('schemas', 'schemas'),
+            new FieldMetadata('responses', 'responses'),
+            new FieldMetadata('parameters', 'parameters'),
+            new FieldMetadata('examples', 'examples'),
+            new FieldMetadata('requestBodies', 'requestBodies'),
+            new FieldMetadata('headers', 'headers'),
+            new FieldMetadata('securitySchemes', 'securitySchemes'),
+            new FieldMetadata('links', 'links'),
+            new FieldMetadata('callbacks', 'callbacks'),
+            new FieldMetadata('pathItems', 'pathItems'),
+            new FieldMetadata('mediaTypes', 'mediaTypes'),
+        ];
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [];
-
-        if (null !== $this->schemas) {
-            $data['schemas'] = $this->schemas;
-        }
-
-        if (null !== $this->responses) {
-            $data['responses'] = $this->responses;
-        }
-
-        if (null !== $this->parameters) {
-            $data['parameters'] = $this->parameters;
-        }
-
-        if (null !== $this->examples) {
-            $data['examples'] = $this->examples;
-        }
-
-        if (null !== $this->requestBodies) {
-            $data['requestBodies'] = $this->requestBodies;
-        }
-
-        if (null !== $this->headers) {
-            $data['headers'] = $this->headers;
-        }
-
-        if (null !== $this->securitySchemes) {
-            $data['securitySchemes'] = $this->securitySchemes;
-        }
-
-        if (null !== $this->links) {
-            $data['links'] = $this->links;
-        }
-
-        if (null !== $this->callbacks) {
-            $data['callbacks'] = $this->callbacks;
-        }
-
-        if (null !== $this->pathItems) {
-            $data['pathItems'] = $this->pathItems;
-        }
-
-        if (null !== $this->mediaTypes) {
-            $data['mediaTypes'] = $this->mediaTypes;
-        }
-
-        return $data;
+        return ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

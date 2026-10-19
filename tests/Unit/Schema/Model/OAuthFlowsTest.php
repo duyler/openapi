@@ -229,4 +229,35 @@ final class OAuthFlowsTest extends TestCase
         self::assertArrayHasKey('authorizationCode', $serialized);
         self::assertArrayHasKey('deviceCode', $serialized);
     }
+
+    #[Test]
+    public function json_serialize_emits_fields_in_wire_order(): void
+    {
+        $implicit = new OAuthFlow(authorizationUrl: 'https://example.com/authorize');
+        $password = new OAuthFlow(tokenUrl: 'https://example.com/token');
+        $clientCredentials = new OAuthFlow(tokenUrl: 'https://example.com/token');
+        $authorizationCode = new OAuthFlow(
+            authorizationUrl: 'https://example.com/authorize',
+            tokenUrl: 'https://example.com/token',
+        );
+        $deviceCode = new OAuthFlow(deviceAuthorizationUrl: 'https://example.com/device');
+
+        $flows = new OAuthFlows(
+            implicit: $implicit,
+            password: $password,
+            clientCredentials: $clientCredentials,
+            authorizationCode: $authorizationCode,
+            deviceCode: $deviceCode,
+        );
+
+        $serialized = $flows->jsonSerialize();
+
+        self::assertSame([
+            'implicit' => $implicit->jsonSerialize(),
+            'password' => $password->jsonSerialize(),
+            'clientCredentials' => $clientCredentials->jsonSerialize(),
+            'authorizationCode' => $authorizationCode->jsonSerialize(),
+            'deviceCode' => $deviceCode->jsonSerialize(),
+        ], $serialized);
+    }
 }

@@ -21,7 +21,7 @@ final readonly class ModelWireSerializer
 
         foreach ($fields as $field) {
             /** @var mixed $value */
-            $value = $model->{$field->name};
+            $value = null !== $field->accessor ? ($field->accessor)($model) : $model->{$field->name};
 
             if (null !== $value) {
                 /** @var mixed */

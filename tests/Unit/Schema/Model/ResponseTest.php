@@ -265,4 +265,30 @@ final class ResponseTest extends TestCase
         self::assertSame('$ref', array_key_first($serialized));
         self::assertSame(['$ref', 'summary', 'description'], array_keys($serialized));
     }
+
+    #[Test]
+    public function json_serialize_emits_fields_in_wire_order(): void
+    {
+        $headers = new Headers([]);
+        $content = new Content(mediaTypes: ['application/json' => new MediaType()]);
+        $links = new Links([]);
+
+        $response = new Response(
+            summary: 'Summary',
+            description: 'Description',
+            headers: $headers,
+            content: $content,
+            links: $links,
+        );
+
+        $serialized = $response->jsonSerialize();
+
+        self::assertSame([
+            'summary' => 'Summary',
+            'description' => 'Description',
+            'headers' => $headers,
+            'content' => $content,
+            'links' => $links,
+        ], $serialized);
+    }
 }

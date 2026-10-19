@@ -256,4 +256,46 @@ final class ParameterTest extends TestCase
 
         self::assertSame(['$ref', 'summary', 'description'], array_keys($serialized));
     }
+
+    #[Test]
+    public function json_serialize_emits_fields_in_wire_order(): void
+    {
+        $schema = new Schema(type: 'string');
+        $example = new Example(summary: 'Example');
+        $content = new Content(mediaTypes: ['application/json' => new MediaType()]);
+
+        $parameter = new Parameter(
+            name: 'limit',
+            in: 'query',
+            description: 'Limit',
+            required: true,
+            deprecated: true,
+            allowEmptyValue: true,
+            style: 'form',
+            explode: true,
+            allowReserved: true,
+            schema: $schema,
+            example: $example,
+            examples: ['first' => 1],
+            content: $content,
+        );
+
+        $serialized = $parameter->jsonSerialize();
+
+        self::assertSame([
+            'name' => 'limit',
+            'in' => 'query',
+            'description' => 'Limit',
+            'required' => true,
+            'deprecated' => true,
+            'allowEmptyValue' => true,
+            'style' => 'form',
+            'explode' => true,
+            'allowReserved' => true,
+            'schema' => $schema,
+            'example' => $example,
+            'examples' => ['first' => 1],
+            'content' => $content,
+        ], $serialized);
+    }
 }

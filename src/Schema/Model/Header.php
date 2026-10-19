@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
 use JsonSerializable;
 use Override;
 
@@ -23,43 +24,26 @@ final readonly class Header implements JsonSerializable
         public ?Content $content = null,
     ) {}
 
+    /**
+     * @return list<FieldMetadata>
+     */
+    public static function wireFields(): array
+    {
+        return [
+            new FieldMetadata('description', 'description'),
+            new FieldMetadata('required', 'required', accessor: static fn(self $model): ?bool => $model->required ? true : null),
+            new FieldMetadata('deprecated', 'deprecated', accessor: static fn(self $model): ?bool => $model->deprecated ? true : null),
+            new FieldMetadata('allowEmptyValue', 'allowEmptyValue', accessor: static fn(self $model): ?bool => $model->allowEmptyValue ? true : null),
+            new FieldMetadata('schema', 'schema'),
+            new FieldMetadata('example', 'example'),
+            new FieldMetadata('examples', 'examples'),
+            new FieldMetadata('content', 'content'),
+        ];
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [];
-
-        if (null !== $this->description) {
-            $data['description'] = $this->description;
-        }
-
-        if ($this->required) {
-            $data['required'] = $this->required;
-        }
-
-        if ($this->deprecated) {
-            $data['deprecated'] = $this->deprecated;
-        }
-
-        if ($this->allowEmptyValue) {
-            $data['allowEmptyValue'] = $this->allowEmptyValue;
-        }
-
-        if (null !== $this->schema) {
-            $data['schema'] = $this->schema;
-        }
-
-        if (null !== $this->example) {
-            $data['example'] = $this->example;
-        }
-
-        if (null !== $this->examples) {
-            $data['examples'] = $this->examples;
-        }
-
-        if (null !== $this->content) {
-            $data['content'] = $this->content;
-        }
-
-        return $data;
+        return ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

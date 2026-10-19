@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
 use Duyler\OpenApi\Schema\Serializer\Internal\RefSerializer;
 use JsonSerializable;
 use Override;
@@ -23,35 +24,26 @@ final readonly class Link implements JsonSerializable
         public ?Server $server = null,
     ) {}
 
+    /**
+     * @return list<FieldMetadata>
+     */
+    public static function wireFields(): array
+    {
+        return [
+            new FieldMetadata('operationRef', 'operationRef'),
+            new FieldMetadata('description', 'description'),
+            new FieldMetadata('operationId', 'operationId'),
+            new FieldMetadata('parameters', 'parameters'),
+            new FieldMetadata('requestBody', 'requestBody'),
+            new FieldMetadata('server', 'server'),
+        ];
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = new RefSerializer()->toWireForm($this->ref, null, null) ?? [];
+        $refData = new RefSerializer()->toWireForm($this->ref, null, null) ?? [];
 
-        if (null !== $this->operationRef) {
-            $data['operationRef'] = $this->operationRef;
-        }
-
-        if (null !== $this->description) {
-            $data['description'] = $this->description;
-        }
-
-        if (null !== $this->operationId) {
-            $data['operationId'] = $this->operationId;
-        }
-
-        if (null !== $this->parameters) {
-            $data['parameters'] = $this->parameters;
-        }
-
-        if (null !== $this->requestBody) {
-            $data['requestBody'] = $this->requestBody;
-        }
-
-        if (null !== $this->server) {
-            $data['server'] = $this->server;
-        }
-
-        return $data;
+        return $refData + ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

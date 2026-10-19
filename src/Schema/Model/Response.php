@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
 use Duyler\OpenApi\Schema\Serializer\Internal\RefSerializer;
 use JsonSerializable;
 use Override;
@@ -21,6 +22,20 @@ final readonly class Response implements JsonSerializable
         public ?Links $links = null,
     ) {}
 
+    /**
+     * @return list<FieldMetadata>
+     */
+    public static function wireFields(): array
+    {
+        return [
+            new FieldMetadata('summary', 'summary'),
+            new FieldMetadata('description', 'description'),
+            new FieldMetadata('headers', 'headers'),
+            new FieldMetadata('content', 'content'),
+            new FieldMetadata('links', 'links'),
+        ];
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
@@ -30,28 +45,6 @@ final readonly class Response implements JsonSerializable
             return $refData;
         }
 
-        $data = [];
-
-        if (null !== $this->summary) {
-            $data['summary'] = $this->summary;
-        }
-
-        if (null !== $this->description) {
-            $data['description'] = $this->description;
-        }
-
-        if (null !== $this->headers) {
-            $data['headers'] = $this->headers;
-        }
-
-        if (null !== $this->content) {
-            $data['content'] = $this->content;
-        }
-
-        if (null !== $this->links) {
-            $data['links'] = $this->links;
-        }
-
-        return $data;
+        return ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

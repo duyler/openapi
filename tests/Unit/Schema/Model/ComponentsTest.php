@@ -545,4 +545,50 @@ final class ComponentsTest extends TestCase
         self::assertArrayHasKey('schemas', $serialized);
         self::assertArrayHasKey('mediaTypes', $serialized);
     }
+
+    #[Test]
+    public function json_serialize_emits_fields_in_wire_order(): void
+    {
+        $schema = new Schema(type: 'string');
+        $response = new Response(description: 'Description');
+        $parameter = new Parameter(name: 'limit', in: 'query');
+        $example = new Example(summary: 'Example');
+        $requestBody = new RequestBody(description: 'Body');
+        $header = new Header(description: 'Header');
+        $securityScheme = new SecurityScheme(type: 'apiKey');
+        $link = new Link(operationId: 'getUser');
+        $callbacks = new Callbacks([]);
+        $pathItem = new PathItem(summary: 'Path');
+        $mediaType = new MediaType();
+
+        $components = new Components(
+            schemas: ['User' => $schema],
+            responses: ['NotFound' => $response],
+            parameters: ['Limit' => $parameter],
+            examples: ['UserExample' => $example],
+            requestBodies: ['UserBody' => $requestBody],
+            headers: ['XRate' => $header],
+            securitySchemes: ['Auth' => $securityScheme],
+            links: ['UserLink' => $link],
+            callbacks: ['Callback' => $callbacks],
+            pathItems: ['UserPath' => $pathItem],
+            mediaTypes: ['Problem' => $mediaType],
+        );
+
+        $serialized = $components->jsonSerialize();
+
+        self::assertSame([
+            'schemas' => ['User' => $schema],
+            'responses' => ['NotFound' => $response],
+            'parameters' => ['Limit' => $parameter],
+            'examples' => ['UserExample' => $example],
+            'requestBodies' => ['UserBody' => $requestBody],
+            'headers' => ['XRate' => $header],
+            'securitySchemes' => ['Auth' => $securityScheme],
+            'links' => ['UserLink' => $link],
+            'callbacks' => ['Callback' => $callbacks],
+            'pathItems' => ['UserPath' => $pathItem],
+            'mediaTypes' => ['Problem' => $mediaType],
+        ], $serialized);
+    }
 }

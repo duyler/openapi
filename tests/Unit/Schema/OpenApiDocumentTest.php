@@ -193,4 +193,47 @@ final class OpenApiDocumentTest extends TestCase
 
         self::assertArrayNotHasKey('$self', $serialized);
     }
+
+    #[Test]
+    public function json_serialize_emits_fields_in_wire_order(): void
+    {
+        $info = new InfoObject(title: 'Test API', version: '1.0.0');
+        $servers = new Servers([]);
+        $paths = new Paths([]);
+        $webhooks = new Webhooks([]);
+        $components = new Components();
+        $security = new SecurityRequirement([]);
+        $tags = new Tags([]);
+        $externalDocs = new ExternalDocs(url: 'https://docs.example.com');
+
+        $document = new OpenApiDocument(
+            openapi: '3.2.0',
+            info: $info,
+            jsonSchemaDialect: 'https://json-schema.org/draft/2020-12/schema',
+            servers: $servers,
+            paths: $paths,
+            webhooks: $webhooks,
+            components: $components,
+            security: $security,
+            tags: $tags,
+            externalDocs: $externalDocs,
+            self: 'https://api.example.com/openapi.json',
+        );
+
+        $serialized = $document->jsonSerialize();
+
+        self::assertSame([
+            'openapi' => '3.2.0',
+            'info' => $info,
+            'jsonSchemaDialect' => 'https://json-schema.org/draft/2020-12/schema',
+            'servers' => $servers,
+            'paths' => $paths,
+            'webhooks' => $webhooks,
+            'components' => $components,
+            'security' => $security,
+            'tags' => $tags,
+            'externalDocs' => $externalDocs,
+            '$self' => 'https://api.example.com/openapi.json',
+        ], $serialized);
+    }
 }

@@ -205,4 +205,31 @@ final class LinkTest extends TestCase
         self::assertIsArray($serialized);
         self::assertArrayHasKey('server', $serialized);
     }
+
+    #[Test]
+    public function json_serialize_emits_fields_in_wire_order(): void
+    {
+        $requestBody = new RequestBody(description: 'Body');
+        $server = new Server(url: 'https://api.example.com');
+
+        $link = new Link(
+            operationRef: '#/operations/getUser',
+            description: 'Description',
+            operationId: 'getUser',
+            parameters: ['id' => '$response.body#/id'],
+            requestBody: $requestBody,
+            server: $server,
+        );
+
+        $serialized = $link->jsonSerialize();
+
+        self::assertSame([
+            'operationRef' => '#/operations/getUser',
+            'description' => 'Description',
+            'operationId' => 'getUser',
+            'parameters' => ['id' => '$response.body#/id'],
+            'requestBody' => $requestBody,
+            'server' => $server,
+        ], $serialized);
+    }
 }

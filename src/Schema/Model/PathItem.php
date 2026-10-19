@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
 use JsonSerializable;
 use Override;
 
@@ -48,71 +49,33 @@ final readonly class PathItem implements JsonSerializable
         };
     }
 
+    /**
+     * @return list<FieldMetadata>
+     */
+    public static function wireFields(): array
+    {
+        return [
+            new FieldMetadata('ref', '$ref'),
+            new FieldMetadata('summary', 'summary'),
+            new FieldMetadata('description', 'description'),
+            new FieldMetadata('get', 'get'),
+            new FieldMetadata('put', 'put'),
+            new FieldMetadata('post', 'post'),
+            new FieldMetadata('delete', 'delete'),
+            new FieldMetadata('options', 'options'),
+            new FieldMetadata('head', 'head'),
+            new FieldMetadata('patch', 'patch'),
+            new FieldMetadata('trace', 'trace'),
+            new FieldMetadata('query', 'query'),
+            new FieldMetadata('additionalOperations', 'additionalOperations'),
+            new FieldMetadata('servers', 'servers'),
+            new FieldMetadata('parameters', 'parameters'),
+        ];
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [];
-
-        if (null !== $this->ref) {
-            $data['$ref'] = $this->ref;
-        }
-
-        if (null !== $this->summary) {
-            $data['summary'] = $this->summary;
-        }
-
-        if (null !== $this->description) {
-            $data['description'] = $this->description;
-        }
-
-        if (null !== $this->get) {
-            $data['get'] = $this->get;
-        }
-
-        if (null !== $this->put) {
-            $data['put'] = $this->put;
-        }
-
-        if (null !== $this->post) {
-            $data['post'] = $this->post;
-        }
-
-        if (null !== $this->delete) {
-            $data['delete'] = $this->delete;
-        }
-
-        if (null !== $this->options) {
-            $data['options'] = $this->options;
-        }
-
-        if (null !== $this->head) {
-            $data['head'] = $this->head;
-        }
-
-        if (null !== $this->patch) {
-            $data['patch'] = $this->patch;
-        }
-
-        if (null !== $this->trace) {
-            $data['trace'] = $this->trace;
-        }
-
-        if (null !== $this->query) {
-            $data['query'] = $this->query;
-        }
-
-        if (null !== $this->additionalOperations) {
-            $data['additionalOperations'] = $this->additionalOperations;
-        }
-
-        if (null !== $this->servers) {
-            $data['servers'] = $this->servers;
-        }
-
-        if (null !== $this->parameters) {
-            $data['parameters'] = $this->parameters;
-        }
-
-        return $data;
+        return ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

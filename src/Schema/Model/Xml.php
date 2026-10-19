@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Schema\Model;
 
 use Duyler\OpenApi\Schema\Model\Enum\XmlNodeType;
+use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
 use JsonSerializable;
 use Override;
 
@@ -33,35 +34,24 @@ final readonly class Xml implements JsonSerializable
         return null !== XmlNodeType::tryFrom($nodeType);
     }
 
+    /**
+     * @return list<FieldMetadata>
+     */
+    public static function wireFields(): array
+    {
+        return [
+            new FieldMetadata('name', 'name'),
+            new FieldMetadata('namespace', 'namespace'),
+            new FieldMetadata('prefix', 'prefix'),
+            new FieldMetadata('attribute', 'attribute'),
+            new FieldMetadata('wrapped', 'wrapped'),
+            new FieldMetadata('nodeType', 'nodeType'),
+        ];
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [];
-
-        if (null !== $this->name) {
-            $data['name'] = $this->name;
-        }
-
-        if (null !== $this->namespace) {
-            $data['namespace'] = $this->namespace;
-        }
-
-        if (null !== $this->prefix) {
-            $data['prefix'] = $this->prefix;
-        }
-
-        if (null !== $this->attribute) {
-            $data['attribute'] = $this->attribute;
-        }
-
-        if (null !== $this->wrapped) {
-            $data['wrapped'] = $this->wrapped;
-        }
-
-        if (null !== $this->nodeType) {
-            $data['nodeType'] = $this->nodeType;
-        }
-
-        return $data;
+        return ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

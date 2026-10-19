@@ -485,4 +485,32 @@ final class PathItemTest extends TestCase
         self::assertNull($pathItem->getOperation('post'));
         self::assertNull($pathItem->getOperation('put'));
     }
+
+    #[Test]
+    public function json_serialize_emits_fields_in_wire_order(): void
+    {
+        $get = new Operation(operationId: 'get');
+        $post = new Operation(operationId: 'post');
+        $servers = new Servers([]);
+
+        $pathItem = new PathItem(
+            ref: '#/components/pathItems/Item',
+            summary: 'Summary',
+            description: 'Description',
+            get: $get,
+            post: $post,
+            servers: $servers,
+        );
+
+        $serialized = $pathItem->jsonSerialize();
+
+        self::assertSame([
+            '$ref' => '#/components/pathItems/Item',
+            'summary' => 'Summary',
+            'description' => 'Description',
+            'get' => $get,
+            'post' => $post,
+            'servers' => $servers,
+        ], $serialized);
+    }
 }
