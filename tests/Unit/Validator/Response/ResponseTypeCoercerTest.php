@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Response;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
+use Duyler\OpenApi\Validator\Request\RequestBodyCoercer;
 use Duyler\OpenApi\Validator\Response\ResponseTypeCoercer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -847,6 +848,47 @@ final class ResponseTypeCoercerTest extends TestCase
         $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
 
         $this->assertSame($expected, $result);
+    }
+
+    public static function unionSymmetryProvider(): array
+    {
+        return [
+            'float string out of int64 range falls back to number' => ['1e300', ['integer', 'number'], 1.0e300],
+            'float value out of int64 range falls back to number' => [1.0e300, ['integer', 'number'], 1.0e300],
+            'integer string matches integer' => ['42', ['integer', 'number'], 42],
+            'non numeric string returns original value' => ['abc', ['integer', 'number'], 'abc'],
+            'null with nullable union returns null' => [null, ['null', 'string'], null],
+        ];
+    }
+
+    #[DataProvider('unionSymmetryProvider')]
+    #[Test]
+    public function union_coercion_is_symmetric_between_request_and_response(mixed $input, array $types, mixed $expected): void
+    {
+        $schema = new Schema(type: $types);
+        $requestCoercer = new RequestBodyCoercer();
+
+        $requestResult = $requestCoercer->coerce($input, new CoercionContext(schema: $schema, enabled: true, strict: true));
+        $responseResult = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true, strict: true));
+
+        $this->assertSame($expected, $requestResult);
+        $this->assertSame($expected, $responseResult);
+        $this->assertSame($requestResult, $responseResult);
+    }
+
+    #[Test]
+    public function coerce_union_type_falls_back_to_number_without_exception_in_non_strict_mode(): void
+    {
+        $schema = new Schema(type: ['integer', 'number']);
+
+        $stringResult = $this->coercer->coerce('1e300', new CoercionContext(schema: $schema, enabled: true, strict: false));
+
+        $floatResult = $this->coercer->coerce(1.0e300, new CoercionContext(schema: $schema, enabled: true, strict: false));
+
+        $this->assertSame(1.0e300, $stringResult);
+        $this->assertIsFloat($stringResult);
+        $this->assertSame(1.0e300, $floatResult);
+        $this->assertIsFloat($floatResult);
     }
 
     public static function coerceToObjectProvider(): array

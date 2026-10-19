@@ -963,4 +963,19 @@ final class RequestBodyCoercerTest extends TestCase
         $this->assertSame('abc', $result);
         $this->assertIsString($result);
     }
+
+    #[Test]
+    public function coerce_union_type_falls_back_to_number_without_exception_in_non_strict_mode(): void
+    {
+        $schema = new Schema(type: ['integer', 'number']);
+
+        $stringResult = $this->coercer->coerce('1e300', new CoercionContext(schema: $schema, enabled: true, strict: false));
+
+        $floatResult = $this->coercer->coerce(1.0e300, new CoercionContext(schema: $schema, enabled: true, strict: false));
+
+        $this->assertSame(1.0e300, $stringResult);
+        $this->assertIsFloat($stringResult);
+        $this->assertSame(1.0e300, $floatResult);
+        $this->assertIsFloat($floatResult);
+    }
 }
