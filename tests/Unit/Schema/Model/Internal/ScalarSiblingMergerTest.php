@@ -34,18 +34,29 @@ final class ScalarSiblingMergerTest extends TestCase
     }
 
     #[Test]
-    public function merge_nullable_uses_and_semantics_sibling_false_blocks_null(): void
+    public function merge_nullable_keeps_resolved_nullable_when_sibling_omits_it(): void
     {
         $resolved = new Schema(type: 'string', nullable: true);
         $sibling = new Schema(nullable: false);
 
         $overrides = new ScalarSiblingMerger()->merge(new SiblingMergeContext($resolved, $sibling));
 
-        self::assertFalse($overrides['nullable']);
+        self::assertTrue($overrides['nullable']);
     }
 
     #[Test]
-    public function merge_nullable_and_semantics_both_true_allows_null(): void
+    public function merge_nullable_sibling_widens_non_nullable_resolved(): void
+    {
+        $resolved = new Schema(type: 'string', nullable: false);
+        $sibling = new Schema(nullable: true);
+
+        $overrides = new ScalarSiblingMerger()->merge(new SiblingMergeContext($resolved, $sibling));
+
+        self::assertTrue($overrides['nullable']);
+    }
+
+    #[Test]
+    public function merge_nullable_both_true_allows_null(): void
     {
         $resolved = new Schema(type: 'string', nullable: true);
         $sibling = new Schema(nullable: true);
@@ -53,6 +64,17 @@ final class ScalarSiblingMergerTest extends TestCase
         $overrides = new ScalarSiblingMerger()->merge(new SiblingMergeContext($resolved, $sibling));
 
         self::assertTrue($overrides['nullable']);
+    }
+
+    #[Test]
+    public function merge_nullable_stays_false_when_neither_side_is_nullable(): void
+    {
+        $resolved = new Schema(type: 'string', nullable: false);
+        $sibling = new Schema(nullable: false);
+
+        $overrides = new ScalarSiblingMerger()->merge(new SiblingMergeContext($resolved, $sibling));
+
+        self::assertFalse($overrides['nullable']);
     }
 
     #[Test]
