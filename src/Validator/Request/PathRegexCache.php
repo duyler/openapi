@@ -96,12 +96,6 @@ final readonly class PathRegexCache
     }
 
     /**
-     * Validates each `{name}` / `{+name}` placeholder, replaces it in the
-     * template with a unique token, and returns the tokenised template plus
-     * the placeholder metadata needed to expand the tokens into named capture
-     * groups. Replaces the previous `preg_replace_callback` + closure-by-
-     * reference accumulator with an explicit two-pass scan (§7: no references).
-     *
      * @return array{templated: string, map: list<array{token: string, name: string, operator: string}>}
      */
     private function extractPlaceholders(string $template): array
@@ -118,10 +112,6 @@ final readonly class PathRegexCache
 
         if (false !== $result && $result > 0) {
             /**
-             * PREG_OFFSET_CAPTURE turns each group into [value, byte-offset].
-             * Psalm cannot infer the inner shape from preg_match_all's return,
-             * so the array-shape annotation below is the source of truth.
-             *
              * @var list<array{0: string, 1: int, operator: array{0: string, 1: int}, name: array{0: string, 1: int}}> $raw
              */
             foreach ($raw as $row) {

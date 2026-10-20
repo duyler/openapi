@@ -10,12 +10,6 @@ use function array_keys;
 use function sprintf;
 use function var_export;
 
-/**
- * Emits object-keyword codegen (required, additionalProperties:false) for
- * the ValidatorCompiler. Property recursion and items iteration stay in
- * the orchestrator because they traverse the schema tree via the shared
- * recursive `generateConstraintsForSchema` entry point.
- */
 final readonly class ObjectConstraints
 {
     /**

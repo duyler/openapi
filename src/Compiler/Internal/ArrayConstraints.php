@@ -9,15 +9,6 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use function sprintf;
 use function var_export;
 
-/**
- * Emits array-constraint codegen (minItems, maxItems, uniqueItems) for
- * the ValidatorCompiler. The uniqueItems block emits a call to the
- * inlined `canonicalJsonKey` helper, which the compiler appends to the
- * generated class footer via EqualityHelpers when the schema tree
- * requires it (enum / const / uniqueItems). Items iteration (the
- * `foreach` + recursive constraint emission) is owned by the
- * orchestrator because it recurses through the full schema tree.
- */
 final readonly class ArrayConstraints
 {
     public const int MAX_UNIQUE_CHECK_ITEMS = 100_000;

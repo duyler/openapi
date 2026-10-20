@@ -296,9 +296,16 @@ $validator = OpenApiValidatorBuilder::create()
 Specs loaded with `fromYamlString()` or `fromJsonString()` fail closed at
 `build()` time when the spec contains an external `$ref` (any `$ref` that
 does not start with `#/`) and `withExternalRefAllowedRoot()` has not been
-called. Call `withExternalRefAllowedRoot('/safe/dir')` after the
+called. Without this pre-build scan the builtin `FileExternalRefResolver`
+would run with `allowedRoot = null` for string-loaded specs and silently
+accept any `file://...` or relative-path `$ref`. The scan covers the whole
+raw spec document, including discriminator `mapping` and `defaultMapping`
+entries whose values point outside the document. Call
+`withExternalRefAllowedRoot('/safe/dir')` after the
 from*String method to confine external ref resolution to that directory,
-or remove the external `$ref` from the spec. Direct `new RefResolver()`
+or remove the external `$ref` from the spec. File-loaded specs skip the
+scan: their `allowedRoot` is auto-derived as `dirname(realpath($path))`
+of the spec file and enforced at resolution time instead. Direct `new RefResolver()`
 usage without the builder keeps the legacy null-`allowedRoot` behaviour
 (disabled path-traversal check) for backward compatibility; this is
 unsafe for trusted specs and should be replaced by the builder.
@@ -956,7 +963,7 @@ For supported keywords, the generated code matches runtime-validator semantics f
 - `type: integer` accepts whole floats (`3.0`) per JSON Schema 2020-12 §4.2.3, and rejects non-whole floats (`3.14`, `Inf`, `NaN`).
 - `multipleOf` uses the integer modulus path (`%`) when both operands are integers, and falls back to a quotient-plus-relative-epsilon check (`1e-9 * max(1.0, abs($quotient))`) for float operands — matching `NumericRangeValidator::isMultipleOf` so large dividends (e.g. `1e20 / 0.1`) do not lose precision the way `fmod` does.
 - Top-level `const`, `enum`, and `uniqueItems` keywords use an inlined copy of `JsonEquals::equals` / `JsonEquals::arraysEqual` so the compiled validator honours JSON Schema 2020-12 §4.2.2 instance equality: `1` and `1.0` are equal; object keys are unordered; bool is distinct from int. Mixed int/float comparisons above the 2^53 IEEE 754 boundary are rejected as unequal (mirrors `JsonEquals::SAFE_INT64_FLOAT_BOUNDARY`). For `uniqueItems`, the inline `canonicalJsonKey` helper canonicalises whole-float-to-int and `ksort`s object keys before hashing, so `[1, 1.0]` and `[{a:1,b:2}, {b:2,a:1}]` are detected as duplicates; an associative-array `isset` lookup gives O(n) enforcement with a `100000` unique-entry cap matching `ArrayLengthValidator::MAX_UNIQUE_CHECK`. `JsonException` from `json_encode` is converted to `RuntimeException` so the standalone-validator contract (only generic `RuntimeException` is thrown) is preserved. The same inlined `jsonEquals` is used for `enum` and `const` checks inside array `items` and nested object `properties`, so instance equality (`1` matches enum `[1, 2, 3]`) holds at every depth (R4-CORRECTNESS-013).
-- `pattern` is matched inside an inlined defensive wrapper that lowers `pcre.backtrack_limit` to `10_000` for the duration of the call (mirroring `PregExecutor::DEFAULT_MAX_BACKTRACKS`) and restores the previous value inside a `try`/`finally`. This bounds execution time for catastrophic-backtracking patterns such as `(a+)+` (CWE-1333, CWE-400) without breaking the standalone-validator contract: no library code is emitted into the generated class. PCRE errors (`preg_match === false`) are disambiguated from no-match (`0`) via distinct `RuntimeException` messages. The same wrapper is emitted for `pattern` declared on nested object properties and array `items`, so the ReDoS defence applies at every depth.
+- `pattern` is matched inside an inlined defensive wrapper that lowers `pcre.backtrack_limit` to `10_000` for the duration of the call (mirroring `PregExecutor::DEFAULT_MAX_BACKTRACKS`) and restores the previous value inside a `try`/`finally`. This bounds execution time for catastrophic-backtracking patterns such as `(a+)+` (CWE-1333, CWE-400) — the standalone generated validator cannot be turned into a CPU-exhaustion vector when matched against attacker-controlled input — without breaking the standalone-validator contract: no library code is emitted into the generated class. Security invariants enforced byte-for-byte in the emitted wrapper: `pcre.backtrack_limit` is captured before it is lowered; `set_error_handler` is installed to suppress PCRE compile warnings; `restore_error_handler` plus `ini_set` always run inside the `finally` block, so the previous limit is restored even when the validator throws. PCRE errors (`preg_match === false`) are disambiguated from no-match (`0`) via distinct `RuntimeException` messages. The same wrapper is emitted for `pattern` declared on nested object properties and array `items`, so the ReDoS defence applies at every depth.
 - Nested `properties` and `items` enforce the same supported-keyword subset as the top-level schema (R4-CORRECTNESS-004). `type`, `enum`, `const`, `minLength`, `maxLength`, `pattern`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`, `minItems`, `maxItems`, `uniqueItems`, `required`, `additionalProperties: false`, `properties`, and `items` are all emitted for nested properties and array items via a shared `generateConstraintsForSchema` helper, so there is no behavioural asymmetry between top-level and nested paths. Unsupported keywords encountered anywhere in the schema tree (including inside `properties` and `items`) throw `UnsupportedKeywordException` at compile time rather than being silently ignored.
 
 Use the runtime validator when you need the typed error classes (`TypeMismatchError`, `MultipleOfKeywordError`, …); the compiler only emits generic `RuntimeException`.
@@ -1146,6 +1153,17 @@ $validator = OpenApiValidatorBuilder::create()
 - `minLength` / `maxLength` - String length constraints
 - `pattern` - Regular expression pattern
 - `format` - Format validation (email, uri, uuid, date-time, etc.)
+
+String length is measured in UTF-16 code units: supplementary characters
+(U+10000 — U+10FFFF) are encoded as UTF-16 surrogate pairs and count as 2
+code units — the counting used by `String.prototype.length`, unlike ajv,
+whose default counts Unicode code points (the literal spec reading).
+This is a deliberate interoperability choice (SPEC-06): JSON Schema
+2020-12 §6.3.1–§6.3.2 define string length as the number of characters
+per RFC 8259, so thresholds on supplementary characters can differ when
+porting schemas. The runtime validator (`Utf16::length`) and the
+compiled validator (an inlined byte-walking loop) enforce the same
+semantics.
 
 ### Pattern Validation
 

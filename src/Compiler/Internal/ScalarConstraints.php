@@ -17,13 +17,6 @@ use function is_array;
 use function sprintf;
 use function var_export;
 
-/**
- * Emits scalar-constraint codegen (type, enum, const, string length,
- * numeric range, pattern, multipleOf) for the ValidatorCompiler. The
- * collaborator holds no mutable state and is constructed fresh per
- * compile() call. It delegates UTF-16 length computation to Utf16Length
- * and pattern matching to PatternCheck.
- */
 final readonly class ScalarConstraints
 {
     private const float RELATIVE_EPSILON_FACTOR = 1e-9;
@@ -33,10 +26,6 @@ final readonly class ScalarConstraints
         private PatternCheck $patternCheck,
     ) {}
 
-    /**
-     * Emits all scalar-constraint code for the given schema in the canonical
-     * order: type, enum, const, length, numeric range, pattern, multipleOf.
-     */
     public function generate(Schema $schema, string $dataVar, string $path = GenerationContext::ROOT_PATH): string
     {
         $code = '';

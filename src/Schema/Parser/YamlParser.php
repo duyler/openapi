@@ -262,9 +262,9 @@ final class YamlParser extends OpenApiBuilder
     }
 
     /**
-     * @param array<array-key, mixed> $matches output of PregExecutor::matchAll
+     * @param array<array-key, mixed> $matches
      *
-     * @return list<string> first capture group values, non-string entries skipped
+     * @return list<string>
      */
     private function capturedStrings(array $matches): array
     {

@@ -9,21 +9,6 @@ use Duyler\OpenApi\Validator\SchemaValidator\Internal\ScalarKeyCodec;
 
 use function sprintf;
 
-/**
- * Emits the inlined JSON-Schema §4.2.2 instance-equality helpers
- * (`jsonEquals`/`arraysEqual`) and the canonical-key helper
- * (`canonicalJsonKey`/`canonicalizeArrayKeys`) used by the compiled
- * validator for `enum`, `const`, and `uniqueItems`. Also answers whether
- * any of those keywords appear in the schema tree so the compiler can
- * skip emitting the helpers when they are unused.
- *
- * The emitted code mirrors `Duyler\OpenApi\Validator\Schema\JsonEquals`
- * byte-for-byte: integer/float equivalence (`1` == `1.0`), unordered
- * object keys, bool distinct from int, and the IEEE 754 safe-integer
- * boundary `ScalarKeyCodec::SAFE_INT64_FLOAT_BOUNDARY` (2^53) above which
- * mixed int/float comparisons are rejected as unequal. Equivalence is
- * pinned by `CompilerJsonEqualsEquivalenceTest`.
- */
 final readonly class EqualityHelpers
 {
     public function isRequiredFor(Schema $schema): bool

@@ -24,21 +24,6 @@ use function strlen;
 
 use const JSON_THROW_ON_ERROR;
 
-/**
- * Fail-closed confinement guard for external `$ref` references in
- * specs loaded via `fromYamlString()` / `fromJsonString()`.
- *
- * String-loaded specs have no auto-derived `externalRefAllowedRoot`, so the
- * builtin `FileExternalRefResolver` would otherwise run with `allowedRoot =
- * null` and silently accept any `file://...` or relative-path `$ref`. This
- * collaborator scans the raw spec before build() proceeds and rejects any
- * external `$ref` (or discriminator mapping/defaultMapping pointing outside
- * the document) when `externalRefAllowedRoot` has not been set.
- *
- * File-loaded specs skip the scan: their `externalRefAllowedRoot` is auto
- * derived from `dirname(realpath($path))` and the `FileExternalRefResolver`
- * enforces the boundary at resolution time.
- */
 final readonly class ExternalRefDetector
 {
     public const string CONFINEMENT_KEY_SUFFIX = '_confinement';

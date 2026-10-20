@@ -77,11 +77,7 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
      * reference the canonical default without duplicating the literal.
      */
     public const int DEFAULT_MAX_REF_BYTES = 10_485_760;
-    /**
-     * Schemes allowed for external $ref resolution. Anything outside this
-     * list is rejected with ExternalRefSecurityException. The empty string
-     * represents a relative path without a scheme.
-     */
+
     private const array ALLOWED_SCHEMES = [
         '',
         'file',
@@ -89,26 +85,10 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
 
     private const string FILE_SCHEME_PREFIX = 'file://';
 
-    /**
-     * Chunk size used by readWithLimit() when draining the file handle.
-     * Balances syscall overhead against memory pressure.
-     */
     private const int READ_CHUNK_BYTES = 8192;
 
-    /**
-     * POSIX stat mode bits selecting the file type, ANDed with
-     * stat['mode'] to obtain the file-type discriminator compared
-     * against self::S_IFREG.
-     */
     private const int S_IFMT = 0xF000;
 
-    /**
-     * POSIX regular-file mode bits. Anything else (character device,
-     * directory, FIFO, socket, symlink) is rejected at fstat time to
-     * defend against special files like /dev/zero or /dev/null that
-     * would otherwise pass scheme/path checks but cause DoS or hang
-     * the reader.
-     */
     private const int S_IFREG = 0x8000;
 
     private const int JSON_DECODE_MAX_DEPTH = 512;

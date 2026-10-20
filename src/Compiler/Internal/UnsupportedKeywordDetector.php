@@ -12,14 +12,6 @@ use function array_unique;
 use function array_values;
 use function is_bool;
 
-/**
- * Walks the schema tree and reports any keyword that the ValidatorCompiler
- * does not generate code for. The detector is a precondition check: it
- * runs before code generation so the compiler throws
- * UnsupportedKeywordException rather than silently emitting a validator
- * that ignores the keyword. Detection is recursive — unsupported
- * keywords inside nested `properties` or `items` are also reported.
- */
 final readonly class UnsupportedKeywordDetector
 {
     /**

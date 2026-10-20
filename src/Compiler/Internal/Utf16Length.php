@@ -6,18 +6,8 @@ namespace Duyler\OpenApi\Compiler\Internal;
 
 use function sprintf;
 
-/**
- * Emits the inlined UTF-16 code-unit length computation used by string
- * minLength/maxLength validation. The compiled loop walks UTF-8 bytes once
- * and converts each code point to its UTF-16 length (1 or 2 code units for
- * code points outside the BMP).
- */
 final readonly class Utf16Length
 {
-    /**
-     * Emits a self-contained byte-walking loop that leaves the UTF-16 code-unit
-     * length in a local `$utf16Length` variable.
-     */
     public function generate(string $valueVar = '$data'): string
     {
         $code = "        \$utf16Length = 0;\n";
