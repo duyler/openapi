@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator;
 
 use Duyler\OpenApi\Test\Support\CountingLock;
+use Duyler\OpenApi\Validator\Internal\LruCache;
 use Duyler\OpenApi\Validator\LibxmlSecuredContext;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -111,9 +112,14 @@ final class ConcurrencyContractTest extends TestCase
 
         $pool = ValidatorPool::forCoroutineRuntime($lock, maxSize: 64);
 
-        $maxSizeProperty = new ReflectionProperty(ValidatorPool::class, 'maxSize');
+        $cacheProperty = new ReflectionProperty(ValidatorPool::class, 'cache');
 
-        self::assertSame(64, $maxSizeProperty->getValue($pool));
+        /** @var LruCache<string, object> $cache */
+        $cache = $cacheProperty->getValue($pool);
+
+        $maxSizeProperty = new ReflectionProperty(LruCache::class, 'maxSize');
+
+        self::assertSame(64, $maxSizeProperty->getValue($cache));
     }
 
     #[Test]

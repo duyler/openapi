@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator;
 
+use Duyler\OpenApi\Validator\Internal\LruCache;
 use InvalidArgumentException;
 
 use function assert;
-use function count;
 use function method_exists;
-use function sprintf;
 
 /**
  * @danger NOT_THREAD_SAFE
@@ -23,17 +22,12 @@ use function sprintf;
  * (O-004). See README "Validator Pool" and "Unsafe classes and their
  * contracts" for the full concurrency contract.
  */
-final class ValidatorPool
+final readonly class ValidatorPool
 {
     private const int DEFAULT_MAX_SIZE = 128;
 
-    /** @var array<string, object> */
-    private array $cache = [];
-
-    /** @var array<string, true> */
-    private array $order = [];
-
-    private readonly int $maxSize;
+    /** @var LruCache<string, object> */
+    private LruCache $cache;
 
     /**
      * @param int|null    $maxSize Maximum entries before LRU eviction. Null falls back to DEFAULT_MAX_SIZE.
@@ -41,23 +35,16 @@ final class ValidatorPool
      *                             the pool prefork-safe; required for Swoole coroutines and threaded FrankenPHP.
      *                             A non-null object must expose BOTH methods; otherwise the constructor throws.
      */
-    public function __construct(?int $maxSize = null, private readonly ?object $lock = null)
+    public function __construct(?int $maxSize = null, private ?object $lock = null)
     {
-        $resolvedMaxSize = $maxSize ?? self::DEFAULT_MAX_SIZE;
-
-        if (1 > $resolvedMaxSize) {
-            throw new InvalidArgumentException(
-                sprintf('Max size must be at least 1, got %d', $resolvedMaxSize),
-            );
-        }
+        /** @var LruCache<string, object> */
+        $this->cache = new LruCache($maxSize ?? self::DEFAULT_MAX_SIZE);
 
         if (null !== $lock && (false === method_exists($lock, 'lock') || false === method_exists($lock, 'unlock'))) {
             throw new InvalidArgumentException(
                 'Lock object must expose both lock() and unlock() methods',
             );
         }
-
-        $this->maxSize = $resolvedMaxSize;
     }
 
     /**
@@ -91,21 +78,15 @@ final class ValidatorPool
     {
         $this->acquireLock();
         try {
-            if (isset($this->cache[$key])) {
-                $this->touch($key);
+            $cachedValidator = $this->cache->get($key);
 
+            if (null !== $cachedValidator) {
                 /** @var T */
-                return $this->cache[$key];
+                return $cachedValidator;
             }
 
             $instance = $factory();
-            $this->cache[$key] = $instance;
-            $this->order[$key] = true;
-
-            if (count($this->cache) > $this->maxSize) {
-                $evictedKey = array_key_first($this->order);
-                unset($this->order[$evictedKey], $this->cache[$evictedKey]);
-            }
+            $this->cache->set($key, $instance);
 
             return $instance;
         } finally {
@@ -117,8 +98,7 @@ final class ValidatorPool
     {
         $this->acquireLock();
         try {
-            $this->cache = [];
-            $this->order = [];
+            $this->cache->clear();
         } finally {
             $this->releaseLock();
         }
@@ -142,11 +122,5 @@ final class ValidatorPool
 
         assert(method_exists($this->lock, 'unlock'));
         $this->lock->unlock();
-    }
-
-    private function touch(string $key): void
-    {
-        unset($this->order[$key]);
-        $this->order[$key] = true;
     }
 }

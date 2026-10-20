@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator;
 use Duyler\OpenApi\Test\Support\CountingLock;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use InvalidArgumentException;
+use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -16,6 +17,7 @@ final class ValidatorPoolTest extends TestCase
 {
     private ValidatorPool $pool;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();

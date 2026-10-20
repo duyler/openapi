@@ -6,15 +6,15 @@ namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
 use Duyler\OpenApi\Validator\Exception\PregRuntimeException;
+use Duyler\OpenApi\Validator\Internal\LruCache;
 use Duyler\OpenApi\Validator\PregExecutor;
 use InvalidArgumentException;
 
-use function count;
 use function sprintf;
 use function str_split;
 use function strlen;
 
-final class RegexValidator
+final readonly class RegexValidator
 {
     private const string DELIMITER_CANDIDATES = '#~!|@%+;';
 
@@ -22,28 +22,16 @@ final class RegexValidator
 
     private const int MAX_PATTERN_LENGTH = 1024;
 
-    /** @var array<string, string> */
-    private array $normalizeCache = [];
-
-    /** @var array<string, true> */
-    private array $order = [];
-
-    private readonly int $maxSize;
+    /** @var LruCache<string, string> */
+    private LruCache $normalizeCache;
 
     /** @throws InvalidArgumentException */
     public function __construct(
         ?int $maxSize = null,
-        private readonly PregExecutor $pregExecutor = new PregExecutor(),
+        private PregExecutor $pregExecutor = new PregExecutor(),
     ) {
-        $resolvedMaxSize = $maxSize ?? self::DEFAULT_MAX_SIZE;
-
-        if (1 > $resolvedMaxSize) {
-            throw new InvalidArgumentException(
-                sprintf('Max size must be at least 1, got %d', $resolvedMaxSize),
-            );
-        }
-
-        $this->maxSize = $resolvedMaxSize;
+        /** @var LruCache<string, string> */
+        $this->normalizeCache = new LruCache($maxSize ?? self::DEFAULT_MAX_SIZE);
     }
 
     public function validate(string $pattern, ?string $fieldName = null): string
@@ -83,28 +71,21 @@ final class RegexValidator
 
     public function normalize(string $pattern): string
     {
-        if (isset($this->normalizeCache[$pattern])) {
-            $this->touch($pattern);
+        $cachedPattern = $this->normalizeCache->get($pattern);
 
-            return $this->normalizeCache[$pattern];
+        if (null !== $cachedPattern) {
+            return $cachedPattern;
         }
 
         $normalized = $this->doNormalize($pattern);
-        $this->normalizeCache[$pattern] = $normalized;
-        $this->order[$pattern] = true;
-
-        if (count($this->normalizeCache) > $this->maxSize) {
-            $evictedKey = array_key_first($this->order);
-            unset($this->order[$evictedKey], $this->normalizeCache[$evictedKey]);
-        }
+        $this->normalizeCache->set($pattern, $normalized);
 
         return $normalized;
     }
 
     public function clear(): void
     {
-        $this->normalizeCache = [];
-        $this->order = [];
+        $this->normalizeCache->clear();
     }
 
     private function doNormalize(string $pattern): string
@@ -156,11 +137,5 @@ final class RegexValidator
         }
 
         return $pattern;
-    }
-
-    private function touch(string $key): void
-    {
-        unset($this->order[$key]);
-        $this->order[$key] = true;
     }
 }

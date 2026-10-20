@@ -48,6 +48,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   finds an external `$ref` is never cached — the `BuilderException` reproduces
   on every build. Specs loaded from files and configurations without
   `withCache()` are unaffected. (#68)
+- All internal LRU caches now share one generic internal class,
+  `Validator\Internal\LruCache` (`@template K of string`, `@template V`):
+  `ValidatorPool`, `PathRegexCache` and `RegexValidator` delegate to it
+  instead of each maintaining their own cache/order/touch/evict arrays.
+  Eviction order, touch semantics and the per-class default capacities
+  (128 / 256 / 512) are unchanged, and the shared class owns the
+  `Max size must be at least 1` constructor guard and a capacity-preserving
+  no-op `touch()` for keys that are not stored. The TTL default and its
+  validation now live in a single place: `TypedCacheDecorator::DEFAULT_TTL`
+  (3600) with `TypedCacheDecorator::validateTtl()`, which
+  `SchemaCache` and `CompilationCache` use for their constructor defaults
+  and validation. The default TTL of `CompilationCache` changes from
+  24 hours (86400) to 1 hour (3600); the error message for a non-positive
+  TTL is unchanged.
 
 ### Fixed
 
@@ -117,6 +131,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **BC break for direct integrators.** The public constant
+  `CompilationCache::DEFAULT_TTL` is removed: the single TTL default source is
+  now `TypedCacheDecorator::DEFAULT_TTL` (3600) — reference it directly or
+  pass `ttl:` explicitly to the `CompilationCache` constructor. The
+  `ConfinementVerdict` singleton class is replaced by the enum
+  `ConfinementVerdict { case Clean }`: type hints through
+  `ConfinementVerdict::class`, `instanceof` checks and stored cache values
+  keep working, but code calling `ConfinementVerdict::clean()` must switch to
+  `ConfinementVerdict::Clean`. No consumer inside the monorepo referenced
+  either removed symbol (grep = 0).
 - **BC break for direct integrators.** The deprecated schema-validation stack
   (`@deprecated since 0.6.0`) is deleted: `SchemaValidator\SchemaValidator`,
   `SchemaValidator\ValidatorDependencies` (the legacy constructor-dependency

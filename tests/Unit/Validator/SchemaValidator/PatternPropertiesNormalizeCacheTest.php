@@ -10,6 +10,7 @@ use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\PatternPropertiesValidator;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Internal\LruCache;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -191,8 +192,14 @@ final class PatternPropertiesNormalizeCacheTest extends TestCase
         $reflection = new ReflectionClass(RegexValidator::class);
         $property = $reflection->getProperty('normalizeCache');
 
+        /** @var LruCache<string, string> $lruCache */
+        $lruCache = $property->getValue($this->regexValidator);
+
+        $lruReflection = new ReflectionClass($lruCache);
+        $itemsProperty = $lruReflection->getProperty('items');
+
         /** @var array<string, string> $cache */
-        $cache = $property->getValue($this->regexValidator);
+        $cache = $itemsProperty->getValue($lruCache);
 
         return $cache;
     }

@@ -4,22 +4,19 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Compiler;
 
+use Duyler\OpenApi\Cache\TypedCacheDecorator;
 use Duyler\OpenApi\Compiler\Internal\DocumentFingerprinter;
 use Duyler\OpenApi\Compiler\Internal\SchemaHasher;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
-use InvalidArgumentException;
 use Override;
 use Psr\Cache\CacheItemPoolInterface;
 use WeakMap;
 
 use function is_string;
-use function sprintf;
 
 final readonly class CompilationCache implements CompilationCacheInterface
 {
-    public const int DEFAULT_TTL = 86400;
-
     /** @var WeakMap<Schema, array<string, string>> */
     private WeakMap $hashCache;
 
@@ -31,13 +28,9 @@ final readonly class CompilationCache implements CompilationCacheInterface
     public function __construct(
         private CacheItemPoolInterface $pool,
         private string $namespace = 'validator_compilation',
-        private int $ttl = self::DEFAULT_TTL,
+        private int $ttl = TypedCacheDecorator::DEFAULT_TTL,
     ) {
-        if ($ttl < 1) {
-            throw new InvalidArgumentException(
-                sprintf('TTL must be a positive integer, got %d.', $ttl),
-            );
-        }
+        TypedCacheDecorator::validateTtl($ttl);
 
         /** @var WeakMap<Schema, array<string, string>> */
         $this->hashCache = new WeakMap();

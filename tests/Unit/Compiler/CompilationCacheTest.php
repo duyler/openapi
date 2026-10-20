@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Compiler;
 
+use Duyler\OpenApi\Cache\TypedCacheDecorator;
 use Duyler\OpenApi\Compiler\CompilationCache;
 use Duyler\OpenApi\Compiler\Exception\CompilationCacheException;
 use Duyler\OpenApi\Compiler\ValidatorCompiler;
@@ -18,7 +19,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
-use ReflectionClass;
+use ReflectionProperty;
 
 use function array_key_exists;
 use function strlen;
@@ -432,11 +433,12 @@ final class CompilationCacheTest extends TestCase
     }
 
     /**
-     * EI-064: CompilationCache uses a default TTL of 86400 seconds (24h).
-     * Verify that set() passes this value to expiresAfter() by default.
+     * A-011: the default TTL is the single shared constant owned by
+     * TypedCacheDecorator; CompilationCache receives the same default and
+     * validates through the same canonical guard.
      */
     #[Test]
-    public function set_uses_default_ttl_of_86400_seconds(): void
+    public function set_uses_default_ttl_from_typed_cache_decorator(): void
     {
         $pool = $this->createMock(CacheItemPoolInterface::class);
 
@@ -449,7 +451,7 @@ final class CompilationCacheTest extends TestCase
         $cacheItem
             ->expects($this->once())
             ->method('expiresAfter')
-            ->with(CompilationCache::DEFAULT_TTL)
+            ->with(TypedCacheDecorator::DEFAULT_TTL)
             ->willReturnSelf();
 
         $pool
@@ -483,7 +485,7 @@ final class CompilationCacheTest extends TestCase
         $cacheItem
             ->expects($this->once())
             ->method('expiresAfter')
-            ->with(3600)
+            ->with(1800)
             ->willReturnSelf();
 
         $pool
@@ -495,22 +497,26 @@ final class CompilationCacheTest extends TestCase
             ->method('save')
             ->with($cacheItem);
 
-        $cache = new CompilationCache($pool, ttl: 3600);
+        $cache = new CompilationCache($pool, ttl: 1800);
 
         $cache->set('test_hash', '<?php return true;');
     }
 
     /**
-     * EI-064: The default TTL is publicly exposed as DEFAULT_TTL.
+     * A-011: the shared TTL default is pinned — TypedCacheDecorator owns the
+     * canonical constant (3600) and CompilationCache's constructor default
+     * is exactly that constant, so no second default source can appear.
      */
     #[Test]
-    public function default_ttl_constant_is_public_and_equals_86400(): void
+    public function default_ttl_is_the_shared_typed_cache_decorator_constant(): void
     {
-        $reflection = new ReflectionClass(CompilationCache::class);
-        $constants = $reflection->getConstants();
+        $pool = $this->createStub(CacheItemPoolInterface::class);
+        $cache = new CompilationCache($pool);
 
-        self::assertArrayHasKey('DEFAULT_TTL', $constants);
-        self::assertSame(86400, $constants['DEFAULT_TTL']);
+        $ttl = new ReflectionProperty(CompilationCache::class, 'ttl');
+
+        self::assertSame(3600, TypedCacheDecorator::DEFAULT_TTL);
+        self::assertSame(TypedCacheDecorator::DEFAULT_TTL, $ttl->getValue($cache));
     }
 
     /**

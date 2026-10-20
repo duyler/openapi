@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request;
 
+use Duyler\OpenApi\Validator\Internal\LruCache;
 use InvalidArgumentException;
 
 use function count;
@@ -25,7 +26,7 @@ use const PREG_SET_ORDER;
  * each worker/coroutine must own its own instance (the default in
  * OpenApiValidatorBuilder — one PathRegexCache per built document).
  */
-final class PathRegexCache
+final readonly class PathRegexCache
 {
     private const int DEFAULT_MAX_SIZE = 256;
 
@@ -37,13 +38,8 @@ final class PathRegexCache
 
     private const string VARNAME_TAIL_CHAR_CLASS = 'a-zA-Z0-9_.\x80-\xff';
 
-    /** @var array<string, string> */
-    private array $cache = [];
-
-    /** @var array<string, true> */
-    private array $order = [];
-
-    private readonly int $maxSize;
+    /** @var LruCache<string, string> */
+    private LruCache $cache;
 
     /**
      * @param int|null $maxSize Maximum entries before LRU eviction. Null falls back to DEFAULT_MAX_SIZE.
@@ -52,41 +48,27 @@ final class PathRegexCache
      */
     public function __construct(?int $maxSize = null)
     {
-        $resolvedMaxSize = $maxSize ?? self::DEFAULT_MAX_SIZE;
-
-        if (1 > $resolvedMaxSize) {
-            throw new InvalidArgumentException(
-                sprintf('Max size must be at least 1, got %d', $resolvedMaxSize),
-            );
-        }
-
-        $this->maxSize = $resolvedMaxSize;
+        /** @var LruCache<string, string> */
+        $this->cache = new LruCache($maxSize ?? self::DEFAULT_MAX_SIZE);
     }
 
     public function getOrCompute(string $template): string
     {
-        if (isset($this->cache[$template])) {
-            $this->touch($template);
+        $cachedRegex = $this->cache->get($template);
 
-            return $this->cache[$template];
+        if (null !== $cachedRegex) {
+            return $cachedRegex;
         }
 
         $regex = $this->buildRegex($template);
-        $this->cache[$template] = $regex;
-        $this->order[$template] = true;
-
-        if (count($this->cache) > $this->maxSize) {
-            $evictedKey = array_key_first($this->order);
-            unset($this->order[$evictedKey], $this->cache[$evictedKey]);
-        }
+        $this->cache->set($template, $regex);
 
         return $regex;
     }
 
     public function clear(): void
     {
-        $this->cache = [];
-        $this->order = [];
+        $this->cache->clear();
     }
 
     private function buildRegex(string $template): string
@@ -180,11 +162,5 @@ final class PathRegexCache
         }
 
         return ['templated' => $templated, 'map' => array_reverse($map)];
-    }
-
-    private function touch(string $key): void
-    {
-        unset($this->order[$key]);
-        $this->order[$key] = true;
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Integration\Validator;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\Internal\LruCache;
 use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
@@ -178,8 +179,14 @@ YAML;
         $reflection = new ReflectionClass($owner);
         $prop = $reflection->getProperty($property);
 
+        /** @var LruCache<string, mixed> $lruCache */
+        $lruCache = $prop->getValue($owner);
+
+        $lruReflection = new ReflectionClass($lruCache);
+        $itemsProperty = $lruReflection->getProperty('items');
+
         /** @var array<string, mixed> $value */
-        $value = $prop->getValue($owner);
+        $value = $itemsProperty->getValue($lruCache);
 
         return $value;
     }

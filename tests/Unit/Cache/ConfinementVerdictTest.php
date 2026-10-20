@@ -14,11 +14,11 @@ use stdClass;
 final class ConfinementVerdictTest extends TestCase
 {
     #[Test]
-    public function clean_returns_confinement_verdict_instance(): void
+    public function clean_is_the_single_enum_case(): void
     {
-        $verdict = ConfinementVerdict::clean();
+        $cases = ConfinementVerdict::cases();
 
-        self::assertInstanceOf(ConfinementVerdict::class, $verdict);
+        self::assertSame([ConfinementVerdict::Clean], $cases);
     }
 
     #[Test]

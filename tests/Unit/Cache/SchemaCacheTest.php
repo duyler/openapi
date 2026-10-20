@@ -193,7 +193,7 @@ final class SchemaCacheTest extends TestCase
     public function get_confinement_delegates_to_decorators_expected_type(): void
     {
         $pool = $this->createMockCachePool();
-        $verdict = ConfinementVerdict::clean();
+        $verdict = ConfinementVerdict::Clean;
 
         $cacheItem = $this->createStub(CacheItemInterface::class);
         $cacheItem
