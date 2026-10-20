@@ -55,7 +55,7 @@ YAML;
 
         $validator->validateSchema(['at' => $time], '#/components/schemas/Event');
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]

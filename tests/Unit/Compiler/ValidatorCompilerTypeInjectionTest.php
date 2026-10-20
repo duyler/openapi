@@ -93,7 +93,7 @@ final class ValidatorCompilerTypeInjectionTest extends TestCase
             ));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -156,7 +156,5 @@ final class ValidatorCompilerTypeInjectionTest extends TestCase
                 ));
             }
         }
-
-        self::assertTrue(true);
     }
 }

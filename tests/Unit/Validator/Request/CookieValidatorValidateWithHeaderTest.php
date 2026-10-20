@@ -69,7 +69,7 @@ final class CookieValidatorValidateWithHeaderTest extends TestCase
 
         $this->validator->validateWithHeader([], '', [$param]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -84,7 +84,7 @@ final class CookieValidatorValidateWithHeaderTest extends TestCase
 
         $this->validator->validateWithHeader([], 'token=abc123', [$param]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -99,7 +99,7 @@ final class CookieValidatorValidateWithHeaderTest extends TestCase
 
         $this->validator->validateWithHeader(['theme' => 'dark'], '', [$param]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -109,7 +109,7 @@ final class CookieValidatorValidateWithHeaderTest extends TestCase
 
         $this->validator->validateWithHeader([], '', [$param]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -117,7 +117,7 @@ final class CookieValidatorValidateWithHeaderTest extends TestCase
     {
         $this->validator->validateWithHeader([], '', ['not_a_param', 42]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -127,6 +127,6 @@ final class CookieValidatorValidateWithHeaderTest extends TestCase
 
         $this->validator->validateWithHeader([], 'test=value', [$param]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 }

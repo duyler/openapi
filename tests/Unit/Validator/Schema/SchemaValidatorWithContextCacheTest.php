@@ -44,7 +44,7 @@ final class SchemaValidatorWithContextCacheTest extends TestCase
         $validator->validate('hello', $schema);
         $validator->validate('world', $schema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -61,7 +61,7 @@ final class SchemaValidatorWithContextCacheTest extends TestCase
 
         $validator->validate(42, $schema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -157,6 +157,6 @@ final class SchemaValidatorWithContextCacheTest extends TestCase
             self::fail(sprintf('Expected no stack overflow, got: %s', $e->getMessage()));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 }

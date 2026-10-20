@@ -46,7 +46,7 @@ final class ByteValidatorTest extends TestCase
     {
         $this->validator->validate($value);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     public static function invalidByteValuesProvider(): array

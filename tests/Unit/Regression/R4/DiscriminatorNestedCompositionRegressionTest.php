@@ -157,7 +157,7 @@ YAML;
             '#/components/schemas/Container',
         );
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -170,7 +170,7 @@ YAML;
             '#/components/schemas/Root',
         );
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -183,7 +183,7 @@ YAML;
             '#/components/schemas/Pet',
         );
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -209,7 +209,7 @@ YAML;
             '#/components/schemas/Pet',
         );
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]

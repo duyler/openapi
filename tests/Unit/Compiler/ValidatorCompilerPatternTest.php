@@ -98,7 +98,7 @@ final class ValidatorCompilerPatternTest extends TestCase
 
         $validator->validate('abc');
 
-        self::assertTrue(true, 'Matching input passes pattern validation without throwing.');
+        self::expectNotToPerformAssertions();
     }
 
     /**

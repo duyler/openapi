@@ -150,10 +150,10 @@ final class CycleDetectionWeakMapRegressionTest extends TestCase
 
         try {
             $validator->validate(['any' => 'data'], $schema);
-            self::assertTrue(true);
         } catch (SchemaDepthExceededException) {
-            self::assertTrue(true, 'Depth guard fired cleanly without stack overflow');
         }
+
+        self::expectNotToPerformAssertions();
     }
 
     private function createSchemaSelfReferencingViaComposition(): Schema

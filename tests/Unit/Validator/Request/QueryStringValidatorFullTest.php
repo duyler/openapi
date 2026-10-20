@@ -48,7 +48,7 @@ final class QueryStringValidatorFullTest extends TestCase
 
         $this->validator->validate('id=1', [$param]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -119,7 +119,7 @@ final class QueryStringValidatorFullTest extends TestCase
 
         $this->validator->validate('', [$param]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -139,7 +139,7 @@ final class QueryStringValidatorFullTest extends TestCase
 
         $this->validator->validate('test', [$param]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -160,6 +160,6 @@ final class QueryStringValidatorFullTest extends TestCase
     {
         $this->validator->validate('test', ['not_a_parameter', 42, null]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 }

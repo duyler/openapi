@@ -173,6 +173,6 @@ YAML;
             '#/components/schemas/User',
         );
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 }

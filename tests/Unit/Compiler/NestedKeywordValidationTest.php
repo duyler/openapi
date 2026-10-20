@@ -827,6 +827,8 @@ final class NestedKeywordValidationTest extends TestCase
                 ],
             ]);
         });
+
+        $this->expectNotToPerformAssertions();
     }
 
     private function compileUniqueValidator(Schema $schema): object
@@ -865,7 +867,5 @@ final class NestedKeywordValidationTest extends TestCase
                 $e->getMessage(),
             ));
         }
-
-        self::assertTrue(true);
     }
 }

@@ -116,7 +116,7 @@ final class ServerUrlResolverTest extends TestCase
 
         $this->resolver->validateVariables($server);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]

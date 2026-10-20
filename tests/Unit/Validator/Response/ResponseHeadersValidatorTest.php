@@ -1294,7 +1294,7 @@ final class ResponseHeadersValidatorTest extends TestCase
 
         $this->validator->validate($headers, $headerSchemas);
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -1309,7 +1309,7 @@ final class ResponseHeadersValidatorTest extends TestCase
 
         $this->validator->validate($headers, $headerSchemas);
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -1346,6 +1346,6 @@ final class ResponseHeadersValidatorTest extends TestCase
 
         $this->validator->validate($headers, $headerSchemas);
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 }

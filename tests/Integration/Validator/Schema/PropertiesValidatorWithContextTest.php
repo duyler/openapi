@@ -68,7 +68,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -90,7 +90,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -110,7 +110,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
         $customContext = ValidationContext::create(pool: $this->pool);
         $this->validator->validateWithContext($data, $schema, $customContext);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -163,7 +163,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -178,7 +178,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -219,7 +219,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -233,7 +233,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -254,7 +254,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -305,7 +305,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -327,7 +327,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -365,7 +365,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -399,7 +399,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $userSchema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -451,7 +451,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -592,7 +592,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $nullableContext);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -621,7 +621,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $validator->validateWithContext(['name' => 'John'], $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -665,7 +665,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $validator->validateWithContext(['value' => null], $schema, $nullableContext);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -748,7 +748,7 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $validator->validateWithContext(['value' => null], $schema, $nullableContext);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -788,6 +788,6 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $validator->validateWithContext(['value' => 'hello'], $schema, $nullableContext);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 }

@@ -66,7 +66,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
 
         $validator->validate($data, $schema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -127,7 +127,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
 
         $validator->validate($data, $schema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -143,7 +143,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
 
         $validator->validateWithContext($data, $schema, $context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -179,7 +179,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
 
         $validator->validate($data, $containerSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -221,7 +221,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
 
         $validator->validate($data, $arraySchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -265,7 +265,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
 
         $validator->validate($data, $extendedItemSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -284,7 +284,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
 
         $validator->validate($data, $anyOfSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -303,7 +303,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
 
         $validator->validate($data, $oneOfSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -323,7 +323,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
 
         $validator->validateWithContext($data, $schema, $context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]

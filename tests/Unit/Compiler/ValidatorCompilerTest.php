@@ -904,7 +904,7 @@ final class ValidatorCompilerTest extends TestCase
 
         $validator->validate(42);
         $validator->validate(3.14);
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -950,7 +950,7 @@ final class ValidatorCompilerTest extends TestCase
         $validator = new ConstCorrectValidator();
         $validator->validate('hello');
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -984,7 +984,7 @@ final class ValidatorCompilerTest extends TestCase
         $validator = new ConstIntValidator();
         $validator->validate(42);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -1031,7 +1031,7 @@ final class ValidatorCompilerTest extends TestCase
         $validator->validate(1.0);
         $validator->validate(2.5);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -1196,7 +1196,7 @@ final class ValidatorCompilerTest extends TestCase
         $validator = new UnionAcceptsStringValidator();
         $validator->validate('hello');
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -1213,7 +1213,7 @@ final class ValidatorCompilerTest extends TestCase
         $validator = new UnionAcceptsIntegerValidator();
         $validator->validate(42);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]

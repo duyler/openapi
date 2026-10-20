@@ -105,7 +105,7 @@ final class OneOfDiscriminatorTest extends TestCase
 
         $validator->validate($dogData, $petSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -131,7 +131,7 @@ final class OneOfDiscriminatorTest extends TestCase
         $validator->validate('test', $valueSchema);
         $validator->validate(42, $valueSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -194,6 +194,6 @@ final class OneOfDiscriminatorTest extends TestCase
 
         $validator->validate($dogData, $petSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 }

@@ -258,7 +258,7 @@ class ContainsValidatorTest extends TestCase
             self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -277,7 +277,7 @@ class ContainsValidatorTest extends TestCase
             self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -297,7 +297,7 @@ class ContainsValidatorTest extends TestCase
             self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -342,7 +342,7 @@ class ContainsValidatorTest extends TestCase
             self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -396,7 +396,7 @@ class ContainsValidatorTest extends TestCase
             self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -415,7 +415,7 @@ class ContainsValidatorTest extends TestCase
             self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -435,7 +435,7 @@ class ContainsValidatorTest extends TestCase
             self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -462,7 +462,7 @@ class ContainsValidatorTest extends TestCase
             ));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]

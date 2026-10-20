@@ -47,7 +47,7 @@ final class DurationValidatorTest extends TestCase
     {
         $this->validator->validate($value);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     public static function invalidDurationValuesProvider(): array
@@ -128,7 +128,7 @@ final class DurationValidatorTest extends TestCase
             ));
         }
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -157,7 +157,7 @@ final class DurationValidatorTest extends TestCase
             ));
         }
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -186,7 +186,7 @@ final class DurationValidatorTest extends TestCase
             ));
         }
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]

@@ -126,7 +126,7 @@ YAML;
 
         $validator->validateSchema(['email' => 'user@example.com'], '#/components/schemas/EmailHolder');
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     private static function failingMarkerValidator(string $marker): FormatValidatorInterface

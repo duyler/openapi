@@ -82,7 +82,7 @@ final class SchemaDepthExceededTest extends TestCase
 
         $validator->validate($data, $schema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -116,6 +116,6 @@ final class SchemaDepthExceededTest extends TestCase
 
         $validator->validate($data, $nestedSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 }

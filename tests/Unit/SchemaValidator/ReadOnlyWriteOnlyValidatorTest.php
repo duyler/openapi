@@ -105,7 +105,7 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
 
         $validator->validate($data, $schema, $context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -131,7 +131,7 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
 
         $validator->validate($data, $schema, $context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -149,7 +149,7 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
 
         $validator->validate($data, $schema, null);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -175,7 +175,7 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
 
         $validator->validate($data, $schema, $context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -196,7 +196,7 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
 
         $validator->validate('some string', $schema, $context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -214,7 +214,7 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
 
         $validator->validate(['foo' => 'bar'], $schema, $context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -248,6 +248,6 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
 
         $validator->validate(['id' => '123', 'name' => 'test'], $schema, $responseContext);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 }

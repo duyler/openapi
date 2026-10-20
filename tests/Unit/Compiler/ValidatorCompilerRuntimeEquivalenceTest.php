@@ -43,7 +43,7 @@ final class ValidatorCompilerRuntimeEquivalenceTest extends TestCase
 
         $validator->validate(1.0);
 
-        self::assertTrue(true, 'Compiled validator accepts 1.0 for const:1 per §4.2.2 numeric equality.');
+        self::expectNotToPerformAssertions();
     }
 
     /**
@@ -84,7 +84,7 @@ final class ValidatorCompilerRuntimeEquivalenceTest extends TestCase
 
         $validator->validate(['b' => 2, 'a' => 1]);
 
-        self::assertTrue(true, 'Compiled validator accepts reordered-key assoc array for const per §4.2.2 object equality.');
+        self::expectNotToPerformAssertions();
     }
 
     /**
@@ -126,7 +126,7 @@ final class ValidatorCompilerRuntimeEquivalenceTest extends TestCase
 
         $validator->validate(1);
 
-        self::assertTrue(true, 'Compiled validator accepts int 1 for float-enum [1.0,2.0,3.0] per §4.2.2 numeric equality.');
+        self::expectNotToPerformAssertions();
     }
 
     /**

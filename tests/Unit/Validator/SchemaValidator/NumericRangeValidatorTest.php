@@ -603,7 +603,7 @@ class NumericRangeValidatorTest extends TestCase
             ));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     /**
