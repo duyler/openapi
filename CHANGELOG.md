@@ -27,18 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The experimental compiler (`ValidatorCompiler`) rejects a schema with a
-  non-positive `multipleOf` at compile time with
-  `InvalidMultipleOfSchemaException` instead of emitting a validator whose
-  every call throws, and the validators it generates now include the
-  property path in their failure messages (for example
-  `Array too long at data.tags`, `String length validation failed at
-  data.user.name`) instead of context-free ones. Internal `$ref` resolution
-  is consolidated behind one `Compiler\Internal\ComponentRefResolver` with
-  no observable message changes: compilation failures surface through
-  `ComponentRefResolutionException` (a `RuntimeException` subclass carrying
-  the `$ref` and, when applicable, the missing schema name), and
-  cache-key generation keeps throwing `CompilationCacheException`.
 - Streaming parsers now share one line/chunk reader, one record collector
   and one media-type detector. `NdJsonParser::parseStream()` and
   `JsonSeqParser::parseStream()` delegate to `StreamLineReader`
@@ -74,11 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Max size must be at least 1` constructor guard and a capacity-preserving
   no-op `touch()` for keys that are not stored. The TTL default and its
   validation now live in a single place: `TypedCacheDecorator::DEFAULT_TTL`
-  (3600) with `TypedCacheDecorator::validateTtl()`, which
-  `SchemaCache` and `CompilationCache` use for their constructor defaults
-  and validation. The default TTL of `CompilationCache` changes from
-  24 hours (86400) to 1 hour (3600); the error message for a non-positive
-  TTL is unchanged.
+  (3600) with `TypedCacheDecorator::validateTtl()`, which `SchemaCache`
+  uses for its constructor default and validation.
 - The optional `DeprecationLogger` constructor parameter `enabled` is
   renamed to `isEnabled` (boolean-naming convention). Callers passing the
   flag by name (`new DeprecationLogger(enabled: false)`) must switch to
@@ -197,16 +182,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- **BC break for direct integrators.** The public constant
-  `CompilationCache::DEFAULT_TTL` is removed: the single TTL default source is
-  now `TypedCacheDecorator::DEFAULT_TTL` (3600) — reference it directly or
-  pass `ttl:` explicitly to the `CompilationCache` constructor. The
-  `ConfinementVerdict` singleton class is replaced by the enum
+- **BC break for direct integrators.** The experimental `ValidatorCompiler`
+  subsystem is removed — `src/Compiler/` (`ValidatorCompiler`,
+  `CompilationCache`, `CompilationCacheInterface`, internal code generators
+  and their exceptions), `tests/Unit/Compiler/` and the compiled-validator
+  benchmark. Runtime validation, `SchemaCache` and the spec-loading cache
+  are unaffected. The package is pre-release; no deprecation cycle applies.
+- **BC break for direct integrators.** The `ConfinementVerdict` singleton
+  class is replaced by the enum
   `ConfinementVerdict { case Clean }`: type hints through
   `ConfinementVerdict::class`, `instanceof` checks and stored cache values
   keep working, but code calling `ConfinementVerdict::clean()` must switch to
   `ConfinementVerdict::Clean`. No consumer inside the monorepo referenced
-  either removed symbol (grep = 0).
+  the removed symbol (grep = 0).
 - **BC break for direct integrators.** The deprecated schema-validation stack
   (`@deprecated since 0.6.0`) is deleted: `SchemaValidator\SchemaValidator`,
   `SchemaValidator\ValidatorDependencies` (the legacy constructor-dependency
