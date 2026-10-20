@@ -10,9 +10,15 @@ use Duyler\OpenApi\Validator\Internal\LruCache;
 use Duyler\OpenApi\Validator\PregExecutor;
 use InvalidArgumentException;
 
+use function ctype_alnum;
+use function preg_match;
 use function sprintf;
+use function str_contains;
+use function str_replace;
 use function str_split;
 use function strlen;
+use function strrpos;
+use function substr;
 
 final readonly class RegexValidator
 {

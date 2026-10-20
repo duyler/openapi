@@ -105,8 +105,8 @@ YAML;
         self::assertSame('/items', $startedEvent->path);
         self::assertSame('POST', $finishedEvent->method);
         self::assertSame('/items', $finishedEvent->path);
-        self::assertTrue($finishedEvent->success);
-        self::assertGreaterThanOrEqual(0.0, $finishedEvent->duration);
+        self::assertTrue($finishedEvent->isSuccess);
+        self::assertGreaterThanOrEqual(0.0, $finishedEvent->durationInSeconds);
     }
 
     #[Test]
@@ -140,7 +140,7 @@ YAML;
         self::assertNotNull($finishedEvent);
         self::assertSame('POST', $startedEvent->method);
         self::assertSame('/items', $startedEvent->path);
-        self::assertTrue($finishedEvent->success);
+        self::assertTrue($finishedEvent->isSuccess);
     }
 
     #[Test]
@@ -199,7 +199,7 @@ YAML;
         self::assertNotNull($startedEvent);
         self::assertNotNull($finishedEvent);
         self::assertNotNull($errorEvent);
-        self::assertFalse($finishedEvent->success);
+        self::assertFalse($finishedEvent->isSuccess);
         self::assertSame('POST', $errorEvent->method);
         self::assertSame('/items', $errorEvent->path);
         self::assertInstanceOf(ValidationException::class, $errorEvent->exception);
@@ -242,7 +242,7 @@ YAML;
         self::assertNotNull($caught);
         self::assertSame(['started', 'finished', 'error'], $sequence);
         self::assertNotNull($errorEvent);
-        self::assertFalse($finishedEvent->success);
+        self::assertFalse($finishedEvent->isSuccess);
         self::assertSame('POST', $errorEvent->method);
         self::assertSame('/items', $errorEvent->path);
         self::assertInstanceOf(ValidationException::class, $errorEvent->exception);

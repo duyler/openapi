@@ -17,6 +17,7 @@ use Override;
 
 use function array_key_exists;
 use function basename;
+use function explode;
 use function fclose;
 use function feof;
 use function fopen;
@@ -32,11 +33,11 @@ use function realpath;
 use function restore_error_handler;
 use function set_error_handler;
 use function sprintf;
+use function str_replace;
 use function str_starts_with;
 use function strlen;
 use function strpos;
 use function strtolower;
-
 use function substr;
 
 use const E_WARNING;

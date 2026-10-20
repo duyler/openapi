@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\InvalidContentMediaTypeException;
 use Duyler\OpenApi\Validator\JsonDepthLimit;
 use Duyler\OpenApi\Validator\LibxmlSecuredContext;
 use Duyler\OpenApi\Validator\SchemaValidator\Enum\ContentMediaType;
@@ -14,12 +15,16 @@ use JsonException;
 use Override;
 use SimpleXMLElement;
 
+use function array_all;
+use function assert;
+use function base64_decode;
 use function explode;
 use function is_string;
+use function json_decode;
+use function preg_quote;
+use function simplexml_load_string;
 use function str_starts_with;
 use function substr_count;
-
-use function assert;
 
 use const LIBXML_NOERROR;
 use const LIBXML_NONET;

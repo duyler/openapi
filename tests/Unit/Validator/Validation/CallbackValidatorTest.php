@@ -250,7 +250,7 @@ final class CallbackValidatorTest extends TestCase
         $this->assertInstanceOf(ValidationFinishedEvent::class, $dispatchedEvents[1]);
         $this->assertSame('myCallback', $dispatchedEvents[0]->path);
         $this->assertSame('POST', $dispatchedEvents[0]->method);
-        $this->assertTrue($dispatchedEvents[1]->success);
+        $this->assertTrue($dispatchedEvents[1]->isSuccess);
     }
 
     #[Test]

@@ -11,6 +11,8 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
+use function array_is_list;
+use function array_keys;
 use function is_array;
 use function is_bool;
 

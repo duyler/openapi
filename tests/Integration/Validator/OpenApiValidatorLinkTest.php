@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Integration\Validator;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\Exception\UnknownLinkException;
 use Duyler\OpenApi\Validator\Link\LinkContext;
-use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -60,7 +60,7 @@ YAML;
             ->fromYamlString(self::LINKS_YAML)
             ->build();
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(UnknownLinkException::class);
 
         $validator->resolveLink('UnknownLink', []);
     }
@@ -96,7 +96,7 @@ YAML;
             ->fromYamlString(self::LINKS_YAML)
             ->build();
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(UnknownLinkException::class);
 
         $validator->resolveLinkWithContext('UnknownLink', new LinkContext());
     }

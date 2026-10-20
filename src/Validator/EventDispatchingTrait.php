@@ -11,6 +11,8 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Internal\ValidationEventPayload;
 use Throwable;
 
+use function microtime;
+
 trait EventDispatchingTrait
 {
     private function dispatchValidationEvent(object $event): void
@@ -86,15 +88,15 @@ trait EventDispatchingTrait
 
     private function createFinishedEvent(
         ValidationEventPayload $payload,
-        bool $success,
-        float $duration,
+        bool $isSuccess,
+        float $durationInSeconds,
     ): ValidationFinishedEvent {
         return new ValidationFinishedEvent(
             request: $payload->request,
             path: $payload->path,
             method: $payload->method,
-            success: $success,
-            duration: $duration,
+            isSuccess: $isSuccess,
+            durationInSeconds: $durationInSeconds,
             response: $payload->response,
             schemaRef: $payload->schemaRef,
         );

@@ -76,10 +76,10 @@ YAML;
         self::assertNotNull($finishedEvent);
         self::assertSame('POST', $startedEvent->method);
         self::assertSame('/items', $startedEvent->path);
-        self::assertTrue($finishedEvent->success);
+        self::assertTrue($finishedEvent->isSuccess);
         self::assertSame('POST', $finishedEvent->method);
         self::assertSame('/items', $finishedEvent->path);
-        self::assertGreaterThanOrEqual(0.0, $finishedEvent->duration);
+        self::assertGreaterThanOrEqual(0.0, $finishedEvent->durationInSeconds);
     }
 
     #[Test]
@@ -113,7 +113,7 @@ YAML;
         self::assertSame(['started', 'finished', 'error'], $sequence);
         self::assertNotNull($finishedEvent);
         self::assertNotNull($errorEvent);
-        self::assertFalse($finishedEvent->success);
+        self::assertFalse($finishedEvent->isSuccess);
         self::assertSame('POST', $errorEvent->method);
         self::assertSame('/items', $errorEvent->path);
         self::assertInstanceOf(ValidationException::class, $errorEvent->exception);
@@ -144,7 +144,7 @@ YAML;
         self::assertNotNull($finishedEvent);
         self::assertSame('oldField', $warningEvent->propertyName);
         self::assertSame('Property "oldField" is deprecated', $warningEvent->message);
-        self::assertTrue($finishedEvent->success);
+        self::assertTrue($finishedEvent->isSuccess);
     }
 
     #[Test]
@@ -207,7 +207,7 @@ YAML;
         $validator->validateRequest(Psr7RequestFactory::createJsonRequest('POST', '/items', '{"name":"widget"}'));
 
         self::assertNotNull($finishedEvent);
-        self::assertGreaterThanOrEqual(0.0, $finishedEvent->duration);
+        self::assertGreaterThanOrEqual(0.0, $finishedEvent->durationInSeconds);
     }
 
     /**

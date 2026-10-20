@@ -59,7 +59,7 @@ YAML;
         $this->assertArrayHasKey('finished', $events);
         $this->assertSame('/users', $events['started']->path);
         $this->assertSame('GET', $events['started']->method);
-        $this->assertTrue($events['finished']->success);
+        $this->assertTrue($events['finished']->isSuccess);
     }
 
     #[Test]
@@ -119,7 +119,7 @@ YAML;
         } catch (Exception) {
             $this->assertArrayHasKey('started', $events);
             $this->assertArrayHasKey('finished', $events);
-            $this->assertFalse($events['finished']->success);
+            $this->assertFalse($events['finished']->isSuccess);
         }
     }
 }

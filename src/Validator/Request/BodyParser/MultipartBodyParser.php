@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request\BodyParser;
 
-use RuntimeException;
+use Duyler\OpenApi\Validator\Exception\MultipartBodyTooLargeException;
 
 use function count;
-use function sprintf;
-
+use function explode;
+use function preg_match;
 use function substr_count;
+use function trim;
 
 use const PREG_UNMATCHED_AS_NULL;
 
@@ -38,9 +39,7 @@ final readonly class MultipartBodyParser
         $delimiter = '--' . $boundary;
 
         if (substr_count($body, $delimiter) + 1 > self::MAX_MULTIPART_PARTS) {
-            throw new RuntimeException(
-                sprintf('Maximum multipart parts of %d exceeded', self::MAX_MULTIPART_PARTS),
-            );
+            throw new MultipartBodyTooLargeException(self::MAX_MULTIPART_PARTS);
         }
 
         $parts = [];

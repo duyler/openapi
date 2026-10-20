@@ -680,10 +680,10 @@ $dispatcher = new ArrayDispatcher([
     ],
     ValidationFinishedEvent::class => [
         function (ValidationFinishedEvent $event) {
-            if ($event->success) {
+            if ($event->isSuccess) {
                 error_log(sprintf(
                     "Validation completed in %.3f seconds",
-                    $event->duration
+                    $event->durationInSeconds
                 ));
             }
         },
@@ -1444,6 +1444,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | Exception | Description |
 |-----------|-------------|
 | `BodyTooLargeException` | Request or response body exceeded the configured `maxJsonBodySize` / `maxMultipartBodySize` cap; body was rejected before full materialisation (CWE-400, CWE-770) |
+| `MultipartBodyTooLargeException` | Multipart request yielded more than 1000 parts (part-count cap, DoS defence; CWE-400); extends `\RuntimeException` |
 | `BuilderException` | Builder precondition failure: spec file unreadable, `withExternalRefAllowedRoot` path does not exist, or other builder-state violation |
 | `CompilationCacheException` | `CompilationCache` / `compileWithCache()` invoked with a schema that contains a `$ref` but no `OpenApiDocument` context |
 | `ExternalRefSecurityException` | External `$ref` violates builtin resolver security policy (non-allowlisted scheme, path traversal outside the allowed root). Surfaced by `RefResolver` as `UnresolvableRefException` |
@@ -1468,6 +1469,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `TooManyItemsForUniqueCheckError` | `uniqueItems: true` evaluated on an array larger than `ArrayLengthValidator::MAX_UNIQUE_CHECK` (default 100 000); DoS defence against quadratic uniqueness scans |
 | `TooManyRecordsException` | Streaming response (NDJSON / SSE / JSON Text Sequence) yielded more records than `maxStreamingRecords` (default 100 000) |
 | `UndefinedResponseException` | Response status code not defined in spec |
+| `UnknownLinkException` | `resolveLink()` / `resolveLinkWithContext()` invoked with a link name not declared under `components/links`; extends `\InvalidArgumentException` |
 | `UnknownCallbackException` | `validateCallback()` invoked with a callback name not declared in the spec; extends `\InvalidArgumentException` |
 | `UnknownValidatorException` | Unknown validator type requested |
 | `UnknownWebhookException` | `validateWebhook()` invoked with a webhook name not declared in the spec; extends `\InvalidArgumentException` |

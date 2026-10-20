@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   semantics previously split between the dispatcher and the detector — and
   the boundary is pinned by detection vectors, including the explicit
   rejection of vendor-suffixed types such as `application/vnd.foo+json-seq`.
+- New domain exceptions `Validator\Exception\UnknownLinkException`
+  (extends `InvalidArgumentException`) and
+  `Validator\Exception\MultipartBodyTooLargeException` (extends
+  `RuntimeException`) replace bare SPL throws for undefined component
+  links and the multipart part-cap violation.
 
 ### Changed
 
@@ -79,6 +84,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   flag by name (`new DeprecationLogger(enabled: false)`) must switch to
   `isEnabled:`; positional calls and the parameter's position and default
   (`true`) are unchanged.
+- `ValidationFinishedEvent` property names follow the naming conventions:
+  `success` is renamed to `isSuccess` and `duration` (seconds) to
+  `durationInSeconds`. Readers of the public readonly properties
+  (`$event->success`, `$event->duration`) must switch to the new names;
+  constructor argument names change with them. Types, defaults and
+  dispatch semantics are unchanged.
+- The two `contentMediaType`/`contentEncoding` validation-error classes
+  move into the shared `Validator\Exception` namespace:
+  `Duyler\OpenApi\Validator\SchemaValidator\InvalidContentMediaTypeException`
+  and `...\InvalidContentEncodingException` are now
+  `Duyler\OpenApi\Validator\Exception\InvalidContentMediaTypeException` and
+  `...\InvalidContentEncodingException`. Catch-sites referencing the old
+  FQCNs must update the import; class names, hierarchy
+  (`AbstractValidationError`) and messages are unchanged.
+- `OpenApiValidator::resolveLink()` / `resolveLinkWithContext()` throw the
+  new `UnknownLinkException` instead of a bare `InvalidArgumentException`
+  for undefined component links. The new class extends
+  `InvalidArgumentException` and keeps the exact message
+  (`Unknown link: %s`), so existing catch blocks continue to work.
+- Exceeding the multipart part cap throws the domain
+  `MultipartBodyTooLargeException` (extends `RuntimeException`, message
+  unchanged) instead of a bare `RuntimeException`.
+- The bearer Authorization check inside security validation now runs on the
+  same `PregExecutor` instance as every other regex in the validator: the
+  `maxRegexBacktracks` limit configured through
+  `OpenApiValidatorBuilder::withMaxRegexBacktracks()` governs the
+  `http`/`bearer` scheme match too, instead of it silently using a second
+  default-capped executor. The `SecurityValidator` constructor no longer
+  accepts a `bearerValidator` argument; the bearer validator is wired to
+  the injected (or default) `PregExecutor`.
 
 ### Fixed
 

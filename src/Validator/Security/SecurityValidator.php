@@ -24,13 +24,15 @@ final readonly class SecurityValidator
 {
     private readonly LoggerInterface $logger;
 
+    private readonly BearerAuthValidator $bearerValidator;
+
     public function __construct(
         ?LoggerInterface $logger = null,
         private readonly PregExecutor $pregExecutor = new PregExecutor(),
-        private readonly BearerAuthValidator $bearerValidator = new BearerAuthValidator(new PregExecutor()),
         private readonly ApiKeyValidator $apiKeyValidator = new ApiKeyValidator(),
     ) {
         $this->logger = $logger ?? new NullLogger();
+        $this->bearerValidator = new BearerAuthValidator($this->pregExecutor);
     }
 
     public function validate(SecurityValidationContext $context): void

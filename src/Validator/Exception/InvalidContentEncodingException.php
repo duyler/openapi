@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Duyler\OpenApi\Validator\SchemaValidator;
+namespace Duyler\OpenApi\Validator\Exception;
 
 use Duyler\OpenApi\Validator\Error\Breadcrumb;
-use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 
 use function sprintf;
 

@@ -8,8 +8,11 @@ use Duyler\OpenApi\Schema\Model\Server;
 use Duyler\OpenApi\Validator\Server\Dto\ServerVariableOverride;
 
 use function array_key_exists;
+use function array_merge;
 use function is_array;
 use function is_string;
+use function preg_match_all;
+use function preg_replace_callback;
 use function sprintf;
 
 final readonly class ServerUrlResolver

@@ -17,6 +17,8 @@ use Duyler\OpenApi\Validator\Schema\Internal\UriResolver;
 use Override;
 use WeakMap;
 
+use function parse_url;
+
 final class RefResolver implements RefResolverInterface
 {
     /** @var WeakMap<OpenApiDocument, RefCache> */

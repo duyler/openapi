@@ -256,7 +256,7 @@ YAML;
             ],
             ValidationFinishedEvent::class => [
                 function (ValidationFinishedEvent $event) use (&$dispatchedEvents): void {
-                    $dispatchedEvents[] = 'finished: ' . ($event->success ? 'ok' : 'fail');
+                    $dispatchedEvents[] = 'finished: ' . ($event->isSuccess ? 'ok' : 'fail');
                 },
             ],
         ]);

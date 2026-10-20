@@ -53,7 +53,7 @@ final class EventIntegrationTest extends TestCase
         $dispatcher = new ArrayDispatcher([
             ValidationFinishedEvent::class => [
                 function (ValidationFinishedEvent $event) use (&$duration): void {
-                    $duration = $event->duration;
+                    $duration = $event->durationInSeconds;
                 },
             ],
         ]);
@@ -137,7 +137,7 @@ final class EventIntegrationTest extends TestCase
         $dispatcher = new ArrayDispatcher([
             ValidationFinishedEvent::class => [
                 function (ValidationFinishedEvent $event) use (&$success): void {
-                    $success = $event->success;
+                    $success = $event->isSuccess;
                 },
             ],
         ]);

@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Request\BodyParser;
 
+use Duyler\OpenApi\Validator\Exception\MultipartBodyTooLargeException;
 use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 use function str_repeat;
 
@@ -29,7 +29,8 @@ final class MultipartBodyParserExplodeLimitTest extends TestCase
 
         $body = str_repeat('--' . $boundary . "\r\nX: 1\r\n\r\nv\r\n", 1001);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(MultipartBodyTooLargeException::class);
+        $this->expectExceptionMessage('Maximum multipart parts of 1000 exceeded');
 
         $this->parser->parse($body, $contentType);
     }
