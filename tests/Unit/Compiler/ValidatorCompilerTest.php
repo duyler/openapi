@@ -1768,8 +1768,8 @@ final class ValidatorCompilerTest extends TestCase
      * interpolate the property name into both the `array_key_exists` key
      * argument and the exception message. With an apostrophe in the name
      * this broke both the literal key and the message string. After the
-     * fix the key uses `var_export` and the message uses `addslashes`, so
-     * the generated source parses cleanly.
+     * fix both the key and the message argument are emitted through
+     * `var_export`, so the generated source parses cleanly.
      */
     #[Test]
     public function compile_with_apostrophe_in_required_property_generates_parseable_php(): void
@@ -1814,6 +1814,101 @@ final class ValidatorCompilerTest extends TestCase
         token_get_all($code, TOKEN_PARSE);
 
         $this->assertStringContainsString('$data[\'it\\\'s\'][\'it\\\'s\']', $code);
+    }
+
+    /**
+     * A-013: generated failure messages carry the property path. The path
+     * mirrors the generation walk: nested properties join with a dot and
+     * array items append `[*]`, so both a nested scalar constraint and an
+     * items-level array constraint point at the exact failing location.
+     */
+    #[Test]
+    public function compile_embeds_property_path_in_constraint_messages(): void
+    {
+        $compiler = new ValidatorCompiler();
+
+        $nestedSchema = new Schema(
+            type: 'object',
+            properties: [
+                'user' => new Schema(
+                    type: 'object',
+                    properties: [
+                        'name' => new Schema(type: 'string', minLength: 1),
+                    ],
+                ),
+            ],
+        );
+
+        $nestedCode = $compiler->compile($nestedSchema, 'NestedPathValidator');
+
+        $this->assertStringContainsString(
+            'String length validation failed at data.user.name',
+            $nestedCode,
+        );
+
+        $itemsSchema = new Schema(
+            type: 'object',
+            properties: [
+                'matrix' => new Schema(
+                    type: 'array',
+                    items: new Schema(minItems: 2),
+                ),
+            ],
+        );
+
+        $itemsCode = $compiler->compile($itemsSchema, 'NestedArrayPathValidator');
+
+        $this->assertStringContainsString(
+            'Array too short at data.matrix[*]',
+            $itemsCode,
+        );
+    }
+
+    /**
+     * EI-026 (critical, security): the four path-bearing message emitters
+     * (string-length, minItems, number-range, maxItems) interpolate the
+     * property path into a single-quoted literal. Hostile property names
+     * (apostrophes) must be escaped through `var_export` at build time so
+     * the generated source still parses and each message literal stays
+     * intact — no injection surface.
+     */
+    #[Test]
+    public function compile_escapes_hostile_property_name_in_path_messages(): void
+    {
+        $compiler = new ValidatorCompiler();
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                "it's" => new Schema(type: 'string', minLength: 1),
+                'rows' => new Schema(
+                    type: 'array',
+                    items: new Schema(minItems: 2),
+                ),
+                "n'ums" => new Schema(type: 'number', minimum: 1),
+                "m'atrix" => new Schema(type: 'array', maxItems: 2),
+            ],
+        );
+
+        $code = $compiler->compile($schema, 'HostilePathValidator');
+
+        token_get_all($code, TOKEN_PARSE);
+
+        $this->assertStringContainsString(
+            "'String length validation failed at data.it\\'s'",
+            $code,
+        );
+        $this->assertStringContainsString(
+            "'Array too short at data.rows[*]'",
+            $code,
+        );
+        $this->assertStringContainsString(
+            "'Number range validation failed at data.n\\'ums'",
+            $code,
+        );
+        $this->assertStringContainsString(
+            "'Array too long at data.m\\'atrix'",
+            $code,
+        );
     }
 
     /**

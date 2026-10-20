@@ -22,6 +22,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The experimental compiler (`ValidatorCompiler`) rejects a schema with a
+  non-positive `multipleOf` at compile time with
+  `InvalidMultipleOfSchemaException` instead of emitting a validator whose
+  every call throws, and the validators it generates now include the
+  property path in their failure messages (for example
+  `Array too long at data.tags`, `String length validation failed at
+  data.user.name`) instead of context-free ones. Internal `$ref` resolution
+  is consolidated behind one `Compiler\Internal\ComponentRefResolver` with
+  no observable message changes: compilation failures surface through
+  `ComponentRefResolutionException` (a `RuntimeException` subclass carrying
+  the `$ref` and, when applicable, the missing schema name), and
+  cache-key generation keeps throwing `CompilationCacheException`.
 - Streaming parsers now share one line/chunk reader, one record collector
   and one media-type detector. `NdJsonParser::parseStream()` and
   `JsonSeqParser::parseStream()` delegate to `StreamLineReader`

@@ -10,6 +10,7 @@ use Duyler\OpenApi\Compiler\Internal\PatternCheck;
 use Duyler\OpenApi\Compiler\Internal\ScalarConstraints;
 use Duyler\OpenApi\Compiler\Internal\Utf16Length;
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Exception\InvalidMultipleOfSchemaException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -110,7 +111,7 @@ final class ScalarConstraintsTest extends TestCase
         // Range conditions follow the UTF-16 length computation.
         self::assertStringContainsString('$utf16Length < 1', $code);
         self::assertStringContainsString('$utf16Length > 100', $code);
-        self::assertStringContainsString("'String length validation failed'", $code);
+        self::assertStringContainsString("'String length validation failed at data'", $code);
     }
 
     #[Test]
@@ -132,7 +133,7 @@ final class ScalarConstraintsTest extends TestCase
         self::assertStringContainsString('$data > 1000.000000', $code);
         self::assertStringContainsString('$data <= 10.000000', $code);
         self::assertStringContainsString('$data >= 990.000000', $code);
-        self::assertStringContainsString("'Number range validation failed'", $code);
+        self::assertStringContainsString("'Number range validation failed at data'", $code);
     }
 
     #[Test]
@@ -184,18 +185,26 @@ final class ScalarConstraintsTest extends TestCase
     }
 
     #[Test]
-    public function generate_emits_throw_only_for_zero_multiple_of(): void
+    public function generate_throws_compile_time_exception_for_non_positive_multiple_of(): void
     {
         // multipleOf=0 is mathematically unsatisfiable. The compiler must
-        // emit an early `throw new \RuntimeException` and NOT emit `% 0`
-        // (which would raise DivisionByZeroError at runtime, bypassing the
-        // RuntimeException contract).
-        $code = $this->scalar->generate(new Schema(type: 'number', multipleOf: 0.0), '$data');
+        // reject the schema at compile time with the same domain exception
+        // the runtime validator raises, and must NOT emit `% 0` (which
+        // would raise DivisionByZeroError at runtime).
+        $this->expectException(InvalidMultipleOfSchemaException::class);
 
-        self::assertStringContainsString('throw new \RuntimeException', $code);
-        self::assertStringContainsString("'multipleOf must be greater than 0'", $code);
-        self::assertStringNotContainsString('% 0', $code);
-        self::assertStringNotContainsString('/ 0.0', $code);
+        $this->scalar->generate(new Schema(type: 'number', multipleOf: 0.0), '$data');
+    }
+
+    #[Test]
+    public function generate_throws_compile_time_exception_for_negative_multiple_of(): void
+    {
+        // multipleOf=-2.0 is non-positive: the schema parser rejects it at
+        // parse time and the compiler must fail closed as well instead of
+        // emitting a quotient check against a negative divisor.
+        $this->expectException(InvalidMultipleOfSchemaException::class);
+
+        $this->scalar->generate(new Schema(type: 'number', multipleOf: -2.0), '$data');
     }
 
     #[Test]

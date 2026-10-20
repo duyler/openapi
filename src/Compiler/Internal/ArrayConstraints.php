@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Compiler\Internal;
 use Duyler\OpenApi\Schema\Model\Schema;
 
 use function sprintf;
+use function var_export;
 
 /**
  * Emits array-constraint codegen (minItems, maxItems, uniqueItems) for
@@ -19,23 +20,28 @@ use function sprintf;
  */
 final readonly class ArrayConstraints
 {
+    public const int MAX_UNIQUE_CHECK_ITEMS = 100_000;
+
     public function __construct(
         private EqualityHelpers $equalityHelpers = new EqualityHelpers(),
     ) {}
 
-    public function generateLengthConstraints(Schema $schema, string $dataVar): string
-    {
+    public function generateLengthConstraints(
+        Schema $schema,
+        string $dataVar,
+        string $path = GenerationContext::ROOT_PATH,
+    ): string {
         $code = '';
 
         if (null !== $schema->minItems) {
             $code .= sprintf("        if (count(%s) < %d) {\n", $dataVar, $schema->minItems);
-            $code .= "            throw new \\RuntimeException('Array too short');\n";
+            $code .= $this->throwRuntime(sprintf('Array too short at %s', $path));
             $code .= "        }\n\n";
         }
 
         if (null !== $schema->maxItems) {
             $code .= sprintf("        if (count(%s) > %d) {\n", $dataVar, $schema->maxItems);
-            $code .= "            throw new \\RuntimeException('Array too long');\n";
+            $code .= $this->throwRuntime(sprintf('Array too long at %s', $path));
             $code .= "        }\n\n";
         }
 
@@ -59,11 +65,16 @@ final readonly class ArrayConstraints
         $code .= "                throw new \\RuntimeException('Array items must be unique');\n";
         $code .= "            }\n";
         $code .= "            \$__seen[\$__key] = true;\n";
-        $code .= "            if (100000 < count(\$__seen)) {\n";
+        $code .= sprintf("            if (%d < count(\$__seen)) {\n", self::MAX_UNIQUE_CHECK_ITEMS);
         $code .= "                throw new \\RuntimeException('Too many items for unique check');\n";
         $code .= "            }\n";
         $code .= "        }\n\n";
 
         return $code;
+    }
+
+    private function throwRuntime(string $message): string
+    {
+        return sprintf("            throw new \\RuntimeException(%s);\n", var_export($message, true));
     }
 }

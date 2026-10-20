@@ -11,10 +11,7 @@ use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-use ReflectionMethod;
-
 use function array_key_exists;
-use function clearstatcache;
 use function count;
 use function file_put_contents;
 use function glob;
@@ -24,8 +21,8 @@ use function sha1;
 use function str_ends_with;
 use function strlen;
 use function sys_get_temp_dir;
+use function time;
 use function touch;
-use function uniqid;
 use function unlink;
 
 use function dirname;
@@ -246,97 +243,6 @@ YAML;
         }
     }
 
-    #[Test]
-    public function cache_key_for_file_includes_content_hash(): void
-    {
-        $path = $this->writeTempSpec(self::MINIMAL_YAML);
-
-        try {
-            $keyForContentA = $this->invokeGenerateCacheKeyFromFile($path, 'openapi: 3.2.0 a');
-            $keyForContentB = $this->invokeGenerateCacheKeyFromFile($path, 'openapi: 3.2.0 b');
-
-            self::assertNotSame(
-                $keyForContentA,
-                $keyForContentB,
-                'Same path with different content must yield different cache keys (R3-SEC-003 content-hash fix)',
-            );
-        } finally {
-            $this->safeUnlink($path);
-        }
-    }
-
-    #[Test]
-    public function cache_key_for_file_with_same_content_different_path_produces_different_keys(): void
-    {
-        $pathA = $this->writeTempSpec(self::MINIMAL_YAML, sys_get_temp_dir() . '/openapi_cache_key_test_a.yaml');
-        $pathB = $this->writeTempSpec(self::MINIMAL_YAML, sys_get_temp_dir() . '/openapi_cache_key_test_b.yaml');
-
-        try {
-            $keyForPathA = $this->invokeGenerateCacheKeyFromFile($pathA, self::MINIMAL_YAML);
-            $keyForPathB = $this->invokeGenerateCacheKeyFromFile($pathB, self::MINIMAL_YAML);
-
-            self::assertNotSame(
-                $keyForPathA,
-                $keyForPathB,
-                'Identical content under different paths must yield different keys (path-component is part of the hash input)',
-            );
-        } finally {
-            $this->safeUnlink($pathA);
-            $this->safeUnlink($pathB);
-        }
-    }
-
-    #[Test]
-    public function cache_key_for_file_excludes_mtime_and_size(): void
-    {
-        $path = $this->writeTempSpec(self::MINIMAL_YAML);
-
-        try {
-            $keyBefore = $this->invokeGenerateCacheKeyFromFile($path, self::MINIMAL_YAML);
-
-            touch($path, time() + 500);
-            clearstatcache(true, $path);
-
-            $keyAfter = $this->invokeGenerateCacheKeyFromFile($path, self::MINIMAL_YAML);
-
-            self::assertSame(
-                $keyBefore,
-                $keyAfter,
-                'Cache key must be invariant across mtime/size probes for identical path+content (mtime and size are not part of the hash input)',
-            );
-        } finally {
-            $this->safeUnlink($path);
-        }
-    }
-
-    #[Test]
-    public function cache_key_for_file_falls_back_to_unresolved_path_when_realpath_fails(): void
-    {
-        $nonexistentPath = sys_get_temp_dir() . '/duyler-cache-key-missing-' . uniqid(more_entropy: true) . '.yaml';
-
-        $key = $this->invokeGenerateCacheKeyFromFile($nonexistentPath, self::MINIMAL_YAML);
-
-        self::assertStringStartsWith(self::FILE_KEY_PREFIX, $key);
-        $hash = substr($key, strlen(self::FILE_KEY_PREFIX));
-        self::assertSame(64, strlen($hash), 'Fallback key must still be a SHA-256 hex digest');
-        self::assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $hash);
-    }
-
-    #[Test]
-    public function cache_key_for_file_returns_prefixed_with_constant(): void
-    {
-        $path = $this->writeTempSpec(self::MINIMAL_YAML);
-
-        try {
-            $key = $this->invokeGenerateCacheKeyFromFile($path, self::MINIMAL_YAML);
-
-            self::assertStringStartsNotWith(self::CONTENT_KEY_PREFIX, $key);
-            self::assertStringStartsWith(self::FILE_KEY_PREFIX, $key);
-        } finally {
-            $this->safeUnlink($path);
-        }
-    }
-
     /**
      * R4-SEC-008 anti-test (maxSpecDepth poisoning): caller A caches a
      * spec under maxSpecDepth=10 (depth=6 fits), caller B with the
@@ -527,17 +433,6 @@ YAML;
         }
 
         return array_keys($seen);
-    }
-
-    private function invokeGenerateCacheKeyFromFile(string $path, string $content): string
-    {
-        $builder = OpenApiValidatorBuilder::create();
-        $method = new ReflectionMethod($builder, 'generateCacheKeyFromFile');
-
-        /** @var string $result */
-        $result = $method->invoke($builder, $path, $content);
-
-        return $result;
     }
 
     private function writeTempSpec(string $content, ?string $path = null): string

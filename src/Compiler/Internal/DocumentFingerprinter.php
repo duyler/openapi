@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Compiler\Internal;
 
 use Duyler\OpenApi\Compiler\Exception\CompilationCacheException;
+use Duyler\OpenApi\Compiler\Exception\ComponentRefResolutionException;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\Serializer\SchemaToArrayConverter;
@@ -15,8 +16,6 @@ use function hash;
 use function in_array;
 use function json_encode;
 use function sprintf;
-use function str_starts_with;
-use function substr;
 
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
@@ -25,7 +24,9 @@ use const JSON_UNESCAPED_UNICODE;
 /** @internal */
 final readonly class DocumentFingerprinter
 {
-    private const int REF_COMPONENTS_SCHEMAS_PREFIX_LENGTH = 21;
+    public function __construct(
+        private readonly ComponentRefResolver $componentRefResolver = new ComponentRefResolver(),
+    ) {}
 
     /**
      * @param WeakMap<OpenApiDocument, string> $fingerprints
@@ -99,18 +100,16 @@ final readonly class DocumentFingerprinter
 
     public function resolveComponentRef(string $ref, OpenApiDocument $document): Schema
     {
-        if (false === str_starts_with($ref, '#/components/schemas/')) {
-            throw new CompilationCacheException(sprintf('Unsupported $ref for cache key: %s', $ref));
+        try {
+            return $this->componentRefResolver->resolve($ref, $document);
+        } catch (ComponentRefResolutionException $e) {
+            throw new CompilationCacheException(
+                null === $e->schemaName
+                    ? sprintf('Unsupported $ref for cache key: %s', $ref)
+                    : sprintf('Schema not found: %s', $e->schemaName),
+                previous: $e,
+            );
         }
-
-        $schemaName = substr($ref, self::REF_COMPONENTS_SCHEMAS_PREFIX_LENGTH);
-        $schemas = $document->components?->schemas ?? [];
-
-        if (false === isset($schemas[$schemaName])) {
-            throw new CompilationCacheException(sprintf('Schema not found: %s', $schemaName));
-        }
-
-        return $schemas[$schemaName];
     }
 
     /** @param list<Schema> $visited */

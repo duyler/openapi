@@ -10,6 +10,7 @@ use Duyler\OpenApi\Compiler\ValidatorCompiler;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Exception\InvalidMultipleOfSchemaException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -129,26 +130,35 @@ final class ValidatorCompilerIntegerMultipleOfTest extends TestCase
     }
 
     /**
-     * Regression for multipleOf=0.0. The int-path guard would otherwise
-     * emit `$data % 0` which raises DivisionByZeroError in PHP 8.0+ —
-     * an unrecoverable error that bypasses the runtime validator's
-     * contract of throwing MultipleOfKeywordError. Runtime always rejects
-     * any data when multipleOf is zero, so the compiled validator must
-     * also reject any data with a regular RuntimeException.
+     * Regression for multipleOf=0.0. The compiler used to emit an
+     * always-throw `RuntimeException` validator; the schema is
+     * mathematically unsatisfiable, so it is now rejected at compile
+     * time with the same domain exception the runtime validator raises
+     * (`NumericRangeValidator`), instead of producing a validator that
+     * throws for every value.
      */
     #[Test]
-    public function compiled_multiple_of_zero_throws_runtime_exception_not_division_by_zero(): void
+    public function compiled_multiple_of_zero_throws_invalid_multiple_of_schema_at_compile_time(): void
     {
         $schema = new Schema(type: 'number', multipleOf: 0.0);
 
         $compiler = new ValidatorCompiler();
-        $code = $compiler->compile($schema, 'MultipleOfZeroCheck');
 
-        self::assertStringContainsString('throw new \\RuntimeException', $code);
-        self::assertStringNotContainsString('% 0', $code);
-        self::assertStringNotContainsString('/ 0.0', $code);
+        $this->expectException(InvalidMultipleOfSchemaException::class);
 
-        $this->assertParity($schema, 5, false, 'MultipleOfZero');
+        $compiler->compile($schema, 'MultipleOfZeroCheck');
+    }
+
+    #[Test]
+    public function compiled_multiple_of_negative_throws_invalid_multiple_of_schema_at_compile_time(): void
+    {
+        $schema = new Schema(type: 'number', multipleOf: -2.0);
+
+        $compiler = new ValidatorCompiler();
+
+        $this->expectException(InvalidMultipleOfSchemaException::class);
+
+        $compiler->compile($schema, 'MultipleOfNegativeCheck');
     }
 
     private function evaluateCompiledClass(ValidatorCompiler $compiler, Schema $schema, string $shortName): object

@@ -502,11 +502,6 @@ final readonly class OpenApiValidatorBuilder
         return new ExternalRefDetector($this->config);
     }
 
-    private function generateCacheKeyFromFile(string $path, string $content): string
-    {
-        return new CacheKeyBuilder($this->config)->forFile($path, $content);
-    }
-
     private function assembleValidator(OpenApiDocument $document): OpenApiValidatorInterface
     {
         $maxRegexBacktracks = $this->config->maxRegexBacktracks ?? ValidatorConfiguration::DEFAULT_MAX_REGEX_BACKTRACKS;

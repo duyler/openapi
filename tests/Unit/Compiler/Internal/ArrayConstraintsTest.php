@@ -41,7 +41,7 @@ final class ArrayConstraintsTest extends TestCase
         $code = $this->constraints->generateLengthConstraints(new Schema(minItems: 1), '$data');
 
         self::assertStringContainsString('if (count($data) < 1)', $code);
-        self::assertStringContainsString("throw new \\RuntimeException('Array too short')", $code);
+        self::assertStringContainsString("throw new \\RuntimeException('Array too short at data')", $code);
     }
 
     #[Test]
@@ -50,7 +50,7 @@ final class ArrayConstraintsTest extends TestCase
         $code = $this->constraints->generateLengthConstraints(new Schema(maxItems: 10), '$data');
 
         self::assertStringContainsString('if (count($data) > 10)', $code);
-        self::assertStringContainsString("throw new \\RuntimeException('Array too long')", $code);
+        self::assertStringContainsString("throw new \\RuntimeException('Array too long at data')", $code);
     }
 
     #[Test]

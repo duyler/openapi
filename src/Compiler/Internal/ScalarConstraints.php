@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Compiler\Internal;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Exception\InvalidMultipleOfSchemaException;
+use InvalidArgumentException;
 
 use function array_filter;
 use function array_map;
@@ -35,7 +37,7 @@ final readonly class ScalarConstraints
      * Emits all scalar-constraint code for the given schema in the canonical
      * order: type, enum, const, length, numeric range, pattern, multipleOf.
      */
-    public function generate(Schema $schema, string $dataVar): string
+    public function generate(Schema $schema, string $dataVar, string $path = GenerationContext::ROOT_PATH): string
     {
         $code = '';
 
@@ -52,11 +54,11 @@ final readonly class ScalarConstraints
         }
 
         if (null !== $schema->minLength || null !== $schema->maxLength) {
-            $code .= $this->generateStringLengthCheck($schema, $dataVar);
+            $code .= $this->generateStringLengthCheck($schema, $dataVar, $path);
         }
 
         if ($this->hasNumericRange($schema)) {
-            $code .= $this->generateNumberRangeCheck($schema, $dataVar);
+            $code .= $this->generateNumberRangeCheck($schema, $dataVar, $path);
         }
 
         if (null !== $schema->pattern) {
@@ -139,8 +141,11 @@ final readonly class ScalarConstraints
         return $code;
     }
 
-    private function generateStringLengthCheck(Schema $schema, string $valueVar = '$data'): string
-    {
+    private function generateStringLengthCheck(
+        Schema $schema,
+        string $valueVar = '$data',
+        string $path = GenerationContext::ROOT_PATH,
+    ): string {
         $conditions = [];
 
         if (null !== $schema->minLength) {
@@ -154,14 +159,20 @@ final readonly class ScalarConstraints
         $condition = implode(' || ', $conditions);
         $code = $this->utf16Length->generate($valueVar);
         $code .= sprintf("        if (%s) {\n", $condition);
-        $code .= "            throw new \\RuntimeException('String length validation failed');\n";
+        $code .= sprintf(
+            "            throw new \\RuntimeException(%s);\n",
+            var_export(sprintf('String length validation failed at %s', $path), true),
+        );
         $code .= "        }\n\n";
 
         return $code;
     }
 
-    private function generateNumberRangeCheck(Schema $schema, string $valueVar = '$data'): string
-    {
+    private function generateNumberRangeCheck(
+        Schema $schema,
+        string $valueVar = '$data',
+        string $path = GenerationContext::ROOT_PATH,
+    ): string {
         $conditions = [];
 
         if (null !== $schema->minimum) {
@@ -182,7 +193,10 @@ final readonly class ScalarConstraints
 
         $condition = implode(' || ', $conditions);
         $code = sprintf("        if (%s) {\n", $condition);
-        $code .= "            throw new \\RuntimeException('Number range validation failed');\n";
+        $code .= sprintf(
+            "            throw new \\RuntimeException(%s);\n",
+            var_export(sprintf('Number range validation failed at %s', $path), true),
+        );
         $code .= "        }\n\n";
 
         return $code;
@@ -201,10 +215,8 @@ final readonly class ScalarConstraints
 
     private function generateMultipleOfCheck(float $multipleOf, string $valueVar = '$data'): string
     {
-        if (0.0 === $multipleOf) {
-            $errorMessage = var_export('multipleOf must be greater than 0', true);
-
-            return sprintf("        throw new \\RuntimeException(%s);\n\n", $errorMessage);
+        if ($multipleOf <= 0.0) {
+            throw InvalidMultipleOfSchemaException::forNonPositiveValue($multipleOf);
         }
 
         $multipleOfStr = var_export($multipleOf, true);
@@ -276,7 +288,7 @@ final readonly class ScalarConstraints
             'array' => 'is_array',
             'object' => 'is_array',
             'null' => 'is_null',
-            default => 'is_string',
+            default => throw new InvalidArgumentException(sprintf('Unsupported scalar type "%s".', $type)),
         };
     }
 

@@ -6,7 +6,9 @@ namespace Duyler\OpenApi\Compiler;
 
 use Duyler\OpenApi\Compiler\Exception\UnsupportedKeywordException;
 use Duyler\OpenApi\Compiler\Internal\ArrayConstraints;
+use Duyler\OpenApi\Compiler\Internal\ComponentRefResolver;
 use Duyler\OpenApi\Compiler\Internal\EqualityHelpers;
+use Duyler\OpenApi\Compiler\Internal\GenerationContext;
 use Duyler\OpenApi\Compiler\Internal\ObjectConstraints;
 use Duyler\OpenApi\Compiler\Internal\PatternCheck;
 use Duyler\OpenApi\Compiler\Internal\ScalarConstraints;
@@ -23,17 +25,12 @@ use function implode;
 use function in_array;
 use function preg_match;
 use function sprintf;
-use function str_starts_with;
-use function substr;
-use function var_export;
 
 /**
  * @experimental
  */
 final readonly class ValidatorCompiler
 {
-    private const int REF_COMPONENTS_SCHEMAS_PREFIX_LENGTH = 21;
-
     private const string CLASS_NAME_PATTERN = '/^[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*$/';
 
     public function __construct(
@@ -45,6 +42,7 @@ final readonly class ValidatorCompiler
         private ObjectConstraints $objectConstraints = new ObjectConstraints(),
         private EqualityHelpers $equalityHelpers = new EqualityHelpers(),
         private UnsupportedKeywordDetector $keywordDetector = new UnsupportedKeywordDetector(),
+        private ComponentRefResolver $componentRefResolver = new ComponentRefResolver(),
     ) {}
 
     public function compile(Schema $schema, string $className): string
@@ -80,7 +78,9 @@ final readonly class ValidatorCompiler
 
         $schemaHash = $cache->generateKey($schema, $className, $document);
 
-        if (null !== ($cached = $cache->get($schemaHash))) {
+        $cached = $cache->get($schemaHash);
+
+        if (null !== $cached) {
             return $cached;
         }
 
@@ -114,7 +114,7 @@ final readonly class ValidatorCompiler
         $code .= "use Duyler\\OpenApi\\Validator\\TypeFormatter;\n\n";
         $code .= sprintf("readonly class %s\n{\n", $shortName);
         $code .= '    public function validate(mixed $data): void' . "\n    {\n";
-        $code .= $this->generateConstraintsForSchema($schema, '$data', 0);
+        $code .= $this->generateConstraintsForSchema($schema, new GenerationContext());
         $code .= "    }\n";
 
         if ($this->equalityHelpers->isRequiredFor($schema)) {
@@ -127,33 +127,33 @@ final readonly class ValidatorCompiler
         return $code;
     }
 
-    private function generateConstraintsForSchema(Schema $schema, string $dataVar, int $itemDepth): string
+    private function generateConstraintsForSchema(Schema $schema, GenerationContext $context): string
     {
-        $code = $this->scalarConstraints->generate($schema, $dataVar);
-        $code .= $this->arrayConstraints->generateLengthConstraints($schema, $dataVar);
-        $code .= $this->generateObjectConstraints($schema, $dataVar, $itemDepth);
+        $code = $this->scalarConstraints->generate($schema, $context->dataVar, $context->path);
+        $code .= $this->arrayConstraints->generateLengthConstraints($schema, $context->dataVar, $context->path);
+        $code .= $this->generateObjectConstraints($schema, $context);
 
         return $code;
     }
 
-    private function generateObjectConstraints(Schema $schema, string $dataVar, int $itemDepth): string
+    private function generateObjectConstraints(Schema $schema, GenerationContext $context): string
     {
         $code = '';
 
         if (null !== $schema->required && [] !== $schema->required) {
-            $code .= $this->objectConstraints->generateRequiredCheck($schema->required, $dataVar);
+            $code .= $this->objectConstraints->generateRequiredCheck($schema->required, $context->dataVar);
         }
 
         if (false === $schema->additionalProperties) {
-            $code .= $this->objectConstraints->generateAdditionalPropertiesCheck($schema, $dataVar);
+            $code .= $this->objectConstraints->generateAdditionalPropertiesCheck($schema, $context->dataVar);
         }
 
         if (null !== $schema->properties) {
-            $code .= $this->generatePropertiesConstraints($schema->properties, $dataVar, $itemDepth);
+            $code .= $this->generatePropertiesConstraints($schema->properties, $context);
         }
 
         if ($schema->items instanceof Schema) {
-            $code .= $this->generateItemsConstraints($schema->items, $dataVar, $itemDepth);
+            $code .= $this->generateItemsConstraints($schema->items, $context);
         }
 
         return $code;
@@ -162,33 +162,35 @@ final readonly class ValidatorCompiler
     /**
      * @param array<string, Schema> $properties
      */
-    private function generatePropertiesConstraints(array $properties, string $dataVar, int $itemDepth): string
+    private function generatePropertiesConstraints(array $properties, GenerationContext $context): string
     {
         $code = '';
 
         foreach ($properties as $propertyName => $propertySchema) {
-            $safePropertyName = var_export($propertyName, true);
-            $propertyVar = $dataVar . '[' . $safePropertyName . ']';
-            $code .= sprintf("        if (isset(%s)) {\n", $propertyVar);
-            $code .= $this->generateConstraintsForSchema($propertySchema, $propertyVar, $itemDepth);
+            $propertyContext = $context->forProperty($propertyName);
+            $code .= sprintf("        if (isset(%s)) {\n", $propertyContext->dataVar);
+            $code .= $this->generateConstraintsForSchema($propertySchema, $propertyContext);
             $code .= "        }\n\n";
         }
 
         return $code;
     }
 
-    private function generateItemsConstraints(Schema $itemsSchema, string $dataVar, int $itemDepth): string
+    private function generateItemsConstraints(Schema $itemsSchema, GenerationContext $context): string
     {
-        $itemVar = 0 === $itemDepth ? '$item' : '$__item_' . $itemDepth;
-        $indexVar = 0 === $itemDepth ? '$index' : '$__index_' . $itemDepth;
+        $itemVar = 0 === $context->itemDepth ? '$item' : '$__item_' . $context->itemDepth;
+        $indexVar = 0 === $context->itemDepth ? '$index' : '$__index_' . $context->itemDepth;
 
-        $code = sprintf("        foreach (%s as %s => %s) {\n", $dataVar, $indexVar, $itemVar);
-        $code .= $this->generateConstraintsForSchema($itemsSchema, $itemVar, $itemDepth + 1);
+        $code = sprintf("        foreach (%s as %s => %s) {\n", $context->dataVar, $indexVar, $itemVar);
+        $code .= $this->generateConstraintsForSchema($itemsSchema, $context->forItems($itemVar));
         $code .= "        }\n\n";
 
         return $code;
     }
 
+    /**
+     * @param list<string> $resolved
+     */
     private function resolveRefs(Schema $schema, OpenApiDocument $document, array $resolved = []): Schema
     {
         if (null !== $schema->ref) {
@@ -196,7 +198,11 @@ final readonly class ValidatorCompiler
                 throw new RuntimeException(sprintf('Circular reference detected: %s', $schema->ref));
             }
 
-            return $this->resolveRef($schema->ref, $document, [...$resolved, $schema->ref]);
+            return $this->resolveRefs(
+                $this->componentRefResolver->resolve($schema->ref, $document),
+                $document,
+                [...$resolved, $schema->ref],
+            );
         }
 
         $resolvedProperties = null;
@@ -217,21 +223,5 @@ final readonly class ValidatorCompiler
             properties: $resolvedProperties,
             items: $resolvedItems,
         );
-    }
-
-    private function resolveRef(string $ref, OpenApiDocument $document, array $resolved): Schema
-    {
-        if (false === str_starts_with($ref, '#/components/schemas/')) {
-            throw new RuntimeException(sprintf('Unsupported $ref: %s', $ref));
-        }
-
-        $schemaName = substr($ref, self::REF_COMPONENTS_SCHEMAS_PREFIX_LENGTH);
-        $schemas = $document->components?->schemas ?? [];
-
-        if (false === isset($schemas[$schemaName])) {
-            throw new RuntimeException(sprintf('Schema not found: %s', $schemaName));
-        }
-
-        return $this->resolveRefs($schemas[$schemaName], $document, $resolved);
     }
 }
