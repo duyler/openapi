@@ -13,24 +13,24 @@ use ReflectionNamedType;
 
 use ReflectionClass;
 use Duyler\OpenApi\Validator\Internal\TrieLookup;
+use Duyler\OpenApi\Validator\Internal\TrieMatches;
 
 use function sprintf;
 
 /**
  * @internal
  *
- * Anti-test for P-043: asserts that TrieLookup::lookupTrie uses a
- * by-reference accumulator (return type void, fourth parameter is
- * passed by reference) and that TrieLookup exposes a MAX_TRIE_DEPTH
- * constant. Task 17 moved lookupTrie from PathFinder to TrieLookup;
- * the contract is preserved. Reverting lookupTrie to the spread-merge
- * form (returns array, no by-reference parameter) breaks the
- * reflection assertion.
+ * Anti-test for the §7 migration of the P-043 contract: TrieLookup::lookupTrie
+ * keeps its void return (no intermediate per-level arrays) and accumulates
+ * matches through a by-object TrieMatches accumulator instead of the former
+ * by-reference array parameter. Reverting lookupTrie to the spread-merge
+ * form (returns array) or reintroducing the by-reference array parameter
+ * breaks these reflection assertions.
  */
 final class PathFinderAccumulatorTest extends TestCase
 {
     #[Test]
-    public function lookup_trie_accumulates_by_reference(): void
+    public function lookup_trie_accumulates_into_by_object_state(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -75,14 +75,14 @@ YAML;
         self::assertCount(4, $parameters, 'lookupTrie must take four parameters including the accumulator');
 
         $accumulator = $parameters[3];
-        self::assertTrue(
+        self::assertFalse(
             $accumulator->isPassedByReference(),
-            'Fourth parameter of lookupTrie must be by-reference accumulator (P-043)',
+            'Fourth parameter of lookupTrie must be a by-object accumulator, not by-reference (§7)',
         );
 
         $type = $accumulator->getType();
         self::assertInstanceOf(ReflectionNamedType::class, $type);
-        self::assertSame('array', $type->getName());
+        self::assertSame(TrieMatches::class, $type->getName());
     }
 
     #[Test]

@@ -115,7 +115,7 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
         }
 
         if (null !== $schema->patternProperties && [] !== $schema->patternProperties) {
-            $this->collectPatternMatched($schema, $data, $evaluated);
+            $evaluated = [...$evaluated, ...$this->collectPatternMatched($schema, $data)];
         }
 
         if (null !== $context) {
@@ -132,17 +132,19 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
 
     /**
      * @param array<array-key, mixed> $data
-     * @param list<string>            $evaluated
+     *
+     * @return list<string>
      */
-    private function collectPatternMatched(Schema $schema, array $data, array &$evaluated): void
+    private function collectPatternMatched(Schema $schema, array $data): array
     {
         $patternProperties = $schema->patternProperties ?? [];
         if ([] === $patternProperties) {
-            return;
+            return [];
         }
 
         $regexValidator = $this->regexValidator();
         $pregExecutor = $this->pregExecutor();
+        $matched = [];
 
         foreach (array_keys($data) as $propertyName) {
             if (false === is_string($propertyName)) {
@@ -157,9 +159,11 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
                 $normalizedPattern = $regexValidator->normalize($pattern);
                 assert('' !== $normalizedPattern);
                 if (1 === $pregExecutor->match($normalizedPattern, $propertyName)) {
-                    $evaluated[] = $propertyName;
+                    $matched[] = $propertyName;
                 }
             }
         }
+
+        return $matched;
     }
 }

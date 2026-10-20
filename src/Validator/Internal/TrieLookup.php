@@ -20,9 +20,9 @@ final readonly class TrieLookup
      * @param array<int|string, mixed> $node
      * @param list<string>             $segments
      * @param int<0, max>              $depth
-     * @param list<array{template: string, item: PathItem}> $results
+     * @param TrieMatches              $matches
      */
-    public function lookupTrie(array $node, array $segments, int $depth, array &$results): void
+    public function lookupTrie(array $node, array $segments, int $depth, TrieMatches $matches): void
     {
         if ($depth >= self::MAX_TRIE_DEPTH) {
             return;
@@ -32,7 +32,7 @@ final readonly class TrieLookup
             /** @var list<array{template: string, item: PathItem}> $templates */
             $templates = $node[TrieBuilder::TEMPLATES_KEY] ?? [];
             foreach ($templates as $template) {
-                $results[] = $template;
+                $matches->add($template);
             }
 
             return;
@@ -44,14 +44,14 @@ final readonly class TrieLookup
             /** @var mixed $child */
             $child = $node[$segment];
             assert(is_array($child));
-            $this->lookupTrie($child, $segments, $depth + 1, $results);
+            $this->lookupTrie($child, $segments, $depth + 1, $matches);
         }
 
         if (array_key_exists(TrieBuilder::PARAM_WILDCARD, $node)) {
             /** @var mixed $child */
             $child = $node[TrieBuilder::PARAM_WILDCARD];
             assert(is_array($child));
-            $this->lookupTrie($child, $segments, $depth + 1, $results);
+            $this->lookupTrie($child, $segments, $depth + 1, $matches);
         }
     }
 }

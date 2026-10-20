@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Parser;
 
+use Duyler\OpenApi\Schema\Parser\Internal\ChainDepthMemo;
 use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Override;
@@ -217,10 +218,10 @@ final class YamlParser extends OpenApiBuilder
      */
     private function computeMaxChainDepth(array $dag, array $nodes): int
     {
-        $cache = [];
+        $memo = new ChainDepthMemo();
         $max = 0;
         foreach ($nodes as $start) {
-            $depth = $this->chainDepthDfs($start, $dag, $cache, []);
+            $depth = $this->chainDepthDfs($start, $dag, $memo, []);
             if ($depth > $max) {
                 $max = $depth;
             }
@@ -231,13 +232,14 @@ final class YamlParser extends OpenApiBuilder
 
     /**
      * @param array<string, array<string, true>> $dag
-     * @param array<string, int>                 $cache
      * @param array<string, true>                $visiting
      */
-    private function chainDepthDfs(string $node, array $dag, array &$cache, array $visiting): int
+    private function chainDepthDfs(string $node, array $dag, ChainDepthMemo $memo, array $visiting): int
     {
-        if (isset($cache[$node])) {
-            return $cache[$node];
+        $memoized = $memo->get($node);
+
+        if (null !== $memoized) {
+            return $memoized;
         }
 
         if (isset($visiting[$node])) {
@@ -247,13 +249,16 @@ final class YamlParser extends OpenApiBuilder
         $visiting[$node] = true;
         $maxChild = 0;
         foreach (array_keys($dag[$node] ?? []) as $child) {
-            $childDepth = $this->chainDepthDfs($child, $dag, $cache, $visiting);
+            $childDepth = $this->chainDepthDfs($child, $dag, $memo, $visiting);
             if ($childDepth > $maxChild) {
                 $maxChild = $childDepth;
             }
         }
 
-        return $cache[$node] = $maxChild + 1;
+        $depth = $maxChild + 1;
+        $memo->set($node, $depth);
+
+        return $depth;
     }
 
     /**
