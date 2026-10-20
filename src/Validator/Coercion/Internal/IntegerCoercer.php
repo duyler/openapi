@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Coercion\Internal;
 
 use Duyler\OpenApi\Validator\Coercion\IntegerStringNormalizer;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\SchemaValidator\Internal\ScalarKeyCodec;
 
 use function abs;
 use function fmod;
@@ -24,7 +25,7 @@ use const PHP_INT_MIN;
 /** @internal */
 final readonly class IntegerCoercer
 {
-    private const float SAFE_INT64_FLOAT_BOUNDARY = 9007199254740992.0;
+    private const float SAFE_INT64_FLOAT_BOUNDARY = ScalarKeyCodec::SAFE_INT64_FLOAT_BOUNDARY;
 
     private const float INT64_MIN_FLOAT = 9.223372036854775E+18;
 

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Schema;
 
+use Duyler\OpenApi\Validator\SchemaValidator\Internal\ScalarKeyCodec;
+
 use function abs;
 use function array_is_list;
 use function array_key_exists;
@@ -16,7 +18,7 @@ use function is_int;
 
 final readonly class JsonEquals
 {
-    private const int SAFE_INT64_FLOAT_BOUNDARY = 9007199254740992;
+    private const int SAFE_INT64_FLOAT_BOUNDARY = ScalarKeyCodec::SAFE_INT64_FLOAT_BOUNDARY;
 
     public static function equals(mixed $a, mixed $b): bool
     {

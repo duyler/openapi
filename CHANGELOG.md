@@ -65,6 +65,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `uniqueItems` and scalar `enum` no longer produce false duplicates and
+  false acceptances around the IEEE-754 double representation. Both keyword
+  paths now encode scalar comparison keys through one internal
+  `Validator\SchemaValidator\Internal\ScalarKeyCodec` whose float keys are
+  an injective per-double-value hex encoding of the big-endian IEEE-754
+  bytes (`pack('E', ...)`), fixing the string-cast collapse where the old
+  `(string)`-based keys were truncated to the `precision` ini (14 digits by
+  default — a different ini from `serialize_precision`), so, for example,
+  `enum: [9007199254740990.0]` incorrectly accepted `9007199254740991.0` and
+  `uniqueItems: true` rejected `[9007199254740990.0, 9007199254740991.0]` as
+  duplicates. `-0.0` and `0.0` now encode to the same key, so the two zeros
+  are equivalent per JSON Schema 2020-12 §4.2.2. `NaN` values remain
+  never-equal to anything (each NaN occurrence gets a unique key), and mixed
+  int/float comparisons above the 2^53 safe-integer boundary stay rejected.
 - OpenAPI 3.0 `nullable: true` is no longer discarded when a schema is
   reached through `$ref`. `ScalarSiblingMerger::merge()` combined the `$ref`
   stub's `nullable` flag with the resolved target's using a logical AND, and

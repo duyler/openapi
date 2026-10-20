@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Compiler\Internal;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\SchemaValidator\Internal\ScalarKeyCodec;
+
+use function sprintf;
 
 /**
  * Emits the inlined JSON-Schema §4.2.2 instance-equality helpers
@@ -16,9 +19,10 @@ use Duyler\OpenApi\Schema\Model\Schema;
  *
  * The emitted code mirrors `Duyler\OpenApi\Validator\Schema\JsonEquals`
  * byte-for-byte: integer/float equivalence (`1` == `1.0`), unordered
- * object keys, bool distinct from int, and the IEEE 754 boundary
- * `9007199254740992` (2^53) above which mixed int/float comparisons are
- * rejected as unequal.
+ * object keys, bool distinct from int, and the IEEE 754 safe-integer
+ * boundary `ScalarKeyCodec::SAFE_INT64_FLOAT_BOUNDARY` (2^53) above which
+ * mixed int/float comparisons are rejected as unequal. Equivalence is
+ * pinned by `CompilerJsonEqualsEquivalenceTest`.
  */
 final readonly class EqualityHelpers
 {
@@ -45,7 +49,7 @@ final readonly class EqualityHelpers
 
     public function renderJsonEqualsInline(): string
     {
-        return <<<'PHP'
+        return sprintf(<<<'PHP'
     private function jsonEquals(mixed $a, mixed $b): bool
     {
         if (is_bool($a) || is_bool($b)) {
@@ -55,10 +59,10 @@ final readonly class EqualityHelpers
             if (is_int($a) && is_int($b)) {
                 return $a === $b;
             }
-            if (is_int($a) && abs($a) > 9007199254740992) {
+            if (is_int($a) && abs($a) > %d) {
                 return false;
             }
-            if (is_int($b) && abs($b) > 9007199254740992) {
+            if (is_int($b) && abs($b) > %d) {
                 return false;
             }
             return (float) $a === (float) $b;
@@ -93,7 +97,7 @@ final readonly class EqualityHelpers
         return true;
     }
 
-PHP;
+PHP, ScalarKeyCodec::SAFE_INT64_FLOAT_BOUNDARY, ScalarKeyCodec::SAFE_INT64_FLOAT_BOUNDARY);
     }
 
     public function renderCanonicalKeyInline(): string

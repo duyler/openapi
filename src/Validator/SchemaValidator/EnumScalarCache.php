@@ -5,21 +5,17 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\SchemaValidator\Internal\ScalarKeyCodec;
 use WeakMap;
 
-use function bin2hex;
 use function is_bool;
 use function is_float;
 use function is_int;
-use function is_nan;
 use function is_string;
-use function random_bytes;
 
 final class EnumScalarCache
 {
-    private const int SAFE_INT64_FLOAT_BOUNDARY = 9007199254740992;
-
-    private const int CACHE_KEY_ENTROPY_BYTES = 16;
+    private readonly ScalarKeyCodec $scalarKeyCodec;
 
     /** @var WeakMap<Schema, bool> */
     private WeakMap $isScalarEnumCache;
@@ -29,6 +25,8 @@ final class EnumScalarCache
 
     public function __construct()
     {
+        $this->scalarKeyCodec = new ScalarKeyCodec();
+
         /** @var WeakMap<Schema, bool> $isScalarEnumCache */
         $isScalarEnumCache = new WeakMap();
         $this->isScalarEnumCache = $isScalarEnumCache;
@@ -51,7 +49,7 @@ final class EnumScalarCache
     {
         $set = $this->scalarSetFor($schema);
 
-        return isset($set[$this->scalarKey($data)]);
+        return isset($set[$this->scalarKeyCodec->encode($data)]);
     }
 
     private function isScalarEnum(Schema $schema): bool
@@ -106,52 +104,10 @@ final class EnumScalarCache
 
         /** @var mixed $value */
         foreach ($enum as $value) {
-            $set[$this->scalarKey($value)] = true;
+            $set[$this->scalarKeyCodec->encode($value)] = true;
         }
 
         return $set;
-    }
-
-    private function scalarKey(mixed $value): string
-    {
-        if (null === $value) {
-            return 'null';
-        }
-
-        if (is_bool($value)) {
-            return 'b:' . ($value ? '1' : '0');
-        }
-
-        if (is_string($value)) {
-            return 's:' . $value;
-        }
-
-        if (is_int($value) || is_float($value)) {
-            return $this->numericKey($value);
-        }
-
-        /** @var float $value */
-        return 'n:' . (string) $value;
-    }
-
-    private function numericKey(int|float $value): string
-    {
-        if (is_float($value) && is_nan($value)) {
-            /** @var non-empty-string $bytes */
-            $bytes = random_bytes(self::CACHE_KEY_ENTROPY_BYTES);
-
-            return 'nan:' . bin2hex($bytes);
-        }
-
-        if (is_int($value)) {
-            if (abs($value) <= self::SAFE_INT64_FLOAT_BOUNDARY) {
-                return 'n:' . (string) (float) $value;
-            }
-
-            return 'n:i:' . (string) $value;
-        }
-
-        return 'n:' . (string) $value;
     }
 
     private function isScalarOrNull(mixed $value): bool
