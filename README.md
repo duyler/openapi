@@ -1218,6 +1218,17 @@ new Schema(pattern: '[invalid')
 - `uniqueItems` - Unique item requirement
 - `contains` / `minContains` / `maxContains` - Item presence validation
 
+`uniqueItems`, `enum`, and `const` enforce JSON Schema 2020-12 §4.2.2
+instance equality via `JsonEquals`: `1` and `1.0` are equal, object keys
+are unordered, and bool is distinct from int; mixed int/float comparisons
+above the 2^53 IEEE 754 boundary are rejected as unequal
+(`ScalarKeyCodec::SAFE_INT64_FLOAT_BOUNDARY`). For `uniqueItems`, scalar
+membership keys are canonicalised by `ScalarKeyCodec`, while object keys
+are sorted via `ksort` before encoding, so `[1, 1.0]` and
+`[{a:1,b:2}, {b:2,a:1}]` are detected as duplicates under a `100000`
+unique-entry cap (`ArrayLengthValidator::MAX_UNIQUE_CHECK`); the same
+equality applies to `enum` and `const` at every nesting depth.
+
 ### Object Validation
 - `properties` - Property definitions
 - `required` - Required properties
@@ -1807,6 +1818,21 @@ per-class mitigation.
 | `Duyler\OpenApi\Validator\ValidatorPool` | Shared mutable `$cache`/`$order` and check-then-act sequence in `getOrCreate()` | Construct via `ValidatorPool::forCoroutineRuntime($lock, $maxSize)` with a `Swoole\Lock` (or any object exposing `lock()`/`unlock()`); never recurse into `getOrCreate()` from inside the factory closure | Swoole coroutines, FrankenPHP threaded workers |
 | `Duyler\OpenApi\Validator\LibxmlSecuredContext` | Process-global `libxml_use_internal_errors` and `libxml_set_external_entity_loader` captured/restored inside `run()` | Run XML body validation (`contentMediaType: application/xml`) in a prefork worker or delegate XML parsing to an isolated `Swoole\Process` worker; under coroutines the helper may either bypass XXE protection for one coroutine or disable the entity loader process-wide | Swoole coroutines, FrankenPHP threaded workers |
 | `Duyler\OpenApi\Validator\PregExecutor` | Process-global `pcre.backtrack_limit` and `pcre.recursion_limit` mutated via `ini_set` in `match()`/`matchAll()` | Prefer prefork workers; each coroutine should own its own `PregExecutor` instance (the default) and must not assume the ReDoS cap applies to a specific call when coroutines yield inside `preg_match` | Swoole coroutines, FrankenPHP threaded workers |
+
+Within a single `match()` / `matchAll()` call, `PregExecutor` wraps the
+underlying `preg_match` / `preg_match_all` with the following ReDoS
+security invariants (CWE-1333, CWE-400): both `pcre.backtrack_limit` and
+`pcre.recursion_limit` are captured **before** being lowered (the
+recursion cap bounds C-stack exhaustion on deeply nested patterns);
+`set_error_handler` is installed to suppress PCRE compile warnings, which
+surface through the `false` return value instead; `restore_error_handler`
+plus `ini_set` always run inside a `finally` block, so the previous values
+are restored even when validation throws; a non-zero `preg_last_error()`
+raises `PregRuntimeException` via `assertNoPcreError()`, so a runtime
+failure can never masquerade as "pattern did not match". The default
+backtrack cap is `PregExecutor::DEFAULT_MAX_BACKTRACKS` (`10_000`),
+configurable via `withMaxRegexBacktracks`; the coroutine-level race on
+these process-global values is analysed in O-007 below.
 
 ##### O-004 — nested `getOrCreate()` deadlocks under `Swoole\Lock(SWOOLE_MUTEX)`
 
