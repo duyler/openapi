@@ -125,9 +125,17 @@ final class ResponseHeadersValidatorObjectCoercionTest extends TestCase
             ),
         ]);
 
-        $this->expectException(TypeMismatchError::class);
+        $caught = null;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+        } catch (TypeMismatchError $e) {
+            $caught = $e;
+        }
 
-        $this->validator->validate($headers, $headerSchemas);
+        self::assertInstanceOf(TypeMismatchError::class, $caught);
+        self::assertSame('X-Meta', $caught->dataPath());
+        self::assertSame('/type', $caught->schemaPath());
+        self::assertStringContainsString('abc', $caught->getMessage());
     }
 
     #[Test]

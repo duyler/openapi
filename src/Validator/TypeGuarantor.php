@@ -14,7 +14,7 @@ use function sprintf;
 
 final readonly class TypeGuarantor
 {
-    public static function ensureValidType(mixed $value, bool $nullableAsType = true): array|int|string|float|bool|null
+    public static function ensureValidType(mixed $value): array|int|string|float|bool|null
     {
         if (null === $value) {
             return null;

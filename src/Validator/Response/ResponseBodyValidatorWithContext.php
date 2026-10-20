@@ -125,12 +125,11 @@ final readonly class ResponseBodyValidatorWithContext
         if ($this->configuration->coercion && null !== $mediaTypeSchema->schema) {
             $coercionContext = new CoercionContext(
                 schema: $mediaTypeSchema->schema,
-                enabled: true,
                 strict: $this->configuration->strictCoercion,
                 nullableAsType: $this->configuration->nullableAsType,
             );
             $parsedBody = $this->typeCoercer->coerce($parsedBody, $coercionContext);
-            $parsedBody = TypeGuarantor::ensureValidType($parsedBody, $this->configuration->nullableAsType);
+            $parsedBody = TypeGuarantor::ensureValidType($parsedBody);
         }
 
         if (null !== $mediaTypeSchema->schema) {

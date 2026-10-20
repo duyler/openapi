@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Header;
 use Duyler\OpenApi\Schema\Model\Headers;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Exception\InvalidNumericStringException;
 use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MaximumError;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
@@ -434,9 +435,17 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->expectException(TypeMismatchError::class);
+        $caught = null;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+        } catch (TypeMismatchError $e) {
+            $caught = $e;
+        }
 
-        $this->validator->validate($headers, $headerSchemas);
+        self::assertInstanceOf(TypeMismatchError::class, $caught);
+        self::assertSame('X-Number', $caught->dataPath());
+        self::assertSame('/type', $caught->schemaPath());
+        self::assertStringContainsString('not-a-number', $caught->getMessage());
     }
 
     #[Test]
@@ -491,9 +500,17 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->expectException(TypeMismatchError::class);
+        $caught = null;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+        } catch (TypeMismatchError $e) {
+            $caught = $e;
+        }
 
-        $this->validator->validate($headers, $headerSchemas);
+        self::assertInstanceOf(TypeMismatchError::class, $caught);
+        self::assertSame('X-Price', $caught->dataPath());
+        self::assertSame('/type', $caught->schemaPath());
+        self::assertStringContainsString('not-a-number', $caught->getMessage());
     }
 
     #[Test]
@@ -1255,9 +1272,17 @@ final class ResponseHeadersValidatorTest extends TestCase
             ),
         ]);
 
-        $this->expectException(TypeMismatchError::class);
+        $caught = null;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+        } catch (TypeMismatchError $e) {
+            $caught = $e;
+        }
 
-        $this->validator->validate($headers, $headerSchemas);
+        self::assertInstanceOf(TypeMismatchError::class, $caught);
+        self::assertSame('X-Active', $caught->dataPath());
+        self::assertSame('/type', $caught->schemaPath());
+        self::assertStringContainsString('maybe', $caught->getMessage());
     }
 
     #[Test]
@@ -1332,6 +1357,31 @@ final class ResponseHeadersValidatorTest extends TestCase
         self::assertInstanceOf(TypeMismatchError::class, $caught);
         self::assertStringContainsString('representable range', $caught->getMessage());
         self::assertSame('X-Total', $caught->dataPath());
+    }
+
+    #[Test]
+    public function response_header_number_subnormal_boundary_throws_type_mismatch_error(): void
+    {
+        $headers = ['X-Rate' => '0.1e-320'];
+        $headerSchemas = new Headers([
+            'X-Rate' => new Header(
+                schema: new Schema(type: 'number'),
+            ),
+        ]);
+
+        $caught = null;
+        try {
+            $this->validator->validate($headers, $headerSchemas);
+        } catch (InvalidNumericStringException $e) {
+            self::fail(sprintf('SPL exception leaked through coercion: %s', $e::class));
+        } catch (TypeMismatchError $e) {
+            $caught = $e;
+        }
+
+        self::assertInstanceOf(TypeMismatchError::class, $caught);
+        self::assertSame('X-Rate', $caught->dataPath());
+        self::assertSame('/type', $caught->schemaPath());
+        self::assertStringContainsString('representable range', $caught->getMessage());
     }
 
     #[Test]

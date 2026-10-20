@@ -17,7 +17,7 @@ final readonly class ResponseTypeCoercer extends AbstractCoercer
 {
     public function coerce(mixed $value, CoercionContext $context): array|int|string|float|bool|null
     {
-        if (false === $context->enabled || null === $context->schema) {
+        if (null === $context->schema) {
             /** @var array|int|string|float|bool|null $value */
             return $value;
         }
@@ -115,7 +115,6 @@ final readonly class ResponseTypeCoercer extends AbstractCoercer
         return fn(mixed $value, Schema $schema): array|int|string|float|bool|null
             => $this->coerce($value, new CoercionContext(
                 schema: $schema,
-                enabled: true,
                 strict: $context->strict,
                 nullableAsType: $context->nullableAsType,
             ));

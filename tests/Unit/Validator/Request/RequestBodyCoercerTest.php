@@ -30,19 +30,9 @@ final class RequestBodyCoercerTest extends TestCase
     }
 
     #[Test]
-    public function return_value_as_is_when_coercion_disabled(): void
-    {
-        $schema = new Schema(type: 'integer');
-
-        $result = $this->coercer->coerce('123', new CoercionContext(schema: $schema, enabled: false));
-
-        $this->assertSame('123', $result);
-    }
-
-    #[Test]
     public function return_value_as_is_when_schema_is_null(): void
     {
-        $result = $this->coercer->coerce('123', new CoercionContext(schema: null, enabled: true));
+        $result = $this->coercer->coerce('123', new CoercionContext(schema: null));
 
         $this->assertSame('123', $result);
     }
@@ -52,7 +42,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema();
 
-        $result = $this->coercer->coerce('123', new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce('123', new CoercionContext(schema: $schema));
 
         $this->assertSame('123', $result);
     }
@@ -62,7 +52,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'integer');
 
-        $result = $this->coercer->coerce('666', new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce('666', new CoercionContext(schema: $schema));
 
         $this->assertSame(666, $result);
         $this->assertIsInt($result);
@@ -73,7 +63,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'number');
 
-        $result = $this->coercer->coerce('19.99', new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce('19.99', new CoercionContext(schema: $schema));
 
         $this->assertSame(19.99, $result);
         $this->assertIsFloat($result);
@@ -85,7 +75,7 @@ final class RequestBodyCoercerTest extends TestCase
         $schema = new Schema(type: 'boolean');
 
         foreach (['true', '1', 'yes', 'on'] as $input) {
-            $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+            $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
             $this->assertTrue($result, "Failed to coerce '$input' to true");
         }
     }
@@ -96,7 +86,7 @@ final class RequestBodyCoercerTest extends TestCase
         $schema = new Schema(type: 'boolean');
 
         foreach (['false', '0', 'no', 'off'] as $input) {
-            $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+            $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
             $this->assertFalse($result, "Failed to coerce '$input' to false");
         }
     }
@@ -113,7 +103,7 @@ final class RequestBodyCoercerTest extends TestCase
         );
 
         $input = ['age' => '25', 'active' => 'true', 'extra' => 'value'];
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
 
         $this->assertSame(25, $result['age']);
         $this->assertTrue($result['active']);
@@ -129,7 +119,7 @@ final class RequestBodyCoercerTest extends TestCase
         );
 
         $input = ['1', '2'];
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
 
         $this->assertSame([1, 2], $result);
     }
@@ -151,7 +141,7 @@ final class RequestBodyCoercerTest extends TestCase
         );
 
         $input = ['user' => ['age' => '25', 'active' => 'true']];
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
 
         $this->assertSame(25, $result['user']['age']);
         $this->assertTrue($result['user']['active']);
@@ -175,7 +165,7 @@ final class RequestBodyCoercerTest extends TestCase
             ['id' => '1', 'name' => 'Alice'],
             ['id' => '2', 'name' => 'Bob'],
         ];
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
 
         $this->assertSame(1, $result[0]['id']);
         $this->assertSame('Alice', $result[0]['name']);
@@ -190,7 +180,7 @@ final class RequestBodyCoercerTest extends TestCase
 
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->coerce('not-a-number', new CoercionContext(schema: $schema, enabled: true, strict: true));
+        $this->coercer->coerce('not-a-number', new CoercionContext(schema: $schema, strict: true));
     }
 
     #[Test]
@@ -200,7 +190,7 @@ final class RequestBodyCoercerTest extends TestCase
 
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->coerce('not-a-number', new CoercionContext(schema: $schema, enabled: true, strict: true));
+        $this->coercer->coerce('not-a-number', new CoercionContext(schema: $schema, strict: true));
     }
 
     #[Test]
@@ -210,7 +200,7 @@ final class RequestBodyCoercerTest extends TestCase
 
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->coerce(3.14, new CoercionContext(schema: $schema, enabled: true, strict: true));
+        $this->coercer->coerce(3.14, new CoercionContext(schema: $schema, strict: true));
     }
 
     #[Test]
@@ -218,7 +208,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'number');
 
-        $result = $this->coercer->coerce('not-a-number', new CoercionContext(schema: $schema, enabled: true, strict: false));
+        $result = $this->coercer->coerce('not-a-number', new CoercionContext(schema: $schema, strict: false));
 
         $this->assertSame('not-a-number', $result);
     }
@@ -228,7 +218,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'string', nullable: true);
 
-        $result = $this->coercer->coerce(null, new CoercionContext(schema: $schema, enabled: true, strict: false, nullableAsType: true));
+        $result = $this->coercer->coerce(null, new CoercionContext(schema: $schema, strict: false, nullableAsType: true));
 
         $this->assertNull($result);
     }
@@ -238,7 +228,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: ['integer', 'string']);
 
-        $result = $this->coercer->coerce('123', new CoercionContext(schema: $schema, enabled: true, strict: false));
+        $result = $this->coercer->coerce('123', new CoercionContext(schema: $schema, strict: false));
 
         $this->assertSame(123, $result);
         $this->assertIsInt($result);
@@ -249,7 +239,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'integer');
 
-        $result = $this->coercer->coerce(123, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce(123, new CoercionContext(schema: $schema));
 
         $this->assertSame(123, $result);
     }
@@ -259,7 +249,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'number');
 
-        $result = $this->coercer->coerce(19.99, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce(19.99, new CoercionContext(schema: $schema));
 
         $this->assertSame(19.99, $result);
     }
@@ -269,7 +259,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'boolean');
 
-        $result = $this->coercer->coerce(true, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce(true, new CoercionContext(schema: $schema));
 
         $this->assertTrue($result);
     }
@@ -279,7 +269,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'number');
 
-        $result = $this->coercer->coerce(42, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce(42, new CoercionContext(schema: $schema));
 
         $this->assertSame(42.0, $result);
         $this->assertIsFloat($result);
@@ -290,7 +280,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'integer');
 
-        $result = $this->coercer->coerce(3.14, new CoercionContext(schema: $schema, enabled: true, strict: false));
+        $result = $this->coercer->coerce(3.14, new CoercionContext(schema: $schema, strict: false));
 
         $this->assertSame(3.14, $result);
         $this->assertIsFloat($result);
@@ -301,8 +291,8 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'integer');
 
-        $resultTrue = $this->coercer->coerce(true, new CoercionContext(schema: $schema, enabled: true));
-        $resultFalse = $this->coercer->coerce(false, new CoercionContext(schema: $schema, enabled: true));
+        $resultTrue = $this->coercer->coerce(true, new CoercionContext(schema: $schema));
+        $resultFalse = $this->coercer->coerce(false, new CoercionContext(schema: $schema));
 
         $this->assertSame(1, $resultTrue);
         $this->assertSame(0, $resultFalse);
@@ -313,8 +303,8 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'number');
 
-        $resultTrue = $this->coercer->coerce(true, new CoercionContext(schema: $schema, enabled: true));
-        $resultFalse = $this->coercer->coerce(false, new CoercionContext(schema: $schema, enabled: true));
+        $resultTrue = $this->coercer->coerce(true, new CoercionContext(schema: $schema));
+        $resultFalse = $this->coercer->coerce(false, new CoercionContext(schema: $schema));
 
         $this->assertSame(1.0, $resultTrue);
         $this->assertSame(0.0, $resultFalse);
@@ -325,8 +315,8 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'boolean');
 
-        $resultZero = $this->coercer->coerce(0, new CoercionContext(schema: $schema, enabled: true));
-        $resultNonZero = $this->coercer->coerce(1, new CoercionContext(schema: $schema, enabled: true));
+        $resultZero = $this->coercer->coerce(0, new CoercionContext(schema: $schema));
+        $resultNonZero = $this->coercer->coerce(1, new CoercionContext(schema: $schema));
 
         $this->assertFalse($resultZero);
         $this->assertTrue($resultNonZero);
@@ -337,8 +327,8 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'boolean');
 
-        $resultZero = $this->coercer->coerce(0.0, new CoercionContext(schema: $schema, enabled: true));
-        $resultNonZero = $this->coercer->coerce(1.5, new CoercionContext(schema: $schema, enabled: true));
+        $resultZero = $this->coercer->coerce(0.0, new CoercionContext(schema: $schema));
+        $resultNonZero = $this->coercer->coerce(1.5, new CoercionContext(schema: $schema));
 
         $this->assertFalse($resultZero);
         $this->assertTrue($resultNonZero);
@@ -350,7 +340,7 @@ final class RequestBodyCoercerTest extends TestCase
         $schema = new Schema(type: 'object');
 
         $input = ['prop' => 'value'];
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
 
         $this->assertSame($input, $result);
     }
@@ -360,7 +350,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'array');
 
-        $result = $this->coercer->coerce('hello', new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce('hello', new CoercionContext(schema: $schema));
 
         $this->assertSame('hello', $result);
     }
@@ -371,7 +361,7 @@ final class RequestBodyCoercerTest extends TestCase
         $schema = new Schema(type: 'array');
 
         $input = [1, 2, 3];
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
 
         $this->assertSame($input, $result);
     }
@@ -381,7 +371,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'integer');
 
-        $result = $this->coercer->coerce('-42', new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce('-42', new CoercionContext(schema: $schema));
 
         $this->assertSame(-42, $result);
     }
@@ -391,7 +381,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'number');
 
-        $result = $this->coercer->coerce('-19.99', new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce('-19.99', new CoercionContext(schema: $schema));
 
         $this->assertSame(-19.99, $result);
     }
@@ -401,7 +391,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'integer');
 
-        $result = $this->coercer->coerce('999999999999', new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce('999999999999', new CoercionContext(schema: $schema));
 
         $this->assertSame(999999999999, $result);
     }
@@ -414,7 +404,7 @@ final class RequestBodyCoercerTest extends TestCase
             properties: ['name' => new Schema(type: 'string')],
         );
 
-        $result = $this->coercer->coerce('not-an-object', new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce('not-an-object', new CoercionContext(schema: $schema));
 
         $this->assertSame('not-an-object', $result);
     }
@@ -440,7 +430,7 @@ final class RequestBodyCoercerTest extends TestCase
         );
 
         $input = ['level1' => ['level2' => ['value' => '42']]];
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
 
         $this->assertSame(42, $result['level1']['level2']['value']);
     }
@@ -464,7 +454,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'integer');
 
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true, strict: false));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, strict: false));
 
         $this->assertSame($expected, $result);
     }
@@ -489,7 +479,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'number');
 
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
 
         $this->assertSame($expected, $result);
     }
@@ -522,7 +512,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'boolean');
 
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
 
         $this->assertSame($expected, $result);
     }
@@ -569,7 +559,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: $types);
 
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
 
         $this->assertSame($expected, $result);
     }
@@ -601,7 +591,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'object', properties: $properties);
 
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
 
         $this->assertSame($expected, $result);
     }
@@ -638,7 +628,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'array', items: $itemsSchema);
 
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
 
         $this->assertSame($expected, $result);
     }
@@ -664,7 +654,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: [$type, 'string']);
 
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
 
         if ($shouldBeValid) {
             $typeCheck = match ($type) {
@@ -690,7 +680,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'string');
 
-        $result = $this->coercer->coerce(42, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce(42, new CoercionContext(schema: $schema));
 
         $this->assertSame('42', $result);
     }
@@ -700,10 +690,10 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'string');
 
-        $result = $this->coercer->coerce(true, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce(true, new CoercionContext(schema: $schema));
         $this->assertSame('1', $result);
 
-        $resultFalse = $this->coercer->coerce(false, new CoercionContext(schema: $schema, enabled: true));
+        $resultFalse = $this->coercer->coerce(false, new CoercionContext(schema: $schema));
         $this->assertSame('', $resultFalse);
     }
 
@@ -712,7 +702,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'string');
 
-        $result = $this->coercer->coerce(3.14, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce(3.14, new CoercionContext(schema: $schema));
 
         $this->assertSame('3.14', $result);
     }
@@ -729,7 +719,7 @@ final class RequestBodyCoercerTest extends TestCase
 
         $input = ['age' => '30', 'extra' => 'value'];
 
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
 
         $this->assertSame(30, $result['age']);
         $this->assertSame('value', $result['extra']);
@@ -740,7 +730,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'string', nullable: true);
 
-        $result = $this->coercer->coerce(null, new CoercionContext(schema: $schema, enabled: true, strict: false, nullableAsType: true));
+        $result = $this->coercer->coerce(null, new CoercionContext(schema: $schema, strict: false, nullableAsType: true));
 
         $this->assertNull($result);
     }
@@ -750,7 +740,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'string', nullable: true);
 
-        $result = $this->coercer->coerce(null, new CoercionContext(schema: $schema, enabled: true, strict: false, nullableAsType: false));
+        $result = $this->coercer->coerce(null, new CoercionContext(schema: $schema, strict: false, nullableAsType: false));
 
         $this->assertNull($result);
     }
@@ -760,7 +750,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: [42, 'string']);
 
-        $result = $this->coercer->coerce('test', new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce('test', new CoercionContext(schema: $schema));
 
         $this->assertSame('test', $result);
     }
@@ -772,7 +762,7 @@ final class RequestBodyCoercerTest extends TestCase
 
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->coerce('3.14', new CoercionContext(schema: $schema, enabled: true, strict: true));
+        $this->coercer->coerce('3.14', new CoercionContext(schema: $schema, strict: true));
     }
 
     #[Test]
@@ -782,7 +772,7 @@ final class RequestBodyCoercerTest extends TestCase
 
         $this->expectException(TypeMismatchError::class);
 
-        $this->coercer->coerce('abc', new CoercionContext(schema: $schema, enabled: true, strict: true));
+        $this->coercer->coerce('abc', new CoercionContext(schema: $schema, strict: true));
     }
 
     #[Test]
@@ -793,7 +783,7 @@ final class RequestBodyCoercerTest extends TestCase
             properties: ['name' => new Schema(type: 'string')],
         );
 
-        $result = $this->coercer->coerce(42, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce(42, new CoercionContext(schema: $schema));
 
         $this->assertSame(42, $result);
     }
@@ -810,7 +800,7 @@ final class RequestBodyCoercerTest extends TestCase
 
         $input = ['id' => '42', 'name' => 'Alice', 'email' => 'a@b.c'];
 
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
 
         $this->assertSame(42, $result['id']);
         $this->assertSame('Alice', $result['name']);
@@ -829,7 +819,7 @@ final class RequestBodyCoercerTest extends TestCase
 
         $result = $this->coercer->coerce(
             ['age' => null],
-            new CoercionContext(schema: $schema, enabled: true, nullableAsType: true),
+            new CoercionContext(schema: $schema, nullableAsType: true),
         );
 
         $this->assertArrayHasKey('age', $result);
@@ -841,7 +831,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'string');
 
-        $result = $this->coercer->coerce(123, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce(123, new CoercionContext(schema: $schema));
 
         $this->assertSame('123', $result);
     }
@@ -852,7 +842,7 @@ final class RequestBodyCoercerTest extends TestCase
         $schema = new Schema(type: 'string');
         $value = ['foo', 'bar'];
 
-        $result = $this->coercer->coerce($value, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($value, new CoercionContext(schema: $schema));
 
         $this->assertSame(['foo', 'bar'], $result);
     }
@@ -862,7 +852,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'number');
 
-        $result = $this->coercer->coerce('3.14', new CoercionContext(schema: $schema, enabled: true, strict: true));
+        $result = $this->coercer->coerce('3.14', new CoercionContext(schema: $schema, strict: true));
 
         $this->assertSame(3.14, $result);
     }
@@ -893,7 +883,7 @@ final class RequestBodyCoercerTest extends TestCase
         );
         $input = ['l1' => ['l2' => ['l3' => ['l4' => '99']]]];
 
-        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($input, new CoercionContext(schema: $schema));
 
         $this->assertSame(99, $result['l1']['l2']['l3']['l4']);
     }
@@ -903,7 +893,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: ['integer', 'string']);
 
-        $result = $this->coercer->coerce('42', new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce('42', new CoercionContext(schema: $schema));
 
         $this->assertSame(42, $result);
         $this->assertIsInt($result);
@@ -914,7 +904,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'string', nullable: true);
 
-        $result = $this->coercer->coerce(null, new CoercionContext(schema: $schema, enabled: true, strict: false, nullableAsType: false));
+        $result = $this->coercer->coerce(null, new CoercionContext(schema: $schema, strict: false, nullableAsType: false));
 
         $this->assertNull($result);
     }
@@ -925,7 +915,7 @@ final class RequestBodyCoercerTest extends TestCase
         $schema = new Schema(type: 'integer');
         $value = ['foo', 'bar'];
 
-        $result = $this->coercer->coerce($value, new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce($value, new CoercionContext(schema: $schema));
 
         $this->assertSame(['foo', 'bar'], $result);
     }
@@ -935,7 +925,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'boolean');
 
-        $result = $this->coercer->coerce('maybe', new CoercionContext(schema: $schema, enabled: true, strict: false));
+        $result = $this->coercer->coerce('maybe', new CoercionContext(schema: $schema, strict: false));
 
         $this->assertTrue($result);
     }
@@ -945,7 +935,7 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: 'custom');
 
-        $result = $this->coercer->coerce('anything', new CoercionContext(schema: $schema, enabled: true));
+        $result = $this->coercer->coerce('anything', new CoercionContext(schema: $schema));
 
         $this->assertSame('anything', $result);
     }
@@ -957,7 +947,7 @@ final class RequestBodyCoercerTest extends TestCase
 
         $result = $this->coercer->coerce(
             'abc',
-            new CoercionContext(schema: $schema, enabled: true, strict: true),
+            new CoercionContext(schema: $schema, strict: true),
         );
 
         $this->assertSame('abc', $result);
@@ -969,9 +959,9 @@ final class RequestBodyCoercerTest extends TestCase
     {
         $schema = new Schema(type: ['integer', 'number']);
 
-        $stringResult = $this->coercer->coerce('1e300', new CoercionContext(schema: $schema, enabled: true, strict: false));
+        $stringResult = $this->coercer->coerce('1e300', new CoercionContext(schema: $schema, strict: false));
 
-        $floatResult = $this->coercer->coerce(1.0e300, new CoercionContext(schema: $schema, enabled: true, strict: false));
+        $floatResult = $this->coercer->coerce(1.0e300, new CoercionContext(schema: $schema, strict: false));
 
         $this->assertSame(1.0e300, $stringResult);
         $this->assertIsFloat($stringResult);

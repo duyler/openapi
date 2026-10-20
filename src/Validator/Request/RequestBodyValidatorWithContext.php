@@ -98,14 +98,13 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
             if ($this->configuration->coercion) {
                 $coercionContext = new CoercionContext(
                     schema: $schema,
-                    enabled: true,
                     strict: $this->configuration->strictCoercion,
                     nullableAsType: $this->configuration->nullableAsType,
                 );
 
                 /** @var array|int|string|float|bool|null $parsedBody */
                 $parsedBody = $this->coercer->coerce($parsedBody, $coercionContext);
-                $parsedBody = TypeGuarantor::ensureValidType($parsedBody, $this->configuration->nullableAsType);
+                $parsedBody = TypeGuarantor::ensureValidType($parsedBody);
             }
 
             $this->contextSchemaValidator->validate($parsedBody, $schema, ValidatorMode::Request);

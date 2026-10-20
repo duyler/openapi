@@ -22,40 +22,6 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensure_valid_type_returns_array_with_nullable_as_type_true(): void
-    {
-        $value = ['key' => 'value'];
-        $result = TypeGuarantor::ensureValidType($value, true);
-
-        self::assertSame($value, $result);
-    }
-
-    #[Test]
-    public function ensure_valid_type_returns_array_with_nullable_as_type_false(): void
-    {
-        $value = [1, 2, 3];
-        $result = TypeGuarantor::ensureValidType($value, false);
-
-        self::assertSame($value, $result);
-    }
-
-    #[Test]
-    public function ensure_valid_type_returns_null_when_nullable_as_type_true(): void
-    {
-        $result = TypeGuarantor::ensureValidType(null, true);
-
-        self::assertNull($result);
-    }
-
-    #[Test]
-    public function ensure_valid_type_returns_null_when_nullable_as_type_false(): void
-    {
-        $result = TypeGuarantor::ensureValidType(null, false);
-
-        self::assertNull($result);
-    }
-
-    #[Test]
     public function ensure_valid_type_throws_type_error_for_object(): void
     {
         $value = new stdClass();
@@ -91,24 +57,6 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensure_valid_type_returns_int_with_nullable_as_type_true(): void
-    {
-        $value = 42;
-        $result = TypeGuarantor::ensureValidType($value, true);
-
-        self::assertSame($value, $result);
-    }
-
-    #[Test]
-    public function ensure_valid_type_returns_int_with_nullable_as_type_false(): void
-    {
-        $value = 42;
-        $result = TypeGuarantor::ensureValidType($value, false);
-
-        self::assertSame($value, $result);
-    }
-
-    #[Test]
     public function ensure_valid_type_returns_string_as_is(): void
     {
         $value = 'test';
@@ -118,46 +66,10 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensure_valid_type_returns_string_with_nullable_as_type_true(): void
-    {
-        $value = 'hello';
-        $result = TypeGuarantor::ensureValidType($value, true);
-
-        self::assertSame($value, $result);
-    }
-
-    #[Test]
-    public function ensure_valid_type_returns_string_with_nullable_as_type_false(): void
-    {
-        $value = 'world';
-        $result = TypeGuarantor::ensureValidType($value, false);
-
-        self::assertSame($value, $result);
-    }
-
-    #[Test]
     public function ensure_valid_type_returns_float_as_is(): void
     {
         $value = 3.14;
         $result = TypeGuarantor::ensureValidType($value);
-
-        self::assertSame($value, $result);
-    }
-
-    #[Test]
-    public function ensure_valid_type_returns_float_with_nullable_as_type_true(): void
-    {
-        $value = 2.5;
-        $result = TypeGuarantor::ensureValidType($value, true);
-
-        self::assertSame($value, $result);
-    }
-
-    #[Test]
-    public function ensure_valid_type_returns_float_with_nullable_as_type_false(): void
-    {
-        $value = 1.75;
-        $result = TypeGuarantor::ensureValidType($value, false);
 
         self::assertSame($value, $result);
     }
@@ -176,24 +88,6 @@ final class TypeGuarantorTest extends TestCase
     {
         $value = false;
         $result = TypeGuarantor::ensureValidType($value);
-
-        self::assertFalse($result);
-    }
-
-    #[Test]
-    public function ensure_valid_type_returns_bool_with_nullable_as_type_true(): void
-    {
-        $value = true;
-        $result = TypeGuarantor::ensureValidType($value, true);
-
-        self::assertTrue($result);
-    }
-
-    #[Test]
-    public function ensure_valid_type_returns_bool_with_nullable_as_type_false(): void
-    {
-        $value = false;
-        $result = TypeGuarantor::ensureValidType($value, false);
 
         self::assertFalse($result);
     }
@@ -238,7 +132,7 @@ final class TypeGuarantorTest extends TestCase
     }
 
     #[Test]
-    public function ensure_valid_type_default_nullable_as_type_is_true(): void
+    public function ensure_valid_type_returns_null_for_null_input(): void
     {
         $result = TypeGuarantor::ensureValidType(null);
 

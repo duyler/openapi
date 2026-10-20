@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Coercion\Internal;
 
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Response\Enum\BooleanCoercionValue;
 
 use function is_bool;
 use function is_float;
@@ -22,13 +23,13 @@ final readonly class BooleanCoercer
         }
 
         if (is_string($value)) {
-            $lower = strtolower($value);
+            $coerced = $this->coerceStringStrict($value);
 
-            return match ($lower) {
-                'true', '1', 'yes', 'on' => true,
-                'false', '0', 'no', 'off' => false,
-                default => (bool) $value,
-            };
+            if (null !== $coerced) {
+                return $coerced;
+            }
+
+            return (bool) $value;
         }
 
         if (is_int($value)) {
@@ -50,18 +51,18 @@ final readonly class BooleanCoercer
         }
 
         if (is_string($value)) {
-            $lower = strtolower($value);
+            $coerced = $this->coerceStringStrict($value);
 
-            return match ($lower) {
-                'true', '1', 'yes', 'on' => true,
-                'false', '0', 'no', 'off' => false,
-                default => throw new TypeMismatchError(
+            if (null === $coerced) {
+                throw new TypeMismatchError(
                     expected: 'boolean',
                     actual: $value,
                     dataPath: '',
                     schemaPath: '/type',
-                ),
-            };
+                );
+            }
+
+            return $coerced;
         }
 
         if (is_int($value)) {
@@ -74,5 +75,10 @@ final readonly class BooleanCoercer
 
         /** @var array|null $value */
         return $value;
+    }
+
+    public function coerceStringStrict(string $value): ?bool
+    {
+        return BooleanCoercionValue::tryFrom(strtolower($value))?->isTruthy();
     }
 }

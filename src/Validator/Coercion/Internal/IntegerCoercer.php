@@ -37,7 +37,7 @@ final readonly class IntegerCoercer
         }
 
         if (is_string($value)) {
-            if (1 !== preg_match('/^[+-]?\d+$/', $value)) {
+            if (1 !== preg_match(IntegerStringNormalizer::INTEGER_PATTERN, $value)) {
                 return $value;
             }
 
@@ -87,7 +87,18 @@ final readonly class IntegerCoercer
         }
 
         if (is_string($value)) {
-            return $this->coerceStringStrict($value);
+            $coerced = $this->coerceStringStrict($value);
+
+            if (null === $coerced) {
+                throw new TypeMismatchError(
+                    expected: 'integer',
+                    actual: $value,
+                    dataPath: '',
+                    schemaPath: '/type',
+                );
+            }
+
+            return $coerced;
         }
 
         if (is_float($value)) {
@@ -102,26 +113,16 @@ final readonly class IntegerCoercer
         return $value;
     }
 
-    private function coerceStringStrict(string $value): int
+    public function coerceStringStrict(string $value): ?int
     {
-        if (1 !== preg_match('/^[+-]?\d+$/', $value)) {
-            throw new TypeMismatchError(
-                expected: 'integer',
-                actual: $value,
-                dataPath: '',
-                schemaPath: '/type',
-            );
+        if (1 !== preg_match(IntegerStringNormalizer::INTEGER_PATTERN, $value)) {
+            return null;
         }
 
         $coerced = (int) $value;
 
         if ((string) $coerced !== IntegerStringNormalizer::canonicalize($value)) {
-            throw new TypeMismatchError(
-                expected: 'integer',
-                actual: $value,
-                dataPath: '',
-                schemaPath: '/type',
-            );
+            return null;
         }
 
         return $coerced;

@@ -268,30 +268,12 @@ YAML;
             ],
         );
 
-        $context = new CoercionContext(schema: $schema, enabled: true, strict: true);
+        $context = new CoercionContext(schema: $schema, strict: true);
 
         $result = $this->bodyCoercer->coerce(['id' => 123], $context);
 
         $this->assertSame('123', $result['id']);
         $this->assertIsString($result['id']);
-    }
-
-    #[Test]
-    public function integer_to_string_coercion_disabled_preserves_integer(): void
-    {
-        $schema = new Schema(
-            type: 'object',
-            properties: [
-                'id' => new Schema(type: 'string'),
-            ],
-        );
-
-        $context = new CoercionContext(schema: $schema, enabled: false, strict: true);
-
-        $result = $this->bodyCoercer->coerce(['id' => 123], $context);
-
-        $this->assertSame(123, $result['id']);
-        $this->assertIsInt($result['id']);
     }
 
     #[Test]
@@ -315,7 +297,7 @@ YAML;
             ],
         );
 
-        $context = new CoercionContext(schema: $schema, enabled: true, strict: true);
+        $context = new CoercionContext(schema: $schema, strict: true);
 
         $body = [
             'data' => [
@@ -355,7 +337,7 @@ YAML;
             ],
         );
 
-        $context = new CoercionContext(schema: $schema, enabled: true, strict: true);
+        $context = new CoercionContext(schema: $schema, strict: true);
 
         $this->expectException(TypeMismatchError::class);
         $this->bodyCoercer->coerce(['data' => ['count' => 'abc']], $context);
@@ -502,7 +484,7 @@ YAML;
             ],
         );
 
-        $context = new CoercionContext(schema: $schema, enabled: true, strict: true);
+        $context = new CoercionContext(schema: $schema, strict: true);
 
         $body = [
             'user' => [
@@ -538,7 +520,7 @@ YAML;
             ],
         );
 
-        $context = new CoercionContext(schema: $schema, enabled: true, strict: true);
+        $context = new CoercionContext(schema: $schema, strict: true);
 
         $this->expectException(TypeMismatchError::class);
         $this->bodyCoercer->coerce(['user' => ['age' => 'abc']], $context);
@@ -571,7 +553,7 @@ YAML;
             ],
         );
 
-        $context = new CoercionContext(schema: $schema, enabled: true, strict: true);
+        $context = new CoercionContext(schema: $schema, strict: true);
 
         $body = [
             'numbers' => ['1', '2', '3'],
@@ -610,7 +592,7 @@ YAML;
             ],
         );
 
-        $context = new CoercionContext(schema: $schema, enabled: true, strict: true);
+        $context = new CoercionContext(schema: $schema, strict: true);
 
         $this->expectException(TypeMismatchError::class);
         $this->bodyCoercer->coerce(['numbers' => ['1', 'abc', '3']], $context);
@@ -628,7 +610,7 @@ YAML;
             ],
         );
 
-        $context = new CoercionContext(schema: $schema, enabled: true, strict: true, nullableAsType: true);
+        $context = new CoercionContext(schema: $schema, strict: true, nullableAsType: true);
 
         $body = [
             'nullableInt' => '42',
@@ -657,7 +639,7 @@ YAML;
             ],
         );
 
-        $context = new CoercionContext(schema: $schema, enabled: true, strict: true, nullableAsType: true);
+        $context = new CoercionContext(schema: $schema, strict: true, nullableAsType: true);
 
         $this->expectException(TypeMismatchError::class);
         $this->bodyCoercer->coerce(['nullableInt' => 'abc'], $context);
@@ -708,7 +690,7 @@ YAML;
             ],
         );
 
-        $context = new CoercionContext(schema: $schema, enabled: true, strict: true);
+        $context = new CoercionContext(schema: $schema, strict: true);
 
         $this->expectException(TypeMismatchError::class);
         $this->bodyCoercer->coerce(['count' => 'abc'], $context);
@@ -964,7 +946,7 @@ YAML;
             ),
         );
 
-        $context = new CoercionContext(schema: $schema, enabled: true, strict: true);
+        $context = new CoercionContext(schema: $schema, strict: true);
 
         $result = $this->bodyCoercer->coerce([['id' => '1'], ['id' => '2']], $context);
 
@@ -1014,7 +996,7 @@ YAML;
             ],
         );
 
-        $context = new CoercionContext(schema: $schema, enabled: true, strict: true);
+        $context = new CoercionContext(schema: $schema, strict: true);
 
         $coercer = new ResponseTypeCoercer();
         $result = $coercer->coerce(['count' => '42'], $context);

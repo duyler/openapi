@@ -16,7 +16,7 @@ final readonly class RequestBodyCoercer extends AbstractCoercer
 {
     public function coerce(mixed $value, CoercionContext $context): array|int|string|float|bool|null
     {
-        if (false === $context->enabled || null === $context->schema) {
+        if (null === $context->schema) {
             /** @var array|int|string|float|bool|null $value */
             return $value;
         }
