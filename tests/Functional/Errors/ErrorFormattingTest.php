@@ -17,10 +17,13 @@ use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\PatternMismatchError;
 use Duyler\OpenApi\Validator\Exception\RequiredError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Exception\ValidationErrorInterface;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 
+use function array_filter;
+use function array_values;
 use function json_decode;
 
 final class ErrorFormattingTest extends FunctionalTestCase
@@ -99,7 +102,7 @@ final class ErrorFormattingTest extends FunctionalTestCase
         $this->assertValidationError(
             fn() => $this->createValidator()->validateWithContext([], $schema, $context),
             RequiredError::class,
-            'Required', // Changed from 'required' to 'Required'
+            'Required',
         );
     }
 
@@ -163,7 +166,7 @@ final class ErrorFormattingTest extends FunctionalTestCase
         $this->assertValidationError(
             fn() => $this->createValidator()->validateWithContext('ab', $schema, $context),
             MinLengthError::class,
-            'less than minimum', // Changed from 'minLength' to actual message pattern
+            'less than minimum',
         );
     }
 
@@ -179,7 +182,7 @@ final class ErrorFormattingTest extends FunctionalTestCase
         $this->assertValidationError(
             fn() => $this->createValidator()->validateWithContext('this_string_is_too_long', $schema, $context),
             MaxLengthError::class,
-            'exceeds maximum', // Changed from 'maxLength' to actual message pattern
+            'exceeds maximum',
         );
     }
 
@@ -195,7 +198,7 @@ final class ErrorFormattingTest extends FunctionalTestCase
         $this->assertValidationError(
             fn() => $this->createValidator()->validateWithContext('yellow', $schema, $context),
             EnumError::class,
-            'allowed values', // Changed from 'enum' to actual message pattern
+            'allowed values',
         );
     }
 
@@ -220,7 +223,7 @@ final class ErrorFormattingTest extends FunctionalTestCase
             required: ['name', 'email', 'age'],
             properties: [
                 'name' => new Schema(type: 'string', minLength: 5),
-                'email' => new Schema(type: 'string'), // Removed format to avoid InvalidFormatException
+                'email' => new Schema(type: 'string'),
                 'age' => new Schema(type: 'integer', minimum: 18),
             ],
         );
@@ -232,7 +235,7 @@ final class ErrorFormattingTest extends FunctionalTestCase
                 $schema,
                 $context,
             ),
-            1, // Changed from 3 to 1 - current implementation limitation
+            1,
         );
     }
 
@@ -248,7 +251,7 @@ final class ErrorFormattingTest extends FunctionalTestCase
                     required: ['name', 'email'],
                     properties: [
                         'name' => new Schema(type: 'string', minLength: 3),
-                        'email' => new Schema(type: 'string'), // Removed format to avoid InvalidFormatException
+                        'email' => new Schema(type: 'string'),
                     ],
                 ),
             ],
@@ -261,7 +264,7 @@ final class ErrorFormattingTest extends FunctionalTestCase
                 $schema,
                 $context,
             ),
-            1, // Changed from 2 to 1 - current implementation limitation
+            1,
         );
     }
 
@@ -318,12 +321,14 @@ final class ErrorFormattingTest extends FunctionalTestCase
         } catch (ValidationException $e) {
             $errors = $e->getErrors();
             $this->assertNotEmpty($errors);
-            $error = $errors[0];
 
-            if ($error instanceof MinimumError) {
-                $params = $error->params();
-                $this->assertEquals(10, $params['minimum']); // Changed from assertSame to assertEquals
-            }
+            $minimumErrors = array_values(array_filter(
+                $errors,
+                static fn(ValidationErrorInterface $error): bool => $error instanceof MinimumError,
+            ));
+            $this->assertNotEmpty($minimumErrors, 'Expected at least one MinimumError for value below minimum.');
+
+            $this->assertSame(10.0, $minimumErrors[0]->params()['minimum']);
         }
     }
 }

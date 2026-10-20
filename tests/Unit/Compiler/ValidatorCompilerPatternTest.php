@@ -20,7 +20,6 @@ use function str_repeat;
 use function str_replace;
 use function substr;
 use function trigger_error;
-use function usleep;
 
 use const E_USER_WARNING;
 
@@ -214,8 +213,6 @@ final class ValidatorCompilerPatternTest extends TestCase
                 // Expected.
             }
 
-            // Give the engine a beat; then probe the handler stack.
-            usleep(0);
             trigger_error('probe', E_USER_WARNING);
 
             self::assertTrue(
