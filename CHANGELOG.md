@@ -74,6 +74,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and validation. The default TTL of `CompilationCache` changes from
   24 hours (86400) to 1 hour (3600); the error message for a non-positive
   TTL is unchanged.
+- The optional `DeprecationLogger` constructor parameter `enabled` is
+  renamed to `isEnabled` (boolean-naming convention). Callers passing the
+  flag by name (`new DeprecationLogger(enabled: false)`) must switch to
+  `isEnabled:`; positional calls and the parameter's position and default
+  (`true`) are unchanged.
 
 ### Fixed
 

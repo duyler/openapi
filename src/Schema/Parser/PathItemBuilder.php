@@ -24,8 +24,6 @@ use function is_bool;
 
 final readonly class PathItemBuilder
 {
-    private const string DEPRECATION_VERSION = '3.2.0';
-
     private readonly InlineExampleResolver $inlineExampleResolver;
 
     public function __construct(private OpenApiBuildContext $context)
@@ -127,11 +125,11 @@ final readonly class PathItemBuilder
             throw new InvalidSchemaException('Parameter must have name and in fields');
         }
 
-        if ($this->context->shouldWarnDeprecation() && isset($data['allowEmptyValue']) && $data['allowEmptyValue']) {
+        if (OpenApiBuildContext::shouldWarnDeprecation($this->context->documentVersion) && isset($data['allowEmptyValue']) && $data['allowEmptyValue']) {
             $this->context->deprecationLogger->warn(
                 'allowEmptyValue',
                 'Parameter Object',
-                self::DEPRECATION_VERSION,
+                OpenApiBuildContext::DEPRECATION_VERSION,
             );
         }
 

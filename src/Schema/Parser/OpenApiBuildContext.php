@@ -9,7 +9,7 @@ use function version_compare;
 /** @internal */
 final class OpenApiBuildContext
 {
-    private const string DEPRECATION_VERSION = '3.2.0';
+    public const string DEPRECATION_VERSION = '3.2.0';
 
     public string $documentVersion = '';
 
@@ -29,8 +29,8 @@ final class OpenApiBuildContext
         $this->componentsBuilder = new ComponentsBuilder($this);
     }
 
-    public function shouldWarnDeprecation(): bool
+    public static function shouldWarnDeprecation(string $version): bool
     {
-        return version_compare($this->documentVersion, self::DEPRECATION_VERSION, '>=');
+        return version_compare($version, self::DEPRECATION_VERSION, '>=');
     }
 }

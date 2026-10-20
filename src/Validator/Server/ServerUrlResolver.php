@@ -16,6 +16,8 @@ final readonly class ServerUrlResolver
 {
     private const string VARNAME_PATTERN = '[a-zA-Z0-9_.]+';
 
+    private const string VARIABLE_PATTERN = '/\{(?<name>' . self::VARNAME_PATTERN . ')\}/';
+
     /**
      * Resolves a server URL template by substituting variables with provided values.
      *
@@ -30,9 +32,9 @@ final readonly class ServerUrlResolver
         $variables = $this->mergeVariables($server, $overrides);
 
         $result = preg_replace_callback(
-            '/\{(' . self::VARNAME_PATTERN . ')\}/',
+            self::VARIABLE_PATTERN,
             function (array $matches) use ($variables, $server): string {
-                $variableName = $matches[1];
+                $variableName = $matches['name'];
 
                 if (false === array_key_exists($variableName, $variables)) {
                     throw new ServerVariableException(
@@ -63,10 +65,10 @@ final readonly class ServerUrlResolver
      */
     public function extractVariableNames(Server $server): array
     {
-        preg_match_all('/\{(' . self::VARNAME_PATTERN . ')\}/', $server->url, $matches);
+        preg_match_all(self::VARIABLE_PATTERN, $server->url, $matches);
 
         /** @var list<string> */
-        return $matches[1];
+        return $matches['name'];
     }
 
     /**

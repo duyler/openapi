@@ -11,11 +11,11 @@ use function sprintf;
 
 final readonly class DeprecationLogger
 {
-    public function __construct(private LoggerInterface $logger = new NullLogger(), private bool $enabled = true) {}
+    public function __construct(private LoggerInterface $logger = new NullLogger(), private bool $isEnabled = true) {}
 
     public function warn(string $field, string $object, string $version, string $alternative = ''): void
     {
-        if (false === $this->enabled) {
+        if (false === $this->isEnabled) {
             return;
         }
 

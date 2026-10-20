@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Schema\Parser;
 
 use Duyler\OpenApi\Schema\Parser\Internal\ChainDepthMemo;
+use Duyler\OpenApi\Schema\Parser\Internal\SpecSizeGuard;
 use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Override;
@@ -12,7 +13,6 @@ use Symfony\Component\Yaml\Yaml;
 
 use function array_filter;
 use function array_keys;
-use function array_values;
 use function count;
 use function explode;
 use function is_array;
@@ -23,9 +23,9 @@ use function strlen;
 
 final class YamlParser extends OpenApiBuilder
 {
-    public const int DEFAULT_MAX_SPEC_BYTES = 1_048_576;
+    public const int DEFAULT_MAX_SPEC_BYTES = SpecSizeGuard::DEFAULT_MAX_SPEC_BYTES;
 
-    public const int DEFAULT_MAX_SPEC_DEPTH = 100;
+    public const int DEFAULT_MAX_SPEC_DEPTH = SpecSizeGuard::DEFAULT_MAX_SPEC_DEPTH;
 
     /**
      * Conservative caps for YAML anchor/alias expansion bombs
@@ -41,36 +41,34 @@ final class YamlParser extends OpenApiBuilder
 
     public const int MAX_ALIAS_DEPTH = 10;
 
+    private const string ANCHOR_NAME_PATTERN = '[^ \t,\[\]\{\}\n]+';
+
     private readonly PregExecutor $pregExecutor;
+
+    private readonly SpecSizeGuard $specSizeGuard;
 
     public function __construct(
         ?DeprecationLogger $deprecationLogger = null,
-        private readonly int $maxSpecBytes = self::DEFAULT_MAX_SPEC_BYTES,
-        private readonly int $maxSpecDepth = self::DEFAULT_MAX_SPEC_DEPTH,
+        int $maxSpecBytes = self::DEFAULT_MAX_SPEC_BYTES,
+        int $maxSpecDepth = self::DEFAULT_MAX_SPEC_DEPTH,
         ?PregExecutor $pregExecutor = null,
     ) {
         parent::__construct($deprecationLogger);
         $this->pregExecutor = $pregExecutor ?? new PregExecutor();
+        $this->specSizeGuard = new SpecSizeGuard($maxSpecBytes, $maxSpecDepth);
     }
 
     #[Override]
     protected function parseContent(string $content): mixed
     {
-        if (strlen($content) > $this->maxSpecBytes) {
-            throw SpecTooLargeException::forSize($this->maxSpecBytes, strlen($content));
-        }
+        $this->specSizeGuard->assertSize($content);
 
         $this->assertNoAnchorBomb($content);
 
         /** @var mixed $data */
         $data = Yaml::parse($content, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
 
-        if (is_array($data)) {
-            $depth = $this->calculateDepth($data);
-            if ($depth > $this->maxSpecDepth) {
-                throw SpecTooLargeException::forDepth($depth, $this->maxSpecDepth);
-            }
-        }
+        $this->specSizeGuard->assertDepth($data);
 
         return $data;
     }
@@ -79,28 +77,6 @@ final class YamlParser extends OpenApiBuilder
     protected function getFormatName(): string
     {
         return 'YAML';
-    }
-
-    /**
-     * @param array<array-key, mixed> $data
-     */
-    private function calculateDepth(array $data, int $current = 0): int
-    {
-        $maxChildDepth = $current;
-
-        foreach ($data as $value) {
-            /** @var mixed $value */
-            if (false === is_array($value)) {
-                continue;
-            }
-
-            $childDepth = $this->calculateDepth($value, $current + 1);
-            if ($childDepth > $maxChildDepth) {
-                $maxChildDepth = $childDepth;
-            }
-        }
-
-        return $maxChildDepth;
     }
 
     private function assertNoAnchorBomb(string $content): void
@@ -123,14 +99,14 @@ final class YamlParser extends OpenApiBuilder
 
     private function countAnchors(string $content): int
     {
-        $result = $this->pregExecutor->matchAll('/(?<![&*])&[^ \t,\[\]\{\}\n]+/u', $content);
+        $result = $this->pregExecutor->matchAll('/(?<![&*])&' . self::ANCHOR_NAME_PATTERN . '/u', $content);
 
         return false === $result ? 0 : $result;
     }
 
     private function countAliases(string $content): int
     {
-        $result = $this->pregExecutor->matchAll('/(?<!&)\*[^ \t,\[\]\{\}\n]+/u', $content);
+        $result = $this->pregExecutor->matchAll('/(?<!&)\*' . self::ANCHOR_NAME_PATTERN . '/u', $content);
 
         return false === $result ? 0 : $result;
     }
@@ -159,8 +135,18 @@ final class YamlParser extends OpenApiBuilder
         $anchors = [];
         foreach ($lines as $idx => $line) {
             $matches = [];
-            $this->pregExecutor->matchAll('/&([^ \t,\[\]\{\}\n]+)/u', $line, $matches);
-            foreach ($this->capturedStrings($matches) as $name) {
+            $this->pregExecutor->matchAll('/&(?<anchor>' . self::ANCHOR_NAME_PATTERN . ')/u', $line, $matches);
+
+            $anchorCaptures = $matches['anchor'] ?? [];
+
+            if (false === is_array($anchorCaptures)) {
+                continue;
+            }
+
+            /** @var array<array-key, string> $anchorCaptures */
+            $anchorCaptures = array_filter($anchorCaptures, is_string(...));
+
+            foreach ($anchorCaptures as $name) {
                 $anchors[$name] ??= ['line' => $idx, 'indent' => strlen($line) - strlen(ltrim($line))];
             }
         }
@@ -184,8 +170,18 @@ final class YamlParser extends OpenApiBuilder
 
             for ($i = $parentInfo['line']; $i <= $endLine; ++$i) {
                 $aliasMatches = [];
-                $this->pregExecutor->matchAll('/\*([^ \t,\[\]\{\}\n]+)/u', $lines[$i], $aliasMatches);
-                foreach ($this->capturedStrings($aliasMatches) as $alias) {
+                $this->pregExecutor->matchAll('/\*(?<alias>' . self::ANCHOR_NAME_PATTERN . ')/u', $lines[$i], $aliasMatches);
+
+                $aliasCaptures = $aliasMatches['alias'] ?? [];
+
+                if (false === is_array($aliasCaptures)) {
+                    continue;
+                }
+
+                /** @var array<array-key, string> $aliasCaptures */
+                $aliasCaptures = array_filter($aliasCaptures, is_string(...));
+
+                foreach ($aliasCaptures as $alias) {
                     if ($alias !== $parent && isset($anchors[$alias])) {
                         $dag[$parent][$alias] = true;
                     }
@@ -259,23 +255,5 @@ final class YamlParser extends OpenApiBuilder
         $memo->set($node, $depth);
 
         return $depth;
-    }
-
-    /**
-     * @param array<array-key, mixed> $matches
-     *
-     * @return list<string>
-     */
-    private function capturedStrings(array $matches): array
-    {
-        $group = $matches[1] ?? [];
-        if (false === is_array($group)) {
-            return [];
-        }
-
-        /** @var array<array-key, string> $captured */
-        $captured = array_filter($group, is_string(...));
-
-        return array_values($captured);
     }
 }
