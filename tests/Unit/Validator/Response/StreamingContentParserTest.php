@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Response;
 
+use Duyler\OpenApi\Validator\Response\Exception\StreamRecordTooLargeException;
 use Duyler\OpenApi\Validator\Response\Exception\TooManyRecordsException;
 use Duyler\OpenApi\Validator\Response\StreamingContentParser;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
-use RuntimeException;
 
 use ReflectionClass;
 
@@ -23,6 +24,7 @@ final class StreamingContentParserTest extends TestCase
 {
     private StreamingContentParser $parser;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->parser = new StreamingContentParser();
@@ -722,7 +724,7 @@ final class StreamingContentParserTest extends TestCase
         $factory = new Psr17Factory();
         $stream = $factory->createStream($body);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(StreamRecordTooLargeException::class);
         $this->expectExceptionMessage('exceeds maximum allowed length');
 
         $this->parser->parseStream($stream, 'application/jsonl');
@@ -736,7 +738,7 @@ final class StreamingContentParserTest extends TestCase
         $factory = new Psr17Factory();
         $stream = $factory->createStream($body);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(StreamRecordTooLargeException::class);
         $this->expectExceptionMessage('exceeds maximum allowed length');
 
         $this->parser->parseStream($stream, 'text/event-stream');
@@ -752,7 +754,7 @@ final class StreamingContentParserTest extends TestCase
 
         $parser = new StreamingContentParser(maxRecordLength: 1024);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(StreamRecordTooLargeException::class);
         $this->expectExceptionMessage('JSON sequence record exceeds maximum allowed length of 1024 bytes');
 
         $parser->parseStream($stream, 'application/json-seq');

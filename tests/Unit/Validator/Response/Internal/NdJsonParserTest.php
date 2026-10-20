@@ -8,6 +8,7 @@ use Duyler\OpenApi\Validator\Exception\MalformedStreamRecordException;
 use Duyler\OpenApi\Validator\Response\Exception\TooManyRecordsException;
 use Duyler\OpenApi\Validator\Response\Internal\NdJsonParser;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -21,6 +22,7 @@ final class NdJsonParserTest extends TestCase
 {
     private NdJsonParser $parser;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->parser = new NdJsonParser();

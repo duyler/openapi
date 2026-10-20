@@ -6,8 +6,10 @@ namespace Duyler\OpenApi\Validator\Response;
 
 use Duyler\OpenApi\Validator\Response\Internal\JsonSeqParser;
 use Duyler\OpenApi\Validator\Response\Internal\NdJsonParser;
+use Duyler\OpenApi\Validator\Response\Internal\RecordCollector;
 use Duyler\OpenApi\Validator\Response\Internal\SseParser;
 use Duyler\OpenApi\Validator\Response\Internal\StreamLineReader;
+use Duyler\OpenApi\Validator\Response\Internal\StreamingFormatParser;
 use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -22,14 +24,14 @@ use Psr\Log\NullLogger;
  * parsers under StreamingFormatParser. Format-specific semantics (BOM
  * handling, malformed-record policy, SSE event assembly, JSON-Seq record
  * separator) live in the parsers; this class only owns the
- * `enableStrictStreaming()` toggle, the record-count cap, and the
+ * `strictStreaming` constructor flag, the record-count cap, and the
  * per-format line/record size limits.
  */
 final readonly class StreamingContentParser
 {
-    private const int DEFAULT_MAX_LINE_LENGTH = 1_048_576;
-    private const int DEFAULT_MAX_RECORD_LENGTH = 10_485_760;
-    private const int DEFAULT_MAX_RECORDS = 100_000;
+    private const int DEFAULT_MAX_LINE_LENGTH = StreamLineReader::DEFAULT_MAX_LINE_LENGTH;
+    private const int DEFAULT_MAX_RECORD_LENGTH = JsonSeqParser::DEFAULT_MAX_RECORD_LENGTH;
+    private const int DEFAULT_MAX_RECORDS = RecordCollector::DEFAULT_MAX_RECORDS;
 
     private NdJsonParser $ndJson;
     private SseParser $sse;
@@ -43,31 +45,60 @@ final readonly class StreamingContentParser
         private readonly int $maxRecords = self::DEFAULT_MAX_RECORDS,
     ) {
         $lineReader = new StreamLineReader($maxLineLength);
-        $this->ndJson = new NdJsonParser($logger, $strictStreaming, $maxRecords, $maxLineLength);
-        $this->sse = new SseParser($logger, $strictStreaming, $maxRecords, $lineReader);
-        $this->jsonSeq = new JsonSeqParser($logger, $maxRecordLength, $strictStreaming, $maxRecords);
+
+        $this->ndJson = new NdJsonParser(
+            logger: $logger,
+            strictStreaming: $strictStreaming,
+            maxRecords: $maxRecords,
+            lineReader: $lineReader,
+        );
+        $this->sse = new SseParser(
+            logger: $logger,
+            strictStreaming: $strictStreaming,
+            maxRecords: $maxRecords,
+            lineReader: $lineReader,
+        );
+        $this->jsonSeq = new JsonSeqParser(
+            logger: $logger,
+            maxRecordLength: $maxRecordLength,
+            strictStreaming: $strictStreaming,
+            maxRecords: $maxRecords,
+            lineReader: $lineReader,
+        );
+    }
+
+    /**
+     * Resolve the format parser responsible for the given content type,
+     * using the same detection semantics as StreamingMediaTypeDetector.
+     *
+     * @internal
+     */
+    public function parserFor(string $contentType): ?StreamingFormatParser
+    {
+        return match (StreamingMediaTypeDetector::detect($contentType)) {
+            StreamingFormat::NdJson => $this->ndJson,
+            StreamingFormat::Sse => $this->sse,
+            StreamingFormat::JsonSeq => $this->jsonSeq,
+            null => null,
+        };
     }
 
     /**
      * Parse streaming content based on content type.
      *
-     * @return list<array<int|string, mixed>|null>
+     * @return list<array<int|string, mixed>|scalar|null>
      */
     public function parse(string $body, string $contentType): array
     {
-        return match (true) {
-            str_contains($contentType, 'application/jsonl'),
-            str_contains($contentType, 'application/x-ndjson') => $this->ndJson->parseString($body),
-            str_contains($contentType, 'text/event-stream') => $this->sse->parseString($body),
-            str_contains($contentType, 'application/json-seq') => $this->jsonSeq->parseString($body),
-            default => [],
-        };
+        $parser = $this->parserFor($contentType);
+
+        return null === $parser ? [] : $parser->parseString($body);
     }
 
     /**
      * Parse a PSR-7 stream in chunks without loading the entire body into memory.
      *
-     * @return list<array<int|string, mixed>|null>
+     * @return list<array<int|string, mixed>|scalar|null>
      */
     public function parseStream(StreamInterface $stream, string $contentType): array
     {
@@ -75,19 +106,15 @@ final readonly class StreamingContentParser
             return [];
         }
 
-        return match (true) {
-            str_contains($contentType, 'application/jsonl'),
-            str_contains($contentType, 'application/x-ndjson') => $this->ndJson->parseStream($stream),
-            str_contains($contentType, 'text/event-stream') => $this->sse->parseStream($stream),
-            str_contains($contentType, 'application/json-seq') => $this->jsonSeq->parseStream($stream),
-            default => [],
-        };
+        $parser = $this->parserFor($contentType);
+
+        return null === $parser ? [] : $parser->parseStream($stream);
     }
 
     /**
      * Parse JSON Lines (NDJSON) format.
      *
-     * @return list<array<int|string, mixed>|null>
+     * @return list<array<int|string, mixed>|scalar|null>
      */
     public function parseJsonLines(string $body): array
     {
@@ -97,7 +124,7 @@ final readonly class StreamingContentParser
     /**
      * Parse Server-Sent Events format.
      *
-     * @return list<array<int|string, mixed>|null>
+     * @return list<array<int|string, mixed>|scalar|null>
      */
     public function parseServerSentEvents(string $body): array
     {
@@ -107,7 +134,7 @@ final readonly class StreamingContentParser
     /**
      * Parse JSON Text Sequences (RFC 7464).
      *
-     * @return list<array<int|string, mixed>|null>
+     * @return list<array<int|string, mixed>|scalar|null>
      */
     public function parseJsonSeq(string $body): array
     {

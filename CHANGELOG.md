@@ -7,8 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `StreamingContentParser::parserFor()` resolves the format parser
+  responsible for a content type through the same detection logic as
+  `StreamingMediaTypeDetector::detect()`, and the new `StreamingFormat`
+  enum (`NdJson`, `Sse`, `JsonSeq`) is the single source of the routing
+  decision. Detection semantics are unified on `str_contains` with the
+  full patterns (`application/jsonl`, `application/x-ndjson`,
+  `text/event-stream`, `application/json-seq`) — the broader of the two
+  semantics previously split between the dispatcher and the detector — and
+  the boundary is pinned by detection vectors, including the explicit
+  rejection of vendor-suffixed types such as `application/vnd.foo+json-seq`.
+
 ### Changed
 
+- Streaming parsers now share one line/chunk reader, one record collector
+  and one media-type detector. `NdJsonParser::parseStream()` and
+  `JsonSeqParser::parseStream()` delegate to `StreamLineReader`
+  (`readLines()` / `readChunks()`) instead of re-implementing the
+  chunk-buffer loop, and the by-reference `readChunk(&$bomStripped)`
+  helpers are gone: the reader is stateless and the UTF-8 BOM flag lives
+  inside each read pass, so BOM stripping works per pass no matter how many
+  sequential streams are parsed through one `StreamingContentParser`.
+  Record counting, the 100 000-record cap, the JSON depth limit and the
+  malformed-record policy (strict throw vs log-and-skip) moved into a new
+  internal `RecordCollector`, keeping each format's existing degradation
+  behaviour (NDJSON/JSON-seq append `null`, SSE keeps the raw value).
+  Exceeding a line or record length limit now throws the domain
+  `StreamRecordTooLargeException` (extends `RuntimeException`, message
+  unchanged) instead of a bare `RuntimeException`, and scalar JSON values
+  (`42`, `"text"`, `true`) remain collected as records per the JSON Lines
+  and RFC 7464 specs. Limit values are unchanged.
 - String-loaded specs (`fromYamlString()` / `fromJsonString()`) no longer pay a
   second, cache-bypassing parse on every `build()` for the external-`$ref`
   confinement guard. The clean confinement verdict is now cached under the
