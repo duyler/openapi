@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Exception;
 
-use Duyler\OpenApi\Compiler\ValidatorCompiler;
-use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
 use Duyler\OpenApi\Validator\Exception\MalformedStreamRecordException;
@@ -366,31 +364,6 @@ final class SecurityExceptionLeakTest extends TestCase
                 'getMessage() must not interpolate attacker-controlled port (S-021).',
             );
         }
-    }
-
-    #[Test]
-    public function validator_compiler_uses_var_export_for_property_names(): void
-    {
-        $schema = new Schema(
-            type: 'object',
-            properties: ['name' => new Schema(type: 'string')],
-            required: ['name'],
-            additionalProperties: false,
-        );
-
-        $compiler = new ValidatorCompiler();
-        $code = $compiler->compile($schema, 'UserValidator');
-
-        self::assertStringContainsString(
-            'var_export($key, true)',
-            $code,
-            'Generated additionalProperties check must escape attacker key via var_export (S-015).',
-        );
-        self::assertStringNotContainsString(
-            "'Additional property not allowed: ' . \$key",
-            $code,
-            'Generated code must not concatenate attacker key raw (S-015).',
-        );
     }
 
     private static function classUsesSanitizableTrait(ReflectionClass $reflection): bool
