@@ -7,13 +7,13 @@ namespace Duyler\OpenApi\Schema\Model;
 final readonly class ObjectConstraints
 {
     /**
-     * @param array<string, Schema>|null          $properties
-     * @param list<string>|null                    $required
-     * @param Schema|bool|null                     $additionalProperties
-     * @param Schema|bool|null                     $unevaluatedProperties
-     * @param array<string, Schema>|null          $patternProperties
-     * @param array<string, Schema>|null          $dependentSchemas
-     * @param Schema|bool|null                     $propertyNames
+     * @param array<string, Schema>|null $properties
+     * @param list<string>|null $required
+     * @param Schema|bool|null $additionalProperties
+     * @param Schema|bool|null $unevaluatedProperties
+     * @param array<string, Schema>|null $patternProperties
+     * @param array<string, Schema>|null $dependentSchemas
+     * @param Schema|bool|null $propertyNames
      */
     public function __construct(
         public ?array $properties = null,

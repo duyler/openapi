@@ -313,12 +313,6 @@ final class SchemaCacheTest extends TestCase
         $cache->set('test_key', $document);
     }
 
-    /**
-     * CA-01: Multiple keys are stored and retrieved independently.
-     *
-     * Verifies that storing two documents under different keys does not
-     * interfere — each key retrieves exactly the document stored under it.
-     */
     #[Test]
     public function multiple_keys_are_stored_and_retrieved_independently(): void
     {
@@ -359,9 +353,6 @@ final class SchemaCacheTest extends TestCase
         self::assertNotSame($retrieved1, $retrieved2);
     }
 
-    /**
-     * CA-01: A miss on one key does not affect another key's hit.
-     */
     #[Test]
     public function miss_on_one_key_does_not_affect_another_key(): void
     {
@@ -395,10 +386,6 @@ final class SchemaCacheTest extends TestCase
         self::assertSame($doc, $cache->get('stored_key'));
     }
 
-    /**
-     * CA-02: Setting the same key twice replaces the previously stored
-     * document — the second document becomes the one retrieved.
-     */
     #[Test]
     public function overwrite_same_key_replaces_previous_document(): void
     {
@@ -437,11 +424,6 @@ final class SchemaCacheTest extends TestCase
         self::assertNotSame($docV1, $retrieved);
     }
 
-    /**
-     * CA-02: SchemaCache itself is a readonly class (immutable wrapper);
-     * the underlying pool state changes, but no setter exposes mutations
-     * on the SchemaCache instance. Verify readonly-by-construction.
-     */
     #[Test]
     public function schema_cache_is_readonly_class(): void
     {
@@ -453,10 +435,6 @@ final class SchemaCacheTest extends TestCase
         self::assertTrue($reflection->isReadOnly());
     }
 
-    /**
-     * CA-02: Calling set on one SchemaCache instance does not leak into
-     * another instance built on a different pool.
-     */
     #[Test]
     public function set_on_one_cache_does_not_affect_other_cache_with_different_pool(): void
     {
@@ -480,9 +458,6 @@ final class SchemaCacheTest extends TestCase
     }
 
     /**
-     * Build a PHPUnit mock that behaves like an in-memory cache pool backed
-     * by the given reference array.
-     *
      * @param array<string, mixed> $storage
      */
     private function buildInMemoryPool(array &$storage): CacheItemPoolInterface

@@ -244,12 +244,6 @@ final class RefResolverOverrideTest extends TestCase
         self::assertSame('Override Title', $result->title);
     }
 
-    /**
-     * SPEC-02 / JSON Schema 2020-12 §8.2.3: a sibling `minLength` next to
-     * `$ref` must be applied as an additional constraint on the resolved
-     * schema. Without sibling merge the constraint would be silently
-     * dropped, allowing shorter values through.
-     */
     #[Test]
     public function resolve_schema_with_override_applies_sibling_min_length(): void
     {
@@ -263,12 +257,6 @@ final class RefResolverOverrideTest extends TestCase
         self::assertSame(5, $result->minLength);
     }
 
-    /**
-     * SPEC-02 / JSON Schema 2020-12 §8.2.3: sibling `properties` next to
-     * `$ref` are merged shallowly into the resolved schema's properties.
-     * Sibling-defined property schemas are added on top of the resolved
-     * ones; on key collision the sibling entry wins.
-     */
     #[Test]
     public function resolve_schema_with_override_merges_sibling_properties(): void
     {
@@ -292,12 +280,6 @@ final class RefResolverOverrideTest extends TestCase
         self::assertSame($siblingRoleSchema, $result->properties['role']);
     }
 
-    /**
-     * SPEC-02 / JSON Schema 2020-12 §8.2.3: a sibling `enum` and the
-     * referenced schema's `enum` both apply, so the merged schema must
-     * accept only the intersection. Without intersection logic either
-     * side would be silently dropped.
-     */
     #[Test]
     public function resolve_schema_with_override_intersects_sibling_enum(): void
     {
@@ -316,11 +298,6 @@ final class RefResolverOverrideTest extends TestCase
         self::assertSame([1, 2], $result->enum);
     }
 
-    /**
-     * SPEC-02: a pure `$ref` without siblings resolves unchanged — the
-     * resolved schema is returned as-is (only the `$ref` family is
-     * cleared because resolution is complete).
-     */
     #[Test]
     public function resolve_schema_with_override_passthrough_without_siblings(): void
     {
@@ -346,11 +323,6 @@ final class RefResolverOverrideTest extends TestCase
         self::assertArrayHasKey('name', $result->properties);
     }
 
-    /**
-     * SPEC-02: a sibling `title` overrides the resolved schema's title
-     * per the historical OpenAPI override semantics preserved by the
-     * merge strategy.
-     */
     #[Test]
     public function resolve_schema_with_override_sibling_title_overrides_resolved(): void
     {
@@ -369,10 +341,6 @@ final class RefResolverOverrideTest extends TestCase
         self::assertSame('Sibling', $result->title);
     }
 
-    /**
-     * SPEC-02: resolved-only fields are preserved when the sibling does
-     * not declare them. The sibling wins only when it sets a value.
-     */
     #[Test]
     public function resolve_schema_with_override_preserves_resolved_only_fields(): void
     {
@@ -394,10 +362,6 @@ final class RefResolverOverrideTest extends TestCase
         self::assertSame(10, $result->maxLength);
     }
 
-    /**
-     * SPEC-02: sibling `required` is unioned with the resolved schema's
-     * `required` so that both required lists apply.
-     */
     #[Test]
     public function resolve_schema_with_override_unions_sibling_required(): void
     {
@@ -419,12 +383,6 @@ final class RefResolverOverrideTest extends TestCase
         self::assertSame(['name', 'role'], $required);
     }
 
-    /**
-     * SPEC-02 end-to-end: a sibling `minLength` next to `$ref` must be
-     * enforced against actual data after the merge. Without sibling merge
-     * the constraint would be silently dropped and short values would
-     * pass downstream validation.
-     */
     #[Test]
     public function resolve_schema_with_override_validates_min_length_via_validator(): void
     {
@@ -445,12 +403,6 @@ final class RefResolverOverrideTest extends TestCase
         }
     }
 
-    /**
-     * SPEC-02 end-to-end: a sibling `enum` next to `$ref` intersects with
-     * the resolved schema's `enum`, and the merged schema must reject
-     * values that were valid in the resolved enum but absent from the
-     * sibling enum.
-     */
     #[Test]
     public function resolve_schema_with_override_validates_enum_intersection_via_validator(): void
     {

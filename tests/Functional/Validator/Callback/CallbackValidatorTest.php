@@ -35,11 +35,6 @@ final class CallbackValidatorTest extends TestCase
         $requestValidator = $this->createStub(RequestValidatorInterface::class);
         $requestValidator->method('validate');
 
-        // Lax mode is opted into explicitly: the historical tests in this
-        // file exercise the routing/matching/resolution logic of the
-        // inner validator with runtime-template expressions treated as
-        // wildcards. Strict-mode defaults are covered separately by
-        // inner_constructor_defaults_to_strict_when_called_without_flag.
         $this->callbackValidator = new CallbackValidator(
             $requestValidator,
             new PathRegexCache(),
@@ -54,8 +49,6 @@ final class CallbackValidatorTest extends TestCase
         $requestValidator = $this->createStub(RequestValidatorInterface::class);
         $requestValidator->method('validate');
 
-        // Arrange: omit the third argument — the constructor must default
-        // to strict (fail-closed) to match OpenApiValidatorBuilder.
         $validator = new CallbackValidator(
             $requestValidator,
             new PathRegexCache(),
@@ -73,7 +66,6 @@ final class CallbackValidatorTest extends TestCase
         $this->expectException(UnresolvableCallbackPathException::class);
         $this->expectExceptionMessage('{$request.body#/callback_url}');
 
-        // Act + Assert: strict default throws on the runtime template.
         $validator->validate($request, 'myCallback', $document);
     }
 
@@ -83,7 +75,6 @@ final class CallbackValidatorTest extends TestCase
         $requestValidator = $this->createStub(RequestValidatorInterface::class);
         $requestValidator->method('validate');
 
-        // Arrange: explicit opt-out of strict mode — legacy wildcard behaviour.
         $validator = new CallbackValidator(
             $requestValidator,
             new PathRegexCache(),
@@ -99,10 +90,8 @@ final class CallbackValidatorTest extends TestCase
 
         $request = $this->psrFactory->createServerRequest('POST', '/attacker-controlled-url');
 
-        // Act: legacy wildcard accepts any path.
         $resolved = $validator->validate($request, 'myCallback', $document);
 
-        // Assert: runtime template falls through to wildcard match.
         $this->assertSame('myCallback', $resolved->operationId);
     }
 

@@ -12,10 +12,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * OAS 3.0 has no way to attach `nullable` to a `$ref`, so the documented workaround is to
- * wrap the reference in a single-branch composition and put `nullable: true` beside it.
- * The keyword sits on the parent, not on the branch, and must be honored there.
- *
  * @internal
  */
 final class NullableCompositionTest extends TestCase
@@ -255,11 +251,6 @@ final class NullableCompositionTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * A `null` member of a `type` union is ordinary JSON Schema and keeps composing: `allOf`
-     * branches still have to match. Only OAS `nullable: true` — which the spec defines as
-     * "allows sending a null value for the defined schema" — waives them.
-     */
     #[Test]
     public function oas_31_null_type_union_on_parent_does_not_waive_composition_branches(): void
     {

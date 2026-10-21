@@ -306,11 +306,6 @@ class UnevaluatedItemsValidatorTest extends TestCase
         self::assertSame(true, $succeeded);
     }
 
-    /**
-     * C-002 regression: prefixItems + items together. Items schema
-     * evaluates every index >= prefixItems count, so the unevaluated
-     * set must be empty for data whose tail items all conform to items.
-     */
     #[Test]
     public function unevaluated_items_with_prefix_items_and_items_schema_passes_tail(): void
     {
@@ -336,12 +331,6 @@ class UnevaluatedItemsValidatorTest extends TestCase
         self::assertSame(true, $succeeded);
     }
 
-    /**
-     * C-003 regression: contains annotations register matched indices,
-     * and unevaluatedItems reads them through ValidationContext.
-     * Indices 0,1 are marked evaluated via annotations; index 2 ("x")
-     * remains unevaluated and fails the boolean unevaluatedItems schema.
-     */
     #[Test]
     public function unevaluated_items_with_contains_only_fails_unevaluated_index(): void
     {
@@ -368,11 +357,6 @@ class UnevaluatedItemsValidatorTest extends TestCase
         self::assertNotNull($caught, 'Index 2 ("x") is unevaluated and fails the boolean unevaluatedItems schema');
     }
 
-    /**
-     * C-003 anti-test seed: without annotations, all three indices are
-     * considered unevaluated; even valid items at 0,1 fail the boolean
-     * unevaluatedItems schema.
-     */
     #[Test]
     public function unevaluated_items_without_contains_annotations_fails_on_all_indices(): void
     {
@@ -395,10 +379,6 @@ class UnevaluatedItemsValidatorTest extends TestCase
         self::assertNotNull($caught, 'Without annotations, integer items 1,2 fail the boolean unevaluatedItems schema');
     }
 
-    /**
-     * C-004 regression: composition-validated items contribute
-     * evaluated indices via context annotations.
-     */
     #[Test]
     public function unevaluated_items_uses_composition_annotations_from_context(): void
     {

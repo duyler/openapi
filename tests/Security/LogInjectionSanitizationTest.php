@@ -13,11 +13,6 @@ use function str_repeat;
 use function strlen;
 
 /**
- * P-037 regression: LogContextSanitizer must truncate long strings and
- * escape control characters before they enter PSR-3 log context, so a
- * plaintext logger (Monolog StreamHandler) cannot be injected with fake
- * log lines via newline injection or buried content.
- *
  * @internal
  */
 final class LogInjectionSanitizationTest extends TestCase
@@ -35,7 +30,7 @@ final class LogInjectionSanitizationTest extends TestCase
         self::assertLessThan(
             400,
             strlen($sanitized),
-            'Sanitized output must stay well under the original 1KB size (P-037)',
+            'Sanitized output must stay well under the original 1KB size',
         );
         self::assertStringContainsString('truncated', $sanitized);
         self::assertStringContainsString('1024 bytes total', $sanitized);
@@ -51,7 +46,7 @@ final class LogInjectionSanitizationTest extends TestCase
         self::assertStringNotContainsString(
             "\n",
             $sanitized,
-            'Newline must be escaped so the logger cannot be injected with fake lines (P-037)',
+            'Newline must be escaped so the logger cannot be injected with fake lines',
         );
         self::assertStringContainsString('\x0a', $sanitized);
     }

@@ -11,15 +11,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/**
- * Pins the override-where-not-null contract of {@see Schema::withOverrides()}.
- *
- * `withOverrides` uses `$arg ?? $this->arg`, so for nullable parameters a
- * passed `null` means "keep the original", while a non-null value replaces it.
- * For booleans (typed `?bool` in withOverrides vs `bool` in __construct), an
- * explicit `false` IS an override, not a fallback — this is the only way to
- * flip a `true` back to `false` on an immutable DTO.
- */
 #[CoversClass(Schema::class)]
 final class SchemaWithOverridesTest extends TestCase
 {
@@ -39,7 +30,6 @@ final class SchemaWithOverridesTest extends TestCase
 
         $result = $original->withOverrides();
 
-        // Equivalent field-for-field — but a distinct immutable instance.
         self::assertNotSame($original, $result);
         self::assertSame('object', $result->type);
         self::assertSame('User', $result->title);
@@ -67,7 +57,6 @@ final class SchemaWithOverridesTest extends TestCase
     {
         $original = new Schema(type: 'string', title: 'Keep', pattern: '^[a-z]+$');
 
-        // Explicit null on a nullable parameter means "no override".
         $result = $original->withOverrides(type: null, title: null, pattern: null);
 
         self::assertSame('string', $result->type);
@@ -78,9 +67,6 @@ final class SchemaWithOverridesTest extends TestCase
     #[Test]
     public function with_overrides_false_flips_boolean_back_to_false(): void
     {
-        // Adversarial guard: `false ?? $this->x` evaluates to `false`, NOT to
-        // `$this->x`. If anyone "simplifies" withOverrides to use
-        // `func_get_args` or argument-count checks, this test catches it.
         $original = new Schema(
             deprecated: true,
             readOnly: true,
@@ -119,7 +105,6 @@ final class SchemaWithOverridesTest extends TestCase
             nullable: true,
         );
 
-        // null on ?bool means "no override" — `true` survives.
         $result = $original->withOverrides(
             deprecated: null,
             readOnly: null,
@@ -221,10 +206,6 @@ final class SchemaWithOverridesTest extends TestCase
     #[Test]
     public function with_overrides_null_keeps_original_for_default_and_const(): void
     {
-        // Adversarial guard: even though `default` and `const` accept `null`
-        // as a valid value at construction, withOverrides uses `$x ?? $this->x`,
-        // and `??` treats null as "no override" regardless of parameter type.
-        // This pins the uniform ?? semantics: null never overrides.
         $original = new Schema(
             type: 'string',
             default: 'keep-default',
@@ -250,7 +231,6 @@ final class SchemaWithOverridesTest extends TestCase
             hasDefault: true,
         );
 
-        // A non-null value overrides, including empty string / empty array.
         $result = $original->withOverrides(default: '', hasDefault: false);
 
         self::assertSame('', $result->default);

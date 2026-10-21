@@ -170,7 +170,6 @@ final class NumberStringNormalizerTest extends TestCase
     #[Test]
     public function cast_string_to_float_returns_float_for_representable_scientific_at_boundary(): void
     {
-        // 1e308 is representable (PHP_FLOAT_MAX ~ 1.8e308); exponent 308 < 320 DoS bound.
         $this->assertSame(1.0E+308, NumberStringNormalizer::castStringToFloatOrFail('1e308'));
     }
 
@@ -194,25 +193,12 @@ final class NumberStringNormalizerTest extends TestCase
     #[Test]
     public function cast_string_to_float_rejects_at_exponent_boundary_320_with_inf_reason(): void
     {
-        // Exponent 320 does not trip the DoS guard (abs($exponent) > 320), but
-        // (float) '1e320' overflows the IEEE-754 double range to INF. R4-SEC-014:
-        // the explicit is_infinite check rejects the value with an informative
-        // 'overflows IEEE-754 double range (INF)' reason instead of relying on
-        // the misleading 'loses precision' path.
         $this->expectException(TypeMismatchError::class);
         $this->expectExceptionMessage('Numeric value overflows IEEE-754 double range (INF)');
 
         NumberStringNormalizer::castStringToFloatOrFail('1e320');
     }
 
-    /**
-     * Anti-test: to verify this test guards against regression, temporarily
-     * remove the is_infinite check after `(float) $value` in
-     * NumberStringNormalizer::castStringToFloatOrFail(). Without the guard,
-     * '1e309' overflows to INF and the precision-loss canonicalize path
-     * returns a misleading 'String value loses precision when converted to
-     * float' message that hides the actual INF overflow.
-     */
     #[Test]
     public function cast_string_to_float_rejects_1e309_with_inf_reason(): void
     {
@@ -289,9 +275,6 @@ final class NumberStringNormalizerTest extends TestCase
     {
         $this->expectException(TypeMismatchError::class);
 
-        // PHP_INT_MAX as a string loses precision when cast to float: the round-trip
-        // canonical form differs (...807 → ...808) because IEEE-754 cannot represent
-        // 19 significant decimal digits.
         NumberStringNormalizer::castStringToFloatOrFail((string) PHP_INT_MAX);
     }
 
@@ -309,11 +292,6 @@ final class NumberStringNormalizerTest extends TestCase
     #[Test]
     public function cast_string_to_float_passes_nan_string_through_as_zero(): void
     {
-        // 'NaN' does not match NUMBER_PATTERN, so canonicalize returns null and the
-        // precision-loss check is skipped. PHP 8.5's (float) cast of a non-numeric
-        // string yields 0.0 (deprecation-grade behavior). Locking the pass-through
-        // contract: this layer defends against precision loss on numeric strings,
-        // not against non-numeric input. Callers filter non-numeric strings upstream.
         $this->assertSame(0.0, NumberStringNormalizer::castStringToFloatOrFail('NaN'));
     }
 

@@ -110,14 +110,6 @@ class ContentMediaTypeValidatorTest extends TestCase
         $this->validator->validate('', $schema);
     }
 
-    /**
-     * Anti-test for EI-003: proves isValidJson is independent of the global
-     * json_last_error state. In long-running runtimes (Swoole coroutines,
-     * RoadRunner, FrankenPHP) the global error code is shared across requests
-     * and coroutines; an unrelated failed json_decode could otherwise corrupt
-     * the validator's verdict (false-positive "valid"). With JSON_THROW_ON_ERROR
-     * the check is atomic and immune to such pollution.
-     */
     #[Test]
     public function json_validation_is_independent_of_global_json_error_state(): void
     {
@@ -136,13 +128,6 @@ class ContentMediaTypeValidatorTest extends TestCase
         self::assertSame(true, $succeeded);
     }
 
-    /**
-     * Anti-test for EI-051: proves the depth limit blocks DoS payloads with
-     * deeply-nested JSON. Default json_decode depth is 512; the validator
-     * enforces 128, which rejects a payload of depth 200 with
-     * InvalidContentMediaTypeException. Without the limit the parser could
-     * stack-overflow or burn CPU on a malicious payload.
-     */
     #[Test]
     public function deeply_nested_json_above_max_depth_is_rejected(): void
     {
@@ -155,10 +140,6 @@ class ContentMediaTypeValidatorTest extends TestCase
         $this->validator->validate($depthExceedingPayload, $schema);
     }
 
-    /**
-     * Boundary test for EI-051: proves JSON nested within the depth limit
-     * (depth 100, under the cap of 128) passes validation.
-     */
     #[Test]
     public function deeply_nested_json_within_max_depth_is_accepted(): void
     {
@@ -177,14 +158,6 @@ class ContentMediaTypeValidatorTest extends TestCase
         self::assertSame(true, $succeeded);
     }
 
-    /**
-     * Documents the exact depth cutoff: payloads nested at JSON_MAX_DEPTH - 1
-     * (127 levels) pass validation, while JSON_MAX_DEPTH (128 levels) is
-     * rejected. PHP's json_decode depth parameter has an off-by-one — depth=N
-     * permits nesting up to N-1. This test locks the boundary so a future
-     * change to the constant or to the depth parameter is immediately
-     * detected.
-     */
     #[Test]
     public function json_depth_boundary_is_enforced_at_max_depth_minus_one(): void
     {
@@ -504,11 +477,6 @@ XML;
         $this->validator->validate('not multipart', $schema);
     }
 
-    /**
-     * P-013: RFC 7578 §4 requires both an opening boundary (`--boundary`)
-     * and a closing boundary (`--boundary--`) at the end. A payload with
-     * only an opening boundary MUST be rejected.
-     */
     #[Test]
     public function rejects_only_opening_boundary(): void
     {
@@ -661,15 +629,6 @@ XML;
         self::assertFalse(libxml_use_internal_errors());
     }
 
-    /**
-     * Defense-in-depth anti-test for the schema validator: proves that the
-     * deny-all external entity loader (installed by LibxmlSecuredContext)
-     * blocks file:// resolution even if a future commit accidentally adds
-     * LIBXML_NOENT to XML_PARSE_OPTIONS. Without LIBXML_NOENT XXE is already
-     * blocked by simplexml_load_string semantics; this test demonstrates
-     * that the loader itself is the invariant guard, so the protection no
-     * longer relies solely on the absence of a flag.
-     */
     #[Test]
     public function deny_all_loader_blocks_file_resolution_even_with_noent_flag_in_xml_validation(): void
     {

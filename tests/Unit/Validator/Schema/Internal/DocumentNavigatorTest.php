@@ -137,9 +137,6 @@ final class DocumentNavigatorTest extends TestCase
     #[Test]
     public function navigate_enforces_max_depth_bound_on_recursion(): void
     {
-        // 70-segment pointer through nested properties on the same schema
-        // cannot be constructed without recursion, so the bound check
-        // fires via the per-segment MAX_DEPTH guard.
         $leaf = new Schema(type: 'string');
         $current = $leaf;
         for ($i = 0; $i < 70; ++$i) {

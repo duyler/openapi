@@ -6,7 +6,6 @@ namespace Duyler\OpenApi\Test\Functional\Regression;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
-use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -18,14 +17,6 @@ use function parse_url;
 use const PHP_URL_QUERY;
 
 /**
- * Regression suite for issue #60: parameter coercion did not recurse into
- * `object` properties or `array` items, so a nested `integer` / `number` /
- * `boolean` was unsatisfiable — query, path, header and cookie values arrive
- * as strings, and coercion was the only path to a non-string leaf.
- *
- * Anti-test: removing the `object` / `array` arms from
- * {@see TypeCoercer::coerceToType()} makes every nested case below fail again.
- *
  * @internal
  */
 final class NestedParameterCoercionRegressionTest extends TestCase

@@ -22,7 +22,6 @@ final readonly class CandidatePrioritizer
 
     /**
      * @param array<int, array{0: Operation, 1: array<string, string>}> $candidates
-     *
      * @return array{0: Operation, 1: array<string, string>}
      */
     public function prioritize(array $candidates): array

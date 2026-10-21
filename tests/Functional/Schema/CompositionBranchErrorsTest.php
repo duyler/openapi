@@ -9,7 +9,6 @@ use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Duyler\OpenApi\Validator\Schema\OneOfValidatorWithContext;
 
 use function array_map;
 use function array_unique;
@@ -121,12 +120,6 @@ final class CompositionBranchErrorsTest extends TestCase
         $this->assertNoDuplicates($exception);
     }
 
-    /**
-     * `oneOf` is deliberately excluded: it is dispatched to
-     * {@see OneOfValidatorWithContext}, which evaluates
-     * keyword groups in a different order, so it surfaces a different — but equally
-     * valid — violation of the same branch. See the "Related observation" in #52.
-     */
     #[Test]
     public function all_of_and_any_of_report_the_same_errors_for_the_same_failing_branch(): void
     {

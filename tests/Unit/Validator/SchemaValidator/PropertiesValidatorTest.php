@@ -263,12 +263,6 @@ class PropertiesValidatorTest extends TestCase
         self::assertSame('type', $errors[0]->keyword());
     }
 
-    /**
-     * P-010 changed SchemaValueNormalizer to normalize stdClass to its
-     * property-view array. A stdClass-typed property value therefore no
-     * longer triggers InvalidDataTypeException at the normalizer; it
-     * fails validation as a regular TypeMismatchError against the schema.
-     */
     #[Test]
     public function validate_property_with_invalid_type_throws_meaningful_exception(): void
     {

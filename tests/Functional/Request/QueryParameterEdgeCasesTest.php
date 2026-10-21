@@ -883,28 +883,13 @@ YAML;
         $validator->validateRequest($request);
     }
 
-    /**
-     * QP-02: Duplicate scalar keys `?a=1&a=2` — actual behavior is form-style
-     * implode, NOT PHP's pre-8.5 last-value-wins and NOT array form.
-     *
-     * QueryParser collects duplicate scalar pairs into an indexed array
-     * `['1', '2']` (see QueryParser::resolveGroup allScalar branch). Then
-     * ParameterDeserializer::deserializeForm with explode=false implodes
-     * the array to the comma-separated string "1,2". The resulting string
-     * validates against `type: string`.
-     *
-     * This test documents the value via a `const: '1,2'` constraint:
-     * successful validation proves the duplicate keys were collapsed to
-     * the string "1,2" (form-style), not "2" (last-value) and not the
-     * array ["1","2"].
-     */
     #[Test]
     public function qp_02_duplicate_scalar_keys_collapse_to_form_imploded_string(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
 info:
-  title: QP-02 Duplicate API
+  title: Duplicate API
   version: 1.0.0
 paths:
   /search:
@@ -932,18 +917,13 @@ YAML;
         $this->assertSame('GET', $operation->method);
     }
 
-    /**
-     * QP-02 negative: const='2' (last-value semantics) — confirms the
-     * validator does NOT use last-value-wins. The actual stored value is
-     * "1,2" (comma-joined), not "2".
-     */
     #[Test]
     public function qp_02_duplicate_scalar_keys_do_not_use_last_value_semantics(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
 info:
-  title: QP-02 Duplicate API
+  title: Duplicate API
   version: 1.0.0
 paths:
   /search:
@@ -980,18 +960,13 @@ YAML;
         self::assertSame('2', $caught->params()['expected']);
     }
 
-    /**
-     * QP-02 negative: type=array with duplicate keys. The form-style
-     * implode collapses the array back to a string "1,2", which fails
-     * the `type: array` check with TypeMismatchError.
-     */
     #[Test]
     public function qp_02_duplicate_scalar_keys_with_array_schema_throws_type_mismatch(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
 info:
-  title: QP-02 Duplicate API
+  title: Duplicate API
   version: 1.0.0
 paths:
   /search:
@@ -1029,24 +1004,13 @@ YAML;
         self::assertSame('string', $caught->params()['actual']);
     }
 
-    /**
-     * QP-04: `style: form` with comma-separated value `?color=black,white`
-     * against `type: array` — ParameterDeserializer::deserializeForm splits
-     * the string into the array ["black", "white"], which then validates
-     * against the array schema.
-     *
-     * The actual split into array form is observed through `items.enum`:
-     * each split value must be in `[black, white]`. Successful validation
-     * proves the comma-separated value was deserialized to a 2-element
-     * array.
-     */
     #[Test]
     public function qp_04_form_style_comma_separated_value_splits_to_array(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
 info:
-  title: QP-04 Form Object API
+  title: Form Object API
   version: 1.0.0
 paths:
   /search:
@@ -1077,17 +1041,13 @@ YAML;
         $this->assertSame('GET', $operation->method);
     }
 
-    /**
-     * QP-04 negative: comma-separated value contains an item not in the
-     * items.enum — EnumError on the offending item at items index 1.
-     */
     #[Test]
     public function qp_04_form_style_invalid_item_value_throws_enum_error(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
 info:
-  title: QP-04 Form Object API
+  title: Form Object API
   version: 1.0.0
 paths:
   /search:
@@ -1130,24 +1090,13 @@ YAML;
         self::assertSame('red', $errors[0]->params()['actual']);
     }
 
-    /**
-     * QP-04 negative: `style: form` against `type: object`.
-     *
-     * ParameterDeserializer splits the comma-separated value to an indexed
-     * array ["black", "white"]. JSON Schema treats indexed arrays and
-     * objects as distinct types, so `type: object` rejects the array form
-     * with TypeMismatchError.
-     *
-     * This documents the actual implementation: form-style object
-     * serialization is not supported by the deserializer.
-     */
     #[Test]
     public function qp_04_form_style_against_object_schema_throws_type_mismatch(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
 info:
-  title: QP-04 Form Object API
+  title: Form Object API
   version: 1.0.0
 paths:
   /search:
@@ -1185,17 +1134,8 @@ YAML;
     }
 
     /**
-     * QP-06: Special characters in query values are URL-decoded by the
-     * QueryParser (via `urldecode($rawValue)`). The decoded value is then
-     * validated against the schema constraint.
-     *
-     * PSR-7 preserves the raw encoded form in `getUri()->getQuery()`. The
-     * QueryParser decodes both `%XX` sequences and `+` (plus sign) to
-     * space. This is verified by `const` constraints that match the
-     * decoded form, not the raw form.
-     *
-     * @param non-empty-string $rawQueryValue the raw value placed in the URL (already URL-encoded where needed)
-     * @param non-empty-string $expectedDecodedValue the value the validator should see after URL-decoding
+     * @param non-empty-string $rawQueryValue
+     * @param non-empty-string $expectedDecodedValue
      */
     #[Test]
     #[DataProvider('provideSpecialCharacterCases')]
@@ -1206,7 +1146,7 @@ YAML;
         $yaml = <<<YAML
 openapi: 3.2.0
 info:
-  title: QP-06 Special Characters API
+  title: Special Characters API
   version: 1.0.0
 paths:
   /search:
@@ -1234,22 +1174,13 @@ YAML;
         $this->assertSame('GET', $operation->method);
     }
 
-    /**
-     * QP-06 negative: raw encoded value does NOT satisfy a const that
-     * matches the raw (encoded) form. The validator sees the decoded
-     * form only, so a const against the encoded form must fail.
-     *
-     * Uses `?q=hello%20world` (encoded space) against `const: 'hello%20world'`
-     * (literal percent-twenty-zero). ConstError actual='hello world'
-     * (decoded) vs expected='hello%20world' (raw).
-     */
     #[Test]
     public function qp_06_url_encoded_value_does_not_match_raw_const(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
 info:
-  title: QP-06 Special Characters API
+  title: Special Characters API
   version: 1.0.0
 paths:
   /search:
@@ -1287,13 +1218,8 @@ YAML;
     }
 
     /**
-     * QP-06 unit-level: QueryParser URL-decodes both `%XX` sequences and
-     * `+` to space, matching the application/x-www-form-urlencoded spec
-     * (RFC 1866 §8.2.1). This complements the full-cycle test by
-     * verifying the parser behavior in isolation.
-     *
-     * @param non-empty-string $rawQuery the raw query string passed to the parser
-     * @param non-empty-string $expectedValue the expected decoded value for key 'q'
+     * @param non-empty-string $rawQuery
+     * @param non-empty-string $expectedValue
      */
     #[Test]
     #[DataProvider('provideSpecialCharacterParserCases')]
@@ -1304,26 +1230,13 @@ YAML;
         $this->assertSame(['q' => $expectedValue], $result);
     }
 
-    /**
-     * QP-07: Brackets in keys without `style: deepObject` — `?arr[0]=a`.
-     *
-     * QueryParser uses a segment-based parser (insertNested + assignSegments)
-     * for bracket keys (resolveGroup allScalar=false branch), producing
-     * `['arr' => ['a']]`. For a schema with `type: string`,
-     * ParameterDeserializer::deserializeForm implodes the single-element
-     * array to "a", which satisfies the `const: 'a'` constraint.
-     *
-     * This documents the actual behavior: bracket notation without
-     * deepObject is parsed to array form, then collapsed by form-style
-     * implode when the schema type is string.
-     */
     #[Test]
     public function qp_07_bracket_key_without_deep_object_collapses_to_string(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
 info:
-  title: QP-07 Brackets API
+  title: Brackets API
   version: 1.0.0
 paths:
   /search:
@@ -1351,17 +1264,13 @@ YAML;
         $this->assertSame('GET', $operation->method);
     }
 
-    /**
-     * QP-07 detail: multiple indexed brackets `?arr[0]=a&arr[1]=b`
-     * collapse to the form-imploded string "a,b" against a string schema.
-     */
     #[Test]
     public function qp_07_multiple_bracket_keys_collapse_to_form_imploded_string(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
 info:
-  title: QP-07 Brackets API
+  title: Brackets API
   version: 1.0.0
 paths:
   /search:
@@ -1388,22 +1297,13 @@ YAML;
         $this->assertSame('/search', $operation->path);
     }
 
-    /**
-     * QP-07 negative: bracket keys against `type: array` schema.
-     *
-     * The form-style implode collapses the array back to a string, which
-     * fails the `type: array` check. To use bracket notation for array
-     * query parameters, the schema must use `style: deepObject` or the
-     * request must use bracket-explode syntax `?arr[]=a` (covered by
-     * `form_explode_*` tests above).
-     */
     #[Test]
     public function qp_07_bracket_keys_with_array_schema_throws_type_mismatch(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
 info:
-  title: QP-07 Brackets API
+  title: Brackets API
   version: 1.0.0
 paths:
   /search:
@@ -1441,12 +1341,6 @@ YAML;
         self::assertSame('string', $caught->params()['actual']);
     }
 
-    /**
-     * QP-07 unit-level: QueryParser parses bracket keys via segment-based
-     * parser (insertNested + assignSegments), producing nested array
-     * structures. This complements the full-cycle test by verifying the
-     * parser behavior in isolation.
-     */
     #[Test]
     public function qp_07_query_parser_bracket_key_produces_nested_array(): void
     {
@@ -1455,10 +1349,6 @@ YAML;
         $this->assertSame(['arr' => ['a']], $result);
     }
 
-    /**
-     * A non-exploded `form` array parameter -- the JSON:API `include` shape --
-     * accepts any number of items, including one and none.
-     */
     #[Test]
     #[DataProvider('provideFormArrayItemCounts')]
     public function form_array_accepts_any_item_count(string $uri): void

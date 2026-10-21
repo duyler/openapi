@@ -11,24 +11,10 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Duyler\OpenApi\Validator\Format\BuiltinFormats;
-use Duyler\OpenApi\Validator\Format\String\TimeValidator;
 
 use function sprintf;
 
 /**
- * Regression suite for R4-SPEC-006 / R4-TEST-009: the `time` format
- * requires a UTC offset per RFC 3339 §5.6 (Z, +HH:MM, -HH:MM).
- *
- * Anti-test: re-introducing the `?` quantifier on the offset-group of
- * {@see TimeValidator::TIME_PATTERN}
- * makes every "rejected" dataset below silently pass.
- *
- * Unlike the inline TimeValidatorTest, this suite drives every value
- * through the public builder path so the regression also fires when
- * the {@see BuiltinFormats} registry
- * stops wiring TimeValidator.
- *
  * @internal
  */
 final class TimeValidatorOffsetRequiredRegressionTest extends TestCase

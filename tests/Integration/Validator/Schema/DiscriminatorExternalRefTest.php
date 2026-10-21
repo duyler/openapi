@@ -18,14 +18,6 @@ use PHPUnit\Framework\TestCase;
 
 use function sprintf;
 
-/**
- * DI-08: Discriminator mapping with external $ref.
- *
- * OpenAPI 3.2 spec allows discriminator mapping values to be either local
- * pointers ('#/components/schemas/Foo') or external references (URIs, file
- * paths). This codebase only supports local pointer refs; external refs are
- * rejected by RefResolver.
- */
 #[CoversClass(DiscriminatorValidator::class)]
 #[CoversClass(RefResolver::class)]
 final class DiscriminatorExternalRefTest extends TestCase
@@ -33,7 +25,7 @@ final class DiscriminatorExternalRefTest extends TestCase
     private const string EXTERNAL_URL_MAPPING_SPEC = <<<'YAML'
 openapi: 3.2.0
 info:
-  title: DI-08 External URL Mapping API
+  title: External URL Mapping API
   version: 1.0.0
 paths: {}
 components:
@@ -77,7 +69,7 @@ YAML;
     private const string RELATIVE_FILE_MAPPING_SPEC = <<<'YAML'
 openapi: 3.2.0
 info:
-  title: DI-08 Relative File Mapping API
+  title: Relative File Mapping API
   version: 1.0.0
 paths: {}
 components:
@@ -118,15 +110,6 @@ components:
           type: string
 YAML;
 
-    /**
-     * Negative: a string-loaded spec whose discriminator mapping
-     * references an external https URL is rejected at `build()` time
-     * with `BuilderException` (STRING-SPEC-FAILOPEN fail-closed
-     * behaviour). The build never reaches `DiscriminatorValidator`,
-     * so no `UnresolvableRefException` is thrown; callers must remove
-     * the external mapping or load the spec via `fromYamlFile` /
-     * `withExternalRefAllowedRoot()` to opt into path-confinement.
-     */
     #[Test]
     public function di_08_external_url_mapping_throws_builder_exception_at_build_time(): void
     {
@@ -138,17 +121,6 @@ YAML;
             ->build();
     }
 
-    /**
-     * Negative: a string-loaded spec whose discriminator mapping
-     * references a relative file path is rejected at `build()` time
-     * with `BuilderException` (STRING-SPEC-FAILOPEN fail-closed
-     * behaviour). The build never reaches the discriminator
-     * resolution path that previously produced a `RuntimeException`
-     * when the referenced file did not exist relative to CWD; callers
-     * must remove the external mapping or load the spec via
-     * `fromYamlFile` / `withExternalRefAllowedRoot()` to opt into
-     * path-confinement.
-     */
     #[Test]
     public function di_08_relative_file_mapping_throws_builder_exception_at_build_time(): void
     {
@@ -160,19 +132,6 @@ YAML;
             ->build();
     }
 
-    /**
-     * Negative: a string-loaded spec whose discriminator mapping
-     * contains an external URL is rejected at `build()` time with
-     * `BuilderException` (STRING-SPEC-FAILOPEN fail-closed
-     * behaviour) — even when the discriminator value eventually used
-     * at validation time would not have matched the external mapping
-     * key. The guard fails closed at build time and never reaches the
-     * previously-documented fail-late path where
-     * `UnknownDiscriminatorValueException` would have surfaced for
-     * absent values; callers must remove the external mapping or
-     * load the spec via `fromYamlFile` /
-     * `withExternalRefAllowedRoot()` to opt into path-confinement.
-     */
     #[Test]
     public function di_08_external_mapping_with_value_absent_from_request_throws_builder_exception_at_build_time(): void
     {
@@ -184,12 +143,6 @@ YAML;
             ->build();
     }
 
-    /**
-     * RefResolutionException is thrown by RefResolver::resolveRelativeRef()
-     * when a relative reference cannot be resolved due to missing document
-     * $self. This is a different code path from external URL refs (which
-     * throw UnresolvableRefException).
-     */
     #[Test]
     public function di_08_resolve_relative_ref_without_self_throws_ref_resolution_exception(): void
     {
@@ -221,11 +174,6 @@ YAML;
         );
     }
 
-    /**
-     * RefResolutionException is NOT thrown when document $self is set: the
-     * relative ref is combined into an absolute URI string. This documents
-     * that no actual external fetching happens — only URI composition.
-     */
     #[Test]
     public function di_08_resolve_relative_ref_with_self_combines_uris(): void
     {
@@ -245,17 +193,13 @@ YAML;
         );
     }
 
-    /**
-     * Sanity check: local pointer mapping ('#/components/schemas/...') works
-     * as the only supported discriminator mapping shape.
-     */
     #[Test]
     public function di_08_local_pointer_mapping_resolves_normally(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.2.0
 info:
-  title: DI-08 Local Mapping API
+  title: Local Mapping API
   version: 1.0.0
 paths: {}
 components:

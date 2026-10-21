@@ -607,12 +607,6 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
         self::assertSame(true, $succeeded);
     }
 
-    /**
-     * C-001 regression: properties validated by an in-place applicator
-     * (here simulated by directly marking them in context, as
-     * AllOfValidator would after a successful branch) must be treated
-     * as evaluated by unevaluatedProperties.
-     */
     #[Test]
     public function unevaluated_properties_with_context_annotations_passes(): void
     {
@@ -652,11 +646,6 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
         $this->validator->validate(['known' => 1, 'unknown' => 2], $schema, $context);
     }
 
-    /**
-     * C-004 regression: annotations from composition validators
-     * (allOf/anyOf/oneOf/if-then-else) merge with static analysis
-     * of properties / patternProperties.
-     */
     #[Test]
     public function unevaluated_properties_merges_static_and_annotation_evaluated(): void
     {
@@ -684,11 +673,6 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
         self::assertSame(true, $succeeded);
     }
 
-    /**
-     * C-001 regression: when a property is evaluated by an annotation
-     * AND present in patternProperties, both contribute to evaluated
-     * set; no double-counting issues.
-     */
     #[Test]
     public function unevaluated_properties_with_pattern_properties_and_annotations(): void
     {
@@ -762,11 +746,6 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
         self::assertSame(true, $succeeded);
     }
 
-    /**
-     * C-001 regression: without context (legacy SchemaValidator path),
-     * the validator falls back to static analysis only. Properties not
-     * declared in static schema are flagged as unevaluated.
-     */
     #[Test]
     public function unevaluated_properties_without_context_uses_static_analysis_only(): void
     {

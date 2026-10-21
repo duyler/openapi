@@ -39,7 +39,6 @@ final readonly class PatternPropertiesValidator extends AbstractSchemaValidator 
 
     /**
      * @param array<string, Schema> $patternProperties
-     *
      * @return array<string, string>
      */
     private function normalizePatterns(array $patternProperties): array
@@ -63,9 +62,9 @@ final readonly class PatternPropertiesValidator extends AbstractSchemaValidator 
     }
 
     /**
-     * @param array<array-key, mixed>           $data
-     * @param array<string, Schema>             $patternProperties
-     * @param array<string, string>             $normalizedPatterns
+     * @param array<array-key, mixed> $data
+     * @param array<string, Schema> $patternProperties
+     * @param array<string, string> $normalizedPatterns
      */
     private function applyPatterns(array $data, array $patternProperties, array $normalizedPatterns, ?ValidationContext $context): void
     {

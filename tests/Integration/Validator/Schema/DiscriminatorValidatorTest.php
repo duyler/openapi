@@ -43,7 +43,7 @@ final class DiscriminatorValidatorTest extends TestCase
     private const string DI_05_ALLOF_COMPOSITION_SPEC = <<<'YAML'
 openapi: 3.2.0
 info:
-  title: DI-05 Animal API
+  title: Animal API
   version: 1.0.0
 paths: {}
 components:
@@ -99,7 +99,7 @@ YAML;
     private const string DI_06_NESTED_DISCRIMINATOR_SPEC = <<<'YAML'
 openapi: 3.2.0
 info:
-  title: DI-06 Shape API
+  title: Shape API
   version: 1.0.0
 paths: {}
 components:

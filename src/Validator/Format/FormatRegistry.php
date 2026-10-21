@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Format;
 
-use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-
 final readonly class FormatRegistry
 {
     /**
@@ -36,16 +34,6 @@ final readonly class FormatRegistry
         return isset($this->validators[$type][$format]);
     }
 
-    /**
-     * Returns a new registry whose entries are the union of $base and
-     * the current registry's entries, with the current registry's
-     * entries overriding $base on (type, format) conflict.
-     *
-     * Used by {@see OpenApiValidatorBuilder::build()}
-     * to ensure builtin format validators share the configured
-     * PregExecutor even when the caller registered custom formats via
-     * withFormat() before withMaxRegexBacktracks().
-     */
     public function withBase(self $base): self
     {
         $merged = $base->validators;

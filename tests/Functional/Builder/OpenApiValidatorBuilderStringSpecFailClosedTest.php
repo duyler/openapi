@@ -23,14 +23,6 @@ use function unlink;
 use const DIRECTORY_SEPARATOR;
 
 /**
- * STRING-SPEC-FAILOPEN: specs loaded via fromYamlString() /
- * fromJsonString() must fail closed at build() time when the spec
- * contains an external `$ref` and withExternalRefAllowedRoot() has
- * not been called. Without this guard the builtin FileExternalRefResolver
- * runs with allowedRoot = null, which means assertPathWithinAllowedRoot
- * is a no-op and an attacker-controlled spec can read arbitrary files
- * via `file:///...` or relative-path `$ref` values.
- *
  * @internal
  */
 final class OpenApiValidatorBuilderStringSpecFailClosedTest extends TestCase

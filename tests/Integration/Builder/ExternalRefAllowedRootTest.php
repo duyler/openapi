@@ -30,12 +30,6 @@ use function unlink;
 use const DIRECTORY_SEPARATOR;
 
 /**
- * SEC-03: external file:// $ref references loaded through the builder
- * must be confined to a real directory by default. The builder
- * auto-derives allowedRoot from the spec file's realpath dirname so
- * that a trusted spec cannot read arbitrary files such as
- * /etc/passwd or composer.json via a crafted $ref.
- *
  * @internal
  */
 final class ExternalRefAllowedRootTest extends TestCase
@@ -60,13 +54,6 @@ final class ExternalRefAllowedRootTest extends TestCase
         $this->removeDirectory($this->outsideDir);
     }
 
-    /**
-     * Default behaviour: fromYamlFile auto-derives allowedRoot from
-     * dirname(realpath($path)). An external $ref inside the spec
-     * directory resolves; an external $ref pointing outside is rejected
-     * with ExternalRefSecurityException (surfaced by RefResolver as
-     * UnresolvableRefException with the original exception as previous).
-     */
     #[Test]
     public function from_yaml_file_sets_default_allowed_root(): void
     {
@@ -98,7 +85,7 @@ YAML,
             <<<'YAML'
 openapi: 3.2.0
 info:
-  title: SEC-03 default root
+  title: default root
   version: 1.0.0
 paths: {}
 components:
@@ -130,11 +117,6 @@ YAML,
         );
     }
 
-    /**
-     * withExternalRefAllowedRoot explicitly overrides the auto-derived
-     * default. The user's choice wins; the spec directory is no longer
-     * the boundary.
-     */
     #[Test]
     public function with_external_ref_allowed_root_overrides_default(): void
     {
@@ -169,7 +151,7 @@ YAML,
             <<<'YAML'
 openapi: 3.2.0
 info:
-  title: SEC-03 override
+  title: override
   version: 1.0.0
 paths: {}
 components:
@@ -208,11 +190,6 @@ YAML,
         }
     }
 
-    /**
-     * withExternalRefAllowedRoot must fail fast with a BuilderException
-     * when the supplied directory does not exist on disk, instead of
-     * silently allowing every path (the legacy null behaviour).
-     */
     #[Test]
     public function with_external_ref_allowed_root_throws_when_path_missing(): void
     {
@@ -224,12 +201,6 @@ YAML,
             ->withExternalRefAllowedRoot('/nonexistent/sec03/path-' . uniqid('', true));
     }
 
-    /**
-     * fromYamlFile must throw BuilderException at call time (not at
-     * build()) when the spec file does not exist. This surfaces the
-     * realpath failure before the auto-derived allowedRoot would be
-     * computed from a non-existent path.
-     */
     #[Test]
     public function from_yaml_file_throws_when_spec_missing(): void
     {
@@ -240,13 +211,6 @@ YAML,
             ->fromYamlFile('/nonexistent/sec03/spec-' . uniqid('', true) . '.yaml');
     }
 
-    /**
-     * BC: directly constructing RefResolver without a builder keeps
-     * the legacy behaviour where allowedRoot is null and the
-     * path-traversal check is disabled. This is the documented escape
-     * hatch and must remain working. Direct usage is dangerous and
-     * discouraged for trusted specs.
-     */
     #[Test]
     public function explicit_null_allowed_root_disables_check_for_direct_resolver_usage(): void
     {
@@ -267,11 +231,6 @@ YAML,
         );
     }
 
-    /**
-     * BC: RefResolver accepts an explicit FileExternalRefResolver and
-     * uses it as the builtin resolver. The builder relies on this
-     * constructor parameter to inject allowedRoot.
-     */
     #[Test]
     public function ref_resolver_accepts_injected_builtin_file_resolver(): void
     {

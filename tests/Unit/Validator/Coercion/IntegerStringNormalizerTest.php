@@ -47,9 +47,6 @@ final class IntegerStringNormalizerTest extends TestCase
     #[Test]
     public function canonicalize_round_trips_in_int64_range(): void
     {
-        // The SEC-15 contract: for any value matching /^[+-]?\d+$/ inside the
-        // int64 range, canonicalize($v) must equal (string) (int) $v. Equality
-        // is what AbstractCoercer relies on to accept the coerced int.
         foreach (['0', '42', '-42', '+42', '00042', (string) PHP_INT_MAX, (string) PHP_INT_MIN] as $value) {
             $this->assertSame(
                 (string) (int) $value,
@@ -62,9 +59,6 @@ final class IntegerStringNormalizerTest extends TestCase
     #[Test]
     public function canonicalize_differs_from_cast_for_overflow(): void
     {
-        // The SEC-15 contract: a value outside int64 range canonicalizes to
-        // its literal form, which MUST differ from the (int)-cast string so
-        // AbstractCoercer can detect overflow and bail out.
         foreach (['99999999999999999999', '-99999999999999999999', '9223372036854775808'] as $value) {
             $this->assertNotSame(
                 (string) (int) $value,

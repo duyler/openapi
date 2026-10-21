@@ -20,11 +20,6 @@ use PHPUnit\Framework\TestCase;
 
 use function gc_collect_cycles;
 
-/**
- * Regression tests for P-027: cycle detection must use identity-based
- * WeakMap rather than spl_object_id() (which is recycled by PHP GC and
- * caused cache-key collisions / spurious cycle detection).
- */
 final class CycleDetectionWeakMapRegressionTest extends TestCase
 {
     #[Test]

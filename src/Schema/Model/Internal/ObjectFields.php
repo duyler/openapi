@@ -12,10 +12,10 @@ use Duyler\OpenApi\Schema\Model\Schema;
 final readonly class ObjectFields
 {
     /**
-     * @param array<string, Schema>|null  $properties
-     * @param list<string>|null           $required
-     * @param array<string, Schema>|null  $patternProperties
-     * @param array<string, Schema>|null  $dependentSchemas
+     * @param array<string, Schema>|null $properties
+     * @param list<string>|null $required
+     * @param array<string, Schema>|null $patternProperties
+     * @param array<string, Schema>|null $dependentSchemas
      */
     public function __construct(
         public ?array $properties = null,

@@ -51,7 +51,6 @@ final readonly class SchemaKeywordAccumulator
 
     /**
      * @param array<array-key, mixed> $data
-     *
      * @return ?list<Schema>
      */
     public function schemaList(array $data, string $key): ?array

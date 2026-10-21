@@ -15,15 +15,6 @@ use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 
 /**
- * R4-SEC-010 / R4-SPEC-003 regression coverage.
- *
- * Anti-tests: revert the SecurityValidator default arm and the
- * validateHttpScheme non-bearer arm to the previous
- * MissingSecurityCredentialsError behaviour and every test below
- * fails — the previous behaviour misclassified unsupported schemes
- * as missing credentials, breaking AND/OR semantics for mixed
- * requirements.
- *
  * @internal
  */
 final class UnsupportedSecuritySchemeRegressionTest extends TestCase
@@ -154,13 +145,6 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
         ));
     }
 
-    /**
-     * AND semantics: spec `security: [{oauth2: [read], bearerAuth: []}]`.
-     * A valid Bearer token cannot rescue the requirement because the
-     * AND-list contains an unsupported scheme. The validator must fail
-     * closed with UnsupportedSecuritySchemeException rather than
-     * silently downgrading the requirement to bearer-only.
-     */
     #[Test]
     public function and_list_with_unsupported_scheme_fails_closed_even_when_supported_sibling_passes(): void
     {
@@ -193,12 +177,6 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
         }
     }
 
-    /**
-     * OR semantics: spec `security: [{oauth2: [read]}, {bearerAuth: []}]`.
-     * The second OR alternative (bearerAuth) is supported and the
-     * request carries a valid Bearer token, so the validator must
-     * succeed despite the unsupported oauth2 alternative.
-     */
     #[Test]
     public function or_list_succeeds_when_supported_alternative_passes_and_unsupported_sibling_skipped(): void
     {
@@ -225,13 +203,6 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * OR semantics: same spec as the success case, but the request is
-     * missing the Bearer token. The validator must re-throw the
-     * captured UnsupportedSecuritySchemeException after exhausting all
-     * OR alternatives so the operator sees the spec-configuration
-     * error rather than a downstream credential error.
-     */
     #[Test]
     public function or_list_rethrows_unsupported_exception_when_no_alternative_succeeds(): void
     {
@@ -261,14 +232,6 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
         }
     }
 
-    /**
-     * R4-SPEC-003: scopes declared on a security requirement must be
-     * preserved for diagnostic purposes. Today they are logged at
-     * debug level via PSR-3 (OAuth2 token scope validation is not
-     * implemented; the UnsupportedSecuritySchemeException is still
-     * raised because the oauth2 scheme type is unsupported). The
-     * scopes must reach the logger even though the scheme is rejected.
-     */
     #[Test]
     public function oauth2_scopes_are_logged_at_debug_level_for_diagnostic_purposes(): void
     {
@@ -306,10 +269,6 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
         }
     }
 
-    /**
-     * Empty scopes (e.g. apiKey, http/bearer) must NOT trigger the
-     * scopes debug-log entry — they carry no diagnostic value.
-     */
     #[Test]
     public function empty_scopes_do_not_trigger_scopes_debug_log_entry(): void
     {
@@ -339,13 +298,6 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
         $this->assertSame([], $scopeRecords);
     }
 
-    /**
-     * The exception message is operator-facing diagnostic content
-     * (spec configuration error, not request auth error), so it must
-     * disclose the scheme name and type. However `(string) $e` must
-     * not leak file paths or stack traces through the default
-     * Exception::__toString() — only the message itself.
-     */
     #[Test]
     public function to_string_returns_message_only_without_paths_or_trace(): void
     {
@@ -378,10 +330,6 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
 }
 
 /**
- * Minimal in-memory PSR-3 spy logger used to assert that OAuth2 scopes
- * declared on a security requirement reach the debug log even when the
- * scheme itself is rejected.
- *
  * @internal
  */
 final class ScopeSpyLogger implements LoggerInterface

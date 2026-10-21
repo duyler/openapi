@@ -179,14 +179,6 @@ final class PatternPropertiesNormalizeCacheTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * Anti-test: the precompile fix in PatternPropertiesValidator ensures
-     * `RegexValidator::normalize` is invoked exactly once per distinct
-     * schema pattern regardless of how many property names are matched.
-     * The visible side-effect that survives the optimization is the
-     * normalize-cache content: the cache contains each pattern exactly
-     * once, and never contains the empty pattern.
-     */
     private function normalizeCache(): array
     {
         $reflection = new ReflectionClass(RegexValidator::class);

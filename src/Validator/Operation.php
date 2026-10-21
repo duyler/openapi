@@ -16,7 +16,7 @@ final readonly class Operation implements Stringable
     private readonly int $placeholderCount;
 
     /**
-     * @param array<string, string> $pathParameters Resolved path parameter values keyed by placeholder name
+     * @param array<string, string> $pathParameters
      */
     public function __construct(
         public readonly string $path,
@@ -25,7 +25,6 @@ final readonly class Operation implements Stringable
         public readonly array $pathParameters = [],
         public readonly ?SchemaOperation $schemaOperation = null,
     ) {
-        // §7 exemption: $matches[0] is the only way to access full preg_match_all matches.
         preg_match_all('/\{[^}]+\}/', $this->path, $matches);
 
         $this->placeholderCount = count($matches[0]);

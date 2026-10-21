@@ -224,9 +224,7 @@ final readonly class ComponentsBuilder
 
     /**
      * @template T
-     *
      * @param Closure(mixed): T $builder
-     *
      * @return array<string, T>
      */
     private function mapByName(array $data, Closure $builder): array

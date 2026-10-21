@@ -29,7 +29,6 @@ final readonly class ScalarSchemaKeywordParser
 
     /**
      * @param array<array-key, mixed> $data
-     *
      * @return array{
      *     multipleOf: ?float,
      *     maximum: ?float,

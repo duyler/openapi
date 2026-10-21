@@ -18,9 +18,9 @@ final readonly class TrieLookup
 
     /**
      * @param array<int|string, mixed> $node
-     * @param list<string>             $segments
-     * @param int<0, max>              $depth
-     * @param TrieMatches              $matches
+     * @param list<string> $segments
+     * @param int<0, max> $depth
+     * @param TrieMatches $matches
      */
     public function lookupTrie(array $node, array $segments, int $depth, TrieMatches $matches): void
     {

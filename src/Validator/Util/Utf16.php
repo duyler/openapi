@@ -7,14 +7,6 @@ namespace Duyler\OpenApi\Validator\Util;
 use function ord;
 use function strlen;
 
-/**
- * Counts UTF-16 code units in a UTF-8 encoded string.
- *
- * Per JSON Schema 2020-12 §6.3.1: "The length of a string is the number
- * of UTF-16 code units." Supplementary characters (U+10000 — U+10FFFF)
- * are encoded as UTF-16 surrogate pairs and count as 2 code units, even
- * though they occupy a single Unicode code point.
- */
 final readonly class Utf16
 {
     private const int ASCII_BOUNDARY = 0x80;

@@ -10,16 +10,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Regression suite for R4-SEC-012 / R4-TEST-006: YAML billion-laughs
- * defence on the public builder path. Anti-test: removing the
- * pre-parse `assertNoAnchorBomb()` scan lets the Symfony YAML parser
- * materialise the exponentially-expanded document and the test
- * either OOMs the CI runner or times out.
- *
- * Unlike the inline YamlParserTest, this suite drives every case
- * through {@see OpenApiValidatorBuilder::build()} so the regression
- * also fires when the builder skips the parser (e.g. via cache).
- *
  * @internal
  */
 final class YamlBillionLaughsRegressionTest extends TestCase

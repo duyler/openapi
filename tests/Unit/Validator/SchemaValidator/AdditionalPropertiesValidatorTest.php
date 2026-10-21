@@ -170,11 +170,6 @@ class AdditionalPropertiesValidatorTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * EI-054 + FU-006: additionalProperties: false must produce one AdditionalPropertyError
-     * per forbidden property instead of an empty errors array, and the keyword must be
-     * 'additionalProperties' (not 'unevaluatedProperties').
-     */
     #[Test]
     public function reject_additional_when_false_returns_additional_property_errors(): void
     {
@@ -207,9 +202,6 @@ class AdditionalPropertiesValidatorTest extends TestCase
         self::assertSame('extra2', $errors[1]->params()['propertyName']);
     }
 
-    /**
-     * Regression: no extra properties must still pass when additionalProperties is false.
-     */
     #[Test]
     public function allow_no_additional_properties_when_additional_properties_false(): void
     {

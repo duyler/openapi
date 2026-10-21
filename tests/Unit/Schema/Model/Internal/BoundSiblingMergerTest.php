@@ -142,8 +142,6 @@ final class BoundSiblingMergerTest extends TestCase
 
         $overrides = $this->merger->merge(new SiblingMergeContext($resolved, $sibling));
 
-        // §3 fix: `is_bool($sibling) && $sibling` (was: `true === $sibling`)
-        // Must distinguish true from truthy non-bool (Schema instance is truthy too).
         self::assertSame($itemSchema, $overrides['items']);
     }
 
@@ -156,7 +154,6 @@ final class BoundSiblingMergerTest extends TestCase
 
         $overrides = $this->merger->merge(new SiblingMergeContext($resolved, $sibling));
 
-        // §3 fix: `is_bool($resolved) && $resolved` (was: `true === $resolved`)
         self::assertSame($itemSchema, $overrides['items']);
     }
 
@@ -195,7 +192,6 @@ final class BoundSiblingMergerTest extends TestCase
         $merged = $overrides['items'];
         self::assertInstanceOf(Schema::class, $merged);
         self::assertSame('string', $merged->type);
-        // minLength takes stricter (5 > 2)
         self::assertSame(5, $merged->minLength);
     }
 
@@ -246,9 +242,7 @@ final class BoundSiblingMergerTest extends TestCase
 
         $prefixItems = $overrides['prefixItems'];
         self::assertCount(2, $prefixItems);
-        // Index 0 merged recursively (integer ∩ string → null type, but allOf has both)
         self::assertNotNull($prefixItems[0]->allOf);
-        // Index 1 appended from resolved (sibling had only 1)
         self::assertSame($resolvedSecond, $prefixItems[1]);
     }
 

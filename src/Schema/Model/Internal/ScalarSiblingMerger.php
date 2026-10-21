@@ -63,7 +63,6 @@ final readonly class ScalarSiblingMerger implements SiblingMergerStrategy
     /**
      * @param string|list<string>|null $resolved
      * @param string|list<string>|null $sibling
-     *
      * @return string|list<string>|null
      */
     public function mergeType(string|array|null $resolved, string|array|null $sibling): string|array|null
@@ -90,7 +89,6 @@ final readonly class ScalarSiblingMerger implements SiblingMergerStrategy
     /**
      * @param ?list<mixed> $resolved
      * @param ?list<mixed> $sibling
-     *
      * @return ?list<mixed>
      */
     public function mergeEnum(?array $resolved, ?array $sibling): ?array
@@ -114,10 +112,8 @@ final readonly class ScalarSiblingMerger implements SiblingMergerStrategy
 
     /**
      * @template T
-     *
      * @param T|null $resolved
      * @param T|null $sibling
-     *
      * @return T|null
      */
     public function mergeNullableIdentical(mixed $resolved, mixed $sibling): mixed
@@ -136,7 +132,6 @@ final readonly class ScalarSiblingMerger implements SiblingMergerStrategy
     /**
      * @param ?list<string> $resolved
      * @param ?list<string> $sibling
-     *
      * @return ?list<string>
      */
     public function mergeStringList(?array $resolved, ?array $sibling): ?array
@@ -155,7 +150,6 @@ final readonly class ScalarSiblingMerger implements SiblingMergerStrategy
     /**
      * @param ?array<string, mixed> $resolved
      * @param ?array<string, mixed> $sibling
-     *
      * @return ?array<string, mixed>
      */
     public function mergeMixedMap(?array $resolved, ?array $sibling): ?array

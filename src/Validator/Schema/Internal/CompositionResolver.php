@@ -26,8 +26,6 @@ final class CompositionResolver
 
     /**
      * @param WeakMap<Schema, true> $visited
-     *
-     * @throws SchemaDepthExceededException
      */
     public function resolveCompositionRefs(Schema $schema, WeakMap $visited): Schema
     {
@@ -80,9 +78,8 @@ final class CompositionResolver
     }
 
     /**
-     * @param list<Schema>|null      $schemas
-     * @param WeakMap<Schema, true>  $visited
-     *
+     * @param list<Schema>|null $schemas
+     * @param WeakMap<Schema, true> $visited
      * @return list<Schema>|null
      */
     private function resolveCompositionArray(?array $schemas, WeakMap $visited): ?array

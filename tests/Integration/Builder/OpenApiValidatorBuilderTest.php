@@ -675,7 +675,6 @@ JSON;
     {
         $yaml = "openapi: 3.0.3\ninfo:\n  title: Test\n  version: 1.0.0\npaths: []";
 
-        // Per Oracle correction: withErrorFormatter wins when called after withDetailedErrors.
         $custom = new DetailedFormatter();
 
         $validator = OpenApiValidatorBuilder::create()

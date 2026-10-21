@@ -15,22 +15,8 @@ use Duyler\OpenApi\Validator\Schema\RefResolver;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/**
- * Behavioral snapshot tests for the two highest-risk Partition 3
- * refactoring zones (Oracle recommendation R1). Locks down the observable
- * behavior of SchemaSiblingMerger and RefResolver
- * against the pre-refactor baseline commit f5b0eb9.
- *
- * Each test exercises one representative scenario end-to-end and asserts
- * on actual output values (merged Schema fields, resolved Schema
- * identity) — never just "no exception".
- */
 final class PostRefactorBehavioralSnapshotTest extends TestCase
 {
-    // ---------------------------------------------------------------------
-    // Zone 2: SchemaSiblingMerger — merge semantics
-    // ---------------------------------------------------------------------
-
     #[Test]
     public function sibling_merger_nullable_widening_semantics_sibling_false_keeps_null(): void
     {
@@ -39,9 +25,6 @@ final class PostRefactorBehavioralSnapshotTest extends TestCase
 
         $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
 
-        // Widening semantics: a `nullable` sibling next to `$ref` can only add
-        // null to the target. `nullable: false` is indistinguishable from an
-        // omitted flag, so it never removes the target's nullability.
         self::assertTrue($merged->nullable);
     }
 
@@ -64,7 +47,6 @@ final class PostRefactorBehavioralSnapshotTest extends TestCase
 
         $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
 
-        // Disjoint types → type cleared, both constraints wrapped in allOf.
         self::assertNull($merged->type);
         self::assertNotNull($merged->allOf);
         self::assertCount(2, $merged->allOf);
@@ -80,7 +62,6 @@ final class PostRefactorBehavioralSnapshotTest extends TestCase
 
         $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
 
-        // Different formats → format cleared, both wrapped in allOf.
         self::assertNull($merged->format);
         self::assertNotNull($merged->allOf);
         self::assertCount(2, $merged->allOf);
@@ -96,7 +77,6 @@ final class PostRefactorBehavioralSnapshotTest extends TestCase
 
         $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
 
-        // Intersection is just 'string'.
         self::assertSame('string', $merged->type);
         self::assertNull($merged->allOf);
     }
@@ -131,8 +111,6 @@ final class PostRefactorBehavioralSnapshotTest extends TestCase
 
         $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
 
-        // anyOf is wrapped — both branches must hold (AND semantics), not
-        // concatenated (which would be OR over 4 alternatives).
         self::assertNull($merged->anyOf);
         self::assertNotNull($merged->allOf);
         self::assertCount(2, $merged->allOf);
@@ -148,7 +126,6 @@ final class PostRefactorBehavioralSnapshotTest extends TestCase
 
         $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
 
-        // AND of two ranges = stricter bounds win.
         self::assertSame(0.0, $merged->minimum);
         self::assertSame(50.0, $merged->maximum);
     }
@@ -163,10 +140,6 @@ final class PostRefactorBehavioralSnapshotTest extends TestCase
 
         self::assertSame(['id', 'name', 'email'], $merged->required);
     }
-
-    // ---------------------------------------------------------------------
-    // Zone 3: RefResolver — $ref resolution semantics
-    // ---------------------------------------------------------------------
 
     #[Test]
     public function ref_resolver_resolves_simple_internal_schema_ref(): void
@@ -200,8 +173,6 @@ final class PostRefactorBehavioralSnapshotTest extends TestCase
         self::assertSame('object', $userResolved->type);
         self::assertNotNull($userResolved->properties);
         self::assertArrayHasKey('address', $userResolved->properties);
-        // Property still holds the $ref pointer; resolve() itself returns
-        // the named schema unchanged — its siblings are not auto-resolved.
         self::assertSame('#/components/schemas/Address', $userResolved->properties['address']->ref);
     }
 
@@ -291,7 +262,6 @@ final class PostRefactorBehavioralSnapshotTest extends TestCase
         $first = $resolver->resolve('#/components/schemas/Cached', $document);
         $second = $resolver->resolve('#/components/schemas/Cached', $document);
 
-        // Same identity — cache returns the previously resolved instance.
         self::assertSame($first, $second);
     }
 
@@ -305,10 +275,6 @@ final class PostRefactorBehavioralSnapshotTest extends TestCase
 
         $resolver->resolve('#/components/schemas/Missing', $document);
     }
-
-    // ---------------------------------------------------------------------
-    // Helpers
-    // ---------------------------------------------------------------------
 
     /**
      * @param array<string, Schema> $schemas

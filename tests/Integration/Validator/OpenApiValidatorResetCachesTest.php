@@ -19,10 +19,6 @@ use function count;
 use function sprintf;
 
 /**
- * Verifies EI-008 contract: OpenApiValidator::reset() must clear all internal
- * instance caches (PathRegexCache from EI-005 and RegexValidator from EI-006)
- * so the validator is safe to reuse across requests in long-running workers.
- *
  * @internal
  */
 final class OpenApiValidatorResetCachesTest extends TestCase

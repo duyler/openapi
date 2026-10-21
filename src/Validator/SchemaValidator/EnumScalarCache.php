@@ -95,7 +95,6 @@ final class EnumScalarCache
 
     /**
      * @param list<mixed> $enum
-     *
      * @return array<string, true>
      */
     private function buildScalarSet(array $enum): array

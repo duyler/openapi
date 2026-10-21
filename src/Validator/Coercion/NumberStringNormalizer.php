@@ -27,18 +27,6 @@ final readonly class NumberStringNormalizer
 
     private const int MAX_DOUBLE_EXPONENT = 320;
 
-    /**
-     * Returns the canonical decimal form of a numeric string, or null if the
-     * input is not a recognised integer/decimal/scientific value.
-     *
-     * Used to detect silent precision loss of `(float) $value` cast: a value
-     * that passes the coerceToNumber regex but whose canonical form does not
-     * equal the canonical form of the round-tripped float loses precision
-     * when coerced to float.
-     *
-     * @throws InvalidNumericStringException when a scientific-notation
-     *     exponent exceeds the representable range of a double
-     */
     public static function canonicalize(string $value): ?string
     {
         if (1 !== preg_match(self::NUMBER_PATTERN, $value)) {
@@ -60,24 +48,6 @@ final readonly class NumberStringNormalizer
         return self::normalizeDecimal($sign, $expanded);
     }
 
-    /**
-     * Casts a numeric string to float and rejects values that lose precision
-     * when round-tripped through IEEE-754 double. Detects precision loss
-     * visible at the string representation level (e.g., 17+ significant
-     * digits). Does NOT prevent magic-hash type-juggling collisions for the
-     * 0eNNN pattern (both inputs canonicalize to "0" and pass) - that
-     * requires strict equality in downstream comparisons, not coercion-time
-     * rejection.
-     *
-     * Also rejects scientific-notation values whose exponent exceeds the
-     * representable range of a double before their canonical expansion would
-     * allocate unbounded zero padding via str_repeat (e.g. `1e999999999`
-     * would allocate ~1 GB of zeros).
-     *
-     * @throws TypeMismatchError when the input cannot be represented as float
-     *     without precision loss, or when its scientific-notation exponent
-     *     exceeds the representable range of a double.
-     */
     public static function castStringToFloatOrFail(string $value, string $dataPath = ''): float
     {
         $inputCanonical = self::canonicalizeOrThrow($value, $dataPath);

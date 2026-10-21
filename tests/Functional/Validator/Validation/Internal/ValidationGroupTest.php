@@ -68,19 +68,16 @@ YAML;
         self::assertSame($group->root->formatRegistry, $deps->formatRegistry);
         self::assertSame($group->root->errorFormatter, $deps->errorFormatter);
         self::assertSame($group->root->refResolver, $deps->refResolver);
-        // Defaults from ValidatorOptions
         self::assertFalse($deps->coercion);
         self::assertTrue($deps->nullableAsType);
         self::assertSame(EmptyArrayStrategy::AllowBoth, $deps->emptyArrayStrategy);
         self::assertFalse($deps->reportDeprecated);
         self::assertFalse($deps->strictFormats);
         self::assertTrue($deps->strictCoercion);
-        // Defaults from BodyLimits
         self::assertSame(ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES, $deps->maxJsonBodyBytes);
         self::assertSame(ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES, $deps->maxMultipartBodyBytes);
         self::assertSame(PregExecutor::DEFAULT_MAX_BACKTRACKS, $deps->maxRegexBacktracks);
         self::assertSame(ValidatorConfiguration::DEFAULT_MAX_STREAMING_RECORDS, $deps->maxStreamingRecords);
-        // Wired sub-services
         self::assertNotNull($deps->requestValidator);
         self::assertNotNull($deps->responseValidator);
         self::assertNotNull($deps->schemaValidatorWithContext);
@@ -156,7 +153,6 @@ YAML;
         self::assertTrue($config->strictStreaming);
         self::assertFalse($config->strictCoercion);
         self::assertSame(7, $config->maxStreamingRecords);
-        // BodyLimits default through ValidatorConfiguration::DEFAULT_* constants
         self::assertSame(ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES, $config->maxJsonBodyBytes);
         self::assertSame(ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES, $config->maxMultipartBodyBytes);
     }
@@ -174,7 +170,6 @@ YAML;
             refResolver: new RefResolver(),
         );
 
-        // Defaults are wired
         self::assertInstanceOf(PathRegexCache::class, $root->pathRegexCache);
         self::assertInstanceOf(RegexValidator::class, $root->regexValidator);
         self::assertInstanceOf(PregExecutor::class, $root->pregExecutor);

@@ -22,9 +22,7 @@ trait EventDispatchingTrait
 
     /**
      * @template T
-     *
      * @param callable(): T $callback
-     *
      * @return T
      */
     private function withValidationEvents(

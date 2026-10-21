@@ -199,11 +199,6 @@ final class RefResolverTest extends TestCase
         $this->assertSame("Address", $resolved->title);
     }
 
-    /**
-     * SPEC-01 / RFC 6901 §3: ~1 must decode to / before lookup.
-     * The schema is keyed with the literal "/user" (contains slash);
-     * without decoding the resolver would look for the literal key "~1user".
-     */
     #[Test]
     public function resolve_decodes_json_pointer_slash_escape(): void
     {
@@ -227,11 +222,6 @@ final class RefResolverTest extends TestCase
         $this->assertSame("User", $resolved->title);
     }
 
-    /**
-     * SPEC-01 / RFC 6901 §3: ~0 must decode to ~ before lookup.
-     * The property name is literal "~foo"; without decoding the resolver
-     * would look for the literal key "~0foo".
-     */
     #[Test]
     public function resolve_decodes_json_pointer_tilde_escape(): void
     {
@@ -261,10 +251,6 @@ final class RefResolverTest extends TestCase
         $this->assertSame("Tilde", $resolved->title);
     }
 
-    /**
-     * SPEC-01 / RFC 6901 §3: combined escapes decode a path-template key.
-     * Schema is keyed with "/user/{id}"; the ref encodes each / as ~1.
-     */
     #[Test]
     public function resolve_decodes_json_pointer_combined_escape(): void
     {
@@ -288,19 +274,6 @@ final class RefResolverTest extends TestCase
         $this->assertSame("UserById", $resolved->title);
     }
 
-    /**
-     * SPEC-01 / RFC 6901 §3: decode order is critical.
-     *
-     * For the encoded segment "~01":
-     *  - Direct order (~1 -> /, then ~0 -> ~): "~01" -> "~1"
-     *    (correct: "~01" is the encoded form of literal "~1").
-     *  - Reverse order (~0 -> ~, then ~1 -> /): "~01" -> "~1" -> "/"
-     *    (incorrect: would resolve to key "/", which is absent).
-     *
-     * The document contains both "~1" and "/1" as keys. With the correct
-     * order the ref resolves to the "~1" entry; with the wrong order it
-     * would resolve to neither.
-     */
     #[Test]
     public function resolve_decodes_json_pointer_escape_order_matters(): void
     {
@@ -326,10 +299,6 @@ final class RefResolverTest extends TestCase
         $this->assertSame("TildeOne", $resolved->title);
     }
 
-    /**
-     * SPEC-01 / RFC 6901 §3: segments without escape sequences pass
-     * through unchanged.
-     */
     #[Test]
     public function resolve_json_pointer_no_escape_passthrough(): void
     {

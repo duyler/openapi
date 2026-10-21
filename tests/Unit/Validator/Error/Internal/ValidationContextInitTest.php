@@ -75,8 +75,6 @@ final class ValidationContextInitTest extends TestCase
             ),
         );
 
-        // Equivalence: same field values as the deprecated create()
-        // (depth defaults to 0 in both paths, breadcrumbs are independent instances)
         self::assertSame($pool, $viaInit->pool);
         self::assertSame($formatter, $viaInit->errorFormatter);
         self::assertFalse($viaInit->nullableAsType);

@@ -18,21 +18,6 @@ use function str_ends_with;
 use function str_starts_with;
 
 /**
- * Regression suite for R4-SEC-008 / R4-TEST-011: the SchemaCache key
- * must incorporate the parse-config fingerprint so a caller that
- * tightens any of maxSpecSizeBytes / maxSpecDepth / externalRefMaxBytes
- * never silently receives a document cached under looser limits.
- *
- * Anti-test: removing the buildParseConfigFingerprint() input makes
- * the cache hit succeed in test 1 (caller B gets the cached document
- * even though its tighter size limit would otherwise reject the spec)
- * and makes the keys produced in tests 2 and 3 identical.
- *
- * Unlike the inline OpenApiValidatorBuilderCacheKeyTest that focuses
- * on maxSpecDepth and externalRefAllowedRoot, this suite exercises
- * the maxSpecSizeBytes and externalRefMaxBytes dimensions of the
- * fingerprint.
- *
  * @internal
  */
 final class SchemaCacheParseConfigRegressionTest extends TestCase
@@ -72,7 +57,7 @@ YAML;
             $poisoningRejected,
             'Caller B with stricter maxSpecSize=1 must NOT receive the document cached under '
             . 'maxSpecSize=1048576. The fingerprint-based cache key must force a re-parse that '
-            . 'rejects the (here) oversized spec (R4-SEC-008 size poisoning defence).',
+            . 'rejects the (here) oversized spec (size poisoning defence).',
         );
     }
 
@@ -121,7 +106,6 @@ YAML;
 
     /**
      * @param callable(OpenApiValidatorBuilder): OpenApiValidatorBuilder $configure
-     *
      * @return list<string>
      */
     private function captureKeys(callable $configure): array

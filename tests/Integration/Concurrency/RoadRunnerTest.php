@@ -18,18 +18,6 @@ use function json_encode;
 use const JSON_THROW_ON_ERROR;
 
 /**
- * P-096: RoadRunner uses a prefork execution model (one worker per process),
- * so the validator instance is implicitly isolated between workers. These
- * tests document the prefork reuse contract: a single worker that reuses
- * the validator instance across many requests does not accumulate state
- * from previous requests, and reset() leaves the worker in a clean state.
- *
- * No special extension is required (RoadRunner ships as a binary that talks
- * to PHP via the standard CGI/Worker protocol); the tests therefore run on
- * every PHP 8.4+ runtime. They are grouped under Concurrency because they
- * describe the long-running reuse contract rather than a single-shot
- * request lifecycle.
- *
  * @internal
  */
 final class RoadRunnerTest extends TestCase

@@ -74,7 +74,6 @@ final readonly class SchemaToArrayConverter
 
     /**
      * @param WeakMap<Schema, int> $visited
-     *
      * @return array<string, mixed>
      */
     public function toSnapshotArray(Schema $schema, WeakMap $visited): array

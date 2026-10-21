@@ -14,10 +14,8 @@ final readonly class SchemaCache
     private TypedCacheDecorator $decorator;
 
     /**
-     * Create a new schema cache.
-     *
-     * @param CacheItemPoolInterface $pool PSR-6 cache pool
-     * @param int $ttl Time to live in seconds (default: TypedCacheDecorator::DEFAULT_TTL)
+     * @param CacheItemPoolInterface $pool
+     * @param int $ttl
      */
     public function __construct(
         CacheItemPoolInterface $pool,
@@ -27,10 +25,8 @@ final readonly class SchemaCache
     }
 
     /**
-     * Retrieve cached OpenAPI document.
-     *
-     * @param string $key Cache key
-     * @return OpenApiDocument|null Cached document or null if not found
+     * @param string $key
+     * @return OpenApiDocument|null
      */
     public function get(string $key): ?OpenApiDocument
     {
@@ -62,10 +58,8 @@ final readonly class SchemaCache
     }
 
     /**
-     * Retrieve cached confinement verdict.
-     *
-     * @param string $key Cache key
-     * @return ConfinementVerdict|null Cached verdict or null if not found
+     * @param string $key
+     * @return ConfinementVerdict|null
      */
     public function getConfinement(string $key): ?ConfinementVerdict
     {
@@ -77,9 +71,7 @@ final readonly class SchemaCache
     }
 
     /**
-     * Store the clean confinement verdict under the given cache key.
-     *
-     * @param string $key Cache key
+     * @param string $key
      */
     public function setConfinement(string $key): void
     {

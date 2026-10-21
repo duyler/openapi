@@ -22,15 +22,6 @@ use RuntimeException;
 
 use function sprintf;
 
-/**
- * End-to-end coverage for JSON Schema 2020-12 annotation passing
- * through in-place applicators (R3-SPEC-001 / R3-SPEC-002 /
- * R3-SPEC-003 / R3-SPEC-004).
- *
- * Each test drives a full SchemaValidatorWithContext validate() call
- * so that the composition validators fork+merge child annotations and
- * the unevaluated* validators observe them at decision time.
- */
 #[CoversClass(SchemaValidatorWithContext::class)]
 final class AnnotationTrackingTest extends TestCase
 {

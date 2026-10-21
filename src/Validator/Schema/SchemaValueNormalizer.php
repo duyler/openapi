@@ -19,8 +19,6 @@ use function sprintf;
 final readonly class SchemaValueNormalizer
 {
     /**
-     * @throws InvalidDataTypeException
-     *
      * @return array<int|string, mixed>|int|string|float|bool|null
      */
     public static function normalize(mixed $value, bool $allowNull = false): array|int|string|float|bool|null
@@ -56,13 +54,6 @@ final readonly class SchemaValueNormalizer
         return $nullableAsType && $schema->nullable;
     }
 
-    /**
-     * Decides whether the pre-check may hand a null to $schema.
-     *
-     * A composition or $ref node carries neither type nor nullable of its
-     * own — both live in the branches or in the resolved target — so null
-     * is deferred to them instead of being rejected here.
-     */
     public static function allowsNull(Schema $schema, bool $nullableAsType = true): bool
     {
         if (false === $nullableAsType) {

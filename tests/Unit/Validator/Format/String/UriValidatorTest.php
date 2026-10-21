@@ -117,14 +117,6 @@ final class UriValidatorTest extends TestCase
         $this->validator->validate($uri);
     }
 
-    /**
-     * RFC 3986 §3 allows an empty reg-name in the authority, so an
-     * `http:///path` triple-slash URI is a syntactically valid URI
-     * even though the host is empty. The validator no longer rejects
-     * this shape; it accepts it per RFC 3986 generic syntax. The
-     * previous rejection was a side effect of the now-removed
-     * `filter_var(FILTER_VALIDATE_URL)` fallback.
-     */
     #[Test]
     public function triple_slash_authority_is_valid_per_rfc_3986(): void
     {
@@ -132,14 +124,6 @@ final class UriValidatorTest extends TestCase
         $this->validator->validate('http:///example.com');
     }
 
-    /**
-     * RFC 3986 §3.3 `path-rootless = segment-nz-nc *( "/" segment )`
-     * admits `(` and `)` via `sub-delims`, so `javascript:alert(1)`
-     * is a syntactically valid URI. Per JSON Schema 2020-12 §7.3.1
-     * the `uri` format validates RFC 3986 generic syntax only;
-     * scheme-specific allowlisting is the application's responsibility
-     * (handled at the consumer layer, not the format validator).
-     */
     #[Test]
     public function javascript_scheme_uri_is_valid_per_rfc_3986(): void
     {
@@ -147,14 +131,6 @@ final class UriValidatorTest extends TestCase
         $this->validator->validate('javascript:alert(1)');
     }
 
-    /**
-     * RFC 3986 host reg-name permits non-ASCII characters; the
-     * validator accepts IDN hosts per RFC 3986 generic syntax. The
-     * previous `filter_var(FILTER_VALIDATE_URL)` fallback rejected
-     * bare UTF-8 hosts without Punycode conversion; that fallback
-     * has been removed (Task 10, Variant A). IDN-to-ASCII Punycode
-     * conversion remains explicitly out of scope.
-     */
     #[Test]
     public function idn_host_uri_accepted_per_rfc_3986(): void
     {
@@ -275,11 +251,6 @@ final class UriValidatorTest extends TestCase
         $this->validator->validate($uri);
     }
 
-    /**
-     * S-021: port-range error message must NOT interpolate the
-     * attacker-supplied port value or any other attacker-derived
-     * fragment (CWE-209).
-     */
     #[Test]
     public function port_out_of_range_rejected_with_generic_message(): void
     {
@@ -297,11 +268,6 @@ final class UriValidatorTest extends TestCase
         $this->assertStringNotContainsString('99999', $exception->getMessage());
     }
 
-    /**
-     * S-021: even when the attacker controls the scheme AND the port,
-     * the error message must not echo either back. The validator
-     * must use a generic message verbatim.
-     */
     #[Test]
     public function error_message_does_not_disclose_scheme_in_port_range_error(): void
     {
@@ -319,14 +285,12 @@ final class UriValidatorTest extends TestCase
         $this->assertStringNotContainsString(
             'javascript',
             $exception->getMessage(),
-            'getMessage() must not disclose attacker-supplied scheme (S-021, CWE-209).',
+            'getMessage() must not disclose attacker-supplied scheme (CWE-209).',
         );
         $this->assertStringNotContainsString('99999', $exception->getMessage());
     }
 
     /**
-     * URI edge cases across all four RFC 3986 §3 hier-part forms.
-     *
      * @return array<string, array{0: string, 1: bool}>
      */
     public static function uriEdgeCasesProvider(): array

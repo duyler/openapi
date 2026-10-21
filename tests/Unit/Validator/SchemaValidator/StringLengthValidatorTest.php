@@ -209,10 +209,6 @@ class StringLengthValidatorTest extends TestCase
     #[Test]
     public function supplementary_cjk_at_max_length_one_rejected_by_utf16_unit_count(): void
     {
-        // U+20BB7 lives in the supplementary plane: 4 bytes in UTF-8,
-        // encoded as a UTF-16 surrogate pair (2 code units). Therefore
-        // it must be rejected by maxLength:1 even though it is a single
-        // Unicode code point.
         $cjk = "\xF0\xA0\xAE\xB7";
         $schema = new Schema(type: 'string', maxLength: 1);
 
@@ -248,12 +244,6 @@ class StringLengthValidatorTest extends TestCase
         self::assertSame(1, $caught->params()['actual']);
     }
 
-    /**
-     * P-011: JSON is always UTF-8 per RFC 8259 §8.1; the validator MUST
-     * count UTF-16 code units independent of any host application
-     * mb_internal_encoding override (e.g., ASCII) that would otherwise
-     * fall back to byte counting.
-     */
     #[Test]
     public function counts_multibyte_utf8_under_overridden_internal_encoding(): void
     {
@@ -281,12 +271,6 @@ class StringLengthValidatorTest extends TestCase
         }
     }
 
-    /**
-     * SPEC-06: supplementary characters (U+10000+) occupy 2 UTF-16 code
-     * units via surrogate pairs. The byte-based counter must remain
-     * correct regardless of mb_internal_encoding, since JSON Schema
-     * 2020-12 §6.3.1 mandates UTF-16 unit counting.
-     */
     #[Test]
     public function counts_emoji_as_two_utf16_units_under_ascii_internal_encoding(): void
     {
@@ -304,11 +288,6 @@ class StringLengthValidatorTest extends TestCase
         }
     }
 
-    /**
-     * SPEC-06 (anti-test): supplementary characters must be rejected
-     * when maxLength is below their UTF-16 unit count, regardless of
-     * the host's mb_internal_encoding setting.
-     */
     #[Test]
     public function rejects_emoji_at_max_length_one_under_ascii_internal_encoding(): void
     {
@@ -326,11 +305,6 @@ class StringLengthValidatorTest extends TestCase
         }
     }
 
-    /**
-     * SPEC-06: minLength counts UTF-16 code units, so a single emoji
-     * (2 units) satisfies minLength:2 — the exact case that the old
-     * mb_strlen($data, 'UTF-8') implementation rejected incorrectly.
-     */
     #[Test]
     public function supplementary_emoji_passes_min_length_two(): void
     {
@@ -341,11 +315,6 @@ class StringLengthValidatorTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * SPEC-06: minLength counts UTF-16 code units, so a single emoji
-     * (2 units) must be rejected by minLength:3 (which requires at
-     * least 3 UTF-16 units).
-     */
     #[Test]
     public function supplementary_emoji_fails_min_length_three(): void
     {
@@ -356,10 +325,6 @@ class StringLengthValidatorTest extends TestCase
         $this->validator->validate('😀', $schema);
     }
 
-    /**
-     * SPEC-06 boundary: two supplementary emojis (4 UTF-16 units)
-     * must satisfy maxLength:4 exactly.
-     */
     #[Test]
     public function supplementary_pair_at_max_length_boundary(): void
     {

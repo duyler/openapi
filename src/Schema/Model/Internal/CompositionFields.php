@@ -12,9 +12,9 @@ use Duyler\OpenApi\Schema\Model\Schema;
 final readonly class CompositionFields
 {
     /**
-     * @param list<Schema>|null   $allOf
-     * @param list<Schema>|null   $anyOf
-     * @param list<Schema>|null   $oneOf
+     * @param list<Schema>|null $allOf
+     * @param list<Schema>|null $anyOf
+     * @param list<Schema>|null $oneOf
      */
     public function __construct(
         public ?array $allOf = null,

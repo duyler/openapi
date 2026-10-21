@@ -12,30 +12,6 @@ use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
-/**
- * Per-validation mutable state: breadcrumb stack (dataPath assembly),
- * recursion depth counter (MAX_DEPTH DoS guard), and JSON Schema 2020-12
- * annotation-state for unevaluatedProperties / unevaluatedItems tracking.
- *
- * Annotation contract (R3-SPEC-001..004): keywords that successfully
- * evaluate portions of the instance — properties, patternProperties,
- * additionalProperties, prefixItems, items, contains, and every
- * successful branch of an in-place applicator (allOf, anyOf, oneOf,
- * if/then/else, $ref) — register the evaluated property names / item
- * indices here. unevaluatedProperties / unevaluatedItems read the
- * resulting sets to decide what remains unevaluated. `not` registers
- * nothing: per §10.3.4 it contributes an empty annotation set.
- *
- * Concurrency contract (P-062): one instance per validate() entry-point
- * call. The instance MUST NOT be stored as a property on a shared
- * validator — it is passed as a method argument through the recursion
- * chain. Under prefork (PHP-FPM, RoadRunner) each request implicitly
- * gets a fresh call stack. Under shared-validator runtimes (Swoole
- * coroutines, FrankenPHP threaded workers) the same validator instance
- * handles many sequential requests, but each validate() call creates a
- * fresh context — coroutine A and coroutine B never observe each
- * other's breadcrumbs, depth, or annotation state.
- */
 final class ValidationContext
 {
     public const int MAX_DEPTH = 64;
@@ -48,8 +24,6 @@ final class ValidationContext
 
     /**
      * @deprecated since 1.x, will be removed in 2.0. Use {@see fromInit()} instead.
-     *             PHPDoc-only deprecation (no {@see \Deprecated} attribute) so {@see fromInit()}
-     *             can delegate without runtime E_DEPRECATED cascade. See `.ai/reports/adr-validator-signatures-and-dtos.md`.
      */
     public function __construct(
         public readonly BreadcrumbManager $breadcrumbs,
@@ -63,8 +37,6 @@ final class ValidationContext
 
     /**
      * @deprecated since 1.x, will be removed in 2.0. Use {@see fromInit()} instead.
-     *             PHPDoc-only deprecation (no {@see \Deprecated} attribute) so internal callers
-     *             keep working without runtime E_DEPRECATED cascade. See `.ai/reports/adr-validator-signatures-and-dtos.md`.
      */
     public static function create(
         ValidatorPool $pool,
@@ -161,27 +133,12 @@ final class ValidationContext
         return isset($this->evaluatedItemIndices[$index]);
     }
 
-    /**
-     * Merges annotation state from a child branch context (composition
-     * sub-validation) into this context. Called after a successful
-     * sub-validation in AllOf / AnyOf / OneOf / If / Then / Else.
-     *
-     * Failed branches MUST NOT have their annotations merged — only
-     * successfully validated subschemas contribute to the evaluated set
-     * per JSON Schema 2020-12 §10.3.4 / §11.1.1.3.
-     */
     public function mergeChildAnnotations(self $child): void
     {
         $this->evaluatedPropertyNames += $child->evaluatedPropertyNames;
         $this->evaluatedItemIndices += $child->evaluatedItemIndices;
     }
 
-    /**
-     * Creates a child context sharing breadcrumbs and depth with this
-     * context but starting with empty annotation state. Used by
-     * composition validators to isolate annotations of each branch
-     * from siblings until a branch succeeds.
-     */
     public function forkForBranch(): self
     {
         return new self(

@@ -15,7 +15,6 @@ use Duyler\OpenApi\Validator\Schema\Internal\DiscriminatorDetector;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use WeakMap;
-use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Closure;
 
 use function is_array;
@@ -214,7 +213,6 @@ final class DiscriminatorDetectorTest extends TestCase
     #[Test]
     public function detect_discriminator_short_circuits_on_visited_cycle(): void
     {
-        // Cycle via $ref: A -> B -> A. The visited WeakMap guard breaks it.
         $schemaA = new Schema(ref: '#/components/schemas/B');
         $schemaB = new Schema(ref: '#/components/schemas/A');
         $document = $this->documentWithSchemas(['A' => $schemaA, 'B' => $schemaB]);
@@ -352,19 +350,11 @@ final class DiscriminatorDetectorTest extends TestCase
         return $current;
     }
 
-    /**
-     * Returns a resolver callable that never actually resolves anything
-     * (used for tests that don't exercise ref-following).
-     */
     private function nullResolver(): Closure
     {
         return static fn(string $ref, OpenApiDocument $d): Schema => new Schema();
     }
 
-    /**
-     * Resolver that walks the document's components.schemas map
-     * (mirrors RefResolver::resolve for tests that need ref-following).
-     */
     private function coordinateResolver(OpenApiDocument $document): Closure
     {
         return static function (string $ref) use ($document): Schema {
@@ -384,11 +374,6 @@ final class DiscriminatorDetectorTest extends TestCase
         };
     }
 
-    /**
-     * Returns a resolver callable that always throws UnresolvableRefException,
-     * matching the behaviour of {@see RefResolver::resolve()}
-     * for refs that cannot be resolved against the document.
-     */
     private function unresolvingResolver(): Closure
     {
         return static fn(string $ref, OpenApiDocument $d): Schema

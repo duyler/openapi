@@ -12,10 +12,6 @@ use PHPUnit\Framework\TestCase;
 
 use function sprintf;
 
-/**
- * OA-03: OpenAPI 3.2 discriminator.defaultMapping — unmapped discriminator values
- * resolve to schema referenced by defaultMapping instead of throwing.
- */
 final class DiscriminatorDefaultMappingTest extends TestCase
 {
     private const string DISCRIMINATOR_WITH_DEFAULT_SPEC = <<<'YAML'

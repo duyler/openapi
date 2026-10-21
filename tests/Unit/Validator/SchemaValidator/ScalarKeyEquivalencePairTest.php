@@ -24,12 +24,6 @@ use function var_export;
 
 use const NAN;
 
-/**
- * §14 pairing test: uniqueItems (ArrayLengthValidator scalar keys) and
- * enum (EnumScalarCache scalar keys) must answer the equivalence question
- * identically for every scalar pair — both are backed by ScalarKeyCodec
- * and must never drift apart again.
- */
 #[CoversClass(ArrayLengthValidator::class)]
 #[CoversClass(EnumScalarCache::class)]
 final class ScalarKeyEquivalencePairTest extends TestCase

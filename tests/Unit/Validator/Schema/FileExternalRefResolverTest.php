@@ -107,13 +107,6 @@ final class FileExternalRefResolverTest extends TestCase
         }
     }
 
-    /**
-     * SPEC-01 / RFC 6901 §3: external $ref JSON Pointer fragments must
-     * decode ~1 -> / and ~0 -> ~ before lookup. The fixture maps the
-     * path key "/user" (literal slash) and the ref encodes the slash as
-     * ~1; without decoding the resolver would look for the literal key
-     * "~1user" and fail with "JSON Pointer segment not found".
-     */
     #[Test]
     public function resolves_external_ref_with_decoded_json_pointer(): void
     {
@@ -139,18 +132,6 @@ final class FileExternalRefResolverTest extends TestCase
     }
 
     /**
-     * SEC-01: every PHP stream wrapper outside the allowlist must be
-     * rejected with ExternalRefSecurityException. The previous blacklist
-     * only covered http/https/ftp/ftps/gopher/netcat and left php://,
-     * phar://, data://, compress.zlib://, zip://, expect://, ssh2://,
-     * rar://, ogg://, glob:// (and every future wrapper) reachable.
-     *
-     * Each sample is a real attack vector: php://filter reads any file via
-     * base64 conversion, phar:// triggers deserialization gadgets, data://
-     * injects attacker-controlled JSON (SEC-24), compress.zlib:// reads
-     * files through zlib, zip:// reads entries inside archives, expect://
-     * spawns interactive shells, ssh2:// reaches the network via SSH, etc.
-     *
      * @param non-empty-string $ref
      */
     #[Test]
@@ -191,12 +172,6 @@ final class FileExternalRefResolverTest extends TestCase
         ];
     }
 
-    /**
-     * SEC-08: exception message must NOT leak the original $ref (it can
-     * contain absolute paths or attacker secrets). The offending scheme
-     * is fine to surface because it is a fixed, attacker-controlled token
-     * from the allowlist check, not user-supplied file content.
-     */
     #[Test]
     public function rejected_scheme_message_does_not_leak_original_ref(): void
     {
@@ -211,7 +186,7 @@ final class FileExternalRefResolverTest extends TestCase
             $this->assertStringNotContainsString(
                 $ref,
                 $e->getMessage(),
-                'Exception message must not leak the original $ref (SEC-08).',
+                'Exception message must not leak the original $ref.',
             );
             $this->assertStringNotContainsString(
                 '/etc/passwd',
@@ -287,16 +262,6 @@ final class FileExternalRefResolverTest extends TestCase
         $resolver->resolve($this->fixtureRoot . '/../ExternalRefSibling.yaml');
     }
 
-    /**
-     * SEC-02: a sibling directory whose name shares a prefix with the
-     * allowedRoot must NOT bypass the path-traversal check. The previous
-     * implementation used bare str_starts_with($realFile, $realRoot), so
-     * allowedRoot='/var/specs' happily admitted '/var/specs-evil/x.yaml'.
-     *
-     * The canonical check is: realFile === realRoot OR realFile starts
-     * with realRoot . '/'. The trailing slash makes the prefix boundary
-     * explicit and rejects sibling-evil directories.
-     */
     #[Test]
     public function denies_sibling_directory_bypass_with_prefix_match(): void
     {
@@ -330,11 +295,6 @@ final class FileExternalRefResolverTest extends TestCase
         }
     }
 
-    /**
-     * SEC-02: strict descendant (file in a subdirectory of allowedRoot)
-     * must remain valid after the prefix-fix. Covers the
-     * str_starts_with($realFile, $realRoot . '/') branch.
-     */
     #[Test]
     public function allows_strict_descendant_file_under_root(): void
     {
@@ -367,11 +327,6 @@ final class FileExternalRefResolverTest extends TestCase
         }
     }
 
-    /**
-     * SEC-02: edge case where the file path is exactly the allowedRoot
-     * (root points at a file rather than a directory). The fixed
-     * implementation accepts this via the $realFile === $realRoot branch.
-     */
     #[Test]
     public function allows_exact_root_match_when_path_equals_root(): void
     {
@@ -465,8 +420,6 @@ final class FileExternalRefResolverTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('External ref target is not a schema object');
 
-        // Existing fixture: user.yaml#/UserSchema/type resolves to the string
-        // 'object', which is not a schema array.
         $resolver->resolve($this->fixtureRoot . '/components/user.yaml#/UserSchema/type');
     }
 
@@ -505,13 +458,6 @@ final class FileExternalRefResolverTest extends TestCase
         $this->assertSame('email', $email->format);
     }
 
-    /**
-     * SEC-04: TOCTOU between realpath and fopen must not let an attacker
-     * swap a regular file for a symlink that escapes allowedRoot. The
-     * builtin resolver resolves the path via realpath right before the
-     * path-traversal check, so a symlink replacement pointing outside
-     * allowedRoot is rejected at assertPathWithinAllowedRoot time.
-     */
     #[Test]
     public function toctou_symlink_replacement_blocked_by_allowed_root_check(): void
     {
@@ -527,7 +473,6 @@ final class FileExternalRefResolverTest extends TestCase
         file_put_contents($outsideFile, "type: string\n");
 
         try {
-            // Swap the regular file for a symlink that escapes the root.
             unlink($insideFile);
             symlink($outsideFile, $insideFile);
 
@@ -555,12 +500,6 @@ final class FileExternalRefResolverTest extends TestCase
         }
     }
 
-    /**
-     * SEC-05: file payload larger than the configured $maxBytes cap must
-     * be rejected with ExternalRefTooLargeException before being fully
-     * materialised in memory. Uses a small maxBytes for test speed; the
-     * production default (10 MB) is the same code path.
-     */
     #[Test]
     public function size_limit_enforced_when_file_exceeds_max_bytes(): void
     {
@@ -590,11 +529,6 @@ final class FileExternalRefResolverTest extends TestCase
         }
     }
 
-    /**
-     * SEC-05 boundary: a file whose size equals exactly $maxBytes must be
-     * accepted (the cap rejects strictly larger files). Uses a small
-     * maxBytes for test speed.
-     */
     #[Test]
     public function file_exactly_at_max_bytes_is_allowed(): void
     {
@@ -619,12 +553,6 @@ final class FileExternalRefResolverTest extends TestCase
         }
     }
 
-    /**
-     * SEC-05: special files (character devices like /dev/null, /dev/zero,
-     * FIFOs, sockets, directories) must be rejected at fstat time. Reading
-     * /dev/zero without a size cap is a textbook DoS vector. /dev/zero
-     * and /dev/null exist on every Linux and macOS test runner.
-     */
     #[DataProvider('specialFileRefs')]
     #[Test]
     public function special_file_rejected_as_not_regular_file(string $specialPath): void
@@ -648,14 +576,6 @@ final class FileExternalRefResolverTest extends TestCase
         ];
     }
 
-    /**
-     * SEC-04 hygiene: when parseContents throws (e.g. unsupported
-     * extension), the file handle acquired via fopen must still be
-     * released via the finally block in readFileWithLimit(). This test
-     * exercises that path and asserts the parseContents exception
-     * propagates — proving fopen → fstat → readWithLimit → parseContents
-     * → finally(fclose) all ran without fatal errors or FD leaks.
-     */
     #[Test]
     public function file_handle_closed_when_parse_contents_throws(): void
     {
@@ -670,20 +590,12 @@ final class FileExternalRefResolverTest extends TestCase
 
             $resolver->resolve($tempFile);
         } finally {
-            // On Unix unlink succeeds regardless of open handles, but a
-            // clean unlink post-exception documents the expected lifecycle.
             if (file_exists($tempFile)) {
                 unlink($tempFile);
             }
         }
     }
 
-    /**
-     * Builder wiring: withExternalRefMaxBytes() must propagate to the
-     * constructed FileExternalRefResolver. A spec loaded from string
-     * has no auto-derived allowedRoot, so the resolver's path policy is
-     * unrestricted and only the size cap governs the resolution.
-     */
     #[Test]
     public function builder_with_external_ref_max_bytes_propagates_to_resolver(): void
     {
@@ -714,17 +626,6 @@ final class FileExternalRefResolverTest extends TestCase
         }
     }
 
-    /**
-     * Defensive guard: if fread() returns false inside readWithLimit()
-     * (signal interruption, stream filter error, FS corruption), the
-     * resolver must surface a RuntimeException rather than silently
-     * returning truncated content. We exercise this path directly with
-     * a custom stream wrapper whose stream_read() returns false, because
-     * regular files (verified via fstat S_IFREG) never return false from
-     * fread() in practice. readWithLimit() is invoked via reflection
-     * because the builtin resolver's scheme allowlist (SEC-01) blocks
-     * the custom wrapper scheme at resolve() entry.
-     */
     #[Test]
     public function fread_returning_false_in_read_with_limit_raises_runtime_exception(): void
     {
@@ -754,16 +655,8 @@ final class FileExternalRefResolverTest extends TestCase
     }
 
     /**
-     * SEC-08 / CWE-209: every exception message produced by the
-     * builtin FileExternalRefResolver must be free of absolute
-     * filesystem paths. The README's PSR-15 middleware example
-     * surfaces any Throwable message to the HTTP client, so paths
-     * such as /var/specs, /private/tmp, /Users/... would disclose
-     * the server's filesystem layout to an unauthenticated caller.
-     *
-     * @param non-empty-string $ref       External ref to feed the resolver
-     * @param class-string     $exception Expected exception class
-     *
+     * @param non-empty-string $ref
+     * @param class-string $exception
      * @dataProvider absolutePathLeakingRefs
      */
     #[Test]
@@ -801,11 +694,6 @@ final class FileExternalRefResolverTest extends TestCase
         ];
     }
 
-    /**
-     * SEC-08 / CWE-209: a payload that is not a YAML/JSON mapping must
-     * raise an exception message that does NOT leak the temp-file path
-     * created on the test machine.
-     */
     #[Test]
     public function non_mapping_payload_message_does_not_leak_temp_path(): void
     {
@@ -830,12 +718,6 @@ final class FileExternalRefResolverTest extends TestCase
         }
     }
 
-    /**
-     * SEC-08 opt-in: when a PSR-3 logger is supplied, the resolver
-     * forwards the absolute path at debug level so trusted operators
-     * can still locate the offending file — even though the surfaced
-     * RuntimeException stays generic.
-     */
     #[Test]
     public function verbose_logger_receives_absolute_path_for_missing_file(): void
     {
@@ -859,21 +741,11 @@ final class FileExternalRefResolverTest extends TestCase
 }
 
 /**
- * Minimal stream wrapper used by file_handle_tests to simulate a regular
- * file whose fread() returns false. Reports S_IFREG via stream_stat() so
- * the resolver's regular-file check passes, then returns false from
- * stream_read() and false from stream_eof() so the read loop enters its
- * body at least once before the guard fires.
- *
  * @internal
  */
 final class FailingReadStreamWrapper
 {
     /**
-     * Stream context resource set by the PHP engine when the wrapper is
-     * opened via stream_context_create(). Declared explicitly to avoid
-     * the dynamic-property deprecation in PHP 8.5+.
-     *
      * @var resource|null
      */
     public $context = null;
@@ -922,10 +794,6 @@ final class FailingReadStreamWrapper
 }
 
 /**
- * Minimal in-memory PSR-3 spy logger used to assert that the resolver
- * forwards absolute paths at debug level when verbose logging is
- * enabled. Captures the level, message, and context of every call.
- *
  * @internal
  */
 final class SpyLogger implements LoggerInterface

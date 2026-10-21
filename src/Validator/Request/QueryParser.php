@@ -25,13 +25,6 @@ final readonly class QueryParser
     ) {}
 
     /**
-     * Uses an explicit segment-based parser (insertNested + assignSegments) instead
-     * of parse_str because parse_str converts dots in keys to underscores
-     * (e.g. `user.name` becomes `user_name`) and keeps only the last value for
-     * duplicate scalar keys. This parser preserves key names literally and
-     * collects duplicate scalars into indexed arrays to match the structure
-     * produced by RFC 6570 form-style explode expansion.
-     *
      * @return array<array-key, mixed>
      */
     public function parse(string $queryString): array
@@ -76,7 +69,6 @@ final readonly class QueryParser
 
     /**
      * @param array<int, scalar> $values
-     *
      * @return array<int, scalar>|string
      */
     public function handleExplode(array $values, bool $explode): array|string

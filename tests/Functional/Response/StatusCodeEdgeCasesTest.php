@@ -13,12 +13,6 @@ use PHPUnit\Framework\TestCase;
 
 use function sprintf;
 
-/**
- * Edge cases for response status code validation (SC-01, SC-02, SC-04, SC-05).
- *
- * Covers non-standard status codes (0, 999), range-based responses (1XX, 3XX)
- * and fully out-of-range codes (6XX-9XX) that the spec does not declare.
- */
 final class StatusCodeEdgeCasesTest extends TestCase
 {
     private const string STANDARD_SPEC = <<<'YAML'
@@ -78,12 +72,6 @@ YAML;
         $this->psrFactory = new Psr17Factory();
     }
 
-    /**
-     * SC-01: Status code 0 is non-standard and not declared in the spec.
-     * The Nyholm Response constructor permits status 0 (only withStatus()
-     * enforces the 100..599 range), so the validator receives 0 and must
-     * reject it because no "0XX" range is defined.
-     */
     #[Test]
     public function status_code_zero_throws_undefined_response_exception(): void
     {
@@ -108,10 +96,6 @@ YAML;
         }
     }
 
-    /**
-     * SC-02: Status code 999 exceeds the standard HTTP range and is not
-     * declared in the spec, so the validator must reject it.
-     */
     #[Test]
     public function status_code_999_throws_undefined_response_exception(): void
     {
@@ -136,9 +120,6 @@ YAML;
         }
     }
 
-    /**
-     * SC-04 (positive): Status 102 falls under the declared 1XX range.
-     */
     #[Test]
     public function status_code_102_matches_declared_1xx_range(): void
     {
@@ -158,9 +139,6 @@ YAML;
         self::assertSame(102, $response->getStatusCode());
     }
 
-    /**
-     * SC-04 (positive): Status 301 falls under the declared 3XX range.
-     */
     #[Test]
     public function status_code_301_matches_declared_3xx_range(): void
     {
@@ -180,10 +158,6 @@ YAML;
         self::assertSame(301, $response->getStatusCode());
     }
 
-    /**
-     * SC-04 (negative): Status 200 is not covered by the RANGES_SPEC
-     * (only 1XX and 3XX are declared), so it must be rejected.
-     */
     #[Test]
     public function status_code_200_not_covered_by_ranges_throws_exception(): void
     {
@@ -204,9 +178,6 @@ YAML;
     }
 
     /**
-     * SC-05: Fully out-of-range HTTP status codes (6XX-9XX) must be rejected
-     * when the spec only declares standard codes.
-     *
      * @return iterable<array{int}>
      */
     public static function nonStandardStatusCodesProvider(): iterable
@@ -227,9 +198,6 @@ YAML;
     }
 
     /**
-     * SC-05: 6XX-9XX codes are not part of any standard HTTP range.
-     * The spec declares only "200", so all of these must throw.
-     *
      * @dataProvider nonStandardStatusCodesProvider
      */
     #[Test]
@@ -259,12 +227,6 @@ YAML;
         }
     }
 
-    /**
-     * SC-05 (positive): The 6XX range works as a declared range. When the
-     * spec explicitly declares "6XX", status 600 must pass validation.
-     * This documents that the validator itself does not blacklist 6XX-9XX;
-     * rejection happens only because the spec did not declare them.
-     */
     #[Test]
     public function status_code_600_passes_when_6xx_range_is_declared(): void
     {

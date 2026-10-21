@@ -491,15 +491,6 @@ final class AbstractCoercerTest extends TestCase
         $this->assertSame([], $this->coercer->exposedCoerceToString([]));
     }
 
-    /**
-     * Anti-test: to verify this test guards against regression, temporarily
-     * remove the overflow check ($value > PHP_INT_MAX || $value < PHP_INT_MIN)
-     * in AbstractCoercer::coerceToInteger(). Without the guard, (int) 1e20
-     * triggers a PHP deprecation notice ("not representable as int") and
-     * returns platform-dependent undefined behavior (commonly 0 or
-     * 7766279631452241920) instead of throwing TypeMismatchError. The same
-     * regression disables coerce_to_integer_throws_on_float_overflow_below_int_min.
-     */
     #[Test]
     public function coerce_to_integer_throws_on_float_overflow_above_int_max(): void
     {
@@ -518,19 +509,6 @@ final class AbstractCoercerTest extends TestCase
         $this->coercer->exposedCoerceToInteger(-1.0E+20);
     }
 
-    /**
-     * Anti-test: to verify this test guards against regression, temporarily
-     * restore the previous guard ($value > PHP_INT_MAX || $value < PHP_INT_MIN)
-     * in AbstractCoercer::coerceToInteger(). The previous float-vs-int
-     * comparison missed the bypass double (float) PHP_INT_MAX =
-     * 9223372036854775808.0 (= PHP_INT_MAX + 1) because PHP implicitly
-     * coerces PHP_INT_MAX to the same float, leaving `$value > PHP_INT_MAX`
-     * false at the boundary. The subsequent (int) cast then wrapped around
-     * to a non-int64 value with a PHP 8.4 deprecation warning (PHP 9.0
-     * promotes this to TypeError). The same regression disables
-     * coerce_to_integer_rejects_float_just_below_php_int_max and
-     * coerce_to_integer_rejects_float_just_above_php_int_min.
-     */
     #[Test]
     public function coerce_to_integer_rejects_float_at_php_int_max_boundary(): void
     {
@@ -569,10 +547,6 @@ final class AbstractCoercerTest extends TestCase
     #[Test]
     public function coerce_to_integer_accepts_large_whole_float_within_range(): void
     {
-        // 2^50 = 1125899906842624 is exactly representable as a double and
-        // well within int64 range. PHP_INT_MAX itself rounds to PHP_INT_MAX+1
-        // when cast to float, so the int boundary is not exactly testable
-        // through float.
         $value = (float) (2 ** 50);
 
         $result = $this->coercer->exposedCoerceToInteger($value);
@@ -598,14 +572,6 @@ final class AbstractCoercerTest extends TestCase
         $this->assertSame(42, $result);
     }
 
-    /**
-     * Anti-test for R4-SPEC-005: to verify this test guards against regression,
-     * temporarily restore the unconditional `is_float($value)` rejection in
-     * AbstractCoercer::coerceToIntegerStrict(). Without the JSON Schema 2020-12
-     * §4.2.3 fix, a whole-valued float like 3.0 is rejected even though the
-     * runtime TypeValidator accepts it (asymmetric behavior between coercion
-     * enabled and coercion disabled).
-     */
     #[Test]
     public function coerce_to_integer_strict_accepts_whole_float_3_0(): void
     {
@@ -674,14 +640,6 @@ final class AbstractCoercerTest extends TestCase
         }
     }
 
-    /**
-     * Anti-test for R4-SPEC-005 safe-integer-range guard: 2^53 + 1
-     * (9007199254740993.0) is silently rounded to 2^53 by IEEE-754 double
-     * precision, so fmod($value, 1.0) === 0.0 even though the value is no
-     * longer exactly representable. Without the |value| < 2^53 guard, the
-     * strict coercion would silently truncate 9007199254740993.0 to
-     * 9007199254740992 with no diagnostic.
-     */
     #[Test]
     public function coerce_to_integer_strict_rejects_unsafe_whole_float_above_2_pow_53(): void
     {
@@ -718,14 +676,6 @@ final class AbstractCoercerTest extends TestCase
         }
     }
 
-    /**
-     * Anti-test for R4-SEC-013 (strict variant): without the floatExceedsInt64Range
-     * guard in coerceToIntegerStrict, a whole-valued float that lands below the
-     * 2^53 safe-range check but exceeds int64 (e.g. (float) PHP_INT_MAX, which
-     * is 9223372036854775808.0 = PHP_INT_MAX + 1 due to IEEE-754 rounding)
-     * would be cast through (int) and wrap around to a negative int with a
-     * PHP 8.5 deprecation notice (TypeError in 9.0).
-     */
     #[Test]
     public function coerce_to_integer_strict_rejects_float_at_php_int_max_boundary(): void
     {

@@ -58,9 +58,7 @@ final class CompositionSiblingMergerTest extends TestCase
 
         $overrides = $this->merger->merge(new SiblingMergeContext($resolved, $sibling));
 
-        // anyOf becomes null when both sides set (deferred to allOf as wrapped composition)
         self::assertNull($overrides['anyOf']);
-        // allOf contains 2 wrapper schemas, each carrying its own anyOf list
         self::assertCount(2, $overrides['allOf']);
         self::assertSame([$resolvedA, $resolvedB], $overrides['allOf'][0]->anyOf);
         self::assertSame([$siblingC, $siblingD], $overrides['allOf'][1]->anyOf);
@@ -158,7 +156,6 @@ final class CompositionSiblingMergerTest extends TestCase
 
         $overrides = $this->merger->merge(new SiblingMergeContext($resolved, $sibling));
 
-        // When both sides have if/then/else, fields are cleared and contributions go to allOf
         self::assertNull($overrides['if']);
         self::assertNull($overrides['then']);
         self::assertNull($overrides['else']);
@@ -220,9 +217,6 @@ final class CompositionSiblingMergerTest extends TestCase
     #[Test]
     public function merge_scalar_additions_appended_to_all_of_when_types_conflict(): void
     {
-        // resolved has type=string, sibling has type=integer → unmergeable types
-        // plus resolved has pattern=^a, sibling pattern=^b → unmergeable patterns
-        // All four should appear as separate allOf entries
         $resolved = new Schema(type: 'string', format: 'date-time', pattern: '^a', multipleOf: 2.0);
         $sibling = new Schema(type: 'integer', format: 'uuid', pattern: '^b', multipleOf: 3.0);
 
@@ -230,7 +224,6 @@ final class CompositionSiblingMergerTest extends TestCase
 
         $allOf = $overrides['allOf'];
         self::assertNotNull($allOf);
-        // 6 contributions: 2 type + 2 format + 2 multipleOf + 2 pattern = 8 (multipleOf+pattern via scalarMerger)
         self::assertCount(8, $allOf);
     }
 

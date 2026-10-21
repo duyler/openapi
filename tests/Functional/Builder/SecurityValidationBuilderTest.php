@@ -218,12 +218,6 @@ YAML;
         $this->assertTrue($caught, 'ValidationException should be thrown for wrong scheme prefix');
     }
 
-    /**
-     * SEC-07 opt-in: withSecurityVerboseLogging() must propagate a PSR-3
-     * logger through the builder DI chain so the security validator
-     * forwards scheme details at debug level when validation fails. The
-     * surfaced exception message stays generic regardless.
-     */
     #[Test]
     public function with_security_verbose_logging_propagates_logger_through_builder(): void
     {
@@ -246,15 +240,11 @@ YAML;
             $this->assertCount(1, $errors);
             $this->assertInstanceOf(MissingSecurityCredentialsError::class, $errors[0]);
 
-            // SEC-07: surfaced message must remain generic despite verbose
-            // logging being enabled. Opt-in logging does not weaken the
-            // caller-safe contract.
             $this->assertSame(
                 'Authentication required: missing or invalid credentials',
                 $errors[0]->getMessage(),
             );
 
-            // Verbose logger must have received the concrete scheme details.
             $this->assertCount(1, $spy->records);
             $record = $spy->records[0];
             $this->assertSame('debug', $record['level']);
@@ -269,9 +259,6 @@ YAML;
 }
 
 /**
- * Minimal in-memory PSR-3 spy logger used to assert that
- * withSecurityVerboseLogging() wires the logger end-to-end.
- *
  * @internal
  */
 final class SecurityVerboseSpyLogger implements LoggerInterface

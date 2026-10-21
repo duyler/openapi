@@ -18,14 +18,6 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 use JsonException;
 
-/**
- * RB-08: vendor-specific media type (application/vnd.api+json) — JSON:API body
- * parsing and content negotiation.
- *
- * RB-09: optional request body (required: false) — verifies the validator does
- * not raise MissingRequestBodyException when the spec marks the body as optional
- * and the client sends an empty body.
- */
 final class RequestBodyMediaTypeTest extends TestCase
 {
     private const string VENDOR_MEDIA_TYPE_STRING_SCHEMA_SPEC = <<<'YAML'

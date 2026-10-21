@@ -64,8 +64,8 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
     }
 
     /**
-     * @param array<array-key, mixed>           $data
-     * @param array<array-key, string>          $stringUnevaluatedProperties
+     * @param array<array-key, mixed> $data
+     * @param array<array-key, string> $stringUnevaluatedProperties
      */
     private function validateUnevaluatedProperties(array $data, Schema $unevaluatedProperties, array $stringUnevaluatedProperties, ?ValidationContext $context): void
     {
@@ -92,7 +92,6 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
 
     /**
      * @param array<array-key, mixed> $data
-     *
      * @return list<string>
      */
     private function getEvaluatedProperties(Schema $schema, array $data, ?ValidationContext $context): array
@@ -132,7 +131,6 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
 
     /**
      * @param array<array-key, mixed> $data
-     *
      * @return list<string>
      */
     private function collectPatternMatched(Schema $schema, array $data): array

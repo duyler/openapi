@@ -93,7 +93,6 @@ final readonly class SchemaSiblingMerger
     /**
      * @param ?list<string> $resolved
      * @param ?list<string> $sibling
-     *
      * @return ?list<string>
      */
     private function mergeRequired(?array $resolved, ?array $sibling): ?array
@@ -112,7 +111,6 @@ final readonly class SchemaSiblingMerger
     /**
      * @param ?array<string, mixed> $resolved
      * @param ?array<string, mixed> $sibling
-     *
      * @return ?array<string, mixed>
      */
     private function mergeExamples(?array $resolved, ?array $sibling): ?array

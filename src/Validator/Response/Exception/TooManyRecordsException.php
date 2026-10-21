@@ -9,12 +9,6 @@ use RuntimeException;
 
 use function sprintf;
 
-/**
- * Thrown when a streaming content parser (NDJSON, SSE, JSON Text Sequence)
- * accumulates more records than the configured maximum. Defends against
- * memory exhaustion from attacker-controlled streaming responses that
- * consist of a very large number of small records.
- */
 final class TooManyRecordsException extends RuntimeException
 {
     use SanitizableExceptionTrait;

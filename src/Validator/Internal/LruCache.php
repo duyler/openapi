@@ -14,7 +14,6 @@ use function sprintf;
 
 /**
  * @internal
- *
  * @template K of string
  * @template V
  */
@@ -37,7 +36,6 @@ final class LruCache
 
     /**
      * @param K $key
-     *
      * @return V|null
      */
     public function get(string $key): mixed

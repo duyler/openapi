@@ -49,9 +49,6 @@ abstract class FunctionalTestCase extends TestCase
         $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
     }
 
-    /**
-     * Create a validation context with specified formatter
-     */
     protected function createContext(ErrorFormatterInterface $formatter = new SimpleFormatter()): ValidationContext
     {
         return new ValidationContext(
@@ -61,9 +58,6 @@ abstract class FunctionalTestCase extends TestCase
         );
     }
 
-    /**
-     * Create a validator instance
-     */
     protected function createValidator(): SchemaValidatorWithContext
     {
         return new SchemaValidatorWithContext(
@@ -77,9 +71,6 @@ abstract class FunctionalTestCase extends TestCase
         );
     }
 
-    /**
-     * Validate data and expect ValidationException
-     */
     protected function assertValidationError(
         callable $validationFn,
         string $expectedErrorClass,
@@ -112,9 +103,6 @@ abstract class FunctionalTestCase extends TestCase
         }
     }
 
-    /**
-     * Assert that validation passes without errors
-     */
     protected function assertValidationPasses(callable $validationFn): void
     {
         try {
@@ -133,9 +121,6 @@ abstract class FunctionalTestCase extends TestCase
         }
     }
 
-    /**
-     * Assert that multiple errors are present
-     */
     protected function assertMultipleErrors(
         callable $validationFn,
         int $expectedCount,
@@ -155,9 +140,6 @@ abstract class FunctionalTestCase extends TestCase
         }
     }
 
-    /**
-     * Get formatted errors as array
-     */
     protected function getFormattedErrors(ValidationException $e, ErrorFormatterInterface $formatter): array
     {
         $errors = [];
@@ -177,9 +159,6 @@ abstract class FunctionalTestCase extends TestCase
         return $errors;
     }
 
-    /**
-     * Assert breadcrumb path in error
-     */
     protected function assertBreadcrumb(string $expectedPath, ValidationException $e): void
     {
         $found = array_any($e->getErrors(), fn($error) => $error->dataPath() === $expectedPath);
@@ -190,9 +169,6 @@ abstract class FunctionalTestCase extends TestCase
         );
     }
 
-    /**
-     * Get summary of error paths for debugging
-     */
     protected function getErrorPathsSummary(ValidationException $e): string
     {
         $paths = [];
@@ -203,9 +179,6 @@ abstract class FunctionalTestCase extends TestCase
         return implode(', ', $paths);
     }
 
-    /**
-     * Get all error types from exception
-     */
     protected function getErrorTypes(ValidationException $e): array
     {
         $types = [];

@@ -18,17 +18,6 @@ use function str_repeat;
 use const JSON_THROW_ON_ERROR;
 
 /**
- * P-097 / P-099: deep-nesting DoS defence. The validator enforces a hard
- * MAX_DEPTH guard (64) via ValidationContext::incrementDepth(); a deeply
- * nested payload that exceeds it must be rejected with
- * SchemaDepthExceededException rather than blowing the PHP stack.
- *
- * These tests build a 100-level nested object in the request body — deep
- * enough to exceed the schema depth guard (64) but shallow enough to pass
- * the JSON parser depth limit (128, JsonDepthLimit::Untrusted). The payload
- * therefore exercises the schema validator's depth counter, proving the DoS
- * guard fires before PHP itself would crash with a stack overflow.
- *
  * @internal
  */
 final class DeepNestingTest extends TestCase
@@ -75,8 +64,6 @@ YAML;
             ->fromYamlString(self::SPEC)
             ->build();
 
-        // 100 levels — exceeds ValidationContext::MAX_DEPTH (64) while
-        // staying under the JsonBodyParser cap (JsonDepthLimit::Untrusted = 128).
         $payload = '{"child":' . str_repeat('{"child":', 100) . 'null' . str_repeat('}', 100) . '}';
 
         $request = $this->factory

@@ -17,10 +17,6 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
 /**
- * Regression coverage for R4-SEC-009: builtin format validators must
- * share the configured PregExecutor regardless of the order in which
- * withFormat() and withMaxRegexBacktracks() are called.
- *
  * @internal
  */
 final class OpenApiValidatorBuilderWithFormatTest extends TestCase

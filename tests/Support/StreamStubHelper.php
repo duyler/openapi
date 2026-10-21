@@ -12,13 +12,6 @@ use function count;
 use function str_split;
 use function strlen;
 
-/**
- * Stream stub helper for tests that exercise paths relying on the PSR-7
- * streaming read API (getSize / eof / read). PHPUnit createStub() returns
- * neutral defaults that defeat chunked reading; this helper wires a stub to
- * emit the configured body across 8192-byte chunks, matching BodyReader's
- * contract.
- */
 trait StreamStubHelper
 {
     private function configureReadableStream(StreamInterface $stream, string $body): void

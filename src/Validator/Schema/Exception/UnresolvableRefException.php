@@ -41,12 +41,6 @@ final class UnresolvableRefException extends RuntimeException
         );
     }
 
-    /**
-     * Returns the retained $ref string. Pass $reveal = true only from
-     * trusted operator code; the default returns '<redacted>' to prevent
-     * disclosure of internal specification structure through reflective
-     * serialization.
-     */
     public function ref(bool $reveal = false): string
     {
         return $reveal ? $this->ref : '<redacted>';
@@ -57,12 +51,6 @@ final class UnresolvableRefException extends RuntimeException
         return $this->reason;
     }
 
-    /**
-     * Returns the internal navigation trace (e.g. the chain of visited
-     * $ref pointers). Pass $reveal = true only from trusted operator
-     * code; the default returns '<redacted>' to prevent disclosure of
-     * internal specification structure through reflective serialization.
-     */
     public function internalTrace(bool $reveal = false): ?string
     {
         return $reveal ? $this->internalTrace : '<redacted>';

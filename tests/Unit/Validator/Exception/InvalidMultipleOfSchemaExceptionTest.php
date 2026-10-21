@@ -15,14 +15,6 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(InvalidMultipleOfSchemaException::class)]
 final class InvalidMultipleOfSchemaExceptionTest extends TestCase
 {
-    /**
-     * Pins the deprecated BC factory retained since R4-CORRECTNESS-008.
-     * NumericRangeValidator no longer throws it; the factory survives only
-     * for external callers and will be removed in 2.0. The PHP 8.4
-     * #[Deprecated] attribute emits E_DEPRECATED at the call site; the
-     * IgnoreDeprecations attribute keeps the pinned BC contract out of the
-     * suite-wide deprecation count so pipelines stay green.
-     */
     #[Test]
     #[IgnoreDeprecations]
     public function deprecated_factory_for_large_integer_without_bcmath_includes_both_arguments_in_message(): void

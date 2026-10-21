@@ -41,10 +41,6 @@ final readonly class DocumentNavigator
     /**
      * @param array<string, bool> $visited
      * @param WeakMap<OpenApiDocument, RefCache> $cache
-     *
-     * @throws SchemaDepthExceededException
-     * @throws UnresolvableRefException
-     *
      * @return array{Schema|Parameter|RequestBody|Response, array<string, bool>}
      */
     public function resolveRef(
@@ -84,9 +80,6 @@ final readonly class DocumentNavigator
 
     /**
      * @param array<int, string> $parts
-     *
-     * @throws SchemaDepthExceededException
-     * @throws UnresolvableRefException
      */
     public function navigate(
         object|array $current,
@@ -201,7 +194,6 @@ final readonly class DocumentNavigator
 
     /**
      * @param array<string, bool> $visited
-     *
      * @return array{Schema|Parameter|RequestBody|Response, array<string, bool>}
      */
     private function resolveExternalRef(string $ref, array $visited): array

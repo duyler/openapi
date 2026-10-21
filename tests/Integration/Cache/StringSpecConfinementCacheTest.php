@@ -16,11 +16,6 @@ use function sprintf;
 use function strlen;
 
 /**
- * End-to-end reproduction of issue #68: fromYamlString() + SchemaCache +
- * repeated build() calls in one process. After the warm-up build the pool
- * must serve every further build without new writes: the cached document
- * and the cached confinement verdict are both reused.
- *
  * @internal
  */
 final class StringSpecConfinementCacheTest extends TestCase

@@ -22,7 +22,6 @@ trait ItemValidationExceptionTrait
 {
     /**
      * @param non-empty-string $schemaPath
-     * @throws Throwable
      */
     private function wrapItemValidationException(
         Throwable $e,

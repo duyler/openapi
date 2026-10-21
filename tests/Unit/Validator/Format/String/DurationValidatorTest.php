@@ -204,10 +204,6 @@ final class DurationValidatorTest extends TestCase
     }
 
     /**
-     * Weeks (W designator) edge cases per ISO 8601: the W designator is an
-     * alternative to Y/M/D + H/M/S. Weeks are exclusive — they cannot be
-     * combined with any other component.
-     *
      * @return array<string, array{0: string, 1: bool}>
      */
     public static function weeksEdgeCasesProvider(): array

@@ -11,14 +11,6 @@ final readonly class IntegerStringNormalizer
 {
     public const string INTEGER_PATTERN = '/^[+-]?\d+$/';
 
-    /**
-     * Returns the canonical form of an integer string: optional leading minus,
-     * no leading plus, no leading zeros (except for the value zero itself).
-     *
-     * Used to detect silent overflow of `(int) $value` cast: a value that
-     * passes `/^[+-]?\d+$/` but whose canonical form does not equal
-     * `(string) (int) $value` is out of int64 range.
-     */
     public static function canonicalize(string $value): string
     {
         $first = $value[0];

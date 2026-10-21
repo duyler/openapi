@@ -123,7 +123,6 @@ final readonly class ExampleValidator
     /**
      * @param array<string, mixed> $source
      * @param list<mixed> $target
-     *
      * @return list<mixed>
      */
     private function extractExampleValues(array $source, array $target): array

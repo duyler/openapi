@@ -36,12 +36,6 @@ final class HeaderFinderTest extends TestCase
         self::assertSame('application/json,application/xml', $result);
     }
 
-    /**
-     * P-015: RFC 9110 §5.2 — multiple field lines with the same name are
-     * equivalent to a single line whose values are joined by a comma
-     * WITHOUT a space, so the merged value round-trips correctly through
-     * simple/pipeDelimited style explode which splits on the bare comma.
-     */
     #[Test]
     public function merges_multi_value_headers_with_comma_no_space(): void
     {

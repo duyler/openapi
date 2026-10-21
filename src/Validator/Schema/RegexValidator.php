@@ -8,7 +8,6 @@ use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
 use Duyler\OpenApi\Validator\Exception\PregRuntimeException;
 use Duyler\OpenApi\Validator\Internal\LruCache;
 use Duyler\OpenApi\Validator\PregExecutor;
-use InvalidArgumentException;
 
 use function ctype_alnum;
 use function preg_match;
@@ -31,7 +30,6 @@ final readonly class RegexValidator
     /** @var LruCache<string, string> */
     private LruCache $normalizeCache;
 
-    /** @throws InvalidArgumentException */
     public function __construct(
         ?int $maxSize = null,
         private PregExecutor $pregExecutor = new PregExecutor(),

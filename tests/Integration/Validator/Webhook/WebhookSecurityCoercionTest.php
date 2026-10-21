@@ -14,10 +14,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Covers webhook edge cases:
- * - WH-04: webhook with security scheme (http/bearer)
- * - WH-05: webhook with type coercion
- *
  * @internal
  */
 final class WebhookSecurityCoercionTest extends TestCase
@@ -108,11 +104,6 @@ YAML;
         self::assertSame('POST', $operation->method);
     }
 
-    /**
-     * When enableSecurityValidation() is active and the spec declares a
-     * security scheme for a webhook, a request missing the required
-     * credentials must be rejected with a ValidationException.
-     */
     #[Test]
     public function wh_04_webhook_without_authorization_throws_security_exception(): void
     {

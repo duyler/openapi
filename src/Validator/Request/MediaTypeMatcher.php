@@ -6,18 +6,11 @@ namespace Duyler\OpenApi\Validator\Request;
 
 use function count;
 
-/**
- * Matches a concrete request media type against the media types declared
- * in an OpenAPI operation body, honouring RFC 7231 §3.1.1.1 wildcard
- * patterns. The most specific declaration wins, from exact match through
- * subtype wildcard to the universal wildcard.
- */
 final readonly class MediaTypeMatcher
 {
     /**
-     * @param list<string> $specMediaTypes lower-cased keys declared in the spec
-     *
-     * @return string|null the matching spec key, or null when no declaration matches
+     * @param list<string> $specMediaTypes
+     * @return string|null
      */
     public static function findMatch(string $requestMediaType, array $specMediaTypes): ?string
     {

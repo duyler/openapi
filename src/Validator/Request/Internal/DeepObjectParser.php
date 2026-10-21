@@ -25,7 +25,6 @@ final readonly class DeepObjectParser
 
     /**
      * @param non-empty-list<array{rawKey: string, rawValue: string, decodedKey: string}> $groupPairs
-     *
      * @return string|array<array-key, mixed>
      */
     public function resolveGroup(string $baseKey, array $groupPairs, BracketNotationParser $bracketParser): string|array
@@ -53,7 +52,6 @@ final readonly class DeepObjectParser
 
     /**
      * @param non-empty-list<array{rawKey: string, rawValue: string, decodedKey: string}> $groupPairs
-     *
      * @return string|array<int, string>
      */
     private function collectScalarValues(array $groupPairs): string|array
@@ -68,7 +66,6 @@ final readonly class DeepObjectParser
 
     /**
      * @param non-empty-list<array{rawKey: string, rawValue: string, decodedKey: string}> $groupPairs
-     *
      * @return string|array<array-key, mixed>
      */
     private function buildNestedTree(array $groupPairs, string $baseKey, BracketNotationParser $bracketParser): string|array

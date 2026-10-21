@@ -11,7 +11,6 @@ final readonly class ModelWireSerializer
 {
     /**
      * @param list<FieldMetadata> $fields
-     *
      * @return array<string, mixed>
      */
     public static function toArray(object $model, array $fields): array

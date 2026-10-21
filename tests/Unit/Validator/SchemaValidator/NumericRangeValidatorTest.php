@@ -504,11 +504,6 @@ class NumericRangeValidatorTest extends TestCase
         self::assertSame(true, $succeeded);
     }
 
-    /**
-     * P-009: JSON per RFC 8259 §6 cannot represent NaN. NaN comparisons
-     * always return false in PHP, which previously caused the range
-     * validator to silently accept any range constraint.
-     */
     #[Test]
     public function rejects_nan_for_numeric_range(): void
     {
@@ -576,17 +571,6 @@ class NumericRangeValidatorTest extends TestCase
         self::assertSame(true, $succeeded);
     }
 
-    /**
-     * R4-CORRECTNESS-008: previously, integer data with non-integer
-     * multipleOf and a large quotient (> 1e15) failed closed with
-     * InvalidMultipleOfSchemaException when bcmath was not loaded.
-     * Since R4-CORRECTNESS-008 the pure-PHP decimal string modulus
-     * path handles the case without bcmath. The test exercises both
-     * runtime variants: when bcmath is loaded the validator takes the
-     * fast bcmath branch; when it is absent the pure-PHP slow path
-     * must produce the same result. The shared expectation (pass)
-     * holds for both branches.
-     */
     #[Test]
     public function multiple_of_large_integer_with_float_step_passes_with_or_without_bcmath(): void
     {
@@ -606,13 +590,6 @@ class NumericRangeValidatorTest extends TestCase
         self::expectNotToPerformAssertions();
     }
 
-    /**
-     * Regression guard for R4-CORRECTNESS-008: the private helper
-     * isBigIntMultipleOfString is the pure-PHP slow path. Invoking it
-     * directly via reflection forces the slow path even when bcmath is
-     * loaded, so the test pins the contract regardless of the host's
-     * extension set.
-     */
     #[Test]
     public function multiple_of_snowflake_id_passes_via_pure_php_string_modulus(): void
     {
@@ -629,16 +606,6 @@ class NumericRangeValidatorTest extends TestCase
         self::assertFalse($method->invoke($this->validator, -7, 1.5));
     }
 
-    /**
-     * Parity guard: the public validate() entry point must return the
-     * same verdict whether the request is served by the bcmath branch
-     * or the pure-PHP slow path. Runs as a plain test (no @requires
-     * annotation) so both runtimes contribute to coverage: in the
-     * bcmath-on host the test pins the bcmath branch; in the
-     * bcmath-off host it pins the pure-PHP branch. The expected
-     * verdicts are computed from the mathematical definition of
-     * multipleOf (x mod m == 0), independent of the implementation.
-     */
     #[Test]
     public function multiple_of_snowflake_id_public_path_matches_mathematical_definition(): void
     {
@@ -681,10 +648,6 @@ class NumericRangeValidatorTest extends TestCase
 
     /**
      * @requires extension bcmath
-     *
-     * Confirms the bcmath branch is taken when the extension is loaded
-     * and produces the same verdict as the pure-PHP slow path. Acts as
-     * a parity contract between the two branches.
      */
     #[Test]
     public function multiple_of_snowflake_id_bcmath_path_parity_with_pure_php_path(): void

@@ -18,10 +18,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/**
- * FU-008: regression tests for the DoS cap on AdditionalPropertyError objects
- * emitted by AdditionalPropertiesValidator when additionalProperties is false.
- */
 #[CoversClass(AdditionalPropertiesValidator::class)]
 class AdditionalPropertiesErrorCapTest extends TestCase
 {

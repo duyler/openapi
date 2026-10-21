@@ -10,10 +10,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * RFC 3986 §5.4 conformance for RefResolver::combineUris().
- *
- * The base URI for the §5.4.1 / §5.4.2 examples is "http://a/b/c/d;p?q".
- *
  * @internal
  */
 final class CombineUrisRfc3986Test extends TestCase

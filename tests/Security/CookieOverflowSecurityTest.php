@@ -19,8 +19,6 @@ use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
-use Duyler\OpenApi\Validator\Request\QueryParser;
 
 use function implode;
 use function range;
@@ -28,13 +26,6 @@ use function str_repeat;
 use function substr_count;
 
 /**
- * Security regression for P-028: CookieValidator previously returned an empty
- * array on overflow, silently dropping cookie state and bypassing security
- * checks for optional cookie-based schemes. The validator now fails closed
- * with {@see InvalidParameterException}, matching
- * {@see QueryParser} and
- * {@see MultipartBodyParser}.
- *
  * @internal
  */
 #[CoversClass(CookieValidator::class)]

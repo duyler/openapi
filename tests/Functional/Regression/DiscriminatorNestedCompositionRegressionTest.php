@@ -13,22 +13,6 @@ use PHPUnit\Framework\TestCase;
 use function array_map;
 
 /**
- * Regression suite for R4-CORRECTNESS-002 / R4-CORRECTNESS-005 /
- * R4-TEST-005: DiscriminatorValidator nested-composition recursion
- * and evaluated-property annotation propagation.
- *
- * Anti-test for the recursion fix: rolling back the early-return on
- * a nested composition that throws UnknownDiscriminatorValueException
- * (legacy behaviour) makes tests 1 and 2 throw instead of succeeding.
- * Anti-test for the annotation-propagation fix: rolling back the
- * mergeChildAnnotations call on the discriminator branch makes tests
- * 3 and 4 raise unevaluatedProperties / unevaluatedItems errors on
- * valid payloads.
- *
- * Unlike the inline DiscriminatorValidatorTest, this suite drives
- * every case through the public builder path so the regression also
- * fires when discriminator wiring is broken at the builder level.
- *
  * @internal
  */
 final class DiscriminatorNestedCompositionRegressionTest extends TestCase

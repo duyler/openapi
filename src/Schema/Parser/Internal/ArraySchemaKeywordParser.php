@@ -14,7 +14,6 @@ final readonly class ArraySchemaKeywordParser
     /**
      * @param array<array-key, mixed> $data
      * @param Closure(bool|array): Schema $recurse
-     *
      * @return array{
      *     items: Schema|bool|null,
      *     prefixItems: ?list<Schema>,

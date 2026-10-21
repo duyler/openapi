@@ -216,11 +216,6 @@ final class UuidValidatorTest extends TestCase
     }
 
     /**
-     * RFC 4122 + RFC 9562 (2024) UUID versions 1-8 are accepted by the
-     * validator regex `[1-8]` for the version nibble and `[89abAB]` for the
-     * variant nibble. Special UUIDs (nil per RFC 4122 §4.1.7 and max per RFC
-     * 9562 §5.4) are validated explicitly before applying the regex.
-     *
      * @return array<string, array{0: string, 1: bool}>
      */
     public static function uuidVersionsAndSpecialCasesProvider(): array

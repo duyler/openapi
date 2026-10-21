@@ -16,35 +16,10 @@ use function set_error_handler;
 use const E_WARNING;
 use const PREG_NO_ERROR;
 
-/**
- * Defensive wrapper around preg_match / preg_match_all that lowers the
- * process-wide pcre.backtrack_limit and pcre.recursion_limit before each
- * call and restores the previous values in a try/finally. Catastrophic
- * backtracking (CWE-1333, CWE-400) on attacker-controlled JSON-Schema
- * "pattern" fields is the dominant CPU cost factor; recursion_limit
- * bounds C-stack exhaustion on deeply-nested patterns. PCRE compile
- * warnings are swallowed and surfaced via the false return value;
- * non-zero preg_last_error() raises PregRuntimeException instead of
- * letting callers misread a runtime failure as "no match".
- *
- * @danger NOT_THREAD_SAFE
- *
- * Both pcre.* ini variables are PHP_INI_ALL (process-global). Under
- * Swoole coroutines / threaded FrankenPHP the capture/restore in
- * {@see match()} and {@see matchAll()} races with concurrent
- * preg_match calls, and the ReDoS cap may be silently non-functional
- * for an individual coroutine call (O-007, S-020). Prefork runtimes
- * are unaffected. See README "Unsafe classes and their contracts".
- */
 final readonly class PregExecutor
 {
     public const int DEFAULT_MAX_BACKTRACKS = 10_000;
 
-    /**
-     * Default cap on PCRE recursion depth. PCRE2 reserves C-stack frames per
-     * recursion level; on typical 8 MB main stacks this leaves comfortable
-     * headroom while still bounding deeply-nested patterns like `(a|a)*b`.
-     */
     public const int DEFAULT_MAX_RECURSION = 512;
 
     private const string BACKTRACK_LIMIT_FALLBACK = '1000000';
@@ -58,14 +33,10 @@ final readonly class PregExecutor
 
     /**
      * @param non-empty-string $pattern
-     * @param array<array-key, string>|null $matches populated by reference when present
-     * @param 0|256|512|768 $flags bitmask of PREG_OFFSET_CAPTURE and PREG_UNMATCHED_AS_NULL
-     *
+     * @param array<array-key, string>|null $matches
+     * @param 0|256|512|768 $flags
      * @param-out array<array-key, mixed> $matches
-     *
-     * @throws PregRuntimeException when preg_last_error() returns a non-zero code
      */
-    // §7 exemption: Mirrors preg_match signature, documented via @param-out.
     public function match(string $pattern, string $subject, ?array &$matches = null, int $flags = 0, int $offset = 0): int|false
     {
         $previousBacktrack = $this->capturePreviousBacktrackLimit();
@@ -89,14 +60,10 @@ final readonly class PregExecutor
 
     /**
      * @param non-empty-string $pattern
-     * @param array<array-key, mixed>|null $matches populated by reference when present
-     * @param int $flags bitmask of PREG_PATTERNORDER, PREG_SET_ORDER, PREG_OFFSET_CAPTURE, PREG_UNMATCHED_AS_NULL
-     *
+     * @param array<array-key, mixed>|null $matches
+     * @param int $flags
      * @param-out array<array-key, mixed> $matches
-     *
-     * @throws PregRuntimeException when preg_last_error() returns a non-zero code
      */
-    // §7 exemption: Mirrors preg_match_all signature, documented via @param-out.
     public function matchAll(string $pattern, string $subject, ?array &$matches = null, int $flags = 0, int $offset = 0): int|false
     {
         $previousBacktrack = $this->capturePreviousBacktrackLimit();
@@ -132,9 +99,6 @@ final readonly class PregExecutor
         return false === $previous ? self::RECURSION_LIMIT_FALLBACK : $previous;
     }
 
-    /**
-     * @throws PregRuntimeException when preg_last_error() returns a non-zero code
-     */
     private function assertNoPcreError(): void
     {
         $error = preg_last_error();

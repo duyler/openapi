@@ -19,11 +19,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * P-031 regression: composition validators must cap accumulated errors at
- * 20 and emit a TooManyErrorsError summary rather than letting deeply
- * nested allOf / anyOf / oneOf schemas produce unbounded error arrays
- * that amplify response size and exhaust memory.
- *
  * @internal
  */
 final class CompositionErrorCapTest extends TestCase
@@ -77,7 +72,7 @@ final class CompositionErrorCapTest extends TestCase
 
         self::assertTrue(
             $hasSummary,
-            'Composition validator must emit a TooManyErrorsError summary when the cap is reached (P-031)',
+            'Composition validator must emit a TooManyErrorsError summary when the cap is reached',
         );
         self::assertSame(1, $summaryCount, 'Exactly one summary error must be appended');
     }

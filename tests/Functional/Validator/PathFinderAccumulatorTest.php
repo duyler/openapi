@@ -19,13 +19,6 @@ use function sprintf;
 
 /**
  * @internal
- *
- * Anti-test for the §7 migration of the P-043 contract: TrieLookup::lookupTrie
- * keeps its void return (no intermediate per-level arrays) and accumulates
- * matches through a by-object TrieMatches accumulator instead of the former
- * by-reference array parameter. Reverting lookupTrie to the spread-merge
- * form (returns array) or reintroducing the by-reference array parameter
- * breaks these reflection assertions.
  */
 final class PathFinderAccumulatorTest extends TestCase
 {
@@ -68,7 +61,7 @@ YAML;
         self::assertSame(
             'void',
             $lookupTrie->getReturnType()?->getName(),
-            'lookupTrie must return void (P-043): no intermediate arrays',
+            'lookupTrie must return void: no intermediate arrays',
         );
 
         $parameters = $lookupTrie->getParameters();
@@ -77,7 +70,7 @@ YAML;
         $accumulator = $parameters[3];
         self::assertFalse(
             $accumulator->isPassedByReference(),
-            'Fourth parameter of lookupTrie must be a by-object accumulator, not by-reference (§7)',
+            'Fourth parameter of lookupTrie must be a by-object accumulator, not by-reference',
         );
 
         $type = $accumulator->getType();
@@ -110,7 +103,7 @@ YAML;
 
         self::assertTrue(
             new ReflectionClass(TrieLookup::class)->hasConstant('MAX_TRIE_DEPTH'),
-            'TrieLookup must define a MAX_TRIE_DEPTH guard constant (P-043)',
+            'TrieLookup must define a MAX_TRIE_DEPTH guard constant',
         );
     }
 

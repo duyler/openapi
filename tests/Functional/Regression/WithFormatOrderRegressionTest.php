@@ -15,23 +15,6 @@ use PHPUnit\Framework\TestCase;
 use Throwable;
 
 /**
- * Regression suite for R4-SEC-009 / R4-TEST-010: builtin format
- * validators must share the configured PregExecutor regardless of
- * the order in which withFormat() and withMaxRegexBacktracks() are
- * chained, and a later withFormat('string','email',...) must
- * override the builtin email validator regardless of order.
- *
- * Anti-test: re-introducing the legacy single-call-only wiring (where
- * the second withFormat() or a later withMaxRegexBacktracks() would
- * silently drop the configuration) makes the override assertions
- * fail.
- *
- * Unlike the inline OpenApiValidatorBuilderWithFormatTest that uses
- * reflection to assert on private state, this suite drives every
- * case through validateSchema() so the regression also fires when
- * the override mechanism is broken at the format-registry lookup
- * level rather than at construction time.
- *
  * @internal
  */
 final class WithFormatOrderRegressionTest extends TestCase

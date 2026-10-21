@@ -20,16 +20,6 @@ use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/**
- * Regression coverage for R4-CORRECTNESS-001 / R4-SEC-001 / R4-ARCH-001:
- * `$ref` inside schema-typed keywords must be resolved before recursion.
- *
- * Each test drives a full {@see SchemaValidatorWithContext::validate()} call
- * so the stateless nested-keyword validators go through the same
- * `AbstractSchemaValidator::createSchemaValidator()` funnel that
- * previously returned a legacy recursion engine without document context —
- * leaving stub `{$ref: '#/...'}` subschemas as no-ops.
- */
 final class NestedRefResolutionTest extends TestCase
 {
     private OpenApiDocument $document;

@@ -16,15 +16,6 @@ use Override;
 
 use function sprintf;
 
-/**
- * OA-05: OpenAPI 3.2 $self reference — base URI for the document.
- *
- * Current behavior (documented): $self is parsed, validated as URL, stored on
- * OpenApiDocument. RefResolver::getBaseUri() returns it; resolveRelativeRef()
- * uses it as the base for combining relative refs and throws RefResolutionException
- * when no $self is set. Recursive schemas referencing themselves resolve without
- * infinite loops thanks to RefResolver's $visited map.
- */
 final class SelfReferenceTest extends TestCase
 {
     private const string SELF_BASE_URI = 'https://api.example.com/schemas/petstore.json';

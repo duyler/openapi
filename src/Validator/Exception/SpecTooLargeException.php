@@ -9,12 +9,6 @@ use Throwable;
 
 use function sprintf;
 
-/**
- * Thrown when an OpenAPI spec payload exceeds the configured size or nesting
- * depth limit (YamlParser). Defends against billion-laughs-style YAML that can
- * cause stack overflow or OOM during parsing. The size check runs BEFORE parse
- * so an attacker cannot force the parser to materialise an oversized document.
- */
 final class SpecTooLargeException extends RuntimeException
 {
     use SanitizableExceptionTrait;

@@ -19,11 +19,6 @@ use function sprintf;
 use function strlen;
 
 /**
- * Regression budget for issue #68: with a warm confinement verdict cache,
- * build() for a string-loaded spec must skip the ExternalRefDetector
- * re-parse, so the median cached build time on a ~300 KB spec stays well
- * below the cost of a single raw parse (the pre-fix behaviour).
- *
  * @internal
  */
 final class ConfinementCacheBenchTest extends TestCase

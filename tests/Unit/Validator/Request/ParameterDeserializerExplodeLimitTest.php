@@ -100,9 +100,6 @@ final class ParameterDeserializerExplodeLimitTest extends TestCase
     #[Test]
     public function matrix_style_explode_true_large_count_rejected(): void
     {
-        // Matrix explode=true uses the repeated-name separator ';tags=' which
-        // flows through splitBySeparator. Pins DoS guard on a path not
-        // previously exercised by the form/pipe/space/simple test set.
         $value = ';tags=a' . str_repeat(';tags=a', 1000);
 
         $this->expectException(InvalidParameterException::class);
@@ -116,8 +113,6 @@ final class ParameterDeserializerExplodeLimitTest extends TestCase
     #[Test]
     public function label_style_explode_true_large_count_rejected(): void
     {
-        // Label explode=true uses '.' as the separator (also via
-        // splitBySeparator). Pins DoS guard on the dot-separated path.
         $value = '.a' . str_repeat('.a', 1000);
 
         $this->expectException(InvalidParameterException::class);

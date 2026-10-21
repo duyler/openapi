@@ -253,10 +253,6 @@ final class EmailValidatorTest extends TestCase
     }
 
     /**
-     * Email edge cases across the three validation layers: EMAIL_PATTERN
-     * regex (named groups local/domain, TLD >= 2), MAX_EMAIL=254 length cap,
-     * and filter_var as the final defence layer.
-     *
      * @return array<string, array{0: string, 1: bool}>
      */
     public static function emailEdgeCasesProvider(): array
@@ -285,9 +281,6 @@ final class EmailValidatorTest extends TestCase
     #[Test]
     public function email_edge_cases_match_expected_result(string $email, bool $expectedValid): void
     {
-        // SMTPUTF8 addresses require ext-intl for IDNA conversion; without it
-        // the validator falls back to a permissive regex that may diverge from
-        // the expected result for non-ASCII inputs.
         if (!extension_loaded('intl') && 1 === preg_match('/[\x80-\xff]/', $email)) {
             self::markTestSkipped('ext-intl required for SMTPUTF8 (RFC 6531) validation');
         }

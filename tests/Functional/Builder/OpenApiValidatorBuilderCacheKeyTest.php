@@ -132,11 +132,6 @@ YAML;
     #[Test]
     public function file_cache_key_ignores_mtime_changes(): void
     {
-        // After R3-SEC-003 the cache key is keyed by realpath + content hash.
-        // mtime is intentionally NOT part of the key because it offered no
-        // defence once an attacker controls write access to the spec file
-        // (the `touch -r` workaround defeats metadata-only keys). The same
-        // content must therefore yield the same key regardless of mtime.
         $path = $this->writeTempSpec(self::MINIMAL_YAML);
 
         try {
@@ -159,7 +154,7 @@ YAML;
             self::assertSame(
                 $key1,
                 $key2,
-                'Cache key must ignore mtime after R3-SEC-003 content-hash fix (defends against touch -r cache-poisoning)',
+                'Cache key must ignore mtime after content-hash fix (defends against touch -r cache-poisoning)',
             );
         } finally {
             $this->safeUnlink($path);
@@ -190,7 +185,7 @@ YAML;
                 ->build();
             $key2 = $this->uniqueKeys($pool2->capturedKeys())[0];
 
-            self::assertNotSame($key1, $key2, 'Cache key must change when file content changes (content-hash fix, R3-SEC-003)');
+            self::assertNotSame($key1, $key2, 'Cache key must change when file content changes (content-hash fix)');
         } finally {
             $this->safeUnlink($path);
         }
@@ -216,7 +211,7 @@ YAML;
                 ->build();
             $key2 = $this->uniqueKeys($pool2->capturedKeys())[0];
 
-            self::assertSame($key1, $key2, 'Same file content must produce identical cache key (content-hash fix, R3-SEC-003)');
+            self::assertSame($key1, $key2, 'Same file content must produce identical cache key (content-hash fix)');
         } finally {
             $this->safeUnlink($path);
         }
@@ -243,14 +238,6 @@ YAML;
         }
     }
 
-    /**
-     * R4-SEC-008 anti-test (maxSpecDepth poisoning): caller A caches a
-     * spec under maxSpecDepth=10 (depth=6 fits), caller B with the
-     * stricter maxSpecDepth=5 must NOT receive the cached document —
-     * instead the cache-miss triggers a re-parse that rejects the spec.
-     * Without the parse-config fingerprint, caller B would silently
-     * bypass the depth limit and read the cached document.
-     */
     #[Test]
     public function max_spec_depth_change_prevents_cache_poisoning(): void
     {
@@ -293,18 +280,10 @@ YAML;
             $poisoningRejected,
             'Caller B with stricter maxSpecDepth=5 must NOT receive the cached document '
             . 'cached under maxSpecDepth=10. The fingerprint-based cache key must force a '
-            . 're-parse that rejects the depth-6 spec (R4-SEC-008 cache-poisoning defence).',
+            . 're-parse that rejects the depth-6 spec (cache-poisoning defence).',
         );
     }
 
-    /**
-     * R4-SEC-008 anti-test (externalRefAllowedRoot poisoning): two
-     * callers that differ only in externalRefAllowedRoot must get
-     * distinct cache keys. Without the fingerprint, caller B (root
-     * `/etc`) would receive the document cached by caller A (root
-     * `/safe`), bypassing its (presumably stricter) confinement
-     * boundary.
-     */
     #[Test]
     public function external_ref_allowed_root_change_produces_distinct_cache_keys(): void
     {
@@ -337,15 +316,10 @@ YAML;
             $key1,
             $key2,
             'externalRefAllowedRoot is part of the parse-config fingerprint and must '
-            . 'produce a distinct cache key (R4-SEC-008 confinement poisoning defence).',
+            . 'produce a distinct cache key (confinement poisoning defence).',
         );
     }
 
-    /**
-     * Stability: two callers with identical parse-config and identical
-     * spec content reuse the same cache key (cache-hit, single parse).
-     * Guards against accidental over-invalidation of the cache.
-     */
     #[Test]
     public function identical_parse_config_and_content_reuse_cache_key(): void
     {
@@ -374,13 +348,6 @@ YAML;
         );
     }
 
-    /**
-     * Unrelated-fields: runtime-validation toggles (coercion,
-     * nullableAsType, strictFormats, securityValidation, etc.) must
-     * NOT change the cache key. Two callers that differ only in
-     * runtime-validation flags reuse the cached parse result, because
-     * the parsed document is identical.
-     */
     #[Test]
     public function runtime_validation_toggles_do_not_invalidate_cache(): void
     {
@@ -415,7 +382,6 @@ YAML;
 
     /**
      * @param list<string> $keys
-     *
      * @return list<string>
      */
     private function uniqueKeys(array $keys): array

@@ -15,12 +15,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * P-030 regression: UnresolvableRefException::getMessage() must NOT leak
- * the internal reference traversal path. The path is preserved in a
- * separate internalTrace property for logging only. A PSR-15 middleware
- * that surfaces getMessage() to the client must not disclose internal
- * ref names, file paths, or URLs.
- *
  * @internal
  */
 final class RefResolverInfoLeakTest extends TestCase
@@ -51,12 +45,12 @@ final class RefResolverInfoLeakTest extends TestCase
             self::assertStringNotContainsString(
                 '#/components/schemas/B',
                 $e->getMessage(),
-                'getMessage() must not leak the path of the cycle (P-030)',
+                'getMessage() must not leak the path of the cycle',
             );
             self::assertStringNotContainsString(
                 ' -> ',
                 $e->getMessage(),
-                'getMessage() must not leak the cycle path arrow notation (P-030)',
+                'getMessage() must not leak the cycle path arrow notation',
             );
 
             self::assertNotNull($e->internalTrace(reveal: true));

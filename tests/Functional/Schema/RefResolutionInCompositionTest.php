@@ -17,14 +17,6 @@ use function count;
 use function sprintf;
 
 /**
- * Covers $ref resolution inside allOf/oneOf/anyOf subschemas.
- *
- * Before bugfix-from-testing/10, stateless composition validators created
- * a stateless SchemaValidator without document context, so subschemas that
- * used $ref silently passed — constraints from the referenced schema were
- * never enforced. These tests verify that $ref is now pre-resolved in
- * composition arrays so that the stateless validators see real constraints.
- *
  * @internal
  */
 #[CoversClass(OpenApiValidatorBuilder::class)]
