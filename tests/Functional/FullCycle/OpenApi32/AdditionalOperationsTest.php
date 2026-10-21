@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Duyler\OpenApi\Test\E2E\OpenApi32;
+namespace Duyler\OpenApi\Test\Functional\FullCycle\OpenApi32;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
