@@ -17,6 +17,8 @@ use function fclose;
 use function fwrite;
 use function ini_get;
 use function ini_set;
+use function is_executable;
+use function is_file;
 use function proc_close;
 use function proc_open;
 use function stream_get_contents;
@@ -28,8 +30,11 @@ use function sprintf;
 
 use function dirname;
 
+use function function_exists;
+
 use const PREG_BACKTRACK_LIMIT_ERROR;
 use const PREG_INTERNAL_ERROR;
+use const PHP_BINARY;
 
 #[CoversClass(PregExecutor::class)]
 class PregExecutorTest extends TestCase
@@ -296,6 +301,16 @@ class PregExecutorTest extends TestCase
     {
         $autoloadPath = dirname(__DIR__, 3) . '/vendor/autoload.php';
 
+        if (false === is_file($autoloadPath)) {
+            self::markTestSkipped(
+                sprintf('Subprocess isolation requires %s; run composer install before this suite', $autoloadPath),
+            );
+        }
+
+        if (false === function_exists('proc_open') || '' === PHP_BINARY || false === is_executable(PHP_BINARY)) {
+            self::markTestSkipped('Subprocess isolation requires proc_open and an executable PHP_BINARY');
+        }
+
         $script = <<<PHP
 <?php
 
@@ -337,7 +352,7 @@ PHP;
             1 => ['pipe', 'w'],
             2 => ['pipe', 'w'],
         ];
-        $process = proc_open(['php', $path], $descriptor, $pipes);
+        $process = proc_open([PHP_BINARY, $path], $descriptor, $pipes);
 
         self::assertIsResource($process, 'Failed to spawn subprocess for observability test');
 

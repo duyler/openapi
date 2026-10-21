@@ -10,7 +10,10 @@ use GuzzleHttp\Psr7\HttpFactory;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\RequestInterface;
 
+use function class_exists;
+use function interface_exists;
 use function json_encode;
 
 use const JSON_THROW_ON_ERROR;
@@ -70,6 +73,10 @@ YAML;
     #[Override]
     protected function setUp(): void
     {
+        if (false === interface_exists(RequestInterface::class) || false === class_exists(HttpFactory::class)) {
+            self::markTestSkipped('GuzzlePsr7Test requires the guzzlehttp/psr7 dev dependency (see composer.json require-dev)');
+        }
+
         $this->factory = new HttpFactory();
     }
 
