@@ -15,15 +15,6 @@ use PHPUnit\Framework\TestCase;
 
 use function json_encode;
 
-/**
- * CY-07: Concurrent validation shared-state isolation.
- *
- * The validator instance is designed for reuse in long-running processes
- * (RoadRunner, FrankenPHP, Swoole) where one validator handles many
- * sequential requests. These tests prove that per-request state does not
- * leak between requests on the same validator instance without calling
- * reset().
- */
 final class ConcurrentValidationTest extends TestCase
 {
     private const string CONCURRENT_SPEC = <<<'YAML'
@@ -97,13 +88,6 @@ YAML;
         $this->factory = new Psr17Factory();
     }
 
-    /**
-     * CY-07: Two sequential requests with distinct paths and methods on
-     * the same validator instance (no reset()) must each return the
-     * correct Operation. A third request repeats the first path with a
-     * different body to prove Operation identity is path/method-driven,
-     * not affected by the prior request body.
-     */
     #[Test]
     public function sequential_distinct_requests_return_expected_operations_without_reset(): void
     {
@@ -131,11 +115,6 @@ YAML;
         $this->assertOperationEquals('POST', '/users', $operation3);
     }
 
-    /**
-     * CY-07: A validation error thrown by the first request must not
-     * prevent the second, valid request from passing. The validator must
-     * not carry forward a "failed" flag or any error state.
-     */
     #[Test]
     public function error_in_first_request_does_not_leak_into_second_valid_request(): void
     {
@@ -165,12 +144,6 @@ YAML;
         $this->assertOperationEquals('POST', '/items', $operation);
     }
 
-    /**
-     * CY-07: Validation errors must not accumulate between failing
-     * requests. Each failing request must throw its own error scoped to
-     * its own data path. The second request's error must reference
-     * /title, never /name — proving no leakage from the previous request.
-     */
     #[Test]
     public function validation_errors_do_not_accumulate_between_failing_requests(): void
     {
@@ -207,11 +180,6 @@ YAML;
         }
     }
 
-    /**
-     * CY-07: With coercion enabled, coerced values from the first request
-     * must not leak into the second request. Three sequential requests
-     * with different query-string values must each validate independently.
-     */
     #[Test]
     public function coerced_attributes_do_not_leak_between_requests(): void
     {
@@ -233,11 +201,6 @@ YAML;
         $this->assertOperationEquals('GET', '/search', $operation3);
     }
 
-    /**
-     * CY-07: A coercion failure (non-numeric query string cannot be
-     * coerced to integer) in the first request must not break subsequent
-     * requests. The validator must remain usable after a failed coercion.
-     */
     #[Test]
     public function coercion_failure_in_first_request_does_not_break_second_request(): void
     {
@@ -261,12 +224,6 @@ YAML;
         $this->assertOperationEquals('GET', '/search', $operation);
     }
 
-    /**
-     * CY-07: The Operation returned for a later request must not equal
-     * the Operation of an earlier request when path or method differs.
-     * This proves the Operation context is built per-request from the
-     * matched path/method, not reused from a stale cache slot.
-     */
     #[Test]
     public function operation_context_is_rebuilt_per_request_not_reused(): void
     {
@@ -290,11 +247,6 @@ YAML;
         $this->assertNotSame((string) $operation1, (string) $operation2);
     }
 
-    /**
-     * CY-07: Mixing successful and failing requests on the same validator
-     * (no reset()) must keep every validation result scoped to its own
-     * request. Pattern: success → failure → success → failure → success.
-     */
     #[Test]
     public function mixed_success_and_failure_sequence_isolates_each_request(): void
     {

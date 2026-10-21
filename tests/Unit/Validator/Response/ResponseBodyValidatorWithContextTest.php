@@ -621,12 +621,6 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
         self::assertSame(true, $succeeded);
     }
 
-    /**
-     * P-020: RFC 7231 §3.1.1.1 allows wildcards in media types. A response
-     * Content-Type of `application/json` MUST be validated against a spec
-     * declaring `application/*` so wildcard handling is symmetric with
-     * RequestBodyValidatorWithContext.
-     */
     #[Test]
     public function wildcard_application_matches_json_response(): void
     {

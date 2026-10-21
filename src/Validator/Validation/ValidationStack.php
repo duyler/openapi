@@ -53,13 +53,10 @@ final readonly class ValidationStack
 
     /**
      * @deprecated since 1.x, will be removed in 2.0. Use {@see fromGroup()} instead.
-     *             PHPDoc-only deprecation (no {@see \Deprecated} attribute) so {@see fromGroup()}
-     *             can delegate without runtime E_DEPRECATED cascade. See `.ai/reports/adr-validator-signatures-and-dtos.md`.
-     *
-     * @param int $maxJsonBodyBytes       from {@see ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES}
-     * @param int $maxMultipartBodyBytes  from {@see ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES}
-     * @param int $maxRegexBacktracks     from {@see PregExecutor::DEFAULT_MAX_BACKTRACKS}
-     * @param int $maxStreamingRecords    from {@see ValidatorConfiguration::DEFAULT_MAX_STREAMING_RECORDS}
+     * @param int $maxJsonBodyBytes
+     * @param int $maxMultipartBodyBytes
+     * @param int $maxRegexBacktracks
+     * @param int $maxStreamingRecords
      */
     public function __construct(
         public readonly OpenApiDocument $document,

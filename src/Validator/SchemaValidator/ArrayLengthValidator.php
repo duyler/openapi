@@ -221,7 +221,6 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
 
     /**
      * @param array<array-key, mixed> $item
-     *
      * @return array<array-key, mixed>
      */
     private function canonicalizeForEncoding(array $item): array

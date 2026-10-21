@@ -102,13 +102,6 @@ YAML;
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * ResponseHeadersValidator::coerceValue coerces an empty header value
-     * into an empty array when the schema type is "object", which lets
-     * EmptyArrayStrategy::PreferObject treat the empty array as an empty
-     * object. Therefore PreferObject + empty header value + {type: object}
-     * is accepted end-to-end.
-     */
     #[Test]
     public function prefer_object_strategy_empty_header_object_is_supported_by_coerce_value(): void
     {

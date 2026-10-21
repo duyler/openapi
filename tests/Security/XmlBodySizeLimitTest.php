@@ -14,12 +14,6 @@ use function sprintf;
 use function str_repeat;
 
 /**
- * P-036 regression: XmlBodyParser must reject bodies larger than 1MB by
- * default to prevent libxml from being asked to ingest unbounded
- * payloads. The billion-laughs entity expansion cap is per-entity, not
- * per-document, so a document-size cap is a necessary first line of
- * defense.
- *
  * @internal
  */
 final class XmlBodySizeLimitTest extends TestCase
@@ -45,7 +39,7 @@ final class XmlBodySizeLimitTest extends TestCase
 
         self::assertNotNull(
             $caught,
-            'XmlBodyParser must throw BodyTooLargeException on bodies > 1MB (P-036)',
+            'XmlBodyParser must throw BodyTooLargeException on bodies > 1MB',
         );
         self::assertSame(1_048_576, $caught->maxBytes);
         self::assertLessThan(

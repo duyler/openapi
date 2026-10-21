@@ -14,10 +14,6 @@ use Override;
 
 use function sprintf;
 
-/**
- * OA-02: OpenAPI 3.2 additionalOperations — non-standard HTTP methods (COPY, PURGE, etc.)
- * defined inside PathItem via additionalOperations map.
- */
 final class AdditionalOperationsTest extends TestCase
 {
     private const string ADDITIONAL_OPERATIONS_SPEC = <<<'YAML'

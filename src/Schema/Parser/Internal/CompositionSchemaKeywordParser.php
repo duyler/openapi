@@ -15,7 +15,6 @@ final readonly class CompositionSchemaKeywordParser
     /**
      * @param array<array-key, mixed> $data
      * @param Closure(bool|array): Schema $recurse
-     *
      * @return array{
      *     ref: ?string,
      *     refSummary: ?string,

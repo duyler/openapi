@@ -60,7 +60,7 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
 
     /**
      * @param array<array-key, mixed> $data
-     * @param list<int|string>        $unevaluatedIndices
+     * @param list<int|string> $unevaluatedIndices
      */
     private function rejectUnevaluatedItems(array $data, array $unevaluatedIndices, string $dataPath): void
     {
@@ -89,7 +89,7 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
 
     /**
      * @param array<array-key, mixed> $data
-     * @param list<int|string>        $unevaluatedIndices
+     * @param list<int|string> $unevaluatedIndices
      */
     private function validateUnevaluatedItems(array $data, Schema $unevaluatedItems, array $unevaluatedIndices, ?ValidationContext $context): void
     {
@@ -117,7 +117,6 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
 
     /**
      * @param array<array-key, mixed> $data
-     *
      * @return list<int>
      */
     private function getEvaluatedItemIndices(Schema $schema, array $data, ?ValidationContext $context): array

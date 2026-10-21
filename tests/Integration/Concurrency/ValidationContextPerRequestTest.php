@@ -17,18 +17,6 @@ use PHPUnit\Framework\TestCase;
 
 use function json_encode;
 
-/**
- * CY-19 / P-062: per-request isolation for Error\ValidationContext.
- *
- * Error\ValidationContext carries mutable per-validation state: a depth
- * counter (MAX_DEPTH DoS guard) and a BreadcrumbManager stack (dataPath
- * assembly). Under prefork execution (PHP-FPM, RoadRunner) each request
- * gets a fresh validator instance OR a fresh context. Under long-running
- * shared-validator runtimes (Swoole coroutines, FrankenPHP threaded
- * workers), the same validator instance handles many sequential requests
- * — these tests prove that per-request state does not leak between
- * requests on the same shared validator.
- */
 final class ValidationContextPerRequestTest extends TestCase
 {
     private const string NESTED_SCHEMA_YAML = <<<'YAML'

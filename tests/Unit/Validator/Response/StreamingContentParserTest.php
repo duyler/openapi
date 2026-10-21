@@ -763,7 +763,7 @@ final class StreamingContentParserTest extends TestCase
     #[Test]
     public function parse_stream_json_seq_allows_record_at_default_max_record_length(): void
     {
-        $record = str_repeat('x', 1_572_864); // 1.5 MB — above old 1MB line limit, below new 10MB record limit
+        $record = str_repeat('x', 1_572_864);
         $body = "\x1E" . $record . "\x1E";
 
         $factory = new Psr17Factory();
@@ -848,12 +848,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertNull($result[0]);
     }
 
-    /**
-     * ST-12: JSON-seq (RFC 7464) with optional newline after record separator.
-     *
-     * RFC 7464 §2.1: "The remainder of the record [...] MAY be terminated by
-     * a line feed (U+000A)." This verifies the parser handles both forms.
-     */
     #[Test]
     public function parse_json_sequence_with_newline_after_record_separator(): void
     {
@@ -866,9 +860,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame(['id' => '2'], $result[1]);
     }
 
-    /**
-     * ST-12: JSON-seq with newline after RS via parse() dispatcher.
-     */
     #[Test]
     public function parse_json_sequence_with_newline_after_rs_via_parse_method(): void
     {
@@ -881,10 +872,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame(['id' => '2'], $result[1]);
     }
 
-    /**
-     * ST-12: Behaviour parity — JSON-seq with newline must produce the same
-     * item count as JSON-seq without newline.
-     */
     #[Test]
     public function parse_json_sequence_newline_and_no_newline_produce_same_count(): void
     {
@@ -899,10 +886,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame($withoutNewline, $withNewline);
     }
 
-    /**
-     * ST-12: Mixed form — some records have a trailing newline, others don't.
-     * RFC 7464 allows both forms within the same sequence.
-     */
     #[Test]
     public function parse_json_sequence_mixed_newline_and_no_newline(): void
     {
@@ -916,9 +899,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame(['c' => 3], $result[2]);
     }
 
-    /**
-     * ST-12: CRLF after RS is also valid per RFC 7464 (newline can be \r\n).
-     */
     #[Test]
     public function parse_json_sequence_with_crlf_after_record_separator(): void
     {
@@ -931,9 +911,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame(['id' => '2'], $result[1]);
     }
 
-    /**
-     * ST-12: Stream-based parser must also accept newline after RS.
-     */
     #[Test]
     public function parse_stream_json_sequence_with_newline_after_rs_matches_parse(): void
     {
@@ -952,9 +929,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame(['id' => '2', 'value' => 'second'], $result[1]);
     }
 
-    /**
-     * EI-037: WHATWG HTML SSE §8.1.1 requires CRLF, LF, and CR line endings.
-     */
     #[Test]
     public function parse_server_sent_events_with_crlf_line_endings(): void
     {
@@ -967,9 +941,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame(['msg' => 'hello'], $result[0]['data']);
     }
 
-    /**
-     * EI-037: Legacy CR-only line endings must also be supported.
-     */
     #[Test]
     public function parse_server_sent_events_with_cr_only_line_endings(): void
     {
@@ -982,9 +953,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame('hello', $result[0]['data']);
     }
 
-    /**
-     * EI-037: Mixed line endings within a single body.
-     */
     #[Test]
     public function parse_server_sent_events_with_mixed_line_endings(): void
     {
@@ -999,11 +967,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame('two', $result[1]['data']);
     }
 
-    /**
-     * EI-038: WHATWG HTML SSE §8.2.6 removes exactly one leading U+0020 SPACE.
-     * Multiple leading spaces preserve all but the first. Plaintext value is
-     * used to avoid JSON-decode masking the space preservation.
-     */
     #[Test]
     public function parse_server_sent_events_preserves_extra_leading_space_in_value(): void
     {
@@ -1015,9 +978,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame('  indented text', $result[0]['data']);
     }
 
-    /**
-     * EI-038: Value without a leading space is left untouched.
-     */
     #[Test]
     public function parse_server_sent_events_value_without_leading_space_unchanged(): void
     {
@@ -1029,10 +989,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame('value', $result[0]['data']);
     }
 
-    /**
-     * EI-038: A single leading space on each accumulated data line is removed,
-     * but subsequent spaces inside the value survive the multi-line join.
-     */
     #[Test]
     public function parse_server_sent_events_multi_line_with_extra_spaces(): void
     {
@@ -1044,9 +1000,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame(" first\n second", $result[0]['data']);
     }
 
-    /**
-     * EI-037: Multi-line data-field accumulation must survive CRLF endings.
-     */
     #[Test]
     public function parse_server_sent_events_crlf_multi_line_data_accumulation(): void
     {
@@ -1058,9 +1011,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame("line1\nline2", $result[0]['data']);
     }
 
-    /**
-     * EI-037: Comment line with CRLF endings is ignored.
-     */
     #[Test]
     public function parse_server_sent_events_crlf_comment_line_ignored(): void
     {
@@ -1073,10 +1023,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame('value', $result[0]['data']);
     }
 
-    /**
-     * EI-037 + EI-038: Stream-based parser must match the string-based parser
-     * for CRLF endings and single-space removal.
-     */
     #[Test]
     public function parse_stream_sse_crlf_matches_parse(): void
     {
@@ -1094,9 +1040,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame(['msg' => 'hello'], $result[0]['data']);
     }
 
-    /**
-     * EI-037: Stream-based parser must support CR-only endings.
-     */
     #[Test]
     public function parse_stream_sse_cr_only_matches_parse(): void
     {
@@ -1113,10 +1056,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame('hello', $result[0]['data']);
     }
 
-    /**
-     * EI-038: Stream-based parser must remove exactly one leading space.
-     * Plaintext value avoids JSON-decode masking the space preservation.
-     */
     #[Test]
     public function parse_stream_sse_preserves_extra_leading_space_in_value(): void
     {
@@ -1133,12 +1072,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame('  indented text', $result[0]['data']);
     }
 
-    /**
-     * P-003: WHATWG HTML §9.2.4 step 8 — a line without a U+003A COLON
-     * creates a field whose name is the whole line and whose value is the
-     * empty string. The compact form `data\n\n` must dispatch a default
-     * `message` event with empty data.
-     */
     #[Test]
     public function processes_sse_line_without_colon_as_field_with_empty_value(): void
     {
@@ -1149,10 +1082,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame('message', $result[0]['event']);
     }
 
-    /**
-     * P-003: Multiple no-colon lines in the same event accumulate as separate
-     * fields with empty values per WHATWG HTML §9.2.4 step 8.
-     */
     #[Test]
     public function processes_multiple_no_colon_fields(): void
     {
@@ -1163,12 +1092,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame('', $result[0]['event']);
     }
 
-    /**
-     * P-003: A no-colon `data` line followed by a regular `data: value` line
-     * behaves identically to `data:\ndata: value` — the empty value is
-     * replaced by the next `data` field, matching the existing accumulator
-     * semantics of `applySseField`.
-     */
     #[Test]
     public function no_colon_field_followed_by_normal_field_dispatches_correctly(): void
     {
@@ -1178,11 +1101,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame('hello', $result[0]['data']);
     }
 
-    /**
-     * SEC-10: Default max records cap is 100_000 — defends against memory
-     * exhaustion from attacker-controlled streaming responses composed of
-     * many tiny records.
-     */
     #[Test]
     public function default_max_records_is_one_hundred_thousand(): void
     {
@@ -1193,10 +1111,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertSame(100_000, $maxRecords);
     }
 
-    /**
-     * SEC-10: NDJSON non-streaming parser enforces the default record cap.
-     * 100_001 records → TooManyRecordsException with max=100_000.
-     */
     #[Test]
     public function ndjson_record_count_limit_enforced(): void
     {
@@ -1208,10 +1122,6 @@ final class StreamingContentParserTest extends TestCase
         $this->parser->parseJsonLines($body);
     }
 
-    /**
-     * SEC-10: Exactly 100_000 records (the default cap) parse successfully.
-     * Boundary case for the off-by-one in the limit check.
-     */
     #[Test]
     public function ndjson_record_count_under_limit(): void
     {
@@ -1222,9 +1132,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertCount(100_000, $result);
     }
 
-    /**
-     * SEC-10: SSE non-streaming parser enforces the default record cap.
-     */
     #[Test]
     public function sse_record_count_limit_enforced(): void
     {
@@ -1235,10 +1142,6 @@ final class StreamingContentParserTest extends TestCase
         $this->parser->parseServerSentEvents($body);
     }
 
-    /**
-     * SEC-10: JSON Text Sequence (RFC 7464) non-streaming parser enforces
-     * the default record cap.
-     */
     #[Test]
     public function json_seq_record_count_limit_enforced(): void
     {
@@ -1249,10 +1152,6 @@ final class StreamingContentParserTest extends TestCase
         $this->parser->parseJsonSeq($body);
     }
 
-    /**
-     * SEC-10: Custom max records via constructor — 11 records with max=10
-     * raises TooManyRecordsException with max=10.
-     */
     #[Test]
     public function custom_max_records(): void
     {
@@ -1268,10 +1167,6 @@ final class StreamingContentParserTest extends TestCase
         }
     }
 
-    /**
-     * SEC-10: Boundary — exactly `maxRecords` parses successfully; max=10,
-     * 10 records → no exception.
-     */
     #[Test]
     public function custom_max_records_boundary_at_limit(): void
     {
@@ -1283,9 +1178,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertCount(10, $result);
     }
 
-    /**
-     * SEC-10: SSE custom limit enforced.
-     */
     #[Test]
     public function custom_max_records_sse(): void
     {
@@ -1297,9 +1189,6 @@ final class StreamingContentParserTest extends TestCase
         $parser->parseServerSentEvents($body);
     }
 
-    /**
-     * SEC-10: JSON-seq custom limit enforced.
-     */
     #[Test]
     public function custom_max_records_json_seq(): void
     {
@@ -1311,11 +1200,6 @@ final class StreamingContentParserTest extends TestCase
         $parser->parseJsonSeq($body);
     }
 
-    /**
-     * SEC-10: NDJSON streaming variant enforces the same cap as the
-     * non-streaming variant — defences against memory amplifier must hold
-     * for chunked stream parsing too.
-     */
     #[Test]
     public function streaming_variant_enforces_limit_ndjson(): void
     {
@@ -1330,9 +1214,6 @@ final class StreamingContentParserTest extends TestCase
         $parser->parseStream($stream, 'application/jsonl');
     }
 
-    /**
-     * SEC-10: SSE streaming variant enforces the cap.
-     */
     #[Test]
     public function streaming_variant_enforces_limit_sse(): void
     {
@@ -1347,9 +1228,6 @@ final class StreamingContentParserTest extends TestCase
         $parser->parseStream($stream, 'text/event-stream');
     }
 
-    /**
-     * SEC-10: JSON Text Sequence streaming variant enforces the cap.
-     */
     #[Test]
     public function streaming_variant_enforces_limit_json_seq(): void
     {
@@ -1364,15 +1242,10 @@ final class StreamingContentParserTest extends TestCase
         $parser->parseStream($stream, 'application/json-seq');
     }
 
-    /**
-     * SEC-10: SSE events are counted, not raw lines. A multi-line SSE event
-     * (`data:` lines accumulated into one event) counts as one record.
-     */
     #[Test]
     public function sse_counts_events_not_lines(): void
     {
         $parser = new StreamingContentParser(maxRecords: 2);
-        // Two multi-line events, each composed of 3 data lines → 2 records.
         $body = "event: first\ndata: a\ndata: b\ndata: c\n\n"
             . "event: second\ndata: d\ndata: e\ndata: f\n\n";
 
@@ -1381,14 +1254,10 @@ final class StreamingContentParserTest extends TestCase
         self::assertCount(2, $result);
     }
 
-    /**
-     * SEC-10: NDJSON empty lines do not count toward the cap.
-     */
     #[Test]
     public function empty_lines_do_not_count_toward_limit(): void
     {
         $parser = new StreamingContentParser(maxRecords: 3);
-        // 3 records interleaved with blank lines — must succeed.
         $body = "{\"a\":1}\n\n\n{\"b\":2}\n\n{\"c\":3}\n";
 
         $result = $parser->parseJsonLines($body);
@@ -1396,10 +1265,6 @@ final class StreamingContentParserTest extends TestCase
         self::assertCount(3, $result);
     }
 
-    /**
-     * SEC-10: JSON-seq empty items (consecutive record separators) do not
-     * count toward the cap.
-     */
     #[Test]
     public function json_seq_empty_items_do_not_count_toward_limit(): void
     {
@@ -1411,18 +1276,10 @@ final class StreamingContentParserTest extends TestCase
         self::assertCount(3, $result);
     }
 
-    /**
-     * SEC-10: SSE with no trailing flush (event mid-assembly when cap hit
-     * by an earlier completed event) — limit is checked on completed events
-     * only, not on in-flight accumulation.
-     */
     #[Test]
     public function sse_trailing_unflushed_event_counts_after_limit_check(): void
     {
         $parser = new StreamingContentParser(maxRecords: 2);
-        // 2 completed events (each terminated by blank line) + 1 trailing
-        // event without terminating blank line — the trailing flush must
-        // trip the cap.
         $body = "data: a\n\ndata: b\n\ndata: c";
 
         $this->expectException(TooManyRecordsException::class);
@@ -1430,15 +1287,10 @@ final class StreamingContentParserTest extends TestCase
         $parser->parseServerSentEvents($body);
     }
 
-    /**
-     * SEC-10: SSE comment lines and field-only lines (no event boundary) do
-     * not count toward the cap.
-     */
     #[Test]
     public function sse_comments_do_not_count_toward_limit(): void
     {
         $parser = new StreamingContentParser(maxRecords: 2);
-        // 2 events with multiple comment lines around them — must succeed.
         $body = ": comment 1\ndata: a\n\n: comment 2\ndata: b\n\n: comment 3\n";
 
         $result = $parser->parseServerSentEvents($body);
@@ -1446,16 +1298,10 @@ final class StreamingContentParserTest extends TestCase
         self::assertCount(2, $result);
     }
 
-    /**
-     * SEC-10: SSE streaming variant also enforces the cap on the trailing
-     * unflushed event when the body ends without a terminating blank line.
-     */
     #[Test]
     public function streaming_sse_trailing_unflushed_event_counts_after_limit_check(): void
     {
         $parser = new StreamingContentParser(maxRecords: 2);
-        // 2 completed events + 1 trailing event without terminating blank
-        // line — the trailing flush must trip the cap.
         $body = "data: a\n\ndata: b\n\ndata: c";
 
         $factory = new Psr17Factory();
@@ -1466,9 +1312,6 @@ final class StreamingContentParserTest extends TestCase
         $parser->parseStream($stream, 'text/event-stream');
     }
 
-    /**
-     * SEC-10: SSE streaming variant counts events, not lines.
-     */
     #[Test]
     public function streaming_sse_counts_events_not_lines(): void
     {

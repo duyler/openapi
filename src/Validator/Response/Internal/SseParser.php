@@ -56,7 +56,6 @@ final readonly class SseParser implements StreamingFormatParser
 
     /**
      * @param iterable<string> $lines
-     *
      * @return list<array<int|string, mixed>|scalar|null>
      */
     private function parseLines(iterable $lines, RecordCollector $collector): array
@@ -91,7 +90,6 @@ final readonly class SseParser implements StreamingFormatParser
 
     /**
      * @param array<string, string> $currentEvent
-     *
      * @return array{0: array<string, string>, 1: array<int|string, mixed>|null}
      */
     private function processLine(string $line, array $currentEvent, RecordCollector $collector): array
@@ -125,7 +123,6 @@ final readonly class SseParser implements StreamingFormatParser
 
     /**
      * @param array<string, string> $currentEvent
-     *
      * @return array<string, string>
      */
     private function applyField(array $currentEvent, string $field, string $value): array
@@ -143,7 +140,6 @@ final readonly class SseParser implements StreamingFormatParser
 
     /**
      * @param array<string, string> $event
-     *
      * @return array<int|string, mixed>
      */
     private function formatEvent(array $event, RecordCollector $collector): array

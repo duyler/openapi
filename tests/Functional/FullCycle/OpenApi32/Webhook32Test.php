@@ -19,10 +19,6 @@ use function json_encode;
 
 use const JSON_THROW_ON_ERROR;
 
-/**
- * OA-06: OpenAPI 3.2 webhook with combined 3.2 features (jsonSchemaDialect, $self,
- * recursive schema references in webhook body).
- */
 final class Webhook32Test extends TestCase
 {
     private const string WEBHOOK_WITH_DATE_TIME_FORMAT_SPEC = <<<'YAML'

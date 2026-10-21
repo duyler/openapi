@@ -19,9 +19,6 @@ final readonly class DiscriminatorDetector
     /**
      * @param WeakMap<Schema, true> $visited
      * @param Closure(string, OpenApiDocument): Schema $resolver
-     *
-     * @throws SchemaDepthExceededException
-     *
      * @return array{bool, WeakMap<Schema, true>}
      */
     public function detectDiscriminator(
@@ -57,7 +54,6 @@ final readonly class DiscriminatorDetector
     /**
      * @param WeakMap<Schema, true> $visited
      * @param Closure(string, OpenApiDocument): Schema $resolver
-     *
      * @return array{bool, WeakMap<Schema, true>}
      */
     public function checkRefForDiscriminator(
@@ -84,9 +80,6 @@ final readonly class DiscriminatorDetector
 
     /**
      * @param WeakMap<Schema, true> $visited
-     *
-     * @throws SchemaDepthExceededException
-     *
      * @return array{bool, WeakMap<Schema, true>}
      */
     public function detectRef(Schema $schema, WeakMap $visited, int $depth): array
@@ -151,7 +144,6 @@ final readonly class DiscriminatorDetector
     /**
      * @param WeakMap<Schema, true> $visited
      * @param Closure(string, OpenApiDocument): Schema $resolver
-     *
      * @return array{bool, WeakMap<Schema, true>}
      */
     private function scanSubSchemasForDiscriminator(
@@ -180,7 +172,6 @@ final readonly class DiscriminatorDetector
 
     /**
      * @param WeakMap<Schema, true> $visited
-     *
      * @return array{bool, WeakMap<Schema, true>}
      */
     private function scanSubSchemasForRef(Schema $schema, WeakMap $visited, int $depth): array

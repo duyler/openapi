@@ -198,11 +198,8 @@ final class BooleanSchemaKeywordTest extends TestCase
             else: new Schema(type: 'integer'),
         );
 
-        // If-true → then activates; then:string accepts.
         $validator->validate('hello', $schema);
 
-        // If-true → then:string rejects integer (typed TypeMismatchError
-        // surfaces from the recursive validator, not a wrapped one).
         $this->expectException(TypeMismatchError::class);
         $validator->validate(42, $schema);
     }
@@ -217,7 +214,6 @@ final class BooleanSchemaKeywordTest extends TestCase
             else: new Schema(type: 'integer'),
         );
 
-        // If-false → else activates; else:integer accepts.
         $validator->validate(42, $schema);
 
         $this->expectNotToPerformAssertions();
@@ -233,7 +229,6 @@ final class BooleanSchemaKeywordTest extends TestCase
             else: new Schema(type: 'integer'),
         );
 
-        // If-false → else:integer rejects string with typed TypeMismatchError.
         $this->expectException(TypeMismatchError::class);
         $validator->validate('hello', $schema);
     }

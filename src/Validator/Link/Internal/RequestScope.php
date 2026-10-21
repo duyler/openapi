@@ -8,8 +8,8 @@ namespace Duyler\OpenApi\Validator\Link\Internal;
 final readonly class RequestScope
 {
     /**
-     * @param array<string, mixed>      $pathParams
-     * @param array<string, string>     $requestHeaders
+     * @param array<string, mixed> $pathParams
+     * @param array<string, string> $requestHeaders
      */
     public function __construct(
         public readonly string $url = '',

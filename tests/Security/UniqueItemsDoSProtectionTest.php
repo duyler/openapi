@@ -21,11 +21,6 @@ use function range;
 use function sprintf;
 
 /**
- * P-033 regression: ArrayLengthValidator must abort the unique-items
- * check after MAX_UNIQUE_CHECK (100000) unique entries with a fail-safe
- * TooManyItemsForUniqueCheckError rather than accumulating a hash-table
- * of unbounded size on attacker-controlled arrays without maxItems.
- *
  * @internal
  */
 final class UniqueItemsDoSProtectionTest extends TestCase
@@ -60,7 +55,7 @@ final class UniqueItemsDoSProtectionTest extends TestCase
 
         self::assertNotNull(
             $caught,
-            'ArrayLengthValidator must abort the unique-items check after MAX_UNIQUE_CHECK entries (P-033)',
+            'ArrayLengthValidator must abort the unique-items check after MAX_UNIQUE_CHECK entries',
         );
         self::assertLessThan(
             50 * 1024 * 1024,

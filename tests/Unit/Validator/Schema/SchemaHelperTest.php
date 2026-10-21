@@ -117,12 +117,6 @@ final class SchemaHelperTest extends TestCase
         SchemaValueNormalizer::normalize(null);
     }
 
-    /**
-     * P-010: `\stdClass` is normalized to its public-property view via
-     * get_object_vars(), matching TypeCoercer::normalizeValue. This lets
-     * consumers using `json_decode` without the associative flag (or plain
-     * object casts) reach the validator without manual conversion.
-     */
     #[Test]
     public function normalizes_stdClass_to_array(): void
     {
@@ -143,11 +137,6 @@ final class SchemaHelperTest extends TestCase
         self::assertSame([], $result);
     }
 
-    /**
-     * Documents the top-level-only limitation: nested stdClass instances
-     * inside the normalized array are NOT recursively converted. Consumers
-     * needing deep conversion must call normalize themselves.
-     */
     #[Test]
     public function normalizes_stdClass_only_at_top_level(): void
     {

@@ -79,7 +79,6 @@ final readonly class SecurityValidator
     /**
      * @param array<string, list<string>> $requirementAlternatives
      * @param array<string, SecurityScheme> $securitySchemes
-     *
      * @return list<MissingSecurityCredentialsError>
      */
     private function validateRequirement(

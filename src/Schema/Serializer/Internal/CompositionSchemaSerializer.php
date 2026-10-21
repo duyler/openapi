@@ -93,7 +93,6 @@ final readonly class CompositionSchemaSerializer
 
     /**
      * @param ?list<Schema> $schemas
-     *
      * @return ?list<array>
      */
     private function schemaListToArray(

@@ -68,7 +68,7 @@ class ErrorHandlingIntegrationTest extends TestCase
 
         try {
             $validator->validateWithContext(
-                ['name' => 'ab'], // Too short
+                ['name' => 'ab'],
                 $schema,
                 $context,
             );
@@ -125,7 +125,7 @@ class ErrorHandlingIntegrationTest extends TestCase
             minLength: 3,
         );
 
-        $formatter = new JsonFormatter(); // Custom formatter
+        $formatter = new JsonFormatter();
         $context = new ValidationContext(
             breadcrumbs: BreadcrumbManager::create(),
             pool: $this->pool,
@@ -135,7 +135,7 @@ class ErrorHandlingIntegrationTest extends TestCase
 
         try {
             $validator->validateWithContext(
-                'ab', // Too short
+                'ab',
                 $schema,
                 $context,
             );
@@ -179,7 +179,7 @@ class ErrorHandlingIntegrationTest extends TestCase
 
         try {
             $validator->validateWithContext(
-                ['user' => ['age' => 15]], // Too young
+                ['user' => ['age' => 15]],
                 $schema,
                 $context,
             );
@@ -288,7 +288,7 @@ class ErrorHandlingIntegrationTest extends TestCase
 
         try {
             $validator->validateWithContext(
-                5, // Below minimum
+                5,
                 $schema,
                 $context,
             );

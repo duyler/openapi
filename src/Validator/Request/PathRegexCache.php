@@ -19,13 +19,6 @@ use function substr_replace;
 use const PREG_OFFSET_CAPTURE;
 use const PREG_SET_ORDER;
 
-/**
- * Instance-scoped LRU cache of compiled path-template regular expressions.
- *
- * Thread-safety: NOT thread-safe. In Swoole coroutines or threaded FrankenPHP,
- * each worker/coroutine must own its own instance (the default in
- * OpenApiValidatorBuilder — one PathRegexCache per built document).
- */
 final readonly class PathRegexCache
 {
     private const int DEFAULT_MAX_SIZE = 256;
@@ -42,9 +35,7 @@ final readonly class PathRegexCache
     private LruCache $cache;
 
     /**
-     * @param int|null $maxSize Maximum entries before LRU eviction. Null falls back to DEFAULT_MAX_SIZE.
-     *
-     * @throws InvalidArgumentException when $maxSize is less than 1
+     * @param int|null $maxSize
      */
     public function __construct(?int $maxSize = null)
     {

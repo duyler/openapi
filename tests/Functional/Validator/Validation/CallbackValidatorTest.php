@@ -42,17 +42,6 @@ final class CallbackValidatorTest extends TestCase
         $this->psrFactory = new Psr17Factory();
     }
 
-    /**
-     * Anti-test guard: build the outer validator without the third
-     * constructor argument. The constructor must default to strict
-     * (fail-closed) so that direct-instantiation callers — frameworks that
-     * use this library as a dependency and bypass OpenApiValidatorBuilder —
-     * receive the same SSRF protection as builder callers. To verify,
-     * temporarily revert the default in Validation\CallbackValidator
-     * from `= true` back to `= false` and re-run this test — it must fail
-     * because the validator would resolve the runtime expression as a
-     * wildcard instead of throwing.
-     */
     #[Test]
     public function outer_constructor_defaults_to_strict_when_called_without_flag(): void
     {

@@ -11,11 +11,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Regression coverage for a JSON:API-shaped OAS 3.0 document where the nullable relationship is
- * expressed as `allOf: [$ref]` plus `nullable: true`, reached through a nested `properties` chain.
- *
- * @see https://github.com/duyler/openapi/issues/50
- *
  * @internal
  */
 final class NullableCompositionTest extends TestCase

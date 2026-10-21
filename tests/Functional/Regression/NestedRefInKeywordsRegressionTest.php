@@ -15,17 +15,6 @@ use function implode;
 use function sprintf;
 
 /**
- * Regression suite for R4-CORRECTNESS-001 / R4-TEST-004: `$ref`
- * resolution inside every schema-typed keyword. Anti-test: rolling
- * back the fix (returning the legacy recursion engine without
- * document context) makes the `{$ref: ...}` stub a no-op, so the
- * invalid data passes validation silently and every dataset below
- * fails to throw.
- *
- * Unlike the inline NestedRefResolutionTest, this suite drives every
- * keyword through the public {@see OpenApiValidatorBuilder::build()}
- * path so the regression also fires when the builder wiring breaks.
- *
  * @internal
  */
 final class NestedRefInKeywordsRegressionTest extends TestCase

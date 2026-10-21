@@ -22,8 +22,6 @@ use const PHP_INT_MIN;
 #[CoversClass(JsonEquals::class)]
 final class JsonEqualsTest extends TestCase
 {
-    // ---- Original tests retained / adjusted ----
-
     #[Test]
     public function equals_int_and_float_with_same_math_value(): void
     {
@@ -96,25 +94,12 @@ final class JsonEqualsTest extends TestCase
         self::assertTrue(JsonEquals::equals([1, 2, 3], [1, 2, 3]));
     }
 
-    /**
-     * JSON Schema 2020-12 §4.2.2: int 1 and float 1.0 are mathematically
-     * equal, so lists that differ only in scalar numeric representation
-     * MUST be equal. The previous implementation returned false here because
-     * PHP's `===` treats 1 and 1.0 as distinct types.
-     */
     #[Test]
     public function equals_arrays_with_equivalent_numeric_representation(): void
     {
         self::assertTrue(JsonEquals::equals([1], [1.0]));
     }
 
-    // ---- SPEC-05: int64 precision ----
-
-    /**
-     * SPEC-05: casting distinct int64 values to float collapses them —
-     * 9223372036854775806 and 9223372036854775807 both round to
-     * 9.223372036854776E+18. JSON Schema treats them as distinct numbers.
-     */
     #[Test]
     public function int64_equality_preserves_precision(): void
     {
@@ -133,12 +118,6 @@ final class JsonEqualsTest extends TestCase
         self::assertFalse(JsonEquals::equals(-9223372036854775807 - 1, PHP_INT_MAX));
     }
 
-    /**
-     * PHP_INT_MAX-FLOAT-BOUNDARY: `(float) PHP_INT_MAX` rounds to
-     * 9223372036854775808.0 (= PHP_INT_MAX + 1), so naive float equality
-     * would silently collapse two mathematically distinct values. The
-     * safe-integer-range guard rejects the comparison as false instead.
-     */
     #[Test]
     public function equals_rejects_int64_max_and_float_int64_max(): void
     {
@@ -175,8 +154,6 @@ final class JsonEqualsTest extends TestCase
         self::assertTrue(JsonEquals::equals(PHP_INT_MAX, PHP_INT_MAX));
     }
 
-    // ---- SPEC-04: bool vs int ----
-
     #[Test]
     public function bool_true_not_equal_int_1(): void
     {
@@ -206,8 +183,6 @@ final class JsonEqualsTest extends TestCase
     {
         self::assertFalse(JsonEquals::equals(true, false));
     }
-
-    // ---- SPEC-03: object order independence ----
 
     #[Test]
     public function object_order_independent(): void
@@ -277,12 +252,6 @@ final class JsonEqualsTest extends TestCase
         self::assertFalse(JsonEquals::equals([1, 2], [1, 2, 3]));
     }
 
-    // ---- Integration: uniqueItems / const / enum ----
-
-    /**
-     * SPEC-05 integration: `[PHP_INT_MAX - 1, PHP_INT_MAX]` MUST NOT trigger
-     * a false-positive DuplicateItemsError under `uniqueItems: true`.
-     */
     #[Test]
     public function unique_items_int64_no_false_duplicate(): void
     {
@@ -298,10 +267,6 @@ final class JsonEqualsTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * SPEC-03 integration: `const: {b: 2, a: 1}` MUST accept `{a: 1, b: 2}`
-     * (object key order independence).
-     */
     #[Test]
     public function const_object_order_independent(): void
     {
@@ -314,9 +279,6 @@ final class JsonEqualsTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * SPEC-03 integration: `enum: [{b: 2, a: 1}]` MUST accept `{a: 1, b: 2}`.
-     */
     #[Test]
     public function enum_object_order_independent(): void
     {
@@ -329,9 +291,6 @@ final class JsonEqualsTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * SPEC-04 integration: `const: true` MUST reject int 1.
-     */
     #[Test]
     public function const_bool_true_rejects_int_one(): void
     {
@@ -352,10 +311,6 @@ final class JsonEqualsTest extends TestCase
         }
     }
 
-    /**
-     * SPEC-05 integration: `enum: [PHP_INT_MAX - 1, PHP_INT_MAX]` MUST accept
-     * `PHP_INT_MAX` and MUST reject `PHP_INT_MAX - 2`.
-     */
     #[Test]
     public function enum_int64_lookup_matches_correct_value(): void
     {
@@ -363,7 +318,6 @@ final class JsonEqualsTest extends TestCase
             ->fromJsonString($this->specWithEnum([9223372036854775806, 9223372036854775807]))
             ->build();
 
-        // Positive match — exact int64 value present in enum.
         $validator->validateSchema(9223372036854775807, '#/components/schemas/Enum');
 
         $this->expectNotToPerformAssertions();

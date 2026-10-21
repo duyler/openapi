@@ -100,9 +100,7 @@ final readonly class ResponseTreeBuilder
 
     /**
      * @template T
-     *
      * @param Closure(array): T $builder
-     *
      * @return T|null
      */
     private function nullable(array $data, string $key, Closure $builder): mixed

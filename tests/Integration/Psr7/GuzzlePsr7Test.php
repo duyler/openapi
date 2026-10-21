@@ -19,15 +19,6 @@ use function json_encode;
 use const JSON_THROW_ON_ERROR;
 
 /**
- * P-100: PSR-7 alternate implementation. The validator targets the PSR-7
- * interfaces (ServerRequestInterface, ResponseInterface, StreamInterface)
- * and MUST work with any compliant implementation, not only nyholm/psr7.
- *
- * These tests build the validator once and exercise it with Guzzle PSR-7
- * request objects (guzzlehttp/psr7 ^2.6), proving that the public contract
- * is implementation-agnostic. nyholm/psr7 remains the canonical test-time
- * implementation; this suite documents the portability guarantee.
- *
  * @internal
  */
 final class GuzzlePsr7Test extends TestCase

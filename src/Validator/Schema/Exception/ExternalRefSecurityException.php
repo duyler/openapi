@@ -9,10 +9,6 @@ use Duyler\OpenApi\Validator\Util\LogContextSanitizer;
 use RuntimeException;
 use Throwable;
 
-/**
- * Thrown when an external $ref violates the builtin FileExternalRefResolver
- * security policy (denied scheme, path traversal outside the allowed root).
- */
 final class ExternalRefSecurityException extends RuntimeException
 {
     use SanitizableExceptionTrait;
@@ -32,12 +28,6 @@ final class ExternalRefSecurityException extends RuntimeException
         parent::__construct($message, $code, $previous);
     }
 
-    /**
-     * Returns the retained $ref string. Pass $reveal = true only from
-     * trusted operator code (security auditor, verbose logger); the
-     * default returns '<redacted>' to prevent disclosure through
-     * reflective serialization ((array) $e, Sentry SDK, etc.).
-     */
     public function ref(bool $reveal = false): string
     {
         return $reveal ? $this->ref : '<redacted>';

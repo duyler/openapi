@@ -14,12 +14,6 @@ use function strlen;
 
 use const STR_PAD_LEFT;
 
-/**
- * Sanitizes attacker-controlled strings before they enter PSR-3 log context.
- * Truncates to a bounded length and escapes control characters so that a
- * plaintext logger (e.g. Monolog StreamHandler) cannot be injected with
- * fake log lines via newline or other control bytes.
- */
 final readonly class LogContextSanitizer
 {
     private const int DEFAULT_MAX_LENGTH = 256;

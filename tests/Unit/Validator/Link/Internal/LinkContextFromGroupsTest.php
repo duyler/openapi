@@ -35,13 +35,11 @@ final class LinkContextFromGroupsTest extends TestCase
 
         $context = LinkContext::fromGroups($request, $response);
 
-        // Response scope
         self::assertSame(['id' => 42, 'name' => 'John'], $context->body);
         self::assertSame(['X-Total' => '1'], $context->headers);
         self::assertSame(['page' => 1], $context->queryParams);
         self::assertSame(200, $context->statusCode);
 
-        // Request scope
         self::assertSame('https://api.example.com/users/42', $context->url);
         self::assertSame('GET', $context->method);
         self::assertSame(['userId' => 42], $context->pathParams);
@@ -84,7 +82,6 @@ final class LinkContextFromGroupsTest extends TestCase
             pathParams: ['k' => 'v'],
         );
 
-        // Equivalent across all fields (queryParams empty-by-default in both)
         self::assertSame($viaCtor->body, $viaGroups->body);
         self::assertSame($viaCtor->statusCode, $viaGroups->statusCode);
         self::assertSame($viaCtor->url, $viaGroups->url);

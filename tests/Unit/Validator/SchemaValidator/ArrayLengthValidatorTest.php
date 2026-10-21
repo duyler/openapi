@@ -280,13 +280,6 @@ class ArrayLengthValidatorTest extends TestCase
         self::assertSame(true, $succeeded);
     }
 
-    /**
-     * Regression for review finding on bugfix 18: int and float that are
-     * mathematically equal MUST be treated as duplicates per JSON Schema
-     * §4.2.3 (numeric equality). PHP's strict === returns false for
-     * 1 === 1.0 because the types differ, which previously caused
-     * uniqueItems to silently accept [1, 1.0] as having no duplicates.
-     */
     #[Test]
     public function unique_items_detects_int_and_float_as_duplicate_when_mathematically_equal(): void
     {
@@ -340,11 +333,6 @@ class ArrayLengthValidatorTest extends TestCase
     }
 
     /**
-     * SV-06 (uniqueItems) parameterized cases covering distinct arrays that
-     * MUST pass validation. Complements the individual uniqueItems tests
-     * above (which carry specific assertions about error metadata and JSON
-     * type-aware equality semantics) with a single data-provider-driven sweep.
-     *
      * @return array<string, array{0: array<mixed>}>
      */
     public static function provideUniqueItemsCases(): array
@@ -380,9 +368,6 @@ class ArrayLengthValidatorTest extends TestCase
     }
 
     /**
-     * SV-06 (uniqueItems) parameterized cases covering duplicate arrays that
-     * MUST fail validation with DuplicateItemsError.
-     *
      * @return array<string, array{0: array<mixed>}>
      */
     public static function provideDuplicateItemsCases(): array
@@ -414,10 +399,6 @@ class ArrayLengthValidatorTest extends TestCase
         self::assertSame('/uniqueItems', $caught->schemaPath());
     }
 
-    /**
-     * EI-052: resources are not valid JSON values and must be rejected by
-     * uniqueItems comparison before any later json_encode call.
-     */
     #[Test]
     public function unique_items_rejects_resource_items(): void
     {
@@ -480,9 +461,6 @@ class ArrayLengthValidatorTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * Regression: arrays without resources must continue to pass uniqueItems.
-     */
     #[Test]
     public function unique_items_accepts_valid_scalars_without_resources(): void
     {
@@ -493,12 +471,6 @@ class ArrayLengthValidatorTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * P-007: JSON Schema 2020-12 §4.2.2 — NaN must NOT compare equal to NaN.
-     * Previously `(string)(float) NAN === 'NAN'` produced a duplicate key
-     * so two NaNs were treated as duplicates. Per spec, two NaN values are
-     * distinct and the array MUST pass uniqueItems.
-     */
     #[Test]
     public function nan_values_treated_as_unique_in_unique_items(): void
     {

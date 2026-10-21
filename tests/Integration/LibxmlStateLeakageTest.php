@@ -15,10 +15,6 @@ use function libxml_use_internal_errors;
 use function simplexml_load_string;
 
 /**
- * Verifies P-064 contract: OpenApiValidator::reset() must not mutate PHP-global
- * libxml state. Consumer code that has accumulated libxml errors before calling
- * reset() must still be able to read them afterwards.
- *
  * @internal
  */
 final class LibxmlStateLeakageTest extends TestCase

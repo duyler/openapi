@@ -13,13 +13,6 @@ final readonly class BodyReader
 {
     private const int CHUNK_SIZE = 8192;
 
-    /**
-     * Enforces the byte cap on every chunk so that an attacker-controlled
-     * body is never fully materialised in memory before the limit applies,
-     * even when getSize() is unknown (chunked transfer-encoding).
-     *
-     * @throws BodyTooLargeException When the stream exceeds the configured cap.
-     */
     public static function readSafely(StreamInterface $stream, int $maxBytes): string
     {
         $size = $stream->getSize();

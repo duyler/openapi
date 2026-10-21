@@ -108,16 +108,6 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(logger: $logger));
     }
 
-    /**
-     * Enable verbose PSR-3 logging of caller-sensitive security and
-     * external-ref diagnostics (scheme names, parameter locations,
-     * resolved filesystem paths). Without this call, the security
-     * validator and the builtin FileExternalRefResolver use a
-     * NullLogger, so the only signal an unauthenticated caller can
-     * observe is a generic exception message. Pass a logger whose
-     * audience is trusted (operators / a sealed log pipeline) to
-     * surface the underlying details at debug level.
-     */
     public function withSecurityVerboseLogging(LoggerInterface $logger): self
     {
         return $this->with(new BuilderConfig(securityVerboseLogger: $logger));
@@ -128,20 +118,6 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(errorFormatter: $formatter));
     }
 
-    /**
-     * Configure the validator to use {@see DetailedFormatter}, optionally with
-     * sensitive values (such as the raw input that failed format validation)
-     * included in the rendered error output.
-     *
-     * Default is `false`: raw invalid inputs are omitted from formatter output
-     * to prevent accidental disclosure of credentials sent against
-     * `format: password`, `format: uuid`, etc. (CWE-532). Pass `true` only in
-     * trusted debugging contexts.
-     *
-     * When chained with {@see withErrorFormatter()}, the call order wins: a
-     * subsequent `withErrorFormatter()` overrides the formatter installed by
-     * this method, and vice versa.
-     */
     public function withDetailedErrors(bool $includeSensitive = false): self
     {
         return $this->with(new BuilderConfig(
@@ -165,17 +141,6 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(coercion: true));
     }
 
-    /**
-     * Disable strict coercion mode and fall back to the legacy non-strict
-     * coercion behaviour.
-     *
-     * Strict coercion is the default since SEC-13/SEC-14/SEC-15: it rejects
-     * arbitrary strings coerced to boolean (e.g. "admin" no longer silently
-     * becomes true), throws on float-to-integer overflow outside the int64
-     * range, and rejects numeric strings that lose precision when cast to
-     * float. Call this method only when the application explicitly relies on
-     * the legacy lax coercion semantics.
-     */
     public function disableStrictCoercion(): self
     {
         return $this->with(new BuilderConfig(strictCoercion: false));
@@ -201,21 +166,6 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(eventDispatcher: $dispatcher));
     }
 
-    /**
-     * Override the directory that external file:// $ref references must
-     * remain inside. The default is auto-derived from the spec file
-     * directory (dirname of the realpath of the path passed to
-     * fromYamlFile / fromJsonFile), which keeps external refs inside the
-     * spec directory. Use this method to widen or narrow that root, for
-     * example to allow references into a shared sibling components
-     * directory. Passing a path that does not exist throws BuilderException
-     * at call time so the failure surfaces before build().
-     *
-     * Call this method AFTER fromYamlFile / fromJsonFile: the auto-derive
-     * step unconditionally sets the value, so a withExternalRefAllowedRoot
-     * call placed before fromYamlFile / fromJsonFile will be silently
-     * overwritten.
-     */
     public function withExternalRefAllowedRoot(string $path): self
     {
         $realPath = realpath($path);
@@ -226,111 +176,51 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(externalRefAllowedRoot: $realPath));
     }
 
-    /**
-     * Enable security scheme validation for requests
-     *
-     * When enabled, the validator checks that required security credentials
-     * are present in the request headers, query parameters, or cookies.
-     */
     public function enableSecurityValidation(): self
     {
         return $this->with(new BuilderConfig(securityValidation: true));
     }
 
-    /**
-     * Enable server path resolution for request validation
-     *
-     * When enabled, the validator strips the base path defined in server URLs
-     * from the request path before matching against OpenAPI path templates.
-     * This allows validation of requests routed through a reverse proxy
-     * that prefixes paths with a version segment (e.g., /v1/users).
-     */
     public function enableServerPathResolution(): self
     {
         return $this->with(new BuilderConfig(serverPathResolution: true));
     }
 
-    /**
-     * Enable strict format validation
-     *
-     * When enabled, unknown format values are rejected during validation
-     * instead of being silently skipped.
-     */
     public function enableStrictFormats(): self
     {
         return $this->with(new BuilderConfig(strictFormats: true));
     }
 
-    /**
-     * Enable reporting of deprecated schema elements
-     *
-     * When enabled, deprecated fields in the OpenAPI specification are logged
-     * through the configured PSR-3 logger.
-     */
     public function enableReportDeprecated(): self
     {
         return $this->with(new BuilderConfig(reportDeprecated: true));
     }
 
-    /**
-     * Override the maximum allowed size, in bytes, for non-multipart request
-     * and response bodies (JSON, XML, text). Bodies larger than this cap are
-     * rejected before being fully materialised in memory.
-     */
     public function withMaxJsonBodySize(int $maxBytes): self
     {
         return $this->with(new BuilderConfig(maxJsonBodyBytes: $maxBytes));
     }
 
-    /**
-     * Override the maximum allowed size, in bytes, for multipart request and
-     * response bodies. multipart payloads typically carry larger uploads, so
-     * the cap is kept independent from the JSON cap.
-     */
     public function withMaxMultipartBodySize(int $maxBytes): self
     {
         return $this->with(new BuilderConfig(maxMultipartBodyBytes: $maxBytes));
     }
 
-    /**
-     * Enable strict streaming mode.
-     *
-     * When enabled, malformed JSON records in NDJSON, SSE, and JSON Text
-     * Sequence streams raise a MalformedStreamRecordException instead of being
-     * logged and skipped. This is an opt-in behaviour and remains disabled by
-     * default for backward compatibility.
-     */
     public function enableStrictStreaming(): self
     {
         return $this->with(new BuilderConfig(strictStreaming: true));
     }
 
-    /**
-     * Disable strict streaming mode.
-     *
-     * Restores the default fail-open behaviour where malformed JSON records
-     * are logged and skipped rather than raised.
-     */
     public function disableStrictStreaming(): self
     {
         return $this->with(new BuilderConfig(strictStreaming: false));
     }
 
-    /**
-     * Override the defensive pcre.backtrack_limit applied to every preg_match
-     * call routed through the PregExecutor wrapper. Lowering this cap below the
-     * PHP default (1_000_000) bounds the worst-case CPU cost of catastrophic
-     * regular expressions on attacker-controlled input such as JSON-Schema
-     * "pattern" fields.
-     */
     public function withMaxRegexBacktracks(int $maxBacktracks): self
     {
         return $this->with(new BuilderConfig(maxRegexBacktracks: $maxBacktracks));
     }
 
-    /**
-     * Enable strict callback runtime template resolution.
-     */
     #[Deprecated(message: <<<'TXT'
     since 1.x, will be removed in 2.0. Strict mode is now the
                  default: callback expressions that use runtime templates
@@ -347,38 +237,13 @@ final readonly class OpenApiValidatorBuilder
         return $this;
     }
 
-    /**
-     * Disable strict callback runtime template resolution.
-     *
-     * SECURITY WARNING: When disabled, callback expressions that use runtime
-     * templates such as `{$request.body#/callback_url}` are treated as
-     * wildcards that accept any URL, and declared security checks on the
-     * callback pathItem still pass against an attacker-controlled URL. If
-     * the resolved URL is then used by the application for an outbound HTTP
-     * request, this enables SSRF via the callback parameter.
-     *
-     * Only use this method when the application validates callback URLs
-     * through another mechanism (allowlist, signed URLs, application-level
-     * allowlist of outbound destinations). The strict default is the
-     * fail-closed posture recommended for new code.
-     */
     public function disableStrictCallbackRuntimeTemplate(): self
     {
         return $this->with(new BuilderConfig(strictCallbackRuntimeTemplate: false));
     }
 
     /**
-     * Override the maximum allowed size, in bytes, for external file:// $ref
-     * payloads loaded by the builtin FileExternalRefResolver. Files larger
-     * than this cap are rejected before being fully materialised in memory,
-     * defending against DoS via attacker-controlled large files or special
-     * files like /dev/zero. The default is 10 MB
-     * (FileExternalRefResolver::DEFAULT_MAX_REF_BYTES).
-     *
-     * @param int $bytes Positive integer size in bytes; values <= 0 raise
-     *                   InvalidArgumentException because they would either
-     *                   reject every file (0) or compare nonsensically
-     *                   against read counts (negative).
+     * @param int $bytes
      */
     public function withExternalRefMaxBytes(int $bytes): self
     {
@@ -388,18 +253,7 @@ final readonly class OpenApiValidatorBuilder
     }
 
     /**
-     * Override the maximum number of records the streaming content parser
-     * (NDJSON, SSE, JSON Text Sequences) will accept from a single response
-     * before raising {@see TooManyRecordsException}.
-     *
-     * The default is 100_000 records, sufficient for typical streaming APIs
-     * while bounding the memory impact of validating an attacker-controlled
-     * response composed of a very large number of small records.
-     *
-     * @param int $max Positive integer record cap; values <= 0 raise
-     *                 InvalidArgumentException because they would either
-     *                 reject every record (0) or compare nonsensically
-     *                 against an accumulated count (negative).
+     * @param int $max
      */
     public function withMaxStreamingRecords(int $max): self
     {
@@ -409,19 +263,7 @@ final readonly class OpenApiValidatorBuilder
     }
 
     /**
-     * Override the maximum allowed size, in bytes, for an OpenAPI spec
-     * payload parsed by `YamlParser` or `JsonParser`. Specs larger than
-     * this cap are rejected before YAML or JSON parsing begins, defending
-     * against OOM on attacker-controlled or accidentally oversized specs
-     * (CWE-400, CWE-770). The default is 1 MB
-     * (`YamlParser::DEFAULT_MAX_SPEC_BYTES` / `JsonParser::DEFAULT_MAX_SPEC_BYTES`,
-     * same value) and is sized to accept typical OpenAPI documents
-     * including the bundled petstore spec.
-     *
-     * @param int $bytes Positive integer size in bytes; values <= 0 raise
-     *                   InvalidArgumentException because they would either
-     *                   reject every spec (0) or compare nonsensically
-     *                   against content length (negative).
+     * @param int $bytes
      */
     public function withMaxSpecSize(int $bytes): self
     {
@@ -431,19 +273,7 @@ final readonly class OpenApiValidatorBuilder
     }
 
     /**
-     * Override the maximum allowed nesting depth for an OpenAPI spec
-     * payload parsed by `YamlParser` or `JsonParser`. Specs whose
-     * nesting exceeds this cap are rejected after parsing, defending
-     * against billion-laughs-style YAML or deeply-nested JSON that can
-     * cause stack overflow or OOM (closes SEC-18 for YAML, extends the
-     * same protection to JSON). The default is 100
-     * (`YamlParser::DEFAULT_MAX_SPEC_DEPTH`) and is sized to accept
-     * typical OpenAPI documents including the bundled petstore spec.
-     *
-     * @param int $depth Positive integer depth cap; values <= 0 raise
-     *                   InvalidArgumentException because they would either
-     *                   reject every spec (0) or compare nonsensically
-     *                   against depth (negative).
+     * @param int $depth
      */
     public function withMaxSpecDepth(int $depth): self
     {
@@ -452,15 +282,6 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(maxSpecDepth: $depth));
     }
 
-    /**
-     * Terminal method: materialises the spec via {@see SpecLoader}, asserts
-     * external `$ref` confinement via {@see ExternalRefDetector}, then wires
-     * the validator dependencies and returns an {@see OpenApiValidatorInterface}.
-     *
-     * Call order is significant: the loader runs first to surface the
-     * canonical parse error, then the confinement guard fail-closes on
-     * string-loaded specs that contain an external `$ref`. Do not reorder.
-     */
     public function build(): OpenApiValidatorInterface
     {
         $document = $this->specLoader()->load();

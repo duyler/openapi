@@ -9,12 +9,6 @@ use RuntimeException;
 
 use function sprintf;
 
-/**
- * Thrown when an external $ref file exceeds the configured maximum size
- * (FileExternalRefResolver::$maxBytes). Semantically a size / DoS error,
- * not a security policy violation, so it extends RuntimeException directly
- * rather than ExternalRefSecurityException.
- */
 final class ExternalRefTooLargeException extends RuntimeException
 {
     use SanitizableExceptionTrait;

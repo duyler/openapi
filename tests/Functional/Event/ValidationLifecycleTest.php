@@ -211,11 +211,11 @@ YAML;
     }
 
     /**
-     * @param list<string>             $sequence
-     * @param ?ValidationStartedEvent  $started
+     * @param list<string> $sequence
+     * @param ?ValidationStartedEvent $started
      * @param ?ValidationFinishedEvent $finished
-     * @param ?ValidationErrorEvent    $error
-     * @param ?ValidationWarningEvent  $warning
+     * @param ?ValidationErrorEvent $error
+     * @param ?ValidationWarningEvent $warning
      */
     private function createLifecycleDispatcher(
         array &$sequence,

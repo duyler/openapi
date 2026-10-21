@@ -29,14 +29,6 @@ use function hrtime;
 use function str_repeat;
 
 /**
- * PoC tests for ReDoS defenses (P-022, P-023, P-035). Each pathological input
- * must terminate within a defensive bound, demonstrating that the
- * PregExecutor wrapper caps pcre.backtrack_limit and that the urlencoded
- * validator no longer relies on a catastrophic regular expression.
- *
- * Time-based assertions use a generous margin so they remain stable on loaded
- * CI workers; the underlying guarantee is the runtime cap itself.
- *
  * @internal
  */
 #[CoversClass(PregExecutor::class)]

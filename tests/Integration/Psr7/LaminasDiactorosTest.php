@@ -20,14 +20,6 @@ use function json_encode;
 use const JSON_THROW_ON_ERROR;
 
 /**
- * P-100: PSR-7 alternate implementation. The validator targets the PSR-7
- * interfaces (ServerRequestInterface, ResponseInterface, StreamInterface)
- * and MUST work with any compliant implementation, not only nyholm/psr7.
- *
- * These tests build the validator once and exercise it with Laminas
- * Diactoros request objects (laminas/laminas-diactoros ^3.3), proving
- * that the public contract is implementation-agnostic.
- *
  * @internal
  */
 final class LaminasDiactorosTest extends TestCase

@@ -31,9 +31,6 @@ final readonly class ServerPathMatcher
         $this->sortedServerPaths = $sortedServerPaths;
     }
 
-    /**
-     * Matches a request path against precompiled server base paths and strips the matched prefix.
-     */
     public function matchPath(string $requestPath): ?ServerPathMatch
     {
         foreach ($this->sortedServerPaths as $entry) {
@@ -54,7 +51,6 @@ final readonly class ServerPathMatcher
 
     /**
      * @param list<Server> $servers
-     *
      * @return list<array{server: Server, basePath: string}>
      */
     private function resolveServerBasePaths(array $servers): array

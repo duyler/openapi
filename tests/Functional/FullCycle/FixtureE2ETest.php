@@ -304,9 +304,6 @@ final class FixtureE2ETest extends TestCase
             $caught = $e;
         }
 
-        // int32 format validator (registered per R3-SPEC-013) fires before
-        // the `maximum` keyword for values exceeding the int32 range.
-        // Either MaximumError or InvalidFormatException is a correct rejection.
         self::assertTrue(
             $caught instanceof MaximumError || $caught instanceof InvalidFormatException,
             'Expected MaximumError or InvalidFormatException for int32_max above range',

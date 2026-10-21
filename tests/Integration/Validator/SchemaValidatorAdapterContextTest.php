@@ -96,7 +96,7 @@ final class SchemaValidatorAdapterContextTest extends TestCase
         return <<<'YAML'
 openapi: 3.2.0
 info:
-  title: EI-009 regression
+  title: regression
   version: 1.0.0
 paths: {}
 components:

@@ -17,7 +17,6 @@ use function substr;
 
 /**
  * @internal
- *
  * @psalm-type UriParts = array<string, int|string|null>
  */
 final readonly class UriResolver
@@ -60,7 +59,6 @@ final readonly class UriResolver
     /**
      * @param UriParts $base
      * @param UriParts $relative
-     *
      * @return UriParts
      */
     public function replaceQueryAndFragment(array $base, array $relative): array
@@ -77,7 +75,6 @@ final readonly class UriResolver
     /**
      * @param UriParts $base
      * @param UriParts $relative
-     *
      * @return UriParts
      */
     public function applyFragment(array $base, array $relative): array

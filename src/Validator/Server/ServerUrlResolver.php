@@ -22,12 +22,8 @@ final readonly class ServerUrlResolver
     private const string VARIABLE_PATTERN = '/\{(?<name>' . self::VARNAME_PATTERN . ')\}/';
 
     /**
-     * Resolves a server URL template by substituting variables with provided values.
-     *
      * @param Server $server
      * @param ServerVariableOverride ...$overrides
-     *
-     * @throws ServerVariableException If a required variable is missing
      */
     public function resolve(Server $server, ServerVariableOverride ...$overrides): string
     {
@@ -62,8 +58,6 @@ final readonly class ServerUrlResolver
     }
 
     /**
-     * Extracts variable names from a server URL template.
-     *
      * @return list<string>
      */
     public function extractVariableNames(Server $server): array
@@ -75,12 +69,8 @@ final readonly class ServerUrlResolver
     }
 
     /**
-     * Validates that all template variables in the server URL have corresponding values.
-     *
      * @param Server $server
      * @param ServerVariableOverride ...$overrides
-     *
-     * @throws ServerVariableException If a variable is missing a value
      */
     public function validateVariables(Server $server, ServerVariableOverride ...$overrides): void
     {
@@ -102,7 +92,6 @@ final readonly class ServerUrlResolver
 
     /**
      * @param array<array-key, ServerVariableOverride> $overrides
-     *
      * @return array<string, string>
      */
     private function mergeVariables(Server $server, array $overrides): array

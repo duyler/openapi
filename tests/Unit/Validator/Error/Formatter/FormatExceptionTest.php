@@ -49,7 +49,6 @@ final class FormatExceptionTest extends TestCase
 
         self::assertStringContainsString('Value must be a valid email address', $result);
         self::assertStringContainsString('email', $result);
-        // Default formatter must NOT expose the raw input value (SEC-06).
         self::assertStringNotContainsString('not-an-email', $result);
     }
 

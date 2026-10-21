@@ -28,20 +28,6 @@ use function array_pop;
 use function sprintf;
 
 /**
- * Regression for issue #54: the MAX_COMPOSITION_ERRORS cap in
- * AbstractCompositionalValidator::validateSchemas() must cap error
- * *collection*, not branch *iteration*.
- *
- * Before the fix, reaching the cap returned from validateSchemas()
- * mid-loop, so branches declared after the noisy ones were never
- * evaluated and $validCount could not grow. anyOf then reported
- * "none did" for data that a later branch matches, making the outcome
- * depend on branch declaration order.
- *
- * Anti-test: restoring the `return` in place of the `capped` flag makes
- * every ordering-sensitive case below fail while the two cap-shape cases
- * keep passing — the cap itself is not what changed.
- *
  * @internal
  */
 #[CoversClass(AnyOfValidator::class)]
@@ -49,9 +35,6 @@ use function sprintf;
 #[CoversClass(AllOfValidator::class)]
 final class CompositionBranchOrderIndependenceTest extends TestCase
 {
-    /**
-     * Two of these exceed MAX_COMPOSITION_ERRORS (20) on their own.
-     */
     private const int ERRORS_PER_NOISY_BRANCH = 12;
 
     private ValidatorPool $pool;
@@ -70,12 +53,6 @@ final class CompositionBranchOrderIndependenceTest extends TestCase
         $this->allOf = new AllOfValidator($dependencies);
     }
 
-    /**
-     * The third noisy branch matters: it is the one that reaches the
-     * post-cap `continue`. A matching branch alone would short-circuit on
-     * `$outcome->matched` before the cap is ever consulted, so turning the
-     * `continue` back into a `break` would go unnoticed.
-     */
     #[Test]
     public function any_of_passes_whatever_the_position_of_the_matching_branch(): void
     {
@@ -201,7 +178,6 @@ final class CompositionBranchOrderIndependenceTest extends TestCase
 
     /**
      * @param array<int, Schema> $branches
-     *
      * @return array<int, Schema>
      */
     private function matchingFirst(array $branches): array
@@ -212,9 +188,6 @@ final class CompositionBranchOrderIndependenceTest extends TestCase
         return [$last, ...$reordered];
     }
 
-    /**
-     * Emits ERRORS_PER_NOISY_BRANCH errors against {@see self::data()}.
-     */
     private function noisyBranch(string $prefix): Schema
     {
         $required = [];

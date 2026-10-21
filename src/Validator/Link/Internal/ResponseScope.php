@@ -8,9 +8,9 @@ namespace Duyler\OpenApi\Validator\Link\Internal;
 final readonly class ResponseScope
 {
     /**
-     * @param array<string, mixed>      $body
-     * @param array<string, string>     $headers
-     * @param array<string, mixed>      $queryParams
+     * @param array<string, mixed> $body
+     * @param array<string, string> $headers
+     * @param array<string, mixed> $queryParams
      */
     public function __construct(
         public readonly array $body = [],

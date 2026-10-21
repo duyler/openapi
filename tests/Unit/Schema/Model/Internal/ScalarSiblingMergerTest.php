@@ -24,7 +24,6 @@ final class ScalarSiblingMergerTest extends TestCase
 
         self::assertSame('string', $overrides['type']);
         self::assertSame('date-time', $overrides['format']);
-        // pattern: resolved has it, sibling does not → mergeNullableIdentical returns resolved value
         self::assertSame('^a', $overrides['pattern']);
         self::assertTrue($overrides['nullable']);
         self::assertFalse($overrides['hasConst']);
@@ -140,8 +139,6 @@ final class ScalarSiblingMergerTest extends TestCase
 
         $overrides = new ScalarSiblingMerger()->merge(new SiblingMergeContext($resolved, $sibling));
 
-        // JSON equality: 1 === true is NOT equal in JsonEquals (different types).
-        // True (bool) is equal in both. So intersection is [1, true].
         self::assertCount(2, $overrides['enum']);
     }
 

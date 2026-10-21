@@ -27,14 +27,6 @@ final class YamlParser extends OpenApiBuilder
 
     public const int DEFAULT_MAX_SPEC_DEPTH = SpecSizeGuard::DEFAULT_MAX_SPEC_DEPTH;
 
-    /**
-     * Conservative caps for YAML anchor/alias expansion bombs
-     * (billion-laughs attack, CWE-400, CWE-770). Real OpenAPI specs
-     * typically use fewer than 20 anchors and 50 aliases for schema
-     * deduplication; these caps allow legitimate deduplication while
-     * rejecting exponential blowup before the Symfony YAML parser
-     * materialises the expanded document.
-     */
     public const int MAX_ANCHORS = 100;
 
     public const int MAX_ALIASES = 1000;
@@ -127,7 +119,6 @@ final class YamlParser extends OpenApiBuilder
 
     /**
      * @param list<string> $lines
-     *
      * @return array<string, array{line: int, indent: int}>
      */
     private function findAnchorDeclarations(array $lines): array
@@ -155,9 +146,8 @@ final class YamlParser extends OpenApiBuilder
     }
 
     /**
-     * @param list<string>                     $lines
+     * @param list<string> $lines
      * @param array<string, array{line: int, indent: int}> $anchors
-     *
      * @return array<string, array<string, true>>
      */
     private function buildAnchorChainDag(array $lines, array $anchors): array
@@ -194,7 +184,7 @@ final class YamlParser extends OpenApiBuilder
 
     /**
      * @param array<string, array{line: int, indent: int}> $anchors
-     * @param array{line: int, indent: int}                $parent
+     * @param array{line: int, indent: int} $parent
      */
     private function findValueRangeEnd(array $anchors, array $parent, int $lineCount): int
     {
@@ -210,7 +200,7 @@ final class YamlParser extends OpenApiBuilder
 
     /**
      * @param array<string, array<string, true>> $dag
-     * @param list<string>                       $nodes
+     * @param list<string> $nodes
      */
     private function computeMaxChainDepth(array $dag, array $nodes): int
     {
@@ -228,7 +218,7 @@ final class YamlParser extends OpenApiBuilder
 
     /**
      * @param array<string, array<string, true>> $dag
-     * @param array<string, true>                $visiting
+     * @param array<string, true> $visiting
      */
     private function chainDepthDfs(string $node, array $dag, ChainDepthMemo $memo, array $visiting): int
     {

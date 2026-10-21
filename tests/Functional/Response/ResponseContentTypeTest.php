@@ -18,18 +18,6 @@ use Psr\Http\Message\ResponseInterface;
 
 use function sprintf;
 
-/**
- * RB-20: response with a Content-Type that does not match any declared
- * media type — the response body validator skips validation (fail-open,
- * documented in README), so malformed JSON bodies sneak through silently.
- * Matching negative tests confirm that validation DOES run when the
- * Content-Type matches the spec.
- *
- * RB-22: response spec declaring multiple Content-Types with different
- * schemas. Each Content-Type is validated against its own schema. Unknown
- * Content-Types silently skip validation (no UnsupportedMediaTypeException
- * on the response side, in contrast to the request side).
- */
 final class ResponseContentTypeTest extends TestCase
 {
     private const string JSON_RESPONSE_SPEC = <<<'YAML'

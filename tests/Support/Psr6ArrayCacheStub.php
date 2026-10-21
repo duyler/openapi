@@ -57,7 +57,6 @@ final class Psr6ArrayCacheStub implements CacheItemPoolInterface
 
     /**
      * @param list<string> $keys
-     *
      * @return array<string, CacheItemInterface>
      */
     #[Override]

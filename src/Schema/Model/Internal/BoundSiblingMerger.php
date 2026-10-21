@@ -72,10 +72,8 @@ final readonly class BoundSiblingMerger implements SiblingMergerStrategy
 
     /**
      * @template T of int|float
-     *
      * @param T|null $resolved
      * @param T|null $sibling
-     *
      * @return T|null
      */
     private function mergeLowerBound(int|float|null $resolved, int|float|null $sibling): int|float|null
@@ -93,10 +91,8 @@ final readonly class BoundSiblingMerger implements SiblingMergerStrategy
 
     /**
      * @template T of int|float
-     *
      * @param T|null $resolved
      * @param T|null $sibling
-     *
      * @return T|null
      */
     private function mergeUpperBound(int|float|null $resolved, int|float|null $sibling): int|float|null
@@ -144,7 +140,6 @@ final readonly class BoundSiblingMerger implements SiblingMergerStrategy
     /**
      * @param ?list<Schema> $resolved
      * @param ?list<Schema> $sibling
-     *
      * @return ?list<Schema>
      */
     private function mergePrefixItems(?array $resolved, ?array $sibling): ?array

@@ -23,7 +23,6 @@ final readonly class TrieBuilder
 
     /**
      * @param array<string, PathItem> $paths
-     *
      * @return array{0: array<int|string, mixed>, 1: array<string, int>}
      */
     public function buildTrie(array $paths): array
@@ -53,7 +52,7 @@ final readonly class TrieBuilder
 
     /**
      * @param array<int|string, mixed> $node
-     * @param list<string>             $segments
+     * @param list<string> $segments
      */
     private function insertSegments(array $node, array $segments, int $depth, string $template, PathItem $pathItem): array
     {

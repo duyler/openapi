@@ -10,12 +10,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * RFC 3986 §5.4 conformance for {@see UriResolver}.
- *
- * Golden-master derived from the official RFC 3986 §5.4.1 / §5.4.2
- * test vectors published at https://datatracker.ietf.org/doc/html/rfc3986#section-5.4.
- * Base URI for all RFC examples is "http://a/b/c/d;p?q".
- *
  * @internal
  */
 final class UriResolverTest extends TestCase
@@ -293,10 +287,6 @@ final class UriResolverTest extends TestCase
         self::assertArrayNotHasKey('query', $result);
     }
 
-    /**
-     * Mirrors RefResolver::combineUris() — splits parse_url() guard logic
-     * then delegates to {@see UriResolver::resolveRelativeAgainstBase()}.
-     */
     private function combineViaResolver(string $baseUri, string $relativeRef): string
     {
         if ('' === $relativeRef) {

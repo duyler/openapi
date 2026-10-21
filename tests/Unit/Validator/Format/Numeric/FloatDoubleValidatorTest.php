@@ -88,11 +88,6 @@ final class FloatDoubleValidatorTest extends TestCase
     }
 
     /**
-     * Special IEEE 754 float values: INF, -INF, NAN.
-     *
-     * JSON (RFC 8259 §6) does not support non-finite or NaN values, so the
-     * validator must reject them even though they are of type float in PHP.
-     *
      * @return array<string, array{0: float, 1: bool}>
      */
     public static function specialFloatValuesProvider(): array

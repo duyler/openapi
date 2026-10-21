@@ -10,7 +10,6 @@ use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MinItemsError;
 use Duyler\OpenApi\Validator\Exception\RequiredError;
-use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Operation;
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -19,13 +18,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 
-/**
- * RB-12: multipart/form-data file upload — characterization tests for the
- * multipart body parser behaviour. The parser returns a list of parts
- * (each with "headers" and "content" keys) which is why a spec schema
- * must use type: array to accept multipart bodies, while type: object
- * is always rejected with a TypeMismatchError.
- */
 final class MultipartUploadTest extends TestCase
 {
     private const string MULTIPART_ARRAY_SCHEMA_SPEC = <<<'YAML'

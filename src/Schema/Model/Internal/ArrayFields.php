@@ -12,7 +12,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 final readonly class ArrayFields
 {
     /**
-     * @param list<Schema>|null   $prefixItems
+     * @param list<Schema>|null $prefixItems
      */
     public function __construct(
         public Schema|bool|null $items = null,

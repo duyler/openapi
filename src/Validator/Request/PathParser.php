@@ -21,14 +21,14 @@ final readonly class PathParser
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
-    /** @return array<string, string> Parameter values */
+    /** @return array<string, string> */
     public function matchPath(string $requestPath, string $template): array
     {
         return $this->tryMatchPath($requestPath, $template)
             ?? throw new PathMismatchException($template, $requestPath);
     }
 
-    /** @return array<string, string>|null Parameter values, or null if no match */
+    /** @return array<string, string>|null */
     public function tryMatchPath(string $requestPath, string $template): ?array
     {
         /** @var non-empty-string $regex */

@@ -20,7 +20,6 @@ final readonly class BracketNotationParser
 
     /**
      * @param array<array-key, mixed> $tree
-     *
      * @return array<array-key, mixed>
      */
     public function insertNested(array $tree, string $key, string $value): array
@@ -48,9 +47,8 @@ final readonly class BracketNotationParser
     }
 
     /**
-     * @param array<array-key, mixed>  $node
-     * @param non-empty-list<string>   $segments
-     *
+     * @param array<array-key, mixed> $node
+     * @param non-empty-list<string> $segments
      * @return array<array-key, mixed>
      */
     public function assignSegments(array $node, array $segments, string $value): array
@@ -114,9 +112,8 @@ final readonly class BracketNotationParser
     }
 
     /**
-     * @param array<array-key, mixed>  $node
-     * @param list<string>             $remaining
-     *
+     * @param array<array-key, mixed> $node
+     * @param list<string> $remaining
      * @return array<array-key, mixed>
      */
     private function assignEmptySegment(array $node, array $remaining, string $value): array

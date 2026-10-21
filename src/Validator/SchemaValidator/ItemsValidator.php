@@ -56,8 +56,8 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
     }
 
     /**
-     * @param array<int, mixed>             $data
-     * @param list<Schema>|null             $prefixItems
+     * @param array<int, mixed> $data
+     * @param list<Schema>|null $prefixItems
      */
     private function validateSchemaItems(array $data, Schema $itemsSchema, ?array $prefixItems, ?ValidationContext $context): void
     {

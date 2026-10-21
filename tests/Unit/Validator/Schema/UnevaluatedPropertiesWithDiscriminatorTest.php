@@ -29,15 +29,6 @@ use Throwable;
 
 use function sprintf;
 
-/**
- * Regression coverage for R4-CORRECTNESS-005 / R4-SPEC-015:
- * discriminator-routed sub-validation must propagate evaluated-property /
- * evaluated-item annotations to the parent ValidationContext via
- * forkForBranch + mergeChildAnnotations so that adjacent
- * unevaluatedProperties:false / unevaluatedItems:false constraints honour
- * properties already validated by the discriminator target schema
- * (JSON Schema 2020-12 §10.3.4 / §11.1.1.3).
- */
 #[CoversClass(DiscriminatorValidator::class)]
 final class UnevaluatedPropertiesWithDiscriminatorTest extends TestCase
 {

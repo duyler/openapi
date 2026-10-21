@@ -12,14 +12,6 @@ use ReflectionProperty;
 
 /**
  * @internal
- *
- * Anti-test for P-053: asserts that SchemaRegistry precomputes the
- * latest-version-per-schema and sorted-versions lists in the
- * constructor, so get($name) without a version and getVersions($name)
- * are O(1) lookups instead of per-call uksort. Reverting to the lazy
- * uksort form removes both private properties, breaking the reflection
- * assertions; get() still returns the right document but no longer in
- * constant time.
  */
 final class SchemaRegistryPrecompiledTest extends TestCase
 {

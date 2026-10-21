@@ -64,7 +64,7 @@ class BreadcrumbIntegrationTest extends TestCase
 
         try {
             $validator->validateWithContext(
-                ['users' => ['name' => 'ab']], // Too short
+                ['users' => ['name' => 'ab']],
                 $schema,
                 $context,
             );
@@ -93,7 +93,7 @@ class BreadcrumbIntegrationTest extends TestCase
 
         try {
             $validator->validateWithContext(
-                [['id' => 'invalid']], // Should be integer
+                [['id' => 'invalid']],
                 $schema,
                 $context,
             );
@@ -127,7 +127,7 @@ class BreadcrumbIntegrationTest extends TestCase
 
         try {
             $validator->validateWithContext(
-                ['users' => [['name' => 123]]], // Should be string
+                ['users' => [['name' => 123]]],
                 $schema,
                 $context,
             );
@@ -153,7 +153,7 @@ class BreadcrumbIntegrationTest extends TestCase
 
         try {
             $validator->validateWithContext(
-                ['field' => 123], // Should be string
+                ['field' => 123],
                 $schema,
                 $context,
             );
@@ -195,7 +195,7 @@ class BreadcrumbIntegrationTest extends TestCase
 
         try {
             $validator->validateWithContext(
-                ['level1' => ['level2' => ['level3' => 456]]], // Should be string
+                ['level1' => ['level2' => ['level3' => 456]]],
                 $schema,
                 $context,
             );
@@ -227,7 +227,7 @@ class BreadcrumbIntegrationTest extends TestCase
 
         try {
             $validator->validateWithContext(
-                ['matrix' => [[1, 2], [3, 'invalid']]], // Should be integer
+                ['matrix' => [[1, 2], [3, 'invalid']]],
                 $schema,
                 $context,
             );
@@ -264,7 +264,7 @@ class BreadcrumbIntegrationTest extends TestCase
 
         try {
             $validator->validateWithContext(
-                ['data' => [['items' => ['valid', 123]]]], // Should be string
+                ['data' => [['items' => ['valid', 123]]]],
                 $schema,
                 $context,
             );

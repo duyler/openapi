@@ -14,14 +14,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/**
- * Pins the named-constructor contract introduced in task 11b §10
- * (see `.ai/reports/adr-schema-constructor.md`).
- *
- * `Schema::fromConstraintGroups()` and `Schema::withOverrideGroups()` wrap the
- * deprecated 57-parameter {@see Schema::__construct()} / {@see Schema::withOverrides()}
- * behind 4 typed value-objects plus an explicit `nullable` modifier.
- */
 #[CoversClass(Schema::class)]
 final class SchemaConstraintGroupsTest extends TestCase
 {
@@ -279,7 +271,6 @@ final class SchemaConstraintGroupsTest extends TestCase
             nullable: false,
         );
 
-        // Field-for-field equivalent (but distinct immutable instances).
         self::assertNotSame($viaLegacy, $viaGroups);
         self::assertSame($viaLegacy->type, $viaGroups->type);
         self::assertSame($viaLegacy->title, $viaGroups->title);
@@ -443,7 +434,6 @@ final class SchemaConstraintGroupsTest extends TestCase
         );
 
         self::assertSame($newOneOf, $result->oneOf);
-        // Original anyOf is preserved (null in the override group means "keep").
         self::assertNotNull($result->anyOf);
     }
 }

@@ -434,9 +434,6 @@ components:
       $ref: '../../../etc/passwd'
 YAML;
 
-        // The ExternalRefDetector's role is to fail-closed when externalRefAllowedRoot is null.
-        // When allowedRoot IS set, the FileExternalRefResolver (separate class) enforces the boundary at resolution time.
-        // This test pins the detector's contract: no allowedRoot + external $ref = exception, regardless of $ref shape.
         $detectorWithoutRoot = new ExternalRefDetector(new BuilderConfig(
             specContent: $yaml,
             specType: 'yaml',

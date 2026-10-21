@@ -506,14 +506,6 @@ XML;
         $this->assertFalse(libxml_use_internal_errors());
     }
 
-    /**
-     * Defense-in-depth anti-test: proves that the deny-all external entity
-     * loader blocks file:// resolution even if a future commit accidentally
-     * adds LIBXML_NOENT to PARSE_OPTIONS. Without LIBXML_NOENT XXE is
-     * already blocked by simplexml_load_string semantics; this test
-     * demonstrates that the loader itself is the invariant guard, so the
-     * protection no longer relies solely on the absence of a flag.
-     */
     #[Test]
     public function deny_all_loader_blocks_file_resolution_even_with_noent_flag(): void
     {

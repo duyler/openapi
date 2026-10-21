@@ -254,10 +254,10 @@ YAML;
     }
 
     /**
-     * @param list<string>             $sequence
-     * @param ?ValidationStartedEvent  $started
+     * @param list<string> $sequence
+     * @param ?ValidationStartedEvent $started
      * @param ?ValidationFinishedEvent $finished
-     * @param ?ValidationErrorEvent    $error
+     * @param ?ValidationErrorEvent $error
      */
     private function buildLifecycleDispatcher(
         array &$sequence,

@@ -218,7 +218,6 @@ final readonly class XmlBodyParser
 
     /**
      * @param array<array-key, mixed> $result
-     *
      * @return array<array-key, mixed>
      */
     private static function mergeChild(array $result, string $key, array|string|null $value): array

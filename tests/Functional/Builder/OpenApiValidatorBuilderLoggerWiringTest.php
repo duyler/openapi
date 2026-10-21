@@ -14,14 +14,6 @@ use Throwable;
 use function is_string;
 
 /**
- * End-to-end coverage for the logger wiring introduced in task 02b:
- * withLogger($logger) on the builder must propagate into the four
- * silent-catch sites (PathParser, CallbackValidator, ServerPathMatcher,
- * XmlBodyParser) so that PSR-3 records are produced on production paths.
- * Verifies one wiring end-to-end (ServerPathMatcher) — the other three
- * share the same $context->logger plumbing inside ValidatorDependencies,
- * so this single assertion exercises the whole chain.
- *
  * @internal
  */
 final class OpenApiValidatorBuilderLoggerWiringTest extends TestCase
@@ -66,9 +58,6 @@ YAML;
         $factory = new Psr17Factory();
         $request = $factory->createServerRequest('GET', '/users');
 
-        // ServerPathMatcher catches ServerVariableException for {unknown},
-        // logs at debug, and falls back to the original request path so the
-        // path finder still matches '/users' and validateRequest returns.
         $operation = $validator->validateRequest($request);
 
         $this->assertSame('getUsers', $operation->operationId);

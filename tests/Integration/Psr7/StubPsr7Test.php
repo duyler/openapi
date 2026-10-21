@@ -25,12 +25,6 @@ use const JSON_THROW_ON_ERROR;
 use const SEEK_SET;
 
 /**
- * P-100 fallback: a minimal PSR-7 StreamInterface stub proves that the
- * validator depends only on the PSR-7 contract, not on any concrete
- * implementation. The validator must consume the body via the documented
- * StreamInterface methods (getSize / isSeekable / rewind / eof / read)
- * without downcasting to a specific class.
- *
  * @internal
  */
 final class StubPsr7Test extends TestCase
@@ -108,8 +102,6 @@ YAML;
 }
 
 /**
- * Minimal ServerRequestInterface implementation backed by in-memory state.
- *
  * @internal
  */
 final readonly class StubServerRequest implements ServerRequestInterface
@@ -285,8 +277,6 @@ final readonly class StubServerRequest implements ServerRequestInterface
 }
 
 /**
- * Simple in-memory StreamInterface backed by a string buffer.
- *
  * @internal
  */
 final class StubStream implements StreamInterface

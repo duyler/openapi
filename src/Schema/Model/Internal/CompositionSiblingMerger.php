@@ -52,7 +52,6 @@ final readonly class CompositionSiblingMerger implements SiblingMergerStrategy
 
     /**
      * @param list<Schema> $ifThenElseAdditions
-     *
      * @return list<Schema>|null
      */
     private function mergeAllOf(Schema $resolved, Schema $sibling, array $ifThenElseAdditions): ?array
@@ -89,7 +88,6 @@ final readonly class CompositionSiblingMerger implements SiblingMergerStrategy
     /**
      * @param ?list<Schema> $resolvedComposition
      * @param ?list<Schema> $siblingComposition
-     *
      * @return ?list<Schema>
      */
     private function wrapCompositionInAllOf(
@@ -116,7 +114,6 @@ final readonly class CompositionSiblingMerger implements SiblingMergerStrategy
     /**
      * @param ?list<Schema> $resolvedComposition
      * @param ?list<Schema> $siblingComposition
-     *
      * @return ?list<Schema>
      */
     private function mergeCompositionField(?array $resolvedComposition, ?array $siblingComposition): ?array
@@ -177,7 +174,6 @@ final readonly class CompositionSiblingMerger implements SiblingMergerStrategy
     /**
      * @param ?list<Schema> $resolved
      * @param ?list<Schema> $sibling
-     *
      * @return ?list<Schema>
      */
     private function mergeSchemaList(?array $resolved, ?array $sibling): ?array
@@ -196,7 +192,6 @@ final readonly class CompositionSiblingMerger implements SiblingMergerStrategy
     /**
      * @param ?array<string, Schema> $resolved
      * @param ?array<string, Schema> $sibling
-     *
      * @return ?array<string, Schema>
      */
     private function mergeSchemaMap(?array $resolved, ?array $sibling): ?array

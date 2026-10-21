@@ -20,13 +20,6 @@ final class InvalidFormatException extends AbstractValidationError
         );
     }
 
-    /**
-     * Returns the validated value. Pass $reveal = true only from trusted
-     * operator code (security auditor, verbose logger with opt-in
-     * includeSensitiveValues); the default returns '<redacted>' to
-     * prevent disclosure of credentials (passwords, tokens) through
-     * reflective serialization.
-     */
     public function value(bool $reveal = false): mixed
     {
         return $reveal ? $this->value : '<redacted>';

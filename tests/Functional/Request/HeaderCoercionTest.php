@@ -15,23 +15,12 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 
-/**
- * TC-08: Header parameter type coercion.
- *
- * PSR-7 headers are always delivered as strings. When an OpenAPI parameter
- * is declared `type: integer` and `enableCoercion()` is on, the validator's
- * TypeCoercer converts the header string to int before schema validation.
- *
- * HeadersValidator invokes TypeCoercer with strict=true (consistent with
- * CookieValidator which also uses strict=true). In strict mode non-numeric
- * strings and overflow values are rejected with TypeMismatchError.
- */
 final class HeaderCoercionTest extends TestCase
 {
     private const string HEADER_COERCION_SPEC = <<<'YAML'
 openapi: 3.2.0
 info:
-  title: TC-08 Header Coercion API
+  title: Header Coercion API
   version: 1.0.0
 paths:
   /metrics:
@@ -55,13 +44,6 @@ YAML;
         $this->psrFactory = new Psr17Factory();
     }
 
-    /**
-     * Direct unit-level proof: TypeCoercer converts header string "42" to int.
-     *
-     * assertSame(42, ...) checks both value and type — this is the only place
-     * where the coerced integer is directly observable. Header validation
-     * uses strict=true, so the assertion is performed with strict mode.
-     */
     #[Test]
     public function tc_08_type_coercer_directly_converts_header_string_to_int(): void
     {
@@ -74,14 +56,6 @@ YAML;
         $this->assertIsInt($result);
     }
 
-    /**
-     * Baseline: without coercion the header string "42" is left as a string
-     * and fails the const constraint. PHP's loose comparison keeps "42"
-     * through the type check, but strict `===` in ConstError rejects it.
-     *
-     * This baseline proves the next test passes specifically because of
-     * coercion, not because the validator is lenient about types.
-     */
     #[Test]
     public function tc_08_header_without_coercion_fails_const_check_on_string_value(): void
     {
@@ -108,14 +82,6 @@ YAML;
         $this->assertSame('42', $caught->params()['actual']);
     }
 
-    /**
-     * Positive: with coercion, header string "42" is converted to int 42 and
-     * passes both the type check and the const constraint.
-     *
-     * The const constraint can only match the integer literal 42 — the
-     * string "42" fails it (see baseline test above). Successful validation
-     * therefore proves coercion occurred end-to-end.
-     */
     #[Test]
     public function tc_08_header_string_coerced_to_integer_passes_const_constraint(): void
     {
@@ -132,12 +98,6 @@ YAML;
         $this->assertSame('/metrics', $operation->path);
     }
 
-    /**
-     * Negative: header string "abc" cannot be coerced to integer.
-     *
-     * HeadersValidator uses strict=true, so TypeMismatchError is raised
-     * directly during coercion (before schema constraint validation).
-     */
     #[Test]
     public function tc_08_header_non_numeric_string_fails_coercion_with_type_mismatch(): void
     {
@@ -165,19 +125,13 @@ YAML;
         $this->assertSame('abc', $caught->params()['actual']);
     }
 
-    /**
-     * Negative: an overflow header value must fail coercion in strict mode.
-     *
-     * PHP's `(int) "99999999999999999999"` cannot represent the value
-     * faithfully, so the strict coercer rejects it as a type mismatch.
-     */
     #[Test]
     public function tc_08_header_overflow_numeric_string_fails_coercion_with_type_mismatch(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.2.0
 info:
-  title: TC-08 Header Coercion Overflow API
+  title: Header Coercion Overflow API
   version: 1.0.0
 paths:
   /metrics:

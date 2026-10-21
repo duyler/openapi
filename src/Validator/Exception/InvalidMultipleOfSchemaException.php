@@ -22,7 +22,7 @@ final class InvalidMultipleOfSchemaException extends InvalidArgumentException
     }
 
     #[Deprecated(
-        message: 'since R4-CORRECTNESS-008: NumericRangeValidator::isMultipleOf now '
+        message: 'NumericRangeValidator::isMultipleOf now '
             . 'uses pure-PHP decimal string modulus when bcmath is unavailable, '
             . 'so this factory is no longer thrown from the validator. Retained '
             . 'for backward compatibility with external callers; will be removed '

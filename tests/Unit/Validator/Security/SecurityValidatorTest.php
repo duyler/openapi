@@ -48,11 +48,6 @@ final class SecurityValidatorTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * RFC 6750 §2.1: Bearer scheme is case-insensitive. SEC-16
-     * anti-test: revert preg_match to str_starts_with('Bearer ') and
-     * every case-variant assertion below fails.
-     */
     #[Test]
     public function http_bearer_uppercase_scheme_passes(): void
     {
@@ -113,11 +108,6 @@ final class SecurityValidatorTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * RFC 9110 OWS: one or more whitespace separators between scheme
-     * and token are valid. SEC-16 anti-test: regex with a literal
-     * single space (/\s/ removed) would reject this header.
-     */
     #[Test]
     public function http_bearer_multiple_spaces_between_scheme_and_token_passes(): void
     {
@@ -138,10 +128,6 @@ final class SecurityValidatorTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * RFC 6750 §2.1 requires a non-empty b64token. SEC-16 anti-test:
-     * regex without the \S+ requirement would let this header through.
-     */
     #[Test]
     public function http_bearer_with_trailing_space_only_rejected_as_missing_token(): void
     {
@@ -171,11 +157,6 @@ final class SecurityValidatorTest extends TestCase
         }
     }
 
-    /**
-     * SEC-16 anti-test: 'Bearer' alone (no separator, no token) must
-     * not satisfy the validation — the regex requires \s+ after the
-     * scheme word.
-     */
     #[Test]
     public function http_bearer_scheme_word_without_token_rejected(): void
     {
@@ -196,10 +177,6 @@ final class SecurityValidatorTest extends TestCase
         $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
     }
 
-    /**
-     * SEC-16: a raw token without the Bearer scheme prefix must not be
-     * accepted as a valid Bearer credential.
-     */
     #[Test]
     public function http_bearer_token_without_scheme_prefix_rejected(): void
     {
@@ -220,10 +197,6 @@ final class SecurityValidatorTest extends TestCase
         $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
     }
 
-    /**
-     * SEC-16: Basic auth must not satisfy a Bearer security
-     * requirement even though both share the Authorization header.
-     */
     #[Test]
     public function http_bearer_basic_auth_credentials_rejected_for_bearer_requirement(): void
     {
@@ -253,14 +226,6 @@ final class SecurityValidatorTest extends TestCase
         }
     }
 
-    /**
-     * R4-SEC-016 anti-test: a multi-challenge Authorization header
-     * carrying a fake Bearer prefix followed by a Basic challenge must
-     * not satisfy the Bearer security requirement. Without the `$`
-     * end-anchor the previous regex `/^bearer\s+\S+/i` matched only the
-     * `Bearer fake` prefix and silently accepted the header, allowing
-     * downstream code to extract the Basic challenge as the credential.
-     */
     #[Test]
     public function http_bearer_multi_challenge_with_basic_suffix_rejected(): void
     {
@@ -290,12 +255,6 @@ final class SecurityValidatorTest extends TestCase
         }
     }
 
-    /**
-     * R4-SEC-016 anti-test: RFC 7235 §4.1 permits multiple challenges in
-     * a single Authorization header. Two Bearer challenges separated by
-     * a comma is still a multi-challenge header and must be rejected to
-     * prevent the validator from rubber-stamping a prefix.
-     */
     #[Test]
     public function http_bearer_multi_challenge_with_duplicate_bearer_rejected(): void
     {
@@ -316,12 +275,6 @@ final class SecurityValidatorTest extends TestCase
         $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
     }
 
-    /**
-     * RFC 7235 header-value semantics: trailing whitespace in the
-     * Authorization value is permitted and must not cause a valid
-     * Bearer credential to be rejected. Requires `\s*$` rather than a
-     * strict `$` anchor.
-     */
     #[Test]
     public function http_bearer_with_trailing_whitespace_passes(): void
     {
@@ -342,12 +295,6 @@ final class SecurityValidatorTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * RFC 6750 §2.1 defines `b64token` as a whitespace-free production.
-     * A second whitespace run inside the token area indicates either a
-     * malformed credential or an attempt to smuggle an additional
-     * value past the validator and must be rejected.
-     */
     #[Test]
     public function http_bearer_with_internal_whitespace_in_token_rejected(): void
     {
@@ -368,11 +315,6 @@ final class SecurityValidatorTest extends TestCase
         $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
     }
 
-    /**
-     * R4-SEC-016 anti-test: the credential position must not be a
-     * vehicle for arbitrary payloads. Any suffix after the token that
-     * is not whitespace must cause rejection (end-anchored regex).
-     */
     #[Test]
     public function http_bearer_with_payload_suffix_after_token_rejected(): void
     {
@@ -703,17 +645,6 @@ final class SecurityValidatorTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * SEC-16 fail-closed anti-test: an apiKey scheme with an `in`
-     * value outside the {query, header, cookie} allowlist must
-     * resolve to MissingSecurityCredentialsError via the match
-     * default arm, NOT throw UnhandledMatchError. Reverting the
-     * `default => null` arm (or replacing the match with a strict
-     * dispatcher) breaks this — the error class changes to
-     * \Error, the location string leaks the raw `in` value, and
-     * the caller-visible exception is no longer the generic
-     * AuthenticationRequired message but a stack trace.
-     */
     #[Test]
     public function api_key_with_unknown_in_value_fails_closed_with_missing_credentials_error(): void
     {
@@ -839,17 +770,6 @@ final class SecurityValidatorTest extends TestCase
         }
     }
 
-    /**
-     * SEC-07 / CWE-209: the public exception message must be generic so
-     * an unauthenticated caller cannot enumerate the security surface
-     * (scheme names, parameter locations, header names). The message
-     * must NOT contain the scheme name, the scheme type, or the
-     * parameter location — only a fixed "Authentication required"
-     * notice.
-     *
-     * Anti-test: if MissingSecurityCredentialsError reverts to embedding
-     * scheme details in its message, this assertion fails.
-     */
     #[Test]
     public function generic_security_message_to_caller_omits_scheme_details(): void
     {
@@ -886,13 +806,6 @@ final class SecurityValidatorTest extends TestCase
         }
     }
 
-    /**
-     * SEC-07 anti-circumvention: scheme details must also be absent
-     * from params(), because error formatters (DetailedFormatter,
-     * JsonFormatter) render params() directly into API responses via
-     * PSR-15 middleware. Only readonly properties retain the detail
-     * for programmatic access by trusted operators.
-     */
     #[Test]
     public function generic_security_message_params_are_empty_for_caller_safety(): void
     {
@@ -919,12 +832,6 @@ final class SecurityValidatorTest extends TestCase
         }
     }
 
-    /**
-     * SEC-07 BC: although the message is generic, scheme details must
-     * remain accessible as readonly properties on the error object so
-     * trusted operators can introspect which scheme failed without
-     * enabling verbose logging.
-     */
     #[Test]
     public function scheme_properties_accessible_programmatically(): void
     {
@@ -951,12 +858,6 @@ final class SecurityValidatorTest extends TestCase
         }
     }
 
-    /**
-     * SEC-07 opt-in: when a PSR-3 logger is supplied, the validator
-     * forwards the concrete scheme details at debug level so trusted
-     * operators can still diagnose which scheme failed — even though
-     * the surfaced message stays generic.
-     */
     #[Test]
     public function verbose_logging_to_logger_when_logger_supplied(): void
     {
@@ -990,18 +891,9 @@ final class SecurityValidatorTest extends TestCase
         }
     }
 
-    /**
-     * SEC-07 default: without an explicit logger, the validator must
-     * NOT emit anything observable — NullLogger is the safe default so
-     * scheme details never end up in production logs via error_log().
-     */
     #[Test]
     public function default_null_logger_emits_nothing_without_opt_in(): void
     {
-        // Default-constructed validator uses NullLogger internally; the
-        // only observable effect is that the generic exception is
-        // raised. This test exists to lock that behaviour: any future
-        // change that introduces a default non-null sink breaks it.
         $validator = new SecurityValidator();
 
         $request = $this->factory->createServerRequest('GET', '/users');
@@ -1022,10 +914,6 @@ final class SecurityValidatorTest extends TestCase
 }
 
 /**
- * Minimal in-memory PSR-3 spy logger used to assert that the security
- * validator forwards scheme details at debug level when verbose logging
- * is enabled. Captures the level, message, and context of every call.
- *
  * @internal
  */
 final class SpyLogger implements LoggerInterface

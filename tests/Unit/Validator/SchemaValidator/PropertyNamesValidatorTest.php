@@ -169,12 +169,6 @@ class PropertyNamesValidatorTest extends TestCase
         $this->validator->validate(['name' => 'value'], $schema);
     }
 
-    /**
-     * P-005: JSON Schema 2020-12 §6.5.4 — propertyNames applies only to
-     * object instances. PHP integer-keyed lists (array_is_list === true)
-     * MUST NOT be validated, otherwise a `type: string` constraint would
-     * reject every list as a false-positive TypeMismatchError.
-     */
     #[Test]
     public function does_not_validate_integer_keys_for_lists(): void
     {

@@ -157,7 +157,6 @@ final class InlineExampleResolverTest extends TestCase
 
     /**
      * @param array<string, mixed> $data
-     *
      * @return int|float|bool|string|array<array-key, mixed>|null|stdClass|class-string<InvalidSchemaException>
      */
     private function mediaTypeOutcome(array $data): mixed
@@ -171,7 +170,6 @@ final class InlineExampleResolverTest extends TestCase
 
     /**
      * @param array<string, mixed> $data
-     *
      * @return int|float|bool|string|array<array-key, mixed>|null|stdClass|class-string<InvalidSchemaException>
      */
     private function parameterOutcome(array $data): mixed

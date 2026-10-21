@@ -21,11 +21,6 @@ use function memory_get_usage;
 use function sprintf;
 
 /**
- * P-032 regression: ContainsValidator must terminate after 10000 matching
- * validations rather than walking a 100k-element attacker payload end to
- * end. Without the cap, a spec like `contains: {complex schema}` without
- * maxItems becomes a CPU-exhaustion vector.
- *
  * @internal
  */
 final class ContainsValidatorDoSProtectionTest extends TestCase
@@ -64,7 +59,7 @@ final class ContainsValidatorDoSProtectionTest extends TestCase
 
         self::assertNotNull(
             $caught,
-            'ContainsValidator must abort after the MAX_CONTAINS_VALIDATIONS cap (P-032)',
+            'ContainsValidator must abort after the MAX_CONTAINS_VALIDATIONS cap',
         );
         self::assertLessThan(
             50 * 1024 * 1024,

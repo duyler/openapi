@@ -60,11 +60,6 @@ final class LibxmlSecuredContextTest extends TestCase
         self::assertFalse(libxml_use_internal_errors());
     }
 
-    /**
-     * Integration: LibxmlSecuredContext + simplexml_load_string must block
-     * XXE file:// resolution. The deny-all loader installed by the helper
-     * is the invariant guard against external entity substitution.
-     */
     #[Test]
     public function run_blocks_xxe_file_resolution(): void
     {

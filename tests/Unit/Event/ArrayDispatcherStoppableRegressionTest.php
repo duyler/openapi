@@ -16,21 +16,6 @@ use Psr\EventDispatcher\StoppableEventInterface;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 
 /**
- * Regression suite for R4-PSR-001 / R4-TEST-012: ArrayDispatcher must
- * honour PSR-14 StoppableEventInterface by checking
- * isPropagationStopped() before every listener invocation (including
- * the first) and breaking the loop as soon as propagation is stopped.
- *
- * Anti-test: removing the `instanceof StoppableEventInterface` check
- * (or removing the `break` statement) makes test 1 fail — the second
- * listener is invoked even though the first stopped propagation.
- *
- * Unlike the inline ArrayDispatcherTest that uses anonymous classes in
- * isolation, this suite registers listeners on real {@see ValidationStartedEvent},
- * {@see ValidationErrorEvent} and {@see ValidationFinishedEvent} classes
- * so the regression also fires when those event classes are mutated to
- * drop the StoppableEventInterface contract in custom wrappers.
- *
  * @internal
  */
 final class ArrayDispatcherStoppableRegressionTest extends TestCase
@@ -143,10 +128,6 @@ final class ArrayDispatcherStoppableRegressionTest extends TestCase
 }
 
 /**
- * Minimal stand-alone StoppableEventInterface implementation that lets
- * the regression suite pin the PSR-14 contract without depending on
- * internal event classes implementing the interface (they do not).
- *
  * @internal
  */
 final class StoppableMarker implements StoppableEventInterface

@@ -427,13 +427,6 @@ final class SchemaRegistryTest extends TestCase
         }
     }
 
-    /**
-     * RG-02: Pre-release versions follow semver ordering rules.
-     *
-     * Per semver 2.0.0 §9-10, pre-release versions have lower precedence
-     * than the associated normal version: 1.0.0-alpha < 1.0.0-beta < 1.0.0.
-     * version_compare() in PHP follows the same semantics.
-     */
     #[Test]
     public function pre_release_versions_sorted_correctly(): void
     {
@@ -457,10 +450,6 @@ final class SchemaRegistryTest extends TestCase
         );
     }
 
-    /**
-     * RG-02: get('api') with no version returns the latest non-pre-release
-     * version (the highest semver), not the highest pre-release.
-     */
     #[Test]
     public function get_latest_returns_stable_release_over_pre_release(): void
     {
@@ -478,10 +467,6 @@ final class SchemaRegistryTest extends TestCase
         self::assertNotSame($docAlpha, $latest);
     }
 
-    /**
-     * RG-02: When only pre-release versions are registered, get('api')
-     * returns the highest pre-release.
-     */
     #[Test]
     public function get_latest_returns_highest_pre_release_when_only_pre_releases_registered(): void
     {
@@ -498,9 +483,6 @@ final class SchemaRegistryTest extends TestCase
         self::assertSame($docBeta, $latest);
     }
 
-    /**
-     * RG-02: Specific pre-release version lookup works by explicit version.
-     */
     #[Test]
     public function get_specific_pre_release_version(): void
     {
@@ -516,10 +498,6 @@ final class SchemaRegistryTest extends TestCase
         self::assertSame($docRc, $registry->get('api', '2.0.0-rc.1'));
     }
 
-    /**
-     * RG-02: Immutability — registering a pre-release does not mutate
-     * the original instance.
-     */
     #[Test]
     public function register_pre_release_returns_new_instance_and_preserves_original(): void
     {
@@ -533,9 +511,6 @@ final class SchemaRegistryTest extends TestCase
         self::assertTrue($newRegistry->has('api', '1.0.0-alpha'));
     }
 
-    /**
-     * RG-02: Pre-release mixing with multiple stable versions.
-     */
     #[Test]
     public function pre_release_mixed_with_multiple_stable_versions(): void
     {
@@ -562,10 +537,6 @@ final class SchemaRegistryTest extends TestCase
         self::assertSame(4, $registry->countVersions('api'));
     }
 
-    /**
-     * RG-03: countVersions returns 0 for a name that has never been
-     * registered, instead of throwing an exception.
-     */
     #[Test]
     public function count_versions_returns_zero_for_nonexistent_name(): void
     {
@@ -574,10 +545,6 @@ final class SchemaRegistryTest extends TestCase
         self::assertSame(0, $registry->countVersions('nonexistent'));
     }
 
-    /**
-     * RG-03: countVersions returns 0 for a nonexistent name even when
-     * other schemas are registered.
-     */
     #[Test]
     public function count_versions_returns_zero_for_nonexistent_name_when_others_registered(): void
     {
@@ -592,10 +559,6 @@ final class SchemaRegistryTest extends TestCase
         self::assertSame(0, $registry->countVersions('nonexistent'));
     }
 
-    /**
-     * RG-03: getVersions returns an empty array (not null) for a
-     * nonexistent name.
-     */
     #[Test]
     public function get_versions_returns_empty_array_for_nonexistent_name(): void
     {
@@ -606,10 +569,6 @@ final class SchemaRegistryTest extends TestCase
         self::assertSame([], $versions);
     }
 
-    /**
-     * RG-03: get('nonexistent') with no version returns null and does
-     * not throw.
-     */
     #[Test]
     public function get_returns_null_for_nonexistent_name_with_no_version(): void
     {

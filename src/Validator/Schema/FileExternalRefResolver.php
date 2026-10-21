@@ -44,39 +44,8 @@ use const E_WARNING;
 use const JSON_THROW_ON_ERROR;
 use const PATHINFO_EXTENSION;
 
-/**
- * Builtin external $ref resolver for file:// URIs and relative-path refs.
- *
- * Security policy:
- * - Allows only the file:// scheme and scheme-less relative paths. Every
- *   other scheme is rejected with ExternalRefSecurityException. PHP
- *   registers dozens of stream wrappers (php://, phar://, data://,
- *   compress.zlib://, zip://, expect://, ssh2://, rar://, ogg://, glob://
- *   and more) that would otherwise allow LFI, deserialization gadgets and
- *   inline schema injection. A whitelist is the only defence that does not
- *   lag behind newly registered wrappers.
- * - When an optional allowedRoot is configured, refuses to read files whose
- *   realpath escapes that root (defends against ../ traversal and symlinks).
- *
- * SEC-08 / CWE-209: exception messages omit absolute paths and the
- * configured allowedRoot so a Throwable surfaced by a PSR-15 middleware
- * cannot leak the server filesystem layout. Concrete paths are forwarded
- * to the optional PSR-3 logger at debug level instead.
- *
- * The resolver is a pure loader: it does not cache loaded schemas (that is the
- * responsibility of RefResolver::$cache). It parses YAML and JSON payloads and
- * supports an optional JSON Pointer suffix (e.g. 'user.yaml#/UserSchema').
- */
-// §6 exemption: Tightly coupled with RefResolver via ExternalRefResolverInterface; decomposition requires interface refactor pending 2.0. See ADR .ai/reports/adr-schema-constructor.md for pattern.
 final readonly class FileExternalRefResolver implements ExternalRefResolverInterface
 {
-    /**
-     * Default cap for external ref file size, defends against DoS via large
-     * attacker-controlled files (file:///dev/zero, multi-gigabyte payloads).
-     * Override via the $maxBytes constructor argument or the builder method
-     * withExternalRefMaxBytes(). Exposed as public so the builder can
-     * reference the canonical default without duplicating the literal.
-     */
     public const int DEFAULT_MAX_REF_BYTES = 10_485_760;
 
     private const array ALLOWED_SCHEMES = [
@@ -328,7 +297,6 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
 
     /**
      * @param array<array-key, mixed> $fileData
-     *
      * @return mixed
      */
     private function navigatePointer(array $fileData, string $pointer, string $absolutePath): mixed

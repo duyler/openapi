@@ -20,22 +20,7 @@ use function str_repeat;
 use const JSON_THROW_ON_ERROR;
 
 /**
- * P-097: memory-exhaustion DoS. The validator enforces a hard cap on the
- * size of request bodies (BodyReader::readSafely, default 10 MB JSON cap
- * via ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES) and on the
- * uniqueItems deduplication work performed by the schema validator.
- *
- * These tests prove that pathological inputs either are rejected outright
- * or stay within a bounded memory envelope, never growing to attacker-
- * controlled size.
- *
  * @internal
- *
- * Known limitation: withMaxJsonBodySize() propagates to RequestBodyValidatorWithContext
- * and ResponseValidatorWithContext but NOT to the RequestValidator that owns
- * BodyReader::readSafely. This is reported separately; the tests below
- * exercise the DEFAULT 10 MB cap by sizing payloads above that threshold,
- * which is sufficient to prove the DoS guard fires.
  */
 final class MemoryExhaustionTest extends TestCase
 {
@@ -78,17 +63,10 @@ YAML;
     #[Test]
     public function rejects_oversized_uniqueitems_array(): void
     {
-        // A uniqueItems payload large enough to exceed the 10 MB default
-        // body cap and to detect a regression in the deduplication path.
-        // Built directly as a string (avoiding array materialisation) so
-        // the test itself does not exhaust PHP's memory limit before the
-        // validator gets a chance to reject it.
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SPEC)
             ->build();
 
-        // Each entry is "aaaaaa" (12 bytes including quotes and comma).
-        // ~900 000 entries -> ~10.8 MB, comfortably above the 10 MB cap.
         $payload = '{"tags":[' . str_repeat('"aaaaaa",', 900_000) . '"aaaaaa"]}';
 
         $request = $this->factory
@@ -116,9 +94,6 @@ YAML;
             ->fromYamlString(self::SPEC)
             ->build();
 
-        // 50 000 entries — small enough to fit under the 10 MB body cap,
-        // large enough to detect a uniqueItems regression that materialised
-        // the full N^2 pairwise comparison.
         $large = [];
         foreach (range(1, 50_000) as $i) {
             $large[] = 'tag-' . $i;
@@ -150,14 +125,10 @@ YAML;
     #[Test]
     public function rejects_payload_above_default_json_body_cap(): void
     {
-        // The default cap (ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES)
-        // is 10 MB. A payload above that threshold must trip the
-        // BodyReader::readSafely guard.
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SPEC)
             ->build();
 
-        // 11 MB of payload, well above the 10 MB default cap.
         $oversized = '{"tags":["' . str_repeat('a', 11 * 1024 * 1024) . '"]}';
 
         $request = $this->factory

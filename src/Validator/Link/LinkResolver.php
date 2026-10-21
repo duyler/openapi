@@ -38,7 +38,6 @@ final readonly class LinkResolver
 
     /**
      * @param array<string, mixed>|null $parameters
-     *
      * @return array<string, mixed>
      */
     private function resolveParameters(?array $parameters, LinkContext $context): array

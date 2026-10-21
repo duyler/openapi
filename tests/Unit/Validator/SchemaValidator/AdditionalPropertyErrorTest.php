@@ -19,11 +19,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/**
- * Regression tests for FU-006: `additionalProperties: false` violations must surface
- * `AdditionalPropertyError` (keyword: 'additionalProperties') instead of the semantically
- * wrong `UnevaluatedPropertyError` (keyword: 'unevaluatedProperties').
- */
 #[CoversClass(AdditionalPropertiesValidator::class)]
 final class AdditionalPropertyErrorTest extends TestCase
 {
@@ -120,12 +115,6 @@ final class AdditionalPropertyErrorTest extends TestCase
         self::assertSame('foo', $caught->getErrors()[0]->params()['propertyName']);
     }
 
-    /**
-     * Anti-test: proves the semantic mismatch that existed before FU-006.
-     * `AdditionalPropertyError` must report keyword 'additionalProperties',
-     * while `UnevaluatedPropertyError` reports 'unevaluatedProperties' for the
-     * distinct `unevaluatedProperties` JSON Schema keyword.
-     */
     #[Test]
     public function additional_property_error_differs_from_unevaluated_property_error(): void
     {

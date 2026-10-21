@@ -14,12 +14,12 @@ use Duyler\OpenApi\Schema\Model\Xml;
 final readonly class ScalarFields
 {
     /**
-     * @param string|list<string>|null                       $type
-     * @param string|int|float|bool|array|null               $default
-     * @param string|int|float|bool|array|null               $const
-     * @param string|int|float|bool|array|null               $example
-     * @param list<mixed>|null                                $enum
-     * @param array<string, mixed>|null                       $examples
+     * @param string|list<string>|null $type
+     * @param string|int|float|bool|array|null $default
+     * @param string|int|float|bool|array|null $const
+     * @param string|int|float|bool|array|null $example
+     * @param list<mixed>|null $enum
+     * @param array<string, mixed>|null $examples
      */
     public function __construct(
         public ?string $ref = null,

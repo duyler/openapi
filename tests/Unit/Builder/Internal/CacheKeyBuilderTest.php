@@ -101,7 +101,7 @@ YAML;
             self::assertNotSame(
                 $keyForContentA,
                 $keyForContentB,
-                'Same path with different content must yield different cache keys (R3-SEC-003 content-hash fix)',
+                'Same path with different content must yield different cache keys (content-hash fix)',
             );
         } finally {
             $this->safeUnlink($path);
@@ -173,7 +173,7 @@ YAML;
         self::assertNotSame(
             $keyDefault,
             $keyStrict,
-            'maxSpecDepth change must produce a distinct cache key (R4-SEC-008 cache-poisoning defence).',
+            'maxSpecDepth change must produce a distinct cache key (cache-poisoning defence).',
         );
     }
 
@@ -186,7 +186,7 @@ YAML;
         self::assertNotSame(
             $keyDefault,
             $keyStrict,
-            'maxSpecSizeBytes change must produce a distinct cache key (R4-SEC-008 cache-poisoning defence).',
+            'maxSpecSizeBytes change must produce a distinct cache key (cache-poisoning defence).',
         );
     }
 
@@ -199,7 +199,7 @@ YAML;
         self::assertNotSame(
             $keyWithoutRoot,
             $keyWithRoot,
-            'externalRefAllowedRoot change must produce a distinct cache key (R4-SEC-008 confinement poisoning defence).',
+            'externalRefAllowedRoot change must produce a distinct cache key (confinement poisoning defence).',
         );
     }
 
@@ -212,7 +212,7 @@ YAML;
         self::assertNotSame(
             $keyDefault,
             $keyStrict,
-            'externalRefMaxBytes change must produce a distinct cache key (R4-SEC-008 cache-poisoning defence).',
+            'externalRefMaxBytes change must produce a distinct cache key (cache-poisoning defence).',
         );
     }
 

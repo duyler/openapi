@@ -10,13 +10,6 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
 /**
- * P-034 regression: TrieLookup::lookupTrie must enforce a depth limit
- * (MAX_TRIE_DEPTH = 32) to prevent algorithmic amplification on
- * deeply-branched spec tries. Task 20 introduced the cap alongside the
- * by-reference accumulator; task 17 moved it to TrieLookup without
- * changing the contract. This test pins the contract so it cannot
- * regress silently.
- *
  * @internal
  */
 final class PathFinderDepthLimitTest extends TestCase
@@ -28,7 +21,7 @@ final class PathFinderDepthLimitTest extends TestCase
 
         self::assertTrue(
             $reflection->hasConstant('MAX_TRIE_DEPTH'),
-            'TrieLookup must define MAX_TRIE_DEPTH (P-034)',
+            'TrieLookup must define MAX_TRIE_DEPTH',
         );
 
         $value = $reflection->getConstant('MAX_TRIE_DEPTH');
@@ -55,7 +48,7 @@ final class PathFinderDepthLimitTest extends TestCase
         self::assertContains(
             'depth',
             $parameterNames,
-            'TrieLookup::lookupTrie must accept a $depth parameter so recursion can be bounded (P-034)',
+            'TrieLookup::lookupTrie must accept a $depth parameter so recursion can be bounded',
         );
     }
 }

@@ -19,19 +19,6 @@ use PHPUnit\Framework\TestCase;
 
 use function strlen;
 
-/**
- * FU-017: regression tests for the residual DoS vector in the
- * ValidationException message built by AdditionalPropertiesValidator.
- *
- * Before the fix the message was assembled with
- * `implode(', ', $additionalKeys)` over the FULL set of additional keys,
- * which allocated ~5MB for 100k properties even though the `$errors`
- * array was already capped at MAX_ADDITIONAL_PROPERTY_ERRORS (FU-008).
- *
- * After the fix the message is assembled exclusively from the already
- * capped `$errors` array (<= 101 elements including the truncation
- * indicator), bounding the message allocation regardless of payload size.
- */
 #[CoversClass(AdditionalPropertiesValidator::class)]
 class AdditionalPropertiesValidatorImplodeCapTest extends TestCase
 {

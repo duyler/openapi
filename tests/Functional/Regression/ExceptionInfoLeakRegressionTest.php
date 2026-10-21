@@ -17,19 +17,6 @@ use Throwable;
 use function implode;
 
 /**
- * Regression suite for R4-SEC-007a/b/c/d / R4-TEST-007: exception
- * messages must not reflect attacker-controlled inputs (request path,
- * method, media type, parameter name) when emitted from the public
- * validator API. Anti-test: re-introducing the legacy behaviour that
- * interpolates the attacker value into getMessage() makes the four
- * structural assertions below fail.
- *
- * Unlike the inline exception tests that exercise the constructors
- * in isolation, this suite drives every case through the public
- * {@see OpenApiValidatorBuilder::build()} path so the regression also
- * fires when an HTTP-side code path reconstructs the exception from
- * raw input rather than through the public constructor.
- *
  * @internal
  */
 final class ExceptionInfoLeakRegressionTest extends TestCase

@@ -60,11 +60,6 @@ final class SchemaHelperIntegrationTest extends TestCase
         }
     }
 
-    /**
-     * P-010: stdClass is now normalized to its property-view array, matching
-     * TypeCoercer::normalizeValue. Consumers using json_decode without the
-     * associative flag no longer need a manual conversion step.
-     */
     #[Test]
     public function stdClass_is_normalized_to_array_in_real_scenario(): void
     {

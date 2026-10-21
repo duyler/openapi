@@ -7,7 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 final readonly class ArrayConstraints
 {
     /**
-     * @param list<Schema>|null                   $prefixItems
+     * @param list<Schema>|null $prefixItems
      */
     public function __construct(
         public Schema|bool|null $items = null,

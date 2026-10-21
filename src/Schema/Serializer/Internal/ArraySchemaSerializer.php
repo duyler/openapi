@@ -88,7 +88,6 @@ final readonly class ArraySchemaSerializer
 
     /**
      * @param ?list<Schema> $schemas
-     *
      * @return ?list<array>
      */
     private function schemaListToArray(

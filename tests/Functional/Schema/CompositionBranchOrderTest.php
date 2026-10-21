@@ -15,16 +15,6 @@ use PHPUnit\Framework\TestCase;
 use function array_filter;
 
 /**
- * Regression for issue #54, driven through the public builder path with the
- * shape that surfaced it in the wild: a JSON:API `included` array whose items
- * are an anyOf over allOf-composed resource schemas.
- *
- * Each non-matching resource branch emits ~12 errors (a `type` enum miss plus
- * an `additionalProperties: false` attribute object), so two branches ahead of
- * the matching one exceed MAX_COMPOSITION_ERRORS. Before the fix the cap
- * returned out of the branch loop, so `MatchingLast` failed while the
- * identical `MatchingFirst` branch set passed.
- *
  * @internal
  */
 #[CoversClass(OpenApiValidatorBuilder::class)]
@@ -144,8 +134,6 @@ YAML;
     }
 
     /**
-     * A single `flows` resource: matches the Flow schema and nothing else.
-     *
      * @return array<int, array<string, mixed>>
      */
     private function included(): array

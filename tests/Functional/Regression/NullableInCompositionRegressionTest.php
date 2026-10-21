@@ -11,21 +11,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Regression suite for issue #66: the `null` pre-check that runs before a
- * property or array item is validated inspected only the immediate schema
- * node. A composition node (`allOf`/`anyOf`/`oneOf`) carries neither `type`
- * nor `nullable` — both live in its branches — so a permitted `null` was
- * rejected by InvalidDataTypeException before a single branch ran.
- *
- * Anti-test: restoring the node-local `$allowNull` computation makes every
- * composition case below throw instead of pass.
- *
- * A 3.0 `allOf: [{$ref: <nullable target>}]` is deliberately absent: it also
- * trips the `$ref` sibling merge of issue #64, which discards the target's
- * `nullable` before this pre-check ever runs. The `$ref` branch covered here
- * reaches its nullability through a composition instead, so it exercises the
- * deferral without depending on that separate fix.
- *
  * @internal
  */
 final class NullableInCompositionRegressionTest extends TestCase

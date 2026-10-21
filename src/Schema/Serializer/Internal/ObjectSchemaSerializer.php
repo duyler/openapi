@@ -95,7 +95,6 @@ final readonly class ObjectSchemaSerializer
 
     /**
      * @param array<string, Schema>|null $schemas
-     *
      * @return array<string, array>|null
      */
     private function schemaMapToArray(

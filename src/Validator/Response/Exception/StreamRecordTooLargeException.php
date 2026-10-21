@@ -9,12 +9,6 @@ use RuntimeException;
 
 use function sprintf;
 
-/**
- * Thrown when a single streamed line (NDJSON, SSE) or record (JSON Text
- * Sequence) exceeds the configured size cap while reading a response body.
- * Defends against memory exhaustion from attacker-controlled streaming
- * responses that never terminate a record.
- */
 final class StreamRecordTooLargeException extends RuntimeException
 {
     use SanitizableExceptionTrait;

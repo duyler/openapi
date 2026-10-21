@@ -251,7 +251,7 @@ JSON;
             cache: $cache,
         ))->load();
 
-        self::assertSame(2, $pool->writeCount, 'Different parse-config fingerprint must produce cache-miss on the second call (R4-SEC-008).');
+        self::assertSame(2, $pool->writeCount, 'Different parse-config fingerprint must produce cache-miss on the second call.');
     }
 
     #[Test]

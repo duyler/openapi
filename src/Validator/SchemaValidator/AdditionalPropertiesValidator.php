@@ -71,7 +71,6 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
 
     /**
      * @param array<array-key, mixed> $data
-     *
      * @return list<int|string>
      */
     private function computeAdditionalKeys(array $data, Schema $schema): array
@@ -158,8 +157,8 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
     }
 
     /**
-     * @param array<array-key, mixed>            $data
-     * @param list<int|string>                   $additionalKeys
+     * @param array<array-key, mixed> $data
+     * @param list<int|string> $additionalKeys
      */
     private function validateAdditionalSchemas(array $data, Schema $additionalSchema, array $additionalKeys, ?ValidationContext $context): void
     {

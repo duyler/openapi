@@ -175,10 +175,6 @@ YAML;
         $this->psrFactory = new Psr17Factory();
     }
 
-    /**
-     * Negative: pattern with catastrophic backtracking must not hang.
-     * PCRE backtrack limit triggers InvalidPatternException.
-     */
     #[Test]
     public function redos_pattern_does_not_hang_on_long_input(): void
     {
@@ -199,9 +195,6 @@ YAML;
         $this->assertLessThan(1.0, $elapsed, 'ReDoS-vulnerable pattern must complete within 1 second');
     }
 
-    /**
-     * Positive: matching input validates without exception.
-     */
     #[Test]
     public function redos_pattern_with_matching_input_validates_successfully(): void
     {
@@ -226,16 +219,6 @@ YAML;
         $this->assertLessThan(1.0, $elapsed, 'Matching pattern must complete within 1 second');
     }
 
-    /**
-     * Negative: XXE entity must NOT be expanded — file contents must not leak.
-     *
-     * XmlBodyParser uses libxml without LIBXML_NOENT flag, so external
-     * entities are never substituted. The empty entity reference produces
-     * null (recursive parser converts empty elements to null), causing
-     * ValidationException from SchemaValueNormalizer. If XXE protection
-     * failed and the entity expanded to file content, the keyword would be
-     * 'maxLength' instead (string passes type check but exceeds maxLength: 0).
-     */
     #[Test]
     public function xxe_attack_does_not_read_system_files(): void
     {
@@ -306,9 +289,6 @@ YAML;
         }
     }
 
-    /**
-     * Positive: valid XML without XXE entities validates successfully.
-     */
     #[Test]
     public function valid_xml_without_xxe_validates_successfully(): void
     {
@@ -333,12 +313,6 @@ XML;
         $this->assertSame('/xml-accept', $operation->path);
     }
 
-    /**
-     * Negative: a chain of 200+ $ref pointers must throw SchemaDepthExceededException.
-     *
-     * RefResolver tracks depth during ref resolution. When depth exceeds
-     * ValidationContext::MAX_DEPTH (64), SchemaDepthExceededException is thrown.
-     */
     #[Test]
     public function deep_ref_chain_exceeds_max_depth(): void
     {
@@ -356,12 +330,6 @@ XML;
         $validator->validateRequest($request);
     }
 
-    /**
-     * Negative: deeply nested JSON data (200+ levels) must fail-closed at the
-     * JSON parser stage via the Untrusted depth limit, completing in well
-     * under one second. Before FU-018 the parser used Trusted (512) and the
-     * validator accepted the deep payload — that was an open DoS vector.
-     */
     #[Test]
     public function deep_data_nesting_fail_closed_via_json_depth_limit(): void
     {
@@ -396,18 +364,6 @@ XML;
         }
     }
 
-    /**
-     * Circular $ref (A→B→A) must not cause infinite recursion.
-     *
-     * No exception is expected here because the regular schema validator
-     * resolves only the top-level $ref once during request body validation
-     * setup and does not recurse into property-level $ref pointers.
-     * For discriminator-based schemas the context validator does recurse,
-     * but ValidationContext::MAX_DEPTH (64) and RefResolver's visited-ref
-     * tracking (UnresolvableRefException on direct circular chains) prevent
-     * infinite loops. This test confirms shallow data validates successfully
-     * without hanging.
-     */
     #[Test]
     public function circular_ref_schema_does_not_cause_infinite_recursion(): void
     {
@@ -438,9 +394,6 @@ XML;
         $this->assertLessThan(1.0, $elapsed, 'Circular $ref schema validation must complete within 1 second');
     }
 
-    /**
-     * A schema with 1000 enum values must not cause timeout.
-     */
     #[Test]
     public function huge_enum_in_schema_does_not_cause_timeout(): void
     {
@@ -499,11 +452,6 @@ YAML;
         $this->assertLessThan(1.0, $elapsed, 'Huge enum schema must validate within 1 second');
     }
 
-    /**
-     * SE-06 Positive: apiKey in cookie with session_id present must pass
-     * security validation and return the matched operation. The cookie
-     * value extracted via PSR-7 must match the value supplied.
-     */
     #[Test]
     public function cookie_api_key_with_session_id_passes_security_validation(): void
     {
@@ -523,12 +471,6 @@ YAML;
         $this->assertSame('/protected', $operation->path);
     }
 
-    /**
-     * SE-06 Negative: request without the session_id cookie must fail
-     * security validation with a MissingSecurityCredentialsError wrapped
-     * in ValidationException. The error must reference the cookie location
-     * and the expected cookie name.
-     */
     #[Test]
     public function cookie_api_key_without_session_id_throws_missing_credentials(): void
     {
@@ -556,11 +498,6 @@ YAML;
         }
     }
 
-    /**
-     * SE-06 Negative: empty session_id cookie must fail security
-     * validation. The PSR-7 layer returns an empty string, which the
-     * security validator treats as missing.
-     */
     #[Test]
     public function cookie_api_key_with_empty_session_id_throws_missing_credentials(): void
     {
@@ -587,11 +524,6 @@ YAML;
         }
     }
 
-    /**
-     * SE-06 Negative: cookie with a different name must not satisfy the
-     * security scheme. Only the cookie declared in the scheme (session_id)
-     * is accepted.
-     */
     #[Test]
     public function cookie_api_key_with_wrong_cookie_name_throws_missing_credentials(): void
     {
@@ -618,11 +550,6 @@ YAML;
         }
     }
 
-    /**
-     * SE-06 Default: when enableSecurityValidation() is not called, a
-     * missing cookie must not trigger any security error. This proves the
-     * opt-in nature of security validation.
-     */
     #[Test]
     public function cookie_api_key_skipped_when_security_validation_disabled(): void
     {
@@ -638,10 +565,6 @@ YAML;
         $this->assertSame('/protected', $operation->path);
     }
 
-    /**
-     * Measures validation time, catching InvalidPatternException which is
-     * the expected exception when PCRE backtrack limit is triggered.
-     */
     private function measureTime(
         OpenApiValidator $validator,
         ServerRequestInterface $request,
@@ -656,10 +579,6 @@ YAML;
         return microtime(true) - $startTime;
     }
 
-    /**
-     * Generates an OpenAPI spec with a chain of $depth $ref pointers.
-     * N0 → N1 → N2 → … → N(depth-1) where the last schema is concrete.
-     */
     private function buildDeepRefChainSpec(int $depth): string
     {
         $yaml = "openapi: 3.1.0\n"

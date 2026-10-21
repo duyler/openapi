@@ -13,14 +13,6 @@ use PHPUnit\Framework\TestCase;
 
 use function sprintf;
 
-/**
- * OA-04: OpenAPI 3.2 jsonSchemaDialect — declares JSON Schema dialect URL.
- *
- * Current behavior (documented): the field is parsed, stored on OpenApiDocument,
- * and round-tripped through jsonSerialize. The validator pipeline does NOT switch
- * validation rules based on the dialect value; the standard draft 2020-12
- * validator is always used. Tests pin this actual behavior.
- */
 final class JsonSchemaDialectTest extends TestCase
 {
     private const string JSON_SCHEMA_DIALECT_2020_12 = 'https://json-schema.org/draft/2020-12/schema';

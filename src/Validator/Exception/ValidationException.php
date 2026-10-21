@@ -8,12 +8,6 @@ use Exception;
 use Throwable;
 
 /**
- * Thrown when request, response, or schema validation fails.
- *
- * Subclasses MUST preserve the contract of getErrors() returning
- * array<int, ValidationErrorInterface> so consumers can iterate the
- * typed error list uniformly.
- *
  * @api Public API: consumers may subclass to attach domain context.
  */
 class ValidationException extends Exception

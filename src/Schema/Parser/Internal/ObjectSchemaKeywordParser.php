@@ -16,7 +16,6 @@ final readonly class ObjectSchemaKeywordParser
     /**
      * @param array<array-key, mixed> $data
      * @param Closure(bool|array): Schema $recurse
-     *
      * @return array{
      *     required: ?list<string>,
      *     properties: ?array<string, Schema>,
@@ -57,7 +56,6 @@ final readonly class ObjectSchemaKeywordParser
     /**
      * @param array<array-key, mixed> $data
      * @param Closure(bool|array): Schema $recurse
-     *
      * @return array<string, Schema>
      */
     private function buildProperties(array $data, Closure $recurse): array

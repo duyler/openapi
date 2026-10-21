@@ -29,7 +29,6 @@ final readonly class StreamLineReader
 
     /**
      * @param non-empty-string $splitPattern
-     *
      * @return Generator<int, string, void, void>
      */
     public function readLines(StreamInterface $stream, string $splitPattern): Generator

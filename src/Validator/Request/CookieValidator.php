@@ -40,11 +40,6 @@ final readonly class CookieValidator extends AbstractParameterValidator
     }
 
     /**
-     * Cookie pairs without `=` (e.g. flag-style cookies) are preserved with an
-     * empty string value rather than dropped, for tolerant parsing of malformed
-     * Cookie headers. Per RFC 6265 §4.1.1 cookie-pair should contain `=`, but
-     * real-world clients sometimes send valueless cookies.
-     *
      * @return array<string, string>
      */
     public function parseCookies(string $cookieHeader): array

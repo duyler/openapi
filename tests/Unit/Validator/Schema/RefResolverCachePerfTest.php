@@ -17,13 +17,6 @@ use WeakMap;
 
 /**
  * @internal
- *
- * Anti-test for P-045: asserts that the WeakMap cache entry is a
- * mutable RefCache container whose spl_object_id stays stable as
- * additional $refs are resolved. Reverting to copy-on-write (storing
- * plain arrays under the document key) breaks every assertion here:
- * the value is no longer a RefCache, and re-writing the array on each
- * resolve yields a different identity.
  */
 final class RefResolverCachePerfTest extends TestCase
 {
@@ -63,7 +56,7 @@ final class RefResolverCachePerfTest extends TestCase
         self::assertInstanceOf(
             RefCache::class,
             $entry,
-            'Cache entry must be a mutable RefCache container, not a plain array (P-045)',
+            'Cache entry must be a mutable RefCache container, not a plain array',
         );
 
         $idBefore = spl_object_id($entry);

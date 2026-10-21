@@ -234,12 +234,6 @@ final class ValidationExceptionErrorsTest extends TestCase
         self::assertSame('/oneOf', $errors[0]->schemaPath());
     }
 
-    /**
-     * P-010: stdClass is now normalized to an array by SchemaValueNormalizer,
-     * so passing `[new stdClass()]` against `items.type: string` reports a
-     * TypeMismatchError with actual='array' instead of the prior
-     * InvalidDataTypeException-wrapped 'object'.
-     */
     #[Test]
     public function items_validator_invalid_item_has_errors_array(): void
     {
@@ -296,12 +290,6 @@ final class ValidationExceptionErrorsTest extends TestCase
         self::assertGreaterThan(0, count($caught->getErrors()));
     }
 
-    /**
-     * P-010: stdClass is now normalized to an array by SchemaValueNormalizer,
-     * so `[new stdClass()]` reaches the type validator as `[]` and the
-     * schemaPath is the type sub-field of the prefixItems entry rather than
-     * the entry itself (as was reported when normalize threw).
-     */
     #[Test]
     public function prefix_items_validator_invalid_item_has_errors_array(): void
     {

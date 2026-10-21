@@ -188,9 +188,6 @@ YAML;
         $validator->validateResponse($response, $operation);
     }
 
-    /**
-     * Create a mock PSR-7 server request
-     */
     private function createMockServerRequest(string $method, string $uri)
     {
         $request = $this->createStub(ServerRequestInterface::class);

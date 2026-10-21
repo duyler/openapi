@@ -12,22 +12,6 @@ use Duyler\OpenApi\Schema\Serializer\SchemaToArrayConverter;
 use JsonSerializable;
 use Override;
 
-/**
- * OpenAPI 3.2 / JSON Schema 2020-12 schema object.
- *
- * The historical facade keeps flat promoted properties so the 35+ existing
- * consumers (validators, ref resolver, tests) keep working. The
- * 56-field enumeration that used to live in jsonSerialize and in
- * OpenApiBuilder::buildSchema now lives exactly once in
- * {@see SchemaFieldMetadata}, consumed by
- * {@see SchemaToArrayConverter} and {@see SchemaFromArrayConverter}.
- *
- * Sub-DTO accessors ({@see stringConstraints()}, {@see numericConstraints()},
- * {@see arrayConstraints()}, {@see objectConstraints()},
- * {@see compositionConstraints()}) expose the same fields as typed value
- * objects for new code and for downstream tasks that migrate consumers off the
- * flat API. They are derived lazily and never mutate the facade.
- */
 final readonly class Schema implements JsonSerializable
 {
     /**
@@ -54,10 +38,7 @@ final readonly class Schema implements JsonSerializable
      * @param list<mixed>|null $enum
      * @param array<string, mixed>|null $examples
      * @param Xml|null $xml
-     *
      * @deprecated since 1.x, will be removed in 2.0. Use {@see fromConstraintGroups()} instead.
-     *             PHPDoc-only deprecation (no {@see Deprecated} attribute) so {@see fromConstraintGroups()}
-     *             can delegate without runtime E_DEPRECATED cascade. See `.ai/reports/adr-schema-constructor.md`.
      */
     public function __construct(
         public ?string $ref = null,
@@ -143,14 +124,7 @@ final readonly class Schema implements JsonSerializable
      * @param list<mixed>|null $enum
      * @param array<string, mixed>|null $examples
      * @param Xml|null $xml
-     *
      * @deprecated since 1.x, will be removed in 2.0. Use {@see withOverrideGroups()} instead.
-     *             PHPDoc-only deprecation (no {@see Deprecated} attribute) so the internal
-     *             callers (CompositionResolver and the schema tests) can invoke it without
-     *             triggering a runtime E_DEPRECATED cascade. The attribute will be re-added
-     *             when all internal callers are migrated to {@see withOverrideGroups()},
-     *             or the method is removed in 2.0 — whichever comes first. See
-     *             `.ai/reports/adr-schema-constructor.md`.
      */
     public function withOverrides(
         ?string $ref = null,
@@ -273,13 +247,7 @@ final readonly class Schema implements JsonSerializable
     }
 
     /**
-     * Named-constructor that groups the 57 constructor parameters into 4 typed
-     * value-objects ({@see ScalarFields}, {@see ArrayFields}, {@see ObjectFields},
-     * {@see CompositionFields}) plus an explicit `nullable` modifier.
-     *
-     * Prefer this over the deprecated {@see __construct} for new code.
-     *
-     * @param ?bool $nullable when null, falls back to `false` (the historical default)
+     * @param ?bool $nullable
      */
     public static function fromConstraintGroups(
         ScalarFields $scalar,
@@ -349,14 +317,6 @@ final readonly class Schema implements JsonSerializable
         );
     }
 
-    /**
-     * Override-grouping replacement for the deprecated {@see withOverrides()}.
-     *
-     * Each value-object's non-null field overrides the corresponding field on
-     * `$this`; null fields preserve the existing value (override semantics).
-     * The `nullable` parameter follows the same rule: when null, the existing
-     * `nullable` is preserved; otherwise it is replaced.
-     */
     public function withOverrideGroups(
         ScalarFields $scalar,
         ArrayFields $array,

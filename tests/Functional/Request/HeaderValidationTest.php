@@ -343,10 +343,6 @@ YAML;
         $this->assertSame('/test', $operation->path);
     }
 
-    /**
-     * A lone value is a one item list, not a scalar, so the schema it fails
-     * is `minItems` rather than `type`.
-     */
     #[Test]
     public function header_array_type_with_single_value_throws_min_items(): void
     {

@@ -56,15 +56,6 @@ final readonly class SchemaRegistry
         $this->sortedVersions = $sortedVersions;
     }
 
-    /**
-     * Register a new schema under the given name and version.
-     *
-     * Fails fast by throwing {@see SchemaAlreadyRegisteredException} when the
-     * name+version pair is already registered. Use {@see registerOrReplace()}
-     * for explicit overwrite semantics (hot-reload, immutable replacement).
-     *
-     * @throws SchemaAlreadyRegisteredException When the name+version pair is already registered.
-     */
     public function register(string $name, string $version, OpenApiDocument $document): self
     {
         if (isset($this->schemas[$name][$version])) {
@@ -74,12 +65,6 @@ final readonly class SchemaRegistry
         return $this->registerOrReplace($name, $version, $document);
     }
 
-    /**
-     * Register a schema, replacing any existing entry for the same name+version.
-     *
-     * Intended for explicit overwrite use cases such as hot-reloading a spec
-     * in development or replacing a placeholder document with a final one.
-     */
     public function registerOrReplace(string $name, string $version, OpenApiDocument $document): self
     {
         $newSchemas = $this->schemas;
@@ -97,15 +82,6 @@ final readonly class SchemaRegistry
         return $this->schemas[$name][$version] ?? null;
     }
 
-    /**
-     * Returns the document for the given schema and version, or throws if missing.
-     *
-     * Use this method when a missing schema or version is a programming error that
-     * must fail fast. For graceful access (e.g. conditional presence checks), use
-     * {@see has()} followed by {@see get()}.
-     *
-     * @throws VersionNotFoundException When the schema name or the requested version is not registered.
-     */
     public function getOrFail(string $name, ?string $version = null): OpenApiDocument
     {
         $document = $this->get($name, $version);
@@ -142,17 +118,11 @@ final readonly class SchemaRegistry
         return array_keys($this->schemas);
     }
 
-    /**
-     * Returns the number of distinct schema names registered.
-     */
     public function countNames(): int
     {
         return count($this->schemas);
     }
 
-    /**
-     * Returns the total number of name+version pairs registered across all schemas.
-     */
     public function countSchemas(): int
     {
         $total = 0;
