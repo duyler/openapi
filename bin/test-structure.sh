@@ -20,8 +20,8 @@ if [ -n "$php_in_fixture" ]; then
     status=1
 fi
 
-literal_hits=$(grep -rnF -e '/../Fixture' -e '/fixtures/' -e '/Fixtures/' tests --include='*.php' 2>/dev/null | grep -v '^tests/Support/FixtureLocator.php:')
-regex_hits=$(grep -rnE "/fixtures['\"]" tests --include='*.php' 2>/dev/null | grep -v '^tests/Support/FixtureLocator.php:')
+literal_hits=$(grep -rniF -e '/../Fixture' -e '/Fixture/' -e '/fixtures/' -e '/Fixtures/' tests --include='*.php' 2>/dev/null | grep -v '^tests/Support/FixtureLocator.php:')
+regex_hits=$(grep -rniE "/fixtures['\"]" tests --include='*.php' 2>/dev/null | grep -v '^tests/Support/FixtureLocator.php:')
 if [ -n "$literal_hits" ] || [ -n "$regex_hits" ]; then
     echo "test-structure: forbidden fixture path references (use FixtureLocator::path):" >&2
     printf '%s\n' "$literal_hits" "$regex_hits" >&2

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Duyler\OpenApi\Test\Unit\Regression\R4;
+namespace Duyler\OpenApi\Test\Unit\Event;
 
 use Duyler\OpenApi\Event\ArrayDispatcher;
 use Duyler\OpenApi\Event\ValidationErrorEvent;
