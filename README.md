@@ -1687,69 +1687,6 @@ backtrack cap is `PregExecutor::DEFAULT_MAX_BACKTRACKS` (`10_000`),
 configurable via `withMaxRegexBacktracks`; the coroutine-level race on
 these process-global values is analysed in O-007 below.
 
-##### O-004 — nested `getOrCreate()` deadlocks under `Swoole\Lock(SWOOLE_MUTEX)`
-
-`Swoole\Lock(SWOOLE_MUTEX)` (the default) is **non-reentrant**. The lock is
-held for the entire duration of the `$factory` closure passed to
-`getOrCreate()`. If `$factory` recursively re-enters `getOrCreate()` on the
-same lock — even on a different key — the calling coroutine deadlocks. Keep
-factories non-blocking (no I/O) and non-recursive; never embed a
-`getOrCreate()` call inside another.
-
-##### O-006 / S-011 — XML body validation races on libxml globals
-
-`LibxmlSecuredContext::run()` captures `libxml_use_internal_errors` and the
-external entity loader, installs a deny-all loader for the duration of the
-work closure, and restores both inside a `try/finally`. Under Swoole
-coroutines the capture/restore sequence races with concurrent XML parsing
-in other coroutines. Two failure modes exist:
-
-1. Coroutine A installs the deny-all loader; coroutine B captures it as the
-   "previous" state; A restores; B restores to the deny-all loader ->
-   process-wide XML parsing is left without a working entity loader.
-2. A installs the deny-all loader; B yields inside its `$work`; A restores
-   to the default loader; B's `$work` observes the default loader -> XXE
-   protection is silently bypassed for B.
-
-Recommended mitigations: restrict XML body validation to prefork workers,
-or delegate XML parsing to an isolated `Swoole\Process` worker.
-
-##### O-007 / S-020 — `pcre.backtrack_limit` / `pcre.recursion_limit` race
-
-`PregExecutor::match()` and `PregExecutor::matchAll()` lower both
-`pcre.backtrack_limit` and `pcre.recursion_limit` (`PHP_INI_ALL`,
-process-global) before the `preg_match` call and restore the previous
-values inside `try/finally`. The defaults
-(`PregExecutor::DEFAULT_MAX_BACKTRACKS = 10_000`,
-`PregExecutor::DEFAULT_MAX_RECURSION = 512`) are deliberately 100x /
-~2x tighter than the PHP defaults (`1_000_000` / `1_000`) to actively
-defend against catastrophic backtracking (CWE-1333, ReDoS). Under
-Swoole coroutines a concurrent `preg_match` in another coroutine may
-observe either the lowered value (ReDoS cap silently non-functional)
-or restore to it (process left with the reduced cap after the call
-returns). Validation correctness is preserved, but the ReDoS cap may
-not apply to a specific call when coroutines yield inside `preg_match`.
-Prefer prefork workers; the `OpenApiValidatorBuilder` already wires one
-`PregExecutor` instance per validator, so per-coroutine isolation
-requires per-coroutine validator construction.
-
-The prefork model (one request per worker process, no shared mutable state) is
-the safest option and requires no extra configuration.
-
-```php
-// Build once at worker startup
-$validator = OpenApiValidatorBuilder::create()
-    ->fromYamlFile('openapi.yaml')
-    ->withCache($schemaCache)
-    ->build();
-
-// Reuse across requests (prefork model only)
-while ($request = $worker->waitRequest()) {
-    $operation = $validator->validateRequest($request);
-    // ...
-}
-```
-
 If the OpenAPI specification changes at runtime, rebuild the validator. The old instances will be garbage-collected when no longer referenced.
 
 #### CI verification
