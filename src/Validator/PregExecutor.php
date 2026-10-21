@@ -65,6 +65,7 @@ final readonly class PregExecutor
      *
      * @throws PregRuntimeException when preg_last_error() returns a non-zero code
      */
+    // §7 exemption: Mirrors preg_match signature, documented via @param-out.
     public function match(string $pattern, string $subject, ?array &$matches = null, int $flags = 0, int $offset = 0): int|false
     {
         $previousBacktrack = $this->capturePreviousBacktrackLimit();
@@ -95,6 +96,7 @@ final readonly class PregExecutor
      *
      * @throws PregRuntimeException when preg_last_error() returns a non-zero code
      */
+    // §7 exemption: Mirrors preg_match_all signature, documented via @param-out.
     public function matchAll(string $pattern, string $subject, ?array &$matches = null, int $flags = 0, int $offset = 0): int|false
     {
         $previousBacktrack = $this->capturePreviousBacktrackLimit();

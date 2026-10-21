@@ -8,6 +8,7 @@ use Duyler\OpenApi\Cache\ConfinementVerdict;
 use Duyler\OpenApi\Cache\SchemaCache;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Test\Support\SpecBuilders;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
@@ -192,7 +193,7 @@ final class SchemaCacheTest extends TestCase
     public function get_confinement_delegates_to_decorators_expected_type(): void
     {
         $pool = $this->createMockCachePool();
-        $verdict = ConfinementVerdict::clean();
+        $verdict = ConfinementVerdict::Clean;
 
         $cacheItem = $this->createStub(CacheItemInterface::class);
         $cacheItem
@@ -344,8 +345,8 @@ final class SchemaCacheTest extends TestCase
         $pool->method('save')->willReturn(true);
 
         $cache = new SchemaCache($pool);
-        $doc1 = $this->createDocumentWithTitle('API v1');
-        $doc2 = $this->createDocumentWithTitle('API v2');
+        $doc1 = SpecBuilders::documentWithTitle('API v1');
+        $doc2 = SpecBuilders::documentWithTitle('API v2');
 
         $cache->set('spec.v1', $doc1);
         $cache->set('spec.v2', $doc2);
@@ -423,8 +424,8 @@ final class SchemaCacheTest extends TestCase
         $pool->method('save')->willReturn(true);
 
         $cache = new SchemaCache($pool);
-        $docV1 = $this->createDocumentWithTitle('First revision');
-        $docV2 = $this->createDocumentWithTitle('Second revision');
+        $docV1 = SpecBuilders::documentWithTitle('First revision');
+        $docV2 = SpecBuilders::documentWithTitle('Second revision');
 
         $cache->set('spec', $docV1);
         self::assertSame($docV1, $cache->get('spec'));
@@ -468,8 +469,8 @@ final class SchemaCacheTest extends TestCase
         $cache1 = new SchemaCache($pool1);
         $cache2 = new SchemaCache($pool2);
 
-        $doc1 = $this->createDocumentWithTitle('one');
-        $doc2 = $this->createDocumentWithTitle('two');
+        $doc1 = SpecBuilders::documentWithTitle('one');
+        $doc2 = SpecBuilders::documentWithTitle('two');
 
         $cache1->set('shared_key', $doc1);
         $cache2->set('shared_key', $doc2);
@@ -520,17 +521,6 @@ final class SchemaCacheTest extends TestCase
             openapi: '3.1.0',
             info: new InfoObject(
                 title: 'Test API',
-                version: '1.0.0',
-            ),
-        );
-    }
-
-    private function createDocumentWithTitle(string $title): OpenApiDocument
-    {
-        return new OpenApiDocument(
-            openapi: '3.1.0',
-            info: new InfoObject(
-                title: $title,
                 version: '1.0.0',
             ),
         );

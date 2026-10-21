@@ -6,7 +6,8 @@ namespace Duyler\OpenApi\Validator\Response;
 
 use Duyler\OpenApi\Schema\Model\Headers;
 use Duyler\OpenApi\Schema\Model\Schema;
-use Duyler\OpenApi\Validator\Coercion\IntegerStringNormalizer;
+use Duyler\OpenApi\Validator\Coercion\Internal\BooleanCoercer;
+use Duyler\OpenApi\Validator\Coercion\Internal\IntegerCoercer;
 use Duyler\OpenApi\Validator\Coercion\NumberStringNormalizer;
 use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
@@ -15,7 +16,6 @@ use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\JsonDepthLimit;
 use Duyler\OpenApi\Validator\Request\HeaderFinder;
-use Duyler\OpenApi\Validator\Response\Enum\BooleanCoercionValue;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use JsonException;
@@ -29,8 +29,6 @@ use function json_decode;
 use function sprintf;
 use function substr_count;
 
-use function strtolower;
-
 use const JSON_THROW_ON_ERROR;
 
 final readonly class ResponseHeadersValidator
@@ -42,6 +40,8 @@ final readonly class ResponseHeadersValidator
         private readonly ValidatorPool $pool = new ValidatorPool(),
         private readonly ParameterValidationConfig $config = new ParameterValidationConfig(),
         private readonly HeaderFinder $headerFinder = new HeaderFinder(),
+        private readonly IntegerCoercer $integerCoercer = new IntegerCoercer(),
+        private readonly BooleanCoercer $booleanCoercer = new BooleanCoercer(),
     ) {}
 
     /**
@@ -86,23 +86,14 @@ final readonly class ResponseHeadersValidator
 
     private function coerceToInteger(string $value, string $headerName): int
     {
-        if (1 !== preg_match('/^[+-]?\d+$/', $value)) {
+        $coerced = $this->integerCoercer->coerceStringStrict($value);
+
+        if (null === $coerced) {
             throw new TypeMismatchError(
                 expected: 'integer',
                 actual: $value,
                 dataPath: $headerName,
-                schemaPath: '#/type',
-            );
-        }
-
-        $coerced = (int) $value;
-
-        if ((string) $coerced !== IntegerStringNormalizer::canonicalize($value)) {
-            throw new TypeMismatchError(
-                expected: 'integer',
-                actual: $value,
-                dataPath: $headerName,
-                schemaPath: '#/type',
+                schemaPath: '/type',
             );
         }
 
@@ -114,9 +105,9 @@ final readonly class ResponseHeadersValidator
         if (false === is_numeric($value)) {
             throw new TypeMismatchError(
                 expected: 'number',
-                actual: 'string',
+                actual: $value,
                 dataPath: $headerName,
-                schemaPath: '#/type',
+                schemaPath: '/type',
             );
         }
 
@@ -125,18 +116,18 @@ final readonly class ResponseHeadersValidator
 
     private function coerceToBoolean(string $value, string $headerName): bool
     {
-        $coercionValue = BooleanCoercionValue::tryFrom(strtolower($value));
+        $coerced = $this->booleanCoercer->coerceStringStrict($value);
 
-        if (null !== $coercionValue) {
-            return $coercionValue->isTruthy();
+        if (null === $coerced) {
+            throw new TypeMismatchError(
+                expected: 'boolean',
+                actual: $value,
+                dataPath: $headerName,
+                schemaPath: '/type',
+            );
         }
 
-        throw new TypeMismatchError(
-            expected: 'boolean',
-            actual: 'string',
-            dataPath: $headerName,
-            schemaPath: '#/type',
-        );
+        return $coerced;
     }
 
     private function coerceToArray(string $value, string $headerName): array
@@ -164,7 +155,7 @@ final readonly class ResponseHeadersValidator
                 expected: 'object',
                 actual: $value,
                 dataPath: $headerName,
-                schemaPath: '#/type',
+                schemaPath: '/type',
             );
         }
 
@@ -173,7 +164,7 @@ final readonly class ResponseHeadersValidator
                 expected: 'object',
                 actual: $value,
                 dataPath: $headerName,
-                schemaPath: '#/type',
+                schemaPath: '/type',
             );
         }
 

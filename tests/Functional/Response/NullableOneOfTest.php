@@ -19,7 +19,7 @@ final class NullableOneOfTest extends TestCase
     }
 
     #[Test]
-    public function oneOf_with_nullable_schema_accepts_null_value(): void
+    public function one_of_with_nullable_schema_accepts_null_value(): void
     {
         $yaml = <<<YAML
 openapi: 3.0.3

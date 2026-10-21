@@ -8,9 +8,13 @@ use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Laminas\Diactoros\ServerRequestFactory;
 use Laminas\Diactoros\StreamFactory;
+use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\RequestInterface;
 
+use function class_exists;
+use function interface_exists;
 use function json_encode;
 
 use const JSON_THROW_ON_ERROR;
@@ -63,6 +67,14 @@ paths:
         '200':
           description: OK
 YAML;
+
+    #[Override]
+    protected function setUp(): void
+    {
+        if (false === interface_exists(RequestInterface::class) || false === class_exists(ServerRequestFactory::class)) {
+            self::markTestSkipped('LaminasDiactorosTest requires the laminas/laminas-diactoros dev dependency (see composer.json require-dev)');
+        }
+    }
 
     #[Test]
     public function validates_request_with_laminas_diactoros_implementation(): void

@@ -6,21 +6,21 @@ namespace Duyler\OpenApi\Schema\Parser\Internal;
 
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
 use Duyler\OpenApi\Schema\Parser\DeprecationLogger;
+use Duyler\OpenApi\Schema\Parser\OpenApiBuildContext;
 use Duyler\OpenApi\Schema\Parser\TypeHelper;
 
 use function array_key_exists;
-use function is_bool;
-use function sprintf;
-use function version_compare;
 use function in_array;
 use function is_array;
+use function is_bool;
 use function is_string;
+use function sprintf;
+use function version_compare;
 
 /** @internal */
 final readonly class ScalarSchemaKeywordParser
 {
     private const string DEPRECATION_VERSION_3_1 = '3.1.0';
-    private const string DEPRECATION_VERSION_3_2 = '3.2.0';
 
     public function __construct(
         private string $documentVersion = '',
@@ -109,7 +109,7 @@ final readonly class ScalarSchemaKeywordParser
     {
         $type = TypeHelper::asTypeOrNull($data['type'] ?? null);
 
-        if (false === $this->isVersion30() && true === ($data['nullable'] ?? false)) {
+        if (false === $this->isVersion30() && isset($data['nullable']) && is_bool($data['nullable']) && $data['nullable']) {
             $baseType = match (true) {
                 is_array($type) => array_values($type),
                 is_string($type) => [$type],
@@ -174,7 +174,7 @@ final readonly class ScalarSchemaKeywordParser
     /** @param array<array-key, mixed> $data */
     private function warnDeprecations(array $data): void
     {
-        if (false === $this->shouldWarnDeprecation3_2()) {
+        if (false === OpenApiBuildContext::shouldWarnDeprecation($this->documentVersion)) {
             return;
         }
 
@@ -182,7 +182,7 @@ final readonly class ScalarSchemaKeywordParser
             $this->deprecationLogger->warn(
                 'example',
                 'Schema Object',
-                self::DEPRECATION_VERSION_3_2,
+                OpenApiBuildContext::DEPRECATION_VERSION,
                 'examples in MediaType Object',
             );
         }
@@ -191,7 +191,7 @@ final readonly class ScalarSchemaKeywordParser
             $this->deprecationLogger->warn(
                 'nullable',
                 'Schema Object',
-                self::DEPRECATION_VERSION_3_2,
+                OpenApiBuildContext::DEPRECATION_VERSION,
                 'type array with "null" (e.g., type: ["string", "null"])',
             );
         }
@@ -218,10 +218,5 @@ final readonly class ScalarSchemaKeywordParser
     private function isVersion30(): bool
     {
         return version_compare($this->documentVersion, self::DEPRECATION_VERSION_3_1, '<');
-    }
-
-    private function shouldWarnDeprecation3_2(): bool
-    {
-        return version_compare($this->documentVersion, self::DEPRECATION_VERSION_3_2, '>=');
     }
 }

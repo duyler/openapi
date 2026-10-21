@@ -111,7 +111,7 @@ final class NestedDiscriminatorTest extends TestCase
 
         $validator->validate($messageData, $messageSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -179,7 +179,7 @@ final class NestedDiscriminatorTest extends TestCase
 
         $validator->validate($petData, $petSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -247,6 +247,6 @@ final class NestedDiscriminatorTest extends TestCase
 
         $validator->validate($containerData, $containerSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 }

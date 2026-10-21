@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
+use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\Exception\InvalidContentEncodingException;
 use Duyler\OpenApi\Validator\SchemaValidator\ContentEncodingValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\InvalidContentEncodingException;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -21,7 +23,7 @@ class ContentEncodingValidatorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->validator = new ContentEncodingValidator(new ValidatorDependencies(pool: new ValidatorPool(), formatRegistry: new FormatRegistry()));
+        $this->validator = new ContentEncodingValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), new FormatRegistry()), pool: new ValidatorPool(), formatRegistry: new FormatRegistry()));
     }
 
     #[Test]

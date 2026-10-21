@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Request;
 
+use Duyler\OpenApi\Validator\Internal\LruCache;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use InvalidArgumentException;
+use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -19,11 +21,13 @@ final class PathRegexCacheTest extends TestCase
 {
     private PathRegexCache $cache;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->cache = new PathRegexCache();
     }
 
+    #[Override]
     protected function tearDown(): void
     {
         unset($this->cache);
@@ -449,8 +453,14 @@ final class PathRegexCacheTest extends TestCase
         $reflection = new ReflectionClass($cache);
         $property = $reflection->getProperty('cache');
 
+        /** @var LruCache<string, string> $lruCache */
+        $lruCache = $property->getValue($cache);
+
+        $lruReflection = new ReflectionClass($lruCache);
+        $itemsProperty = $lruReflection->getProperty('items');
+
         /** @var array<string, string> $value */
-        $value = $property->getValue($cache);
+        $value = $itemsProperty->getValue($lruCache);
 
         return $value;
     }

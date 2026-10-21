@@ -16,10 +16,10 @@ use Override;
  * OpenAPI 3.2 / JSON Schema 2020-12 schema object.
  *
  * The historical facade keeps flat promoted properties so the 35+ existing
- * consumers (validators, compiler, ref resolver, tests) keep working. The
- * 56-field enumeration that used to live in jsonSerialize, in
- * CompilationCache::schemaToArray and in OpenApiBuilder::buildSchema now lives
- * exactly once in {@see SchemaFieldMetadata}, consumed by
+ * consumers (validators, ref resolver, tests) keep working. The
+ * 56-field enumeration that used to live in jsonSerialize and in
+ * OpenApiBuilder::buildSchema now lives exactly once in
+ * {@see SchemaFieldMetadata}, consumed by
  * {@see SchemaToArrayConverter} and {@see SchemaFromArrayConverter}.
  *
  * Sub-DTO accessors ({@see stringConstraints()}, {@see numericConstraints()},
@@ -145,9 +145,8 @@ final readonly class Schema implements JsonSerializable
      * @param Xml|null $xml
      *
      * @deprecated since 1.x, will be removed in 2.0. Use {@see withOverrideGroups()} instead.
-     *             PHPDoc-only deprecation (no {@see Deprecated} attribute) so the 5 internal
-     *             callers (DocumentFingerprinter, ValidatorCompiler, CompositionResolver,
-     *             CompilationCacheTest, SchemaWithOverridesTest) can invoke it without
+     *             PHPDoc-only deprecation (no {@see Deprecated} attribute) so the internal
+     *             callers (CompositionResolver and the schema tests) can invoke it without
      *             triggering a runtime E_DEPRECATED cascade. The attribute will be re-added
      *             when all internal callers are migrated to {@see withOverrideGroups()},
      *             or the method is removed in 2.0 — whichever comes first. See

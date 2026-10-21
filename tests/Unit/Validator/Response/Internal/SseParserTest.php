@@ -8,6 +8,7 @@ use Duyler\OpenApi\Validator\Exception\MalformedStreamRecordException;
 use Duyler\OpenApi\Validator\Response\Exception\TooManyRecordsException;
 use Duyler\OpenApi\Validator\Response\Internal\SseParser;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -18,6 +19,7 @@ final class SseParserTest extends TestCase
 {
     private SseParser $parser;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->parser = new SseParser();

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\SchemaValidator\AnyOfValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
@@ -27,7 +29,7 @@ class AnyOfValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new AnyOfValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $this->validator = new AnyOfValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]
@@ -225,7 +227,7 @@ class AnyOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function anyOf_passes_when_multiple_nullable_schemas_match_null(): void
+    public function any_of_passes_when_multiple_nullable_schemas_match_null(): void
     {
         $schema = new Schema(
             anyOf: [
@@ -241,7 +243,7 @@ class AnyOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function anyOf_passes_when_parent_schema_is_nullable_and_data_is_null(): void
+    public function any_of_passes_when_parent_schema_is_nullable_and_data_is_null(): void
     {
         $schema = new Schema(
             nullable: true,
@@ -254,7 +256,7 @@ class AnyOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function anyOf_rejects_null_when_parent_nullable_is_not_honored(): void
+    public function any_of_rejects_null_when_parent_nullable_is_not_honored(): void
     {
         $schema = new Schema(
             nullable: true,

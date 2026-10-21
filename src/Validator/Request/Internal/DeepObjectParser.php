@@ -9,7 +9,12 @@ use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
 use Duyler\OpenApi\Validator\JsonDepthLimit;
 use JsonException;
 
+use function array_all;
 use function count;
+use function json_decode;
+use function rawurldecode;
+use function sprintf;
+use function urldecode;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -88,7 +93,7 @@ final readonly class DeepObjectParser
         } catch (JsonException $e) {
             throw InvalidParameterException::malformedValue(
                 $parameterName,
-                'Invalid JSON: ' . $e->getMessage(),
+                sprintf('Invalid JSON: %s', $e->getMessage()),
                 0,
                 $e,
             );

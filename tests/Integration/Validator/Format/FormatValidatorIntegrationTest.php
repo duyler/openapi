@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Integration\Validator\Format;
 
+use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\FormatValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -35,7 +37,7 @@ final class FormatValidatorIntegrationTest extends TestCase
             type: 'string',
             format: 'date-time',
         );
-        $validator = new FormatValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: $this->registry));
+        $validator = new FormatValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, $this->registry), pool: $this->pool, formatRegistry: $this->registry));
 
         $this->expectNotToPerformAssertions();
         $validator->validate('2024-01-15T10:30:00Z', $schema);
@@ -48,7 +50,7 @@ final class FormatValidatorIntegrationTest extends TestCase
             type: 'string',
             format: 'email',
         );
-        $validator = new FormatValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: $this->registry));
+        $validator = new FormatValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, $this->registry), pool: $this->pool, formatRegistry: $this->registry));
 
         $this->expectNotToPerformAssertions();
         $validator->validate('test@example.com', $schema);
@@ -71,7 +73,7 @@ final class FormatValidatorIntegrationTest extends TestCase
             type: 'string',
             format: 'custom',
         );
-        $validator = new FormatValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: $registry));
+        $validator = new FormatValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, $registry), pool: $this->pool, formatRegistry: $registry));
 
         $this->expectNotToPerformAssertions();
         $validator->validate('custom-value', $schema);
@@ -84,7 +86,7 @@ final class FormatValidatorIntegrationTest extends TestCase
             type: 'string',
             format: 'unknown-format',
         );
-        $validator = new FormatValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: $this->registry));
+        $validator = new FormatValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, $this->registry), pool: $this->pool, formatRegistry: $this->registry));
 
         $this->expectNotToPerformAssertions();
         $validator->validate('any-value', $schema);
@@ -107,7 +109,7 @@ final class FormatValidatorIntegrationTest extends TestCase
             type: 'string',
             format: 'email',
         );
-        $validator = new FormatValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: $registry));
+        $validator = new FormatValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, $registry), pool: $this->pool, formatRegistry: $registry));
 
         $this->expectNotToPerformAssertions();
         $validator->validate('custom-email@example.com', $schema);

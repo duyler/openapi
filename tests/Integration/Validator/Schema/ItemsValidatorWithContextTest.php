@@ -63,7 +63,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -88,7 +88,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -105,7 +105,7 @@ final class ItemsValidatorWithContextTest extends TestCase
         $customContext = ValidationContext::create(pool: $this->pool);
         $this->validator->validateWithContext($data, $schema, $customContext);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -146,7 +146,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -162,7 +162,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -190,7 +190,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -252,7 +252,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -268,7 +268,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -284,7 +284,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -300,7 +300,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -341,7 +341,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -462,7 +462,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $nullableContext);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -496,7 +496,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $this->validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -542,7 +542,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $validator->validateWithContext(['valid'], $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -612,7 +612,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $validator->validateWithContext($data, $schema, $this->context);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -654,7 +654,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $validator->validateWithContext([null], $schema, $nullableContext);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -734,7 +734,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $validator->validateWithContext([null], $schema, $nullableContext);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -773,6 +773,6 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $validator->validateWithContext(['hello', 'world'], $schema, $nullableContext);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 }

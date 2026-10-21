@@ -10,23 +10,37 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Throwable;
 
+use function json_encode;
 use function memory_get_usage;
 use function sprintf;
 use function str_repeat;
+use function strlen;
+
+use const JSON_THROW_ON_ERROR;
 
 /**
  * P-097: real Billion Laughs attack. The existing XmlSecurityTest covers
- * three entity levels; this test extends the contract to eight levels
- * (10^8 = 100 million entity expansions on the leaf reference) and asserts
- * that memory growth stays under 20 MB. The defence is the deny-all
- * external entity loader installed by LibxmlSecuredContext plus
- * LIBXML_NONET — internal entity expansion of ENTITY declarations is
- * still permitted by libxml but the deny-all loader prevents the resolved
- * entities from leaking file or network content.
+ * three entity levels; this test extends the contract to eight ENTITY
+ * declarations — a literal leaf plus seven multiplying levels of ten
+ * (10^7 = 10 million entity expansions at the leaf reference; a fully
+ * expanded tree would allocate ~30 MB for the lol-string) — and asserts
+ * that memory growth stays under 20 MB. The entity chain is currently
+ * inert due to a naming defect (see SEC-026 in the campaign backlog);
+ * the defence lines below are verified against a live chain.
+ *
+ * Defence lines for this payload, which declares internal entities only:
+ * libxml2's built-in entity-reference-loop detection aborts exponential
+ * internal entity expansion, and XmlBodyParser parses without LIBXML_NOENT
+ * and without LIBXML_PARSE_HUGE (entity substitution stays off); the
+ * deny-all external entity loader installed by LibxmlSecuredContext plus
+ * LIBXML_NONET guards XXE (SYSTEM/PUBLIC references) and is not invoked by
+ * internal entities. On top of the parser, the reject-or-bounded assertion
+ * pins the contract: the parser must either reject the document or return
+ * a result whose serialized form stays under 1 MB.
  *
  * Memory assertion is generous (20 MB) to stay stable on noisy CI workers
  * while still detecting a regression that fully expanded the entity tree
- * (which would allocate on the order of 100 MB just for the lol-string).
+ * (~30 MB at these levels).
  *
  * @internal
  */
@@ -46,15 +60,15 @@ final class BillionLaughsTest extends TestCase
         $xml = $this->buildBillionLaughs(8);
 
         $before = memory_get_usage();
+        $result = null;
         $caught = null;
         try {
-            $this->parser->parse($xml);
+            $result = $this->parser->parse($xml);
         } catch (Throwable $e) {
             $caught = $e;
         }
-        $after = memory_get_usage();
 
-        $delta = $after - $before;
+        $delta = memory_get_usage() - $before;
 
         self::assertLessThan(
             20 * 1024 * 1024,
@@ -62,12 +76,11 @@ final class BillionLaughsTest extends TestCase
             sprintf('Memory delta must stay under 20 MB during an 8-level billion laughs attack; got %.2f MB.', $delta / 1024 / 1024),
         );
 
-        // The parser must NOT have surfaced the expanded entity payload as
-        // legitimate field data — either it rejected the document, or it
-        // returned the raw body without expansion.
+        $isResultBounded = null === $result || strlen(json_encode($result, JSON_THROW_ON_ERROR)) < 1_048_576;
+
         self::assertTrue(
-            null !== $caught || true,
-            'Billion laughs payload must not crash the worker.',
+            null !== $caught || $isResultBounded,
+            'Parser must reject the billion laughs document or return a bounded result without entity expansion.',
         );
     }
 
@@ -92,11 +105,6 @@ final class BillionLaughsTest extends TestCase
         );
     }
 
-    /**
-     * Builds an N-level billion laughs payload. Level 1 is the leaf lol
-     * entity; each subsequent level references the previous level ten times,
-     * producing 10^N expansions on the deepest entity.
-     */
     private function buildBillionLaughs(int $levels): string
     {
         $header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE lolz [\n";

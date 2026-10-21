@@ -47,7 +47,7 @@ final class HostnameValidatorTest extends TestCase
     {
         $this->validator->validate($value);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     public static function invalidHostnameValuesProvider(): array

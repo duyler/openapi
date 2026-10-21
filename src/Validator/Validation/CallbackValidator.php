@@ -28,7 +28,7 @@ final readonly class CallbackValidator
      * @param bool $strictCallbackRuntimeTemplate
      */
     public function __construct(
-        private readonly ValidatorDependencies $context,
+        private readonly ValidationStack $context,
         private readonly bool $securityValidation = false,
         private readonly bool $strictCallbackRuntimeTemplate = true,
     ) {

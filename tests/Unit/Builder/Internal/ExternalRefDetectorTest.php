@@ -9,16 +9,9 @@ use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\Internal\ExternalRefDetector;
 use Duyler\OpenApi\Cache\ConfinementVerdict;
 use Duyler\OpenApi\Cache\SchemaCache;
+use Duyler\OpenApi\Test\Support\Psr6ArrayCacheStub;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Cache\CacheItemInterface;
-use Psr\Cache\CacheItemPoolInterface;
-
-use DateInterval;
-use DateTimeInterface;
-
-use function array_key_exists;
-use function str_ends_with;
 
 /**
  * @internal
@@ -458,7 +451,7 @@ YAML;
     #[Test]
     public function assert_confinement_writes_clean_verdict_on_first_call(): void
     {
-        $pool = new ConfinementCountingPool();
+        $pool = new Psr6ArrayCacheStub();
 
         $detector = new ExternalRefDetector(new BuilderConfig(
             specContent: $this->cleanSpecYaml('Clean verdict'),
@@ -477,7 +470,7 @@ YAML;
     #[Test]
     public function assert_confinement_returns_from_cache_on_second_call(): void
     {
-        $pool = new ConfinementCountingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
         $specContent = $this->cleanSpecYaml('Cache hit verdict');
 
@@ -507,7 +500,7 @@ YAML;
     #[Test]
     public function assert_confinement_does_not_cache_guilty_verdict(): void
     {
-        $pool = new ConfinementCountingPool();
+        $pool = new Psr6ArrayCacheStub();
 
         $detector = new ExternalRefDetector(new BuilderConfig(
             specContent: self::GUILTY_YAML,
@@ -529,7 +522,7 @@ YAML;
     #[Test]
     public function assert_confinement_guilty_verdict_throws_again_on_second_call(): void
     {
-        $pool = new ConfinementCountingPool();
+        $pool = new Psr6ArrayCacheStub();
 
         $detector = new ExternalRefDetector(new BuilderConfig(
             specContent: self::GUILTY_YAML,
@@ -557,7 +550,7 @@ YAML;
     #[Test]
     public function assert_confinement_uses_content_hash_in_key(): void
     {
-        $pool = new ConfinementCountingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
 
         $firstDetector = new ExternalRefDetector(new BuilderConfig(
@@ -581,7 +574,7 @@ YAML;
     #[Test]
     public function assert_confinement_key_includes_spec_limits_fingerprint(): void
     {
-        $pool = new ConfinementCountingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
         $specContent = $this->cleanSpecYaml('Fingerprint limits');
 
@@ -607,7 +600,7 @@ YAML;
     #[Test]
     public function assert_confinement_skips_cache_when_allowed_root_is_set(): void
     {
-        $pool = new ConfinementCountingPool();
+        $pool = new Psr6ArrayCacheStub();
 
         $detector = new ExternalRefDetector(new BuilderConfig(
             specContent: self::GUILTY_YAML,
@@ -625,7 +618,7 @@ YAML;
     #[Test]
     public function assert_confinement_skips_cache_when_spec_content_is_null(): void
     {
-        $pool = new ConfinementCountingPool();
+        $pool = new Psr6ArrayCacheStub();
 
         $detector = new ExternalRefDetector(new BuilderConfig(
             specPath: '/var/specs/openapi.yaml',
@@ -654,137 +647,5 @@ components:
     Bar:
       \$ref: '#/components/schemas/Foo'
 YAML;
-    }
-}
-
-final class ConfinementCountingPool implements CacheItemPoolInterface
-{
-    public int $readCount = 0;
-    public int $writeCount = 0;
-
-    /** @var array<string, mixed> */
-    private array $values = [];
-
-    /** @return list<string> */
-    public function confinementKeys(): array
-    {
-        $keys = [];
-        foreach (array_keys($this->values) as $key) {
-            if (str_ends_with($key, ExternalRefDetector::CONFINEMENT_KEY_SUFFIX)) {
-                $keys[] = $key;
-            }
-        }
-
-        return $keys;
-    }
-
-    public function value(string $key): mixed
-    {
-        return $this->values[$key] ?? null;
-    }
-
-    public function getItem(string $key): CacheItemInterface
-    {
-        ++$this->readCount;
-
-        return new ConfinementCountingItem($key, $this->values[$key] ?? null, array_key_exists($key, $this->values));
-    }
-
-    /** @param list<string> $keys */
-    public function getItems(array $keys = []): array
-    {
-        $items = [];
-        foreach ($keys as $key) {
-            $items[$key] = $this->getItem($key);
-        }
-
-        return $items;
-    }
-
-    public function hasItem(string $key): bool
-    {
-        return array_key_exists($key, $this->values);
-    }
-
-    public function clear(): bool
-    {
-        $this->values = [];
-
-        return true;
-    }
-
-    public function deleteItem(string $key): bool
-    {
-        unset($this->values[$key]);
-
-        return true;
-    }
-
-    public function deleteItems(array $keys): bool
-    {
-        foreach ($keys as $key) {
-            unset($this->values[$key]);
-        }
-
-        return true;
-    }
-
-    public function save(CacheItemInterface $item): bool
-    {
-        ++$this->writeCount;
-        $this->values[$item->getKey()] = $item->get();
-
-        return true;
-    }
-
-    public function saveDeferred(CacheItemInterface $item): bool
-    {
-        return $this->save($item);
-    }
-
-    public function commit(): bool
-    {
-        return true;
-    }
-}
-
-final class ConfinementCountingItem implements CacheItemInterface
-{
-    public function __construct(
-        private readonly string $key,
-        private mixed $value,
-        private readonly bool $hit,
-    ) {}
-
-    public function getKey(): string
-    {
-        return $this->key;
-    }
-
-    public function get(): mixed
-    {
-        return $this->value;
-    }
-
-    public function isHit(): bool
-    {
-        return $this->hit;
-    }
-
-    public function set(mixed $value): static
-    {
-        $this->value = $value;
-
-        return $this;
-    }
-
-    public function expiresAt(?DateTimeInterface $expiration): static
-    {
-        return $this;
-    }
-
-    public function expiresAfter(int|DateInterval|null $time): static
-    {
-        return $this;
     }
 }

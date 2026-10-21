@@ -146,4 +146,35 @@ final class HeaderTest extends TestCase
         self::assertIsArray($serialized);
         self::assertArrayHasKey('content', $serialized);
     }
+
+    #[Test]
+    public function json_serialize_emits_fields_in_wire_order(): void
+    {
+        $schema = new Schema(type: 'string');
+        $content = new Content(mediaTypes: ['application/json' => new MediaType()]);
+
+        $header = new Header(
+            description: 'Description',
+            required: true,
+            deprecated: true,
+            allowEmptyValue: true,
+            schema: $schema,
+            example: 'example-value',
+            examples: ['first' => 'one'],
+            content: $content,
+        );
+
+        $serialized = $header->jsonSerialize();
+
+        self::assertSame([
+            'description' => 'Description',
+            'required' => true,
+            'deprecated' => true,
+            'allowEmptyValue' => true,
+            'schema' => $schema,
+            'example' => 'example-value',
+            'examples' => ['first' => 'one'],
+            'content' => $content,
+        ], $serialized);
+    }
 }

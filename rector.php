@@ -25,10 +25,10 @@ return RectorConfig::configure()
         // deprecated constructors, so converting the PHPDoc to #[Deprecated] would
         // trigger E_DEPRECATED on every internal call. ADRs:
         //  - adr-schema-constructor.md (Schema 11b)
-        //  - adr-validator-signatures-and-dtos.md (ValidatorDependencies, ValidationContext 18)
+        //  - adr-validator-signatures-and-dtos.md (ValidationStack, ValidationContext 18)
         DeprecatedAnnotationToDeprecatedAttributeRector::class => [
             __DIR__ . '/src/Schema/Model/Schema.php',
-            __DIR__ . '/src/Validator/Validation/ValidatorDependencies.php',
+            __DIR__ . '/src/Validator/Validation/ValidationStack.php',
             __DIR__ . '/src/Validator/Error/ValidationContext.php',
         ],
     ]);

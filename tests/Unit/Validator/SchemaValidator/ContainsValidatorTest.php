@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\SchemaValidator\ContainsValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\ContainsMatchError;
 use Duyler\OpenApi\Validator\Exception\MaxContainsError;
 use Duyler\OpenApi\Validator\Exception\MinContainsError;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -31,7 +33,7 @@ class ContainsValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new ContainsValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $this->validator = new ContainsValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]
@@ -256,7 +258,7 @@ class ContainsValidatorTest extends TestCase
             self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -275,7 +277,7 @@ class ContainsValidatorTest extends TestCase
             self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -295,7 +297,7 @@ class ContainsValidatorTest extends TestCase
             self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -340,7 +342,7 @@ class ContainsValidatorTest extends TestCase
             self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -394,7 +396,7 @@ class ContainsValidatorTest extends TestCase
             self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -413,7 +415,7 @@ class ContainsValidatorTest extends TestCase
             self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -433,7 +435,7 @@ class ContainsValidatorTest extends TestCase
             self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -460,7 +462,7 @@ class ContainsValidatorTest extends TestCase
             ));
         }
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     #[Test]

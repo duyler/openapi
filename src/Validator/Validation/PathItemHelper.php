@@ -7,6 +7,8 @@ namespace Duyler\OpenApi\Validator\Validation;
 use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\Model\PathItem;
 
+use function strtolower;
+
 final readonly class PathItemHelper
 {
     public static function getOperation(PathItem $pathItem, string $httpMethod): ?Operation

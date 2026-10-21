@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\FormatValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -255,7 +257,7 @@ class FormatValidatorTest extends TestCase
 
     private function createFormatValidator(): FormatValidator
     {
-        return new FormatValidator(new ValidatorDependencies(pool: new ValidatorPool(), formatRegistry: BuiltinFormats::create()));
+        return new FormatValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), BuiltinFormats::create()), pool: new ValidatorPool(), formatRegistry: BuiltinFormats::create()));
     }
 
     private function buildSpec(string $type, string $format): string

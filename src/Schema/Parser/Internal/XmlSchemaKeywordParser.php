@@ -7,17 +7,15 @@ namespace Duyler\OpenApi\Schema\Parser\Internal;
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
 use Duyler\OpenApi\Schema\Model\Xml;
 use Duyler\OpenApi\Schema\Parser\DeprecationLogger;
+use Duyler\OpenApi\Schema\Parser\OpenApiBuildContext;
 use Duyler\OpenApi\Schema\Parser\TypeHelper;
 
 use function implode;
 use function sprintf;
-use function version_compare;
 
 /** @internal */
 final readonly class XmlSchemaKeywordParser
 {
-    private const string DEPRECATION_VERSION = '3.2.0';
-
     public function __construct(
         private string $documentVersion = '',
         private DeprecationLogger $deprecationLogger = new DeprecationLogger(),
@@ -53,7 +51,7 @@ final readonly class XmlSchemaKeywordParser
     /** @param array<string, mixed> $data */
     private function warnDeprecations(array $data): void
     {
-        if (false === $this->shouldWarnDeprecation()) {
+        if (false === OpenApiBuildContext::shouldWarnDeprecation($this->documentVersion)) {
             return;
         }
 
@@ -61,7 +59,7 @@ final readonly class XmlSchemaKeywordParser
             $this->deprecationLogger->warn(
                 'attribute',
                 'XML Object',
-                self::DEPRECATION_VERSION,
+                OpenApiBuildContext::DEPRECATION_VERSION,
                 'nodeType: "attribute"',
             );
         }
@@ -70,13 +68,8 @@ final readonly class XmlSchemaKeywordParser
             $this->deprecationLogger->warn(
                 'wrapped',
                 'XML Object',
-                self::DEPRECATION_VERSION,
+                OpenApiBuildContext::DEPRECATION_VERSION,
             );
         }
-    }
-
-    private function shouldWarnDeprecation(): bool
-    {
-        return version_compare($this->documentVersion, self::DEPRECATION_VERSION, '>=');
     }
 }

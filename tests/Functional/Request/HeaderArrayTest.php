@@ -124,7 +124,7 @@ YAML;
     /**
      * HD-05 negative: required header missing entirely.
      *
-     * HeadersValidator::findParameter returns null when no header with
+     * HeadersValidator::resolveValue returns null when no header with
      * matching name (case-insensitive) is present. The required flag then
      * raises MissingParameterException for the header location.
      */

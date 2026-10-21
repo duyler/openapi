@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Response\Internal;
 
-use Duyler\OpenApi\Validator\Exception\MalformedStreamRecordException;
-use Duyler\OpenApi\Validator\JsonDepthLimit;
-use Duyler\OpenApi\Validator\Response\Exception\TooManyRecordsException;
-use Duyler\OpenApi\Validator\Util\LogContextSanitizer;
+use Duyler\OpenApi\Validator\Response\StreamingFormat;
 use JsonException;
 use Override;
 use Psr\Http\Message\StreamInterface;
@@ -15,10 +12,10 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 use function assert;
-use function count;
 use function ctype_digit;
 use function is_array;
 use function json_decode;
+use function preg_split;
 use function str_starts_with;
 use function strpos;
 use function substr;
@@ -31,105 +28,84 @@ final readonly class SseParser implements StreamingFormatParser
     private const string SSE_LINE_SPLIT_PATTERN = '/\r\n|\r|\n/';
     private const string SSE_DEFAULT_EVENT_TYPE = 'message';
     private const string SSE_FIELD_SPACE = ' ';
-    private const int JSON_MAX_DEPTH = JsonDepthLimit::Untrusted->value;
-    private const int DEFAULT_MAX_RECORDS = 100_000;
-    private const int LOG_RECORD_TRUNCATE_LENGTH = 256;
 
     public function __construct(
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly bool $strictStreaming = false,
-        private readonly int $maxRecords = self::DEFAULT_MAX_RECORDS,
+        private readonly int $maxRecords = RecordCollector::DEFAULT_MAX_RECORDS,
         private readonly StreamLineReader $lineReader = new StreamLineReader(),
     ) {}
 
     #[Override]
     public function parseString(string $body): array
     {
-        $body = StreamLineReader::stripBom($body);
-
-        /** @var list<array<int|string, mixed>|null> $events */
-        $events = [];
-        /** @var array<string, string> $currentEvent */
-        $currentEvent = [];
-        $recordCount = 0;
-
-        $lines = preg_split(self::SSE_LINE_SPLIT_PATTERN, $body);
+        $lines = preg_split(self::SSE_LINE_SPLIT_PATTERN, StreamLineReader::stripBom($body));
         assert(is_array($lines));
 
-        foreach ($lines as $line) {
-            $before = count($events);
-            [$currentEvent, $events] = $this->processLine($line, $currentEvent, $events);
-            if (count($events) === $before) {
-                continue;
-            }
-            ++$recordCount;
-            $this->enforceRecordLimit($recordCount);
-        }
-
-        if ([] !== $currentEvent) {
-            $events[] = $this->formatEvent($currentEvent);
-            ++$recordCount;
-            $this->enforceRecordLimit($recordCount);
-        }
-
-        return $events;
+        return $this->parseLines($lines, $this->createCollector());
     }
 
     #[Override]
     public function parseStream(StreamInterface $stream): array
     {
-        /** @var list<array<int|string, mixed>|null> $events */
-        $events = [];
-        /** @var array<string, string> $currentEvent */
-        $currentEvent = [];
-        $recordCount = 0;
-
-        foreach ($this->lineReader->readLines($stream, self::SSE_LINE_SPLIT_PATTERN) as $line) {
-            $before = count($events);
-            [$currentEvent, $events] = $this->processLine($line, $currentEvent, $events);
-            if (count($events) === $before) {
-                continue;
-            }
-            ++$recordCount;
-            $this->enforceRecordLimit($recordCount);
-        }
-
-        if ([] !== $currentEvent) {
-            $events[] = $this->formatEvent($currentEvent);
-            ++$recordCount;
-            $this->enforceRecordLimit($recordCount);
-        }
-
-        return $events;
-    }
-
-    private function enforceRecordLimit(int $recordCount): void
-    {
-        if ($recordCount > $this->maxRecords) {
-            throw new TooManyRecordsException(max: $this->maxRecords);
-        }
+        return $this->parseLines(
+            $this->lineReader->readLines($stream, self::SSE_LINE_SPLIT_PATTERN),
+            $this->createCollector(),
+        );
     }
 
     /**
-     * @param array<string, string>              $currentEvent
-     * @param list<array<int|string, mixed>|null> $events
+     * @param iterable<string> $lines
      *
-     * @return array{0: array<string, string>, 1: list<array<int|string, mixed>|null>}
+     * @return list<array<int|string, mixed>|scalar|null>
      */
-    private function processLine(string $line, array $currentEvent, array $events): array
+    private function parseLines(iterable $lines, RecordCollector $collector): array
+    {
+        /** @var array<string, string> $currentEvent */
+        $currentEvent = [];
+
+        foreach ($lines as $line) {
+            [$currentEvent, $completedEvent] = $this->processLine($line, $currentEvent, $collector);
+
+            if (null !== $completedEvent) {
+                $collector->append($completedEvent);
+            }
+        }
+
+        if ([] !== $currentEvent) {
+            $collector->append($this->formatEvent($currentEvent, $collector));
+        }
+
+        return $collector->records();
+    }
+
+    private function createCollector(): RecordCollector
+    {
+        return new RecordCollector(
+            format: StreamingFormat::Sse,
+            logger: $this->logger,
+            strictStreaming: $this->strictStreaming,
+            maxRecords: $this->maxRecords,
+        );
+    }
+
+    /**
+     * @param array<string, string> $currentEvent
+     *
+     * @return array{0: array<string, string>, 1: array<int|string, mixed>|null}
+     */
+    private function processLine(string $line, array $currentEvent, RecordCollector $collector): array
     {
         if ('' === $line) {
             if ([] !== $currentEvent) {
-                $events[] = $this->formatEvent($currentEvent);
-
-                return [[], $events];
+                return [[], $this->formatEvent($currentEvent, $collector)];
             }
 
-            return [$currentEvent, $events];
+            return [$currentEvent, null];
         }
 
         if (str_starts_with($line, ':')) {
-            return [$currentEvent, $events];
+            return [$currentEvent, null];
         }
 
         $colonPos = strpos($line, ':');
@@ -141,10 +117,10 @@ final readonly class SseParser implements StreamingFormatParser
                 ? substr($rawValue, 1)
                 : $rawValue;
 
-            return [$this->applyField($currentEvent, $field, $value), $events];
+            return [$this->applyField($currentEvent, $field, $value), null];
         }
 
-        return [$this->applyField($currentEvent, $line, ''), $events];
+        return [$this->applyField($currentEvent, $line, ''), null];
     }
 
     /**
@@ -170,7 +146,7 @@ final readonly class SseParser implements StreamingFormatParser
      *
      * @return array<int|string, mixed>
      */
-    private function formatEvent(array $event): array
+    private function formatEvent(array $event, RecordCollector $collector): array
     {
         $result = [];
 
@@ -181,7 +157,7 @@ final readonly class SseParser implements StreamingFormatParser
         }
 
         if (isset($event['data'])) {
-            $result['data'] = $this->decodeData($event['data']);
+            $result['data'] = $this->decodeData($event['data'], $collector);
         }
 
         if (isset($event['id'])) {
@@ -189,10 +165,8 @@ final readonly class SseParser implements StreamingFormatParser
         }
 
         if (isset($event['retry'])) {
-            /** @var mixed $retry */
-            $retry = $event['retry'];
-            if (ctype_digit((string) $retry)) {
-                $result['retry'] = (int) $retry;
+            if (ctype_digit($event['retry'])) {
+                $result['retry'] = (int) $event['retry'];
             }
         }
 
@@ -202,21 +176,15 @@ final readonly class SseParser implements StreamingFormatParser
     /**
      * @return array<int|string, mixed>|scalar|null
      */
-    private function decodeData(string $data): mixed
+    private function decodeData(string $data, RecordCollector $collector): mixed
     {
         try {
             /** @var array<int|string, mixed>|scalar|null $decoded */
-            $decoded = json_decode($data, true, self::JSON_MAX_DEPTH, JSON_THROW_ON_ERROR);
+            $decoded = json_decode($data, true, RecordCollector::JSON_MAX_DEPTH, JSON_THROW_ON_ERROR);
 
             return $decoded;
         } catch (JsonException $exception) {
-            if ($this->strictStreaming) {
-                throw new MalformedStreamRecordException($data, $exception);
-            }
-            $this->logger->warning('Failed to parse SSE event data as JSON, using raw value', [
-                'data' => LogContextSanitizer::truncate($data, self::LOG_RECORD_TRUNCATE_LENGTH),
-                'exception' => $exception,
-            ]);
+            $collector->reportMalformed($data, $exception);
 
             return $data;
         }

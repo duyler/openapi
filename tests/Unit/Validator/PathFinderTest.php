@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator;
 
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\SpecBuilders;
 use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\PathFinder;
@@ -80,7 +81,7 @@ YAML;
     #[Test]
     public function find_operation_static_path_exact_match(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::TEST_SPEC_YAML);
 
         $operation = $finder->findOperation('/users/admin', 'GET');
 
@@ -92,7 +93,7 @@ YAML;
     #[Test]
     public function find_operation_parametrized_path_exact_match(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::TEST_SPEC_YAML);
 
         $operation = $finder->findOperation('/users/123', 'GET');
 
@@ -104,7 +105,7 @@ YAML;
     #[Test]
     public function find_operation_with_post_method(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::TEST_SPEC_YAML);
 
         $operation = $finder->findOperation('/users/456', 'POST');
 
@@ -116,7 +117,7 @@ YAML;
     #[Test]
     public function find_operation_with_multiple_path_parameters(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::TEST_SPEC_YAML);
 
         $operation = $finder->findOperation('/users/42/posts/99', 'GET');
 
@@ -128,7 +129,7 @@ YAML;
     #[Test]
     public function find_operation_not_found_throws_exception(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::TEST_SPEC_YAML);
 
         $this->expectException(OperationNotFoundException::class);
         $this->expectExceptionMessage('No operation matches the request');
@@ -139,7 +140,7 @@ YAML;
     #[Test]
     public function find_operation_method_not_found_throws_exception(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::TEST_SPEC_YAML);
 
         $this->expectException(OperationNotFoundException::class);
         $this->expectExceptionMessage('No operation matches the request');
@@ -171,7 +172,7 @@ YAML)
     #[Test]
     public function prioritize_candidates_static_over_parametrized(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::TEST_SPEC_YAML);
 
         $operation = $finder->findOperation('/users/admin', 'GET');
 
@@ -181,7 +182,7 @@ YAML)
     #[Test]
     public function prioritize_candidates_multiple_parametrized_paths(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::TEST_SPEC_YAML);
 
         $operation = $finder->findOperation('/products/electronics', 'GET');
 
@@ -191,7 +192,7 @@ YAML)
     #[Test]
     public function prioritize_candidates_two_parametrized_paths(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::TEST_SPEC_YAML);
 
         $operation = $finder->findOperation('/products/electronics/42', 'GET');
 
@@ -201,7 +202,7 @@ YAML)
     #[Test]
     public function find_operation_case_insensitive_method(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::TEST_SPEC_YAML);
 
         $operation1 = $finder->findOperation('/users/123', 'get');
         $operation2 = $finder->findOperation('/users/123', 'GET');
@@ -215,7 +216,7 @@ YAML)
     #[Test]
     public function find_operation_post_method_case_insensitive(): void
     {
-        $finder = $this->createPathFinder();
+        $finder = SpecBuilders::pathFinder(self::TEST_SPEC_YAML);
 
         $operation1 = $finder->findOperation('/users/123', 'post');
         $operation2 = $finder->findOperation('/users/123', 'POST');
@@ -252,16 +253,6 @@ YAML)
 
         $operation8 = $finder->findOperation('/resource', 'TRACE');
         $this->assertSame('TRACE', $operation8->method);
-    }
-
-    private function createPathFinder(): PathFinder
-    {
-        $document = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::TEST_SPEC_YAML)
-            ->build()
-            ->getDocument();
-
-        return new PathFinder($document);
     }
 
     private function createPathFinderWithAllMethods(): PathFinder
@@ -315,11 +306,6 @@ paths:
           description: OK
 YAML;
 
-        $document = OpenApiValidatorBuilder::create()
-            ->fromYamlString($yaml)
-            ->build()
-            ->getDocument();
-
-        return new PathFinder($document);
+        return SpecBuilders::pathFinder($yaml);
     }
 }

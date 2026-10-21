@@ -36,7 +36,7 @@ YAML;
     private const int CONFIGURED_BACKTRACKS = 1337;
 
     #[Test]
-    public function withFormat_after_withMaxRegexBacktracks_uses_configured_backtrack_limit_for_builtin_email(): void
+    public function with_format_after_with_max_regex_backtracks_uses_configured_backtrack_limit_for_builtin_email(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SPEC)
@@ -50,7 +50,7 @@ YAML;
     }
 
     #[Test]
-    public function withFormat_before_withMaxRegexBacktracks_uses_configured_backtrack_limit_for_builtin_email(): void
+    public function with_format_before_with_max_regex_backtracks_uses_configured_backtrack_limit_for_builtin_email(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SPEC)
@@ -64,7 +64,7 @@ YAML;
     }
 
     #[Test]
-    public function without_withFormat_uses_configured_backtrack_limit_for_builtin_email(): void
+    public function without_with_format_uses_configured_backtrack_limit_for_builtin_email(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SPEC)
@@ -77,7 +77,7 @@ YAML;
     }
 
     #[Test]
-    public function withFormat_overriding_builtin_email_replaces_builtin_after_build(): void
+    public function with_format_overriding_builtin_email_replaces_builtin_after_build(): void
     {
         $custom = new class implements FormatValidatorInterface {
             #[Override]
@@ -98,7 +98,7 @@ YAML;
     }
 
     #[Test]
-    public function withFormat_user_validator_preserved_alongside_builtin(): void
+    public function with_format_user_validator_preserved_alongside_builtin(): void
     {
         $custom = $this->noOpValidator();
 

@@ -5,20 +5,22 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Response\Internal;
 
 use Duyler\OpenApi\Validator\Exception\MalformedStreamRecordException;
+use Duyler\OpenApi\Validator\Response\Exception\StreamRecordTooLargeException;
 use Duyler\OpenApi\Validator\Response\Exception\TooManyRecordsException;
 use Duyler\OpenApi\Validator\Response\Internal\JsonSeqParser;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
-use RuntimeException;
 
 #[CoversClass(JsonSeqParser::class)]
 final class JsonSeqParserTest extends TestCase
 {
     private JsonSeqParser $parser;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->parser = new JsonSeqParser();
@@ -163,7 +165,7 @@ final class JsonSeqParserTest extends TestCase
 
         $parser = new JsonSeqParser(maxRecordLength: 1_048_576);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(StreamRecordTooLargeException::class);
         $this->expectExceptionMessage('JSON sequence record exceeds maximum allowed length of 1048576 bytes');
 
         $parser->parseStream($stream);

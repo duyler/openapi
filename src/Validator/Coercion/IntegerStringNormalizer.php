@@ -9,6 +9,8 @@ use function substr;
 
 final readonly class IntegerStringNormalizer
 {
+    public const string INTEGER_PATTERN = '/^[+-]?\d+$/';
+
     /**
      * Returns the canonical form of an integer string: optional leading minus,
      * no leading plus, no leading zeros (except for the value zero itself).

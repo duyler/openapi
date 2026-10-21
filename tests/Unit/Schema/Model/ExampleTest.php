@@ -128,7 +128,7 @@ final class ExampleTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_externalValue(): void
+    public function json_serialize_includes_external_value(): void
     {
         $example = new Example(
             externalValue: 'https://example.com/example',
@@ -184,5 +184,31 @@ final class ExampleTest extends TestCase
 
         self::assertArrayHasKey('serializedExample', $serialized);
         self::assertSame('https://example.com/serialized.json', $serialized['serializedExample']);
+    }
+
+    #[Test]
+    public function json_serialize_emits_fields_in_wire_order(): void
+    {
+        $example = new Example(
+            summary: 'Summary',
+            description: 'Description',
+            value: ['id' => 42],
+            dataValue: ['id' => 42],
+            serializedValue: '{"id":42}',
+            externalValue: 'https://example.com/example',
+            serializedExample: '{"id":42}',
+        );
+
+        $serialized = $example->jsonSerialize();
+
+        self::assertSame([
+            'summary' => 'Summary',
+            'description' => 'Description',
+            'value' => ['id' => 42],
+            'dataValue' => ['id' => 42],
+            'serializedValue' => '{"id":42}',
+            'externalValue' => 'https://example.com/example',
+            'serializedExample' => '{"id":42}',
+        ], $serialized);
     }
 }

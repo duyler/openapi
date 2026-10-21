@@ -10,15 +10,13 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Dto\ValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
+use Duyler\OpenApi\Validator\Exception\UnknownLinkException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Link\LinkContext;
 use Duyler\OpenApi\Validator\Link\ResolvedLink;
-use InvalidArgumentException;
 use Override;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-
-use function sprintf;
 
 final readonly class OpenApiValidator implements OpenApiValidatorInterface
 {
@@ -141,9 +139,7 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
         $link = $links[$linkName] ?? null;
 
         if (null === $link) {
-            throw new InvalidArgumentException(
-                sprintf('Unknown link: %s', $linkName),
-            );
+            throw new UnknownLinkException($linkName);
         }
 
         return $this->dependencies->linkResolver->resolve($link, $context);

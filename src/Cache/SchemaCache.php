@@ -11,19 +11,17 @@ use function assert;
 
 final readonly class SchemaCache
 {
-    private const int DEFAULT_TTL = 3600;
-
     private TypedCacheDecorator $decorator;
 
     /**
      * Create a new schema cache.
      *
      * @param CacheItemPoolInterface $pool PSR-6 cache pool
-     * @param int $ttl Time to live in seconds (default: 3600)
+     * @param int $ttl Time to live in seconds (default: TypedCacheDecorator::DEFAULT_TTL)
      */
     public function __construct(
         CacheItemPoolInterface $pool,
-        int $ttl = self::DEFAULT_TTL,
+        int $ttl = TypedCacheDecorator::DEFAULT_TTL,
     ) {
         $this->decorator = new TypedCacheDecorator($pool, $ttl);
     }
@@ -85,6 +83,6 @@ final readonly class SchemaCache
      */
     public function setConfinement(string $key): void
     {
-        $this->decorator->set($key, ConfinementVerdict::clean());
+        $this->decorator->set($key, ConfinementVerdict::Clean);
     }
 }

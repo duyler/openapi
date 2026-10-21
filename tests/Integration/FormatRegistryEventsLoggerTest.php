@@ -200,10 +200,10 @@ YAML;
             ValidationFinishedEvent::class => [
                 function (ValidationFinishedEvent $event) use (&$finished): void {
                     $finished = true;
-                    self::assertTrue($event->success);
+                    self::assertTrue($event->isSuccess);
                     self::assertSame('/users', $event->path);
                     self::assertSame('POST', $event->method);
-                    self::assertGreaterThan(0, $event->duration);
+                    self::assertGreaterThan(0, $event->durationInSeconds);
                     self::assertNotNull($event->response);
                 },
             ],
@@ -234,7 +234,7 @@ YAML;
         $dispatcher = new ArrayDispatcher([
             ValidationFinishedEvent::class => [
                 function (ValidationFinishedEvent $event) use (&$finishedSuccess): void {
-                    $finishedSuccess = $event->success;
+                    $finishedSuccess = $event->isSuccess;
                 },
             ],
             ValidationErrorEvent::class => [
@@ -303,7 +303,7 @@ YAML;
             ValidationFinishedEvent::class => [
                 function (ValidationFinishedEvent $event) use (&$finished): void {
                     $finished = true;
-                    self::assertTrue($event->success);
+                    self::assertTrue($event->isSuccess);
                     self::assertSame('#/components/schemas/User', $event->schemaRef);
                 },
             ],

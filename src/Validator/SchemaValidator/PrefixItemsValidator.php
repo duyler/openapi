@@ -15,8 +15,10 @@ use Duyler\OpenApi\Validator\SchemaValidator\Internal\ItemValidationExceptionTra
 use Duyler\OpenApi\Validator\SchemaValidator\Internal\ItemValidationState;
 use Override;
 
+use function array_is_list;
 use function count;
 use function is_array;
+use function min;
 
 final readonly class PrefixItemsValidator extends AbstractSchemaValidator implements KeywordApplicable
 {

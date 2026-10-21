@@ -115,14 +115,14 @@ final readonly class SpecLoader
 
             $parser = match ($this->config->specType) {
                 'yaml' => new YamlParser(
-                    $deprecationLogger,
-                    $this->config->maxSpecSizeBytes ?? YamlParser::DEFAULT_MAX_SPEC_BYTES,
-                    $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
+                    deprecationLogger: $deprecationLogger,
+                    maxSpecBytes: $this->config->maxSpecSizeBytes ?? YamlParser::DEFAULT_MAX_SPEC_BYTES,
+                    maxSpecDepth: $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
                 ),
                 'json' => new JsonParser(
-                    $deprecationLogger,
-                    $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
-                    $this->config->maxSpecSizeBytes ?? JsonParser::DEFAULT_MAX_SPEC_BYTES,
+                    deprecationLogger: $deprecationLogger,
+                    maxSpecDepth: $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
+                    maxSpecBytes: $this->config->maxSpecSizeBytes ?? JsonParser::DEFAULT_MAX_SPEC_BYTES,
                 ),
                 default => throw new BuilderException(
                     sprintf('Unsupported spec type: %s', $this->config->specType ?? 'none'),

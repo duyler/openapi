@@ -15,6 +15,8 @@ use PHPUnit\Framework\TestCase;
 
 use WeakMap;
 
+use function array_keys;
+
 use const JSON_THROW_ON_ERROR;
 
 #[CoversClass(SchemaToArrayConverter::class)]
@@ -91,6 +93,27 @@ final class SchemaToArrayConverterTest extends TestCase
 
         self::assertArrayHasKey('const', $result);
         self::assertNull($result['const']);
+    }
+
+    #[Test]
+    public function default_omitted_when_has_default_flag_absent(): void
+    {
+        $schema = new Schema(default: 'orphan', type: 'string');
+
+        $result = new SchemaToArrayConverter()->toWireArray($schema);
+
+        self::assertArrayNotHasKey('default', $result);
+        self::assertSame(['type' => 'string'], $result);
+    }
+
+    #[Test]
+    public function const_omitted_when_has_const_flag_absent(): void
+    {
+        $schema = new Schema(const: 'orphan');
+
+        $result = new SchemaToArrayConverter()->toWireArray($schema);
+
+        self::assertSame([], $result);
     }
 
     #[Test]
@@ -401,5 +424,81 @@ final class SchemaToArrayConverterTest extends TestCase
         $result = new SchemaToArrayConverter()->toSnapshotArray($schema, new WeakMap());
 
         self::assertTrue($result['not']);
+    }
+
+    #[Test]
+    public function snapshot_emits_field_keys_in_metadata_order_with_has_keys_tail(): void
+    {
+        $schema = new Schema(
+            type: 'string',
+            hasDefault: true,
+            default: 42,
+            hasConst: true,
+            const: 'x',
+        );
+
+        $result = new SchemaToArrayConverter()->toSnapshotArray($schema, new WeakMap());
+
+        self::assertSame([
+            'ref',
+            'refSummary',
+            'refDescription',
+            'title',
+            'description',
+            'default',
+            'deprecated',
+            'readOnly',
+            'writeOnly',
+            'type',
+            'nullable',
+            'const',
+            'multipleOf',
+            'maximum',
+            'exclusiveMaximum',
+            'minimum',
+            'exclusiveMinimum',
+            'maxLength',
+            'minLength',
+            'pattern',
+            'maxItems',
+            'minItems',
+            'uniqueItems',
+            'maxProperties',
+            'minProperties',
+            'required',
+            'allOf',
+            'anyOf',
+            'oneOf',
+            'not',
+            'discriminator',
+            'properties',
+            'additionalProperties',
+            'unevaluatedProperties',
+            'items',
+            'prefixItems',
+            'contains',
+            'minContains',
+            'maxContains',
+            'patternProperties',
+            'propertyNames',
+            'dependentSchemas',
+            'if',
+            'then',
+            'else',
+            'unevaluatedItems',
+            'example',
+            'examples',
+            'enum',
+            'format',
+            'contentEncoding',
+            'contentMediaType',
+            'contentSchema',
+            'jsonSchemaDialect',
+            'xml',
+            'hasDefault',
+            'hasConst',
+        ], array_keys($result));
+        self::assertSame(42, $result['default']);
+        self::assertSame('x', $result['const']);
     }
 }

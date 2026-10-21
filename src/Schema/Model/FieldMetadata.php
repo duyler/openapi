@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Closure;
+
 final readonly class FieldMetadata
 {
     public const string CATEGORY_FLAT = 'flat';
@@ -16,7 +18,8 @@ final readonly class FieldMetadata
     public function __construct(
         public string $name,
         public string $openApiName,
-        public string $category,
+        public ?string $category = null,
         public bool $hasSentinel = false,
+        public ?Closure $accessor = null,
     ) {}
 }

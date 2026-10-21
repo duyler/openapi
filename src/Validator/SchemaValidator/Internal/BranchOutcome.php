@@ -10,8 +10,7 @@ use Duyler\OpenApi\Validator\Exception\ValidationErrorInterface;
 final readonly class BranchOutcome
 {
     /**
-     * @param list<ValidationErrorInterface> $errors Canonical error list for the branch,
-     *                                               empty only when the branch matched.
+     * @param list<ValidationErrorInterface> $errors
      */
     public function __construct(
         public bool $matched,

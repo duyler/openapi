@@ -235,4 +235,37 @@ final class MediaTypeTest extends TestCase
         self::assertSame($schema, $mediaType->schema);
         self::assertSame($itemSchema, $mediaType->itemSchema);
     }
+
+    #[Test]
+    public function json_serialize_emits_fields_in_wire_order(): void
+    {
+        $schema = new Schema(type: 'object');
+        $itemSchema = new Schema(type: 'string');
+        $encoding = new Encoding(contentType: 'application/json');
+        $itemEncoding = new Encoding(contentType: 'application/x-www-form-urlencoded');
+        $prefixEncoding = new Encoding(contentType: 'text/plain');
+        $example = new Example(summary: 'Example');
+
+        $mediaType = new MediaType(
+            schema: $schema,
+            itemSchema: $itemSchema,
+            encoding: ['application/json' => $encoding],
+            itemEncoding: $itemEncoding,
+            prefixEncoding: [$prefixEncoding],
+            example: $example,
+            examples: ['first' => ['value' => 1]],
+        );
+
+        $serialized = $mediaType->jsonSerialize();
+
+        self::assertSame([
+            'schema' => $schema,
+            'itemSchema' => $itemSchema,
+            'encoding' => ['application/json' => $encoding],
+            'itemEncoding' => $itemEncoding,
+            'prefixEncoding' => [$prefixEncoding],
+            'example' => $example,
+            'examples' => ['first' => ['value' => 1]],
+        ], $serialized);
+    }
 }

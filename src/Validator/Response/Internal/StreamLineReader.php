@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Response\Internal;
 
+use Duyler\OpenApi\Validator\Response\Exception\StreamRecordTooLargeException;
 use Generator;
 use Psr\Http\Message\StreamInterface;
-use RuntimeException;
 
+use function array_pop;
 use function assert;
 use function is_array;
-use function sprintf;
+use function preg_split;
 use function str_starts_with;
 use function strlen;
 use function substr;
@@ -34,9 +35,8 @@ final readonly class StreamLineReader
     public function readLines(StreamInterface $stream, string $splitPattern): Generator
     {
         $buffer = '';
-        $bomStripped = false;
 
-        while (null !== ($chunk = $this->readChunk($stream, $bomStripped))) {
+        foreach ($this->readChunks($stream) as $chunk) {
             $buffer .= $chunk;
             $this->enforceLineLength($buffer);
 
@@ -54,6 +54,29 @@ final readonly class StreamLineReader
         yield $buffer;
     }
 
+    /**
+     * @return Generator<int, string, void, void>
+     */
+    public function readChunks(StreamInterface $stream): Generator
+    {
+        $isBomStripped = false;
+
+        while (!$stream->eof()) {
+            $chunk = $stream->read(self::STREAM_CHUNK_SIZE);
+
+            if ('' === $chunk) {
+                return;
+            }
+
+            if (false === $isBomStripped) {
+                $chunk = self::stripBom($chunk);
+                $isBomStripped = true;
+            }
+
+            yield $chunk;
+        }
+    }
+
     public static function stripBom(string $body): string
     {
         if (str_starts_with($body, self::UTF8_BOM)) {
@@ -63,34 +86,10 @@ final readonly class StreamLineReader
         return $body;
     }
 
-    /** @param-out bool $bomStripped */
-    private function readChunk(StreamInterface $stream, bool &$bomStripped): ?string
-    {
-        if ($stream->eof()) {
-            return null;
-        }
-
-        $chunk = $stream->read(self::STREAM_CHUNK_SIZE);
-
-        if ('' === $chunk) {
-            return null;
-        }
-
-        if (false === $bomStripped) {
-            $chunk = self::stripBom($chunk);
-            $bomStripped = true;
-        }
-
-        return $chunk;
-    }
-
     private function enforceLineLength(string $buffer): void
     {
         if (strlen($buffer) > $this->maxLineLength) {
-            throw new RuntimeException(sprintf(
-                'Stream line exceeds maximum allowed length of %d bytes',
-                $this->maxLineLength,
-            ));
+            throw StreamRecordTooLargeException::forStreamLine($this->maxLineLength);
         }
     }
 }

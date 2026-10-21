@@ -45,7 +45,7 @@ paths:
 YAML;
 
     #[Test]
-    public function validateResponse_throws_on_invalid_data(): void
+    public function validate_response_throws_on_invalid_data(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SIMPLE_YAML)
@@ -62,7 +62,7 @@ YAML;
     }
 
     #[Test]
-    public function validateResponse_succeeds_on_valid_data(): void
+    public function validate_response_succeeds_on_valid_data(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SIMPLE_YAML)
@@ -79,7 +79,7 @@ YAML;
     }
 
     #[Test]
-    public function getFormattedErrors_returns_formatted_message(): void
+    public function get_formatted_errors_returns_formatted_message(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SIMPLE_YAML)

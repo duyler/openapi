@@ -4,17 +4,23 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Response;
 
+use function str_contains;
+
 final readonly class StreamingMediaTypeDetector
 {
-    private const array STREAMING_TYPES = [
-        'text/event-stream',
-        'application/jsonl',
-        'application/x-ndjson',
-        'application/json-seq',
-    ];
-
     public static function isStreaming(string $mediaType): bool
     {
-        return array_any(self::STREAMING_TYPES, fn(string $type) => str_starts_with($mediaType, $type));
+        return null !== self::detect($mediaType);
+    }
+
+    public static function detect(string $mediaType): ?StreamingFormat
+    {
+        return match (true) {
+            str_contains($mediaType, 'application/jsonl'),
+            str_contains($mediaType, 'application/x-ndjson') => StreamingFormat::NdJson,
+            str_contains($mediaType, 'text/event-stream') => StreamingFormat::Sse,
+            str_contains($mediaType, 'application/json-seq') => StreamingFormat::JsonSeq,
+            default => null,
+        };
     }
 }

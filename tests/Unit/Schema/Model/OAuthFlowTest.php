@@ -190,4 +190,28 @@ final class OAuthFlowTest extends TestCase
         self::assertArrayHasKey('deviceAuthorizationUrl', $serialized);
         self::assertArrayHasKey('deprecated', $serialized);
     }
+
+    #[Test]
+    public function json_serialize_emits_fields_in_wire_order(): void
+    {
+        $flow = new OAuthFlow(
+            authorizationUrl: 'https://example.com/authorize',
+            tokenUrl: 'https://example.com/token',
+            refreshUrl: 'https://example.com/refresh',
+            scopes: ['read' => 'Read access'],
+            deviceAuthorizationUrl: 'https://example.com/device',
+            deprecated: true,
+        );
+
+        $serialized = $flow->jsonSerialize();
+
+        self::assertSame([
+            'authorizationUrl' => 'https://example.com/authorize',
+            'tokenUrl' => 'https://example.com/token',
+            'refreshUrl' => 'https://example.com/refresh',
+            'scopes' => ['read' => 'Read access'],
+            'deviceAuthorizationUrl' => 'https://example.com/device',
+            'deprecated' => true,
+        ], $serialized);
+    }
 }

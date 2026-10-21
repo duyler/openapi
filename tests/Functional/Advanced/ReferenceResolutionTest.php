@@ -115,7 +115,7 @@ final class ReferenceResolutionTest extends AdvancedFunctionalTestCase
     }
 
     #[Test]
-    public function ref_inside_prefixItems_valid(): void
+    public function ref_inside_prefix_items_valid(): void
     {
         $validator = $this->createValidator($this->specFile);
         $request = $this->createRequest('POST', '/prefixitems-ref', [

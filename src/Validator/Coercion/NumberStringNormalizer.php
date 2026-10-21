@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Coercion;
 
+use Duyler\OpenApi\Validator\Exception\InvalidNumericStringException;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 
 use function abs;
@@ -16,6 +17,7 @@ use function rtrim;
 use function sprintf;
 use function str_contains;
 use function str_repeat;
+use function str_starts_with;
 use function strlen;
 use function substr;
 
@@ -33,6 +35,9 @@ final readonly class NumberStringNormalizer
      * that passes the coerceToNumber regex but whose canonical form does not
      * equal the canonical form of the round-tripped float loses precision
      * when coerced to float.
+     *
+     * @throws InvalidNumericStringException when a scientific-notation
+     *     exponent exceeds the representable range of a double
      */
     public static function canonicalize(string $value): ?string
     {
@@ -65,9 +70,9 @@ final readonly class NumberStringNormalizer
      * rejection.
      *
      * Also rejects scientific-notation values whose exponent exceeds the
-     * representable range of a double BEFORE invoking canonicalize, which
-     * would otherwise expand them via str_repeat and trigger algorithmic
-     * DoS (e.g. `1e999999999` would allocate ~1 GB of zeros).
+     * representable range of a double before their canonical expansion would
+     * allocate unbounded zero padding via str_repeat (e.g. `1e999999999`
+     * would allocate ~1 GB of zeros).
      *
      * @throws TypeMismatchError when the input cannot be represented as float
      *     without precision loss, or when its scientific-notation exponent
@@ -75,18 +80,7 @@ final readonly class NumberStringNormalizer
      */
     public static function castStringToFloatOrFail(string $value, string $dataPath = ''): float
     {
-        if (1 === preg_match('/^[+-]?\\d+(?:\\.\\d+)?[eE](?<exponent>[+-]?\\d+)$/', $value, $matches)) {
-            $exponent = (int) $matches['exponent'];
-            if (abs($exponent) > self::MAX_DOUBLE_EXPONENT) {
-                throw new TypeMismatchError(
-                    expected: 'number',
-                    actual: $value,
-                    dataPath: $dataPath,
-                    schemaPath: '/type',
-                    reason: 'Numeric value is outside the representable range of a double',
-                );
-            }
-        }
+        $inputCanonical = self::canonicalizeOrThrow($value, $dataPath);
 
         $float = (float) $value;
 
@@ -110,8 +104,7 @@ final readonly class NumberStringNormalizer
             );
         }
 
-        $inputCanonical = self::canonicalize($value);
-        $roundtripCanonical = self::canonicalize((string) $float);
+        $roundtripCanonical = self::canonicalizeOrThrow((string) $float, $dataPath);
 
         if (null !== $inputCanonical && null !== $roundtripCanonical && $inputCanonical !== $roundtripCanonical) {
             throw new TypeMismatchError(
@@ -126,6 +119,21 @@ final readonly class NumberStringNormalizer
         return $float;
     }
 
+    private static function canonicalizeOrThrow(string $value, string $dataPath): ?string
+    {
+        try {
+            return self::canonicalize($value);
+        } catch (InvalidNumericStringException) {
+            throw new TypeMismatchError(
+                expected: 'number',
+                actual: $value,
+                dataPath: $dataPath,
+                schemaPath: '/type',
+                reason: 'Numeric value is outside the representable range of a double',
+            );
+        }
+    }
+
     private static function expandScientificNotation(string $value): string
     {
         if (1 !== preg_match('/^(?<mantissa>\\d+(?:\\.\\d+)?)[eE](?<exponent>[+-]?\\d+)$/', $value, $matches)) {
@@ -134,6 +142,14 @@ final readonly class NumberStringNormalizer
 
         $mantissa = $matches['mantissa'];
         $exponent = (int) $matches['exponent'];
+
+        if (abs($exponent) > self::MAX_DOUBLE_EXPONENT) {
+            throw new InvalidNumericStringException(sprintf(
+                'Scientific notation exponent %d exceeds double precision boundary %d.',
+                $exponent,
+                self::MAX_DOUBLE_EXPONENT,
+            ));
+        }
 
         if (str_contains($mantissa, '.')) {
             [$integer, $fraction] = explode('.', $mantissa);

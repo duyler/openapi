@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Security;
 
+use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\Exception\TooManyContainsValidationsError;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\ContainsValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
@@ -34,7 +36,7 @@ final class ContainsValidatorDoSProtectionTest extends TestCase
     protected function setUp(): void
     {
         $pool = new ValidatorPool();
-        $this->validator = new ContainsValidator(new ValidatorDependencies(pool: $pool, formatRegistry: BuiltinFormats::create()));
+        $this->validator = new ContainsValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()), pool: $pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]

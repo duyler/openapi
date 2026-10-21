@@ -209,7 +209,7 @@ final class NullableCompositionTest extends TestCase
     }
 
     #[Test]
-    public function oneOf_still_rejects_data_matching_more_than_one_branch(): void
+    public function one_of_still_rejects_data_matching_more_than_one_branch(): void
     {
         $yaml = <<<'YAML'
             openapi: 3.0.3
@@ -273,7 +273,7 @@ final class NullableCompositionTest extends TestCase
     }
 
     #[Test]
-    public function discriminated_oneOf_with_nullable_parent_accepts_null_and_still_discriminates(): void
+    public function discriminated_one_of_with_nullable_parent_accepts_null_and_still_discriminates(): void
     {
         $yaml = <<<'YAML'
             openapi: 3.0.3

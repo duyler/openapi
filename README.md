@@ -27,7 +27,6 @@ OpenAPI 3.2 validator for PHP 8.4+
 - **Webhooks Support** - Validate incoming webhook requests
 - **Streaming Validation** - Validate NDJSON, SSE, and JSON Text Sequences responses
 - **Schema Registry** - Manage multiple schema versions
-- **Validator Compilation** (experimental) - Generate optimized validator code for basic schemas (see Limitations)
 
 ## Installation
 
@@ -296,9 +295,16 @@ $validator = OpenApiValidatorBuilder::create()
 Specs loaded with `fromYamlString()` or `fromJsonString()` fail closed at
 `build()` time when the spec contains an external `$ref` (any `$ref` that
 does not start with `#/`) and `withExternalRefAllowedRoot()` has not been
-called. Call `withExternalRefAllowedRoot('/safe/dir')` after the
+called. Without this pre-build scan the builtin `FileExternalRefResolver`
+would run with `allowedRoot = null` for string-loaded specs and silently
+accept any `file://...` or relative-path `$ref`. The scan covers the whole
+raw spec document, including discriminator `mapping` and `defaultMapping`
+entries whose values point outside the document. Call
+`withExternalRefAllowedRoot('/safe/dir')` after the
 from*String method to confine external ref resolution to that directory,
-or remove the external `$ref` from the spec. Direct `new RefResolver()`
+or remove the external `$ref` from the spec. File-loaded specs skip the
+scan: their `allowedRoot` is auto-derived as `dirname(realpath($path))`
+of the spec file and enforced at resolution time instead. Direct `new RefResolver()`
 usage without the builder keeps the legacy null-`allowedRoot` behaviour
 (disabled path-traversal check) for backward compatibility; this is
 unsafe for trusted specs and should be replaced by the builder.
@@ -332,7 +338,7 @@ $operation = $validator->validateRequest($request);
 
 ### Caching
 
-Enable PSR-6 caching to skip YAML/JSON parsing and schema construction on every build. See the [Caching](#caching-1) section under Performance for configuration details and compiled validator caching.
+Enable PSR-6 caching to skip YAML/JSON parsing and schema construction on every build. See the [Caching](#caching-1) section under Performance for configuration details.
 
 ### Events
 
@@ -673,10 +679,10 @@ $dispatcher = new ArrayDispatcher([
     ],
     ValidationFinishedEvent::class => [
         function (ValidationFinishedEvent $event) {
-            if ($event->success) {
+            if ($event->isSuccess) {
                 error_log(sprintf(
                     "Validation completed in %.3f seconds",
-                    $event->duration
+                    $event->durationInSeconds
                 ));
             }
         },
@@ -845,121 +851,6 @@ exposes the two methods that actually drive pool reuse:
 |--------|-----------|---------|
 | `getOrCreate` | `(string $key, callable $factory): object` | Return the cached instance for `$key`, or invoke `$factory` (non-blocking, non-recursive — the lock is held for the entire factory call) and cache the result |
 | `clear` | `(): void` | Evict every entry. Useful when the spec is hot-reloaded and all derived validators must be rebuilt |
-
-### Validator Compilation
-
-> **Note (1.0 stability contract):** The `ValidatorCompiler` API is marked
-> `@experimental` and is **not** part of the 1.0 stability guarantee. The
-> compiler's public interface (method signatures, supported keywords, codegen
-> output format) may change in any minor release (1.1, 1.2, ...) without
-> notice. If you depend on the compiler, pin the exact version and test
-> generated code after each upgrade. The runtime validator
-> (`OpenApiValidatorBuilder::build()`) is the stable API surface for 1.0.
-
-Generate optimized validator code:
-
-```php
-use Duyler\OpenApi\Compiler\ValidatorCompiler;
-use Duyler\OpenApi\Schema\Model\Schema;
-
-$schema = new Schema(
-    type: 'object',
-    properties: [
-        'name' => new Schema(type: 'string'),
-        'age' => new Schema(type: 'integer'),
-    ],
-    required: ['name', 'age'],
-);
-
-$compiler = new ValidatorCompiler();
-$code = $compiler->compile($schema, 'UserValidator');
-
-// Save generated validator
-file_put_contents('UserValidator.php', $code);
-
-// Use generated validator
-require_once 'UserValidator.php';
-$validator = new UserValidator();
-$validator->validate(['name' => 'John', 'age' => 30]);
-```
-
-The compiler generates a standalone PHP class with hardcoded validation rules. The generated code has a minimal runtime dependency on `Duyler\OpenApi\Validator\TypeFormatter::format()` for type-mismatch error messages; otherwise no library code is invoked.
-
-#### Compilation with $ref Resolution
-
-Use `compileWithRefResolution()` to inline `$ref` references from an OpenAPI document:
-
-```php
-use Duyler\OpenApi\Compiler\ValidatorCompiler;
-use Duyler\OpenApi\Schema\OpenApiDocument;
-
-$compiler = new ValidatorCompiler();
-
-// Resolve $ref pointers against the document before compiling
-$code = $compiler->compileWithRefResolution($schema, 'PetValidator', $document);
-```
-
-Circular references are detected and throw a `RuntimeException`.
-
-#### Compilation with Caching
-
-Use `compileWithCache()` to avoid recompiling the same schema:
-
-```php
-use Duyler\OpenApi\Compiler\ValidatorCompiler;
-use Duyler\OpenApi\Compiler\CompilationCache;
-use Symfony\Component\Cache\Adapter\FilesystemAdapter;
-
-$cachePool = new FilesystemAdapter();
-$compilationCache = new CompilationCache($cachePool);
-
-$compiler = new ValidatorCompiler();
-
-// First call compiles and caches, subsequent calls return cached code
-$code = $compiler->compileWithCache($schema, 'UserValidator', $compilationCache);
-
-// For schemas that contain a $ref, pass the OpenApiDocument as the fourth
-// argument so the cache key can resolve #/components/schemas/... pointers
-// against the document and fingerprint its components.schemas map.
-$code = $compiler->compileWithCache($refSchema, 'PetValidator', $compilationCache, $document);
-```
-
-`CompilationCache` uses a PSR-6 cache pool and generates a SHA-256 hash that incorporates the target class name, the schema snapshot, and (when supplied) the document context, then collapses the compound input through a second SHA-256 pass so the returned key never exceeds `namespace.length + 1 + 64` characters regardless of how long the class name is. The class name input prevents collisions when the same schema is compiled under different class names; the document context input (a SHA-256 fingerprint of the document's `components.schemas` map, applied after in-memory `#/components/schemas/...` pointer resolution) prevents cross-document cache poisoning when tenants share a PSR-6 pool. Schemas that contain a `$ref` therefore require the document argument; pass `null` only for `$ref`-free schemas. Cached entries expire after the configured TTL (default: 24 hours / 86400 seconds). Pass a custom TTL to the `CompilationCache` constructor to override:
-
-```php
-$compilationCache = new CompilationCache($pool, ttl: 3600); // 1-hour TTL
-```
-
-`CompilationCache` implements `CompilationCacheInterface`, which is the
-extension point for swapping the cache backend (for example, a Redis-
-backed pool with a different key namespace, or a noop pool that always
-recompiles for development):
-
-| Method | Signature | Purpose |
-|--------|-----------|---------|
-| `get` | `(string $schemaHash): ?string` | Read cached compiled PHP source, or `null` on miss |
-| `set` | `(string $schemaHash, string $compiledCode): void` | Persist compiled source |
-| `generateKey` | `(Schema $schema, string $className, ?OpenApiDocument $document = null): string` | Compute the cache key from the schema, target class name, and (optional) document context for `$ref` resolution |
-
-Pass any `CompilationCacheInterface` implementation to
-`ValidatorCompiler::compileWithCache()`; `CompilationCache` is the
-PSR-6-backed default.
-
-#### Compiler Limitations
-
-The compiler does not support all JSON Schema keywords. If a schema uses unsupported keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `patternProperties`, `format`, `minProperties`, `maxProperties`, `prefixItems`, `discriminator`, `dependentSchemas`, `unevaluatedProperties`, `unevaluatedItems`, `contentEncoding`, `contentMediaType`, `contentSchema`, the boolean form of `items`/`contains`/`propertyNames`/`if`/`then`/`else`/`not`/`unevaluatedItems`, or `additionalProperties` as a Schema — the bool `true`/`false` form is supported), the compiler throws `UnsupportedKeywordException`. Unsupported keywords are detected anywhere in the schema tree (top-level, nested `properties`, or `items`); the compiler never silently emits a validator that ignores them. See the Limitations section below for details.
-
-`prefixItems` is rejected with `UnsupportedKeywordException` during compilation — positional item validation is not generated. Use the runtime validator for `prefixItems` enforcement.
-
-For supported keywords, the generated code matches runtime-validator semantics for these edge cases and defensive wrappers:
-
-- `type: integer` accepts whole floats (`3.0`) per JSON Schema 2020-12 §4.2.3, and rejects non-whole floats (`3.14`, `Inf`, `NaN`).
-- `multipleOf` uses the integer modulus path (`%`) when both operands are integers, and falls back to a quotient-plus-relative-epsilon check (`1e-9 * max(1.0, abs($quotient))`) for float operands — matching `NumericRangeValidator::isMultipleOf` so large dividends (e.g. `1e20 / 0.1`) do not lose precision the way `fmod` does.
-- Top-level `const`, `enum`, and `uniqueItems` keywords use an inlined copy of `JsonEquals::equals` / `JsonEquals::arraysEqual` so the compiled validator honours JSON Schema 2020-12 §4.2.2 instance equality: `1` and `1.0` are equal; object keys are unordered; bool is distinct from int. Mixed int/float comparisons above the 2^53 IEEE 754 boundary are rejected as unequal (mirrors `JsonEquals::SAFE_INT64_FLOAT_BOUNDARY`). For `uniqueItems`, the inline `canonicalJsonKey` helper canonicalises whole-float-to-int and `ksort`s object keys before hashing, so `[1, 1.0]` and `[{a:1,b:2}, {b:2,a:1}]` are detected as duplicates; an associative-array `isset` lookup gives O(n) enforcement with a `100000` unique-entry cap matching `ArrayLengthValidator::MAX_UNIQUE_CHECK`. `JsonException` from `json_encode` is converted to `RuntimeException` so the standalone-validator contract (only generic `RuntimeException` is thrown) is preserved. The same inlined `jsonEquals` is used for `enum` and `const` checks inside array `items` and nested object `properties`, so instance equality (`1` matches enum `[1, 2, 3]`) holds at every depth (R4-CORRECTNESS-013).
-- `pattern` is matched inside an inlined defensive wrapper that lowers `pcre.backtrack_limit` to `10_000` for the duration of the call (mirroring `PregExecutor::DEFAULT_MAX_BACKTRACKS`) and restores the previous value inside a `try`/`finally`. This bounds execution time for catastrophic-backtracking patterns such as `(a+)+` (CWE-1333, CWE-400) without breaking the standalone-validator contract: no library code is emitted into the generated class. PCRE errors (`preg_match === false`) are disambiguated from no-match (`0`) via distinct `RuntimeException` messages. The same wrapper is emitted for `pattern` declared on nested object properties and array `items`, so the ReDoS defence applies at every depth.
-- Nested `properties` and `items` enforce the same supported-keyword subset as the top-level schema (R4-CORRECTNESS-004). `type`, `enum`, `const`, `minLength`, `maxLength`, `pattern`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`, `minItems`, `maxItems`, `uniqueItems`, `required`, `additionalProperties: false`, `properties`, and `items` are all emitted for nested properties and array items via a shared `generateConstraintsForSchema` helper, so there is no behavioural asymmetry between top-level and nested paths. Unsupported keywords encountered anywhere in the schema tree (including inside `properties` and `items`) throw `UnsupportedKeywordException` at compile time rather than being silently ignored.
-
-Use the runtime validator when you need the typed error classes (`TypeMismatchError`, `MultipleOfKeywordError`, …); the compiler only emits generic `RuntimeException`.
 
 ## Configuration Options
 
@@ -1147,6 +1038,16 @@ $validator = OpenApiValidatorBuilder::create()
 - `pattern` - Regular expression pattern
 - `format` - Format validation (email, uri, uuid, date-time, etc.)
 
+String length is measured in UTF-16 code units: supplementary characters
+(U+10000 — U+10FFFF) are encoded as UTF-16 surrogate pairs and count as 2
+code units — the counting used by `String.prototype.length`, unlike ajv,
+whose default counts Unicode code points (the literal spec reading).
+This is a deliberate interoperability choice (SPEC-06): JSON Schema
+2020-12 §6.3.1–§6.3.2 define string length as the number of characters
+per RFC 8259, so thresholds on supplementary characters can differ when
+porting schemas. The runtime validator (`Utf16::length`) enforces this
+semantics.
+
 ### Pattern Validation
 
 All regular expressions in schemas are validated during schema parsing. If a pattern is invalid, an `InvalidPatternException` is thrown.
@@ -1199,6 +1100,17 @@ new Schema(pattern: '[invalid')
 - `minItems` / `maxItems` - Array length constraints
 - `uniqueItems` - Unique item requirement
 - `contains` / `minContains` / `maxContains` - Item presence validation
+
+`uniqueItems`, `enum`, and `const` enforce JSON Schema 2020-12 §4.2.2
+instance equality via `JsonEquals`: `1` and `1.0` are equal, object keys
+are unordered, and bool is distinct from int; mixed int/float comparisons
+above the 2^53 IEEE 754 boundary are rejected as unequal
+(`ScalarKeyCodec::SAFE_INT64_FLOAT_BOUNDARY`). For `uniqueItems`, scalar
+membership keys are canonicalised by `ScalarKeyCodec`, while object keys
+are sorted via `ksort` before encoding, so `[1, 1.0]` and
+`[{a:1,b:2}, {b:2,a:1}]` are detected as duplicates under a `100000`
+unique-entry cap (`ArrayLengthValidator::MAX_UNIQUE_CHECK`); the same
+equality applies to `enum` and `const` at every nesting depth.
 
 ### Object Validation
 - `properties` - Property definitions
@@ -1426,8 +1338,8 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | Exception | Description |
 |-----------|-------------|
 | `BodyTooLargeException` | Request or response body exceeded the configured `maxJsonBodySize` / `maxMultipartBodySize` cap; body was rejected before full materialisation (CWE-400, CWE-770) |
+| `MultipartBodyTooLargeException` | Multipart request yielded more than 1000 parts (part-count cap, DoS defence; CWE-400); extends `\RuntimeException` |
 | `BuilderException` | Builder precondition failure: spec file unreadable, `withExternalRefAllowedRoot` path does not exist, or other builder-state violation |
-| `CompilationCacheException` | `CompilationCache` / `compileWithCache()` invoked with a schema that contains a `$ref` but no `OpenApiDocument` context |
 | `ExternalRefSecurityException` | External `$ref` violates builtin resolver security policy (non-allowlisted scheme, path traversal outside the allowed root). Surfaced by `RefResolver` as `UnresolvableRefException` |
 | `ExternalRefTooLargeException` | External `$ref` file exceeds the configured `maxBytes` limit (default 10 MB); extends `\RuntimeException` (not a security policy violation) |
 | `InvalidMultipleOfSchemaException` | Schema declares `multipleOf` ≤ 0 (mathematically unsatisfiable); also has `forNonPositiveValue()` and the deprecated `forLargeIntegerWithoutBcmath()` factory |
@@ -1450,6 +1362,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `TooManyItemsForUniqueCheckError` | `uniqueItems: true` evaluated on an array larger than `ArrayLengthValidator::MAX_UNIQUE_CHECK` (default 100 000); DoS defence against quadratic uniqueness scans |
 | `TooManyRecordsException` | Streaming response (NDJSON / SSE / JSON Text Sequence) yielded more records than `maxStreamingRecords` (default 100 000) |
 | `UndefinedResponseException` | Response status code not defined in spec |
+| `UnknownLinkException` | `resolveLink()` / `resolveLinkWithContext()` invoked with a link name not declared under `components/links`; extends `\InvalidArgumentException` |
 | `UnknownCallbackException` | `validateCallback()` invoked with a callback name not declared in the spec; extends `\InvalidArgumentException` |
 | `UnknownValidatorException` | Unknown validator type requested |
 | `UnknownWebhookException` | `validateWebhook()` invoked with a webhook name not declared in the spec; extends `\InvalidArgumentException` |
@@ -1680,7 +1593,6 @@ the exception is raised again on every subsequent `build()`.
 file path and content (or raw content for string-loaded specs). The
 content-hash defends against cache-poisoning via size-preserving or
 mtime-preserving spec tampering (OWASP ASVS V8.1.3, CWE-349, CWE-1023).
-`CompilationCache` uses the same SHA-256 keying scheme.
 
 `SchemaCache` exposes the standard cache lifecycle on top of the PSR-6
 pool:
@@ -1699,34 +1611,6 @@ The cache key is normally derived from the spec via the builder. The
 operators that manage cache lifecycle outside the build cycle (cache
 warming at deploy time, selective invalidation after a hot-reload,
 clearing before a memory-budget-critical request).
-
-For compiled validators, use `CompilationCache` to avoid regenerating PHP code:
-
-```php
-use Duyler\OpenApi\Compiler\ValidatorCompiler;
-use Duyler\OpenApi\Compiler\CompilationCache;
-use Symfony\Component\Cache\Adapter\FilesystemAdapter;
-
-$compilationCache = new CompilationCache(new FilesystemAdapter());
-$compiler = new ValidatorCompiler();
-
-$code = $compiler->compileWithCache($schema, 'UserValidator', $compilationCache);
-```
-
-### When to Use Compilation
-
-The `ValidatorCompiler` generates standalone PHP classes with hardcoded validation rules. This is faster than runtime schema traversal because the compiled code has no reflection, no `$ref` resolution, and no dynamic dispatch.
-
-Use compilation when:
-- The schema is stable and does not change at runtime
-- You need maximum throughput for hot-path validation
-- The schema uses only basic keywords (no `allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `format`)
-
-Stick with runtime validation when:
-- The schema changes frequently or is user-defined
-- You need composition keywords (`allOf`, `anyOf`, `oneOf`)
-- You need format validation (`email`, `uuid`, `date-time`, etc.)
-- You need `$ref` resolution against an OpenAPI document (use `compileWithRefResolution()` instead)
 
 ### Coercion Impact
 
@@ -1788,68 +1672,21 @@ per-class mitigation.
 | `Duyler\OpenApi\Validator\LibxmlSecuredContext` | Process-global `libxml_use_internal_errors` and `libxml_set_external_entity_loader` captured/restored inside `run()` | Run XML body validation (`contentMediaType: application/xml`) in a prefork worker or delegate XML parsing to an isolated `Swoole\Process` worker; under coroutines the helper may either bypass XXE protection for one coroutine or disable the entity loader process-wide | Swoole coroutines, FrankenPHP threaded workers |
 | `Duyler\OpenApi\Validator\PregExecutor` | Process-global `pcre.backtrack_limit` and `pcre.recursion_limit` mutated via `ini_set` in `match()`/`matchAll()` | Prefer prefork workers; each coroutine should own its own `PregExecutor` instance (the default) and must not assume the ReDoS cap applies to a specific call when coroutines yield inside `preg_match` | Swoole coroutines, FrankenPHP threaded workers |
 
-##### O-004 — nested `getOrCreate()` deadlocks under `Swoole\Lock(SWOOLE_MUTEX)`
-
-`Swoole\Lock(SWOOLE_MUTEX)` (the default) is **non-reentrant**. The lock is
-held for the entire duration of the `$factory` closure passed to
-`getOrCreate()`. If `$factory` recursively re-enters `getOrCreate()` on the
-same lock — even on a different key — the calling coroutine deadlocks. Keep
-factories non-blocking (no I/O) and non-recursive; never embed a
-`getOrCreate()` call inside another.
-
-##### O-006 / S-011 — XML body validation races on libxml globals
-
-`LibxmlSecuredContext::run()` captures `libxml_use_internal_errors` and the
-external entity loader, installs a deny-all loader for the duration of the
-work closure, and restores both inside a `try/finally`. Under Swoole
-coroutines the capture/restore sequence races with concurrent XML parsing
-in other coroutines. Two failure modes exist:
-
-1. Coroutine A installs the deny-all loader; coroutine B captures it as the
-   "previous" state; A restores; B restores to the deny-all loader ->
-   process-wide XML parsing is left without a working entity loader.
-2. A installs the deny-all loader; B yields inside its `$work`; A restores
-   to the default loader; B's `$work` observes the default loader -> XXE
-   protection is silently bypassed for B.
-
-Recommended mitigations: restrict XML body validation to prefork workers,
-or delegate XML parsing to an isolated `Swoole\Process` worker.
-
-##### O-007 / S-020 — `pcre.backtrack_limit` / `pcre.recursion_limit` race
-
-`PregExecutor::match()` and `PregExecutor::matchAll()` lower both
-`pcre.backtrack_limit` and `pcre.recursion_limit` (`PHP_INI_ALL`,
-process-global) before the `preg_match` call and restore the previous
-values inside `try/finally`. The defaults
-(`PregExecutor::DEFAULT_MAX_BACKTRACKS = 10_000`,
-`PregExecutor::DEFAULT_MAX_RECURSION = 512`) are deliberately 100x /
-~2x tighter than the PHP defaults (`1_000_000` / `1_000`) to actively
-defend against catastrophic backtracking (CWE-1333, ReDoS). Under
-Swoole coroutines a concurrent `preg_match` in another coroutine may
-observe either the lowered value (ReDoS cap silently non-functional)
-or restore to it (process left with the reduced cap after the call
-returns). Validation correctness is preserved, but the ReDoS cap may
-not apply to a specific call when coroutines yield inside `preg_match`.
-Prefer prefork workers; the `OpenApiValidatorBuilder` already wires one
-`PregExecutor` instance per validator, so per-coroutine isolation
-requires per-coroutine validator construction.
-
-The prefork model (one request per worker process, no shared mutable state) is
-the safest option and requires no extra configuration.
-
-```php
-// Build once at worker startup
-$validator = OpenApiValidatorBuilder::create()
-    ->fromYamlFile('openapi.yaml')
-    ->withCache($schemaCache)
-    ->build();
-
-// Reuse across requests (prefork model only)
-while ($request = $worker->waitRequest()) {
-    $operation = $validator->validateRequest($request);
-    // ...
-}
-```
+Within a single `match()` / `matchAll()` call, `PregExecutor` wraps the
+underlying `preg_match` / `preg_match_all` with the following ReDoS
+security invariants (CWE-1333, CWE-400): both `pcre.backtrack_limit` and
+`pcre.recursion_limit` are captured **before** being lowered (the
+recursion cap bounds C-stack exhaustion on deeply nested patterns);
+`set_error_handler` is installed to suppress PCRE compile warnings, which
+surface through the `false` return value instead; `restore_error_handler`
+plus `ini_set` always run inside a `finally` block, so the previous values
+are restored even when validation throws; a non-zero `preg_last_error()`
+raises `PregRuntimeException` via `assertNoPcreError()`, so a runtime
+failure can never masquerade as "pattern did not match". The default
+backtrack cap is `PregExecutor::DEFAULT_MAX_BACKTRACKS` (`10_000`),
+configurable via `withMaxRegexBacktracks`; the coroutine-level race on
+these process-global values is captured in the `PregExecutor` table row
+above.
 
 If the OpenAPI specification changes at runtime, rebuild the validator. The old instances will be garbage-collected when no longer referenced.
 
@@ -2120,18 +1957,7 @@ Limitations:
   `unevaluatedProperties`, `contentSchema`, `items`, `contains`,
   `propertyNames`, `if`, `then`, `else`, `not`, `unevaluatedItems`.
   `true` always passes; `false` always rejects (per JSON Schema 2020-12
-  §4.3.2). The `ValidatorCompiler` rejects boolean-form `items`,
-  `contains`, `propertyNames`, `if`, `then`, `else`, `not`,
-  `unevaluatedItems` with `UnsupportedKeywordException`; use the runtime
-  validator for these schemas.
-
-### Validator Compiler
-
-The `ValidatorCompiler` is marked as `@experimental`. It supports a subset of JSON Schema keywords: `type`, `enum`, `const`, `minLength`, `maxLength`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`, `pattern`, `minItems`, `maxItems`, `uniqueItems`, `properties`, `required`, `additionalProperties` (bool form only), `items`. The same subset is enforced at every depth — for nested object `properties` and array `items`, the compiler emits the same constraints as for top-level fields (R4-CORRECTNESS-004).
-
-The compiler does not support composition keywords (`allOf`, `anyOf`, `oneOf`, `not`), conditional keywords (`if`/`then`/`else`), `patternProperties`, `format`, `minProperties`, `maxProperties`, `prefixItems`, `discriminator`, `dependentSchemas`, `unevaluatedProperties`, `unevaluatedItems`, `contentEncoding`, `contentMediaType`, `contentSchema`, or `additionalProperties` as a Schema (the bool `true`/`false` form is supported). The boolean form of `items`, `contains`, `propertyNames`, `if`, `then`, `else`, `not`, and `unevaluatedItems` is also unsupported and throws `UnsupportedKeywordException`; use the runtime validator for these schemas. Unsupported keywords are detected anywhere in the schema tree (top-level, nested `properties`, or `items`); if any are present, `compile()` throws `UnsupportedKeywordException` rather than silently producing a validator that ignores them.
-
-Generated validators throw generic `RuntimeException` on failure rather than the typed error classes used by the runtime validator.
+  §4.3.2).
 
 ### Content Negotiation
 

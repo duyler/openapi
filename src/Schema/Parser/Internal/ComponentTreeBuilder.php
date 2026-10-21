@@ -24,9 +24,12 @@ use function strtolower;
 /** @internal */
 final readonly class ComponentTreeBuilder
 {
-    private const string DEPRECATION_VERSION = '3.2.0';
+    private readonly InlineExampleResolver $inlineExampleResolver;
 
-    public function __construct(private OpenApiBuildContext $context) {}
+    public function __construct(private OpenApiBuildContext $context)
+    {
+        $this->inlineExampleResolver = new InlineExampleResolver();
+    }
 
     public function buildRequestBody(array $data): RequestBody
     {
@@ -69,9 +72,7 @@ final readonly class ComponentTreeBuilder
             encoding: $this->nullable($data, 'encoding', $this->buildEncodingMap(...)),
             itemEncoding: $this->nullable($data, 'itemEncoding', $this->buildEncoding(...)),
             prefixEncoding: $this->nullable($data, 'prefixEncoding', $this->buildPrefixEncoding(...)),
-            example: isset($data['example']) && false === is_array($data['example'])
-                ? $this->buildExample(['value' => $data['example']])
-                : null,
+            example: isset($data['example']) ? $this->inlineExampleResolver->resolve($data['example']) : null,
             examples: isset($data['examples']) && is_array($data['examples']) ? TypeHelper::asStringMixedMapOrNull($data['examples']) : null,
         );
     }
@@ -144,8 +145,8 @@ final readonly class ComponentTreeBuilder
     /** @param array<string, mixed> $data */
     public function buildHeader(array $data): Header
     {
-        if ($this->context->shouldWarnDeprecation() && isset($data['allowEmptyValue']) && $data['allowEmptyValue']) {
-            $this->context->deprecationLogger->warn('allowEmptyValue', 'Header Object', self::DEPRECATION_VERSION);
+        if (OpenApiBuildContext::shouldWarnDeprecation($this->context->documentVersion) && isset($data['allowEmptyValue']) && $data['allowEmptyValue']) {
+            $this->context->deprecationLogger->warn('allowEmptyValue', 'Header Object', OpenApiBuildContext::DEPRECATION_VERSION);
         }
 
         return new Header(
@@ -208,8 +209,8 @@ final readonly class ComponentTreeBuilder
     /** @param array<string, mixed> $data */
     private function warnExampleDeprecation(array $data, string $object, string $alternative): void
     {
-        if ($this->context->shouldWarnDeprecation() && isset($data['example'])) {
-            $this->context->deprecationLogger->warn('example', $object, self::DEPRECATION_VERSION, $alternative);
+        if (OpenApiBuildContext::shouldWarnDeprecation($this->context->documentVersion) && isset($data['example'])) {
+            $this->context->deprecationLogger->warn('example', $object, OpenApiBuildContext::DEPRECATION_VERSION, $alternative);
         }
     }
 }

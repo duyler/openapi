@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\SchemaValidator\AllOfValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -29,7 +31,7 @@ class AllOfValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new AllOfValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $this->validator = new AllOfValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]
@@ -200,7 +202,7 @@ class AllOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function allOf_propagates_nested_validation_exceptions(): void
+    public function all_of_propagates_nested_validation_exceptions(): void
     {
         $schema = new Schema(
             allOf: [
@@ -224,7 +226,7 @@ class AllOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function allOf_propagates_invalid_data_type_errors(): void
+    public function all_of_propagates_invalid_data_type_errors(): void
     {
         $schema = new Schema(
             allOf: [new Schema(type: 'string')],
@@ -240,7 +242,7 @@ class AllOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function allOf_passes_when_parent_schema_is_nullable_and_data_is_null(): void
+    public function all_of_passes_when_parent_schema_is_nullable_and_data_is_null(): void
     {
         $schema = new Schema(
             nullable: true,
@@ -253,7 +255,7 @@ class AllOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function allOf_rejects_null_when_parent_nullable_is_not_honored(): void
+    public function all_of_rejects_null_when_parent_nullable_is_not_honored(): void
     {
         $schema = new Schema(
             nullable: true,

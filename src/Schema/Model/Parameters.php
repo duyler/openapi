@@ -19,6 +19,11 @@ final readonly class Parameters implements JsonSerializable
     #[Override]
     public function jsonSerialize(): array
     {
-        return ['parameters' => array_map(fn($param) => $param instanceof JsonSerializable ? $param->jsonSerialize() : $param, $this->parameters)];
+        return [
+            'parameters' => array_map(
+                fn(Parameter|string $param) => $param instanceof JsonSerializable ? $param->jsonSerialize() : $param,
+                $this->parameters,
+            ),
+        ];
     }
 }

@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Request\CookieValidator;
 use Duyler\OpenApi\Validator\Request\ParameterDeserializer;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
-use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -23,7 +25,12 @@ final class CookieValidatorValidateWithHeaderTest extends TestCase
 
     protected function setUp(): void
     {
-        $schemaValidator = new SchemaValidator(new ValidatorPool(), BuiltinFormats::create());
+        $schemaValidator = new SchemaValidatorDependencies(
+            pool: new ValidatorPool(),
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), BuiltinFormats::create()),
+            formatRegistry: BuiltinFormats::create(),
+        )->rootStatelessValidator();
         $deserializer = new ParameterDeserializer();
         $coercer = new TypeCoercer();
 
@@ -62,7 +69,7 @@ final class CookieValidatorValidateWithHeaderTest extends TestCase
 
         $this->validator->validateWithHeader([], '', [$param]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -77,7 +84,7 @@ final class CookieValidatorValidateWithHeaderTest extends TestCase
 
         $this->validator->validateWithHeader([], 'token=abc123', [$param]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -92,7 +99,7 @@ final class CookieValidatorValidateWithHeaderTest extends TestCase
 
         $this->validator->validateWithHeader(['theme' => 'dark'], '', [$param]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -102,7 +109,7 @@ final class CookieValidatorValidateWithHeaderTest extends TestCase
 
         $this->validator->validateWithHeader([], '', [$param]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -110,7 +117,7 @@ final class CookieValidatorValidateWithHeaderTest extends TestCase
     {
         $this->validator->validateWithHeader([], '', ['not_a_param', 42]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -120,6 +127,6 @@ final class CookieValidatorValidateWithHeaderTest extends TestCase
 
         $this->validator->validateWithHeader([], 'test=value', [$param]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 }

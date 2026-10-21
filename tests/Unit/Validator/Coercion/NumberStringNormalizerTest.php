@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Coercion;
 
 use Duyler\OpenApi\Validator\Coercion\NumberStringNormalizer;
+use Duyler\OpenApi\Validator\Exception\InvalidNumericStringException;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -66,6 +67,24 @@ final class NumberStringNormalizerTest extends TestCase
     public function canonicalize_returns_null_for_invalid_input(string $input): void
     {
         $this->assertNull(NumberStringNormalizer::canonicalize($input));
+    }
+
+    #[Test]
+    public function canonicalize_rejects_huge_exponent(): void
+    {
+        $this->expectException(InvalidNumericStringException::class);
+        $this->expectExceptionMessage('Scientific notation exponent 999999999 exceeds double precision boundary 320.');
+
+        NumberStringNormalizer::canonicalize('1e999999999');
+    }
+
+    #[Test]
+    public function canonicalize_rejects_huge_negative_exponent(): void
+    {
+        $this->expectException(InvalidNumericStringException::class);
+        $this->expectExceptionMessage('Scientific notation exponent -999999999 exceeds double precision boundary 320.');
+
+        NumberStringNormalizer::canonicalize('1e-999999999');
     }
 
     #[Test]
@@ -228,6 +247,24 @@ final class NumberStringNormalizerTest extends TestCase
         $this->expectExceptionMessage('Numeric value overflows IEEE-754 double range (INF)');
 
         NumberStringNormalizer::castStringToFloatOrFail('1.8e308');
+    }
+
+    #[Test]
+    public function cast_string_to_float_rejects_subnormal_boundary_with_range_reason(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+        $this->expectExceptionMessage('Numeric value is outside the representable range of a double');
+
+        NumberStringNormalizer::castStringToFloatOrFail('0.1e-320');
+    }
+
+    #[Test]
+    public function cast_string_to_float_rejects_deep_subnormal_with_range_reason(): void
+    {
+        $this->expectException(TypeMismatchError::class);
+        $this->expectExceptionMessage('Numeric value is outside the representable range of a double');
+
+        NumberStringNormalizer::castStringToFloatOrFail('0.001e-320');
     }
 
     #[Test]

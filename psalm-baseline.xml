@@ -1,17 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <files psalm-version="6.16.1@f1f5de594dc76faf8784e02d3dc4716c91c6f6ac">
-  <file src="src/Schema/Model/Example.php">
-    <MixedAssignment>
-      <code><![CDATA[$data['dataValue']]]></code>
-      <code><![CDATA[$data['serializedValue']]]></code>
-      <code><![CDATA[$data['value']]]></code>
-    </MixedAssignment>
-  </file>
-  <file src="src/Schema/Model/Header.php">
-    <MixedAssignment>
-      <code><![CDATA[$data['example']]]></code>
-    </MixedAssignment>
-  </file>
   <file src="src/Schema/Parser/ComponentsBuilder.php">
     <ArgumentTypeCoercion>
       <code><![CDATA[$data]]></code>
@@ -43,11 +31,6 @@
       <code><![CDATA[$result]]></code>
       <code><![CDATA[array<string, T>]]></code>
     </MixedReturnTypeCoercion>
-  </file>
-  <file src="src/Schema/Parser/Internal/ArraySchemaKeywordParser.php">
-    <MixedAssignment>
-      <code><![CDATA[$value]]></code>
-    </MixedAssignment>
   </file>
   <file src="src/Schema/Parser/Internal/ComponentTreeBuilder.php">
     <ArgumentTypeCoercion>
@@ -81,9 +64,6 @@
     <MixedArgumentTypeCoercion>
       <code><![CDATA[TypeHelper::asArray($data['discriminator'])]]></code>
     </MixedArgumentTypeCoercion>
-    <MixedAssignment>
-      <code><![CDATA[$value]]></code>
-    </MixedAssignment>
   </file>
   <file src="src/Schema/Parser/Internal/CompositionTypeHelper.php">
     <MixedAssignment>
@@ -96,7 +76,6 @@
     </MixedArgument>
     <MixedAssignment>
       <code><![CDATA[$schema]]></code>
-      <code><![CDATA[$value]]></code>
     </MixedAssignment>
     <MixedReturnTypeCoercion>
       <code><![CDATA[$properties]]></code>
@@ -225,11 +204,6 @@
       <code><![CDATA[$data]]></code>
     </MixedArgumentTypeCoercion>
   </file>
-  <file src="src/Validator/Response/ResponseTypeCoercer.php">
-    <MixedAssignment>
-      <code><![CDATA[$item]]></code>
-    </MixedAssignment>
-  </file>
   <file src="src/Validator/Schema/ItemsValidatorWithContext.php">
     <MixedAssignment>
       <code><![CDATA[$arrayItem]]></code>
@@ -244,16 +218,5 @@
     <MixedAssignment>
       <code><![CDATA[$item]]></code>
     </MixedAssignment>
-  </file>
-  <file src="src/Validator/SchemaValidator/PatternPropertiesValidator.php">
-    <DocblockTypeContradiction>
-      <code><![CDATA[false === is_string($propertyName)]]></code>
-    </DocblockTypeContradiction>
-    <MixedAssignment>
-      <code><![CDATA[$propertyValue]]></code>
-    </MixedAssignment>
-    <RedundantConditionGivenDocblockType>
-      <code><![CDATA[is_string($propertyName)]]></code>
-    </RedundantConditionGivenDocblockType>
   </file>
 </files>

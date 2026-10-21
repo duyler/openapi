@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
+use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\AllOfValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\AnyOfValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\KeywordApplicable;
 use Duyler\OpenApi\Validator\SchemaValidator\OneOfValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -27,11 +29,13 @@ use function count;
 #[CoversClass(OneOfValidator::class)]
 final class CompositionBranchErrorsTest extends TestCase
 {
-    private ValidatorDependencies $dependencies;
+    private SchemaValidatorDependencies $dependencies;
 
     protected function setUp(): void
     {
-        $this->dependencies = new ValidatorDependencies(
+        $this->dependencies = new SchemaValidatorDependencies(
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), BuiltinFormats::create()),
             pool: new ValidatorPool(),
             formatRegistry: BuiltinFormats::create(),
         );
@@ -42,7 +46,9 @@ final class CompositionBranchErrorsTest extends TestCase
      */
     public static function compositionKeywordProvider(): iterable
     {
-        $dependencies = new ValidatorDependencies(
+        $dependencies = new SchemaValidatorDependencies(
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), BuiltinFormats::create()),
             pool: new ValidatorPool(),
             formatRegistry: BuiltinFormats::create(),
         );

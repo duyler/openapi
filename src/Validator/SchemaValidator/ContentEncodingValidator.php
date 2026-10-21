@@ -5,16 +5,19 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\InvalidContentEncodingException;
 use Override;
 
 use function base64_decode;
+use function base64_encode;
 use function is_string;
 
 final readonly class ContentEncodingValidator implements KeywordApplicable
 {
     public function __construct(
-        private readonly ValidatorDependencies $dependencies,
+        private readonly SchemaValidatorDependencies $dependencies,
     ) {}
 
     #[Override]

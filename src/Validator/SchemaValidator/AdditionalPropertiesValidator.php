@@ -10,8 +10,14 @@ use Duyler\OpenApi\Validator\Exception\AdditionalPropertyError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 
+use function array_diff;
+use function array_filter;
+use function array_is_list;
+use function array_keys;
+use function array_values;
 use function assert;
 use function count;
+use function implode;
 use function is_array;
 use function sprintf;
 

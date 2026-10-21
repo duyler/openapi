@@ -38,25 +38,22 @@ final readonly class PropertiesValidator extends AbstractSchemaValidator impleme
 
         $validator = $this->createSchemaValidator();
         $nullableAsType = $context?->nullableAsType ?? true;
+        $context ??= ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
 
         foreach ($schema->properties as $name => $propertySchema) {
             if (false === array_key_exists($name, $data)) {
                 continue;
             }
 
-            $this->validateProperty($data[$name], $name, $propertySchema, $validator, $nullableAsType, $context);
+            $this->validateProperty($data[$name], $name, $propertySchema, $validator, $context);
         }
     }
 
-    private function validateProperty(mixed $value, string $name, Schema $propertySchema, SchemaValidatorInterface $validator, bool $nullableAsType, ?ValidationContext &$context): void
+    private function validateProperty(mixed $value, string $name, Schema $propertySchema, SchemaValidatorInterface $validator, ValidationContext $context): void
     {
         try {
-            $allowNull = SchemaValueNormalizer::allowsNull($propertySchema, $nullableAsType);
+            $allowNull = SchemaValueNormalizer::allowsNull($propertySchema, $context->nullableAsType);
             $normalized = SchemaValueNormalizer::normalize($value, $allowNull);
-
-            if (null === $context) {
-                $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
-            }
 
             $context->enterBreadcrumb($name);
 

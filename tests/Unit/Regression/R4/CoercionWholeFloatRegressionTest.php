@@ -70,6 +70,7 @@ YAML;
         $this->assertNoValidationError(fn(): mixed => $validator->validateRequest(
             $this->jsonRequest(['count' => 3.0]),
         ));
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -80,6 +81,7 @@ YAML;
         $this->assertNoValidationError(fn(): mixed => $validator->validateRequest(
             $this->jsonRequest(['count' => 0.0]),
         ));
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -90,6 +92,7 @@ YAML;
         $this->assertNoValidationError(fn(): mixed => $validator->validateRequest(
             $this->jsonRequest(['count' => -42.0]),
         ));
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -131,6 +134,7 @@ YAML;
         $this->assertNoValidationError(fn(): mixed => $validator->validateRequest(
             $this->jsonRequest(['count' => 10.0]),
         ));
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -174,8 +178,6 @@ YAML;
         } catch (ValidationException $e) {
             self::fail(sprintf('Expected no validation failure, got: %s', $e->getMessage()));
         }
-
-        self::assertTrue(true);
     }
 
     /**

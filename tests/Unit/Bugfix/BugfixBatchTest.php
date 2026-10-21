@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Bugfix;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Compiler\ValidatorCompiler;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\Model\Parameter;
@@ -28,23 +27,16 @@ use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\SchemaValidator\AdditionalPropertiesValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\SchemaValidator\ConstValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\NumericRangeValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Webhook\WebhookValidator;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
-use RuntimeException;
-use NumberRejectStringB19;
-use NumberTypeValidatorB19;
-use PatternExportValidatorB13;
-use UnicodeLengthValidatorB12;
 use Duyler\OpenApi\Schema\Model\Components;
-use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use stdClass;
 
@@ -148,68 +140,11 @@ final class BugfixBatchTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * B12 (regression): the compiler must emit UTF-16 code-unit counting
-     * for minLength/maxLength, not naive strlen bytes. Updated for
-     * SPEC-06: UTF-16 code units per JSON Schema 2020-12 §6.3.1.
-     */
-    #[Test]
-    public function b12_compiler_generates_utf16_unit_counting_for_string_length(): void
-    {
-        $compiler = new ValidatorCompiler();
-        $schema = new Schema(type: 'string', minLength: 1, maxLength: 10);
-        $code = $compiler->compile($schema, 'Utf16LengthValidatorB12');
-
-        $this->assertStringContainsString('$utf16Length', $code);
-        $this->assertStringContainsString('$utf16Length < 1', $code);
-        $this->assertStringContainsString('$utf16Length > 10', $code);
-        $this->assertStringNotContainsString("mb_strlen(\$data, 'UTF-8')", $code);
-    }
-
-    /**
-     * B12 (regression): compiled validator must reject strings whose
-     * UTF-16 unit count exceeds maxLength. Cyrillic BMP characters
-     * remain 1 UTF-16 unit each.
-     */
-    #[Test]
-    public function b12_compiler_utf16_length_validates_unicode_correctly(): void
-    {
-        $compiler = new ValidatorCompiler();
-        $schema = new Schema(type: 'string', minLength: 1, maxLength: 6);
-        $code = $compiler->compile($schema, 'UnicodeLengthValidatorB12');
-
-        $evalCode = substr($code, 5);
-        eval($evalCode);
-
-        $validator = new UnicodeLengthValidatorB12();
-        $validator->validate('Привет');
-
-        $this->expectException(RuntimeException::class);
-        $validator->validate('Приветмир');
-    }
-
-    #[Test]
-    public function b13_compiler_uses_var_export_for_pattern(): void
-    {
-        $compiler = new ValidatorCompiler();
-        $schema = new Schema(type: 'string', pattern: '^[a-z]+\.(special)$');
-        $code = $compiler->compile($schema, 'PatternExportValidatorB13');
-
-        $this->assertStringContainsString('preg_match', $code);
-        $this->assertStringNotContainsString('addslashes', $code);
-
-        $evalCode = substr($code, 5);
-        eval($evalCode);
-
-        $validator = new PatternExportValidatorB13();
-        $validator->validate('test.special');
-    }
-
     #[Test]
     public function b14_const_null_validates_null_data(): void
     {
         $pool = new ValidatorPool();
-        $validator = new ConstValidator(new ValidatorDependencies(pool: $pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new ConstValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()), pool: $pool, formatRegistry: BuiltinFormats::create()));
 
         $schema = new Schema(type: 'null', const: null, hasConst: true);
 
@@ -222,7 +157,7 @@ final class BugfixBatchTest extends TestCase
     public function b14_const_null_rejects_non_null_data(): void
     {
         $pool = new ValidatorPool();
-        $validator = new ConstValidator(new ValidatorDependencies(pool: $pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new ConstValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()), pool: $pool, formatRegistry: BuiltinFormats::create()));
 
         $schema = new Schema(type: 'string', const: null, hasConst: true);
 
@@ -235,7 +170,7 @@ final class BugfixBatchTest extends TestCase
     public function b14_const_not_set_skips_validation(): void
     {
         $pool = new ValidatorPool();
-        $validator = new ConstValidator(new ValidatorDependencies(pool: $pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new ConstValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()), pool: $pool, formatRegistry: BuiltinFormats::create()));
 
         $schema = new Schema(type: 'string', const: null, hasConst: false);
 
@@ -248,7 +183,7 @@ final class BugfixBatchTest extends TestCase
     public function b15_additional_properties_ignores_pattern_properties(): void
     {
         $pool = new ValidatorPool();
-        $validator = new AdditionalPropertiesValidator(new ValidatorDependencies(pool: $pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new AdditionalPropertiesValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()), pool: $pool, formatRegistry: BuiltinFormats::create()));
 
         $schema = new Schema(
             type: 'object',
@@ -273,7 +208,7 @@ final class BugfixBatchTest extends TestCase
     public function b15_additional_properties_rejects_non_pattern_extra_keys(): void
     {
         $pool = new ValidatorPool();
-        $validator = new AdditionalPropertiesValidator(new ValidatorDependencies(pool: $pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new AdditionalPropertiesValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()), pool: $pool, formatRegistry: BuiltinFormats::create()));
 
         $schema = new Schema(
             type: 'object',
@@ -342,49 +277,13 @@ final class BugfixBatchTest extends TestCase
     public function b18_multiple_of_zero_throws_error(): void
     {
         $pool = new ValidatorPool();
-        $validator = new NumericRangeValidator(new ValidatorDependencies(pool: $pool, formatRegistry: BuiltinFormats::create()));
+        $validator = new NumericRangeValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()), pool: $pool, formatRegistry: BuiltinFormats::create()));
 
         $schema = new Schema(type: 'number', multipleOf: 0.0);
 
         $this->expectException(InvalidMultipleOfSchemaException::class);
 
         $validator->validate(42, $schema);
-    }
-
-    #[Test]
-    public function b19_compiler_number_type_accepts_integer(): void
-    {
-        $compiler = new ValidatorCompiler();
-        $schema = new Schema(type: 'number');
-        $code = $compiler->compile($schema, 'NumberTypeValidatorB19');
-
-        $this->assertStringContainsString('is_float($data)', $code);
-        $this->assertStringContainsString('is_int($data)', $code);
-
-        $evalCode = substr($code, 5);
-        eval($evalCode);
-
-        $validator = new NumberTypeValidatorB19();
-
-        $validator->validate(3.14);
-        $validator->validate(42);
-        $validator->validate(0);
-    }
-
-    #[Test]
-    public function b19_compiler_number_type_rejects_string(): void
-    {
-        $compiler = new ValidatorCompiler();
-        $schema = new Schema(type: 'number');
-        $code = $compiler->compile($schema, 'NumberRejectStringB19');
-
-        $evalCode = substr($code, 5);
-        eval($evalCode);
-
-        $validator = new NumberRejectStringB19();
-
-        $this->expectException(RuntimeException::class);
-        $validator->validate('not-a-number');
     }
 
     #[Test]
@@ -462,7 +361,12 @@ final class BugfixBatchTest extends TestCase
     public function b08_cookie_validator_uses_separate_strict_flag(): void
     {
         $pool = new ValidatorPool();
-        $schemaValidator = new SchemaValidator($pool, BuiltinFormats::create());
+        $schemaValidator = new SchemaValidatorDependencies(
+            pool: $pool,
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
+            formatRegistry: BuiltinFormats::create(),
+        )->rootStatelessValidator();
         $deserializer = new ParameterDeserializer();
         $coercer = new TypeCoercer();
 
@@ -486,7 +390,12 @@ final class BugfixBatchTest extends TestCase
     public function b08_abstract_parameter_validator_uses_separate_strict_flag(): void
     {
         $pool = new ValidatorPool();
-        $schemaValidator = new SchemaValidator($pool, BuiltinFormats::create());
+        $schemaValidator = new SchemaValidatorDependencies(
+            pool: $pool,
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
+            formatRegistry: BuiltinFormats::create(),
+        )->rootStatelessValidator();
         $deserializer = new ParameterDeserializer();
         $coercer = new TypeCoercer();
 

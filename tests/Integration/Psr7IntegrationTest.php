@@ -5,18 +5,16 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Integration;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Test\Support\StreamStubHelper;
+use Duyler\OpenApi\Test\Support\Psr7RequestStubFactory;
 use Duyler\OpenApi\Validator\Operation;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
-use Psr\Http\Message\UriInterface;
 
 final class Psr7IntegrationTest extends TestCase
 {
-    use StreamStubHelper;
+    use Psr7RequestStubFactory;
 
     #[Test]
     public function validate_request_with_psr7_request(): void
@@ -49,9 +47,9 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $request = $this->createPsr7Request(
-            '/users',
+        $request = $this->createStubRequest(
             'POST',
+            '/users',
             ['Content-Type' => 'application/json'],
             '{"name": "John Doe"}',
         );
@@ -103,62 +101,6 @@ YAML;
         $validator->validateResponse($response, $operation);
 
         $this->expectNotToPerformAssertions();
-    }
-
-    private function createPsr7Request(
-        string $uri,
-        string $method,
-        array $headers = [],
-        string $body = '',
-    ): object {
-        $request = $this->createStub(ServerRequestInterface::class);
-
-        $request
-            ->method('getMethod')
-            ->willReturn($method);
-
-        $uriMock = $this->createStub(UriInterface::class);
-        $uriMock
-            ->method('getPath')
-            ->willReturn($uri);
-        $uriMock
-            ->method('getQuery')
-            ->willReturn('');
-
-        $request
-            ->method('getUri')
-            ->willReturn($uriMock);
-
-        $request
-            ->method('getHeaders')
-            ->willReturn($headers);
-
-        $request
-            ->method('getHeaderLine')
-            ->willReturnCallback(function ($headerName) use ($headers) {
-                if ('Content-Type' === $headerName) {
-                    return 'application/json';
-                }
-
-                if ('Cookie' === $headerName) {
-                    return '';
-                }
-
-                return '';
-            });
-
-        $stream = $this->createStub(StreamInterface::class);
-        $stream
-            ->method('__toString')
-            ->willReturn($body);
-
-        $this->configureReadableStream($stream, $body);
-
-        $request
-            ->method('getBody')
-            ->willReturn($stream);
-
-        return $request;
     }
 
     private function createPsr7Response(

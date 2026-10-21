@@ -24,21 +24,6 @@ use function strlen;
 
 use const JSON_THROW_ON_ERROR;
 
-/**
- * Fail-closed confinement guard for external `$ref` references in
- * specs loaded via `fromYamlString()` / `fromJsonString()`.
- *
- * String-loaded specs have no auto-derived `externalRefAllowedRoot`, so the
- * builtin `FileExternalRefResolver` would otherwise run with `allowedRoot =
- * null` and silently accept any `file://...` or relative-path `$ref`. This
- * collaborator scans the raw spec before build() proceeds and rejects any
- * external `$ref` (or discriminator mapping/defaultMapping pointing outside
- * the document) when `externalRefAllowedRoot` has not been set.
- *
- * File-loaded specs skip the scan: their `externalRefAllowedRoot` is auto
- * derived from `dirname(realpath($path))` and the `FileExternalRefResolver`
- * enforces the boundary at resolution time.
- */
 final readonly class ExternalRefDetector
 {
     public const string CONFINEMENT_KEY_SUFFIX = '_confinement';
@@ -53,22 +38,34 @@ final readonly class ExternalRefDetector
             return;
         }
 
-        if (null === $this->config->specContent) {
+        $specContent = $this->config->specContent;
+
+        if (null === $specContent) {
             return;
         }
 
-        $confinementKey = null;
+        $cache = $this->config->cache;
 
-        if (null !== $this->config->cache) {
-            $confinementKey = new CacheKeyBuilder($this->config)
-                ->forString($this->config->specContent) . self::CONFINEMENT_KEY_SUFFIX;
+        if (null === $cache) {
+            $this->assertSpecIsConfined($specContent);
 
-            if (null !== $this->config->cache->getConfinement($confinementKey)) {
-                return;
-            }
+            return;
         }
 
-        $parsedSpec = $this->parseSpecContentAsArray($this->config->specContent);
+        $confinementKey = new CacheKeyBuilder($this->config)->forString($specContent)
+            . self::CONFINEMENT_KEY_SUFFIX;
+
+        if (null !== $cache->getConfinement($confinementKey)) {
+            return;
+        }
+
+        $this->assertSpecIsConfined($specContent);
+        $cache->setConfinement($confinementKey);
+    }
+
+    private function assertSpecIsConfined(string $specContent): void
+    {
+        $parsedSpec = $this->parseSpecContentAsArray($specContent);
         $specDepth = $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH;
         $maxDepth = max($specDepth, ValidationContext::MAX_DEPTH);
         $externalRef = $this->detect($parsedSpec, 0, $maxDepth);
@@ -80,10 +77,6 @@ final readonly class ExternalRefDetector
                 . 'or remove the external $ref from the spec.',
                 $externalRef,
             ));
-        }
-
-        if (null !== $this->config->cache && null !== $confinementKey) {
-            $this->config->cache->setConfinement($confinementKey);
         }
     }
 
@@ -132,7 +125,7 @@ final readonly class ExternalRefDetector
         /** @var mixed $ref */
         $ref = $data['$ref'];
 
-        if (is_string($ref) && !str_starts_with($ref, '#/')) {
+        if ($this->isExternalRefString($ref)) {
             return $ref;
         }
 
@@ -146,7 +139,7 @@ final readonly class ExternalRefDetector
             /** @var mixed $defaultMapping */
             $defaultMapping = $discriminator['defaultMapping'];
 
-            if (is_string($defaultMapping) && !str_starts_with($defaultMapping, '#/')) {
+            if ($this->isExternalRefString($defaultMapping)) {
                 return $defaultMapping;
             }
         }
@@ -155,19 +148,23 @@ final readonly class ExternalRefDetector
             /** @var array<array-key, mixed> $mapping */
             $mapping = $discriminator['mapping'];
 
+            /** @var mixed $mappingRef */
             foreach ($mapping as $mappingRef) {
-                /** @var mixed $mappingRef */
-                if (!is_string($mappingRef)) {
-                    continue;
-                }
-
-                if (!str_starts_with($mappingRef, '#/')) {
+                if ($this->isExternalRefString($mappingRef)) {
                     return $mappingRef;
                 }
             }
         }
 
         return null;
+    }
+
+    /**
+     * @psalm-assert-if-true string $ref
+     */
+    private function isExternalRefString(mixed $ref): bool
+    {
+        return is_string($ref) && false === str_starts_with($ref, '#/');
     }
 
     /** @return array<array-key, mixed> */

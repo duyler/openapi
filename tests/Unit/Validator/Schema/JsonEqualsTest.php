@@ -284,7 +284,7 @@ final class JsonEqualsTest extends TestCase
      * a false-positive DuplicateItemsError under `uniqueItems: true`.
      */
     #[Test]
-    public function uniqueItems_int64_no_false_duplicate(): void
+    public function unique_items_int64_no_false_duplicate(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromJsonString($this->specWithUniqueItemsArray())

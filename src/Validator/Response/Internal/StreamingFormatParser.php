@@ -10,12 +10,12 @@ use Psr\Http\Message\StreamInterface;
 interface StreamingFormatParser
 {
     /**
-     * @return list<array<int|string, mixed>|null>
+     * @return list<array<int|string, mixed>|scalar|null>
      */
     public function parseString(string $body): array;
 
     /**
-     * @return list<array<int|string, mixed>|null>
+     * @return list<array<int|string, mixed>|scalar|null>
      */
     public function parseStream(StreamInterface $stream): array;
 }

@@ -6,9 +6,11 @@ namespace Duyler\OpenApi\Test\Performance;
 
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\ArrayLengthValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\DuplicateItemsError;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -18,7 +20,7 @@ final class UniqueItemsBenchTest extends TestCase
     #[Test]
     public function ten_thousand_unique_items_validate_under_100ms(): void
     {
-        $validator = new ArrayLengthValidator(new ValidatorDependencies(pool: new ValidatorPool(), formatRegistry: BuiltinFormats::create()));
+        $validator = new ArrayLengthValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), BuiltinFormats::create()), pool: new ValidatorPool(), formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(type: 'array', uniqueItems: true);
         $data = array_map(
             static fn(int $i): string => 'value-' . $i,
@@ -37,7 +39,7 @@ final class UniqueItemsBenchTest extends TestCase
     #[Test]
     public function ten_thousand_items_with_single_duplicate_fail_under_100ms(): void
     {
-        $validator = new ArrayLengthValidator(new ValidatorDependencies(pool: new ValidatorPool(), formatRegistry: BuiltinFormats::create()));
+        $validator = new ArrayLengthValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), BuiltinFormats::create()), pool: new ValidatorPool(), formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(type: 'array', uniqueItems: true);
         $data = array_map(
             static fn(int $i): string => 'value-' . $i,

@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Functional\Request;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\Psr7RequestFactory;
 use Duyler\OpenApi\Validator\Exception\ConstError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
-use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\ServerRequestInterface;
 
 use function json_decode;
 use function json_encode;
@@ -56,13 +55,6 @@ paths:
           description: Created
 YAML;
 
-    private Psr17Factory $psrFactory;
-
-    protected function setUp(): void
-    {
-        $this->psrFactory = new Psr17Factory();
-    }
-
     /**
      * Sanity check: PHP's json_decode uses last value wins on duplicate keys.
      *
@@ -95,7 +87,7 @@ YAML;
             ->fromYamlString(self::DUPLICATE_KEYS_SPEC)
             ->build();
 
-        $request = $this->createJsonRequest('POST', '/data', '{"value": 1, "value": 2}');
+        $request = Psr7RequestFactory::createJsonRequest('POST', '/data', '{"value": 1, "value": 2}');
 
         $operation = $validator->validateRequest($request);
 
@@ -118,7 +110,7 @@ YAML;
             ->fromYamlString(self::DUPLICATE_KEYS_SPEC)
             ->build();
 
-        $request = $this->createJsonRequest('POST', '/data', '{"value": 2, "value": 1}');
+        $request = Psr7RequestFactory::createJsonRequest('POST', '/data', '{"value": 2, "value": 1}');
 
         $caught = null;
 
@@ -159,12 +151,5 @@ YAML;
         $reencoded = json_encode($decoded, JSON_THROW_ON_ERROR);
 
         $this->assertSame('{"value":2}', $reencoded);
-    }
-
-    private function createJsonRequest(string $method, string $path, string $body): ServerRequestInterface
-    {
-        return $this->psrFactory->createServerRequest($method, $path)
-            ->withHeader('Content-Type', 'application/json')
-            ->withBody($this->psrFactory->createStream($body));
     }
 }

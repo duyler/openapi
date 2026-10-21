@@ -185,7 +185,7 @@ final class ResponseValidationTest extends TestCase
     }
 
     #[Test]
-    public function status_code_range_2XX_valid(): void
+    public function status_code_range_2xx_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/status-codes.yaml')
@@ -215,7 +215,7 @@ final class ResponseValidationTest extends TestCase
     }
 
     #[Test]
-    public function status_code_range_4XX_valid(): void
+    public function status_code_range_4xx_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/status-codes.yaml')
@@ -245,7 +245,7 @@ final class ResponseValidationTest extends TestCase
     }
 
     #[Test]
-    public function status_code_range_5XX_valid(): void
+    public function status_code_range_5xx_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/status-codes.yaml')

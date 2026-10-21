@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Response;
 
 use Duyler\OpenApi\Validator\Response\StreamingContentParser;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -18,6 +19,7 @@ final class StreamingContentParserEdgeCaseTest extends TestCase
 {
     private StreamingContentParser $parser;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->parser = new StreamingContentParser();

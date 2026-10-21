@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator;
 
+use Duyler\OpenApi\Test\Support\CountingLock;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use InvalidArgumentException;
+use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -15,13 +17,14 @@ final class ValidatorPoolTest extends TestCase
 {
     private ValidatorPool $pool;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
     }
 
     #[Test]
-    public function getOrCreate_creates_new_instance(): void
+    public function get_or_create_creates_new_instance(): void
     {
         $instance = $this->pool->getOrCreate('key_a', fn() => new stdClass());
 
@@ -29,7 +32,7 @@ final class ValidatorPoolTest extends TestCase
     }
 
     #[Test]
-    public function getOrCreate_returns_same_instance_for_same_key(): void
+    public function get_or_create_returns_same_instance_for_same_key(): void
     {
         $instance1 = $this->pool->getOrCreate('key_a', fn() => new stdClass());
         $instance2 = $this->pool->getOrCreate('key_a', fn() => new stdClass());
@@ -38,7 +41,7 @@ final class ValidatorPoolTest extends TestCase
     }
 
     #[Test]
-    public function getOrCreate_returns_different_instances_for_different_keys(): void
+    public function get_or_create_returns_different_instances_for_different_keys(): void
     {
         $instance1 = $this->pool->getOrCreate('key_a', fn() => new stdClass());
         $instance2 = $this->pool->getOrCreate('key_b', fn() => new stdClass());
@@ -47,7 +50,7 @@ final class ValidatorPoolTest extends TestCase
     }
 
     #[Test]
-    public function getOrCreate_does_not_call_factory_on_cache_hit(): void
+    public function get_or_create_does_not_call_factory_on_cache_hit(): void
     {
         $callCount = 0;
         $factory = function () use (&$callCount) {
@@ -63,7 +66,7 @@ final class ValidatorPoolTest extends TestCase
     }
 
     #[Test]
-    public function getOrCreate_returns_strictly_same_object(): void
+    public function get_or_create_returns_strictly_same_object(): void
     {
         $object = new stdClass();
         $object->value = 42;
@@ -379,7 +382,7 @@ final class ValidatorPoolTest extends TestCase
     #[Test]
     public function mock_lock_is_acquired_and_released_for_each_get_or_create_call(): void
     {
-        $lock = $this->createCountingLock();
+        $lock = new CountingLock();
         $pool = new ValidatorPool(maxSize: 8, lock: $lock);
 
         $pool->getOrCreate('a', fn() => new stdClass());
@@ -393,7 +396,7 @@ final class ValidatorPoolTest extends TestCase
     #[Test]
     public function mock_lock_is_acquired_and_released_for_clear(): void
     {
-        $lock = $this->createCountingLock();
+        $lock = new CountingLock();
         $pool = new ValidatorPool(maxSize: 8, lock: $lock);
 
         $pool->getOrCreate('a', fn() => new stdClass());
@@ -406,7 +409,7 @@ final class ValidatorPoolTest extends TestCase
     #[Test]
     public function mock_lock_is_released_when_factory_throws(): void
     {
-        $lock = $this->createCountingLock();
+        $lock = new CountingLock();
         $pool = new ValidatorPool(maxSize: 8, lock: $lock);
 
         $factoryThrown = false;
@@ -427,7 +430,7 @@ final class ValidatorPoolTest extends TestCase
     #[Test]
     public function mock_lock_is_released_when_factory_throws_on_clear_after_eviction(): void
     {
-        $lock = $this->createCountingLock();
+        $lock = new CountingLock();
         $pool = new ValidatorPool(maxSize: 1, lock: $lock);
 
         $pool->getOrCreate('a', fn() => new stdClass());
@@ -445,24 +448,5 @@ final class ValidatorPoolTest extends TestCase
         self::assertTrue($factoryThrown, 'Factory exception must propagate through finally');
         self::assertSame(2, $lock->lockCount);
         self::assertSame(2, $lock->unlockCount);
-    }
-
-    private function createCountingLock(): object
-    {
-        return new class {
-            public int $lockCount = 0;
-
-            public int $unlockCount = 0;
-
-            public function lock(): void
-            {
-                ++$this->lockCount;
-            }
-
-            public function unlock(): void
-            {
-                ++$this->unlockCount;
-            }
-        };
     }
 }

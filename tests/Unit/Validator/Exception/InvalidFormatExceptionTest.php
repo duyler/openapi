@@ -37,7 +37,7 @@ final class InvalidFormatExceptionTest extends TestCase
     }
 
     #[Test]
-    public function dataPath_returns_empty_string(): void
+    public function data_path_returns_empty_string(): void
     {
         $exception = new InvalidFormatException(
             format: 'email',
@@ -49,7 +49,7 @@ final class InvalidFormatExceptionTest extends TestCase
     }
 
     #[Test]
-    public function schemaPath_returns_format_path(): void
+    public function schema_path_returns_format_path(): void
     {
         $exception = new InvalidFormatException(
             format: 'email',

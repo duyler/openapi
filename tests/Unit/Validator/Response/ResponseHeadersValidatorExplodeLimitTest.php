@@ -6,11 +6,13 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Response;
 
 use Duyler\OpenApi\Schema\Model\Header;
 use Duyler\OpenApi\Schema\Model\Headers;
+use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Response\ResponseHeadersValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -27,7 +29,12 @@ final class ResponseHeadersValidatorExplodeLimitTest extends TestCase
     protected function setUp(): void
     {
         $pool = new ValidatorPool();
-        $schemaValidator = new SchemaValidator($pool, BuiltinFormats::create());
+        $schemaValidator = new SchemaValidatorDependencies(
+            pool: $pool,
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
+            formatRegistry: BuiltinFormats::create(),
+        )->rootStatelessValidator();
 
         $this->validator = new ResponseHeadersValidator($schemaValidator);
     }

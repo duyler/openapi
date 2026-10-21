@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
 use JsonSerializable;
 use Override;
 
@@ -24,36 +25,26 @@ final readonly class Encoding implements JsonSerializable
         public ?Encoding $itemEncoding = null,
     ) {}
 
+    /**
+     * @return list<FieldMetadata>
+     */
+    public static function wireFields(): array
+    {
+        return [
+            new FieldMetadata('contentType', 'contentType'),
+            new FieldMetadata('headers', 'headers'),
+            new FieldMetadata('style', 'style'),
+            new FieldMetadata('explode', 'explode'),
+            new FieldMetadata('allowReserved', 'allowReserved'),
+            new FieldMetadata('encoding', 'encoding'),
+            new FieldMetadata('prefixEncoding', 'prefixEncoding'),
+            new FieldMetadata('itemEncoding', 'itemEncoding'),
+        ];
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
-        $result = [];
-
-        if (null !== $this->contentType) {
-            $result['contentType'] = $this->contentType;
-        }
-        if (null !== $this->headers) {
-            $result['headers'] = $this->headers;
-        }
-        if (null !== $this->style) {
-            $result['style'] = $this->style;
-        }
-        if (null !== $this->explode) {
-            $result['explode'] = $this->explode;
-        }
-        if (null !== $this->allowReserved) {
-            $result['allowReserved'] = $this->allowReserved;
-        }
-        if (null !== $this->encoding) {
-            $result['encoding'] = $this->encoding;
-        }
-        if (null !== $this->prefixEncoding) {
-            $result['prefixEncoding'] = $this->prefixEncoding;
-        }
-        if (null !== $this->itemEncoding) {
-            $result['itemEncoding'] = $this->itemEncoding;
-        }
-
-        return $result;
+        return ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

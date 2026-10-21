@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Schema;
 
 use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
+use Duyler\OpenApi\Validator\Internal\LruCache;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use InvalidArgumentException;
+use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -22,11 +24,13 @@ final class RegexValidatorTest extends TestCase
 {
     private RegexValidator $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->validator = new RegexValidator();
     }
 
+    #[Override]
     protected function tearDown(): void
     {
         unset($this->validator);
@@ -530,8 +534,14 @@ final class RegexValidatorTest extends TestCase
         $reflection = new ReflectionClass($validator);
         $property = $reflection->getProperty('normalizeCache');
 
+        /** @var LruCache<string, string> $lruCache */
+        $lruCache = $property->getValue($validator);
+
+        $lruReflection = new ReflectionClass($lruCache);
+        $itemsProperty = $lruReflection->getProperty('items');
+
         /** @var array<string, string> $value */
-        $value = $property->getValue($validator);
+        $value = $itemsProperty->getValue($lruCache);
 
         return $value;
     }

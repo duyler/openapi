@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Schema\Internal;
 
+use function array_pop;
+use function implode;
 use function is_int;
 use function is_string;
 use function str_contains;
@@ -108,14 +110,13 @@ final readonly class UriResolver
 
     public function removeDotSegments(string $path): string
     {
-        $input = $path;
-        $output = '';
+        $step = new DotSegmentStep($path, []);
 
-        while ('' !== $input) {
-            $input = $this->consumeDotSegment($input, $output);
+        while ('' !== $step->remainingInput) {
+            $step = $this->applyDotSegmentRules($step->remainingInput, $step->stack);
         }
 
-        return $output;
+        return implode('', $step->stack);
     }
 
     /** @param UriParts $parts */
@@ -195,43 +196,91 @@ final readonly class UriResolver
         return is_string($value) ? $value : null;
     }
 
-    private function consumeDotSegment(string $input, string &$output): string
+    /**
+     * @param list<string> $stack
+     */
+    private function applyDotSegmentRules(string $input, array $stack): DotSegmentStep
     {
-        return match (true) {
-            str_starts_with($input, '../') => substr($input, 3),
-            str_starts_with($input, './') => substr($input, 2),
-            str_starts_with($input, '/../') => $this->popAndAdvance($output, $input, 4),
-            str_starts_with($input, '/./') => '/' . substr($input, 3),
-            '/.' === $input => '/',
-            '/..' === $input => $this->popAndAdvance($output, $input, 0),
-            '.' === $input, '..' === $input => '',
-            default => $this->moveNextSegment($input, $output),
-        };
+        return $this->removeDotPrefix($input, $stack)
+            ?? $this->removeCurrentSegment($input, $stack)
+            ?? $this->removeParentSegment($input, $stack)
+            ?? $this->removeLoneDotSegment($input, $stack)
+            ?? $this->pushNextSegment($input, $stack);
     }
 
-    private function popAndAdvance(string &$output, string $input, int $trim): string
+    /**
+     * @param list<string> $stack
+     */
+    private function removeDotPrefix(string $input, array $stack): ?DotSegmentStep
     {
-        $output = $this->removeLastSegment($output);
-
-        return 0 === $trim ? '/' : '/' . substr($input, $trim);
-    }
-
-    private function moveNextSegment(string $input, string &$output): string
-    {
-        $moveOffset = $this->findNextSlashOffset($input);
-        $output .= substr($input, 0, $moveOffset);
-
-        return substr($input, $moveOffset);
-    }
-
-    private function removeLastSegment(string $output): string
-    {
-        $lastSlash = strrpos($output, '/');
-        if (false === $lastSlash) {
-            return '';
+        if (str_starts_with($input, '../')) {
+            return new DotSegmentStep(substr($input, 3), $stack);
         }
 
-        return substr($output, 0, $lastSlash);
+        if (str_starts_with($input, './')) {
+            return new DotSegmentStep(substr($input, 2), $stack);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param list<string> $stack
+     */
+    private function removeCurrentSegment(string $input, array $stack): ?DotSegmentStep
+    {
+        if ('/.' === $input) {
+            return new DotSegmentStep('/', $stack);
+        }
+
+        if (str_starts_with($input, '/./')) {
+            return new DotSegmentStep('/' . substr($input, 3), $stack);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param list<string> $stack
+     */
+    private function removeParentSegment(string $input, array $stack): ?DotSegmentStep
+    {
+        if ('/..' === $input) {
+            array_pop($stack);
+
+            return new DotSegmentStep('/', $stack);
+        }
+
+        if (str_starts_with($input, '/../')) {
+            array_pop($stack);
+
+            return new DotSegmentStep('/' . substr($input, 4), $stack);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param list<string> $stack
+     */
+    private function removeLoneDotSegment(string $input, array $stack): ?DotSegmentStep
+    {
+        if ('.' === $input || '..' === $input) {
+            return new DotSegmentStep('', $stack);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param list<string> $stack
+     */
+    private function pushNextSegment(string $input, array $stack): DotSegmentStep
+    {
+        $segmentEnd = $this->findNextSlashOffset($input);
+        $stack[] = substr($input, 0, $segmentEnd);
+
+        return new DotSegmentStep(substr($input, $segmentEnd), $stack);
     }
 
     private function findNextSlashOffset(string $input): int
@@ -243,4 +292,15 @@ final readonly class UriResolver
 
         return $nextSlash;
     }
+}
+
+final readonly class DotSegmentStep
+{
+    /**
+     * @param list<string> $stack
+     */
+    public function __construct(
+        public string $remainingInput,
+        public array $stack,
+    ) {}
 }

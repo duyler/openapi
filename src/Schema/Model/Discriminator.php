@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
 use JsonSerializable;
 use Override;
 
@@ -18,23 +19,21 @@ final readonly class Discriminator implements JsonSerializable
         public ?string $defaultMapping = null,
     ) {}
 
+    /**
+     * @return list<FieldMetadata>
+     */
+    public static function wireFields(): array
+    {
+        return [
+            new FieldMetadata('propertyName', 'propertyName'),
+            new FieldMetadata('mapping', 'mapping'),
+            new FieldMetadata('defaultMapping', 'defaultMapping'),
+        ];
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [];
-
-        if (null !== $this->propertyName) {
-            $data['propertyName'] = $this->propertyName;
-        }
-
-        if (null !== $this->mapping) {
-            $data['mapping'] = $this->mapping;
-        }
-
-        if (null !== $this->defaultMapping) {
-            $data['defaultMapping'] = $this->defaultMapping;
-        }
-
-        return $data;
+        return ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

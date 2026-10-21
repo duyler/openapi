@@ -13,7 +13,6 @@ use Duyler\OpenApi\Validator\Exception\MissingRequestBodyException;
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
 use Duyler\OpenApi\Validator\Example\ExampleValidator;
 use Duyler\OpenApi\Validator\Example\ValidatesExamplesTrait;
-use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\TypeGuarantor;
 use Duyler\OpenApi\Validator\ValidatorMode;
@@ -32,10 +31,8 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
         private readonly OpenApiDocument $document,
         private readonly SchemaValidatorDependencies $dependencies,
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
-        ?PregExecutor $pregExecutor = null,
     ) {
-        $resolvedPregExecutor = $pregExecutor ?? new PregExecutor($this->configuration->maxRegexBacktracks);
-        $this->negotiator = new ContentTypeNegotiator($resolvedPregExecutor);
+        $this->negotiator = new ContentTypeNegotiator($this->dependencies->pregExecutor);
         $this->exampleValidator = new ExampleValidator();
 
         $this->contextSchemaValidator = $this->dependencies->rootSchemaValidator(
@@ -101,14 +98,13 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
             if ($this->configuration->coercion) {
                 $coercionContext = new CoercionContext(
                     schema: $schema,
-                    enabled: true,
                     strict: $this->configuration->strictCoercion,
                     nullableAsType: $this->configuration->nullableAsType,
                 );
 
                 /** @var array|int|string|float|bool|null $parsedBody */
                 $parsedBody = $this->coercer->coerce($parsedBody, $coercionContext);
-                $parsedBody = TypeGuarantor::ensureValidType($parsedBody, $this->configuration->nullableAsType);
+                $parsedBody = TypeGuarantor::ensureValidType($parsedBody);
             }
 
             $this->contextSchemaValidator->validate($parsedBody, $schema, ValidatorMode::Request);

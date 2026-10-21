@@ -223,4 +223,36 @@ final class EncodingTest extends TestCase
         self::assertArrayHasKey('prefixEncoding', $serialized);
         self::assertArrayHasKey('itemEncoding', $serialized);
     }
+
+    #[Test]
+    public function json_serialize_emits_fields_in_wire_order(): void
+    {
+        $headers = new Headers([]);
+        $encoding = new Encoding(contentType: 'text/plain');
+        $itemEncoding = new Encoding(contentType: 'application/x-www-form-urlencoded');
+
+        $parent = new Encoding(
+            contentType: 'application/json',
+            headers: $headers,
+            style: 'form',
+            explode: false,
+            allowReserved: true,
+            encoding: ['text/plain' => $encoding],
+            prefixEncoding: [$encoding],
+            itemEncoding: $itemEncoding,
+        );
+
+        $serialized = $parent->jsonSerialize();
+
+        self::assertSame([
+            'contentType' => 'application/json',
+            'headers' => $headers,
+            'style' => 'form',
+            'explode' => false,
+            'allowReserved' => true,
+            'encoding' => ['text/plain' => $encoding],
+            'prefixEncoding' => [$encoding],
+            'itemEncoding' => $itemEncoding,
+        ], $serialized);
+    }
 }

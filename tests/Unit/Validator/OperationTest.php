@@ -14,7 +14,7 @@ use PHPUnit\Framework\TestCase;
 final class OperationTest extends TestCase
 {
     #[Test]
-    public function __toString_returns_formatted_string(): void
+    public function to_string_returns_formatted_string(): void
     {
         $operation = new Operation('/users/{id}', 'get');
 
@@ -22,7 +22,7 @@ final class OperationTest extends TestCase
     }
 
     #[Test]
-    public function __toString_lowercases_method(): void
+    public function to_string_lowercases_method(): void
     {
         $operation = new Operation('/users', 'POST');
 
@@ -30,7 +30,7 @@ final class OperationTest extends TestCase
     }
 
     #[Test]
-    public function countPlaceholders_returns_correct_count(): void
+    public function count_placeholders_returns_correct_count(): void
     {
         $operation = new Operation('/users/{id}', 'GET');
 
@@ -38,7 +38,7 @@ final class OperationTest extends TestCase
     }
 
     #[Test]
-    public function countPlaceholders_returns_zero_for_static_path(): void
+    public function count_placeholders_returns_zero_for_static_path(): void
     {
         $operation = new Operation('/users/admin', 'GET');
 
@@ -46,7 +46,7 @@ final class OperationTest extends TestCase
     }
 
     #[Test]
-    public function countPlaceholders_returns_correct_count_for_multiple_params(): void
+    public function count_placeholders_returns_correct_count_for_multiple_params(): void
     {
         $operation = new Operation('/users/{userId}/posts/{postId}', 'GET');
 

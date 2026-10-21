@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\SchemaValidator\OneOfValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\OneOfError;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
@@ -27,7 +29,7 @@ class OneOfValidatorTest extends TestCase
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
-        $this->validator = new OneOfValidator(new ValidatorDependencies(pool: $this->pool, formatRegistry: BuiltinFormats::create()));
+        $this->validator = new OneOfValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
     }
 
     #[Test]
@@ -239,7 +241,7 @@ class OneOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function oneOf_throws_when_multiple_nullable_schemas_match_null(): void
+    public function one_of_throws_when_multiple_nullable_schemas_match_null(): void
     {
         $schema = new Schema(
             oneOf: [
@@ -256,7 +258,7 @@ class OneOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function oneOf_passes_when_single_nullable_schema_matches_null(): void
+    public function one_of_passes_when_single_nullable_schema_matches_null(): void
     {
         $schema = new Schema(
             oneOf: [
@@ -272,7 +274,7 @@ class OneOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function oneOf_passes_when_parent_schema_is_nullable_and_data_is_null(): void
+    public function one_of_passes_when_parent_schema_is_nullable_and_data_is_null(): void
     {
         $schema = new Schema(
             nullable: true,
@@ -288,7 +290,7 @@ class OneOfValidatorTest extends TestCase
     }
 
     #[Test]
-    public function oneOf_rejects_null_when_parent_nullable_is_not_honored(): void
+    public function one_of_rejects_null_when_parent_nullable_is_not_honored(): void
     {
         $schema = new Schema(
             nullable: true,

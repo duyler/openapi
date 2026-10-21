@@ -6,18 +6,12 @@ namespace Duyler\OpenApi\Test\Unit\Builder;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Cache\SchemaCache;
+use Duyler\OpenApi\Test\Support\Psr6ArrayCacheStub;
 use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Cache\CacheItemInterface;
-use Psr\Cache\CacheItemPoolInterface;
-
-use DateInterval;
-use DateTimeInterface;
-use ReflectionMethod;
 
 use function array_key_exists;
-use function clearstatcache;
 use function count;
 use function file_put_contents;
 use function glob;
@@ -27,8 +21,8 @@ use function sha1;
 use function str_ends_with;
 use function strlen;
 use function sys_get_temp_dir;
+use function time;
 use function touch;
-use function uniqid;
 use function unlink;
 
 use function dirname;
@@ -52,7 +46,7 @@ YAML;
     #[Test]
     public function string_cache_key_uses_sha256_length(): void
     {
-        $pool = new KeyCapturingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
 
         OpenApiValidatorBuilder::create()
@@ -76,7 +70,7 @@ YAML;
     #[Test]
     public function string_cache_key_matches_sha256_of_content_hash_and_parse_config_fingerprint(): void
     {
-        $pool = new KeyCapturingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
 
         OpenApiValidatorBuilder::create()
@@ -96,7 +90,7 @@ YAML;
     #[Test]
     public function string_cache_key_is_not_xxh64_length(): void
     {
-        $pool = new KeyCapturingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
 
         OpenApiValidatorBuilder::create()
@@ -116,7 +110,7 @@ YAML;
         $path = $this->writeTempSpec(self::MINIMAL_YAML);
 
         try {
-            $pool = new KeyCapturingPool();
+            $pool = new Psr6ArrayCacheStub();
             $cache = new SchemaCache($pool);
 
             OpenApiValidatorBuilder::create()
@@ -146,7 +140,7 @@ YAML;
         $path = $this->writeTempSpec(self::MINIMAL_YAML);
 
         try {
-            $pool1 = new KeyCapturingPool();
+            $pool1 = new Psr6ArrayCacheStub();
             OpenApiValidatorBuilder::create()
                 ->fromYamlFile($path)
                 ->withCache(new SchemaCache($pool1))
@@ -155,7 +149,7 @@ YAML;
 
             touch($path, time() + 100);
 
-            $pool2 = new KeyCapturingPool();
+            $pool2 = new Psr6ArrayCacheStub();
             OpenApiValidatorBuilder::create()
                 ->fromYamlFile($path)
                 ->withCache(new SchemaCache($pool2))
@@ -178,7 +172,7 @@ YAML;
         $path = $this->writeTempSpec(self::MINIMAL_YAML);
 
         try {
-            $pool1 = new KeyCapturingPool();
+            $pool1 = new Psr6ArrayCacheStub();
             OpenApiValidatorBuilder::create()
                 ->fromYamlFile($path)
                 ->withCache(new SchemaCache($pool1))
@@ -189,7 +183,7 @@ YAML;
             $this->writeTempSpec($appended, $path);
             touch($path, time() + 200);
 
-            $pool2 = new KeyCapturingPool();
+            $pool2 = new Psr6ArrayCacheStub();
             OpenApiValidatorBuilder::create()
                 ->fromYamlFile($path)
                 ->withCache(new SchemaCache($pool2))
@@ -208,14 +202,14 @@ YAML;
         $path = $this->writeTempSpec(self::MINIMAL_YAML);
 
         try {
-            $pool1 = new KeyCapturingPool();
+            $pool1 = new Psr6ArrayCacheStub();
             OpenApiValidatorBuilder::create()
                 ->fromYamlFile($path)
                 ->withCache(new SchemaCache($pool1))
                 ->build();
             $key1 = $this->uniqueKeys($pool1->capturedKeys())[0];
 
-            $pool2 = new KeyCapturingPool();
+            $pool2 = new Psr6ArrayCacheStub();
             OpenApiValidatorBuilder::create()
                 ->fromYamlFile($path)
                 ->withCache(new SchemaCache($pool2))
@@ -234,7 +228,7 @@ YAML;
         $path = $this->writeTempSpec(self::MINIMAL_YAML);
 
         try {
-            $pool = new KeyCapturingPool();
+            $pool = new Psr6ArrayCacheStub();
             OpenApiValidatorBuilder::create()
                 ->fromYamlFile($path)
                 ->withCache(new SchemaCache($pool))
@@ -244,97 +238,6 @@ YAML;
             $hash = substr($uniqueKeys[0], strlen(self::FILE_KEY_PREFIX));
 
             self::assertNotSame(16, strlen($hash), 'File cache key must not be xxh64');
-        } finally {
-            $this->safeUnlink($path);
-        }
-    }
-
-    #[Test]
-    public function cache_key_for_file_includes_content_hash(): void
-    {
-        $path = $this->writeTempSpec(self::MINIMAL_YAML);
-
-        try {
-            $keyForContentA = $this->invokeGenerateCacheKeyFromFile($path, 'openapi: 3.2.0 a');
-            $keyForContentB = $this->invokeGenerateCacheKeyFromFile($path, 'openapi: 3.2.0 b');
-
-            self::assertNotSame(
-                $keyForContentA,
-                $keyForContentB,
-                'Same path with different content must yield different cache keys (R3-SEC-003 content-hash fix)',
-            );
-        } finally {
-            $this->safeUnlink($path);
-        }
-    }
-
-    #[Test]
-    public function cache_key_for_file_with_same_content_different_path_produces_different_keys(): void
-    {
-        $pathA = $this->writeTempSpec(self::MINIMAL_YAML, sys_get_temp_dir() . '/openapi_cache_key_test_a.yaml');
-        $pathB = $this->writeTempSpec(self::MINIMAL_YAML, sys_get_temp_dir() . '/openapi_cache_key_test_b.yaml');
-
-        try {
-            $keyForPathA = $this->invokeGenerateCacheKeyFromFile($pathA, self::MINIMAL_YAML);
-            $keyForPathB = $this->invokeGenerateCacheKeyFromFile($pathB, self::MINIMAL_YAML);
-
-            self::assertNotSame(
-                $keyForPathA,
-                $keyForPathB,
-                'Identical content under different paths must yield different keys (path-component is part of the hash input)',
-            );
-        } finally {
-            $this->safeUnlink($pathA);
-            $this->safeUnlink($pathB);
-        }
-    }
-
-    #[Test]
-    public function cache_key_for_file_excludes_mtime_and_size(): void
-    {
-        $path = $this->writeTempSpec(self::MINIMAL_YAML);
-
-        try {
-            $keyBefore = $this->invokeGenerateCacheKeyFromFile($path, self::MINIMAL_YAML);
-
-            touch($path, time() + 500);
-            clearstatcache(true, $path);
-
-            $keyAfter = $this->invokeGenerateCacheKeyFromFile($path, self::MINIMAL_YAML);
-
-            self::assertSame(
-                $keyBefore,
-                $keyAfter,
-                'Cache key must be invariant across mtime/size probes for identical path+content (mtime and size are not part of the hash input)',
-            );
-        } finally {
-            $this->safeUnlink($path);
-        }
-    }
-
-    #[Test]
-    public function cache_key_for_file_falls_back_to_unresolved_path_when_realpath_fails(): void
-    {
-        $nonexistentPath = sys_get_temp_dir() . '/duyler-cache-key-missing-' . uniqid(more_entropy: true) . '.yaml';
-
-        $key = $this->invokeGenerateCacheKeyFromFile($nonexistentPath, self::MINIMAL_YAML);
-
-        self::assertStringStartsWith(self::FILE_KEY_PREFIX, $key);
-        $hash = substr($key, strlen(self::FILE_KEY_PREFIX));
-        self::assertSame(64, strlen($hash), 'Fallback key must still be a SHA-256 hex digest');
-        self::assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $hash);
-    }
-
-    #[Test]
-    public function cache_key_for_file_returns_prefixed_with_constant(): void
-    {
-        $path = $this->writeTempSpec(self::MINIMAL_YAML);
-
-        try {
-            $key = $this->invokeGenerateCacheKeyFromFile($path, self::MINIMAL_YAML);
-
-            self::assertStringStartsNotWith(self::CONTENT_KEY_PREFIX, $key);
-            self::assertStringStartsWith(self::FILE_KEY_PREFIX, $key);
         } finally {
             $this->safeUnlink($path);
         }
@@ -366,7 +269,7 @@ x-l1:
             l7: deep
 YAML;
 
-        $pool = new KeyCapturingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
 
         OpenApiValidatorBuilder::create()
@@ -408,14 +311,14 @@ YAML;
         $root1 = sys_get_temp_dir();
         $root2 = dirname(__DIR__, 3);
 
-        $pool1 = new KeyCapturingPool();
+        $pool1 = new Psr6ArrayCacheStub();
         OpenApiValidatorBuilder::create()
             ->fromYamlString(self::MINIMAL_YAML)
             ->withExternalRefAllowedRoot($root1)
             ->withCache(new SchemaCache($pool1))
             ->build();
 
-        $pool2 = new KeyCapturingPool();
+        $pool2 = new Psr6ArrayCacheStub();
         OpenApiValidatorBuilder::create()
             ->fromYamlString(self::MINIMAL_YAML)
             ->withExternalRefAllowedRoot($root2)
@@ -446,7 +349,7 @@ YAML;
     #[Test]
     public function identical_parse_config_and_content_reuse_cache_key(): void
     {
-        $pool = new KeyCapturingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
 
         OpenApiValidatorBuilder::create()
@@ -481,7 +384,7 @@ YAML;
     #[Test]
     public function runtime_validation_toggles_do_not_invalidate_cache(): void
     {
-        $pool = new KeyCapturingPool();
+        $pool = new Psr6ArrayCacheStub();
         $cache = new SchemaCache($pool);
 
         OpenApiValidatorBuilder::create()
@@ -532,17 +435,6 @@ YAML;
         return array_keys($seen);
     }
 
-    private function invokeGenerateCacheKeyFromFile(string $path, string $content): string
-    {
-        $builder = OpenApiValidatorBuilder::create();
-        $method = new ReflectionMethod($builder, 'generateCacheKeyFromFile');
-
-        /** @var string $result */
-        $result = $method->invoke($builder, $path, $content);
-
-        return $result;
-    }
-
     private function writeTempSpec(string $content, ?string $path = null): string
     {
         if (null === $path) {
@@ -560,136 +452,5 @@ YAML;
         if (is_file($path)) {
             unlink($path);
         }
-    }
-}
-
-final class KeyCapturingPool implements CacheItemPoolInterface
-{
-    /** @var array<string, mixed> */
-    private array $values = [];
-
-    /** @var list<string> */
-    private array $keys = [];
-
-    public function getItem(string $key): CacheItemInterface
-    {
-        $this->keys[] = $key;
-
-        if (array_key_exists($key, $this->values)) {
-            return new CapturedItem($key, $this->values[$key], true);
-        }
-
-        return new CapturedItem($key, null, false);
-    }
-
-    /**
-     * @param list<string> $keys
-     *
-     * @return array<string, CacheItemInterface>
-     */
-    public function getItems(array $keys = []): array
-    {
-        $result = [];
-
-        foreach ($keys as $key) {
-            $result[$key] = $this->getItem($key);
-        }
-
-        return $result;
-    }
-
-    public function hasItem(string $key): bool
-    {
-        return array_key_exists($key, $this->values);
-    }
-
-    public function clear(): bool
-    {
-        $this->values = [];
-        $this->keys = [];
-
-        return true;
-    }
-
-    public function deleteItem(string $key): bool
-    {
-        unset($this->values[$key]);
-
-        return true;
-    }
-
-    public function deleteItems(array $keys): bool
-    {
-        foreach ($keys as $key) {
-            unset($this->values[$key]);
-        }
-
-        return true;
-    }
-
-    public function save(CacheItemInterface $item): bool
-    {
-        $this->values[$item->getKey()] = $item->get();
-
-        return true;
-    }
-
-    public function saveDeferred(CacheItemInterface $item): bool
-    {
-        return $this->save($item);
-    }
-
-    public function commit(): bool
-    {
-        return true;
-    }
-
-    /**
-     * @return list<string>
-     */
-    public function capturedKeys(): array
-    {
-        return $this->keys;
-    }
-}
-
-final class CapturedItem implements CacheItemInterface
-{
-    public function __construct(
-        private readonly string $key,
-        private mixed $value,
-        private readonly bool $hit,
-    ) {}
-
-    public function getKey(): string
-    {
-        return $this->key;
-    }
-
-    public function get(): mixed
-    {
-        return $this->value;
-    }
-
-    public function isHit(): bool
-    {
-        return $this->hit;
-    }
-
-    public function set(mixed $value): static
-    {
-        $this->value = $value;
-
-        return $this;
-    }
-
-    public function expiresAt(?DateTimeInterface $expiration): static
-    {
-        return $this;
-    }
-
-    public function expiresAfter(int|DateInterval|null $time): static
-    {
-        return $this;
     }
 }

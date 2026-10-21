@@ -12,6 +12,7 @@ use Duyler\OpenApi\Validator\Exception\MinPropertiesError;
 use Duyler\OpenApi\Validator\SchemaValidator\Trait\LengthValidationTrait;
 use Override;
 
+use function array_is_list;
 use function count;
 use function is_array;
 

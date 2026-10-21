@@ -12,7 +12,9 @@ use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
+use function array_any;
 use function array_filter;
+use function array_is_list;
 use function fmod;
 use function implode;
 use function is_array;

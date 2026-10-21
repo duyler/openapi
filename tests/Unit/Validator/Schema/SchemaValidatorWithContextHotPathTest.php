@@ -136,7 +136,7 @@ final class SchemaValidatorWithContextHotPathTest extends TestCase
     }
 
     #[Test]
-    public function applicable_stateless_validators_for_minLength_schema(): void
+    public function applicable_stateless_validators_for_min_length_schema(): void
     {
         $rootValidator = new SchemaValidatorWithContext(
             $this->buildDocument(),

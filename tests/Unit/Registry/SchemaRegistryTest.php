@@ -9,6 +9,7 @@ use Duyler\OpenApi\Registry\Exception\VersionNotFoundException;
 use Duyler\OpenApi\Registry\SchemaRegistry;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Test\Support\SpecBuilders;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -219,8 +220,8 @@ final class SchemaRegistryTest extends TestCase
     public function register_throws_on_duplicate_name_version(): void
     {
         $registry = new SchemaRegistry();
-        $docV1 = $this->createDocumentWithTitle('First API');
-        $docV2 = $this->createDocumentWithTitle('Second API');
+        $docV1 = SpecBuilders::documentWithTitle('First API');
+        $docV2 = SpecBuilders::documentWithTitle('Second API');
 
         $registry = $registry->register('api', '1.0.0', $docV1);
 
@@ -252,8 +253,8 @@ final class SchemaRegistryTest extends TestCase
     public function register_or_replace_overwrites_silently(): void
     {
         $registry = new SchemaRegistry();
-        $docV1 = $this->createDocumentWithTitle('First API');
-        $docV2 = $this->createDocumentWithTitle('Second API');
+        $docV1 = SpecBuilders::documentWithTitle('First API');
+        $docV2 = SpecBuilders::documentWithTitle('Second API');
 
         $registry = $registry->registerOrReplace('api', '1.0.0', $docV1);
         $registry = $registry->registerOrReplace('api', '1.0.0', $docV2);
@@ -268,9 +269,9 @@ final class SchemaRegistryTest extends TestCase
     public function register_or_replace_preserves_other_versions(): void
     {
         $registry = new SchemaRegistry();
-        $docV1Original = $this->createDocumentWithTitle('API v1 original');
-        $docV2 = $this->createDocumentWithTitle('API v2');
-        $docV1Overwrite = $this->createDocumentWithTitle('API v1 overwrite');
+        $docV1Original = SpecBuilders::documentWithTitle('API v1 original');
+        $docV2 = SpecBuilders::documentWithTitle('API v2');
+        $docV1Overwrite = SpecBuilders::documentWithTitle('API v1 overwrite');
 
         $registry = $registry
             ->register('api', '1.0.0', $docV1Original)
@@ -291,8 +292,8 @@ final class SchemaRegistryTest extends TestCase
     public function register_or_replace_does_not_mutate_original_instance(): void
     {
         $registry = new SchemaRegistry();
-        $docV1 = $this->createDocumentWithTitle('First');
-        $docV2 = $this->createDocumentWithTitle('Second');
+        $docV1 = SpecBuilders::documentWithTitle('First');
+        $docV2 = SpecBuilders::documentWithTitle('Second');
 
         $registryV1 = $registry->register('api', '1.0.0', $docV1);
         $registryV2 = $registryV1->registerOrReplace('api', '1.0.0', $docV2);
@@ -350,8 +351,8 @@ final class SchemaRegistryTest extends TestCase
     public function get_or_fail_returns_latest_version_when_no_version_given(): void
     {
         $registry = new SchemaRegistry();
-        $docV1 = $this->createDocumentWithTitle('v1');
-        $docV2 = $this->createDocumentWithTitle('v2');
+        $docV1 = SpecBuilders::documentWithTitle('v1');
+        $docV2 = SpecBuilders::documentWithTitle('v2');
 
         $registry = $registry
             ->register('api', '1.0.0', $docV1)
@@ -437,10 +438,10 @@ final class SchemaRegistryTest extends TestCase
     public function pre_release_versions_sorted_correctly(): void
     {
         $registry = new SchemaRegistry();
-        $docAlpha = $this->createDocumentWithTitle('alpha');
-        $docBeta = $this->createDocumentWithTitle('beta');
-        $docRc = $this->createDocumentWithTitle('rc');
-        $docStable = $this->createDocumentWithTitle('stable');
+        $docAlpha = SpecBuilders::documentWithTitle('alpha');
+        $docBeta = SpecBuilders::documentWithTitle('beta');
+        $docRc = SpecBuilders::documentWithTitle('rc');
+        $docStable = SpecBuilders::documentWithTitle('stable');
 
         $registry = $registry
             ->register('api', '2.0.0-rc.1', $docRc)
@@ -464,8 +465,8 @@ final class SchemaRegistryTest extends TestCase
     public function get_latest_returns_stable_release_over_pre_release(): void
     {
         $registry = new SchemaRegistry();
-        $docAlpha = $this->createDocumentWithTitle('alpha');
-        $docStable = $this->createDocumentWithTitle('stable');
+        $docAlpha = SpecBuilders::documentWithTitle('alpha');
+        $docStable = SpecBuilders::documentWithTitle('stable');
 
         $registry = $registry
             ->register('api', '1.0.0-alpha', $docAlpha)
@@ -485,8 +486,8 @@ final class SchemaRegistryTest extends TestCase
     public function get_latest_returns_highest_pre_release_when_only_pre_releases_registered(): void
     {
         $registry = new SchemaRegistry();
-        $docAlpha = $this->createDocumentWithTitle('alpha');
-        $docBeta = $this->createDocumentWithTitle('beta');
+        $docAlpha = SpecBuilders::documentWithTitle('alpha');
+        $docBeta = SpecBuilders::documentWithTitle('beta');
 
         $registry = $registry
             ->register('api', '1.0.0-alpha', $docAlpha)
@@ -504,8 +505,8 @@ final class SchemaRegistryTest extends TestCase
     public function get_specific_pre_release_version(): void
     {
         $registry = new SchemaRegistry();
-        $docAlpha = $this->createDocumentWithTitle('alpha');
-        $docRc = $this->createDocumentWithTitle('rc');
+        $docAlpha = SpecBuilders::documentWithTitle('alpha');
+        $docRc = SpecBuilders::documentWithTitle('rc');
 
         $registry = $registry
             ->register('api', '1.0.0-alpha', $docAlpha)
@@ -523,7 +524,7 @@ final class SchemaRegistryTest extends TestCase
     public function register_pre_release_returns_new_instance_and_preserves_original(): void
     {
         $registry = new SchemaRegistry();
-        $docAlpha = $this->createDocumentWithTitle('alpha');
+        $docAlpha = SpecBuilders::documentWithTitle('alpha');
 
         $newRegistry = $registry->register('api', '1.0.0-alpha', $docAlpha);
 
@@ -539,10 +540,10 @@ final class SchemaRegistryTest extends TestCase
     public function pre_release_mixed_with_multiple_stable_versions(): void
     {
         $registry = new SchemaRegistry();
-        $doc1Alpha = $this->createDocumentWithTitle('1.0.0-alpha');
-        $doc1 = $this->createDocumentWithTitle('1.0.0');
-        $doc2Beta = $this->createDocumentWithTitle('2.0.0-beta');
-        $doc2 = $this->createDocumentWithTitle('2.0.0');
+        $doc1Alpha = SpecBuilders::documentWithTitle('1.0.0-alpha');
+        $doc1 = SpecBuilders::documentWithTitle('1.0.0');
+        $doc2Beta = SpecBuilders::documentWithTitle('2.0.0-beta');
+        $doc2 = SpecBuilders::documentWithTitle('2.0.0');
 
         $registry = $registry
             ->register('api', '2.0.0-beta', $doc2Beta)
@@ -623,17 +624,6 @@ final class SchemaRegistryTest extends TestCase
             openapi: '3.1.0',
             info: new InfoObject(
                 title: 'Test API',
-                version: '1.0.0',
-            ),
-        );
-    }
-
-    private function createDocumentWithTitle(string $title): OpenApiDocument
-    {
-        return new OpenApiDocument(
-            openapi: '3.1.0',
-            info: new InfoObject(
-                title: $title,
                 version: '1.0.0',
             ),
         );

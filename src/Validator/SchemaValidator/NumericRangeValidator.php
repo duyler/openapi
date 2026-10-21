@@ -15,12 +15,16 @@ use Override;
 
 use function abs;
 use function assert;
+use function bccomp;
+use function bcdiv;
+use function bcfloor;
 use function explode;
 use function extension_loaded;
 use function is_float;
 use function is_infinite;
 use function is_int;
 use function is_nan;
+use function is_numeric;
 use function ltrim;
 use function max;
 use function round;

@@ -11,13 +11,18 @@ use function sprintf;
 
 final readonly class TypedCacheDecorator
 {
-    private const int DEFAULT_TTL = 3600;
+    public const int DEFAULT_TTL = 3600;
 
     public function __construct(
         private readonly CacheItemPoolInterface $pool,
         private readonly int $ttl = self::DEFAULT_TTL,
     ) {
-        if ($ttl < 1) {
+        self::validateTtl($ttl);
+    }
+
+    public static function validateTtl(int $ttl): void
+    {
+        if (1 > $ttl) {
             throw new InvalidArgumentException(
                 sprintf('TTL must be a positive integer, got %d.', $ttl),
             );

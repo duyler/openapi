@@ -12,6 +12,7 @@ use Duyler\OpenApi\Validator\Internal\CandidatePrioritizer;
 use Duyler\OpenApi\Validator\Internal\PathItemParameterMerger;
 use Duyler\OpenApi\Validator\Internal\TrieBuilder;
 use Duyler\OpenApi\Validator\Internal\TrieLookup;
+use Duyler\OpenApi\Validator\Internal\TrieMatches;
 use Duyler\OpenApi\Validator\Request\PathParser;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 
@@ -82,13 +83,14 @@ final readonly class PathFinder
      */
     private function findCandidates(string $requestPath, string $method): array
     {
-        $matches = [];
+        $matches = new TrieMatches();
         $segments = explode('/', trim($requestPath, '/'));
         $this->trieLookup->lookupTrie($this->trie, $segments, 0, $matches);
+        $ordered = $matches->all();
 
         /** @var array<string, int> $templateOrder */
         $templateOrder = $this->templateOrder;
-        usort($matches, static function (array $a, array $b) use ($templateOrder): int {
+        usort($ordered, static function (array $a, array $b) use ($templateOrder): int {
             /** @var string $aTemplate */
             $aTemplate = $a['template'];
             /** @var string $bTemplate */
@@ -97,7 +99,7 @@ final readonly class PathFinder
             return $templateOrder[$aTemplate] <=> $templateOrder[$bTemplate];
         });
         $candidates = [];
-        foreach ($matches as ['template' => $template, 'item' => $pathItem]) {
+        foreach ($ordered as ['template' => $template, 'item' => $pathItem]) {
             $pathParameters = $this->pathParser->tryMatchPath($requestPath, $template);
             if (null === $pathParameters) {
                 continue;

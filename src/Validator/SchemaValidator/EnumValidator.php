@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\EnumError;
 use Duyler\OpenApi\Validator\Schema\JsonEquals;
@@ -14,7 +15,7 @@ final readonly class EnumValidator extends AbstractSchemaValidator implements Ke
 {
     private readonly EnumScalarCache $scalarCache;
 
-    public function __construct(ValidatorDependencies $dependencies)
+    public function __construct(SchemaValidatorDependencies $dependencies)
     {
         parent::__construct($dependencies);
         $this->scalarCache = new EnumScalarCache();

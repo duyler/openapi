@@ -147,6 +147,32 @@ final class UriResolverTest extends TestCase
         self::assertSame('', $this->resolver->removeDotSegments('..'));
     }
 
+    /**
+     * @return iterable<string, array{0: string, 1: string}>
+     */
+    public static function dotSegmentEdgeVectors(): iterable
+    {
+        yield 'rfc 5.2.4 merged path example' => ['a/b/c/./../../g', 'a/g'];
+        yield 'rfc mid content example' => ['mid/content=5/../6', 'mid/6'];
+        yield 'dot dot above root with absolute path' => ['/../a', '/a'];
+        yield 'trailing dot dot on relative path keeps root slash' => ['a/..', '/'];
+        yield 'leading single dot prefix dropped' => ['./a', 'a'];
+        yield 'trailing single dot keeps trailing slash' => ['a/.', 'a/'];
+        yield 'empty segments preserved' => ['a//b', 'a//b'];
+        yield 'dot dot above root on relative path keeps root slash' => ['a/../..', '/'];
+        yield 'empty input returns empty output' => ['', ''];
+        yield 'mixed dots with trailing slash' => ['a/b/../c/./d/', 'a/c/d/'];
+    }
+
+    #[Test]
+    #[DataProvider('dotSegmentEdgeVectors')]
+    public function remove_dot_segments_edge_vectors(string $path, string $expected): void
+    {
+        $result = $this->resolver->removeDotSegments($path);
+
+        self::assertSame($expected, $result);
+    }
+
     #[Test]
     public function merge_paths_with_absolute_relative_returns_relative(): void
     {

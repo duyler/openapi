@@ -24,7 +24,7 @@ final class ConstErrorTest extends TestCase
     }
 
     #[Test]
-    public function dataPath_returns_correct_value(): void
+    public function data_path_returns_correct_value(): void
     {
         $exception = new ConstError(
             expected: 'test-value',
@@ -37,7 +37,7 @@ final class ConstErrorTest extends TestCase
     }
 
     #[Test]
-    public function schemaPath_returns_correct_value(): void
+    public function schema_path_returns_correct_value(): void
     {
         $exception = new ConstError(
             expected: 'test-value',
@@ -96,7 +96,7 @@ final class ConstErrorTest extends TestCase
     }
 
     #[Test]
-    public function getType_returns_const(): void
+    public function get_type_returns_const(): void
     {
         $exception = new ConstError(
             expected: 'test-value',

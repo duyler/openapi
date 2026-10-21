@@ -14,7 +14,7 @@ use PHPUnit\Framework\TestCase;
 final class ValidationEventPayloadTest extends TestCase
 {
     #[Test]
-    public function defaults_request_response_schemaRef_are_null_when_omitted(): void
+    public function defaults_request_response_schema_ref_are_null_when_omitted(): void
     {
         $payload = new ValidationEventPayload(
             request: null,
@@ -31,7 +31,7 @@ final class ValidationEventPayloadTest extends TestCase
     }
 
     #[Test]
-    public function carries_request_response_and_schemaRef(): void
+    public function carries_request_response_and_schema_ref(): void
     {
         $factory = new Psr17Factory();
         $request = $factory->createServerRequest('POST', '/users');

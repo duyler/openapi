@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\DuplicateItemsError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
@@ -12,6 +13,7 @@ use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MinItemsError;
 use Duyler\OpenApi\Validator\Exception\TooManyItemsForUniqueCheckError;
 use Duyler\OpenApi\Validator\Schema\JsonEquals;
+use Duyler\OpenApi\Validator\SchemaValidator\Internal\ScalarKeyCodec;
 use Duyler\OpenApi\Validator\SchemaValidator\Trait\LengthValidationTrait;
 use Override;
 
@@ -19,20 +21,14 @@ use JsonException;
 
 use function array_is_list;
 use function array_map;
-use function bin2hex;
 use function count;
 use function hash;
 use function is_array;
-use function is_bool;
-use function is_float;
-use function is_int;
-use function is_nan;
+use function is_object;
 use function is_resource;
 use function is_scalar;
-use function is_string;
 use function json_encode;
 use function ksort;
-use function random_bytes;
 use function serialize;
 
 use const JSON_THROW_ON_ERROR;
@@ -46,9 +42,13 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
 
     private const int MAX_UNIQUE_CHECK = 100000;
 
-    private const int SAFE_INT64_FLOAT_BOUNDARY = 9007199254740992;
+    private readonly ScalarKeyCodec $scalarKeyCodec;
 
-    private const int CACHE_KEY_ENTROPY_BYTES = 8;
+    public function __construct(SchemaValidatorDependencies $dependencies)
+    {
+        parent::__construct($dependencies);
+        $this->scalarKeyCodec = new ScalarKeyCodec();
+    }
 
     #[Override]
     public function isApplicable(Schema $schema): bool
@@ -193,40 +193,11 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
             return 'a:' . $this->encodeArrayKey($item);
         }
 
-        return $this->scalarKey($item);
-    }
-
-    private function scalarKey(mixed $item): string
-    {
-        if (is_float($item) && is_nan($item)) {
-            return 'n:nan:' . bin2hex(random_bytes(self::CACHE_KEY_ENTROPY_BYTES));
+        if (is_object($item)) {
+            return serialize($item);
         }
 
-        if (is_int($item)) {
-            if (abs($item) <= self::SAFE_INT64_FLOAT_BOUNDARY) {
-                return 'n:' . (string) (float) $item;
-            }
-
-            return 'n:i:' . (string) $item;
-        }
-
-        if (is_float($item)) {
-            return 'n:' . (string) $item;
-        }
-
-        if (null === $item) {
-            return 'null';
-        }
-
-        if (is_bool($item)) {
-            return 'b:' . ($item ? '1' : '0');
-        }
-
-        if (is_string($item)) {
-            return 's:' . $item;
-        }
-
-        return serialize($item);
+        return $this->scalarKeyCodec->encode($item);
     }
 
     private function ensureJsonCompatible(mixed $value): void

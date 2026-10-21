@@ -5,20 +5,18 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Integration;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Test\Support\StreamStubHelper;
+use Duyler\OpenApi\Test\Support\Psr7RequestStubFactory;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
-use Psr\Http\Message\UriInterface;
 
 /** @internal */
 final class RealOpenApiSpecTest extends TestCase
 {
-    use StreamStubHelper;
+    use Psr7RequestStubFactory;
 
     private object $petstoreValidator;
     private object $ecommerceValidator;
@@ -47,7 +45,7 @@ final class RealOpenApiSpecTest extends TestCase
     #[Test]
     public function validate_petstore_list_pets_request(): void
     {
-        $request = $this->createPsr7Request(method: 'GET', uri: '/pets');
+        $request = $this->createStubRequest(method: 'GET', uri: '/pets');
 
         $this->petstoreValidator->validateRequest($request);
 
@@ -57,7 +55,7 @@ final class RealOpenApiSpecTest extends TestCase
     #[Test]
     public function validate_petstore_create_pet_request(): void
     {
-        $request = $this->createPsr7Request(
+        $request = $this->createStubRequest(
             method: 'POST',
             uri: '/pets',
             headers: ['Content-Type' => 'application/json'],
@@ -72,7 +70,7 @@ final class RealOpenApiSpecTest extends TestCase
     #[Test]
     public function validate_petstore_get_pet_by_id(): void
     {
-        $request = $this->createPsr7Request(method: 'GET', uri: '/pets/123');
+        $request = $this->createStubRequest(method: 'GET', uri: '/pets/123');
 
         $this->petstoreValidator->validateRequest($request);
 
@@ -98,7 +96,7 @@ final class RealOpenApiSpecTest extends TestCase
     #[Test]
     public function validate_petstore_invalid_request_throws(): void
     {
-        $request = $this->createPsr7Request(
+        $request = $this->createStubRequest(
             method: 'POST',
             uri: '/pets',
             headers: ['Content-Type' => 'application/json'],
@@ -113,7 +111,7 @@ final class RealOpenApiSpecTest extends TestCase
     #[Test]
     public function validate_ecommerce_create_order(): void
     {
-        $request = $this->createPsr7Request(
+        $request = $this->createStubRequest(
             method: 'POST',
             uri: '/orders',
             headers: ['Content-Type' => 'application/json'],
@@ -128,7 +126,7 @@ final class RealOpenApiSpecTest extends TestCase
     #[Test]
     public function validate_ecommerce_get_order(): void
     {
-        $request = $this->createPsr7Request(
+        $request = $this->createStubRequest(
             method: 'GET',
             uri: '/orders/123e4567-e89b-12d3-a456-426614174000',
         );
@@ -136,34 +134,6 @@ final class RealOpenApiSpecTest extends TestCase
         $this->ecommerceValidator->validateRequest($request);
 
         $this->expectNotToPerformAssertions();
-    }
-
-    private function createPsr7Request(
-        string $method,
-        string $uri,
-        array $headers = [],
-        string $body = '',
-    ): ServerRequestInterface {
-        $request = $this->createStub(ServerRequestInterface::class);
-
-        $request->method('getMethod')->willReturn($method);
-
-        $uriMock = $this->createStub(UriInterface::class);
-        $uriMock->method('getPath')->willReturn($uri);
-        $uriMock->method('getQuery')->willReturn('');
-
-        $request->method('getUri')->willReturn($uriMock);
-        $request->method('getHeaders')->willReturn($headers);
-        $request->method('getHeaderLine')->willReturnCallback(
-            fn($headerName) => $headers[$headerName] ?? '',
-        );
-
-        $bodyMock = $this->createStub(StreamInterface::class);
-        $bodyMock->method('__toString')->willReturn($body);
-        $this->configureReadableStream($bodyMock, $body);
-        $request->method('getBody')->willReturn($bodyMock);
-
-        return $request;
     }
 
     private function createPsr7Response(

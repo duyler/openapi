@@ -7,17 +7,17 @@ namespace Duyler\OpenApi\Validator\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Coercion\AbstractCoercer;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
+use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Override;
 
 use function is_array;
 use function is_string;
-use function array_key_exists;
 
 final readonly class ResponseTypeCoercer extends AbstractCoercer
 {
     public function coerce(mixed $value, CoercionContext $context): array|int|string|float|bool|null
     {
-        if (false === $context->enabled || null === $context->schema) {
+        if (null === $context->schema) {
             /** @var array|int|string|float|bool|null $value */
             return $value;
         }
@@ -54,7 +54,11 @@ final readonly class ResponseTypeCoercer extends AbstractCoercer
                 continue;
             }
 
-            $coerced = $this->coerceToType($value, $type, $context);
+            try {
+                $coerced = $this->coerceToType($value, $type, $context);
+            } catch (TypeMismatchError) {
+                continue;
+            }
 
             if ($this->isValidType($coerced, $type)) {
                 return $coerced;
@@ -83,65 +87,36 @@ final readonly class ResponseTypeCoercer extends AbstractCoercer
 
     private function coerceToObject(mixed $value, CoercionContext $context): array|int|string|float|bool|null
     {
-        if (false === is_array($value)) {
+        if (null === $context->schema) {
             /** @var array|int|string|float|bool|null $value */
             return $value;
         }
 
-        $properties = $context->schema->properties ?? null;
-
-        if (null === $properties) {
-            return $value;
-        }
-
-        /** @var array<string, mixed> $coerced */
-        $coerced = $value;
-
-        foreach ($properties as $name => $propertySchema) {
-            if (false === array_key_exists($name, $value)) {
-                continue;
-            }
-
-            $childContext = new CoercionContext(
-                schema: $propertySchema,
-                enabled: true,
-                strict: $context->strict,
-                nullableAsType: $context->nullableAsType,
-            );
-
-            $coerced[$name] = $this->coerce($value[$name], $childContext);
-        }
-
-        return $coerced;
+        /** @var array|int|string|float|bool|null */
+        return $this->coerceDeclaredProperties($value, $context->schema, $this->recursion($context));
     }
 
     private function coerceToArray(mixed $value, CoercionContext $context): array|int|string|float|bool|null
     {
-        if (false === is_array($value)) {
+        if (null === $context->schema) {
             /** @var array|int|string|float|bool|null $value */
             return $value;
         }
 
-        $schema = $context->schema;
-        $itemsSchema = null !== $schema && $schema->items instanceof Schema ? $schema->items : null;
+        /** @var array|int|string|float|bool|null */
+        return $this->coerceDeclaredItems($value, $context->schema, $this->recursion($context));
+    }
 
-        if (null === $itemsSchema) {
-            return $value;
-        }
-
-        $childContext = new CoercionContext(
-            schema: $itemsSchema,
-            enabled: true,
-            strict: $context->strict,
-            nullableAsType: $context->nullableAsType,
-        );
-
-        $coerced = [];
-
-        foreach ($value as $item) {
-            $coerced[] = $this->coerce($item, $childContext);
-        }
-
-        return $coerced;
+    /**
+     * @return callable(mixed, Schema): (array|int|string|float|bool|null)
+     */
+    private function recursion(CoercionContext $context): callable
+    {
+        return fn(mixed $value, Schema $schema): array|int|string|float|bool|null
+            => $this->coerce($value, new CoercionContext(
+                schema: $schema,
+                strict: $context->strict,
+                nullableAsType: $context->nullableAsType,
+            ));
     }
 }

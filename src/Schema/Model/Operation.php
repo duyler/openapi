@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
 use JsonSerializable;
 use Override;
 
@@ -27,59 +28,30 @@ final readonly class Operation implements JsonSerializable
         public ?Servers $servers = null,
     ) {}
 
+    /**
+     * @return list<FieldMetadata>
+     */
+    public static function wireFields(): array
+    {
+        return [
+            new FieldMetadata('tags', 'tags'),
+            new FieldMetadata('summary', 'summary'),
+            new FieldMetadata('description', 'description'),
+            new FieldMetadata('externalDocs', 'externalDocs'),
+            new FieldMetadata('operationId', 'operationId'),
+            new FieldMetadata('parameters', 'parameters'),
+            new FieldMetadata('requestBody', 'requestBody'),
+            new FieldMetadata('responses', 'responses'),
+            new FieldMetadata('callbacks', 'callbacks'),
+            new FieldMetadata('deprecated', 'deprecated', accessor: static fn(self $model): ?bool => $model->deprecated ? true : null),
+            new FieldMetadata('security', 'security'),
+            new FieldMetadata('servers', 'servers'),
+        ];
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [];
-
-        if (null !== $this->tags) {
-            $data['tags'] = $this->tags;
-        }
-
-        if (null !== $this->summary) {
-            $data['summary'] = $this->summary;
-        }
-
-        if (null !== $this->description) {
-            $data['description'] = $this->description;
-        }
-
-        if (null !== $this->externalDocs) {
-            $data['externalDocs'] = $this->externalDocs;
-        }
-
-        if (null !== $this->operationId) {
-            $data['operationId'] = $this->operationId;
-        }
-
-        if (null !== $this->parameters) {
-            $data['parameters'] = $this->parameters;
-        }
-
-        if (null !== $this->requestBody) {
-            $data['requestBody'] = $this->requestBody;
-        }
-
-        if (null !== $this->responses) {
-            $data['responses'] = $this->responses;
-        }
-
-        if (null !== $this->callbacks) {
-            $data['callbacks'] = $this->callbacks;
-        }
-
-        if ($this->deprecated) {
-            $data['deprecated'] = $this->deprecated;
-        }
-
-        if (null !== $this->security) {
-            $data['security'] = $this->security;
-        }
-
-        if (null !== $this->servers) {
-            $data['servers'] = $this->servers;
-        }
-
-        return $data;
+        return ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

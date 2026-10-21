@@ -150,7 +150,7 @@ final class DiscriminatorIntegrationTest extends TestCase
 
         $validator->validate($petStoreData, $petStoreSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -241,7 +241,7 @@ final class DiscriminatorIntegrationTest extends TestCase
 
         $validator->validate($catData, $petSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -317,7 +317,7 @@ final class DiscriminatorIntegrationTest extends TestCase
 
         $validator->validate($treeData, $nodeSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -401,7 +401,7 @@ final class DiscriminatorIntegrationTest extends TestCase
 
         $validator->validate($errorData, $responseSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]

@@ -26,7 +26,7 @@ final readonly class NumberCoercer
         }
 
         if (is_string($value)) {
-            if (1 !== preg_match('/^[+-]?\d+(\.\d+)?([eE][+-]?\d+)?$/', $value)) {
+            if (1 !== preg_match(NumberStringNormalizer::NUMBER_PATTERN, $value)) {
                 return $value;
             }
 
@@ -52,7 +52,7 @@ final readonly class NumberCoercer
         }
 
         if (is_string($value)) {
-            if (1 !== preg_match('/^[+-]?\d+(\.\d+)?([eE][+-]?\d+)?$/', $value)) {
+            if (1 !== preg_match(NumberStringNormalizer::NUMBER_PATTERN, $value)) {
                 throw new TypeMismatchError(
                     expected: 'number',
                     actual: $value,

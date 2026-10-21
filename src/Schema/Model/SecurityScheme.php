@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
 use JsonSerializable;
 use Override;
 
@@ -28,61 +29,31 @@ final readonly class SecurityScheme implements JsonSerializable
         public ?array $scopes = null,
     ) {}
 
+    /**
+     * @return list<FieldMetadata>
+     */
+    public static function wireFields(): array
+    {
+        return [
+            new FieldMetadata('type', 'type'),
+            new FieldMetadata('description', 'description'),
+            new FieldMetadata('name', 'name'),
+            new FieldMetadata('in', 'in'),
+            new FieldMetadata('scheme', 'scheme'),
+            new FieldMetadata('bearerFormat', 'bearerFormat'),
+            new FieldMetadata('flows', 'flows', accessor: static fn(self $model): ?array => $model->flows?->jsonSerialize()),
+            new FieldMetadata('openIdConnectUrl', 'openIdConnectUrl'),
+            new FieldMetadata('oauth2MetadataUrl', 'oauth2MetadataUrl'),
+            new FieldMetadata('authorizationUrl', 'authorizationUrl'),
+            new FieldMetadata('tokenUrl', 'tokenUrl'),
+            new FieldMetadata('refreshUrl', 'refreshUrl'),
+            new FieldMetadata('scopes', 'scopes'),
+        ];
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [
-            'type' => $this->type,
-        ];
-
-        if (null !== $this->description) {
-            $data['description'] = $this->description;
-        }
-
-        if (null !== $this->name) {
-            $data['name'] = $this->name;
-        }
-
-        if (null !== $this->in) {
-            $data['in'] = $this->in;
-        }
-
-        if (null !== $this->scheme) {
-            $data['scheme'] = $this->scheme;
-        }
-
-        if (null !== $this->bearerFormat) {
-            $data['bearerFormat'] = $this->bearerFormat;
-        }
-
-        if (null !== $this->flows) {
-            $data['flows'] = $this->flows->jsonSerialize();
-        }
-
-        if (null !== $this->openIdConnectUrl) {
-            $data['openIdConnectUrl'] = $this->openIdConnectUrl;
-        }
-
-        if (null !== $this->oauth2MetadataUrl) {
-            $data['oauth2MetadataUrl'] = $this->oauth2MetadataUrl;
-        }
-
-        if (null !== $this->authorizationUrl) {
-            $data['authorizationUrl'] = $this->authorizationUrl;
-        }
-
-        if (null !== $this->tokenUrl) {
-            $data['tokenUrl'] = $this->tokenUrl;
-        }
-
-        if (null !== $this->refreshUrl) {
-            $data['refreshUrl'] = $this->refreshUrl;
-        }
-
-        if (null !== $this->scopes) {
-            $data['scopes'] = $this->scopes;
-        }
-
-        return $data;
+        return ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

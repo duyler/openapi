@@ -27,7 +27,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   CookieValidator uses `rawurldecode` on the raw cookie value.
  * - CK-03: `style: form + explode: true` for cookie arrays. Multiple
  *   cookies with the same name are collected into an indexed array
- *   via CookieValidator::parseExplodedValues.
+ *   via CookieHeaderParser::parseExplodedValues.
  */
 final class CookieValidationTest extends TestCase
 {
@@ -337,7 +337,7 @@ YAML;
     /**
      * CK-03 positive: `style: form + explode: true` for cookie arrays via
      * multiple Cookie header values with the same name. The Cookie header
-     * `tags=php; tags=go` is parsed by CookieValidator::parseExplodedValues
+     * `tags=php; tags=go` is parsed by CookieHeaderParser::parseExplodedValues
      * into the array ["php", "go"].
      *
      * The `minItems: 2` constraint proves two items were actually collected.

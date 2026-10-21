@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
 use JsonSerializable;
 use Override;
 
@@ -14,17 +15,20 @@ final readonly class ExternalDocs implements JsonSerializable
         public ?string $description = null,
     ) {}
 
+    /**
+     * @return list<FieldMetadata>
+     */
+    public static function wireFields(): array
+    {
+        return [
+            new FieldMetadata('url', 'url'),
+            new FieldMetadata('description', 'description'),
+        ];
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [
-            'url' => $this->url,
-        ];
-
-        if (null !== $this->description) {
-            $data['description'] = $this->description;
-        }
-
-        return $data;
+        return ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

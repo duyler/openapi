@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
 use JsonSerializable;
 use Override;
 
@@ -24,39 +25,25 @@ final readonly class MediaType implements JsonSerializable
         public ?Example $example = null,
     ) {}
 
+    /**
+     * @return list<FieldMetadata>
+     */
+    public static function wireFields(): array
+    {
+        return [
+            new FieldMetadata('schema', 'schema'),
+            new FieldMetadata('itemSchema', 'itemSchema'),
+            new FieldMetadata('encoding', 'encoding'),
+            new FieldMetadata('itemEncoding', 'itemEncoding'),
+            new FieldMetadata('prefixEncoding', 'prefixEncoding'),
+            new FieldMetadata('example', 'example'),
+            new FieldMetadata('examples', 'examples'),
+        ];
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [];
-
-        if (null !== $this->schema) {
-            $data['schema'] = $this->schema;
-        }
-
-        if (null !== $this->itemSchema) {
-            $data['itemSchema'] = $this->itemSchema;
-        }
-
-        if (null !== $this->encoding) {
-            $data['encoding'] = $this->encoding;
-        }
-
-        if (null !== $this->itemEncoding) {
-            $data['itemEncoding'] = $this->itemEncoding;
-        }
-
-        if (null !== $this->prefixEncoding) {
-            $data['prefixEncoding'] = $this->prefixEncoding;
-        }
-
-        if (null !== $this->example) {
-            $data['example'] = $this->example;
-        }
-
-        if (null !== $this->examples) {
-            $data['examples'] = $this->examples;
-        }
-
-        return $data;
+        return ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

@@ -105,7 +105,7 @@ final class AnyOfDiscriminatorTest extends TestCase
 
         $validator->validate($userData, $accountSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -131,6 +131,6 @@ final class AnyOfDiscriminatorTest extends TestCase
         $validator->validate('test', $valueSchema);
         $validator->validate(42, $valueSchema);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 }

@@ -7,13 +7,15 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Request;
 use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Request\QueryParser;
 use Duyler\OpenApi\Validator\Request\QueryStringValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -26,7 +28,12 @@ final class QueryStringValidatorFullTest extends TestCase
     protected function setUp(): void
     {
         $queryParser = new QueryParser();
-        $schemaValidator = new SchemaValidator(new ValidatorPool(), BuiltinFormats::create());
+        $schemaValidator = new SchemaValidatorDependencies(
+            pool: new ValidatorPool(),
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), BuiltinFormats::create()),
+            formatRegistry: BuiltinFormats::create(),
+        )->rootStatelessValidator();
 
         $this->validator = new QueryStringValidator(
             $queryParser,
@@ -41,7 +48,7 @@ final class QueryStringValidatorFullTest extends TestCase
 
         $this->validator->validate('id=1', [$param]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -112,7 +119,7 @@ final class QueryStringValidatorFullTest extends TestCase
 
         $this->validator->validate('', [$param]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -132,7 +139,7 @@ final class QueryStringValidatorFullTest extends TestCase
 
         $this->validator->validate('test', [$param]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -153,6 +160,6 @@ final class QueryStringValidatorFullTest extends TestCase
     {
         $this->validator->validate('test', ['not_a_parameter', 42, null]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 }

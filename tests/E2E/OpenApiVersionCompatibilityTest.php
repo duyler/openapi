@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\E2E;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
+use Duyler\OpenApi\Test\Support\Psr7RequestFactory;
 use Duyler\OpenApi\Validator\Exception\EnumError;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
@@ -194,7 +195,7 @@ final class OpenApiVersionCompatibilityTest extends TestCase
     {
         $validator = $this->buildValidator($specPath);
 
-        $request = $this->buildJsonRequest('POST', '/pets', [
+        $request = Psr7RequestFactory::createJsonRequest('POST', '/pets', [
             'name' => 'Rex',
             'tag' => 'dog',
         ]);
@@ -211,7 +212,7 @@ final class OpenApiVersionCompatibilityTest extends TestCase
     {
         $validator = $this->buildValidator($specPath);
 
-        $request = $this->buildJsonRequest('POST', '/pets', ['tag' => 'dog']);
+        $request = Psr7RequestFactory::createJsonRequest('POST', '/pets', ['tag' => 'dog']);
 
         $this->expectException(ValidationException::class);
         $validator->validateRequest($request);
@@ -223,7 +224,7 @@ final class OpenApiVersionCompatibilityTest extends TestCase
     {
         $validator = $this->buildValidator($specPath);
 
-        $request = $this->buildJsonRequest('POST', '/pet/simple', [
+        $request = Psr7RequestFactory::createJsonRequest('POST', '/pet/simple', [
             'petType' => 'cat',
             'meow' => true,
         ]);
@@ -240,7 +241,7 @@ final class OpenApiVersionCompatibilityTest extends TestCase
     {
         $validator = $this->buildValidator($specPath);
 
-        $request = $this->buildJsonRequest('POST', '/pet/simple', ['petType' => 'cat']);
+        $request = Psr7RequestFactory::createJsonRequest('POST', '/pet/simple', ['petType' => 'cat']);
 
         $this->expectException(ValidationException::class);
         $validator->validateRequest($request);
@@ -338,7 +339,7 @@ final class OpenApiVersionCompatibilityTest extends TestCase
     {
         $validator = $this->buildValidator($specPath);
 
-        $request = $this->buildJsonRequest('POST', '/webhook', [
+        $request = Psr7RequestFactory::createJsonRequest('POST', '/webhook', [
             'payment_id' => '550e8400-e29b-41d4-a716-446655440000',
             'status' => 'completed',
             'amount' => 99.99,
@@ -355,7 +356,7 @@ final class OpenApiVersionCompatibilityTest extends TestCase
     {
         $validator = $this->buildValidator($specPath);
 
-        $request = $this->buildJsonRequest('POST', '/webhook', [
+        $request = Psr7RequestFactory::createJsonRequest('POST', '/webhook', [
             'payment_id' => '550e8400-e29b-41d4-a716-446655440000',
             'status' => 'unknown',
             'amount' => 99.99,
@@ -567,7 +568,7 @@ final class OpenApiVersionCompatibilityTest extends TestCase
     {
         $validator = $this->buildValidator($specPath);
 
-        $request = $this->buildJsonRequest('POST', '/resource', ['name' => 'widget']);
+        $request = Psr7RequestFactory::createJsonRequest('POST', '/resource', ['name' => 'widget']);
 
         $operation = $validator->validateRequest($request);
 
@@ -628,15 +629,6 @@ final class OpenApiVersionCompatibilityTest extends TestCase
             ->fromYamlFile($specPath)
             ->enableSecurityValidation()
             ->build();
-    }
-
-    private function buildJsonRequest(string $method, string $path, array $body): ServerRequestInterface
-    {
-        return $this->psrFactory->createServerRequest($method, $path)
-            ->withHeader('Content-Type', 'application/json')
-            ->withBody($this->psrFactory->createStream(
-                (string) json_encode($body, JSON_THROW_ON_ERROR),
-            ));
     }
 
     private function buildXmlRequest(string $method, string $path, string $xmlBody): ServerRequestInterface

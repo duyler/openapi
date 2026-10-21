@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
+use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\PatternPropertiesValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Internal\LruCache;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -30,7 +33,9 @@ final class PatternPropertiesNormalizeCacheTest extends TestCase
     {
         $this->pool = new ValidatorPool();
         $this->regexValidator = new RegexValidator();
-        $this->validator = new PatternPropertiesValidator(new ValidatorDependencies(
+        $this->validator = new PatternPropertiesValidator(new SchemaValidatorDependencies(
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()),
             pool: $this->pool,
             formatRegistry: BuiltinFormats::create(),
             regexValidator: $this->regexValidator,
@@ -187,8 +192,14 @@ final class PatternPropertiesNormalizeCacheTest extends TestCase
         $reflection = new ReflectionClass(RegexValidator::class);
         $property = $reflection->getProperty('normalizeCache');
 
+        /** @var LruCache<string, string> $lruCache */
+        $lruCache = $property->getValue($this->regexValidator);
+
+        $lruReflection = new ReflectionClass($lruCache);
+        $itemsProperty = $lruReflection->getProperty('items');
+
         /** @var array<string, string> $cache */
-        $cache = $property->getValue($this->regexValidator);
+        $cache = $itemsProperty->getValue($lruCache);
 
         return $cache;
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
 use JsonSerializable;
 use Override;
 
@@ -18,30 +19,24 @@ final readonly class InfoObject implements JsonSerializable
         public ?License $license = null,
     ) {}
 
+    /**
+     * @return list<FieldMetadata>
+     */
+    public static function wireFields(): array
+    {
+        return [
+            new FieldMetadata('title', 'title'),
+            new FieldMetadata('version', 'version'),
+            new FieldMetadata('description', 'description'),
+            new FieldMetadata('termsOfService', 'termsOfService'),
+            new FieldMetadata('contact', 'contact'),
+            new FieldMetadata('license', 'license'),
+        ];
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [
-            'title' => $this->title,
-            'version' => $this->version,
-        ];
-
-        if (null !== $this->description) {
-            $data['description'] = $this->description;
-        }
-
-        if (null !== $this->termsOfService) {
-            $data['termsOfService'] = $this->termsOfService;
-        }
-
-        if (null !== $this->contact) {
-            $data['contact'] = $this->contact;
-        }
-
-        if (null !== $this->license) {
-            $data['license'] = $this->license;
-        }
-
-        return $data;
+        return ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

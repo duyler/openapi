@@ -29,13 +29,13 @@ final class InvalidDataTypeExceptionTest extends TestCase
     }
 
     #[Test]
-    public function dataPath_returns_empty_string(): void
+    public function data_path_returns_empty_string(): void
     {
         self::assertSame('', $this->exception->dataPath());
     }
 
     #[Test]
-    public function schemaPath_returns_empty_string(): void
+    public function schema_path_returns_empty_string(): void
     {
         self::assertSame('', $this->exception->schemaPath());
     }

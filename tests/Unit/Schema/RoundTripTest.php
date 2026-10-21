@@ -135,7 +135,8 @@ JSON;
             "bearerAuth": {"type": "http", "scheme": "bearer"}
         },
         "links": {
-            "UserLink": {"operationId": "getUser", "parameters": {"id": "$response.body#/id"}}
+            "UserLink": {"operationId": "getUser", "parameters": {"id": "$response.body#/id"}},
+            "ExternalLink": {"$ref": "#/components/links/UserLink", "description": "Alias of user link"}
         }
     }
 }

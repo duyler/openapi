@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Model;
 
+use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
 use JsonSerializable;
 use Override;
 
@@ -18,33 +19,24 @@ final readonly class Tag implements JsonSerializable
         public ?string $kind = null,
     ) {}
 
+    /**
+     * @return list<FieldMetadata>
+     */
+    public static function wireFields(): array
+    {
+        return [
+            new FieldMetadata('name', 'name'),
+            new FieldMetadata('description', 'description'),
+            new FieldMetadata('externalDocs', 'externalDocs'),
+            new FieldMetadata('summary', 'summary'),
+            new FieldMetadata('parent', 'parent'),
+            new FieldMetadata('kind', 'kind'),
+        ];
+    }
+
     #[Override]
     public function jsonSerialize(): array
     {
-        $data = [
-            'name' => $this->name,
-        ];
-
-        if (null !== $this->description) {
-            $data['description'] = $this->description;
-        }
-
-        if (null !== $this->externalDocs) {
-            $data['externalDocs'] = $this->externalDocs;
-        }
-
-        if (null !== $this->summary) {
-            $data['summary'] = $this->summary;
-        }
-
-        if (null !== $this->parent) {
-            $data['parent'] = $this->parent;
-        }
-
-        if (null !== $this->kind) {
-            $data['kind'] = $this->kind;
-        }
-
-        return $data;
+        return ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

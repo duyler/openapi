@@ -11,8 +11,7 @@ use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Exception\UndefinedResponseException;
-use Duyler\OpenApi\Validator\PregExecutor;
-use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidator;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorDispatcher;
 use Duyler\OpenApi\Schema\Model\Response;
 use Psr\Http\Message\ResponseInterface;
 
@@ -31,19 +30,12 @@ final readonly class ResponseValidatorWithContext
         private readonly OpenApiDocument $document,
         private readonly SchemaValidatorDependencies $dependencies,
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
-        ?PregExecutor $pregExecutor = null,
     ) {
-        $resolvedPregExecutor = $pregExecutor ?? new PregExecutor($this->configuration->maxRegexBacktracks);
         $this->statusCodeValidator = new StatusCodeValidator();
 
-        $schemaValidator = new SchemaValidator(
-            $this->dependencies->pool,
-            $this->dependencies->formatRegistry,
-            strictFormats: $this->configuration->strictFormats,
-            reportDeprecated: $this->configuration->reportDeprecated,
-            logger: $this->dependencies->logger,
-            eventDispatcher: $this->dependencies->eventDispatcher,
-            pregExecutor: $resolvedPregExecutor,
+        $schemaValidator = new StatelessValidatorDispatcher(
+            validators: $this->dependencies->createFullList(),
+            pool: $this->dependencies->pool,
         );
         $this->headersValidator = new ResponseHeadersValidator(
             schemaValidator: $schemaValidator,
@@ -57,7 +49,6 @@ final readonly class ResponseValidatorWithContext
             document: $this->document,
             dependencies: $this->dependencies,
             configuration: $this->configuration,
-            pregExecutor: $resolvedPregExecutor,
         );
     }
 

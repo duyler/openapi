@@ -52,7 +52,7 @@ final class TimeValidatorTest extends TestCase
     {
         $this->validator->validate($value);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     public static function invalidTimeValuesProvider(): array

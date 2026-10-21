@@ -11,12 +11,11 @@ use Duyler\OpenApi\Event\ValidationErrorEvent;
 use Duyler\OpenApi\Event\ValidationFinishedEvent;
 use Duyler\OpenApi\Event\ValidationStartedEvent;
 use Duyler\OpenApi\Event\ValidationWarningEvent;
+use Duyler\OpenApi\Test\Support\Psr7RequestFactory;
+use Duyler\OpenApi\Test\Support\TestEventBuilders;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
-use Nyholm\Psr7\Factory\Psr17Factory;
-use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\ServerRequestInterface;
 
 final class ValidationLifecycleTest extends TestCase
 {
@@ -52,14 +51,6 @@ components:
           deprecated: true
 YAML;
 
-    private Psr17Factory $factory;
-
-    #[Override]
-    protected function setUp(): void
-    {
-        $this->factory = new Psr17Factory();
-    }
-
     #[Test]
     public function lifecycle_started_then_finished_on_successful_validation(): void
     {
@@ -78,17 +69,17 @@ YAML;
 
         $validator = $this->buildLifecycleValidator($dispatcher);
 
-        $validator->validateRequest($this->createItemRequest('{"name":"widget"}'));
+        $validator->validateRequest(Psr7RequestFactory::createJsonRequest('POST', '/items', '{"name":"widget"}'));
 
         self::assertSame(['started', 'finished'], $sequence);
         self::assertNotNull($startedEvent);
         self::assertNotNull($finishedEvent);
         self::assertSame('POST', $startedEvent->method);
         self::assertSame('/items', $startedEvent->path);
-        self::assertTrue($finishedEvent->success);
+        self::assertTrue($finishedEvent->isSuccess);
         self::assertSame('POST', $finishedEvent->method);
         self::assertSame('/items', $finishedEvent->path);
-        self::assertGreaterThanOrEqual(0.0, $finishedEvent->duration);
+        self::assertGreaterThanOrEqual(0.0, $finishedEvent->durationInSeconds);
     }
 
     #[Test]
@@ -112,7 +103,7 @@ YAML;
         $exceptionCaught = false;
 
         try {
-            $validator->validateRequest($this->createItemRequest('{}'));
+            $validator->validateRequest(Psr7RequestFactory::createJsonRequest('POST', '/items', '{}'));
             self::fail('Expected ValidationException for missing required "name" property');
         } catch (ValidationException) {
             $exceptionCaught = true;
@@ -122,7 +113,7 @@ YAML;
         self::assertSame(['started', 'finished', 'error'], $sequence);
         self::assertNotNull($finishedEvent);
         self::assertNotNull($errorEvent);
-        self::assertFalse($finishedEvent->success);
+        self::assertFalse($finishedEvent->isSuccess);
         self::assertSame('POST', $errorEvent->method);
         self::assertSame('/items', $errorEvent->path);
         self::assertInstanceOf(ValidationException::class, $errorEvent->exception);
@@ -146,25 +137,25 @@ YAML;
 
         $validator = $this->buildLifecycleValidator($dispatcher);
 
-        $validator->validateRequest($this->createItemRequest('{"name":"widget","oldField":"legacy"}'));
+        $validator->validateRequest(Psr7RequestFactory::createJsonRequest('POST', '/items', '{"name":"widget","oldField":"legacy"}'));
 
         self::assertSame(['started', 'warning', 'finished'], $sequence);
         self::assertNotNull($warningEvent);
         self::assertNotNull($finishedEvent);
         self::assertSame('oldField', $warningEvent->propertyName);
         self::assertSame('Property "oldField" is deprecated', $warningEvent->message);
-        self::assertTrue($finishedEvent->success);
+        self::assertTrue($finishedEvent->isSuccess);
     }
 
     #[Test]
     public function lifecycle_only_started_and_finished_on_valid_request_without_deprecated(): void
     {
         $sequence = [];
-        $dispatcher = $this->createSequenceDispatcher($sequence);
+        $dispatcher = TestEventBuilders::sequenceDispatcher($sequence);
 
         $validator = $this->buildLifecycleValidator($dispatcher);
 
-        $validator->validateRequest($this->createItemRequest('{"name":"widget"}'));
+        $validator->validateRequest(Psr7RequestFactory::createJsonRequest('POST', '/items', '{"name":"widget"}'));
 
         self::assertSame(['started', 'finished'], $sequence);
     }
@@ -187,7 +178,7 @@ YAML;
 
         $validator = $this->buildLifecycleValidator($dispatcher);
 
-        $validator->validateRequest($this->createItemRequest('{"name":"widget"}'));
+        $validator->validateRequest(Psr7RequestFactory::createJsonRequest('POST', '/items', '{"name":"widget"}'));
 
         self::assertNotNull($startedEvent);
         self::assertSame('/items', $startedEvent->path);
@@ -213,10 +204,10 @@ YAML;
 
         $validator = $this->buildLifecycleValidator($dispatcher);
 
-        $validator->validateRequest($this->createItemRequest('{"name":"widget"}'));
+        $validator->validateRequest(Psr7RequestFactory::createJsonRequest('POST', '/items', '{"name":"widget"}'));
 
         self::assertNotNull($finishedEvent);
-        self::assertGreaterThanOrEqual(0.0, $finishedEvent->duration);
+        self::assertGreaterThanOrEqual(0.0, $finishedEvent->durationInSeconds);
     }
 
     /**
@@ -261,47 +252,11 @@ YAML;
         ]);
     }
 
-    /**
-     * @param list<string> $sequence
-     */
-    private function createSequenceDispatcher(array &$sequence): ArrayDispatcher
-    {
-        return new ArrayDispatcher([
-            ValidationStartedEvent::class => [
-                static function () use (&$sequence): void {
-                    $sequence[] = 'started';
-                },
-            ],
-            ValidationFinishedEvent::class => [
-                static function () use (&$sequence): void {
-                    $sequence[] = 'finished';
-                },
-            ],
-            ValidationErrorEvent::class => [
-                static function () use (&$sequence): void {
-                    $sequence[] = 'error';
-                },
-            ],
-            ValidationWarningEvent::class => [
-                static function () use (&$sequence): void {
-                    $sequence[] = 'warning';
-                },
-            ],
-        ]);
-    }
-
     private function buildLifecycleValidator(ArrayDispatcher $dispatcher): OpenApiValidatorInterface
     {
         return OpenApiValidatorBuilder::create()
             ->fromYamlString(self::LIFECYCLE_SPEC)
             ->withEventDispatcher($dispatcher)
             ->build();
-    }
-
-    private function createItemRequest(string $body): ServerRequestInterface
-    {
-        return $this->factory->createServerRequest('POST', '/items')
-            ->withHeader('Content-Type', 'application/json')
-            ->withBody($this->factory->createStream($body));
     }
 }

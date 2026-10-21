@@ -9,7 +9,6 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Parser\TypeHelper;
 
 use function is_array;
-use function is_bool;
 
 /** @internal */
 final readonly class ObjectSchemaKeywordParser
@@ -33,64 +32,26 @@ final readonly class ObjectSchemaKeywordParser
      */
     public function build(array $data, Closure $recurse): array
     {
+        $accumulator = new SchemaKeywordAccumulator($recurse);
+
         return [
             'required' => TypeHelper::asStringListOrNull($data['required'] ?? null),
             'properties' => isset($data['properties']) && is_array($data['properties'])
                 ? $this->buildProperties(TypeHelper::asArray($data['properties']), $recurse)
                 : null,
-            'additionalProperties' => $this->buildOptionalSchema($data, 'additionalProperties', $recurse),
-            'unevaluatedProperties' => $this->buildOptionalSchema($data, 'unevaluatedProperties', $recurse),
+            'additionalProperties' => $accumulator->schemaOrBoolOrNull($data, 'additionalProperties'),
+            'unevaluatedProperties' => $accumulator->schemaOrBoolOrNull($data, 'unevaluatedProperties'),
             'maxProperties' => TypeHelper::asIntOrNull($data['maxProperties'] ?? null),
             'minProperties' => TypeHelper::asIntOrNull($data['minProperties'] ?? null),
             'patternProperties' => isset($data['patternProperties']) && is_array($data['patternProperties'])
                 ? $this->buildProperties(TypeHelper::asArray($data['patternProperties']), $recurse)
                 : null,
-            'propertyNames' => $this->schemaOrBoolOrNull($data, 'propertyNames', $recurse),
+            'propertyNames' => $accumulator->schemaOrBoolOrNull($data, 'propertyNames'),
             'dependentSchemas' => isset($data['dependentSchemas']) && is_array($data['dependentSchemas'])
                 ? $this->buildProperties(TypeHelper::asArray($data['dependentSchemas']), $recurse)
                 : null,
-            'contentSchema' => $this->buildOptionalSchema($data, 'contentSchema', $recurse),
+            'contentSchema' => $accumulator->schemaOrBoolOrNull($data, 'contentSchema'),
         ];
-    }
-
-    /**
-     * @param array<array-key, mixed> $data
-     * @param Closure(bool|array): Schema $recurse
-     */
-    private function buildOptionalSchema(array $data, string $key, Closure $recurse): Schema|bool|null
-    {
-        if (false === isset($data[$key])) {
-            return null;
-        }
-
-        if (is_array($data[$key])) {
-            return $recurse(TypeHelper::asArray($data[$key]));
-        }
-
-        return (bool) $data[$key];
-    }
-
-    /**
-     * @param array<array-key, mixed> $data
-     * @param Closure(bool|array): Schema $recurse
-     */
-    private function schemaOrBoolOrNull(array $data, string $key, Closure $recurse): Schema|bool|null
-    {
-        if (false === isset($data[$key])) {
-            return null;
-        }
-
-        $value = $data[$key];
-
-        if (is_bool($value)) {
-            return $value;
-        }
-
-        if (is_array($value)) {
-            return $recurse($value);
-        }
-
-        return null;
     }
 
     /**

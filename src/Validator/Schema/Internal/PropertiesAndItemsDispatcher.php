@@ -12,12 +12,9 @@ use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\ItemsValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\PropertiesValidatorWithContext;
-use Duyler\OpenApi\Validator\SchemaValidator\KeywordApplicable;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use WeakMap;
 
-use function array_filter;
-use function array_values;
 use function is_array;
 
 /** @internal */
@@ -58,13 +55,10 @@ final class PropertiesAndItemsDispatcher
     {
         $errors = [];
 
-        if ($this->applicableStatelessValidators->offsetExists($schema)) {
-            /** @var list<SchemaValidatorInterface> $validators */
-            $validators = $this->applicableStatelessValidators[$schema];
-        } else {
-            $validators = $this->computeApplicableStatelessValidators($schema);
-            $this->applicableStatelessValidators[$schema] = $validators;
-        }
+        /** @var list<SchemaValidatorInterface> $validators */
+        $validators = $this->applicableStatelessValidators[$schema]
+            ?? $this->computeApplicableStatelessValidators($schema);
+        $this->applicableStatelessValidators[$schema] = $validators;
 
         foreach ($validators as $validator) {
             try {
@@ -89,16 +83,9 @@ final class PropertiesAndItemsDispatcher
      */
     private function computeApplicableStatelessValidators(Schema $schema): array
     {
-        $all = $this->dependencies->statelessValidators->getValidators();
-
-        /** @var list<SchemaValidatorInterface> $filtered */
-        $filtered = array_values(array_filter(
-            $all,
-            static function (SchemaValidatorInterface $v) use ($schema): bool {
-                return false === ($v instanceof KeywordApplicable) || $v->isApplicable($schema);
-            },
-        ));
-
-        return $filtered;
+        return ApplicableValidators::filter(
+            $this->dependencies->statelessValidators->getValidators(),
+            $schema,
+        );
     }
 }

@@ -51,7 +51,7 @@ components:
 YAML;
 
     #[Test]
-    public function withFormat_called_before_withMaxRegexBacktracks_overrides_builtin_email(): void
+    public function with_format_called_before_with_max_regex_backtracks_overrides_builtin_email(): void
     {
         $custom = self::failingMarkerValidator('custom-email-marker-before');
 
@@ -72,7 +72,7 @@ YAML;
     }
 
     #[Test]
-    public function withFormat_called_after_withMaxRegexBacktracks_overrides_builtin_email(): void
+    public function with_format_called_after_with_max_regex_backtracks_overrides_builtin_email(): void
     {
         $custom = self::failingMarkerValidator('custom-email-marker-after');
 
@@ -93,7 +93,7 @@ YAML;
     }
 
     #[Test]
-    public function last_withFormat_call_for_same_type_and_format_wins(): void
+    public function last_with_format_call_for_same_type_and_format_wins(): void
     {
         $first = self::failingMarkerValidator('first-marker');
         $second = self::failingMarkerValidator('second-marker-wins');
@@ -115,7 +115,7 @@ YAML;
     }
 
     #[Test]
-    public function withFormat_user_validator_does_not_disable_builtin_email_for_other_specs(): void
+    public function with_format_user_validator_does_not_disable_builtin_email_for_other_specs(): void
     {
         $custom = self::failingMarkerValidator('never-triggered-marker');
 
@@ -126,7 +126,7 @@ YAML;
 
         $validator->validateSchema(['email' => 'user@example.com'], '#/components/schemas/EmailHolder');
 
-        self::assertTrue(true);
+        self::expectNotToPerformAssertions();
     }
 
     private static function failingMarkerValidator(string $marker): FormatValidatorInterface

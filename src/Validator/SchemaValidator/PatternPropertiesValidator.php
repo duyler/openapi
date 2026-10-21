@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Override;
 
+use function array_keys;
 use function is_array;
 use function is_string;
 
@@ -72,11 +73,13 @@ final readonly class PatternPropertiesValidator extends AbstractSchemaValidator 
         $nullableAsType = $context?->nullableAsType ?? true;
         $pregExecutor = $this->pregExecutor();
 
-        /** @var array<string, mixed> $data */
-        foreach ($data as $propertyName => $propertyValue) {
+        foreach (array_keys($data) as $propertyName) {
             if (false === is_string($propertyName)) {
                 continue;
             }
+
+            /** @var array-key|array<array-key, mixed> $propertyValue */
+            $propertyValue = $data[$propertyName];
 
             foreach ($normalizedPatterns as $pattern => $normalizedPattern) {
                 if ('' === $normalizedPattern) {
@@ -96,7 +99,6 @@ final readonly class PatternPropertiesValidator extends AbstractSchemaValidator 
                 $context->enterBreadcrumb($propertyName);
 
                 try {
-                    /** @var array-key|array<array-key, mixed> $propertyValue */
                     $validator->validate($propertyValue, $propertySchema, $context);
                     $context->markPropertyEvaluated($propertyName);
                 } finally {

@@ -74,7 +74,7 @@ YAML;
 
         $validator->validateSchema(['name' => null], '#/components/schemas/User');
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -103,7 +103,7 @@ YAML;
 
         $validator->validateSchema(['name' => 'John'], '#/components/schemas/User');
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]

@@ -5,10 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.8.0]
+
+### Added
+
+- `StreamingContentParser::parserFor()` resolves the format parser
+  responsible for a content type through the same detection logic as
+  `StreamingMediaTypeDetector::detect()`, and the new `StreamingFormat`
+  enum (`NdJson`, `Sse`, `JsonSeq`) is the single source of the routing
+  decision. Detection semantics are unified on `str_contains` with the
+  full patterns (`application/jsonl`, `application/x-ndjson`,
+  `text/event-stream`, `application/json-seq`) — the broader of the two
+  semantics previously split between the dispatcher and the detector — and
+  the boundary is pinned by detection vectors, including the explicit
+  rejection of vendor-suffixed types such as `application/vnd.foo+json-seq`.
+- New domain exceptions `Validator\Exception\UnknownLinkException`
+  (extends `InvalidArgumentException`) and
+  `Validator\Exception\MultipartBodyTooLargeException` (extends
+  `RuntimeException`) replace bare SPL throws for undefined component
+  links and the multipart part-cap violation.
 
 ### Changed
 
+- Streaming parsers now share one line/chunk reader, one record collector
+  and one media-type detector. `NdJsonParser::parseStream()` and
+  `JsonSeqParser::parseStream()` delegate to `StreamLineReader`
+  (`readLines()` / `readChunks()`) instead of re-implementing the
+  chunk-buffer loop, and the by-reference `readChunk(&$bomStripped)`
+  helpers are gone: the reader is stateless and the UTF-8 BOM flag lives
+  inside each read pass, so BOM stripping works per pass no matter how many
+  sequential streams are parsed through one `StreamingContentParser`.
+  Record counting, the 100 000-record cap, the JSON depth limit and the
+  malformed-record policy (strict throw vs log-and-skip) moved into a new
+  internal `RecordCollector`, keeping each format's existing degradation
+  behaviour (NDJSON/JSON-seq append `null`, SSE keeps the raw value).
+  Exceeding a line or record length limit now throws the domain
+  `StreamRecordTooLargeException` (extends `RuntimeException`, message
+  unchanged) instead of a bare `RuntimeException`, and scalar JSON values
+  (`42`, `"text"`, `true`) remain collected as records per the JSON Lines
+  and RFC 7464 specs. Limit values are unchanged.
 - String-loaded specs (`fromYamlString()` / `fromJsonString()`) no longer pay a
   second, cache-bypassing parse on every `build()` for the external-`$ref`
   confinement guard. The clean confinement verdict is now cached under the
@@ -18,9 +53,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   finds an external `$ref` is never cached — the `BuilderException` reproduces
   on every build. Specs loaded from files and configurations without
   `withCache()` are unaffected. (#68)
+- All internal LRU caches now share one generic internal class,
+  `Validator\Internal\LruCache` (`@template K of string`, `@template V`):
+  `ValidatorPool`, `PathRegexCache` and `RegexValidator` delegate to it
+  instead of each maintaining their own cache/order/touch/evict arrays.
+  Eviction order, touch semantics and the per-class default capacities
+  (128 / 256 / 512) are unchanged, and the shared class owns the
+  `Max size must be at least 1` constructor guard and a capacity-preserving
+  no-op `touch()` for keys that are not stored. The TTL default and its
+  validation now live in a single place: `TypedCacheDecorator::DEFAULT_TTL`
+  (3600) with `TypedCacheDecorator::validateTtl()`, which `SchemaCache`
+  uses for its constructor default and validation.
+- The optional `DeprecationLogger` constructor parameter `enabled` is
+  renamed to `isEnabled` (boolean-naming convention). Callers passing the
+  flag by name (`new DeprecationLogger(enabled: false)`) must switch to
+  `isEnabled:`; positional calls and the parameter's position and default
+  (`true`) are unchanged.
+- `ValidationFinishedEvent` property names follow the naming conventions:
+  `success` is renamed to `isSuccess` and `duration` (seconds) to
+  `durationInSeconds`. Readers of the public readonly properties
+  (`$event->success`, `$event->duration`) must switch to the new names;
+  constructor argument names change with them. Types, defaults and
+  dispatch semantics are unchanged.
+- The two `contentMediaType`/`contentEncoding` validation-error classes
+  move into the shared `Validator\Exception` namespace:
+  `Duyler\OpenApi\Validator\SchemaValidator\InvalidContentMediaTypeException`
+  and `...\InvalidContentEncodingException` are now
+  `Duyler\OpenApi\Validator\Exception\InvalidContentMediaTypeException` and
+  `...\InvalidContentEncodingException`. Catch-sites referencing the old
+  FQCNs must update the import; class names, hierarchy
+  (`AbstractValidationError`) and messages are unchanged.
+- `OpenApiValidator::resolveLink()` / `resolveLinkWithContext()` throw the
+  new `UnknownLinkException` instead of a bare `InvalidArgumentException`
+  for undefined component links. The new class extends
+  `InvalidArgumentException` and keeps the exact message
+  (`Unknown link: %s`), so existing catch blocks continue to work.
+- Exceeding the multipart part cap throws the domain
+  `MultipartBodyTooLargeException` (extends `RuntimeException`, message
+  unchanged) instead of a bare `RuntimeException`.
+- The bearer Authorization check inside security validation now runs on the
+  same `PregExecutor` instance as every other regex in the validator: the
+  `maxRegexBacktracks` limit configured through
+  `OpenApiValidatorBuilder::withMaxRegexBacktracks()` governs the
+  `http`/`bearer` scheme match too, instead of it silently using a second
+  default-capped executor. The `SecurityValidator` constructor no longer
+  accepts a `bearerValidator` argument; the bearer validator is wired to
+  the injected (or default) `PregExecutor`.
 
 ### Fixed
 
+- `uniqueItems` and scalar `enum` no longer produce false duplicates and
+  false acceptances around the IEEE-754 double representation. Both keyword
+  paths now encode scalar comparison keys through one internal
+  `Validator\SchemaValidator\Internal\ScalarKeyCodec` whose float keys are
+  an injective per-double-value hex encoding of the big-endian IEEE-754
+  bytes (`pack('E', ...)`), fixing the string-cast collapse where the old
+  `(string)`-based keys were truncated to the `precision` ini (14 digits by
+  default — a different ini from `serialize_precision`), so, for example,
+  `enum: [9007199254740990.0]` incorrectly accepted `9007199254740991.0` and
+  `uniqueItems: true` rejected `[9007199254740990.0, 9007199254740991.0]` as
+  duplicates. `-0.0` and `0.0` now encode to the same key, so the two zeros
+  are equivalent per JSON Schema 2020-12 §4.2.2. `NaN` values remain
+  never-equal to anything (each NaN occurrence gets a unique key), and mixed
+  int/float comparisons above the 2^53 safe-integer boundary stay rejected.
 - OpenAPI 3.0 `nullable: true` is no longer discarded when a schema is
   reached through `$ref`. `ScalarSiblingMerger::merge()` combined the `$ref`
   stub's `nullable` flag with the resolved target's using a logical AND, and
@@ -84,6 +179,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   through `RequestValidator`. Per OAS 3.1+, a `description` sibling of
   `$ref` overrides the referenced description (#56).
 - `anyOf`/`oneOf`/`allOf` evaluate every branch again once the composition error cap is reached. A merge had restored the early `return` in `validateSchemas()`, so a matching branch declared after the cap was never counted. Only error collection stops at the cap; `allOf` now reports the true number of failed branches (#54)
+
+### Removed
+
+- **BC break for direct integrators.** The experimental `ValidatorCompiler`
+  subsystem is removed — `src/Compiler/` (`ValidatorCompiler`,
+  `CompilationCache`, `CompilationCacheInterface`, internal code generators
+  and their exceptions), `tests/Unit/Compiler/` and the compiled-validator
+  benchmark. Runtime validation, `SchemaCache` and the spec-loading cache
+  are unaffected. The package is pre-release; no deprecation cycle applies.
+- **BC break for direct integrators.** The `ConfinementVerdict` singleton
+  class is replaced by the enum
+  `ConfinementVerdict { case Clean }`: type hints through
+  `ConfinementVerdict::class`, `instanceof` checks and stored cache values
+  keep working, but code calling `ConfinementVerdict::clean()` must switch to
+  `ConfinementVerdict::Clean`. No consumer inside the monorepo referenced
+  the removed symbol (grep = 0).
+- **BC break for direct integrators.** The deprecated schema-validation stack
+  (`@deprecated since 0.6.0`) is deleted: `SchemaValidator\SchemaValidator`,
+  `SchemaValidator\ValidatorDependencies` (the legacy constructor-dependency
+  bag), `SchemaValidator\ValidatorFactory`, `Registry\DefaultValidatorRegistry`,
+  `Registry\ValidatorRegistryInterface` and `Exception\UnknownValidatorException`.
+  Custom validator/registry injection through these classes is removed with no
+  replacement; the 29 builtin validators are the complete set.
+  All five internal consumption points had already migrated to
+  `SchemaValidatorWithContext` / `StatelessValidatorDispatcher` / the
+  `SchemaValidatorDependencies` DTO; nothing in `src/` referenced the legacy
+  classes. Integrate through `OpenApiValidatorBuilder` or construct validators
+  against `SchemaValidatorDependencies` — validators now take that DTO in their
+  constructors instead of the removed bag. The one shared keyword-applicability
+  filter now lives in `Schema\Internal\ApplicableValidators`, and the single
+  `items: true|false` implementation lives in
+  `SchemaValidator\Internal\BooleanItemsValidator`.
+- `Validation\ValidatorDependencies` is renamed to `Validation\ValidationStack`
+  (and `Validation\Internal\ValidatorDependenciesGroup` to
+  `Validation\Internal\ValidationGroup`) — one short `ValidatorDependencies` name
+  remains, the `Dto\ValidatorDependencies` service container. The class was never
+  README-documented; the only caller is `OpenApiValidatorBuilder`, which is
+  updated. The 21-parameter constructor keeps its PHPDoc-only `@deprecated`
+  (1.x window, `fromGroup()` replacement) — no `#[Deprecated]` attribute, so no
+  runtime `E_DEPRECATED` cascade.
+- The optional `regexValidator` / `pregExecutor` constructor parameters of
+  `Schema\StatelessValidatorRegistry` are removed — the canonical defaults live
+  on `SchemaValidatorDependencies`. With custom instances injected through
+  `ValidationStack`/`Builder` (`maxRegexBacktracks`, shared `PregExecutor`), the
+  stateless registry's schema-level validators now use the default instances;
+  request/response/context paths keep the injected ones.
+- The optional `?PregExecutor` constructor parameters of
+  `ResponseValidatorWithContext`, `ResponseBodyValidatorWithContext` and
+  `RequestBodyValidatorWithContext` are removed: header and body validation now
+  resolve their regex executor from a single source,
+  `SchemaValidatorDependencies::pregExecutor`, so direct construction can no
+  longer mix two instances.
 
 ## [0.7.3]
 

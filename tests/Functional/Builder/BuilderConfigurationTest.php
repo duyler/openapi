@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Functional\Builder;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\Psr7RequestFactory;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -13,7 +14,6 @@ use Nyholm\Psr7\Factory\Psr17Factory;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\AbstractLogger;
 use Psr\Log\LogLevel;
 use Stringable;
@@ -199,7 +199,7 @@ YAML;
             ->fromYamlString(self::OBJECT_SCHEMA_SPEC)
             ->withEmptyArrayStrategy(EmptyArrayStrategy::PreferObject)
             ->build();
-        $request = $this->buildJsonRequest('/data', '[]');
+        $request = Psr7RequestFactory::createJsonRequest('POST', '/data', '[]');
 
         $operation = $validator->validateRequest($request);
 
@@ -214,7 +214,7 @@ YAML;
             ->fromYamlString(self::ARRAY_SCHEMA_SPEC)
             ->withEmptyArrayStrategy(EmptyArrayStrategy::PreferArray)
             ->build();
-        $request = $this->buildJsonRequest('/data', '[]');
+        $request = Psr7RequestFactory::createJsonRequest('POST', '/data', '[]');
 
         $operation = $validator->validateRequest($request);
 
@@ -229,7 +229,7 @@ YAML;
             ->fromYamlString(self::OBJECT_SCHEMA_SPEC)
             ->withEmptyArrayStrategy(EmptyArrayStrategy::PreferArray)
             ->build();
-        $request = $this->buildJsonRequest('/data', '[]');
+        $request = Psr7RequestFactory::createJsonRequest('POST', '/data', '[]');
 
         try {
             $validator->validateRequest($request);
@@ -249,7 +249,7 @@ YAML;
             ->fromYamlString(self::ARRAY_SCHEMA_SPEC)
             ->withEmptyArrayStrategy(EmptyArrayStrategy::PreferObject)
             ->build();
-        $request = $this->buildJsonRequest('/data', '[]');
+        $request = Psr7RequestFactory::createJsonRequest('POST', '/data', '[]');
 
         try {
             $validator->validateRequest($request);
@@ -269,7 +269,7 @@ YAML;
             ->fromYamlString(self::OBJECT_SCHEMA_SPEC)
             ->withEmptyArrayStrategy(EmptyArrayStrategy::Reject)
             ->build();
-        $request = $this->buildJsonRequest('/data', '[]');
+        $request = Psr7RequestFactory::createJsonRequest('POST', '/data', '[]');
 
         try {
             $validator->validateRequest($request);
@@ -289,7 +289,7 @@ YAML;
             ->fromYamlString(self::OBJECT_SCHEMA_SPEC)
             ->withEmptyArrayStrategy(EmptyArrayStrategy::AllowBoth)
             ->build();
-        $request = $this->buildJsonRequest('/data', '[]');
+        $request = Psr7RequestFactory::createJsonRequest('POST', '/data', '[]');
 
         $operation = $validator->validateRequest($request);
 
@@ -403,13 +403,6 @@ YAML;
             ->build();
 
         $this->assertNotNull($validator);
-    }
-
-    private function buildJsonRequest(string $path, string $body): ServerRequestInterface
-    {
-        return $this->psrFactory->createServerRequest('POST', $path)
-            ->withHeader('Content-Type', 'application/json')
-            ->withBody($this->psrFactory->createStream($body));
     }
 
     /**

@@ -353,4 +353,46 @@ final class SecuritySchemeTest extends TestCase
         self::assertArrayHasKey('scopes', $serialized);
         self::assertSame(['read' => 'Read access'], $serialized['scopes']);
     }
+
+    #[Test]
+    public function json_serialize_emits_fields_in_wire_order(): void
+    {
+        $flows = new OAuthFlows(
+            implicit: new OAuthFlow(authorizationUrl: 'https://example.com/authorize'),
+        );
+
+        $scheme = new SecurityScheme(
+            type: 'oauth2',
+            description: 'Description',
+            name: 'Name',
+            in: 'query',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+            flows: $flows,
+            openIdConnectUrl: 'https://example.com/openid',
+            oauth2MetadataUrl: 'https://example.com/metadata',
+            authorizationUrl: 'https://example.com/authorize',
+            tokenUrl: 'https://example.com/token',
+            refreshUrl: 'https://example.com/refresh',
+            scopes: ['read' => 'Read access'],
+        );
+
+        $serialized = $scheme->jsonSerialize();
+
+        self::assertSame([
+            'type' => 'oauth2',
+            'description' => 'Description',
+            'name' => 'Name',
+            'in' => 'query',
+            'scheme' => 'bearer',
+            'bearerFormat' => 'JWT',
+            'flows' => $flows->jsonSerialize(),
+            'openIdConnectUrl' => 'https://example.com/openid',
+            'oauth2MetadataUrl' => 'https://example.com/metadata',
+            'authorizationUrl' => 'https://example.com/authorize',
+            'tokenUrl' => 'https://example.com/token',
+            'refreshUrl' => 'https://example.com/refresh',
+            'scopes' => ['read' => 'Read access'],
+        ], $serialized);
+    }
 }

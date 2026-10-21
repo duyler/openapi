@@ -7,6 +7,8 @@ namespace Duyler\OpenApi\Validator\Format\String;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Override;
 
+use function filter_var;
+
 use const FILTER_FLAG_IPV6;
 use const FILTER_VALIDATE_IP;
 
