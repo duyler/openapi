@@ -239,7 +239,7 @@ final class NullableCompositionTest extends TestCase
     }
 
     #[Test]
-    public function oas_31_null_type_union_is_honored_inside_and_outside_compositions(): void
+    public function openapi_31_null_type_union_is_honored_inside_and_outside_compositions(): void
     {
         $validator = OpenApiValidatorBuilder::create()->fromYamlString(self::SPEC_31)->build();
 
@@ -252,7 +252,7 @@ final class NullableCompositionTest extends TestCase
     }
 
     #[Test]
-    public function oas_31_null_type_union_on_parent_does_not_waive_composition_branches(): void
+    public function openapi_31_null_type_union_on_parent_does_not_waive_composition_branches(): void
     {
         $validator = OpenApiValidatorBuilder::create()->fromYamlString(self::SPEC_31)->build();
 

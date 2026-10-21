@@ -884,7 +884,7 @@ YAML;
     }
 
     #[Test]
-    public function qp_02_duplicate_scalar_keys_collapse_to_form_imploded_string(): void
+    public function duplicate_scalar_keys_collapse_to_form_imploded_string(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -918,7 +918,7 @@ YAML;
     }
 
     #[Test]
-    public function qp_02_duplicate_scalar_keys_do_not_use_last_value_semantics(): void
+    public function duplicate_scalar_keys_do_not_use_last_value_semantics(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -961,7 +961,7 @@ YAML;
     }
 
     #[Test]
-    public function qp_02_duplicate_scalar_keys_with_array_schema_throws_type_mismatch(): void
+    public function duplicate_scalar_keys_with_array_schema_throws_type_mismatch(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -1005,7 +1005,7 @@ YAML;
     }
 
     #[Test]
-    public function qp_04_form_style_comma_separated_value_splits_to_array(): void
+    public function form_style_comma_separated_value_splits_to_array(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -1042,7 +1042,7 @@ YAML;
     }
 
     #[Test]
-    public function qp_04_form_style_invalid_item_value_throws_enum_error(): void
+    public function form_style_invalid_item_value_throws_enum_error(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -1091,7 +1091,7 @@ YAML;
     }
 
     #[Test]
-    public function qp_04_form_style_against_object_schema_throws_type_mismatch(): void
+    public function form_style_against_object_schema_throws_type_mismatch(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -1139,7 +1139,7 @@ YAML;
      */
     #[Test]
     #[DataProvider('provideSpecialCharacterCases')]
-    public function qp_06_special_characters_in_query_value_url_decoded_correctly(
+    public function special_characters_in_query_value_url_decoded_correctly(
         string $rawQueryValue,
         string $expectedDecodedValue,
     ): void {
@@ -1175,7 +1175,7 @@ YAML;
     }
 
     #[Test]
-    public function qp_06_url_encoded_value_does_not_match_raw_const(): void
+    public function url_encoded_value_does_not_match_raw_const(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -1223,7 +1223,7 @@ YAML;
      */
     #[Test]
     #[DataProvider('provideSpecialCharacterParserCases')]
-    public function qp_06_query_parser_url_decodes_special_characters(string $rawQuery, string $expectedValue): void
+    public function query_parser_url_decodes_special_characters(string $rawQuery, string $expectedValue): void
     {
         $result = $this->queryParser->parse($rawQuery);
 
@@ -1231,7 +1231,7 @@ YAML;
     }
 
     #[Test]
-    public function qp_07_bracket_key_without_deep_object_collapses_to_string(): void
+    public function bracket_key_without_deep_object_collapses_to_string(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -1265,7 +1265,7 @@ YAML;
     }
 
     #[Test]
-    public function qp_07_multiple_bracket_keys_collapse_to_form_imploded_string(): void
+    public function multiple_bracket_keys_collapse_to_form_imploded_string(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -1298,7 +1298,7 @@ YAML;
     }
 
     #[Test]
-    public function qp_07_bracket_keys_with_array_schema_throws_type_mismatch(): void
+    public function bracket_keys_with_array_schema_throws_type_mismatch(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -1342,7 +1342,7 @@ YAML;
     }
 
     #[Test]
-    public function qp_07_query_parser_bracket_key_produces_nested_array(): void
+    public function query_parser_bracket_key_produces_nested_array(): void
     {
         $result = $this->queryParser->parse('arr[0]=a');
 

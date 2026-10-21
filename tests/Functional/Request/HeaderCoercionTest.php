@@ -45,7 +45,7 @@ YAML;
     }
 
     #[Test]
-    public function tc_08_type_coercer_directly_converts_header_string_to_int(): void
+    public function type_coercer_directly_converts_header_string_to_int(): void
     {
         $coercer = new TypeCoercer();
         $param = new Parameter(schema: new Schema(type: 'integer'));
@@ -57,7 +57,7 @@ YAML;
     }
 
     #[Test]
-    public function tc_08_header_without_coercion_fails_const_check_on_string_value(): void
+    public function header_without_coercion_fails_const_check_on_string_value(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::HEADER_COERCION_SPEC)
@@ -83,7 +83,7 @@ YAML;
     }
 
     #[Test]
-    public function tc_08_header_string_coerced_to_integer_passes_const_constraint(): void
+    public function header_string_coerced_to_integer_passes_const_constraint(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::HEADER_COERCION_SPEC)
@@ -99,7 +99,7 @@ YAML;
     }
 
     #[Test]
-    public function tc_08_header_non_numeric_string_fails_coercion_with_type_mismatch(): void
+    public function header_non_numeric_string_fails_coercion_with_type_mismatch(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::HEADER_COERCION_SPEC)
@@ -126,7 +126,7 @@ YAML;
     }
 
     #[Test]
-    public function tc_08_header_overflow_numeric_string_fails_coercion_with_type_mismatch(): void
+    public function header_overflow_numeric_string_fails_coercion_with_type_mismatch(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.2.0

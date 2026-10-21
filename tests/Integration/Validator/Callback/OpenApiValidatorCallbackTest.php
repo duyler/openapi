@@ -648,7 +648,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_07_callback_with_valid_query_and_header_params_returns_operation(): void
+    public function callback_with_valid_query_and_header_params_returns_operation(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::QUERY_PATH_PARAMS_CALLBACK_YAML)
@@ -671,7 +671,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_07_callback_with_invalid_query_enum_throws_enum_error(): void
+    public function callback_with_invalid_query_enum_throws_enum_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::QUERY_PATH_PARAMS_CALLBACK_YAML)
@@ -693,7 +693,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_07_callback_without_required_query_param_throws_missing_parameter(): void
+    public function callback_without_required_query_param_throws_missing_parameter(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::QUERY_PATH_PARAMS_CALLBACK_YAML)
@@ -716,7 +716,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_07_callback_without_required_header_throws_missing_parameter(): void
+    public function callback_without_required_header_throws_missing_parameter(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::QUERY_PATH_PARAMS_CALLBACK_YAML)
@@ -738,7 +738,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_07_callback_with_path_template_matches_and_returns_operation(): void
+    public function callback_with_path_template_matches_and_returns_operation(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::PATH_TEMPLATE_CALLBACK_YAML)
@@ -759,7 +759,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_07_callback_with_path_template_mismatched_value_throws_unknown_callback(): void
+    public function callback_with_path_template_mismatched_value_throws_unknown_callback(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::PATH_TEMPLATE_CALLBACK_YAML)
@@ -779,7 +779,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_08_callback_on_success_returns_operation(): void
+    public function callback_on_success_returns_operation(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SUCCESS_ERROR_CALLBACKS_YAML)
@@ -801,7 +801,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_08_callback_on_error_returns_operation(): void
+    public function callback_on_error_returns_operation(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SUCCESS_ERROR_CALLBACKS_YAML)
@@ -823,7 +823,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_08_callback_on_success_with_error_payload_throws_validation_exception(): void
+    public function callback_on_success_with_error_payload_throws_validation_exception(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SUCCESS_ERROR_CALLBACKS_YAML)
@@ -844,7 +844,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_08_callback_on_error_with_success_payload_throws_validation_exception(): void
+    public function callback_on_error_with_success_payload_throws_validation_exception(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::SUCCESS_ERROR_CALLBACKS_YAML)
@@ -865,7 +865,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_09_inline_fixed_url_callback_with_matching_path_returns_operation(): void
+    public function inline_fixed_url_callback_with_matching_path_returns_operation(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::INLINE_FIXED_URL_CALLBACK_YAML)
@@ -886,7 +886,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_09_inline_fixed_url_callback_with_mismatched_path_throws_unknown_callback(): void
+    public function inline_fixed_url_callback_with_mismatched_path_throws_unknown_callback(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::INLINE_FIXED_URL_CALLBACK_YAML)
@@ -906,7 +906,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_09_inline_fixed_url_callback_with_invalid_body_throws_validation_exception(): void
+    public function inline_fixed_url_callback_with_invalid_body_throws_validation_exception(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::INLINE_FIXED_URL_CALLBACK_YAML)

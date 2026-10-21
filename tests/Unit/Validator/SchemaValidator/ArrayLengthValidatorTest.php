@@ -351,7 +351,7 @@ class ArrayLengthValidatorTest extends TestCase
 
     #[Test]
     #[DataProvider('provideUniqueItemsCases')]
-    public function sv_06_unique_items_accepts_distinct_arrays(array $data): void
+    public function unique_items_accepts_distinct_arrays(array $data): void
     {
         $schema = new Schema(type: 'array', uniqueItems: true);
 
@@ -382,7 +382,7 @@ class ArrayLengthValidatorTest extends TestCase
 
     #[Test]
     #[DataProvider('provideDuplicateItemsCases')]
-    public function sv_06_unique_items_rejects_duplicate_arrays(array $data): void
+    public function unique_items_rejects_duplicate_arrays(array $data): void
     {
         $schema = new Schema(type: 'array', uniqueItems: true);
 

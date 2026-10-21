@@ -806,7 +806,7 @@ YAML;
     }
 
     #[Test]
-    public function rp_05_param_only_root_path_matches_single_segment_value(): void
+    public function param_only_root_path_matches_single_segment_value(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -840,7 +840,7 @@ YAML;
     }
 
     #[Test]
-    public function rp_05_param_only_root_path_rejects_empty_value(): void
+    public function param_only_root_path_rejects_empty_value(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0

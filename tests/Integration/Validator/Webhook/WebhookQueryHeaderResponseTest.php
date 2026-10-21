@@ -143,7 +143,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_01_webhook_with_valid_query_parameters_returns_operation(): void
+    public function webhook_with_valid_query_parameters_returns_operation(): void
     {
         $validator = $this->buildQueryValidator();
 
@@ -159,7 +159,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_01_webhook_with_only_required_query_parameter_returns_operation(): void
+    public function webhook_with_only_required_query_parameter_returns_operation(): void
     {
         $validator = $this->buildQueryValidator();
 
@@ -175,7 +175,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_01_webhook_without_required_query_parameter_throws_missing_parameter(): void
+    public function webhook_without_required_query_parameter_throws_missing_parameter(): void
     {
         $validator = $this->buildQueryValidator();
 
@@ -191,7 +191,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_01_webhook_with_invalid_enum_query_parameter_throws_enum_error(): void
+    public function webhook_with_invalid_enum_query_parameter_throws_enum_error(): void
     {
         $validator = $this->buildQueryValidator();
 
@@ -206,7 +206,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_01_webhook_with_page_below_minimum_throws_minimum_error(): void
+    public function webhook_with_page_below_minimum_throws_minimum_error(): void
     {
         $validator = $this->buildQueryValidator();
 
@@ -221,7 +221,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_02_webhook_with_required_headers_returns_operation(): void
+    public function webhook_with_required_headers_returns_operation(): void
     {
         $validator = $this->buildHeaderValidator();
 
@@ -238,7 +238,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_02_webhook_without_required_header_throws_missing_parameter(): void
+    public function webhook_without_required_header_throws_missing_parameter(): void
     {
         $validator = $this->buildHeaderValidator();
 
@@ -255,7 +255,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_02_webhook_with_invalid_header_enum_throws_enum_error(): void
+    public function webhook_with_invalid_header_enum_throws_enum_error(): void
     {
         $validator = $this->buildHeaderValidator();
 
@@ -271,7 +271,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_03_webhook_to_response_full_cycle_passes(): void
+    public function webhook_to_response_full_cycle_passes(): void
     {
         $validator = $this->buildFullCycleValidator();
 
@@ -294,7 +294,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_03_webhook_to_response_with_undefined_status_throws(): void
+    public function webhook_to_response_with_undefined_status_throws(): void
     {
         $validator = $this->buildFullCycleValidator();
 
@@ -311,7 +311,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_03_webhook_to_response_with_invalid_body_throws_validation_exception(): void
+    public function webhook_to_response_with_invalid_body_throws_validation_exception(): void
     {
         $validator = $this->buildFullCycleValidator();
 
@@ -329,7 +329,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_03_webhook_to_response_with_missing_required_field_throws_validation_exception(): void
+    public function webhook_to_response_with_missing_required_field_throws_validation_exception(): void
     {
         $validator = $this->buildFullCycleValidator();
 

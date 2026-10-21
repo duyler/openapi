@@ -43,7 +43,7 @@ YAML;
     }
 
     #[Test]
-    public function hd_05_header_string_value_with_commas_parses_to_array(): void
+    public function header_string_value_with_commas_parses_to_array(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.2.0
@@ -79,7 +79,7 @@ YAML;
     }
 
     #[Test]
-    public function hd_05_header_psr7_array_value_parses_to_array(): void
+    public function header_psr7_array_value_parses_to_array(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::HEADER_ARRAY_SPEC)
@@ -96,7 +96,7 @@ YAML;
     }
 
     #[Test]
-    public function hd_05_missing_required_header_throws_missing_parameter(): void
+    public function missing_required_header_throws_missing_parameter(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::HEADER_ARRAY_SPEC)
@@ -119,7 +119,7 @@ YAML;
     }
 
     #[Test]
-    public function hd_05_header_value_exceeding_max_items_throws_max_items_error(): void
+    public function header_value_exceeding_max_items_throws_max_items_error(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.2.0
@@ -164,7 +164,7 @@ YAML;
     }
 
     #[Test]
-    public function hd_05_psr7_array_header_trims_split_items(): void
+    public function psr7_array_header_trims_split_items(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.2.0

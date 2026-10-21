@@ -76,14 +76,14 @@ final class CombineUrisRfc3986Test extends TestCase
 
     #[Test]
     #[DataProvider('rfc3986NormalExamples')]
-    public function rfc_3986_5_4_1_normal_examples(string $ref, string $expected): void
+    public function normal_examples_per_rfc_3986(string $ref, string $expected): void
     {
         $this->assertSame($expected, $this->resolver->combineUris(self::RFC_BASE, $ref));
     }
 
     #[Test]
     #[DataProvider('rfc3986AbnormalExamples')]
-    public function rfc_3986_5_4_2_abnormal_examples(string $ref, string $expected): void
+    public function abnormal_examples_per_rfc_3986(string $ref, string $expected): void
     {
         $this->assertSame($expected, $this->resolver->combineUris(self::RFC_BASE, $ref));
     }

@@ -46,7 +46,7 @@ paths:
 YAML;
 
     #[Test]
-    public function rb_11_php_json_decode_last_value_wins_for_duplicate_keys(): void
+    public function php_json_decode_last_value_wins_for_duplicate_keys(): void
     {
         $decoded = json_decode('{"value": 1, "value": 2}', true, 512, JSON_THROW_ON_ERROR);
 
@@ -54,7 +54,7 @@ YAML;
     }
 
     #[Test]
-    public function rb_11_duplicate_keys_last_value_wins_passes_validation(): void
+    public function duplicate_keys_last_value_wins_passes_validation(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::DUPLICATE_KEYS_SPEC)
@@ -69,7 +69,7 @@ YAML;
     }
 
     #[Test]
-    public function rb_11_duplicate_keys_negative_when_last_value_violates_schema(): void
+    public function duplicate_keys_negative_when_last_value_violates_schema(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::DUPLICATE_KEYS_SPEC)
@@ -103,7 +103,7 @@ YAML;
     }
 
     #[Test]
-    public function rb_11_decoded_body_round_trips_to_single_key(): void
+    public function decoded_body_round_trips_to_single_key(): void
     {
         $decoded = json_decode('{"value": 1, "value": 2}', true, 512, JSON_THROW_ON_ERROR);
 

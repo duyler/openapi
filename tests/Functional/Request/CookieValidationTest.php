@@ -25,7 +25,7 @@ final class CookieValidationTest extends TestCase
     }
 
     #[Test]
-    public function ck_01_type_coercer_directly_converts_cookie_string_to_int_25(): void
+    public function type_coercer_directly_converts_cookie_string_to_int_25(): void
     {
         $coercer = new TypeCoercer();
         $param = new Parameter(schema: new Schema(type: 'integer'));
@@ -37,7 +37,7 @@ final class CookieValidationTest extends TestCase
     }
 
     #[Test]
-    public function ck_01_cookie_integer_value_coerced_passes_const_constraint(): void
+    public function cookie_integer_value_coerced_passes_const_constraint(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.2.0
@@ -72,7 +72,7 @@ YAML;
     }
 
     #[Test]
-    public function ck_01_cookie_integer_without_coercion_fails_const_check(): void
+    public function cookie_integer_without_coercion_fails_const_check(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.2.0
@@ -117,7 +117,7 @@ YAML;
     }
 
     #[Test]
-    public function ck_01_cookie_non_numeric_string_throws_type_mismatch(): void
+    public function cookie_non_numeric_string_throws_type_mismatch(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.2.0
@@ -163,7 +163,7 @@ YAML;
     }
 
     #[Test]
-    public function ck_01_type_coercer_strict_mode_rejects_non_numeric_string_with_type_mismatch(): void
+    public function type_coercer_strict_mode_rejects_non_numeric_string_with_type_mismatch(): void
     {
         $coercer = new TypeCoercer();
         $param = new Parameter(schema: new Schema(type: 'integer'));
@@ -186,7 +186,7 @@ YAML;
     }
 
     #[Test]
-    public function ck_02_cookie_url_encoded_utf8_value_decoded_to_string(): void
+    public function cookie_url_encoded_utf8_value_decoded_to_string(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.2.0
@@ -220,7 +220,7 @@ YAML;
     }
 
     #[Test]
-    public function ck_02_cookie_url_encoded_utf8_value_decoded_does_not_match_other_const(): void
+    public function cookie_url_encoded_utf8_value_decoded_does_not_match_other_const(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.2.0
@@ -265,7 +265,7 @@ YAML;
     }
 
     #[Test]
-    public function ck_02_raw_url_decode_of_cyrillic_cookie_value_yields_utf8(): void
+    public function raw_url_decode_of_cyrillic_cookie_value_yields_utf8(): void
     {
         $decoded = rawurldecode('%D0%98%D0%B2%D0%B0%D0%BD');
 
@@ -273,7 +273,7 @@ YAML;
     }
 
     #[Test]
-    public function ck_03_cookie_style_form_explode_collects_repeated_keys_into_array(): void
+    public function cookie_style_form_explode_collects_repeated_keys_into_array(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.2.0
@@ -313,7 +313,7 @@ YAML;
     }
 
     #[Test]
-    public function ck_03_cookie_style_form_explode_single_value_fails_array_schema(): void
+    public function cookie_style_form_explode_single_value_fails_array_schema(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.2.0
