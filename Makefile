@@ -2,6 +2,10 @@
 tests:
 	docker-compose run --rm php vendor/bin/phpunit
 
+.PHONY: test-structure
+test-structure:
+	docker-compose run --rm php sh bin/test-structure.sh
+
 .PHONY: infection
 infection:
 	docker-compose run --rm php php -d memory_limit=512M vendor/bin/infection

@@ -72,5 +72,8 @@
         "branch-alias": {
             "dev-dev": "1.0.x-dev"
         }
+    },
+    "scripts": {
+        "test-structure": "sh bin/test-structure.sh"
     }
 }

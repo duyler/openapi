@@ -22,10 +22,8 @@ use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 
-use function file_get_contents;
 use function is_array;
 
 abstract class FunctionalTestCase extends TestCase
@@ -49,32 +47,6 @@ abstract class FunctionalTestCase extends TestCase
         $this->refResolver = new RefResolver();
         $this->parser = new YamlParser();
         $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
-    }
-
-    /**
-     * Load fixture from YAML file
-     */
-    protected function loadFixture(string $path): OpenApiDocument
-    {
-        $fullPath = __DIR__ . '/../fixtures/' . $path;
-
-        if (!file_exists($fullPath)) {
-            throw new RuntimeException("Fixture file not found: {$fullPath}");
-        }
-
-        $content = file_get_contents($fullPath);
-
-        if ($content === false) {
-            throw new RuntimeException("Failed to read fixture file: {$fullPath}");
-        }
-
-        $document = $this->parser->parse($content);
-
-        if ($document === null) {
-            throw new RuntimeException("Failed to parse fixture file: {$fullPath}");
-        }
-
-        return $document;
     }
 
     /**
