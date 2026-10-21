@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Functional\Advanced;
 
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
@@ -19,7 +20,7 @@ final class ReferenceResolutionTest extends AdvancedFunctionalTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->specFile = __DIR__ . '/../../fixtures/advanced-specs/complex-references.yaml';
+        $this->specFile = FixtureLocator::path('advanced-specs/complex-references.yaml');
     }
 
     #[Test]

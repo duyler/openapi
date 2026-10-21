@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Security;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -24,7 +25,7 @@ final class XmlSecurityTest extends TestCase
     public function xxe_attack_via_request_body_does_not_leak_file_content(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/security-specs/xml-endpoint.yaml')
+            ->fromYamlFile(FixtureLocator::path('security-specs/xml-endpoint.yaml'))
             ->build();
 
         $xxePayload = <<<'XML'
@@ -61,7 +62,7 @@ XML;
     public function ssrf_via_xxe_blocked(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/security-specs/xml-endpoint.yaml')
+            ->fromYamlFile(FixtureLocator::path('security-specs/xml-endpoint.yaml'))
             ->build();
 
         $ssrfPayload = <<<'XML'
@@ -95,7 +96,7 @@ XML;
     public function valid_xml_request_body(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/security-specs/xml-endpoint.yaml')
+            ->fromYamlFile(FixtureLocator::path('security-specs/xml-endpoint.yaml'))
             ->build();
 
         $validXml = <<<'XML'
@@ -120,7 +121,7 @@ XML;
     public function billion_laughs_no_memory_exhaustion(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/security-specs/xml-endpoint.yaml')
+            ->fromYamlFile(FixtureLocator::path('security-specs/xml-endpoint.yaml'))
             ->build();
 
         $billionLaughs = <<<'XML'
@@ -157,7 +158,7 @@ XML;
     public function external_dtd_blocked(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/security-specs/xml-endpoint.yaml')
+            ->fromYamlFile(FixtureLocator::path('security-specs/xml-endpoint.yaml'))
             ->build();
 
         $externalDtdPayload = <<<'XML'
@@ -188,7 +189,7 @@ XML;
     public function xxe_cdata_no_data_leak(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/security-specs/xml-endpoint.yaml')
+            ->fromYamlFile(FixtureLocator::path('security-specs/xml-endpoint.yaml'))
             ->build();
 
         $xxePayload = <<<'XML'

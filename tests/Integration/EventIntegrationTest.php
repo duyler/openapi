@@ -9,6 +9,7 @@ use Duyler\OpenApi\Event\ArrayDispatcher;
 use Duyler\OpenApi\Event\ValidationErrorEvent;
 use Duyler\OpenApi\Event\ValidationFinishedEvent;
 use Duyler\OpenApi\Event\ValidationStartedEvent;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Test\Support\Psr7RequestStubFactory;
 use Exception;
 use PHPUnit\Framework\Attributes\Test;
@@ -33,7 +34,7 @@ final class EventIntegrationTest extends TestCase
         ]);
 
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/petstore.yaml')
+            ->fromYamlFile(FixtureLocator::path('petstore.yaml'))
             ->withEventDispatcher($dispatcher)
             ->build();
 
@@ -59,7 +60,7 @@ final class EventIntegrationTest extends TestCase
         ]);
 
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/petstore.yaml')
+            ->fromYamlFile(FixtureLocator::path('petstore.yaml'))
             ->withEventDispatcher($dispatcher)
             ->build();
 
@@ -87,7 +88,7 @@ final class EventIntegrationTest extends TestCase
         ]);
 
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/petstore.yaml')
+            ->fromYamlFile(FixtureLocator::path('petstore.yaml'))
             ->withEventDispatcher($dispatcher)
             ->build();
 
@@ -117,7 +118,7 @@ final class EventIntegrationTest extends TestCase
         ]);
 
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/petstore.yaml')
+            ->fromYamlFile(FixtureLocator::path('petstore.yaml'))
             ->withEventDispatcher($dispatcher)
             ->build();
 
@@ -143,7 +144,7 @@ final class EventIntegrationTest extends TestCase
         ]);
 
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/petstore.yaml')
+            ->fromYamlFile(FixtureLocator::path('petstore.yaml'))
             ->withEventDispatcher($dispatcher)
             ->build();
 

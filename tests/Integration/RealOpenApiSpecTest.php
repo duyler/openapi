@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Integration;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Test\Support\Psr7RequestStubFactory;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -24,11 +25,11 @@ final class RealOpenApiSpecTest extends TestCase
     protected function setUp(): void
     {
         $this->petstoreValidator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/petstore.yaml')
+            ->fromYamlFile(FixtureLocator::path('petstore.yaml'))
             ->build();
 
         $this->ecommerceValidator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/real-world-api.yaml')
+            ->fromYamlFile(FixtureLocator::path('real-world-api.yaml'))
             ->build();
     }
 

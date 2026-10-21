@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Functional\Advanced;
 
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
@@ -18,7 +19,7 @@ final class DiscriminatorTest extends AdvancedFunctionalTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->specFile = __DIR__ . '/../../fixtures/advanced-specs/discriminator.yaml';
+        $this->specFile = FixtureLocator::path('advanced-specs/discriminator.yaml');
     }
 
     #[Test]

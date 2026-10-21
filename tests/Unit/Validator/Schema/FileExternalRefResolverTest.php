@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Schema;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Validator\Schema\Exception\ExternalRefSecurityException;
 use Duyler\OpenApi\Validator\Schema\Exception\ExternalRefTooLargeException;
 use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
@@ -17,7 +18,6 @@ use RuntimeException;
 
 use Throwable;
 
-use function dirname;
 use function fclose;
 use function file_put_contents;
 use function fopen;
@@ -48,7 +48,7 @@ final class FileExternalRefResolverTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->fixtureRoot = dirname(__DIR__, 3) . '/Fixture/ExternalRef';
+        $this->fixtureRoot = FixtureLocator::path('external-ref');
     }
 
     #[Test]
@@ -795,7 +795,7 @@ final class FileExternalRefResolverTest extends TestCase
             'missing_file' => ['/var/lib/specs/does-not-exist.yaml', RuntimeException::class],
             'path_traversal' => ['/etc/passwd', ExternalRefSecurityException::class],
             'json_pointer_to_scalar' => [
-                dirname(__DIR__, 3) . '/Fixture/ExternalRef/components/user.yaml#/UserSchema/type',
+                FixtureLocator::path('external-ref/components/user.yaml#/UserSchema/type'),
                 RuntimeException::class,
             ],
         ];

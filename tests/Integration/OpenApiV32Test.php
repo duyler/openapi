@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Integration;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Schema\Parser\YamlParser;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -23,7 +24,7 @@ final class OpenApiV32Test extends TestCase
     public function parses_full_v3_2_spec(): void
     {
         $parser = new YamlParser();
-        $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
+        $content = file_get_contents(FixtureLocator::path('v3.2/full-spec.yaml'));
         self::assertNotFalse($content);
 
         $document = $parser->parse($content);
@@ -38,7 +39,7 @@ final class OpenApiV32Test extends TestCase
     public function validates_query_method(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/v3.2/query-method.yaml')
+            ->fromYamlFile(FixtureLocator::path('v3.2/query-method.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('QUERY', '/search')
@@ -58,7 +59,7 @@ final class OpenApiV32Test extends TestCase
     public function validates_streaming_sse_response(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/v3.2/streaming-events.yaml')
+            ->fromYamlFile(FixtureLocator::path('v3.2/streaming-events.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/events');
@@ -79,7 +80,7 @@ final class OpenApiV32Test extends TestCase
     public function validates_jsonl_streaming(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/v3.2/streaming-events.yaml')
+            ->fromYamlFile(FixtureLocator::path('v3.2/streaming-events.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/logs');
@@ -100,7 +101,7 @@ final class OpenApiV32Test extends TestCase
     public function validates_additional_operations(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/v3.2/full-spec.yaml')
+            ->fromYamlFile(FixtureLocator::path('v3.2/full-spec.yaml'))
             ->build();
 
         $copyRequest = $this->psrFactory->createServerRequest('COPY', '/resource');
@@ -117,7 +118,7 @@ final class OpenApiV32Test extends TestCase
     public function backward_compatible_with_v3_1(): void
     {
         $parser = new YamlParser();
-        $content = file_get_contents(__DIR__ . '/../fixtures/petstore.yaml');
+        $content = file_get_contents(FixtureLocator::path('petstore.yaml'));
         self::assertNotFalse($content);
 
         $document = $parser->parse($content);
@@ -130,7 +131,7 @@ final class OpenApiV32Test extends TestCase
     public function backward_compatible_with_v3_0(): void
     {
         $parser = new YamlParser();
-        $content = file_get_contents(__DIR__ . '/../fixtures/v3.0/simple-api.yaml');
+        $content = file_get_contents(FixtureLocator::path('v3.0/simple-api.yaml'));
         self::assertNotFalse($content);
 
         $document = $parser->parse($content);
@@ -143,7 +144,7 @@ final class OpenApiV32Test extends TestCase
     public function validates_querystring_parameter(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/v3.2/full-spec.yaml')
+            ->fromYamlFile(FixtureLocator::path('v3.2/full-spec.yaml'))
             ->build();
 
         $filter = ['query' => 'test', 'limit' => 10];
@@ -160,7 +161,7 @@ final class OpenApiV32Test extends TestCase
     public function parses_discriminator_with_default_mapping(): void
     {
         $parser = new YamlParser();
-        $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
+        $content = file_get_contents(FixtureLocator::path('v3.2/full-spec.yaml'));
         self::assertNotFalse($content);
 
         $document = $parser->parse($content);
@@ -178,7 +179,7 @@ final class OpenApiV32Test extends TestCase
     public function validates_response_with_discriminator_default_mapping(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/v3.2/full-spec.yaml')
+            ->fromYamlFile(FixtureLocator::path('v3.2/full-spec.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/users');
@@ -199,7 +200,7 @@ final class OpenApiV32Test extends TestCase
     public function parses_server_name(): void
     {
         $parser = new YamlParser();
-        $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
+        $content = file_get_contents(FixtureLocator::path('v3.2/full-spec.yaml'));
         self::assertNotFalse($content);
 
         $document = $parser->parse($content);
@@ -214,7 +215,7 @@ final class OpenApiV32Test extends TestCase
     public function parses_tags_with_parent_and_kind(): void
     {
         $parser = new YamlParser();
-        $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
+        $content = file_get_contents(FixtureLocator::path('v3.2/full-spec.yaml'));
         self::assertNotFalse($content);
 
         $document = $parser->parse($content);
@@ -238,7 +239,7 @@ final class OpenApiV32Test extends TestCase
     public function parses_oauth2_device_code_flow(): void
     {
         $parser = new YamlParser();
-        $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
+        $content = file_get_contents(FixtureLocator::path('v3.2/full-spec.yaml'));
         self::assertNotFalse($content);
 
         $document = $parser->parse($content);
@@ -258,7 +259,7 @@ final class OpenApiV32Test extends TestCase
     public function parses_media_types_component(): void
     {
         $parser = new YamlParser();
-        $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
+        $content = file_get_contents(FixtureLocator::path('v3.2/full-spec.yaml'));
         self::assertNotFalse($content);
 
         $document = $parser->parse($content);
@@ -272,7 +273,7 @@ final class OpenApiV32Test extends TestCase
     public function parses_path_item_summary(): void
     {
         $parser = new YamlParser();
-        $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
+        $content = file_get_contents(FixtureLocator::path('v3.2/full-spec.yaml'));
         self::assertNotFalse($content);
 
         $document = $parser->parse($content);
@@ -286,7 +287,7 @@ final class OpenApiV32Test extends TestCase
     public function parses_response_summary(): void
     {
         $parser = new YamlParser();
-        $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
+        $content = file_get_contents(FixtureLocator::path('v3.2/full-spec.yaml'));
         self::assertNotFalse($content);
 
         $document = $parser->parse($content);

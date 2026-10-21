@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Integration;
 
 use DateTime;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use PHPUnit\Framework\Attributes\Test;
@@ -27,7 +28,7 @@ final class SchemaHelperIntegrationTest extends TestCase
     public function valid_types_pass_through_schema_helper_in_validation_context(): void
     {
         $builder = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/petstore.yaml');
+            ->fromYamlFile(FixtureLocator::path('petstore.yaml'));
 
         $validator = $builder->build();
 
