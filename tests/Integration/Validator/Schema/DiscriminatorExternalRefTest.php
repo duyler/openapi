@@ -111,7 +111,7 @@ components:
 YAML;
 
     #[Test]
-    public function di_08_external_url_mapping_throws_builder_exception_at_build_time(): void
+    public function external_url_mapping_throws_builder_exception_at_build_time(): void
     {
         $this->expectException(BuilderException::class);
         $this->expectExceptionMessage('https://example.com/schemas/cat.json');
@@ -122,7 +122,7 @@ YAML;
     }
 
     #[Test]
-    public function di_08_relative_file_mapping_throws_builder_exception_at_build_time(): void
+    public function relative_file_mapping_throws_builder_exception_at_build_time(): void
     {
         $this->expectException(BuilderException::class);
         $this->expectExceptionMessage('schemas/cat.yaml');
@@ -133,7 +133,7 @@ YAML;
     }
 
     #[Test]
-    public function di_08_external_mapping_with_value_absent_from_request_throws_builder_exception_at_build_time(): void
+    public function external_mapping_with_value_absent_from_request_throws_builder_exception_at_build_time(): void
     {
         $this->expectException(BuilderException::class);
         $this->expectExceptionMessage('https://example.com/schemas/cat.json');
@@ -144,7 +144,7 @@ YAML;
     }
 
     #[Test]
-    public function di_08_resolve_relative_ref_without_self_throws_ref_resolution_exception(): void
+    public function resolve_relative_ref_without_self_throws_ref_resolution_exception(): void
     {
         $resolver = new RefResolver();
         $document = new OpenApiDocument('3.2.0', new InfoObject('Test', '1.0.0'));
@@ -175,7 +175,7 @@ YAML;
     }
 
     #[Test]
-    public function di_08_resolve_relative_ref_with_self_combines_uris(): void
+    public function resolve_relative_ref_with_self_combines_uris(): void
     {
         $resolver = new RefResolver();
         $document = new OpenApiDocument(
@@ -194,7 +194,7 @@ YAML;
     }
 
     #[Test]
-    public function di_08_local_pointer_mapping_resolves_normally(): void
+    public function local_pointer_mapping_resolves_normally(): void
     {
         $yaml = <<<'YAML'
 openapi: 3.2.0

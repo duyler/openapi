@@ -112,7 +112,7 @@ YAML;
     }
 
     #[Test]
-    public function di_04_cat_with_only_cat_fields_passes_via_validate_schema(): void
+    public function cat_with_only_cat_fields_passes_via_validate_schema(): void
     {
         $validator = $this->buildPetValidator();
 
@@ -123,7 +123,7 @@ YAML;
     }
 
     #[Test]
-    public function di_04_dog_with_only_dog_fields_passes_via_validate_schema(): void
+    public function dog_with_only_dog_fields_passes_via_validate_schema(): void
     {
         $validator = $this->buildPetValidator();
 
@@ -134,7 +134,7 @@ YAML;
     }
 
     #[Test]
-    public function di_04_cat_with_dog_only_field_bark_rejected_by_additional_properties(): void
+    public function cat_with_dog_only_field_bark_rejected_by_additional_properties(): void
     {
         $validator = $this->buildPetValidator();
 
@@ -149,7 +149,7 @@ YAML;
     }
 
     #[Test]
-    public function di_04_dog_with_cat_only_field_meow_rejected_by_additional_properties(): void
+    public function dog_with_cat_only_field_meow_rejected_by_additional_properties(): void
     {
         $validator = $this->buildPetValidator();
 
@@ -164,7 +164,7 @@ YAML;
     }
 
     #[Test]
-    public function di_04_unknown_pet_type_throws_unknown_discriminator_value(): void
+    public function unknown_pet_type_throws_unknown_discriminator_value(): void
     {
         $validator = $this->buildPetValidator();
 
@@ -175,7 +175,7 @@ YAML;
     }
 
     #[Test]
-    public function di_07_response_with_cat_body_passes(): void
+    public function response_with_cat_body_passes(): void
     {
         [$validator, $operation] = $this->buildPetValidatorWithOperation();
 
@@ -185,7 +185,7 @@ YAML;
     }
 
     #[Test]
-    public function di_07_response_with_dog_body_passes(): void
+    public function response_with_dog_body_passes(): void
     {
         [$validator, $operation] = $this->buildPetValidatorWithOperation();
 
@@ -195,7 +195,7 @@ YAML;
     }
 
     #[Test]
-    public function di_07_response_with_cat_body_and_dog_field_bark_rejected(): void
+    public function response_with_cat_body_and_dog_field_bark_rejected(): void
     {
         [$validator, $operation] = $this->buildPetValidatorWithOperation();
 
@@ -209,7 +209,7 @@ YAML;
     }
 
     #[Test]
-    public function di_07_response_with_dog_body_and_cat_field_meow_rejected(): void
+    public function response_with_dog_body_and_cat_field_meow_rejected(): void
     {
         [$validator, $operation] = $this->buildPetValidatorWithOperation();
 
@@ -223,7 +223,7 @@ YAML;
     }
 
     #[Test]
-    public function di_07_response_with_unknown_pet_type_throws_unknown_discriminator_value(): void
+    public function response_with_unknown_pet_type_throws_unknown_discriminator_value(): void
     {
         [$validator, $operation] = $this->buildPetValidatorWithOperation();
 

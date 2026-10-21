@@ -88,7 +88,7 @@ webhooks:
 YAML;
 
     #[Test]
-    public function wh_04_webhook_with_valid_bearer_token_returns_operation(): void
+    public function webhook_with_valid_bearer_token_returns_operation(): void
     {
         $validator = $this->buildSecurityValidator();
 
@@ -105,7 +105,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_04_webhook_without_authorization_throws_security_exception(): void
+    public function webhook_without_authorization_throws_security_exception(): void
     {
         $validator = $this->buildSecurityValidator();
 
@@ -121,7 +121,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_05_webhook_with_integer_query_coerced_from_string_passes(): void
+    public function webhook_with_integer_query_coerced_from_string_passes(): void
     {
         $validator = $this->buildCoercionValidator();
 
@@ -137,7 +137,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_05_webhook_with_non_coercible_integer_query_throws_type_mismatch(): void
+    public function webhook_with_non_coercible_integer_query_throws_type_mismatch(): void
     {
         $validator = $this->buildCoercionValidator();
 
@@ -152,7 +152,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_05_webhook_with_coerced_integer_below_minimum_throws_minimum_error(): void
+    public function webhook_with_coerced_integer_below_minimum_throws_minimum_error(): void
     {
         $validator = $this->buildCoercionValidator();
 
@@ -167,7 +167,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_05_webhook_with_coerced_number_below_minimum_throws_minimum_error(): void
+    public function webhook_with_coerced_number_below_minimum_throws_minimum_error(): void
     {
         $validator = $this->buildCoercionValidator();
 
@@ -182,7 +182,7 @@ YAML;
     }
 
     #[Test]
-    public function wh_05_webhook_with_coercion_boundary_value_passes(): void
+    public function webhook_with_coercion_boundary_value_passes(): void
     {
         $validator = $this->buildCoercionValidator();
 

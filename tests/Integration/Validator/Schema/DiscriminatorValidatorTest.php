@@ -1567,7 +1567,7 @@ YAML;
     }
 
     #[Test]
-    public function di_05_cat_with_allof_composition_passes_via_discriminator(): void
+    public function cat_with_allof_composition_passes_via_discriminator(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::DI_05_ALLOF_COMPOSITION_SPEC)
@@ -1592,7 +1592,7 @@ YAML;
     }
 
     #[Test]
-    public function di_05_dog_with_allof_composition_passes_via_discriminator(): void
+    public function dog_with_allof_composition_passes_via_discriminator(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::DI_05_ALLOF_COMPOSITION_SPEC)
@@ -1618,7 +1618,7 @@ YAML;
     }
 
     #[Test]
-    public function di_05_cat_data_with_dog_fields_rejected_by_cat_allof_schema(): void
+    public function cat_data_with_dog_fields_rejected_by_cat_allof_schema(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::DI_05_ALLOF_COMPOSITION_SPEC)
@@ -1651,7 +1651,7 @@ YAML;
     }
 
     #[Test]
-    public function di_05_dog_data_with_cat_fields_rejected_by_dog_allof_schema(): void
+    public function dog_data_with_cat_fields_rejected_by_dog_allof_schema(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::DI_05_ALLOF_COMPOSITION_SPEC)
@@ -1690,7 +1690,7 @@ YAML;
     }
 
     #[Test]
-    public function di_05_cat_data_missing_base_pet_name_rejected_after_allof_merge(): void
+    public function cat_data_missing_base_pet_name_rejected_after_allof_merge(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::DI_05_ALLOF_COMPOSITION_SPEC)
@@ -1722,7 +1722,7 @@ YAML;
     }
 
     #[Test]
-    public function di_05_cat_data_does_not_validate_against_dog_schema_directly(): void
+    public function cat_data_does_not_validate_against_dog_schema_directly(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::DI_05_ALLOF_COMPOSITION_SPEC)
@@ -1751,7 +1751,7 @@ YAML;
     }
 
     #[Test]
-    public function di_06_nested_discriminator_circle_shape_passes_validation(): void
+    public function nested_discriminator_circle_shape_passes_validation(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::DI_06_NESTED_DISCRIMINATOR_SPEC)
@@ -1776,7 +1776,7 @@ YAML;
     }
 
     #[Test]
-    public function di_06_nested_discriminator_square_shape_passes_validation(): void
+    public function nested_discriminator_square_shape_passes_validation(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::DI_06_NESTED_DISCRIMINATOR_SPEC)
@@ -1801,7 +1801,7 @@ YAML;
     }
 
     #[Test]
-    public function di_06_nested_discriminator_circle_fields_with_square_type_rejected(): void
+    public function nested_discriminator_circle_fields_with_square_type_rejected(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::DI_06_NESTED_DISCRIMINATOR_SPEC)
@@ -1831,7 +1831,7 @@ YAML;
     }
 
     #[Test]
-    public function di_06_nested_discriminator_missing_base_id_rejected(): void
+    public function nested_discriminator_missing_base_id_rejected(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::DI_06_NESTED_DISCRIMINATOR_SPEC)
@@ -1866,7 +1866,7 @@ YAML;
     }
 
     #[Test]
-    public function di_06_nested_discriminator_unknown_shape_type_rejected(): void
+    public function nested_discriminator_unknown_shape_type_rejected(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::DI_06_NESTED_DISCRIMINATOR_SPEC)

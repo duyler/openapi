@@ -77,7 +77,7 @@ final class UriResolverTest extends TestCase
 
     #[Test]
     #[DataProvider('rfc3986NormalExamples')]
-    public function rfc_3986_5_4_1_normal_examples(string $ref, string $expected): void
+    public function normal_examples_per_rfc_3986(string $ref, string $expected): void
     {
         $result = $this->combineViaResolver(self::RFC_BASE, $ref);
 
@@ -86,7 +86,7 @@ final class UriResolverTest extends TestCase
 
     #[Test]
     #[DataProvider('rfc3986AbnormalExamples')]
-    public function rfc_3986_5_4_2_abnormal_examples(string $ref, string $expected): void
+    public function abnormal_examples_per_rfc_3986(string $ref, string $expected): void
     {
         $result = $this->combineViaResolver(self::RFC_BASE, $ref);
 

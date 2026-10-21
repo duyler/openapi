@@ -45,7 +45,7 @@ YAML;
     }
 
     #[Test]
-    public function tc_07_type_coercer_directly_converts_cookie_string_to_int(): void
+    public function type_coercer_directly_converts_cookie_string_to_int(): void
     {
         $coercer = new TypeCoercer();
         $param = new Parameter(schema: new Schema(type: 'integer'));
@@ -57,7 +57,7 @@ YAML;
     }
 
     #[Test]
-    public function tc_07_cookie_without_coercion_fails_const_check_on_string_value(): void
+    public function cookie_without_coercion_fails_const_check_on_string_value(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::COOKIE_COERCION_SPEC)
@@ -83,7 +83,7 @@ YAML;
     }
 
     #[Test]
-    public function tc_07_cookie_string_coerced_to_integer_passes_const_constraint(): void
+    public function cookie_string_coerced_to_integer_passes_const_constraint(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::COOKIE_COERCION_SPEC)
@@ -99,7 +99,7 @@ YAML;
     }
 
     #[Test]
-    public function tc_07_cookie_non_numeric_string_throws_type_mismatch(): void
+    public function cookie_non_numeric_string_throws_type_mismatch(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::COOKIE_COERCION_SPEC)
@@ -126,7 +126,7 @@ YAML;
     }
 
     #[Test]
-    public function tc_07_type_coercer_strict_mode_rejects_non_numeric_cookie_with_type_mismatch(): void
+    public function type_coercer_strict_mode_rejects_non_numeric_cookie_with_type_mismatch(): void
     {
         $coercer = new TypeCoercer();
         $param = new Parameter(schema: new Schema(type: 'integer'));
