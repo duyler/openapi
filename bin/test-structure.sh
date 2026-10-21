@@ -30,7 +30,7 @@ fi
 
 non_test_files=$(find tests/Unit tests/Integration tests/Functional tests/Performance tests/Security -name '*.php' ! -name '*Test.php' ! -name '*TestCase.php' ! -name '*Trait.php' 2>/dev/null)
 if [ -n "$non_test_files" ]; then
-    echo "test-structure: non-test php files inside test layers (must match *Test.php):" >&2
+    echo "test-structure: non-test php files inside test layers (must match *Test.php, *TestCase.php or *Trait.php):" >&2
     echo "$non_test_files" >&2
     status=1
 fi
