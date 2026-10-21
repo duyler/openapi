@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Functional\Response;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Validator\Exception\UndefinedResponseException;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -36,7 +37,7 @@ final class ResponseValidationTest extends TestCase
     public function status_code_200_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/status-codes.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/status-codes.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/users/550e8400-e29b-41d4-a716-446655440000');
@@ -67,7 +68,7 @@ final class ResponseValidationTest extends TestCase
     public function status_code_201_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/status-codes.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/status-codes.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/users/550e8400-e29b-41d4-a716-446655440000');
@@ -98,7 +99,7 @@ final class ResponseValidationTest extends TestCase
     public function status_code_400_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/status-codes.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/status-codes.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/users/550e8400-e29b-41d4-a716-446655440000');
@@ -128,7 +129,7 @@ final class ResponseValidationTest extends TestCase
     public function status_code_404_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/status-codes.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/status-codes.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/users/550e8400-e29b-41d4-a716-446655440000');
@@ -158,7 +159,7 @@ final class ResponseValidationTest extends TestCase
     public function status_code_500_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/status-codes.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/status-codes.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/users/550e8400-e29b-41d4-a716-446655440000');
@@ -188,7 +189,7 @@ final class ResponseValidationTest extends TestCase
     public function status_code_range_2xx_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/status-codes.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/status-codes.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/items/test-id');
@@ -218,7 +219,7 @@ final class ResponseValidationTest extends TestCase
     public function status_code_range_4xx_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/status-codes.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/status-codes.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/items/test-id');
@@ -248,7 +249,7 @@ final class ResponseValidationTest extends TestCase
     public function status_code_range_5xx_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/status-codes.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/status-codes.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/items/test-id');
@@ -278,7 +279,7 @@ final class ResponseValidationTest extends TestCase
     public function default_response_fallback_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/status-codes.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/status-codes.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/unknown/test-id');
@@ -308,7 +309,7 @@ final class ResponseValidationTest extends TestCase
     public function undefined_status_code_throws_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/status-codes.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/status-codes.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/users/550e8400-e29b-41d4-a716-446655440000');
@@ -328,7 +329,7 @@ final class ResponseValidationTest extends TestCase
     public function header_simple_string_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/headers.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/headers.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/headers/simple');
@@ -358,7 +359,7 @@ final class ResponseValidationTest extends TestCase
     public function header_array_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/headers.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/headers.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/headers/array');
@@ -388,7 +389,7 @@ final class ResponseValidationTest extends TestCase
     public function header_content_type_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/headers.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/headers.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/headers/content-type');
@@ -416,7 +417,7 @@ final class ResponseValidationTest extends TestCase
     public function header_content_length_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/headers.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/headers.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/headers/content-length');
@@ -445,7 +446,7 @@ final class ResponseValidationTest extends TestCase
     public function header_custom_format_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/headers.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/headers.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/headers/custom-format');
@@ -475,7 +476,7 @@ final class ResponseValidationTest extends TestCase
     public function header_optional_required_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/headers.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/headers.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/headers/optional-required');
@@ -504,7 +505,7 @@ final class ResponseValidationTest extends TestCase
     public function body_json_primitive_types_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/response-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/response-schemas.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/primitive');
@@ -537,7 +538,7 @@ final class ResponseValidationTest extends TestCase
     public function body_json_format_validation_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/response-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/response-schemas.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/formats');
@@ -570,7 +571,7 @@ final class ResponseValidationTest extends TestCase
     public function body_json_invalid_format_throws_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/response-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/response-schemas.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/formats');
@@ -593,7 +594,7 @@ final class ResponseValidationTest extends TestCase
     public function body_json_optional_field_not_provided_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/response-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/response-schemas.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/nullable');
@@ -624,7 +625,7 @@ final class ResponseValidationTest extends TestCase
     public function body_json_nested_objects_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/response-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/response-schemas.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/nested');
@@ -661,7 +662,7 @@ final class ResponseValidationTest extends TestCase
     public function body_json_arrays_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/response-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/response-schemas.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/arrays');
@@ -696,7 +697,7 @@ final class ResponseValidationTest extends TestCase
     public function body_json_array_too_many_items_throws_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/response-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/response-schemas.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/arrays');
@@ -724,7 +725,7 @@ final class ResponseValidationTest extends TestCase
     public function body_json_required_fields_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/response-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/response-schemas.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/required');
@@ -756,7 +757,7 @@ final class ResponseValidationTest extends TestCase
     public function body_json_missing_required_field_throws_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/response-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/response-schemas.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/required');
@@ -776,7 +777,7 @@ final class ResponseValidationTest extends TestCase
     public function body_json_additional_properties_allowed_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/response-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/response-schemas.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/additional-properties');
@@ -808,7 +809,7 @@ final class ResponseValidationTest extends TestCase
     public function body_json_anyof_composition_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/response-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/response-schemas.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/anyof');
@@ -838,7 +839,7 @@ final class ResponseValidationTest extends TestCase
     public function body_json_anyof_integer_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/response-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/response-schemas.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/anyof');
@@ -868,7 +869,7 @@ final class ResponseValidationTest extends TestCase
     public function body_json_allof_composition_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/response-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/response-schemas.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/allof');
@@ -899,7 +900,7 @@ final class ResponseValidationTest extends TestCase
     public function body_form_data_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/other-content-types.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/other-content-types.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('POST', '/form');
@@ -931,7 +932,7 @@ final class ResponseValidationTest extends TestCase
     public function body_text_plain_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/other-content-types.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/other-content-types.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/text/plain');
@@ -959,7 +960,7 @@ final class ResponseValidationTest extends TestCase
     public function body_text_too_long_throws_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/other-content-types.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/other-content-types.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/text/plain');
@@ -978,7 +979,7 @@ final class ResponseValidationTest extends TestCase
     public function body_binary_octet_stream_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/other-content-types.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/other-content-types.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/binary/octet');
@@ -1006,7 +1007,7 @@ final class ResponseValidationTest extends TestCase
     public function body_binary_image_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/other-content-types.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/other-content-types.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/binary/image');
@@ -1034,7 +1035,7 @@ final class ResponseValidationTest extends TestCase
     public function body_json_invalid_type_mismatch_throws_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/response-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/response-schemas.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/primitive');
@@ -1858,7 +1859,7 @@ YAML;
     public function discriminator_with_dog_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/discriminator-responses.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/discriminator-responses.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/pet');
@@ -1891,7 +1892,7 @@ YAML;
     public function discriminator_with_cat_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/discriminator-responses.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/discriminator-responses.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/pet');
@@ -1924,7 +1925,7 @@ YAML;
     public function discriminator_with_dog_missing_bark_throws_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/discriminator-responses.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/discriminator-responses.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/pet');
@@ -1946,7 +1947,7 @@ YAML;
     public function discriminator_with_cat_missing_meow_throws_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/discriminator-responses.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/discriminator-responses.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/pet');
@@ -1968,7 +1969,7 @@ YAML;
     public function discriminator_with_invalid_type_throws_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/discriminator-responses.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/discriminator-responses.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/pet');
@@ -1990,7 +1991,7 @@ YAML;
     public function discriminator_with_missing_property_throws_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/discriminator-responses.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/discriminator-responses.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/pet');
@@ -2012,7 +2013,7 @@ YAML;
     public function nullable_field_with_null_value_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/nullable.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/nullable.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/nullable');
@@ -2044,7 +2045,7 @@ YAML;
     public function nullable_field_with_non_null_value_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/nullable.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/nullable.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/nullable');
@@ -2076,7 +2077,7 @@ YAML;
     public function nullable_optional_field_missing_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/nullable.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/nullable.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/nullable');
@@ -2107,7 +2108,7 @@ YAML;
     public function nullable_required_field_missing_throws_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/nullable.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/nullable.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/nullable');
@@ -2127,7 +2128,7 @@ YAML;
     public function nullable_field_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/nullable.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/nullable.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/nullable');
@@ -2159,7 +2160,7 @@ YAML;
     public function nested_nullable_field_with_null_value_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/nullable.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/nullable.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/nullable-nested');
@@ -2192,7 +2193,7 @@ YAML;
     public function array_with_nullable_items_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/nullable.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/nullable.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/nullable-array');

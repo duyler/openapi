@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Integration;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Cache\SchemaCache;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
@@ -45,7 +46,7 @@ final class CacheIntegrationTest extends TestCase
         $cache = new SchemaCache($pool);
 
         $builder = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/petstore.yaml')
+            ->fromYamlFile(FixtureLocator::path('petstore.yaml'))
             ->withCache($cache);
 
         $validator1 = $builder->build();
@@ -72,7 +73,7 @@ final class CacheIntegrationTest extends TestCase
         $cache = new SchemaCache($pool);
 
         $builder = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/petstore.yaml')
+            ->fromYamlFile(FixtureLocator::path('petstore.yaml'))
             ->withCache($cache);
 
         $validator = $builder->build();

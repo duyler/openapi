@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\E2E;
 
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Validator\Exception\MissingRequestBodyException;
 use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -240,7 +241,7 @@ YAML;
     public function multipart_form_data_request_parses_and_validates(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/request-validation-specs/multipart-data.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/multipart-data.yaml'))
             ->build();
 
         $multipartBody = "boundary=----TestBoundary12345\r\n\r\n"

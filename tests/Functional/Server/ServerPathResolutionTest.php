@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Functional\Server;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
@@ -14,7 +15,7 @@ use PHPUnit\Framework\TestCase;
 
 final class ServerPathResolutionTest extends TestCase
 {
-    private const string FIXTURES_DIR = __DIR__ . '/../../fixtures/server-path-resolution';
+    private const string FIXTURES_DIR = 'server-path-resolution';
     private Psr17Factory $psrFactory;
 
     protected function setUp(): void
@@ -26,7 +27,7 @@ final class ServerPathResolutionTest extends TestCase
     public function request_with_base_path_matches_path_template(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(self::FIXTURES_DIR . '/multi-server.yaml')
+            ->fromYamlFile(FixtureLocator::path(self::FIXTURES_DIR . '/multi-server.yaml'))
             ->enableServerPathResolution()
             ->build();
 
@@ -45,7 +46,7 @@ final class ServerPathResolutionTest extends TestCase
     public function request_with_different_base_path_matches_correct_path(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(self::FIXTURES_DIR . '/multi-server.yaml')
+            ->fromYamlFile(FixtureLocator::path(self::FIXTURES_DIR . '/multi-server.yaml'))
             ->enableServerPathResolution()
             ->build();
 
@@ -64,7 +65,7 @@ final class ServerPathResolutionTest extends TestCase
     public function request_without_base_path_still_works_when_disabled(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(self::FIXTURES_DIR . '/multi-server.yaml')
+            ->fromYamlFile(FixtureLocator::path(self::FIXTURES_DIR . '/multi-server.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest(
@@ -82,7 +83,7 @@ final class ServerPathResolutionTest extends TestCase
     public function request_without_base_path_falls_through_when_enabled(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(self::FIXTURES_DIR . '/multi-server.yaml')
+            ->fromYamlFile(FixtureLocator::path(self::FIXTURES_DIR . '/multi-server.yaml'))
             ->enableServerPathResolution()
             ->build();
 
@@ -101,7 +102,7 @@ final class ServerPathResolutionTest extends TestCase
     public function path_parameters_validated_after_base_path_strip(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(self::FIXTURES_DIR . '/multi-server.yaml')
+            ->fromYamlFile(FixtureLocator::path(self::FIXTURES_DIR . '/multi-server.yaml'))
             ->enableServerPathResolution()
             ->build();
 
@@ -118,7 +119,7 @@ final class ServerPathResolutionTest extends TestCase
     public function query_parameters_validated_after_base_path_strip(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(self::FIXTURES_DIR . '/multi-server.yaml')
+            ->fromYamlFile(FixtureLocator::path(self::FIXTURES_DIR . '/multi-server.yaml'))
             ->enableServerPathResolution()
             ->build();
 
@@ -135,7 +136,7 @@ final class ServerPathResolutionTest extends TestCase
     public function request_body_validated_after_base_path_strip(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(self::FIXTURES_DIR . '/multi-server.yaml')
+            ->fromYamlFile(FixtureLocator::path(self::FIXTURES_DIR . '/multi-server.yaml'))
             ->enableServerPathResolution()
             ->build();
 
@@ -155,7 +156,7 @@ final class ServerPathResolutionTest extends TestCase
     public function server_with_variables_resolved_correctly(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(self::FIXTURES_DIR . '/server-with-variables.yaml')
+            ->fromYamlFile(FixtureLocator::path(self::FIXTURES_DIR . '/server-with-variables.yaml'))
             ->enableServerPathResolution()
             ->build();
 
@@ -171,7 +172,7 @@ final class ServerPathResolutionTest extends TestCase
     public function root_server_no_base_path_strips_nothing(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(self::FIXTURES_DIR . '/root-server.yaml')
+            ->fromYamlFile(FixtureLocator::path(self::FIXTURES_DIR . '/root-server.yaml'))
             ->enableServerPathResolution()
             ->build();
 
@@ -187,7 +188,7 @@ final class ServerPathResolutionTest extends TestCase
     public function non_matching_base_path_throws_operation_not_found(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(self::FIXTURES_DIR . '/multi-server.yaml')
+            ->fromYamlFile(FixtureLocator::path(self::FIXTURES_DIR . '/multi-server.yaml'))
             ->enableServerPathResolution()
             ->build();
 
@@ -201,7 +202,7 @@ final class ServerPathResolutionTest extends TestCase
     public function backward_compat_without_enable_flag(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(self::FIXTURES_DIR . '/multi-server.yaml')
+            ->fromYamlFile(FixtureLocator::path(self::FIXTURES_DIR . '/multi-server.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest(

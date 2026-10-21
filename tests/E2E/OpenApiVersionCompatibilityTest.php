@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\E2E;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Test\Support\Psr7RequestFactory;
 use Duyler\OpenApi\Validator\Exception\EnumError;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
@@ -26,13 +27,13 @@ use function basename;
 use function implode;
 use function json_encode;
 use function str_contains;
+use function substr;
 
 use const JSON_THROW_ON_ERROR;
 
 final class OpenApiVersionCompatibilityTest extends TestCase
 {
-    private const string ORIGINAL_DIR = __DIR__ . '/../fixtures';
-    private const string MIRROR_DIR = __DIR__ . '/Fixtures/version-compat';
+    private const string MIRROR_DIR = 'version-compat';
 
     private const string VERSION_310 = '3.1.0';
     private const string VERSION_320 = '3.2.0';
@@ -76,13 +77,13 @@ final class OpenApiVersionCompatibilityTest extends TestCase
         $cases = [];
 
         foreach (self::SPECS as $name => $relativePath) {
-            $cases[$name . ' (' . self::VERSION_310 . ')'] = [self::ORIGINAL_DIR . $relativePath];
-            $cases[$name . ' (' . self::VERSION_320 . ')'] = [self::MIRROR_DIR . '/' . basename($relativePath)];
+            $cases[$name . ' (' . self::VERSION_310 . ')'] = [FixtureLocator::path(substr($relativePath, 1))];
+            $cases[$name . ' (' . self::VERSION_320 . ')'] = [FixtureLocator::path(self::MIRROR_DIR . '/' . basename($relativePath))];
         }
 
         foreach (self::CUSTOM_SPECS as $name => $paths) {
-            $cases[$name . ' (' . self::VERSION_310 . ')'] = [self::MIRROR_DIR . '/' . $paths[0]];
-            $cases[$name . ' (' . self::VERSION_320 . ')'] = [self::MIRROR_DIR . '/' . $paths[1]];
+            $cases[$name . ' (' . self::VERSION_310 . ')'] = [FixtureLocator::path(self::MIRROR_DIR . '/' . $paths[0])];
+            $cases[$name . ' (' . self::VERSION_320 . ')'] = [FixtureLocator::path(self::MIRROR_DIR . '/' . $paths[1])];
         }
 
         return $cases;
@@ -146,8 +147,8 @@ final class OpenApiVersionCompatibilityTest extends TestCase
         [$path310, $path320] = self::CUSTOM_SPECS['deprecation'];
 
         return [
-            self::VERSION_310 => [self::MIRROR_DIR . '/' . $path310, false],
-            self::VERSION_320 => [self::MIRROR_DIR . '/' . $path320, true],
+            self::VERSION_310 => [FixtureLocator::path(self::MIRROR_DIR . '/' . $path310), false],
+            self::VERSION_320 => [FixtureLocator::path(self::MIRROR_DIR . '/' . $path320), true],
         ];
     }
 
@@ -159,8 +160,8 @@ final class OpenApiVersionCompatibilityTest extends TestCase
         [$path310, $path320] = self::CUSTOM_SPECS['deprecation'];
 
         return [
-            self::VERSION_310 => [self::MIRROR_DIR . '/' . $path310],
-            self::VERSION_320 => [self::MIRROR_DIR . '/' . $path320],
+            self::VERSION_310 => [FixtureLocator::path(self::MIRROR_DIR . '/' . $path310)],
+            self::VERSION_320 => [FixtureLocator::path(self::MIRROR_DIR . '/' . $path320)],
         ];
     }
 
@@ -582,8 +583,8 @@ final class OpenApiVersionCompatibilityTest extends TestCase
     private static function versionPair(string $relativePath): array
     {
         return [
-            self::VERSION_310 => [self::ORIGINAL_DIR . $relativePath],
-            self::VERSION_320 => [self::MIRROR_DIR . '/' . basename($relativePath)],
+            self::VERSION_310 => [FixtureLocator::path(substr($relativePath, 1))],
+            self::VERSION_320 => [FixtureLocator::path(self::MIRROR_DIR . '/' . basename($relativePath))],
         ];
     }
 
@@ -595,8 +596,8 @@ final class OpenApiVersionCompatibilityTest extends TestCase
         [$path310, $path320] = self::CUSTOM_SPECS[$name];
 
         return [
-            self::VERSION_310 => [self::MIRROR_DIR . '/' . $path310],
-            self::VERSION_320 => [self::MIRROR_DIR . '/' . $path320],
+            self::VERSION_310 => [FixtureLocator::path(self::MIRROR_DIR . '/' . $path310)],
+            self::VERSION_320 => [FixtureLocator::path(self::MIRROR_DIR . '/' . $path320)],
         ];
     }
 

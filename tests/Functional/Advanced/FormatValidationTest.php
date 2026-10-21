@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Functional\Advanced;
 
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
@@ -19,7 +20,7 @@ final class FormatValidationTest extends AdvancedFunctionalTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->specFile = __DIR__ . '/../../fixtures/advanced-specs/format-validation.yaml';
+        $this->specFile = FixtureLocator::path('advanced-specs/format-validation.yaml');
     }
 
     #[Test]

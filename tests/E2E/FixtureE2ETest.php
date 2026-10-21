@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\E2E;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Validator\Exception\EnumError;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\MaximumError;
@@ -29,7 +30,7 @@ final class FixtureE2ETest extends TestCase
     public function large_payloads_fixture_validates_large_object(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/edge-cases/large-payloads.yaml')
+            ->fromYamlFile(FixtureLocator::path('edge-cases/large-payloads.yaml'))
             ->build();
 
         $data = [];
@@ -49,7 +50,7 @@ final class FixtureE2ETest extends TestCase
     public function large_payloads_fixture_validates_large_array(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/edge-cases/large-payloads.yaml')
+            ->fromYamlFile(FixtureLocator::path('edge-cases/large-payloads.yaml'))
             ->build();
 
         $items = [];
@@ -72,7 +73,7 @@ final class FixtureE2ETest extends TestCase
     public function large_payloads_fixture_validates_null_handling(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/edge-cases/large-payloads.yaml')
+            ->fromYamlFile(FixtureLocator::path('edge-cases/large-payloads.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('POST', '/test/large/null')
@@ -91,7 +92,7 @@ final class FixtureE2ETest extends TestCase
     public function pagination_fixture_validates_paginated_request(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/real-world/pagination.yaml')
+            ->fromYamlFile(FixtureLocator::path('real-world/pagination.yaml'))
             ->enableCoercion()
             ->build();
 
@@ -106,7 +107,7 @@ final class FixtureE2ETest extends TestCase
     public function pagination_fixture_validates_paginated_response(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/real-world/pagination.yaml')
+            ->fromYamlFile(FixtureLocator::path('real-world/pagination.yaml'))
             ->enableCoercion()
             ->build();
 
@@ -136,7 +137,7 @@ final class FixtureE2ETest extends TestCase
     public function pagination_fixture_rejects_invalid_page_parameter(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/real-world/pagination.yaml')
+            ->fromYamlFile(FixtureLocator::path('real-world/pagination.yaml'))
             ->enableCoercion()
             ->build();
 
@@ -150,7 +151,7 @@ final class FixtureE2ETest extends TestCase
     public function filtering_fixture_validates_filtered_request(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/real-world/filtering.yaml')
+            ->fromYamlFile(FixtureLocator::path('real-world/filtering.yaml'))
             ->enableCoercion()
             ->build();
 
@@ -168,7 +169,7 @@ final class FixtureE2ETest extends TestCase
     public function filtering_fixture_rejects_invalid_status_enum(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/real-world/filtering.yaml')
+            ->fromYamlFile(FixtureLocator::path('real-world/filtering.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest(
@@ -184,7 +185,7 @@ final class FixtureE2ETest extends TestCase
     public function crud_operations_fixture_validates_create_user(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/real-world/crud-operations.yaml')
+            ->fromYamlFile(FixtureLocator::path('real-world/crud-operations.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('POST', '/api/users')
@@ -205,7 +206,7 @@ final class FixtureE2ETest extends TestCase
     public function crud_operations_fixture_validates_get_user(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/real-world/crud-operations.yaml')
+            ->fromYamlFile(FixtureLocator::path('real-world/crud-operations.yaml'))
             ->enableCoercion()
             ->build();
 
@@ -219,7 +220,7 @@ final class FixtureE2ETest extends TestCase
     public function crud_operations_fixture_validates_delete_user(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/real-world/crud-operations.yaml')
+            ->fromYamlFile(FixtureLocator::path('real-world/crud-operations.yaml'))
             ->enableCoercion()
             ->build();
 
@@ -233,7 +234,7 @@ final class FixtureE2ETest extends TestCase
     public function crud_operations_fixture_validates_full_cycle_request_response(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/real-world/crud-operations.yaml')
+            ->fromYamlFile(FixtureLocator::path('real-world/crud-operations.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('POST', '/api/users')
@@ -263,7 +264,7 @@ final class FixtureE2ETest extends TestCase
     public function boundary_values_fixture_validates_integer_boundaries(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/edge-cases/boundary-values.yaml')
+            ->fromYamlFile(FixtureLocator::path('edge-cases/boundary-values.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('POST', '/test/boundary')
@@ -283,7 +284,7 @@ final class FixtureE2ETest extends TestCase
     public function boundary_values_fixture_rejects_integer_above_max(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/edge-cases/boundary-values.yaml')
+            ->fromYamlFile(FixtureLocator::path('edge-cases/boundary-values.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('POST', '/test/boundary')
@@ -316,7 +317,7 @@ final class FixtureE2ETest extends TestCase
     public function boundary_values_fixture_validates_string_boundaries(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/edge-cases/boundary-values.yaml')
+            ->fromYamlFile(FixtureLocator::path('edge-cases/boundary-values.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('POST', '/test/boundary/string')
@@ -336,7 +337,7 @@ final class FixtureE2ETest extends TestCase
     public function complex_nesting_fixture_validates_deep_nesting(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/edge-cases/complex-nesting.yaml')
+            ->fromYamlFile(FixtureLocator::path('edge-cases/complex-nesting.yaml'))
             ->build();
 
         $nestedData = ['level10' => 'deep value'];
@@ -356,7 +357,7 @@ final class FixtureE2ETest extends TestCase
     public function complex_nesting_fixture_validates_mixed_nesting(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/edge-cases/complex-nesting.yaml')
+            ->fromYamlFile(FixtureLocator::path('edge-cases/complex-nesting.yaml'))
             ->build();
 
         $data = [
@@ -388,7 +389,7 @@ final class FixtureE2ETest extends TestCase
     public function complex_nesting_fixture_validates_nested_arrays_and_objects(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/edge-cases/complex-nesting.yaml')
+            ->fromYamlFile(FixtureLocator::path('edge-cases/complex-nesting.yaml'))
             ->build();
 
         $data = [

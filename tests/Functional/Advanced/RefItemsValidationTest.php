@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Functional\Advanced;
 
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
@@ -16,7 +17,7 @@ final class RefItemsValidationTest extends AdvancedFunctionalTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->specFile = __DIR__ . '/../../fixtures/advanced-specs/ref-items-validation.yaml';
+        $this->specFile = FixtureLocator::path('advanced-specs/ref-items-validation.yaml');
     }
 
     #[Test]

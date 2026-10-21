@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Integration;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
 use Duyler\OpenApi\Schema\Parser\YamlParser;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -82,7 +83,7 @@ YAML;
     public function handles_empty_streaming_response(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/v3.2/streaming-events.yaml')
+            ->fromYamlFile(FixtureLocator::path('v3.2/streaming-events.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/logs');
@@ -228,7 +229,7 @@ YAML;
     public function handles_multiple_streaming_items(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/v3.2/streaming-events.yaml')
+            ->fromYamlFile(FixtureLocator::path('v3.2/streaming-events.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/logs');
@@ -252,7 +253,7 @@ YAML;
     public function handles_special_characters_in_jsonl(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/v3.2/streaming-events.yaml')
+            ->fromYamlFile(FixtureLocator::path('v3.2/streaming-events.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/logs');
@@ -273,7 +274,7 @@ YAML;
     public function handles_nested_discriminator_mapping(): void
     {
         $parser = new YamlParser();
-        $content = file_get_contents(__DIR__ . '/../fixtures/v3.2/full-spec.yaml');
+        $content = file_get_contents(FixtureLocator::path('v3.2/full-spec.yaml'));
         self::assertNotFalse($content);
 
         $document = $parser->parse($content);
@@ -326,7 +327,7 @@ YAML;
     public function handles_complex_query_request_body(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/v3.2/query-method.yaml')
+            ->fromYamlFile(FixtureLocator::path('v3.2/query-method.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('QUERY', '/search')

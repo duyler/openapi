@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Functional\Response;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -22,7 +23,7 @@ final class StreamingResponseValidationTest extends TestCase
     public function jsonl_valid_response(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/streaming.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/streaming.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/logs');
@@ -43,7 +44,7 @@ final class StreamingResponseValidationTest extends TestCase
     public function jsonl_with_charset_valid_response(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/streaming.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/streaming.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/logs');
@@ -63,7 +64,7 @@ final class StreamingResponseValidationTest extends TestCase
     public function ndjson_valid_response(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/streaming.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/streaming.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/ndjson');
@@ -84,7 +85,7 @@ final class StreamingResponseValidationTest extends TestCase
     public function sse_valid_response(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/streaming.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/streaming.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/events');
@@ -107,7 +108,7 @@ final class StreamingResponseValidationTest extends TestCase
     public function sse_with_id_valid_response(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/streaming.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/streaming.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/events');
@@ -129,7 +130,7 @@ final class StreamingResponseValidationTest extends TestCase
     public function sse_ignores_comments(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/streaming.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/streaming.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/events');
@@ -151,7 +152,7 @@ final class StreamingResponseValidationTest extends TestCase
     public function json_seq_valid_response(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/streaming.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/streaming.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/records');
@@ -171,7 +172,7 @@ final class StreamingResponseValidationTest extends TestCase
     public function jsonl_empty_lines_ignored(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/streaming.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/streaming.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/logs');
@@ -192,7 +193,7 @@ final class StreamingResponseValidationTest extends TestCase
     public function streaming_uses_schema_when_item_schema_not_defined(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/streaming.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/streaming.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/stream-with-schema');

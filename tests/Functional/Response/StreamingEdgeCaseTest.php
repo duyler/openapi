@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Functional\Response;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Validator\Exception\EnumError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -29,7 +30,7 @@ final class StreamingEdgeCaseTest extends TestCase
         $logger->expects($this->never())->method('warning');
 
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/streaming.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/streaming.yaml'))
             ->withLogger($logger)
             ->build();
 
@@ -54,7 +55,7 @@ final class StreamingEdgeCaseTest extends TestCase
     public function stream_with_invalid_item_at_third_position_throws_enum_error_with_expected_path(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/streaming.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/streaming.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/logs');
@@ -86,7 +87,7 @@ final class StreamingEdgeCaseTest extends TestCase
     public function stream_with_invalid_item_at_first_position_throws_enum_error_immediately(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/streaming.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/streaming.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/logs');
@@ -123,7 +124,7 @@ final class StreamingEdgeCaseTest extends TestCase
             );
 
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/streaming.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/streaming.yaml'))
             ->withLogger($logger)
             ->build();
 
@@ -147,7 +148,7 @@ final class StreamingEdgeCaseTest extends TestCase
     public function sse_stream_with_invalid_item_data_at_second_position_throws_type_mismatch_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/response-validation-specs/streaming.yaml')
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/streaming.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/events');

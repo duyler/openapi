@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Functional\Request;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\Exception\PatternMismatchError;
 use Duyler\OpenApi\Validator\Exception\EnumError;
@@ -32,7 +33,7 @@ final class RequestValidationTest extends TestCase
     public function path_parameter_with_uuid_format_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/simple-params.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/simple-params.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/users/550e8400-e29b-41d4-a716-446655440000');
@@ -47,7 +48,7 @@ final class RequestValidationTest extends TestCase
     public function path_parameter_with_integer_type_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/simple-params.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/simple-params.yaml'))
             ->enableCoercion()
             ->build();
 
@@ -63,7 +64,7 @@ final class RequestValidationTest extends TestCase
     public function path_parameter_with_pattern_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/simple-params.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/simple-params.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/orders/ORD-123456');
@@ -78,7 +79,7 @@ final class RequestValidationTest extends TestCase
     public function path_parameter_with_pattern_invalid_throws_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/simple-params.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/simple-params.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/orders/INVALID-ORDER');
@@ -91,7 +92,7 @@ final class RequestValidationTest extends TestCase
     public function multiple_path_parameters_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/complex-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/complex-schemas.yaml'))
             ->enableCoercion()
             ->build();
 
@@ -110,7 +111,7 @@ final class RequestValidationTest extends TestCase
     public function path_parameter_with_minimum_value_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/simple-params.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/simple-params.yaml'))
             ->enableCoercion()
             ->build();
 
@@ -126,7 +127,7 @@ final class RequestValidationTest extends TestCase
     public function path_parameter_with_minimum_value_invalid_throws_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/simple-params.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/simple-params.yaml'))
             ->enableCoercion()
             ->build();
 
@@ -140,7 +141,7 @@ final class RequestValidationTest extends TestCase
     public function query_parameter_with_boolean_type_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/simple-params.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/simple-params.yaml'))
             ->enableCoercion()
             ->build();
 
@@ -155,7 +156,7 @@ final class RequestValidationTest extends TestCase
     public function query_parameter_with_enum_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/simple-params.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/simple-params.yaml'))
             ->enableCoercion()
             ->build();
 
@@ -170,7 +171,7 @@ final class RequestValidationTest extends TestCase
     public function query_parameter_with_enum_invalid_throws_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/simple-params.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/simple-params.yaml'))
             ->enableCoercion()
             ->build();
 
@@ -184,7 +185,7 @@ final class RequestValidationTest extends TestCase
     public function query_parameter_array_form_style_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/complex-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/complex-schemas.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/items/123?tags=tag1,tag2,tag3');
@@ -240,7 +241,7 @@ YAML;
     public function query_parameter_object_deep_object_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/complex-schemas.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/complex-schemas.yaml'))
             ->enableCoercion()
             ->build();
 
@@ -258,7 +259,7 @@ YAML;
     public function optional_query_parameter_not_provided_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/simple-params.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/simple-params.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('GET', '/users/550e8400-e29b-41d4-a716-446655440000');
@@ -686,7 +687,7 @@ YAML;
     public function request_body_form_data_simple_fields_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/form-data.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/form-data.yaml'))
             ->enableCoercion()
             ->build();
 
@@ -707,7 +708,7 @@ YAML;
     public function request_body_form_data_with_email_format_valid(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/form-data.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/form-data.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('POST', '/form-submit')
@@ -726,7 +727,7 @@ YAML;
     public function request_body_form_data_with_invalid_email_format_throws_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/form-data.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/form-data.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('POST', '/form-submit')
@@ -744,7 +745,7 @@ YAML;
     public function request_body_form_data_missing_required_field_throws_error(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../../fixtures/request-validation-specs/form-data.yaml')
+            ->fromYamlFile(FixtureLocator::path('request-validation-specs/form-data.yaml'))
             ->build();
 
         $request = $this->psrFactory->createServerRequest('POST', '/form-submit')

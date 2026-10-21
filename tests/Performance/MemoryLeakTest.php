@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Performance;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Test\Support\Psr7RequestStubFactory;
 use Exception;
 use PHPUnit\Framework\Attributes\Test;
@@ -18,7 +19,7 @@ final class MemoryLeakTest extends TestCase
     public function no_memory_leak_on_repeated_validation(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/petstore.yaml')
+            ->fromYamlFile(FixtureLocator::path('petstore.yaml'))
             ->build();
 
         $initialMemory = memory_get_usage();
@@ -45,7 +46,7 @@ final class MemoryLeakTest extends TestCase
 
         for ($i = 0; $i < 10; $i++) {
             $validator = OpenApiValidatorBuilder::create()
-                ->fromYamlFile(__DIR__ . '/../fixtures/petstore.yaml')
+                ->fromYamlFile(FixtureLocator::path('petstore.yaml'))
                 ->build();
         }
 
@@ -60,7 +61,7 @@ final class MemoryLeakTest extends TestCase
     public function pool_prevents_memory_leaks(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/petstore.yaml')
+            ->fromYamlFile(FixtureLocator::path('petstore.yaml'))
             ->build();
 
         $initialMemory = memory_get_usage();

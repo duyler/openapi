@@ -8,6 +8,7 @@ use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
 use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MinItemsError;
@@ -213,7 +214,7 @@ YAML;
     protected function setUp(): void
     {
         parent::setUp();
-        $this->specFile = __DIR__ . '/../../fixtures/advanced-specs/type-coercion.yaml';
+        $this->specFile = FixtureLocator::path('advanced-specs/type-coercion.yaml');
         $this->paramCoercer = new TypeCoercer();
         $this->bodyCoercer = new RequestBodyCoercer();
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Benchmark;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Test\Support\FixtureLocator;
 use Duyler\OpenApi\Test\Support\Psr7RequestStubFactory;
 use Duyler\OpenApi\Validator\Request\PathParser;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
@@ -196,7 +197,7 @@ YAML;
     public function validation_time_complex_schema(): void
     {
         $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlFile(__DIR__ . '/../fixtures/petstore.yaml')
+            ->fromYamlFile(FixtureLocator::path('petstore.yaml'))
             ->build();
 
         $iterations = 200;
