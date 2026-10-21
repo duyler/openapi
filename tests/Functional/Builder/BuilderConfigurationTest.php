@@ -9,6 +9,7 @@ use Duyler\OpenApi\Test\Support\Psr7RequestFactory;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Response\Exception\TooManyRecordsException;
 use InvalidArgumentException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Override;
@@ -136,6 +137,29 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
+YAML;
+
+    private const string STREAMING_RECORDS_SPEC = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: Streaming Records API
+  version: 1.0.0
+paths:
+  /stream:
+    get:
+      operationId: streamRecords
+      responses:
+        '200':
+          description: Streaming records
+          content:
+            application/jsonl:
+              itemSchema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: integer
 YAML;
 
     private Psr17Factory $psrFactory;
@@ -403,6 +427,43 @@ YAML;
             ->build();
 
         $this->assertNotNull($validator);
+    }
+
+    #[Test]
+    public function with_max_streaming_records_raises_too_many_records_when_exceeded(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::STREAMING_RECORDS_SPEC)
+            ->withMaxStreamingRecords(2)
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/stream');
+        $operation = $validator->validateRequest($request);
+
+        $response = $this->psrFactory->createResponse(200)
+            ->withHeader('Content-Type', 'application/jsonl')
+            ->withBody($this->psrFactory->createStream('{"id":1}' . "\n" . '{"id":2}' . "\n" . '{"id":3}'));
+
+        $this->expectException(TooManyRecordsException::class);
+        $validator->validateResponse($response, $operation);
+    }
+
+    #[Test]
+    public function without_max_streaming_records_three_records_pass(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString(self::STREAMING_RECORDS_SPEC)
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/stream');
+        $operation = $validator->validateRequest($request);
+
+        $response = $this->psrFactory->createResponse(200)
+            ->withHeader('Content-Type', 'application/jsonl')
+            ->withBody($this->psrFactory->createStream('{"id":1}' . "\n" . '{"id":2}' . "\n" . '{"id":3}'));
+
+        $validator->validateResponse($response, $operation);
+        $this->expectNotToPerformAssertions();
     }
 
     /**

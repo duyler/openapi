@@ -532,6 +532,7 @@ final readonly class OpenApiValidatorBuilder
         $reportDeprecated = $this->config->reportDeprecated ?? true;
         $maxJsonBodyBytes = $this->config->maxJsonBodyBytes ?? ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES;
         $maxMultipartBodyBytes = $this->config->maxMultipartBodyBytes ?? ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES;
+        $maxStreamingRecords = $this->config->maxStreamingRecords ?? ValidatorConfiguration::DEFAULT_MAX_STREAMING_RECORDS;
         $strictStreaming = $this->config->strictStreaming ?? false;
         $strictCallbackRuntimeTemplate = $this->config->strictCallbackRuntimeTemplate ?? true;
         $strictCoercion = $this->config->strictCoercion ?? true;
@@ -557,6 +558,7 @@ final readonly class OpenApiValidatorBuilder
                     eventDispatcher: $this->config->eventDispatcher,
                     strictFormats: $strictFormats,
                     strictStreaming: $strictStreaming,
+                    maxStreamingRecords: $maxStreamingRecords,
                     strictCoercion: $strictCoercion,
                     securityVerboseLogger: $securityVerboseLogger,
                 ),
@@ -581,6 +583,7 @@ final readonly class OpenApiValidatorBuilder
                 maxMultipartBodyBytes: $maxMultipartBodyBytes,
                 strictStreaming: $strictStreaming,
                 maxRegexBacktracks: $maxRegexBacktracks,
+                maxStreamingRecords: $maxStreamingRecords,
                 strictCoercion: $strictCoercion,
             ),
             dependencies: new ValidatorDependencies(

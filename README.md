@@ -68,7 +68,7 @@ class UserService
     public function handleRequest(ServerRequestInterface $request): void
     {
         $operation = $this->validator->validateRequest($request);
-        // $operation->path             template path, e.g. "/users/{id}"
+        // $operation->path             matched template path, e.g. "/users/{id}"
         // $operation->method           matched HTTP method
         // $operation->operationId      operationId from the spec (nullable)
         // $operation->pathParameters   resolved values, e.g. ['id' => '42']
@@ -79,6 +79,8 @@ class UserService
 }
 ```
 
+The returned `Operation` is a `final readonly` value object implementing `Stringable`: `(string) $operation` yields the template form, e.g. `'GET /users/{id}'` (the path is the route template, not the concrete request URI), and `Operation::countPlaceholders(): int` returns the number of `{...}` placeholders.
+
 The interface exposes the following methods:
 
 | Method | Description |
@@ -86,69 +88,15 @@ The interface exposes the following methods:
 | `validateRequest(ServerRequestInterface $request): Operation` | Validate and return matched operation |
 | `validateResponse(ResponseInterface $response, Operation $operation): void` | Validate response against operation |
 | `validateSchema(mixed $data, string $schemaRef): void` | Validate data against a schema reference |
-| `getFormattedErrors(ValidationException $e): string` | Format validation errors as string |
+| `getFormattedErrors(ValidationException $e): string` | Format validation errors as string (**deprecated** in favor of `ErrorFormatterInterface::formatException()`, removed in 2.0) |
 | `validateWebhook(ServerRequestInterface $request, string $name): Operation` | Validate webhook request |
 | `validateCallback(ServerRequestInterface $request, string $name): Operation` | Validate callback request |
-| `getDocument(): OpenApiDocument` | Returns the loaded OpenAPI document for introspection, `SchemaRegistry` registration, or building routing maps. Available after `build()`; safe to call multiple times (memoised). |
+| `getDocument(): OpenApiDocument` | Returns the loaded OpenAPI document for introspection or routing maps (available after `build()`) |
 | `resolveLink(string $linkName, array $responseData): ResolvedLink` | Resolve link parameters from response data (response body only) |
-| `resolveLinkWithContext(string $linkName, LinkContext $context): ResolvedLink` | Resolve link parameters with full Runtime Expression support ($request.*, $response.body/header/query, $url, $method, $statusCode) |
+| `resolveLinkWithContext(string $linkName, LinkContext $context): ResolvedLink` | Resolve link parameters with full Runtime Expression support |
 | `reset(): void` | Reset validator state for reuse |
 
-The returned `Operation` DTO is a `final readonly` value object. Beyond the
-matched `path` (template form, e.g. `/users/{id}`) and `method`, it carries
-resolved `pathParameters` (raw `array<string, string>` keyed by placeholder
-name), `operationId` (nullable, populated when the spec declares one), and
-`schemaOperation` (nullable reference to the matched
-`Duyler\OpenApi\Schema\Model\Operation` for direct access to `requestBody`,
-`responses`, `security`, etc.). All newly added fields have defaults, so
-`new Operation('/users', 'GET')` and existing call sites keep working.
-`Operation` also implements `Stringable`: `(string) $operation` yields
-`'METHOD /path'` (e.g. `'GET /users/42'`), and `Operation::countPlaceholders(): int`
-returns the number of `{...}` placeholders in the template path.
-
-The concrete `OpenApiValidator` instance returned by `build()` (which
-implements `OpenApiValidatorInterface`) additionally exposes six
-read-only introspection accessors that return the resolved builder
-configuration. These are stable public API, intended for diagnostic
-surfaces, middleware that needs to inspect the active validator, and
-test fixtures:
-
-| Method | Returns | Purpose |
-|--------|---------|---------|
-| `getPool()` | `ValidatorPool` | The active pool instance (capacity / lock wiring) |
-| `isCoercion()` | `bool` | Whether `enableCoercion()` was set |
-| `isNullableAsType()` | `bool` | Whether `nullable: true` is honoured (default `true`) |
-| `getEmptyArrayStrategy()` | `EmptyArrayStrategy` | The active empty-array strategy enum |
-| `getErrorFormatter()` | `ErrorFormatterInterface` | The configured formatter |
-| `getCache()` | `?SchemaCache` | The configured PSR-6 cache, or `null` when caching is disabled |
-
-The accessors are not part of `OpenApiValidatorInterface`; callers that
-only type-hint the interface will not see them. Use the concrete class
-(`OpenApiValidator`) when you need them.
-
-The `OpenApiDocument` returned by `getDocument()` is a `final readonly`
-value object implementing `JsonSerializable`. Its fields map to the
-top-level OpenAPI 3.2 document structure:
-
-| Field | Type | Always present? |
-|-------|------|-----------------|
-| `openapi` | `string` | Yes — the document version string (e.g. `'3.2.0'`) |
-| `info` | `InfoObject` | Yes — title, version, contact, license |
-| `jsonSchemaDialect` | `?string` | Optional — JSON Schema dialect URI |
-| `servers` | `?Servers` | Optional — server list with variables |
-| `paths` | `?Paths` | Optional — path-item map (mutually exclusive with `webhooks` for some document types) |
-| `webhooks` | `?Webhooks` | Optional — OpenAPI 3.1+ webhooks |
-| `components` | `?Components` | Optional — reusable schemas, parameters, responses, security schemes |
-| `security` | `?SecurityRequirement` | Optional — document-level security requirements |
-| `tags` | `?Tags` | Optional — tag definitions for grouping operations |
-| `externalDocs` | `?ExternalDocs` | Optional — external documentation link |
-| `self` | `?string` | Optional — `$self` reference (when the document was loaded through a self-describing mechanism) |
-
-The document is immutable: callers can read it freely for routing-map
-construction, security-scheme introspection, or `SchemaRegistry`
-registration, but cannot mutate it. `(string) $document` is not
-implemented; use `json_encode($document)` to obtain the canonical JSON
-representation (the class implements `JsonSerializable`).
+`getDocument()` returns an immutable `OpenApiDocument` value object implementing `JsonSerializable` (use `json_encode()` for the canonical JSON). Its top-level fields mirror the OpenAPI 3.2 document structure (`info`, `servers`, `paths`, `webhooks`, `components`, `security`, `tags`, `externalDocs`), making it useful for routing maps and `SchemaRegistry` registration.
 
 ## Usage
 
@@ -180,41 +128,13 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
-#### YAML Anchor / Alias Caps (Billion-Laughs Defence)
+#### YAML Anchor and Alias Caps
 
-`YamlParser` enforces three orthogonal pre-parse caps on YAML anchor (`&name`)
-and alias (`*name`) constructs to block the "billion laughs" expansion bomb
-(CWE-400, CWE-770) **before** the Symfony YAML parser materialises the expanded
-document. The pre-parse scan runs after the size check and before
-`Symfony\Component\Yaml\Yaml::parse()`, so an attacker-controlled 1 KB payload
-can never reach the parser even when its expanded in-memory size would exceed
-the process `memory_limit`.
-
-| Cap | Default | Rationale |
-|-----|---------|-----------|
-| `YamlParser::MAX_ANCHORS` | 100 | Real OpenAPI specs use fewer than 20 anchors for schema deduplication. The regex scanner uses `[^ \t,\[\]\{\}\n]+` with `/u` flag, exactly mirroring Symfony YAML's `Inline::parseAnchor` reject set — so any character Symfony accepts as an anchor-name character (Cyrillic, CJK, dots, colons, pipes, FF, VT, NBSP, etc.) is counted. |
-| `YamlParser::MAX_ALIASES` | 1000 | Real OpenAPI specs use fewer than 50 alias references. Symfony YAML's own `maxAliasesForCollections` (default 128) remains active as defense-in-depth for collection aliases that slip past the pre-parse scan. |
-| `YamlParser::MAX_ALIAS_DEPTH` | 10 | DAG-based longest-chain heuristic. Each anchor's value range is determined by indentation (from the anchor's declaration line to the next anchor at the same or lower indentation). Aliases within that range that reference other declared anchors become DAG edges; the longest path is the chain depth. Catches both same-line (flow-style `b: &b [*a]`) and multi-line (`b: &b\n  - *a`) billion-laughs variants. Real billion-laughs payloads use 5-7 chain levels; 10 leaves conservative headroom for legitimate deduplication. |
-
-Exceeding any cap throws `SpecTooLargeException` (a `\RuntimeException`
-subclass) with a sanitised message that discloses only the metric, the actual
-count, and the cap — never the attacker payload (CWE-209). The caps are
-compile-time `public const int` values; runtime configurability is tracked as
-a separate follow-up.
-
-Known heuristic limitation: the byte-level regex scanner cannot distinguish
-anchor/alias tokens from literal `&` / `*` characters inside double-quoted
-YAML strings (for example `description: "User & Admin"`). The conservative
-identifier pattern (`&[A-Za-z0-9_-]+`) rejects the common `& ` case but a
-false positive on `&Word` is possible; treat such specs as trusted or
-pre-process them before passing to the parser.
+Before parsing, the validator scans the raw YAML and enforces caps on anchors (`&name`, max 100), aliases (`*name`, max 1000), and alias chain depth (max 10). This blocks "billion laughs" expansion bombs before the YAML parser materialises them; exceeding any cap throws `SpecTooLargeException`. The scanner is conservative and may count a literal `&Word` sequence inside a double-quoted string as an anchor; treat such specs as trusted or pre-process them before parsing.
 
 ### External `$ref` Resolution
 
-The validator supports external `$ref` references for `file://` URIs and
-relative-path refs by default. The builtin `FileExternalRefResolver` loads
-the referenced YAML/JSON file, follows an optional JSON Pointer fragment
-(e.g. `components/user.yaml#/UserSchema`), and returns the referenced schema.
+The validator supports external `$ref` references for `file://` URIs and relative-path refs. The builtin resolver loads the referenced YAML/JSON file, follows an optional JSON Pointer fragment (e.g. `components/user.yaml#/UserSchema`), and returns the referenced schema:
 
 ```yaml
 # openapi.yaml
@@ -224,23 +144,16 @@ components:
       $ref: 'components/user.yaml#/UserSchema'
 ```
 
-Only `file://` URIs and scheme-less relative paths are allowed by default.
-Every other scheme (`http://`, `https://`, `ftp://`, `php://`, `phar://`,
-`data://`, `compress.zlib://`, `compress.bzip2://`, `zip://`, `expect://`,
-`ssh2://`, `rar://`, `ogg://`, `glob://`, and any other PHP stream wrapper)
-is **rejected** with `ExternalRefSecurityException` (surfaced by `RefResolver`
-as `UnresolvableRefException`). The whitelist (not blacklist) approach is the
-only defence that does not lag behind newly registered PHP stream wrappers.
-To enable network or other scheme resolution, inject a custom
-`ExternalRefResolverInterface` implementation:
+Only `file://` URIs and scheme-less relative paths are allowed; every other scheme — `http://`, `data://`, `phar://`, or any other PHP stream wrapper — is rejected with `ExternalRefSecurityException`, surfaced as `UnresolvableRefException`. To enable other schemes, inject a custom `ExternalRefResolverInterface` implementation:
 
 ```php
-use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Schema\ExternalRefResolverInterface;
+use Duyler\OpenApi\Validator\Schema\RefResolver;
 
 final class MyHttpExternalRefResolver implements ExternalRefResolverInterface
 {
-    public function resolve(string $ref): \Duyler\OpenApi\Schema\Model\Schema
+    public function resolve(string $ref): Schema
     {
         // fetch $ref over HTTP, return Schema
     }
@@ -249,8 +162,7 @@ final class MyHttpExternalRefResolver implements ExternalRefResolverInterface
 $refResolver = new RefResolver(new MyHttpExternalRefResolver());
 ```
 
-The resolver also supports an optional `allowedRoot` to defend against
-`../../../etc/passwd` style path traversal and symlink escapes:
+To defend against `../../../etc/passwd` style path traversal and symlink escapes, the builtin resolver accepts an optional `allowedRoot`: both the requested path and the root are resolved via `realpath()`, and any reference outside the root is refused:
 
 ```php
 use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
@@ -258,32 +170,7 @@ use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
 $resolver = new FileExternalRefResolver(allowedRoot: '/var/specs');
 ```
 
-When `allowedRoot` is configured, the resolver resolves both the requested
-path and the root via `realpath()` and refuses any reference whose real
-location is not a descendant of the root.
-
-#### Auto-derived `allowedRoot` from the builder
-
-When the spec is loaded with `fromYamlFile()` or `fromJsonFile()`, the
-builder automatically derives `allowedRoot` from `dirname(realpath($path))`
-so the spec directory becomes the confinement boundary. Any external
-`$ref` whose realpath resolves outside that directory is rejected with
-`ExternalRefSecurityException` (surfaced as `UnresolvableRefException`):
-
-```php
-use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-
-// /var/specs/openapi.yaml referring to /etc/passwd via $ref would now
-// raise UnresolvableRefException at resolution time.
-$validator = OpenApiValidatorBuilder::create()
-    ->fromYamlFile('/var/specs/openapi.yaml')
-    ->build();
-```
-
-Override the auto-derived root explicitly when external `$ref` references
-must reach outside the spec directory (for example, a shared sibling
-`components/` directory). The path must exist; otherwise the builder
-throws `BuilderException` at call time:
+When the spec is loaded with `fromYamlFile()` or `fromJsonFile()`, the builder automatically derives `allowedRoot` from the spec file's directory. Override it with `withExternalRefAllowedRoot()` when refs must reach outside the spec directory (the path must exist, otherwise the builder throws `BuilderException`):
 
 ```php
 $validator = OpenApiValidatorBuilder::create()
@@ -292,28 +179,7 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
-Specs loaded with `fromYamlString()` or `fromJsonString()` fail closed at
-`build()` time when the spec contains an external `$ref` (any `$ref` that
-does not start with `#/`) and `withExternalRefAllowedRoot()` has not been
-called. Without this pre-build scan the builtin `FileExternalRefResolver`
-would run with `allowedRoot = null` for string-loaded specs and silently
-accept any `file://...` or relative-path `$ref`. The scan covers the whole
-raw spec document, including discriminator `mapping` and `defaultMapping`
-entries whose values point outside the document. Call
-`withExternalRefAllowedRoot('/safe/dir')` after the
-from*String method to confine external ref resolution to that directory,
-or remove the external `$ref` from the spec. File-loaded specs skip the
-scan: their `allowedRoot` is auto-derived as `dirname(realpath($path))`
-of the spec file and enforced at resolution time instead. Direct `new RefResolver()`
-usage without the builder keeps the legacy null-`allowedRoot` behaviour
-(disabled path-traversal check) for backward compatibility; this is
-unsafe for trusted specs and should be replaced by the builder.
-
-External ref files are read in bounded chunks with a default size cap of
-10 MB; files exceeding the cap throw `ExternalRefTooLargeException`. The
-cap is configurable via `withExternalRefMaxBytes(int $bytes)`. Non-regular
-files (`/dev/null`, `/dev/zero`, FIFOs, sockets) are rejected with
-`ExternalRefSecurityException` to prevent DoS via infinite-read special files.
+Specs loaded from a string (`fromYamlString()` / `fromJsonString()`) have no directory to derive a root from, so they **fail closed** at `build()` time when the spec contains an external `$ref` and no explicit root was set. External ref files are read with a default size cap of 10 MB (`withExternalRefMaxBytes()`); larger files throw `ExternalRefTooLargeException`, and non-regular files (device files, FIFOs, sockets) are rejected with `ExternalRefSecurityException`.
 
 ### PSR-7 Integration
 
@@ -334,33 +200,6 @@ $validator = OpenApiValidatorBuilder::create()
 
 $operation = $validator->validateRequest($request);
 // $operation contains the matched path and method
-```
-
-### Caching
-
-Enable PSR-6 caching to skip YAML/JSON parsing and schema construction on every build. See the [Caching](#caching-1) section under Performance for configuration details.
-
-### Events
-
-Subscribe to validation events using PSR-14:
-
-```php
-use Duyler\OpenApi\Event\ArrayDispatcher;
-use Duyler\OpenApi\Event\ValidationStartedEvent;
-use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-
-$dispatcher = new ArrayDispatcher([
-    ValidationStartedEvent::class => [
-        function (ValidationStartedEvent $event) {
-            printf("Validating: %s %s\n", $event->method, $event->path);
-        },
-    ],
-]);
-
-$validator = OpenApiValidatorBuilder::create()
-    ->fromYamlFile('openapi.yaml')
-    ->withEventDispatcher($dispatcher)
-    ->build();
 ```
 
 ### Webhooks
@@ -391,26 +230,9 @@ $validator = OpenApiValidatorBuilder::create()
 $operation = $validator->validateCallback($request, 'myCallback');
 ```
 
-> **Security default — strict fail-closed**: Callback runtime expressions
-> like `{$request.body#/callback_url}` reference the original triggering
-> request body and cannot be resolved by the validator. Since SEC-09, the
-> builder fails closed by default: any callback expression that contains a
-> runtime template throws `UnresolvableCallbackPathException` instead of
-> being treated as a wildcard that accepts any URL. This prevents
-> attacker-controlled runtime templates from bypassing path validation
-> while still passing declared security checks on the callback pathItem.
+> **Strict fail-closed default**: callback runtime expressions like `{$request.body#/callback_url}` reference the original triggering request body and cannot be resolved by the validator. The builder therefore fails closed by default: any callback expression that contains a runtime template throws `UnresolvableCallbackPathException` instead of being treated as a wildcard that accepts any URL. This prevents attacker-controlled runtime templates from bypassing path validation.
 
-To opt back into the legacy wildcard behaviour, call
-`disableStrictCallbackRuntimeTemplate()`:
-
-> **SECURITY WARNING**: `disableStrictCallbackRuntimeTemplate()` disables
-> the protection against SSRF via attacker-controlled callback URLs.
-> Declared security checks on the callback pathItem still pass against an
-> arbitrary URL when the runtime template is unresolvable. Use this opt-out
-> only when the application validates callback URLs through another
-> mechanism (for example, an allowlist of permitted outbound hosts, signed
-> callback URLs, or application-level destination validation that runs
-> before any outbound HTTP request is issued).
+To opt back into the legacy wildcard behaviour, call `disableStrictCallbackRuntimeTemplate()`:
 
 ```php
 $validator = OpenApiValidatorBuilder::create()
@@ -419,28 +241,13 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
-The previous opt-in method `enableStrictCallbackRuntimeTemplate()` is
-retained as a `@deprecated` no-op for backward compatibility: callers that
-explicitly invoked it continue to receive the (now default) strict
-behaviour. The method will be removed in 2.0.
+> **SECURITY WARNING**: `disableStrictCallbackRuntimeTemplate()` disables the protection against SSRF via attacker-controlled callback URLs: declared security checks still pass against an arbitrary URL when the runtime template is unresolvable. Use it only when callback URLs are validated at the application level (an allowlist of permitted outbound hosts, signed callback URLs, or destination validation before any outbound request is issued).
 
-The `CallbackValidator` class itself (both the outer
-`Duyler\OpenApi\Validator\Validation\CallbackValidator` and the inner
-`Duyler\OpenApi\Validator\Callback\CallbackValidator`) also defaults
-`$strictCallbackRuntimeTemplate` to `true`, matching the builder default.
-Frameworks that instantiate either class directly without going through
-`OpenApiValidatorBuilder` therefore receive the same safe-by-default
-behaviour. Pass `strictCallbackRuntimeTemplate: false` explicitly to the
-constructor only when callback URLs are validated at the application level
-(for example, an allowlist of permitted outbound hosts, signed callback
-URLs, or application-level destination validation that runs before any
-outbound HTTP request is issued).
+The previous opt-in method `enableStrictCallbackRuntimeTemplate()` is retained as a deprecated no-op for backward compatibility: strict behaviour is now the default. The method will be removed in 2.0.
 
 ### Link Resolution
 
-Resolve OpenAPI Link parameters from response data. Both methods return a
-`ResolvedLink` DTO exposing resolved `parameters`, `requestBody`, and the
-optional `server` override declared by the link.
+Resolve OpenAPI Link parameters from response data. Both methods return a `ResolvedLink` DTO exposing resolved `parameters`, `requestBody`, and the optional `server` override declared by the link.
 
 ```php
 use Duyler\OpenApi\Validator\Link\LinkContext;
@@ -466,10 +273,7 @@ $context = new LinkContext(
 $result = $validator->resolveLinkWithContext('GetUserById', $context);
 ```
 
-`resolveLink()` populates only the response body context, so it can resolve
-`$response.body` expressions. Use `resolveLinkWithContext()` to supply the
-full request and response state and unlock all OpenAPI 3.2 §6.19.2 runtime
-expressions:
+`resolveLink()` populates only the response body context, so it can resolve `$response.body` expressions. Use `resolveLinkWithContext()` to supply the full request and response state and unlock all OpenAPI 3.2 §6.19.2 runtime expressions:
 
 | Expression | Resolves from LinkContext |
 |------------|---------------------------|
@@ -488,8 +292,7 @@ expressions:
 | `$response.query` | `queryParams` (whole map) |
 | `$response.query[.{name}|#/{name}]` | `queryParams` by name or JSON Pointer |
 
-Unsupported expressions are returned as the literal string so callers can
-distinguish them from values that legitimately resolve to null.
+Unsupported expressions are returned as the literal string so callers can distinguish them from values that legitimately resolve to null.
 
 ## Advanced Usage
 
@@ -523,19 +326,7 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
-Internally the builder accumulates registered formats into a
-`Duyler\OpenApi\Validator\Format\FormatRegistry`, then layers the
-builtin formats on top via `FormatRegistry::withBase()` at `build()`
-time. Direct construction of `FormatRegistry` is supported for callers
-that wire validators outside the builder:
-
-| Method | Signature | Purpose |
-|--------|-----------|---------|
-| `__construct` | `(array $validators = [])` | Seed with a `(type, format) => FormatValidatorInterface` map |
-| `registerFormat` | `(string $type, string $format, FormatValidatorInterface $validator): self` | Add or replace a single format entry (immutable — returns a new registry) |
-| `getValidator` | `(string $type, string $format): ?FormatValidatorInterface` | Look up the validator for `(type, format)`, or `null` if not registered |
-| `hasFormat` | `(string $type, string $format): bool` | Membership check |
-| `withBase` | `(self $base): self` | Return a new registry whose entries are the union of `$base` and `$this`, with `$this` overriding `$base` on `(type, format)` conflict |
+Formats registered via `withFormat()` override built-in validators whenever both target the same `(type, format)` pair — the same mechanism is used to replace built-ins (see [Overriding Built-in Validators](#overriding-built-in-validators)).
 
 ### Type Coercion
 
@@ -548,38 +339,7 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
-`TypeCoercer::coerce()` defaults to strict mode (`$strict = true`). Third-party callers that instantiate `TypeCoercer` directly and omit the fourth argument get strict coercion. To opt out, pass `false` explicitly or use `disableStrictCoercion()` on the builder.
-
-Type coercion also applies to non-string PHP scalars produced by `json_decode(..., true)` for JSON request bodies. A field declared as `type: integer` receiving `bool true` is coerced to `int 1`; `type: boolean` receiving `int 1` is coerced to `bool true`; `type: string` receiving `int 42` or `float 1.5` is coerced to `"42"` / `"1.5"`. Non-scalar inputs (`resource`, `null` handled earlier via `nullable`) fall through unchanged via normalisation. For both parameter (`TypeCoercer`) and request body (`RequestBodyCoercer`) coercion, union types such as `type: [integer, string]` try each type in order and return the first successful coercion; an input like `'abc'` no longer aborts on the `integer` branch but falls through to `string`.
-
-### Error Formatters
-
-Choose from built-in error formatters or create your own:
-
-```php
-use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
-use Duyler\OpenApi\Validator\Error\Formatter\JsonFormatter;
-
-// Detailed formatter with suggestions
-$validator = OpenApiValidatorBuilder::create()
-    ->fromYamlFile('openapi.yaml')
-    ->withErrorFormatter(new DetailedFormatter())
-    ->build();
-
-// JSON formatter for API responses
-$validator = OpenApiValidatorBuilder::create()
-    ->fromYamlFile('openapi.yaml')
-    ->withErrorFormatter(new JsonFormatter())
-    ->build();
-
-try {
-    $operation = $validator->validateRequest($request);
-} catch (ValidationException $e) {
-    // Get formatted errors
-    $formatted = $validator->getFormattedErrors($e);
-    echo $formatted;
-}
-```
+Coercion is strict by default and applies to request parameters (query, path, headers, cookies) and to JSON body values alike: strings are converted to their declared types, and non-string scalars produced by `json_decode(..., true)` are normalised too (`bool true` → `int 1` for `type: integer`, `int 42` → `"42"` for `type: string`). Union types such as `type: [integer, string]` try each branch in order and use the first successful coercion. `disableStrictCoercion()` restores the legacy lax casting behaviour; overflow and precision-loss guards remain active.
 
 ### Discriminator Validation
 
@@ -588,15 +348,11 @@ Validate polymorphic schemas with discriminators:
 ```php
 $yaml = <<<YAML
 openapi: 3.2.0
-info:
-  title: Pet Store API
-  version: 1.0.0
 components:
   schemas:
     Pet:
       type: object
-      required:
-        - petType
+      required: [petType]
       discriminator:
         propertyName: petType
         mapping:
@@ -607,29 +363,17 @@ components:
         - $ref: '#/components/schemas/Dog'
     Cat:
       type: object
-      required:
-        - petType
-        - name
+      required: [petType, name]
       properties:
-        petType:
-          type: string
-          enum: [cat]
-        name:
-          type: string
+        petType: { type: string, enum: [cat] }
+        name: { type: string }
     Dog:
       type: object
-      required:
-        - petType
-        - name
-        - breed
+      required: [petType, name, breed]
       properties:
-        petType:
-          type: string
-          enum: [dog]
-        name:
-          type: string
-        breed:
-          type: string
+        petType: { type: string, enum: [dog] }
+        name: { type: string }
+        breed: { type: string }
 YAML;
 
 $validator = OpenApiValidatorBuilder::create()
@@ -641,50 +385,22 @@ $data = ['petType' => 'cat', 'name' => 'Fluffy'];
 $validator->validateSchema($data, '#/components/schemas/Pet');
 ```
 
-Discriminator candidate enumeration follows JSON Schema 2020-12 §10.2.1.1:
-when a schema declares more than one composition keyword (`oneOf`, `anyOf`,
-`allOf`), the discriminator enumerates candidates from **all** non-null
-composition arrays simultaneously. A nested candidate whose own composition
-does not contain the discriminator value no longer aborts the search —
-remaining candidates are tried before the discriminator gives up.
-
-The OpenAPI 3.2 §4.25 `defaultMapping` keyword is honoured as the final
-fallback for **any** unresolved discriminator value, regardless of whether
-`propertyName` is set. When the value is missing from `mapping` and no
-candidate matches via implicit name or nested composition, the validator
-resolves `defaultMapping` instead of raising
-`UnknownDiscriminatorValueException`. When `propertyName` itself is `null`,
-the same `defaultMapping` is applied unconditionally.
+Candidate enumeration follows JSON Schema 2020-12: when a schema declares more than one composition keyword (`oneOf`, `anyOf`, `allOf`), candidates are collected from **all** of them, and a non-matching nested candidate does not abort the search — remaining candidates are tried before the validator gives up. The OpenAPI `defaultMapping` keyword is honoured as the final fallback for any unresolved discriminator value, regardless of whether `propertyName` is set.
 
 ### Event-Driven Validation
 
-Subscribe to validation lifecycle events:
+Subscribe to validation lifecycle events via PSR-14:
 
 ```php
-use Duyler\OpenApi\Event\ValidationStartedEvent;
-use Duyler\OpenApi\Event\ValidationFinishedEvent;
-use Duyler\OpenApi\Event\ValidationErrorEvent;
-use Duyler\OpenApi\Event\ValidationWarningEvent;
 use Duyler\OpenApi\Event\ArrayDispatcher;
+use Duyler\OpenApi\Event\ValidationStartedEvent;
+use Duyler\OpenApi\Event\ValidationErrorEvent;
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 
 $dispatcher = new ArrayDispatcher([
     ValidationStartedEvent::class => [
         function (ValidationStartedEvent $event) {
-            error_log(sprintf(
-                "Validation started: %s %s",
-                $event->method,
-                $event->path
-            ));
-        },
-    ],
-    ValidationFinishedEvent::class => [
-        function (ValidationFinishedEvent $event) {
-            if ($event->isSuccess) {
-                error_log(sprintf(
-                    "Validation completed in %.3f seconds",
-                    $event->durationInSeconds
-                ));
-            }
+            printf("Validation started: %s %s\n", $event->method, $event->path);
         },
     ],
     ValidationErrorEvent::class => [
@@ -694,17 +410,6 @@ $dispatcher = new ArrayDispatcher([
                 $event->method,
                 $event->path,
                 $event->exception->getMessage()
-            ));
-        },
-    ],
-    ValidationWarningEvent::class => [
-        function (ValidationWarningEvent $event) {
-            error_log(sprintf(
-                "Warning at %s (property: %s, schema: %s): %s",
-                $event->propertyPath,
-                $event->propertyName,
-                $event->schemaRef ?? 'unknown',
-                $event->message
             ));
         },
     ],
@@ -725,13 +430,10 @@ Available events:
 | `ValidationErrorEvent` | Dispatched when validation fails |
 | `ValidationWarningEvent` | Dispatched for non-fatal validation warnings |
 
-The example above registers listeners through the `ArrayDispatcher`
-constructor. `ArrayDispatcher` also exposes a fluent `listen()` method
-for adding listeners after construction (returns `$this` for chaining):
+Listeners can also be registered after construction. `ArrayDispatcher` is immutable: `listen()` returns a **new** instance, so reassign the result — chaining without reassignment silently discards the added listeners:
 
 ```php
-$dispatcher = new ArrayDispatcher([]);
-$dispatcher
+$dispatcher = $dispatcher
     ->listen(ValidationStartedEvent::class, $myStartedListener)
     ->listen(ValidationErrorEvent::class, $myErrorListener);
 ```
@@ -744,97 +446,44 @@ Manage multiple API versions:
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Registry\SchemaRegistry;
 
-// Load multiple versions
 $validatorV1 = OpenApiValidatorBuilder::create()
     ->fromYamlFile('api-v1.yaml')
     ->build();
-$documentV1 = $validatorV1->getDocument();
-
 $validatorV2 = OpenApiValidatorBuilder::create()
     ->fromYamlFile('api-v2.yaml')
     ->build();
-$documentV2 = $validatorV2->getDocument();
 
-// Register schemas (throws on duplicate name+version)
-$registry = new SchemaRegistry();
-$registry = $registry
-    ->register('api', '1.0.0', $documentV1)
-    ->register('api', '2.0.0', $documentV2);
+// The registry is immutable: register() returns a new instance and throws
+// SchemaAlreadyRegisteredException on a duplicate name+version pair.
+// registerOrReplace() is the explicit-overwrite counterpart (e.g. hot reload).
+$registry = (new SchemaRegistry())
+    ->register('api', '1.0.0', $validatorV1->getDocument())
+    ->register('api', '2.0.0', $validatorV2->getDocument());
 
-// Replace an existing entry explicitly (hot-reload, immutable replacement)
-$registry = $registry->registerOrReplace('api', '1.0.0', $reloadedDocumentV1);
-
-// Get specific version (returns null if missing)
+// get() returns null for a missing name or version; getOrFail() throws
+// VersionNotFoundException. A call without a version returns the latest
+// version (sorted by semver).
 $schema = $registry->get('api', '1.0.0');
+$latest = $registry->get('api');
 
-// Get latest version (sorted by semver, returns null if no versions)
-$schema = $registry->get('api');
-
-// Get specific version with fail-fast semantics
-// Throws VersionNotFoundException if the schema name or version is missing
-use Duyler\OpenApi\Registry\Exception\VersionNotFoundException;
-try {
-    $schema = $registry->getOrFail('api', '1.0.0');
-    $latest = $registry->getOrFail('api');
-} catch (VersionNotFoundException $e) {
-    // $e->getMessage() describes the missing name and version
-}
-
-// List all versions
-$versions = $registry->getVersions('api');
-// ['1.0.0', '2.0.0']
-
-// Check if a schema exists
-$registry->has('api', '1.0.0'); // true
-$registry->has('api');          // true
-$registry->has('unknown');      // false
-
-// List all registered schema names
-$names = $registry->getNames();
-// ['api']
-
-// Count schemas and versions
-$totalNames   = $registry->countNames();   // 1 — distinct names
-$totalSchemas = $registry->countSchemas(); // 2 — total name+version pairs
-$apiVersions  = $registry->countVersions('api'); // 2
+// Introspection: getVersions(), has(), getNames(), and the count* helpers.
+$versions = $registry->getVersions('api'); // ['1.0.0', '2.0.0']
 ```
-
-The registry is immutable: `register()` and `registerOrReplace()` return a new
-instance with the added schema.
-
-`register()` is the fail-safe default: it throws
-`SchemaAlreadyRegisteredException` (extends `\RuntimeException`) when the
-`name+version` pair is already present, preventing accidental silent data loss.
-Use `registerOrReplace()` to opt into explicit overwrite semantics when you
-need immutable replacement patterns such as hot-reloading a spec in development
-or replacing a placeholder document with a final one.
-
-- **`get()` returns `null` for a missing schema or version** (mirrors the PSR-6
-  cache convention). Use `has()` to distinguish "missing" from "present" before
-  calling `get()`, or use `getOrFail()` to fail fast with a
-  `VersionNotFoundException` (extends `\RuntimeException`).
 
 ### Validator Pool
 
-The validator pool uses an LRU (Least Recently Used) cache to reuse validator instances. The default capacity is 128 entries. When the pool is full, the least recently used validator is evicted.
-
-By default the pool is **not thread-safe**. It is safe to share in prefork models where each worker has isolated state (PHP-FPM, RoadRunner, FrankenPHP non-threaded). In Swoole with coroutines or FrankenPHP with threaded workers, concurrent `getOrCreate()` calls race on the check-then-act sequence. Pass a lock object exposing `lock()`/`unlock()` methods to serialize access (for example `Swoole\Lock`). Without a lock the pool is racy under shared state.
-
-The `$factory` passed to `getOrCreate()` must be non-blocking (no I/O) and non-recursive (no nested `getOrCreate()` calls); the lock is held for the entire duration of `$factory`, so suspending or recursing inside it deadlocks.
+The pool reuses validator instances through an LRU cache with a default capacity of 128 entries; the least recently used entry is evicted when the pool is full. It is safe to share in prefork models (PHP-FPM, RoadRunner, FrankenPHP non-threaded). Under Swoole coroutines or threaded FrankenPHP workers, concurrent `getOrCreate()` calls race on the check-then-act sequence: pass a lock (any object with `lock()` and `unlock()` methods, such as `Swoole\Lock`) or give each worker its own pool. The factory callable passed to `getOrCreate()` must be non-blocking (no I/O) and non-recursive — the lock is held for its entire duration, so suspending or recursing inside it deadlocks.
 
 ```php
 use Duyler\OpenApi\Validator\ValidatorPool;
 
-$pool = new ValidatorPool();          // default: 128 entries
+$pool = new ValidatorPool();            // default: 128 entries
 $pool = new ValidatorPool(maxSize: 64); // custom capacity
 
 // Swoole / threaded runtimes: pass a lock to serialize access
 $pool = new ValidatorPool(maxSize: 128, lock: new \Swoole\Lock());
 
-// Or use the named-constructor factory to make the concurrency contract
-// explicit at the call site (delegates to the constructor with the same
-// validation). The lock parameter is required (object), so the type system
-// refuses accidental null-passing under coroutine runtimes.
+// Or use the named constructor to make the concurrency contract explicit
 $pool = ValidatorPool::forCoroutineRuntime(new \Swoole\Lock(), maxSize: 128);
 
 // Validators are automatically reused and evicted when capacity is exceeded
@@ -844,22 +493,14 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
-Beyond the constructor and `forCoroutineRuntime()` factory, `ValidatorPool`
-exposes the two methods that actually drive pool reuse:
-
-| Method | Signature | Purpose |
-|--------|-----------|---------|
-| `getOrCreate` | `(string $key, callable $factory): object` | Return the cached instance for `$key`, or invoke `$factory` (non-blocking, non-recursive — the lock is held for the entire factory call) and cache the result |
-| `clear` | `(): void` | Evict every entry. Useful when the spec is hot-reloaded and all derived validators must be rebuilt |
-
 ## Configuration Options
 
 ### Builder Methods
 
 | Method | Description | Default |
 |--------|-------------|---------|
-| `create()` | Static factory entry point — equivalent to `new OpenApiValidatorBuilder(new BuilderConfig())`. Returns a fresh builder instance. | - |
-| `build()` | Terminal method — materialises the spec, wires dependencies, and returns an `OpenApiValidatorInterface` (concrete `OpenApiValidator`). Call exactly once per builder instance. | - |
+| `create()` | Static factory entry point; returns a fresh builder instance. | - |
+| `build()` | Terminal method — materialises the spec, wires dependencies, and returns an `OpenApiValidatorInterface`. Call exactly once per builder instance. | - |
 | `fromYamlFile(string $path)` | Load spec from YAML file | - |
 | `fromJsonFile(string $path)` | Load spec from JSON file | - |
 | `fromYamlString(string $content)` | Load spec from YAML string | - |
@@ -867,34 +508,34 @@ exposes the two methods that actually drive pool reuse:
 | `withCache(SchemaCache $cache)` | Enable PSR-6 caching | `null` |
 | `withEventDispatcher(EventDispatcherInterface $dispatcher)` | Set PSR-14 event dispatcher | `null` |
 | `withErrorFormatter(ErrorFormatterInterface $formatter)` | Set error formatter | `SimpleFormatter` |
-| `withDetailedErrors(bool $includeSensitive)` | Use DetailedFormatter with optional sensitive value exposure | Uses `DetailedFormatter` (default omits secrets) |
-| `withSecurityVerboseLogging(LoggerInterface $logger)` | Enable debug-level logging of security validation details (scheme names, types, locations) and external ref filesystem paths | `null` (no verbose logging) |
+| `withDetailedErrors(bool $includeSensitive)` | Use `DetailedFormatter`; `true` includes sensitive values in output | `DetailedFormatter` (sensitive values omitted) |
+| `withSecurityVerboseLogging(LoggerInterface $logger)` | Debug-level logging of security validation details and external ref paths | `null` |
 | `withFormat(string $type, string $format, FormatValidatorInterface $validator)` | Register custom format | - |
 | `withValidatorPool(ValidatorPool $pool)` | Set custom validator pool | `new ValidatorPool()` |
 | `withLogger(LoggerInterface $logger)` | Set PSR-3 logger | `null` |
 | `withEmptyArrayStrategy(EmptyArrayStrategy $strategy)` | Set empty array validation strategy | `AllowBoth` |
 | `enableCoercion()` | Enable type coercion | `false` |
-| `disableStrictCoercion()` | Restore legacy lax type coercion (non-strict boolean/integer/number casting). When disabled, unknown strings are cast to boolean via `(bool)`, whole floats are accepted as integers, and non-numeric strings pass through unchanged for number type. Overflow and precision-loss guards remain active in both modes. | `true` (strict default) |
-| `enableNullableAsType()` | Enable nullable validation (default: true) | `true` |
+| `disableStrictCoercion()` | Restore legacy lax type coercion (loose boolean/integer/number casting) | `true` (strict default) |
+| `enableNullableAsType()` | Enable nullable validation | `true` |
 | `disableNullableAsType()` | Disable nullable validation | `false` |
 | `enableSecurityValidation()` | Enable security scheme validation for requests | `false` |
 | `enableStrictFormats()` | Reject unknown format values instead of skipping | `false` |
 | `enableReportDeprecated()` | Log deprecated schema elements via PSR-3 logger | `true` |
 | `enableServerPathResolution()` | Strip server base path from request path before matching | `false` |
-| `enableStrictCallbackRuntimeTemplate()` | `@deprecated` no-op since SEC-09: strict mode is now the default. Retained for backward compatibility; will be removed in 2.0. | `true` (effective) |
-| `disableStrictCallbackRuntimeTemplate()` | Opt out of strict callback runtime template resolution. **SECURITY WARNING**: callback expressions like `{$request.body#/callback_url}` are treated as wildcards that accept any URL, enabling SSRF via attacker-controlled callback URLs when the resolved URL is used for outbound HTTP. Use only when callback URLs are validated at the application level. | `false` (opt-in legacy mode) |
-| `withExternalRefAllowedRoot(string $path)` | Override the directory that external file:// `$ref` references must stay inside. Auto-derived from the spec file's dirname for `fromYamlFile` / `fromJsonFile`; unset for string-loaded specs. | `null` (auto from spec path) |
+| `enableStrictCallbackRuntimeTemplate()` | Deprecated no-op: strict mode is now the default. Will be removed in 2.0 | `true` (effective) |
+| `disableStrictCallbackRuntimeTemplate()` | Opt out of strict callback runtime template resolution. **SECURITY WARNING**: unresolvable callback expressions like `{$request.body#/callback_url}` are treated as wildcards that accept any URL, enabling SSRF via attacker-controlled callback URLs. Use only when callback URLs are validated at the application level. | `false` (opt-in legacy mode) |
+| `withExternalRefAllowedRoot(string $path)` | Directory that external `file://` `$ref` references must stay inside | `null` (auto-derived from spec path for file-loaded specs) |
 | `withExternalRefMaxBytes(int $bytes)` | Set max external ref file size | `10485760` (10 MB) |
-| `withMaxSpecSize(int $bytes)` | Set the maximum allowed size, in bytes, for a parsed OpenAPI spec payload. Applies to both YAML and JSON specs (defends against OOM on attacker-controlled or accidentally oversized input; CWE-400, CWE-770). | `1048576` (1 MB) |
-| `withMaxSpecDepth(int $depth)` | Set the maximum allowed nesting depth for a parsed OpenAPI spec payload. Applies to both YAML and JSON specs. | `100` |
-| `withMaxJsonBodySize(int $bytes)` | Override the maximum allowed size, in bytes, for non-multipart request and response bodies (JSON, XML, text). Bodies exceeding the cap are rejected before being fully materialised in memory. | `10485760` (10 MB) — `ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES` |
-| `withMaxMultipartBodySize(int $bytes)` | Override the maximum allowed size, in bytes, for multipart request and response bodies. Multipart payloads typically carry larger uploads, so the cap is kept independent from the JSON cap. | `52428800` (50 MB) — `ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES` |
-| `withMaxRegexBacktracks(int $maxBacktracks)` | Override the defensive `pcre.backtrack_limit` applied to every `preg_match` call routed through `PregExecutor`. Lowering bounds the worst-case CPU cost of catastrophic regex on attacker-controlled input (JSON Schema `pattern`). | `PregExecutor::DEFAULT_MAX_BACKTRACKS` (`10_000`; 100x tighter than the PHP default of `1_000_000` to actively defend against ReDoS) |
-| `withMaxStreamingRecords(int $max)` | Override the maximum number of records accepted from a single NDJSON / SSE / JSON Text Sequences response before `TooManyRecordsException`. Bounds memory impact of attacker-controlled streaming responses. | `100000` — `ValidatorConfiguration::DEFAULT_MAX_STREAMING_RECORDS` |
-| `enableStrictStreaming()` | Enable strict streaming mode: malformed JSON records in NDJSON, SSE, and JSON Text Sequences raise `MalformedStreamRecordException` instead of being logged and skipped. Opt-in for backward compatibility. | `false` |
-| `disableStrictStreaming()` | Disable strict streaming mode; restores the default fail-open behaviour where malformed records are logged and skipped. | `false` (default remains in effect) |
+| `withMaxSpecSize(int $bytes)` | Max allowed spec payload size in bytes (YAML and JSON) | `1048576` (1 MB) |
+| `withMaxSpecDepth(int $depth)` | Max allowed spec nesting depth | `100` |
+| `withMaxJsonBodySize(int $bytes)` | Max size for non-multipart request and response bodies (JSON, XML, text); larger bodies are rejected before being fully materialised | `10485760` (10 MB) |
+| `withMaxMultipartBodySize(int $bytes)` | Max size for multipart request and response bodies (typically larger uploads) | `52428800` (50 MB) |
+| `withMaxRegexBacktracks(int $maxBacktracks)` | Defensive `pcre.backtrack_limit` applied to schema `pattern` evaluation (ReDoS defence) | `10_000` |
+| `withMaxStreamingRecords(int $max)` | Max number of records accepted from a single streaming response | `100000` |
+| `enableStrictStreaming()` | Malformed stream records throw `MalformedStreamRecordException` instead of being logged and skipped | `false` |
+| `disableStrictStreaming()` | Restore default fail-open streaming behaviour (malformed records logged and skipped) | `false` |
 
-Deprecated reporting is enabled by default. Without a PSR-3 logger, deprecation warnings go to `NullLogger` and produce no output. There is no `disableReportDeprecated()` method; to suppress deprecation warnings, simply omit the logger (the default behavior).
+Deprecated reporting is enabled by default; without a PSR-3 logger the warnings go to `NullLogger` and produce no output. To suppress them, simply omit the logger (there is no `disableReportDeprecated()` method).
 
 ### EmptyArrayStrategy
 
@@ -1001,8 +642,6 @@ $middleware = new ValidationMiddleware($validator);
 // $pipeline->pipe(new ValidationMiddleware($validator));
 ```
 
-> Note: The PSR-15 interfaces require the `psr/http-server-middleware` package, typically provided by your framework.
-
 ## Supported JSON Schema Keywords
 
 The validator supports the following JSON Schema draft 2020-12 keywords:
@@ -1013,10 +652,6 @@ The validator supports the following JSON Schema draft 2020-12 keywords:
 - `const` - Constant value
 - `nullable` - Allows null values (default: enabled)
 
-### Nullable Validation
-
-By default, the `nullable: true` schema keyword allows null values for a property:
-
 ```yaml
 properties:
   username:
@@ -1024,76 +659,25 @@ properties:
     nullable: true  # Allows null values
 ```
 
-This behavior is enabled by default. To disable nullable validation and treat `nullable: true` as not allowing null values:
-
-```php
-$validator = OpenApiValidatorBuilder::create()
-    ->fromYamlFile('openapi.yaml')
-    ->disableNullableAsType()  // Optional: disable nullable validation
-    ->build();
-```
+Nullable validation is enabled by default; call `disableNullableAsType()` to treat `nullable: true` as not allowing null values.
 
 ### String Validation
 - `minLength` / `maxLength` - String length constraints
 - `pattern` - Regular expression pattern
 - `format` - Format validation (email, uri, uuid, date-time, etc.)
 
-String length is measured in UTF-16 code units: supplementary characters
-(U+10000 — U+10FFFF) are encoded as UTF-16 surrogate pairs and count as 2
-code units — the counting used by `String.prototype.length`, unlike ajv,
-whose default counts Unicode code points (the literal spec reading).
-This is a deliberate interoperability choice (SPEC-06): JSON Schema
-2020-12 §6.3.1–§6.3.2 define string length as the number of characters
-per RFC 8259, so thresholds on supplementary characters can differ when
-porting schemas. The runtime validator (`Utf16::length`) enforces this
-semantics.
+String length is counted in UTF-16 code units: supplementary characters count as 2 (surrogate pairs), matching JavaScript's `String.prototype.length`. This can differ from code-point counting (used by ajv by default) for schemas whose length thresholds fall around supplementary characters.
 
 ### Pattern Validation
 
-All regular expressions in schemas are validated during schema parsing. If a pattern is invalid, an `InvalidPatternException` is thrown.
-
-#### Supported Pattern Fields
-
-- `pattern` - Regular expression for string validation
-- `patternProperties` - Object with patterns for property keys
-- `propertyNames` - Pattern for property name validation
-
-#### Pattern Delimiters
-
-The library automatically adds delimiters (`/`) to patterns without them. You can specify patterns with or without delimiters:
-
-```php
-// Without delimiters (recommended)
-new Schema(pattern: '^test$')
-
-// With delimiters
-new Schema(pattern: '/^test$/')
-```
-
-Both variants work identically.
-
-#### Pattern Validation Errors
-
-Invalid patterns are detected early and throw descriptive errors:
-
-```php
-// This will throw InvalidPatternException:
-// Invalid regex pattern "/[invalid/": preg_match(): No ending matching delimiter ']' found
-new Schema(pattern: '[invalid')
-```
+All regular expressions in schemas are validated at parse time; an invalid pattern throws `InvalidPatternException`. Patterns are honoured on the `pattern`, `patternProperties`, and `propertyNames` keywords. Delimiters are added automatically, so both `^test$` and `/^test$/` work identically — whether the pattern comes from a spec or from a `new Schema(pattern: ...)` value object.
 
 ### Numeric Validation
 - `minimum` / `maximum` - Range constraints
 - `exclusiveMinimum` / `exclusiveMaximum` - Exclusive ranges
 - `multipleOf` - Numeric division
 
-> **Big-integer support without `bcmath`**: `multipleOf` for int64 values
-> (e.g. snowflake IDs up to `PHP_INT_MAX`) works without the `bcmath`
-> extension via pure-PHP string-based decimal modulus. When `bcmath` is
-> loaded, the validator prefers the faster bcmath path; when it is
-> absent, the validator falls back to the pure-PHP path instead of
-> rejecting the request. This unblocks production deployments on
-> images that ship without `bcmath` (R4-CORRECTNESS-008).
+`multipleOf` for int64 values (e.g. snowflake IDs up to `PHP_INT_MAX`) works without ext-bcmath via pure-PHP decimal modulus; the bcmath extension is used for the faster path when available.
 
 ### Array Validation
 - `items` / `prefixItems` - Array item validation
@@ -1101,16 +685,7 @@ new Schema(pattern: '[invalid')
 - `uniqueItems` - Unique item requirement
 - `contains` / `minContains` / `maxContains` - Item presence validation
 
-`uniqueItems`, `enum`, and `const` enforce JSON Schema 2020-12 §4.2.2
-instance equality via `JsonEquals`: `1` and `1.0` are equal, object keys
-are unordered, and bool is distinct from int; mixed int/float comparisons
-above the 2^53 IEEE 754 boundary are rejected as unequal
-(`ScalarKeyCodec::SAFE_INT64_FLOAT_BOUNDARY`). For `uniqueItems`, scalar
-membership keys are canonicalised by `ScalarKeyCodec`, while object keys
-are sorted via `ksort` before encoding, so `[1, 1.0]` and
-`[{a:1,b:2}, {b:2,a:1}]` are detected as duplicates under a `100000`
-unique-entry cap (`ArrayLengthValidator::MAX_UNIQUE_CHECK`); the same
-equality applies to `enum` and `const` at every nesting depth.
+`uniqueItems`, `enum`, and `const` use JSON instance equality: `1` and `1.0` are equal, object key order is irrelevant, and `bool` is distinct from `int`. Arrays larger than 100 000 items are rejected for `uniqueItems` instead of being scanned for duplicates.
 
 ### Object Validation
 - `properties` - Property definitions
@@ -1150,10 +725,10 @@ try {
 
     foreach ($errors as $error) {
         printf(
-            "Path: %s\nMessage: %s\nType: %s\n\n",
+            "Path: %s\nMessage: %s\nKeyword: %s\n\n",
             $error->dataPath(),
             $error->message(),
-            $error->getType()
+            $error->keyword()
         );
     }
 
@@ -1165,25 +740,9 @@ try {
 
 ### Exception Sanitization
 
-Every exception class shipped by this package overrides `__toString()` so
-the default `Exception::__toString()` (which returns class name, absolute
-file path, line number, and full stack trace) cannot leak server
-filesystem layout or internal structure into PSR-15 middleware responses
-or PSR-3 logs (CWE-209, CWE-497). `(string) $e` always returns just
-`$e->getMessage()`.
+Every exception shipped by this package overrides `__toString()`, so `(string) $e` returns only the message — no file paths or stack traces. This makes exception messages safe to render into HTTP responses and logs.
 
-Exception classes that carry attacker-controlled values
-(`InvalidFormatException::$value`,
-`MissingSecurityCredentialsError::$schemeName` / `$schemeType` /
-`$location`, `ExternalRefSecurityException::$ref`,
-`UnresolvableRefException::$ref` / `$internalTrace`,
-`InvalidParameterException::$parameterName`) store them in
-`protected readonly` properties and expose them only through explicit
-opt-in getters with a `bool $reveal = false` parameter. The default call
-returns the literal string `'<redacted>'`; trusted operator code (a
-security auditor, a verbose logger constructed with
-`DetailedFormatter(includeSensitiveValues: true)`) must pass
-`reveal: true` to read the underlying value:
+Attacker-influenced values (the `InvalidFormatException` value, security scheme details, external `$ref` targets, parameter names) are stored non-public and exposed only through opt-in getters with a `bool $reveal = false` parameter; the default return is the literal string `'<redacted>'`. For example, `InvalidFormatException::value(reveal: true)` returns the raw value, and `MissingSecurityCredentialsError` exposes `schemeName(reveal: true)`, `schemeType(reveal: true)`, and `location(reveal: true)`:
 
 ```php
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
@@ -1194,55 +753,13 @@ try {
     /** @var InvalidFormatException $formatError */
     $formatError = $e->getErrors()[0];
 
-    // Safe to log / surface to caller:
-    echo $formatError->message();          // 'Invalid email format'
-    echo $formatError->format;             // 'email' (spec keyword, not sensitive)
-    echo (string) $formatError;            // 'Invalid email format' (no file path / trace)
-
-    // Trusted operator only — explicit opt-in:
-    echo $formatError->value(reveal: true); // 'not-an-email'
+    echo $formatError->message();           // safe to log or surface
     echo $formatError->value();             // '<redacted>' (default)
+    echo $formatError->value(reveal: true); // 'not-an-email' (trusted operator only)
 }
 ```
 
-The same pattern applies to all sanitised exception classes. Migrate
-direct property reads (`$e->value`, `$e->schemeName`, `$e->ref`, ...)
-to the matching getter with `reveal: true`.
-
-`MalformedStreamRecordException::$record` is truncated to 256 bytes and
-control-character-escaped in the constructor via `LogContextSanitizer`,
-preventing a multi-megabyte attacker payload from being amplified into
-logs. The truncated value stays public readonly because it remains
-useful for diagnosing user-facing stream parse failures.
-
-`PathMismatchException`, `OperationNotFoundException`,
-`UnsupportedMediaTypeException`, and `InvalidParameterException` carry
-attacker-controlled values (`$requestPath`, `$template`, `$method`,
-`$mediaType`, the caller-supplied `$message` argument) but their
-`getMessage()` returns a generic static string
-(`'Request path does not match any declared template'`,
-`'No operation matches the request'`,
-`'Unsupported media type. Supported types: %s'` with the spec-derived
-`$supportedTypes` list, and `'Invalid parameter configuration'`
-respectively) so a PSR-15 middleware that renders the message into an
-HTTP response body, or a PSR-3 logger that writes it into a log file,
-cannot be turned into a reflective XSS or log-injection sink by a
-crafted request path, method, or Content-Type header (R4-SEC-007a/b/c/d,
-CWE-209, CWE-532). `InvalidParameterException` additionally keeps
-`$parameterName` in `protected readonly` and exposes it via the
-`parameterName(bool $reveal = false)` opt-in getter (default returns
-`'<redacted>'`); the constructor's `$message` argument is no longer
-interpolated into `getMessage()` and is dropped after construction.
-The remaining attacker-controlled properties on the three HTTP-side
-exception classes (`PathMismatchException::$requestPath`,
-`PathMismatchException::$template`, `OperationNotFoundException::$requestPath`,
-`OperationNotFoundException::$method`,
-`UnsupportedMediaTypeException::$mediaType`,
-`UnsupportedMediaTypeException::$supportedTypes`) stay `public readonly`
-because they are exception internal state, not message content: a PSR-3
-logger calls `getMessage()` rather than reading properties directly, and
-trusted operator code (verbose formatter, security auditor) needs them
-for diagnostics.
+Error formatters omit raw values unless constructed with `includeSensitiveValues: true`, or the builder is configured with `withDetailedErrors(includeSensitive: true)` (see [Error Formatters](#error-formatters)).
 
 ### Validation Error Reference
 
@@ -1337,12 +854,12 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 
 | Exception | Description |
 |-----------|-------------|
-| `BodyTooLargeException` | Request or response body exceeded the configured `maxJsonBodySize` / `maxMultipartBodySize` cap; body was rejected before full materialisation (CWE-400, CWE-770) |
-| `MultipartBodyTooLargeException` | Multipart request yielded more than 1000 parts (part-count cap, DoS defence; CWE-400); extends `\RuntimeException` |
+| `BodyTooLargeException` | Request or response body exceeded the configured body-size cap; rejected before full materialisation |
+| `MultipartBodyTooLargeException` | Multipart request yielded more than 1000 parts (part-count cap); extends `\RuntimeException` |
 | `BuilderException` | Builder precondition failure: spec file unreadable, `withExternalRefAllowedRoot` path does not exist, or other builder-state violation |
 | `ExternalRefSecurityException` | External `$ref` violates builtin resolver security policy (non-allowlisted scheme, path traversal outside the allowed root). Surfaced by `RefResolver` as `UnresolvableRefException` |
-| `ExternalRefTooLargeException` | External `$ref` file exceeds the configured `maxBytes` limit (default 10 MB); extends `\RuntimeException` (not a security policy violation) |
-| `InvalidMultipleOfSchemaException` | Schema declares `multipleOf` ≤ 0 (mathematically unsatisfiable); also has `forNonPositiveValue()` and the deprecated `forLargeIntegerWithoutBcmath()` factory |
+| `ExternalRefTooLargeException` | External `$ref` file exceeds the configured size limit (default 10 MB); extends `\RuntimeException` |
+| `InvalidMultipleOfSchemaException` | Schema declares `multipleOf` ≤ 0 (mathematically unsatisfiable) |
 | `InvalidParameterException` | Parameter value is malformed or invalid |
 | `InvalidPatternException` | Invalid regex pattern in schema definition |
 | `InvalidSchemaException` | Spec parsing failed (malformed OpenAPI document) |
@@ -1351,25 +868,24 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `MissingParameterException` | Required parameter is missing from request |
 | `MissingRequestBodyException` | Request body is required but missing or empty |
 | `NestedValidationError` | Validation failure nested inside a composition branch whose specific cause could not be narrowed to a single keyword (composition fallback) |
-| `OperationNotFoundException` | Request path or method does not match any operation in the specification (thrown by `PathFinder::findOperation()` and `validateRequest()`) |
+| `OperationNotFoundException` | Request path or method does not match any operation in the specification |
 | `PathMismatchException` | Request path doesn't match any operation template |
-| `PregRuntimeException` | PCRE runtime failure (backtrack limit, recursion limit, or JIT stack exhaustion) raised by `PregExecutor::match()` / `matchAll()` while evaluating a JSON Schema `pattern` |
+| `PregRuntimeException` | PCRE runtime failure (backtrack limit, recursion limit, or JIT stack exhaustion) while evaluating a JSON Schema `pattern` |
 | `RefResolutionException` | Failed to resolve `$ref` reference |
 | `SchemaDepthExceededException` | Maximum schema nesting depth exceeded |
-| `SpecTooLargeException` | Spec payload exceeded the configured `maxSpecSize` / `maxSpecDepth`, or YAML anchor/alias caps were tripped (billion-laughs defence; CWE-400, CWE-770). Carries only the metric, actual count, and cap — never the attacker payload (CWE-209) |
+| `SpecTooLargeException` | Spec payload exceeded `maxSpecSize` / `maxSpecDepth`, or YAML anchor/alias caps were tripped. Carries only the metric, actual count, and cap — never the payload |
 | `TooManyContainsValidationsError` | `contains` keyword evaluated more matching items than the internal cap (DoS defence on attacker-controlled arrays) |
 | `TooManyErrorsError` | Composition validator (`oneOf` / `anyOf` / `allOf`) accumulated more errors than the internal cap (DoS defence on deeply-nested schemas) |
-| `TooManyItemsForUniqueCheckError` | `uniqueItems: true` evaluated on an array larger than `ArrayLengthValidator::MAX_UNIQUE_CHECK` (default 100 000); DoS defence against quadratic uniqueness scans |
+| `TooManyItemsForUniqueCheckError` | `uniqueItems: true` evaluated on an array larger than 100 000 items; guards against quadratic uniqueness scans |
 | `TooManyRecordsException` | Streaming response (NDJSON / SSE / JSON Text Sequence) yielded more records than `maxStreamingRecords` (default 100 000) |
 | `UndefinedResponseException` | Response status code not defined in spec |
 | `UnknownLinkException` | `resolveLink()` / `resolveLinkWithContext()` invoked with a link name not declared under `components/links`; extends `\InvalidArgumentException` |
 | `UnknownCallbackException` | `validateCallback()` invoked with a callback name not declared in the spec; extends `\InvalidArgumentException` |
-| `UnknownValidatorException` | Unknown validator type requested |
 | `UnknownWebhookException` | `validateWebhook()` invoked with a webhook name not declared in the spec; extends `\InvalidArgumentException` |
 | `UnresolvableCallbackPathException` | Callback runtime template (e.g. `{$request.body#/callback_url}`) cannot be resolved in strict mode |
 | `UnresolvableRefException` | `$ref` cannot be resolved against the spec or allowed external-ref root. `ExternalRefSecurityException` is surfaced through this class |
 | `UnsupportedMediaTypeException` | Content-Type not supported by the operation |
-| `UnsupportedSecuritySchemeException` | Spec declares a security scheme type this library does not validate (`oauth2`, `openIdConnect`, `http/basic`, `http/digest`, `mutualTLS`, or unknown). Thrown by `SecurityValidator::validate()` (surfaced through `validateRequest()` / `validateWebhook()` / `validateCallback()`); extends `\RuntimeException`, **not** wrapped into `ValidationException`. R4-SEC-010 / R4-SPEC-003. |
+| `UnsupportedSecuritySchemeException` | Spec declares a security scheme type this library does not validate (`oauth2`, `openIdConnect`, `http/basic`, `http/digest`, `mutualTLS`, or unknown). Extends `\RuntimeException`, **not** wrapped into `ValidationException` (see [Security Validation](#security-validation)) |
 | `VersionNotFoundException` | Requested schema name or version is not registered (thrown by `SchemaRegistry::getOrFail()`) |
 | `SchemaAlreadyRegisteredException` | Schema name+version pair is already registered (thrown by `SchemaRegistry::register()`; use `registerOrReplace()` for explicit overwrite) |
 | `ServerVariableException` | Server URL template substitution failed: a required `{var}` was missing from the configured `ServerVariableOverride` map, or the request URL did not match any declared server |
@@ -1379,17 +895,18 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 Choose the appropriate error formatter for your use case:
 
 ```php
-// Simple formatter (default)
-use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;    // default
+use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;  // with suggestions
+use Duyler\OpenApi\Validator\Error\Formatter\JsonFormatter;      // for API responses
 
-// Detailed formatter with suggestions
-use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
-
-// JSON formatter for API responses
-use Duyler\OpenApi\Validator\Error\Formatter\JsonFormatter;
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withErrorFormatter(new DetailedFormatter())
+    ->build();
 ```
 
-To format a `ValidationException` without holding a reference to the validator, call `ErrorFormatterInterface::formatException()` directly. This is the canonical replacement for `OpenApiValidatorInterface::getFormattedErrors()` (deprecated, removed in 2.0):
+To format a `ValidationException` without holding a reference to the validator, call `ErrorFormatterInterface::formatException()` directly. This is the canonical replacement for the deprecated `OpenApiValidatorInterface::getFormattedErrors()` (removed in 2.0):
 
 ```php
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
@@ -1404,23 +921,15 @@ try {
 }
 ```
 
-By default, `DetailedFormatter` and `JsonFormatter` omit the raw user-supplied value
-from `InvalidFormatException` errors to prevent accidental disclosure of secrets
-(passwords, tokens) through error messages into logs and API responses. The value
-remains accessible via `$exception->value(reveal: true)` for trusted programmatic
-access (see Exception Sanitization above). To include the raw value in formatted
-output (for debugging), construct the formatter with `includeSensitiveValues: true`
-or use `withDetailedErrors(includeSensitive: true)` on the builder.
-
-`ErrorFormatterInterface` exposes three methods; `formatException()` is
-the canonical entry point (the others are useful when you hold
-individual errors rather than a full exception):
+`ErrorFormatterInterface` exposes three methods; `formatException()` is the canonical entry point (the others are useful when you hold individual errors rather than a full exception):
 
 | Method | Signature | Purpose |
 |--------|-----------|---------|
 | `format` | `(ValidationErrorInterface $error): string` | Render a single validation error |
 | `formatMultiple` | `(array $errors): string` | Render a list of `ValidationErrorInterface` instances |
-| `formatException` | `(ValidationException $exception): string` | Render every error carried by a `ValidationException` (the recommended replacement for the deprecated `OpenApiValidatorInterface::getFormattedErrors()`) |
+| `formatException` | `(ValidationException $exception): string` | Render every error carried by a `ValidationException` |
+
+By default, `DetailedFormatter` and `JsonFormatter` omit the raw user-supplied value from `InvalidFormatException` errors to prevent accidental disclosure of secrets (passwords, tokens) through error messages into logs and API responses. The value remains accessible via `$exception->value(reveal: true)` for trusted programmatic access (see [Exception Sanitization](#exception-sanitization)). To include the raw value in formatted output (for debugging), construct the formatter with `includeSensitiveValues: true` or use `withDetailedErrors(includeSensitive: true)` on the builder.
 
 ## Built-in Format Validators
 
@@ -1453,9 +962,7 @@ The following format validators are included:
 | `uri-template` | URI Template (RFC 6570, balanced expressions) | `https://api.example.com/users/{userId}` |
 | `regex` | Regular expression pattern (ECMA-262 syntax via PCRE) | `^[a-z]+$` |
 
-> The `time` format requires a UTC offset per RFC 3339 §5.6 (`Z`, `+HH:MM`,
-> or `-HH:MM`). Time strings without an offset (e.g., `10:30:00`) are
-> rejected with `InvalidFormatException`.
+> The `time` format requires a UTC offset per RFC 3339 §5.6 (`Z`, `+HH:MM`, or `-HH:MM`). Time strings without an offset (e.g., `10:30:00`) are rejected with `InvalidFormatException`.
 
 ### Numeric Formats
 
@@ -1502,12 +1009,7 @@ $validator = OpenApiValidatorBuilder::create()
 
 ### Migration Examples
 
-> **Warning:** Migration from `league/openapi-psr7-validator` requires rewriting your routing layer.
-> `league` provided `OperationAddress` + `PathParams` utilities; `duyler/openapi` returns a simpler
-> `Operation(path, method)` DTO with a `pathParameters` map. You must extract path parameters
-> yourself (or wait for the planned `Operation` DTO expansion). Additionally, coercion is **opt-in**
-> here (`enableCoercion()`), whereas `league` had it enabled by default — this is a behavioral
-> breaking change for migrants.
+> **Warning:** Migration from `league/openapi-psr7-validator` requires rewriting your routing layer. `league` provided `OperationAddress` + `PathParams` utilities; `duyler/openapi` returns a simpler `Operation` DTO that already carries a resolved `pathParameters` map. Additionally, coercion is **opt-in** here (`enableCoercion()`), whereas `league` had it enabled by default — this is a behavioral breaking change for migrants.
 
 #### Before (league/openapi-psr7-validator)
 
@@ -1548,19 +1050,7 @@ $validator->validateSchema($data, '#/components/schemas/User');
 
 ## Performance
 
-### Benchmark Results
-
-The following measurements come from the test suite benchmarks run on a standard development machine. Actual numbers vary depending on hardware, PHP version, and schema complexity.
-
-| Scenario | Schema | Avg per validation | Memory per request |
-|----------|--------|--------------------|--------------------|
-| Simple (GET /ping) | 1 path, no body | < 5 ms | - |
-| Medium (POST /users) | 4 properties, format validation, enum | < 10 ms | - |
-| Complex (petstore.yaml) | Multiple paths, `$ref`, nested schemas | < 10 ms | - |
-| Path scanning | 100 routes, 50 iterations | < 100 ms total | < 1 MB growth |
-| Full request+response cycle | 2 properties, email format | - | < 50 KB |
-
-These numbers represent upper bounds enforced by assertions in `tests/Benchmark/PerformanceBenchmarkTest.php`. They are not reproducible benchmarks: there is no environment spec, no warm-up / iteration protocol, and no comparison against `league/openapi-psr7-validator`. Actual performance depends on hardware, PHP version, opcache, and schema complexity. For production sizing, run [PHPBench](https://phpbench.readthedocs.io/) against your own schemas.
+Reuse a single validator instance across requests: building it (spec parsing and validator construction) is far more expensive than validating. Per-request validation cost is dominated by body size and schema complexity; for production sizing, measure against your own specs, hardware, and PHP version rather than relying on generic figures.
 
 ### Caching
 
@@ -1572,7 +1062,7 @@ use Duyler\OpenApi\Cache\SchemaCache;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 
 $cachePool = new FilesystemAdapter();
-$schemaCache = new SchemaCache($cachePool, 3600); // TTL: 1 hour
+$schemaCache = new SchemaCache($cachePool, 3600); // TTL in seconds, default 3600
 
 $validator = OpenApiValidatorBuilder::create()
     ->fromYamlFile('openapi.yaml')
@@ -1580,134 +1070,15 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
-When `withCache()` is enabled, the external-`$ref` confinement verdict for
-string-loaded specs (`fromYamlString()` / `fromJsonString()`) is cached
-alongside the document (same pool and TTL, key suffixed with `_confinement`).
-The verdict is derived from the same bytes and limits as the document, so it
-is invalidated automatically whenever the spec content or the size/depth
-limits (`withMaxSpecSize()` / `withMaxSpecDepth()`) change. A failing verdict
-(an external `$ref` without `withExternalRefAllowedRoot()`) is never cached —
-the exception is raised again on every subsequent `build()`.
-
-`SchemaCache` uses a PSR-6 cache pool keyed by a SHA-256 hash of the spec
-file path and content (or raw content for string-loaded specs). The
-content-hash defends against cache-poisoning via size-preserving or
-mtime-preserving spec tampering (OWASP ASVS V8.1.3, CWE-349, CWE-1023).
-
-`SchemaCache` exposes the standard cache lifecycle on top of the PSR-6
-pool:
-
-| Method | Signature | Purpose |
-|--------|-----------|---------|
-| `__construct` | `(CacheItemPoolInterface $pool, int $ttl = 3600)` | Wrap a PSR-6 pool with a default TTL (seconds) |
-| `get` | `(string $key): ?OpenApiDocument` | Read a cached document, or `null` on miss |
-| `set` | `(string $key, OpenApiDocument $document): void` | Store a document under the given key with the configured TTL |
-| `has` | `(string $key): bool` | Membership check without materialising the document |
-| `delete` | `(string $key): void` | Invalidate a single entry |
-| `clear` | `(): void` | Flush all entries from the underlying pool |
-
-The cache key is normally derived from the spec via the builder. The
-`get` / `set` / `has` / `delete` / `clear` methods are intended for
-operators that manage cache lifecycle outside the build cycle (cache
-warming at deploy time, selective invalidation after a hot-reload,
-clearing before a memory-budget-critical request).
-
-### Coercion Impact
-
-Enabling coercion with `enableCoercion()` adds a type conversion pass before validation. For request parameters (query, path, headers), this converts string values to their declared types (e.g., `"123"` to `123`). The overhead is proportional to the number of parameters and properties in the request body. For most APIs, the cost is negligible compared to the validation itself.
-
-### Memory Profiling
-
-The validator creates a fixed set of objects during `build()`. Per-request memory usage stays under 50 KB for typical schemas. To profile memory in your application:
-
-```php
-$validator = OpenApiValidatorBuilder::create()
-    ->fromYamlFile('openapi.yaml')
-    ->build();
-
-gc_collect_cycles();
-$before = memory_get_usage();
-
-$operation = $validator->validateRequest($request);
-$validator->validateResponse($response, $operation);
-
-gc_collect_cycles();
-$after = memory_get_usage();
-
-printf("Memory delta: %d bytes\n", $after - $before);
-```
+`SchemaCache` wraps any PSR-6 pool with a TTL and derives its keys from the spec content plus the builder settings that affect validation (size/depth caps, external-ref configuration), so a changed spec or configuration automatically produces a new key. The external-`$ref` confinement verdict for string-loaded specs is cached alongside the document under the same pool and TTL; a failing verdict is never cached. Entries can also be managed directly via `get()` / `set()` / `delete()` / `clear()` — useful for cache warming at deploy time or selective invalidation after a hot reload.
 
 ### Long-Running Processes
 
-The validator instance is safe to reuse across requests in long-running
-processes that use the **prefork execution model**: PHP-FPM, RoadRunner, and
-FrankenPHP in non-threaded mode. The internal `ValidatorPool` uses an LRU cache
-to reuse validator instances without manual cleanup. The pool has a default
-capacity of 128 entries and automatically evicts the least recently used entries
-when full.
-
-For **Swoole with coroutines** or **FrankenPHP threaded workers**, the validator
-requires additional concurrency protection:
-
-- Each coroutine or worker must use its own `ValidatorPool` instance, or you
-  must inject a lock (any object with `lock()` and `unlock()` methods, such as
-  `Swoole\Lock`) into the `ValidatorPool` constructor.
-- libxml global state (`libxml_use_internal_errors`, external entity loader) is
-  shared across coroutines. XML body parsing and `contentMediaType: application/xml`
-  validation may race on these globals.
-- `DateTime::getLastErrors()` and `json_last_error()` are also global. Prefer
-  code paths that use `JSON_THROW_ON_ERROR` and do not rely on these globals.
-
-#### Unsafe classes and their contracts
-
-The three classes below carry an explicit `@danger NOT_THREAD_SAFE` marker in
-their class-level PHPDoc. The prefork model (one request per worker process)
-needs no extra configuration. Swoole coroutines and threaded FrankenPHP workers
-share mutable process state across coroutines/threads and must apply the
-per-class mitigation.
-
-| Class | Unsafe state | Mitigation | Affected runtimes |
-|-------|--------------|------------|-------------------|
-| `Duyler\OpenApi\Validator\ValidatorPool` | Shared mutable `$cache`/`$order` and check-then-act sequence in `getOrCreate()` | Construct via `ValidatorPool::forCoroutineRuntime($lock, $maxSize)` with a `Swoole\Lock` (or any object exposing `lock()`/`unlock()`); never recurse into `getOrCreate()` from inside the factory closure | Swoole coroutines, FrankenPHP threaded workers |
-| `Duyler\OpenApi\Validator\LibxmlSecuredContext` | Process-global `libxml_use_internal_errors` and `libxml_set_external_entity_loader` captured/restored inside `run()` | Run XML body validation (`contentMediaType: application/xml`) in a prefork worker or delegate XML parsing to an isolated `Swoole\Process` worker; under coroutines the helper may either bypass XXE protection for one coroutine or disable the entity loader process-wide | Swoole coroutines, FrankenPHP threaded workers |
-| `Duyler\OpenApi\Validator\PregExecutor` | Process-global `pcre.backtrack_limit` and `pcre.recursion_limit` mutated via `ini_set` in `match()`/`matchAll()` | Prefer prefork workers; each coroutine should own its own `PregExecutor` instance (the default) and must not assume the ReDoS cap applies to a specific call when coroutines yield inside `preg_match` | Swoole coroutines, FrankenPHP threaded workers |
-
-Within a single `match()` / `matchAll()` call, `PregExecutor` wraps the
-underlying `preg_match` / `preg_match_all` with the following ReDoS
-security invariants (CWE-1333, CWE-400): both `pcre.backtrack_limit` and
-`pcre.recursion_limit` are captured **before** being lowered (the
-recursion cap bounds C-stack exhaustion on deeply nested patterns);
-`set_error_handler` is installed to suppress PCRE compile warnings, which
-surface through the `false` return value instead; `restore_error_handler`
-plus `ini_set` always run inside a `finally` block, so the previous values
-are restored even when validation throws; a non-zero `preg_last_error()`
-raises `PregRuntimeException` via `assertNoPcreError()`, so a runtime
-failure can never masquerade as "pattern did not match". The default
-backtrack cap is `PregExecutor::DEFAULT_MAX_BACKTRACKS` (`10_000`),
-configurable via `withMaxRegexBacktracks`; the coroutine-level race on
-these process-global values is captured in the `PregExecutor` table row
-above.
-
-If the OpenAPI specification changes at runtime, rebuild the validator. The old instances will be garbage-collected when no longer referenced.
-
-#### CI verification
-
-The concurrency contracts above are documented guidance for coroutine and
-threaded runtimes; they are not exercised by this repository's test suite.
-The extension-gated suites that previously covered them
-(`SwooleSharedValidatorTest`, `FrankenPhpThreadedTest`) were removed: the
-`frankenphp` extension is statically compiled into the Caddy-based
-`frankenphp` binary and is registered with the Zend engine only inside the
-frankenphp worker SAPI (real web requests), so it is absent from any
-CLI-based run, and the dedicated Swoole CI matrix job was retired. Both
-suites could therefore only report skipped results and provided no
-regression signal. `tests/Concurrency/RoadRunnerTest` runs in the main
-`tests` job without any extension gate because RoadRunner uses the prefork
-model and does not require a runtime extension.
+The validator instance is safe to reuse across requests in long-running processes that use the **prefork execution model** (PHP-FPM, RoadRunner, FrankenPHP non-threaded) — no extra configuration needed. Under **Swoole coroutines** or **FrankenPHP threaded workers**, shared mutable state requires care: give the validator pool a lock (`ValidatorPool::forCoroutineRuntime(new \Swoole\Lock())`) or use one pool per coroutine/worker, as described in [Validator Pool](#validator-pool). XML body validation uses libxml global state, and functions like `json_last_error()` and `DateTime::getLastErrors()` are process-global, so these code paths are not coroutine-safe. If the OpenAPI specification changes at runtime, rebuild the validator; old instances are garbage-collected when no longer referenced.
 
 ## Streaming Response Validation
 
-The validator supports three streaming response formats. Each item in the stream is validated individually against the schema defined in `itemSchema` (or `schema` as fallback).
+The validator supports three streaming response formats. Each item in the stream is validated individually against the schema declared with the `itemSchema` keyword (or `schema` as fallback) in the media type definition:
 
 ### Supported Content Types
 
@@ -1718,8 +1089,6 @@ The validator supports three streaming response formats. Each item in the stream
 | JSON Text Sequences | `application/json-seq` | RFC 7464 |
 
 ### OpenAPI Specification
-
-Use the `itemSchema` keyword within the media type definition to declare the schema for each individual item in the stream:
 
 ```yaml
 openapi: '3.2.0'
@@ -1746,50 +1115,7 @@ paths:
                     enum: [debug, info, warn, error]
                   message:
                     type: string
-                required:
-                  - timestamp
-                  - level
-                  - message
-  /events:
-    get:
-      operationId: getEvents
-      responses:
-        '200':
-          description: Event stream
-          content:
-            text/event-stream:
-              itemSchema:
-                type: object
-                properties:
-                  event:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      message:
-                        type: string
-                      count:
-                        type: integer
-                required:
-                  - event
-                  - data
-  /records:
-    get:
-      operationId: getRecords
-      responses:
-        '200':
-          description: Record stream
-          content:
-            application/json-seq:
-              itemSchema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  value:
-                    type: string
-                required:
-                  - id
+                required: [timestamp, level, message]
 ```
 
 ### NDJSON / JSON Lines
@@ -1820,55 +1146,15 @@ $validator->validateResponse($response, $operation);
 
 ### Server-Sent Events (SSE)
 
-The parser handles the standard SSE format with `event`, `data`, `id`, and `retry` fields. Comments (lines starting with `:`) are ignored. The `data` field is automatically decoded from JSON when possible. The `retry` field is the W3C reconnection time in integer milliseconds; non-numeric values are ignored. When an SSE event has `data:` but no `event:` field, the parser assigns the W3C default event type `'message'`.
-
-```php
-$request = $factory->createServerRequest('GET', '/events');
-$operation = $validator->validateRequest($request);
-
-$body = "event: message\n"
-    . "data: {\"message\":\"hello\",\"count\":1}\n\n"
-    . "event: update\n"
-    . "data: {\"message\":\"world\",\"count\":2}\n\n";
-
-$response = $factory->createResponse(200)
-    ->withHeader('Content-Type', 'text/event-stream')
-    ->withBody($factory->createStream($body));
-
-$validator->validateResponse($response, $operation);
-```
+Each event consists of `event`, `data`, `id`, and `retry` fields; comment lines (starting with `:`) are ignored. The `data` field is automatically decoded from JSON when possible, and an event that carries `data:` but no `event:` field is assigned the W3C default event type `message`.
 
 ### JSON Text Sequences (RFC 7464)
 
-Each record is prefixed with a record separator byte (`0x1E`). This format avoids ambiguity with newlines inside JSON strings.
-
-```php
-$request = $factory->createServerRequest('GET', '/records');
-$operation = $validator->validateRequest($request);
-
-$body = "\x1E" . '{"id":"1","value":"first"}' . "\x1E" . '{"id":"2","value":"second"}';
-
-$response = $factory->createResponse(200)
-    ->withHeader('Content-Type', 'application/json-seq')
-    ->withBody($factory->createStream($body));
-
-$validator->validateResponse($response, $operation);
-```
+Each record is prefixed with a record separator byte (`0x1E`), which avoids ambiguity with newlines inside JSON strings.
 
 ### Error Handling in Streams
 
-When a stream item fails to parse (invalid JSON), the parser logs a warning and yields `null` for that item. The validator skips `null` items. When a parsed item fails schema validation, a `ValidationException` is thrown immediately.
-
-```php
-use Duyler\OpenApi\Validator\Response\StreamingContentParser;
-use Psr\Log\LoggerInterface;
-
-// Custom logger to track parse failures
-$parser = new StreamingContentParser($logger);
-
-// Returns [valid, null, valid] - second item is null due to invalid JSON
-$items = $parser->parseJsonLines('{"ok":true}' . "\n" . 'bad json' . "\n" . '{"ok":false}');
-```
+By default, malformed records (invalid JSON) are logged and skipped: the parser yields `null` for such items and the validator skips them. Enable `enableStrictStreaming()` to throw `MalformedStreamRecordException` instead. A parsed item that fails schema validation always throws `ValidationException` immediately, and a stream yielding more than `withMaxStreamingRecords()` records (default 100 000) throws `TooManyRecordsException`.
 
 ## Limitations
 
@@ -1878,86 +1164,18 @@ The validator covers approximately 95% of JSON Schema draft 2020-12 keywords. Th
 
 - `$dynamicRef` / `$dynamicAnchor` - dynamic schema resolution
 - `$recursiveRef` / `$recursiveAnchor` - recursive schema resolution
-- `contentEncoding` / `contentMediaType` - **limited** support: `ContentEncodingValidator` covers base64, `ContentMediaTypeValidator` covers JSON/XML/text; custom encodings and media types are not supported.
+- `contentEncoding` / `contentMediaType` - **limited** support: base64 encoding and a fixed set of common media types (JSON, XML, text); custom encodings and media types are not supported.
 - Custom vocabularies and keyword extensions
 
-### Annotation Tracking for `unevaluatedProperties` / `unevaluatedItems`
+The boolean schema form (`true` / `false`) is supported everywhere a schema is expected: `true` always passes and `false` always rejects.
 
-JSON Schema 2020-12 §10.3.4 / §11.1.1.3 define `unevaluatedProperties` and
-`unevaluatedItems` through the *annotations* produced by adjacent in-place
-applicators (`properties`, `patternProperties`, `additionalProperties`,
-`prefixItems`, `items`, `contains`, `allOf`, `anyOf`, `oneOf`, `if`,
-`then`, `else`, `$ref`), not through static schema analysis. The runtime
-validator propagates these annotations through `ValidationContext`:
-`PropertiesValidator` / `PropertiesValidatorWithContext` /
-`PatternPropertiesValidator` / `AdditionalPropertiesValidator` register
-evaluated property names; `PrefixItemsValidator` / `ItemsValidator` /
-`ItemsValidatorWithContext` / `ContainsValidator` register evaluated item
-indices; and composition validators (`AllOfValidator`, `AnyOfValidator`,
-`OneOfValidatorWithContext`, `IfThenElseValidator`) fork a child context
-per branch and merge annotations only on successful sub-validation.
-`NotValidator` deliberately contributes an empty annotation set per
-§10.3.4.
+### `$ref` and null values (known limitation)
 
-`$ref` resolution applies to all schema-typed keywords, not just the
-top-level composition arrays (`allOf` / `anyOf` / `oneOf`). The legacy
-recursion engine wrapped by `RefResolvingSchemaValidator` resolves
-`$ref` on `additionalProperties`, `patternProperties`,
-`unevaluatedProperties`, `unevaluatedItems`, `prefixItems`, `contains`,
-`propertyNames`, `dependentSchemas`, `not`, `if`, `then`, `else`,
-`items`, and `properties` before delegating to the recursion validator,
-so stub `{$ref: '#/...'}` subschemas embedded in any of those keywords
-no longer pass validation as a silent no-op. Circular `$ref` chains are
-bounded by `RefResolver`'s WeakMap cycle guard and the surrounding
-`ValidationContext::MAX_DEPTH` (default 64), which raises
-`SchemaDepthExceededException` instead of looping forever.
+When a `properties` or `items` subschema is declared as `{$ref: '#/...'}` and only the **resolved target** allows `null` (via `type: [..., 'null']` rather than a `nullable: true` sibling on the `$ref` stub), a `null` value on that property or item is rejected as `InvalidDataTypeException` even though the resolved target allows it. Non-null values are unaffected. Workaround: declare `nullable: true` as a sibling of the `$ref` — the sibling flag and the target's own nullability are combined with AND semantics, per OpenAPI 3.x `nullable` sibling-extension rules.
 
-Discriminator-routed branches (`discriminator.mapping` resolution) now
-propagate evaluated-property / evaluated-item annotations to the parent
-`ValidationContext` via `forkForBranch` + `mergeChildAnnotations`.
-`unevaluatedProperties: false` and `unevaluatedItems: false` correctly
-exclude properties/items already validated by the discriminator target
-schema (R4-CORRECTNESS-005, R4-SPEC-015).
+### `unevaluatedProperties` / `unevaluatedItems`
 
-Known limitation: when a `properties` or `items` subschema is declared
-as `{$ref: '#/...'}` and the resolved target schema allows `null` via
-`type: [..., 'null']` (rather than via an explicit `nullable: true`
-sibling on the `$ref` stub), the validator's pre-normalization step
-(`PropertiesValidatorWithContext` / `PropertiesValidator` /
-`ItemsValidator` / `ItemsValidatorWithContext`) still sees the
-unresolved stub when computing `$allowNull`. Because the stub has no
-`nullable` field and no `type`, `$allowNull` evaluates to `false`, so a
-`null` value on such a property or item is rejected as
-`InvalidDataTypeException` even though it is valid per the resolved
-target. Non-null values are unaffected. To work around this, declare
-`nullable: true` as a sibling of the `$ref` so the pre-normalize step
-sees the allow-null flag, and ensure the resolved target schema also
-allows `null` (via `nullable: true` or `type: [..., 'null']`); the
-sibling `nullable: true` is combined with the resolved target's
-nullability using logical AND semantics
-(`SchemaSiblingMerger`, per OpenAPI 3.x `nullable`
-sibling-extension rules). Tracked for a follow-up fix.
-
-Limitations:
-
-- Annotation tracking works only when validation flows through
-  `SchemaValidatorWithContext` (the canonical entry point returned by
-  `OpenApiValidatorBuilder::build()`). The legacy stateless
-  `SchemaValidator` dispatcher is annotation-aware when invoked with an
-  externally supplied `ValidationContext` (which the canonical path
-  always does), but when called directly without a context it falls back
-  to the static analysis path (`properties`, `patternProperties`,
-  `additionalProperties`) and cannot honour `unevaluatedProperties` /
-  `unevaluatedItems` across `allOf` / `anyOf` / `oneOf` / `if`-`then`-
-  `else` / `$ref` / `contains`. Application code that invokes
-  `SchemaValidator` directly should switch to `SchemaValidatorWithContext`
-  for full annotation coverage.
-- Boolean schema form (`Schema|bool|null`) is supported by the runtime
-  validator for every schema-typed keyword: `additionalProperties`,
-  `unevaluatedProperties`, `contentSchema`, `items`, `contains`,
-  `propertyNames`, `if`, `then`, `else`, `not`, `unevaluatedItems`.
-  `true` always passes; `false` always rejects (per JSON Schema 2020-12
-  §4.3.2).
+Both keywords are honoured — including across `allOf` / `anyOf` / `oneOf`, `if`/`then`/`else`, `$ref`, `contains`, and discriminator-routed branches — through the canonical validator path returned by `OpenApiValidatorBuilder::build()`.
 
 ### Content Negotiation
 
@@ -1973,81 +1191,20 @@ Response body validation does not expand wildcards: media type matching uses lit
 
 ### Security Validation
 
-Security scheme validation is basic. The validator checks that required credentials are present in the request (headers, query parameters, or cookies) but does not verify their correctness or format. Token introspection, JWT signature verification, JWKS resolution, and OAuth flow handling are outside the scope of this library.
+Security scheme validation is opt-in (`enableSecurityValidation()`) and performs **presence-only** checks: it verifies that required credentials are present in the request but does not verify their correctness. Token introspection, JWT verification, JWKS resolution, and OAuth flows are out of scope.
 
-> **Note:** Security scheme validation is invoked by `validateRequest()`, `validateWebhook()`, and `validateCallback()` when `enableSecurityValidation()` is enabled. If a security scheme is defined at the document or operation level, the validator checks that required credentials are present in the request. If `enableSecurityValidation()` is not called, security validation is skipped (default behavior).
+Supported scheme types:
 
-The following security scheme types are supported:
+- `http/bearer` - checks for the `Authorization: Bearer ...` header (case-insensitive scheme prefix)
+- `apiKey` (`query`, `header`, `cookie`) - checks for the named parameter in the specified location
 
-- `http/bearer` - Checks for `Authorization: Bearer ...` header (RFC 6750, case-insensitive scheme prefix)
-- `apiKey` (`query`, `header`, `cookie`) - Checks for the named parameter in the specified location
+Any other scheme type declared in the spec (`http/basic`, `http/digest`, `oauth2`, `openIdConnect`, `mutualTLS`, or unknown) throws `UnsupportedSecuritySchemeException` at request-validation time. The exception extends `\RuntimeException` and is **not** wrapped into `ValidationException`, so catch it separately in your middleware.
 
-The following scheme types are **not supported** and throw `Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException` when encountered in the spec at request-validation time (R4-SEC-010, R4-SPEC-003):
+The `security` keyword is a list of OR-alternatives, each an AND-dict of schemes. An AND list containing an unsupported scheme fails closed with `UnsupportedSecuritySchemeException`, even when a supported sibling in the same dict would have passed. In an OR list, supported alternatives are still tried; if none succeeds, the unsupported-scheme error is re-thrown.
 
-- `http/basic` - Basic authentication (`Authorization: Basic base64(user:pass)`)
-- `http/digest` - HTTP Digest authentication
-- `oauth2` - OAuth 2.0 flows (authorizationCode, implicit, password, clientCredentials, deviceCode)
-- `openIdConnect` - OpenID Connect Discovery
-- `mutualTLS` - Mutual TLS
-- any other unknown scheme type
+By default, credential failures return a generic message (`'Authentication required: missing or invalid credentials'`) that does not reveal which scheme was checked or where the credential was expected. Provide a PSR-3 logger via `withSecurityVerboseLogging()` to get scheme details at debug level (declared OAuth2 scopes are logged there as well), or read them programmatically via the opt-in `reveal: true` getters (see [Exception Sanitization](#exception-sanitization)).
 
-`UnsupportedSecuritySchemeException` extends `\RuntimeException` (it is a
-configuration error, not a credential-validation error). It is **not** wrapped
-into `ValidationException`; it propagates directly from `validateRequest()` /
-`validateWebhook()` / `validateCallback()` and must be caught separately in a
-PSR-15 middleware. The exception message is operator-facing diagnostic content
-(the scheme name and type), but `(string) $e` returns only `getMessage()` —
-file paths and stack traces are not leaked (CWE-209, CWE-497, R3-SEC-INFO-LEAK).
-
-#### AND / OR semantics with unsupported schemes
-
-The OpenAPI `security` keyword is a list of dicts. The outer list is OR
-(any-of); each inner dict is AND (all-of).
-
-- **AND list with one unsupported scheme**: the whole dict fails closed with
-  `UnsupportedSecuritySchemeException`, even if a supported sibling scheme in
-  the same dict would have passed. A spec such as
-  `security: [{oauth2: [read], bearerAuth: []}]` therefore fails for every
-  request — the operator must remove the unsupported scheme from the spec.
-- **OR list with mixed supported and unsupported dicts**: the supported
-  alternative is still tried. A spec such as
-  `security: [{oauth2: [read]}, {bearerAuth: []}]` succeeds for a request
-  that carries a valid `Authorization: Bearer ...` header, because the
-  second OR dict validates. If no OR alternative succeeds, the most recently
-  captured `UnsupportedSecuritySchemeException` is re-thrown (operator-visible
-  configuration error takes priority over credential errors).
-
-#### OAuth2 scope preservation (R4-SPEC-003)
-
-The scopes declared on a security requirement
-(`security: [{OAuth2: [read, write]}]`) are no longer discarded. Even though
-the `oauth2` scheme itself is rejected, the declared scopes are forwarded to
-the configured PSR-3 logger at `debug` level via the entry
-`'Security requirement scopes'` with `{schemeName, schemeType, scopes}` context,
-so trusted operators can audit which scopes the spec demands. Empty scope
-lists (the default for `apiKey`, `http/bearer`) do not trigger the log entry.
-
-#### Migrating an OAuth2 / OpenID Connect spec
-
-Consumers that need full OAuth2 / OpenID Connect token validation must remove
-the unsupported schemes from their spec and validate the token at the
-application layer, or replace this library's security validator with a custom
-PSR-15 middleware that calls an external token introspection endpoint / JWKS
-verifier. There is no extension point in `SecurityValidator` for plugging in a
-custom scheme handler; the diagnostic exception exists precisely so a missing
-handler is detected instead of silently bypassed (R4-SEC-010 secure-by-default).
-
-By default, credential-validation failures (missing `Authorization: Bearer`
-header, missing API key parameter, etc.) return a generic error message
-(`'Authentication required: missing or invalid credentials'`) that does not
-reveal which security scheme was checked or where the credential was expected.
-This prevents unauthenticated callers from learning the API's security
-configuration (CWE-209). To include scheme details in debug logs (for
-development or operational diagnostics), provide a PSR-3 logger via
-`withSecurityVerboseLogging($logger)`. Scheme details remain accessible
-programmatically via the opt-in getters `$error->schemeName(reveal: true)`,
-`$error->schemeType(reveal: true)`, and `$error->location(reveal: true)`
-for trusted operator code (see Exception Sanitization above).
+To validate OAuth2 / OpenID Connect tokens, remove those schemes from the spec and validate the token at the application layer — for example, in a PSR-15 middleware calling your introspection endpoint or JWKS verifier. The security validator has no extension point for custom scheme handlers; a missing handler is reported via the exception instead of silently bypassed.
 
 ## Requirements
 

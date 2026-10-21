@@ -59,6 +59,7 @@ final readonly class ValidationStack
      * @param int $maxJsonBodyBytes       from {@see ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES}
      * @param int $maxMultipartBodyBytes  from {@see ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES}
      * @param int $maxRegexBacktracks     from {@see PregExecutor::DEFAULT_MAX_BACKTRACKS}
+     * @param int $maxStreamingRecords    from {@see ValidatorConfiguration::DEFAULT_MAX_STREAMING_RECORDS}
      */
     public function __construct(
         public readonly OpenApiDocument $document,
@@ -79,6 +80,7 @@ final readonly class ValidationStack
         public readonly int $maxMultipartBodyBytes = ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES,
         public readonly bool $strictStreaming = false,
         public readonly int $maxRegexBacktracks = PregExecutor::DEFAULT_MAX_BACKTRACKS,
+        public readonly int $maxStreamingRecords = ValidatorConfiguration::DEFAULT_MAX_STREAMING_RECORDS,
         public readonly PregExecutor $pregExecutor = new PregExecutor(),
         public readonly ?LoggerInterface $securityVerboseLogger = null,
         public readonly bool $strictCoercion = true,
@@ -93,6 +95,7 @@ final readonly class ValidationStack
             maxMultipartBodyBytes: $this->maxMultipartBodyBytes,
             strictStreaming: $this->strictStreaming,
             maxRegexBacktracks: $this->maxRegexBacktracks,
+            maxStreamingRecords: $this->maxStreamingRecords,
             strictCoercion: $this->strictCoercion,
         );
 
@@ -167,6 +170,7 @@ final readonly class ValidationStack
             maxMultipartBodyBytes: $limits->maxMultipartBodyBytes,
             strictStreaming: $options->strictStreaming,
             maxRegexBacktracks: $limits->maxRegexBacktracks,
+            maxStreamingRecords: $options->maxStreamingRecords,
             securityVerboseLogger: $options->securityVerboseLogger,
             strictCoercion: $options->strictCoercion,
         );
