@@ -35,6 +35,13 @@ if [ -n "$non_test_files" ]; then
     status=1
 fi
 
+builder_in_unit=$(grep -rnF 'OpenApiValidatorBuilder' tests/Unit --include='*.php' 2>/dev/null)
+if [ -n "$builder_in_unit" ]; then
+    echo "test-structure: OpenApiValidatorBuilder is forbidden in Unit/ (public API entry belongs to Functional/):" >&2
+    echo "$builder_in_unit" >&2
+    status=1
+fi
+
 if [ "$status" -ne 0 ]; then
     echo "test-structure: FAILED" >&2
     exit 1
