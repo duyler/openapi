@@ -1685,7 +1685,8 @@ raises `PregRuntimeException` via `assertNoPcreError()`, so a runtime
 failure can never masquerade as "pattern did not match". The default
 backtrack cap is `PregExecutor::DEFAULT_MAX_BACKTRACKS` (`10_000`),
 configurable via `withMaxRegexBacktracks`; the coroutine-level race on
-these process-global values is analysed in O-007 below.
+these process-global values is captured in the `PregExecutor` table row
+above.
 
 If the OpenAPI specification changes at runtime, rebuild the validator. The old instances will be garbage-collected when no longer referenced.
 

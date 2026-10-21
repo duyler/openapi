@@ -199,11 +199,6 @@ final class ConcurrencyContractTest extends TestCase
                 'PregExecutor',
                 self::NOT_THREAD_SAFE_MARKER,
                 'forCoroutineRuntime',
-                'O-004',
-                'O-006',
-                'S-011',
-                'O-007',
-                'S-020',
             ] as $requiredToken
         ) {
             self::assertTrue(
@@ -215,15 +210,15 @@ final class ConcurrencyContractTest extends TestCase
             );
         }
 
-        // Sanity bound: the section grew past its baseline ~40 lines to carry
-        // the unsafe-class table and the three scenario paragraphs. Guard
-        // against accidental truncation during README restructuring.
+        // Sanity bound: the section carries the unsafe-class table and the
+        // ReDoS invariants paragraph. Guard against accidental truncation
+        // during README restructuring.
         self::assertGreaterThan(
             1_500,
             strlen($section),
             sprintf(
-                'README "Long-Running Processes" section must carry the unsafe-class table and the three scenario '
-                . 'paragraphs (O-004, O-006/S-011, O-007/S-020); got %d bytes.%s',
+                'README "Long-Running Processes" section must carry the unsafe-class table and the ReDoS '
+                . 'invariants paragraph; got %d bytes.%s',
                 strlen($section),
                 str_repeat("\n", 1),
             ),
