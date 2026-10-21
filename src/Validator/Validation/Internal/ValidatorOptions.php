@@ -22,6 +22,7 @@ final readonly class ValidatorOptions
         public readonly ?EventDispatcherInterface $eventDispatcher = null,
         public readonly bool $strictFormats = false,
         public readonly bool $strictStreaming = false,
+        public readonly int $maxStreamingRecords = ValidatorConfiguration::DEFAULT_MAX_STREAMING_RECORDS,
         public readonly bool $strictCoercion = true,
         public readonly ?LoggerInterface $securityVerboseLogger = null,
     ) {}
@@ -38,6 +39,7 @@ final readonly class ValidatorOptions
             maxMultipartBodyBytes: ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES,
             strictStreaming: $this->strictStreaming,
             maxRegexBacktracks: ValidatorConfiguration::DEFAULT_MAX_REGEX_BACKTRACKS,
+            maxStreamingRecords: $this->maxStreamingRecords,
             strictCoercion: $this->strictCoercion,
         );
     }

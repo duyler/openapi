@@ -79,6 +79,7 @@ YAML;
         self::assertSame(ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES, $deps->maxJsonBodyBytes);
         self::assertSame(ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES, $deps->maxMultipartBodyBytes);
         self::assertSame(PregExecutor::DEFAULT_MAX_BACKTRACKS, $deps->maxRegexBacktracks);
+        self::assertSame(ValidatorConfiguration::DEFAULT_MAX_STREAMING_RECORDS, $deps->maxStreamingRecords);
         // Wired sub-services
         self::assertNotNull($deps->requestValidator);
         self::assertNotNull($deps->responseValidator);
@@ -106,6 +107,7 @@ YAML;
                 logger: new NullLogger(),
                 strictFormats: true,
                 strictStreaming: true,
+                maxStreamingRecords: 42,
                 strictCoercion: false,
             ),
             bodyLimits: new BodyLimits(
@@ -127,6 +129,7 @@ YAML;
         self::assertSame(1024, $deps->maxJsonBodyBytes);
         self::assertSame(2048, $deps->maxMultipartBodyBytes);
         self::assertSame(999, $deps->maxRegexBacktracks);
+        self::assertSame(42, $deps->maxStreamingRecords);
     }
 
     #[Test]
@@ -139,6 +142,7 @@ YAML;
             reportDeprecated: true,
             strictFormats: true,
             strictStreaming: true,
+            maxStreamingRecords: 7,
             strictCoercion: false,
         );
 
@@ -151,6 +155,7 @@ YAML;
         self::assertTrue($config->strictFormats);
         self::assertTrue($config->strictStreaming);
         self::assertFalse($config->strictCoercion);
+        self::assertSame(7, $config->maxStreamingRecords);
         // BodyLimits default through ValidatorConfiguration::DEFAULT_* constants
         self::assertSame(ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES, $config->maxJsonBodyBytes);
         self::assertSame(ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES, $config->maxMultipartBodyBytes);
