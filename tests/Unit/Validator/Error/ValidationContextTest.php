@@ -404,4 +404,129 @@ class ValidationContextTest extends TestCase
             ],
         ], $child->annotations());
     }
+
+    #[Test]
+    public function dynamic_scope_is_empty_by_default(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+
+        $this->assertTrue($context->hasEmptyDynamicScope());
+        $this->assertSame([], $context->dynamicScope());
+    }
+
+    #[Test]
+    public function enter_and_leave_dynamic_scope_push_and_pop_resource(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $resource = new Schema(id: 'https://example.com/a');
+
+        $context->enterDynamicScope($resource);
+
+        $this->assertFalse($context->hasEmptyDynamicScope());
+        $this->assertSame([$resource], $context->dynamicScope());
+
+        $context->leaveDynamicScope();
+
+        $this->assertTrue($context->hasEmptyDynamicScope());
+        $this->assertSame([], $context->dynamicScope());
+    }
+
+    #[Test]
+    public function enter_dynamic_scope_deduplicates_consecutive_identical_resource(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $resource = new Schema(id: 'https://example.com/a');
+
+        $context->enterDynamicScope($resource);
+        $context->enterDynamicScope($resource);
+
+        $this->assertSame([$resource], $context->dynamicScope());
+    }
+
+    #[Test]
+    public function enter_dynamic_scope_keeps_repeated_resource_after_intermediate_frame(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $first = new Schema(id: 'https://example.com/a');
+        $second = new Schema(id: 'https://example.com/b');
+
+        $context->enterDynamicScope($first);
+        $context->enterDynamicScope($second);
+        $context->enterDynamicScope($first);
+
+        $this->assertSame([$first, $second, $first], $context->dynamicScope());
+    }
+
+    #[Test]
+    public function leave_dynamic_scope_on_empty_scope_is_no_op(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+
+        $context->leaveDynamicScope();
+
+        $this->assertTrue($context->hasEmptyDynamicScope());
+        $this->assertSame([], $context->dynamicScope());
+    }
+
+    #[Test]
+    public function resolve_dynamic_anchor_returns_outermost_resource_with_matching_anchor(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $outer = new Schema(id: 'https://example.com/strict-tree', dynamicAnchor: 'node');
+        $inner = new Schema(id: 'https://example.com/tree', dynamicAnchor: 'node');
+
+        $context->enterDynamicScope($outer);
+        $context->enterDynamicScope($inner);
+
+        $this->assertSame($outer, $context->resolveDynamicAnchor('node'));
+    }
+
+    #[Test]
+    public function resolve_dynamic_anchor_returns_null_when_anchor_absent(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $context->enterDynamicScope(new Schema(id: 'https://example.com/a', dynamicAnchor: 'other'));
+
+        $this->assertNull($context->resolveDynamicAnchor('node'));
+    }
+
+    #[Test]
+    public function resolve_dynamic_anchor_on_empty_scope_returns_null(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+
+        $this->assertNull($context->resolveDynamicAnchor('node'));
+    }
+
+    #[Test]
+    public function fork_for_branch_copies_dynamic_scope_from_parent(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $root = new Schema(id: 'https://example.com/root');
+        $parent->enterDynamicScope($root);
+
+        $child = $parent->forkForBranch();
+
+        $this->assertSame([$root], $child->dynamicScope());
+    }
+
+    #[Test]
+    public function fork_for_branch_isolates_child_scope_changes_from_parent(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $root = new Schema(id: 'https://example.com/root');
+        $branch = new Schema(id: 'https://example.com/branch');
+        $parent->enterDynamicScope($root);
+
+        $child = $parent->forkForBranch();
+        $child->enterDynamicScope($branch);
+
+        $this->assertSame([$root, $branch], $child->dynamicScope());
+        $this->assertSame([$root], $parent->dynamicScope());
+
+        $child->leaveDynamicScope();
+
+        $this->assertSame([$root], $child->dynamicScope());
+        $this->assertSame([$root], $parent->dynamicScope());
+    }
 }

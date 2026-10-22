@@ -39,6 +39,12 @@ final class StatelessValidatorDispatcher implements SchemaValidatorInterface
 
         $context->incrementDepth();
 
+        $entersDynamicScope = null !== $schema->id || $context->hasEmptyDynamicScope();
+
+        if ($entersDynamicScope) {
+            $context->enterDynamicScope($schema);
+        }
+
         try {
             $context->annotateSchemaExtras($schema);
 
@@ -46,6 +52,10 @@ final class StatelessValidatorDispatcher implements SchemaValidatorInterface
                 $validator->validate($data, $schema, $context);
             }
         } finally {
+            if ($entersDynamicScope) {
+                $context->leaveDynamicScope();
+            }
+
             $context->decrementDepth();
         }
     }

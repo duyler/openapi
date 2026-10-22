@@ -14,6 +14,9 @@ use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
 
+use function array_pop;
+use function count;
+
 final class ValidationContext
 {
     public const int MAX_DEPTH = 64;
@@ -34,6 +37,8 @@ final class ValidationContext
         public readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         private int $depth = 0,
         public readonly ?ValidatorMode $mode = null,
+        /** @var list<Schema> */
+        private array $dynamicScope = [],
     ) {
         $this->annotations = new ValidationAnnotations();
     }
@@ -149,6 +154,42 @@ final class ValidationContext
         $this->annotations = $this->annotations->merge($child->annotations);
     }
 
+    public function enterDynamicScope(Schema $resource): void
+    {
+        if ([] !== $this->dynamicScope && $this->dynamicScope[count($this->dynamicScope) - 1] === $resource) {
+            return;
+        }
+
+        $this->dynamicScope[] = $resource;
+    }
+
+    public function leaveDynamicScope(): void
+    {
+        array_pop($this->dynamicScope);
+    }
+
+    public function hasEmptyDynamicScope(): bool
+    {
+        return [] === $this->dynamicScope;
+    }
+
+    /** @return list<Schema> */
+    public function dynamicScope(): array
+    {
+        return $this->dynamicScope;
+    }
+
+    public function resolveDynamicAnchor(string $name): ?Schema
+    {
+        foreach ($this->dynamicScope as $resource) {
+            if ($name === $resource->dynamicAnchor) {
+                return $resource;
+            }
+        }
+
+        return null;
+    }
+
     public function forkForBranch(): self
     {
         return new self(
@@ -159,6 +200,7 @@ final class ValidationContext
             emptyArrayStrategy: $this->emptyArrayStrategy,
             depth: $this->depth,
             mode: $this->mode,
+            dynamicScope: $this->dynamicScope,
         );
     }
 }

@@ -10,6 +10,7 @@ use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Test\Support\DynamicScopeSpyValidator;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
@@ -302,6 +303,81 @@ final class StatelessValidatorDispatcherTest extends TestCase
         $this->expectException(SchemaDepthExceededException::class);
 
         $dispatcher->validate($data, $current);
+    }
+
+    #[Test]
+    public function validate_enters_document_root_scope_for_schema_without_id(): void
+    {
+        $spy = new DynamicScopeSpyValidator();
+        $dispatcher = new StatelessValidatorDispatcher(validators: [$spy], pool: new ValidatorPool());
+        $schema = new Schema(type: 'string');
+
+        $dispatcher->validate('value', $schema);
+
+        $this->assertSame([[$schema]], $spy->observedScopes);
+    }
+
+    #[Test]
+    public function validate_enters_id_bearing_schema_scope_when_nested(): void
+    {
+        $spy = new DynamicScopeSpyValidator();
+        $dispatcher = new StatelessValidatorDispatcher(validators: [$spy], pool: new ValidatorPool());
+        $root = new Schema(id: 'https://example.com/root');
+        $nested = new Schema(id: 'https://example.com/nested', type: 'string');
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $context->enterDynamicScope($root);
+
+        $dispatcher->validate('value', $nested, $context);
+
+        $this->assertSame([[$root, $nested]], $spy->observedScopes);
+        $this->assertSame([$root], $context->dynamicScope());
+    }
+
+    #[Test]
+    public function validate_skips_scope_for_nested_schema_without_id(): void
+    {
+        $spy = new DynamicScopeSpyValidator();
+        $dispatcher = new StatelessValidatorDispatcher(validators: [$spy], pool: new ValidatorPool());
+        $root = new Schema(id: 'https://example.com/root');
+        $nested = new Schema(type: 'string');
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $context->enterDynamicScope($root);
+
+        $dispatcher->validate('value', $nested, $context);
+
+        $this->assertSame([[$root]], $spy->observedScopes);
+        $this->assertSame([$root], $context->dynamicScope());
+    }
+
+    #[Test]
+    public function validate_restores_dynamic_scope_when_validator_throws(): void
+    {
+        $dispatcher = $this->createFullDispatcher();
+        $root = new Schema(id: 'https://example.com/root');
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $context->enterDynamicScope($root);
+
+        try {
+            $dispatcher->validate('value', new Schema(type: 'integer'), $context);
+            self::fail('Expected TypeMismatchError for non-integer data');
+        } catch (TypeMismatchError) {
+        }
+
+        $this->assertSame([$root], $context->dynamicScope());
+    }
+
+    #[Test]
+    public function validate_leaves_empty_scope_after_root_validation(): void
+    {
+        $spy = new DynamicScopeSpyValidator();
+        $dispatcher = new StatelessValidatorDispatcher(validators: [$spy], pool: new ValidatorPool());
+
+        $dispatcher->validate('value', new Schema(type: 'string'));
+
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $dispatcher->validate('value', new Schema(type: 'string'), $context);
+
+        $this->assertTrue($context->hasEmptyDynamicScope());
     }
 
     private function createDispatcher(?StatelessValidatorRegistry $registry = null): StatelessValidatorDispatcher

@@ -98,28 +98,40 @@ final readonly class SchemaValidatorWithContext
         $visited = new WeakMap();
         $schema = $this->compositionResolver->resolveCompositionRefs($schema, $visited);
 
-        $context->annotateSchemaExtras($schema);
+        $entersDynamicScope = null !== $schema->id || $context->hasEmptyDynamicScope();
 
-        if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
-            $this->oneOfValidator->validateWithContext($data, $schema, $context);
-
-            return;
+        if ($entersDynamicScope) {
+            $context->enterDynamicScope($schema);
         }
 
-        if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
+        try {
+            $context->annotateSchemaExtras($schema);
+
+            if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
+                $this->oneOfValidator->validateWithContext($data, $schema, $context);
+
+                return;
+            }
+
+            if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
+                $this->dispatcher->validateInternal($data, $schema, $context);
+                $this->discriminatorValidator->validate($data, $schema, $this->document, '/', $context);
+                $this->dispatcher->dispatchPropertiesAndItems($data, $schema, $context, $useDiscriminator);
+
+                return;
+            }
+
+            if (null === $schema->discriminator && null !== $schema->oneOf) {
+                $this->oneOfValidator->validateWithContextIgnoringDiscriminator($data, $schema, $context);
+            }
+
             $this->dispatcher->validateInternal($data, $schema, $context);
-            $this->discriminatorValidator->validate($data, $schema, $this->document, '/', $context);
             $this->dispatcher->dispatchPropertiesAndItems($data, $schema, $context, $useDiscriminator);
-
-            return;
+        } finally {
+            if ($entersDynamicScope) {
+                $context->leaveDynamicScope();
+            }
         }
-
-        if (null === $schema->discriminator && null !== $schema->oneOf) {
-            $this->oneOfValidator->validateWithContextIgnoringDiscriminator($data, $schema, $context);
-        }
-
-        $this->dispatcher->validateInternal($data, $schema, $context);
-        $this->dispatcher->dispatchPropertiesAndItems($data, $schema, $context, $useDiscriminator);
     }
 
     private function resolveRef(Schema $schema): Schema
