@@ -13,6 +13,7 @@ use Duyler\OpenApi\Validator\Exception\RefResolutionException;
 use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
 use Duyler\OpenApi\Validator\Schema\Internal\DiscriminatorDetector;
 use Duyler\OpenApi\Validator\Schema\Internal\DocumentNavigator;
+use Duyler\OpenApi\Validator\Schema\Internal\ResourceRegistry;
 use Duyler\OpenApi\Validator\Schema\Internal\UriResolver;
 use Override;
 use WeakMap;
@@ -103,6 +104,11 @@ final class RefResolver implements RefResolverInterface
         }
 
         return $this->uriResolver->resolveRelativeAgainstBase($base, $relative, $baseUri);
+    }
+
+    public function resourceRegistry(OpenApiDocument $document): ResourceRegistry
+    {
+        return ResourceRegistry::forDocument($document, $this);
     }
 
     #[Override]

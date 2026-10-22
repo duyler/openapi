@@ -290,6 +290,20 @@ final class DiscriminatorDetectorTest extends TestCase
     }
 
     #[Test]
+    public function detect_ref_short_circuits_on_visited_schema(): void
+    {
+        $schema = new Schema(ref: '#/components/schemas/A');
+
+        /** @var WeakMap<Schema, true> $visited */
+        $visited = new WeakMap();
+        $visited[$schema] = true;
+
+        [$has,] = $this->detector->detectRef($schema, $visited, 0);
+
+        self::assertFalse($has);
+    }
+
+    #[Test]
     public function iterate_sub_schemas_yields_composition_arrays_and_singles(): void
     {
         $items = new Schema(type: 'string');

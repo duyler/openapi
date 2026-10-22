@@ -16,6 +16,10 @@ use WeakMap;
 /** @internal */
 final readonly class DiscriminatorDetector
 {
+    public function __construct(
+        private readonly SchemaSubschemaWalkerInterface $walker = new SchemaSubschemaWalker(),
+    ) {}
+
     /**
      * @param WeakMap<Schema, true> $visited
      * @param Closure(string, OpenApiDocument): Schema $resolver
@@ -101,44 +105,16 @@ final readonly class DiscriminatorDetector
         return $this->scanSubSchemasForRef($schema, $visited, $depth);
     }
 
-    /** @return Generator<int, Schema, void, void> */
+    /** @return Generator<array-key, Schema, void, void> */
     public function iterateSubSchemas(Schema $schema): Generator
     {
-        yield from $schema->properties ?? [];
-        yield from $schema->prefixItems ?? [];
-        yield from $schema->allOf ?? [];
-        yield from $schema->anyOf ?? [];
-        yield from $schema->oneOf ?? [];
-        yield from $schema->patternProperties ?? [];
-        yield from $schema->dependentSchemas ?? [];
-
-        foreach ($this->collectSingleSubSchemas($schema) as $subSchema) {
-            yield $subSchema;
-        }
+        yield from $this->walker->iterateSubSchemas($schema);
     }
 
     /** @return list<Schema> */
     public function collectSingleSubSchemas(Schema $schema): array
     {
-        /** @var list<Schema|bool|null> $candidates */
-        $candidates = [
-            $schema->items,
-            $schema->not,
-            $schema->contains,
-            $schema->propertyNames,
-            $schema->if,
-            $schema->then,
-            $schema->else,
-            $schema->unevaluatedItems,
-            $schema->additionalProperties instanceof Schema ? $schema->additionalProperties : null,
-            $schema->unevaluatedProperties instanceof Schema ? $schema->unevaluatedProperties : null,
-            $schema->contentSchema instanceof Schema ? $schema->contentSchema : null,
-        ];
-
-        return array_values(array_filter(
-            $candidates,
-            static fn(mixed $c): bool => $c instanceof Schema,
-        ));
+        return $this->walker->collectSingleSubSchemas($schema);
     }
 
     /**
