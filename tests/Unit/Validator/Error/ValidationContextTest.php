@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Error;
 
+use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
 use Duyler\OpenApi\Validator\Error\Formatter\JsonFormatter;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
@@ -280,5 +281,127 @@ class ValidationContextTest extends TestCase
 
         $this->assertSame(['child_only'], $child->evaluatedPropertyNames());
         $this->assertSame(['parent_only', 'child_only'], $parent->evaluatedPropertyNames());
+    }
+
+    #[Test]
+    public function path_returns_current_breadcrumb_path(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+
+        $this->assertSame('/', $context->path());
+
+        $context->enterBreadcrumb('users');
+        $context->enterBreadcrumbIndex(0);
+
+        $this->assertSame('/users/0', $context->path());
+    }
+
+    #[Test]
+    public function annotations_are_empty_by_default(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+
+        $this->assertSame([], $context->annotations());
+    }
+
+    #[Test]
+    public function annotate_accumulates_records_per_keyword(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+
+        $context->annotate('x-a', 1, '/');
+        $context->annotate('x-a', 2, '/users');
+        $context->annotate('x-b', 'v', '/users/0');
+
+        $this->assertSame([
+            'x-a' => [
+                ['path' => '/', 'value' => 1],
+                ['path' => '/users', 'value' => 2],
+            ],
+            'x-b' => [
+                ['path' => '/users/0', 'value' => 'v'],
+            ],
+        ], $context->annotations());
+    }
+
+    #[Test]
+    public function annotate_schema_extras_records_each_keyword_with_current_path(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $schema = new Schema(extras: ['x-meta' => ['a' => 1], 'x-vendor' => true]);
+
+        $context->enterBreadcrumb('users');
+        $context->annotateSchemaExtras($schema);
+
+        $this->assertSame([
+            'x-meta' => [
+                ['path' => '/users', 'value' => ['a' => 1]],
+            ],
+            'x-vendor' => [
+                ['path' => '/users', 'value' => true],
+            ],
+        ], $context->annotations());
+    }
+
+    #[Test]
+    public function annotate_schema_extras_ignores_schema_without_extras(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+
+        $context->annotateSchemaExtras(new Schema(type: 'string'));
+
+        $this->assertSame([], $context->annotations());
+    }
+
+    #[Test]
+    public function fork_for_branch_starts_with_empty_annotations(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $parent->annotate('x-parent', 'v', '/');
+
+        $child = $parent->forkForBranch();
+
+        $this->assertSame([], $child->annotations());
+    }
+
+    #[Test]
+    public function merge_child_annotations_appends_child_records_per_keyword(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $parent->annotate('x-meta', 'parent', '/');
+
+        $child = $parent->forkForBranch();
+        $child->annotate('x-meta', 'child', '/users');
+        $child->annotate('x-ok', 'branch', '/users');
+
+        $parent->mergeChildAnnotations($child);
+
+        $this->assertSame([
+            'x-meta' => [
+                ['path' => '/', 'value' => 'parent'],
+                ['path' => '/users', 'value' => 'child'],
+            ],
+            'x-ok' => [
+                ['path' => '/users', 'value' => 'branch'],
+            ],
+        ], $parent->annotations());
+    }
+
+    #[Test]
+    public function merge_child_annotations_does_not_mutate_child_annotations(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $parent->annotate('x-parent', 'v', '/');
+
+        $child = $parent->forkForBranch();
+        $child->annotate('x-child', 'v', '/users');
+
+        $parent->mergeChildAnnotations($child);
+
+        $this->assertSame([
+            'x-child' => [
+                ['path' => '/users', 'value' => 'v'],
+            ],
+        ], $child->annotations());
     }
 }

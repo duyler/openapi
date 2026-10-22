@@ -40,6 +40,8 @@ final class StatelessValidatorDispatcher implements SchemaValidatorInterface
         $context->incrementDepth();
 
         try {
+            $context->annotateSchemaExtras($schema);
+
             foreach ($this->applicableValidators($schema) as $validator) {
                 $validator->validate($data, $schema, $context);
             }

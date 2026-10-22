@@ -98,6 +98,8 @@ final readonly class SchemaValidatorWithContext
         $visited = new WeakMap();
         $schema = $this->compositionResolver->resolveCompositionRefs($schema, $visited);
 
+        $context->annotateSchemaExtras($schema);
+
         if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
             $this->oneOfValidator->validateWithContext($data, $schema, $context);
 

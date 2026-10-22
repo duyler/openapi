@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Error;
 
+use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Dto\ValidationAnnotations;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
@@ -22,6 +24,8 @@ final class ValidationContext
     /** @var array<int, true> */
     private array $evaluatedItemIndices = [];
 
+    private ValidationAnnotations $annotations;
+
     private function __construct(
         public readonly BreadcrumbManager $breadcrumbs,
         public readonly ValidatorPool $pool,
@@ -30,7 +34,9 @@ final class ValidationContext
         public readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         private int $depth = 0,
         public readonly ?ValidatorMode $mode = null,
-    ) {}
+    ) {
+        $this->annotations = new ValidationAnnotations();
+    }
 
     public static function fromInit(ValidationContextInit $init): self
     {
@@ -110,10 +116,37 @@ final class ValidationContext
         return isset($this->evaluatedItemIndices[$index]);
     }
 
+    public function path(): string
+    {
+        return $this->breadcrumbs->currentPath();
+    }
+
+    public function annotate(string $keyword, mixed $value, string $path): void
+    {
+        $this->annotations = $this->annotations->with($keyword, $path, $value);
+    }
+
+    /**
+     * @return array<string, list<array{path: string, value: mixed}>>
+     */
+    public function annotations(): array
+    {
+        return $this->annotations->toArray();
+    }
+
+    public function annotateSchemaExtras(Schema $schema): void
+    {
+        /** @var mixed $value */
+        foreach ($schema->extras ?? [] as $keyword => $value) {
+            $this->annotate($keyword, $value, $this->path());
+        }
+    }
+
     public function mergeChildAnnotations(self $child): void
     {
         $this->evaluatedPropertyNames += $child->evaluatedPropertyNames;
         $this->evaluatedItemIndices += $child->evaluatedItemIndices;
+        $this->annotations = $this->annotations->merge($child->annotations);
     }
 
     public function forkForBranch(): self
