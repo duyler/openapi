@@ -9,6 +9,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\PrefixItemsValidator;
@@ -366,7 +367,7 @@ class PrefixItemsValidatorTest extends TestCase
             prefixItems: [$schema1, $schema2],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $succeeded = false;
 
         try {
@@ -390,7 +391,7 @@ class PrefixItemsValidatorTest extends TestCase
             items: $itemsSchema,
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $succeeded = false;
 
         try {
@@ -413,7 +414,7 @@ class PrefixItemsValidatorTest extends TestCase
             prefixItems: [$schema1, $schema2],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $succeeded = false;
 
         try {

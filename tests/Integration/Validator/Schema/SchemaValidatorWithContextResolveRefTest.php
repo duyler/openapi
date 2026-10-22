@@ -14,6 +14,7 @@ use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -135,7 +136,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
     {
         $schema = new Schema(ref: '#/components/schemas/Item');
         $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
 
         $data = [
             'id' => 1,
@@ -151,7 +152,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
     {
         $schema = new Schema(ref: '#/components/schemas/Item');
         $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
 
         $data = [];
 
@@ -317,7 +318,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
             ],
         );
         $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
 
         $data = ['value' => 'test'];
 
@@ -337,7 +338,7 @@ final class SchemaValidatorWithContextResolveRefTest extends TestCase
             ],
         );
         $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
 
         $data = [];
 

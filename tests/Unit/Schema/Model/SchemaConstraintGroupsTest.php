@@ -10,6 +10,7 @@ use Duyler\OpenApi\Schema\Model\Internal\CompositionFields;
 use Duyler\OpenApi\Schema\Model\Internal\ObjectFields;
 use Duyler\OpenApi\Schema\Model\Internal\ScalarFields;
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Schema\Model\Xml;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -435,5 +436,165 @@ final class SchemaConstraintGroupsTest extends TestCase
 
         self::assertSame($newOneOf, $result->oneOf);
         self::assertNotNull($result->anyOf);
+    }
+
+    #[Test]
+    public function with_override_groups_flips_boolean_back_to_false(): void
+    {
+        $original = new Schema(
+            deprecated: true,
+            readOnly: true,
+            writeOnly: true,
+            hasDefault: true,
+            hasConst: true,
+            nullable: true,
+        );
+
+        $result = $original->withOverrideGroups(
+            scalar: new ScalarFields(
+                deprecated: false,
+                readOnly: false,
+                writeOnly: false,
+                hasDefault: false,
+                hasConst: false,
+            ),
+            array: new ArrayFields(),
+            object: new ObjectFields(),
+            composition: new CompositionFields(),
+            nullable: false,
+        );
+
+        self::assertFalse($result->deprecated);
+        self::assertFalse($result->readOnly);
+        self::assertFalse($result->writeOnly);
+        self::assertFalse($result->hasDefault);
+        self::assertFalse($result->hasConst);
+        self::assertFalse($result->nullable);
+    }
+
+    #[Test]
+    public function with_override_groups_ref_family_replaces_ref(): void
+    {
+        $original = new Schema(ref: '#/components/schemas/Old');
+
+        $result = $original->withOverrideGroups(
+            scalar: new ScalarFields(
+                ref: '#/components/schemas/New',
+                refSummary: 'New summary',
+                refDescription: 'New description',
+            ),
+            array: new ArrayFields(),
+            object: new ObjectFields(),
+            composition: new CompositionFields(),
+        );
+
+        self::assertSame('#/components/schemas/New', $result->ref);
+        self::assertSame('New summary', $result->refSummary);
+        self::assertSame('New description', $result->refDescription);
+    }
+
+    #[Test]
+    public function with_override_groups_replaces_schema_or_bool_union_fields(): void
+    {
+        $original = new Schema(
+            type: 'object',
+            additionalProperties: true,
+            unevaluatedProperties: new Schema(type: 'string'),
+            contentSchema: false,
+        );
+
+        $newAdditional = new Schema(type: 'integer');
+        $result = $original->withOverrideGroups(
+            scalar: new ScalarFields(contentSchema: true),
+            array: new ArrayFields(),
+            object: new ObjectFields(
+                additionalProperties: $newAdditional,
+                unevaluatedProperties: false,
+            ),
+            composition: new CompositionFields(),
+        );
+
+        self::assertSame($newAdditional, $result->additionalProperties);
+        self::assertFalse($result->unevaluatedProperties);
+        self::assertTrue($result->contentSchema);
+    }
+
+    #[Test]
+    public function with_override_groups_replaces_discriminator_and_xml(): void
+    {
+        $original = new Schema(
+            xml: new Xml(name: 'old'),
+            discriminator: new Discriminator(propertyName: 'type', mapping: ['a' => '#/A']),
+        );
+
+        $newXml = new Xml(name: 'new', wrapped: true);
+        $newDiscriminator = new Discriminator(propertyName: 'kind');
+
+        $result = $original->withOverrideGroups(
+            scalar: new ScalarFields(xml: $newXml, discriminator: $newDiscriminator),
+            array: new ArrayFields(),
+            object: new ObjectFields(),
+            composition: new CompositionFields(),
+        );
+
+        self::assertSame($newXml, $result->xml);
+        self::assertSame($newDiscriminator, $result->discriminator);
+    }
+
+    #[Test]
+    public function with_override_groups_replaces_default_with_explicit_value(): void
+    {
+        $original = new Schema(
+            type: 'string',
+            default: 'old',
+            hasDefault: true,
+        );
+
+        $result = $original->withOverrideGroups(
+            scalar: new ScalarFields(default: '', hasDefault: false),
+            array: new ArrayFields(),
+            object: new ObjectFields(),
+            composition: new CompositionFields(),
+        );
+
+        self::assertSame('', $result->default);
+        self::assertFalse($result->hasDefault);
+    }
+
+    #[Test]
+    public function with_override_groups_is_immutable_original_unchanged(): void
+    {
+        $original = new Schema(type: 'string', title: 'Original');
+
+        $result = $original->withOverrideGroups(
+            scalar: new ScalarFields(type: 'integer'),
+            array: new ArrayFields(),
+            object: new ObjectFields(),
+            composition: new CompositionFields(),
+        );
+
+        self::assertSame('string', $original->type);
+        self::assertSame('Original', $original->title);
+        self::assertSame('integer', $result->type);
+        self::assertSame('Original', $result->title);
+    }
+
+    #[Test]
+    public function with_override_groups_chains(): void
+    {
+        $schema = new Schema(type: 'object');
+        $array = new ArrayFields();
+        $object = new ObjectFields();
+        $composition = new CompositionFields();
+
+        $chained = $schema
+            ->withOverrideGroups(scalar: new ScalarFields(title: 'First'), array: $array, object: $object, composition: $composition)
+            ->withOverrideGroups(scalar: new ScalarFields(description: 'Second'), array: $array, object: $object, composition: $composition)
+            ->withOverrideGroups(scalar: new ScalarFields(deprecated: true), array: $array, object: $object, composition: $composition);
+
+        self::assertSame('object', $chained->type);
+        self::assertSame('First', $chained->title);
+        self::assertSame('Second', $chained->description);
+        self::assertTrue($chained->deprecated);
     }
 }

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Exception;
 
-use Deprecated;
-
 interface ValidationErrorInterface
 {
     public function keyword(): string;
@@ -22,7 +20,4 @@ interface ValidationErrorInterface
     public function params(): array;
 
     public function suggestion(): ?string;
-
-    #[Deprecated(message: 'Use keyword() instead. This method will be removed in 2.0.')]
-    public function getType(): string;
 }

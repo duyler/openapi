@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
@@ -38,7 +39,7 @@ final readonly class PropertiesValidator extends AbstractSchemaValidator impleme
 
         $validator = $this->createSchemaValidator();
         $nullableAsType = $context?->nullableAsType ?? true;
-        $context ??= ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
+        $context ??= ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool(), nullableAsType: $nullableAsType));
 
         foreach ($schema->properties as $name => $propertySchema) {
             if (false === array_key_exists($name, $data)) {

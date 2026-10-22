@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Functional\Validator;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Operation;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
@@ -95,7 +96,7 @@ YAML;
             $validator->validateResponse($response, $operation);
             $this->fail('Expected ValidationException to be thrown');
         } catch (ValidationException $e) {
-            $formatted = $validator->getFormattedErrors($e);
+            $formatted = (new SimpleFormatter())->formatException($e);
             $this->assertIsString($formatted);
             $this->assertNotEmpty($formatted);
         }

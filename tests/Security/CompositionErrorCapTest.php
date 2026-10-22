@@ -13,6 +13,7 @@ use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\SchemaValidator\AllOfValidator;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
@@ -46,7 +47,7 @@ final class CompositionErrorCapTest extends TestCase
 
         $schema = new Schema(allOf: $subSchemas);
         $data = [];
-        $context = ValidationContext::create(pool: new ValidatorPool());
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
 
         $caught = null;
 

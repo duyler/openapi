@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Event\ValidationWarningEvent;
 use Duyler\OpenApi\Event\ArrayDispatcher;
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\SchemaValidator\DeprecatedValidator;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
@@ -251,7 +252,7 @@ class DeprecatedValidatorTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
         $context->enterBreadcrumb('root');
 
         $validator->validate(['oldField' => 'value'], $schema, $context);

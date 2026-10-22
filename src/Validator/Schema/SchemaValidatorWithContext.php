@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Schema\Internal\CompositionResolver;
 use Duyler\OpenApi\Validator\Schema\Internal\PropertiesAndItemsDispatcher;
@@ -57,13 +58,13 @@ final readonly class SchemaValidatorWithContext
 
     public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidatorMode $mode = null): void
     {
-        $context = ValidationContext::create(
-            $this->dependencies->pool,
-            $this->dependencies->errorFormatter,
-            $this->configuration->nullableAsType,
-            $this->configuration->emptyArrayStrategy,
-            $mode,
-        );
+        $context = ValidationContext::fromInit(new ValidationContextInit(
+            pool: $this->dependencies->pool,
+            errorFormatter: $this->dependencies->errorFormatter,
+            nullableAsType: $this->configuration->nullableAsType,
+            emptyArrayStrategy: $this->configuration->emptyArrayStrategy,
+            mode: $mode,
+        ));
 
         $this->doValidate($data, $schema, $context, true);
     }

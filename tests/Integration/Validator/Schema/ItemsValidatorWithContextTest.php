@@ -16,6 +16,7 @@ use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
@@ -45,7 +46,7 @@ final class ItemsValidatorWithContextTest extends TestCase
             '3.1.0',
             new InfoObject('Test API', '1.0.0'),
         );
-        $this->context = ValidationContext::create(pool: $this->pool);
+        $this->context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
         $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
         $this->validator = new ItemsValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
     }
@@ -102,7 +103,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $data = ['value1', 'value2'];
 
-        $customContext = ValidationContext::create(pool: $this->pool);
+        $customContext = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
         $this->validator->validateWithContext($data, $schema, $customContext);
 
         $this->expectNotToPerformAssertions();
@@ -119,7 +120,7 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $data = ['first', 'second', 'third'];
 
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
 
         $this->validator->validateWithContext($data, $schema, $context);
 
@@ -456,7 +457,7 @@ final class ItemsValidatorWithContextTest extends TestCase
             items: $itemSchema,
         );
 
-        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+        $nullableContext = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $data = ['valid', null, 'also valid'];
 
@@ -644,7 +645,7 @@ final class ItemsValidatorWithContextTest extends TestCase
             ),
         );
 
-        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+        $nullableContext = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $validator->validateWithContext([null], $schema, $nullableContext);
 
@@ -680,7 +681,7 @@ final class ItemsValidatorWithContextTest extends TestCase
             ),
         );
 
-        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+        $nullableContext = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $this->expectException(ValidationException::class);
 
@@ -716,7 +717,7 @@ final class ItemsValidatorWithContextTest extends TestCase
             ),
         );
 
-        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+        $nullableContext = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $validator->validateWithContext([null], $schema, $nullableContext);
 
@@ -752,7 +753,7 @@ final class ItemsValidatorWithContextTest extends TestCase
             ),
         );
 
-        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+        $nullableContext = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $validator->validateWithContext(['hello', 'world'], $schema, $nullableContext);
 

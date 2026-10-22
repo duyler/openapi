@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
 use Override;
@@ -77,7 +78,7 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
             $value = $data[$propertyName];
 
             if (null === $context) {
-                $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
+                $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool(), nullableAsType: $nullableAsType));
             }
 
             $context->enterBreadcrumb($propertyName);

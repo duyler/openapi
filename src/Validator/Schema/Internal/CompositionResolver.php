@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Schema\Internal;
 
+use Duyler\OpenApi\Schema\Model\Internal\ArrayFields;
+use Duyler\OpenApi\Schema\Model\Internal\CompositionFields;
+use Duyler\OpenApi\Schema\Model\Internal\ObjectFields;
+use Duyler\OpenApi\Schema\Model\Internal\ScalarFields;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
@@ -66,10 +70,11 @@ final class CompositionResolver
             return $schema;
         }
 
-        $resolved = $schema->withOverrides(
-            allOf: $allOf,
-            anyOf: $anyOf,
-            oneOf: $oneOf,
+        $resolved = $schema->withOverrideGroups(
+            scalar: new ScalarFields(),
+            array: new ArrayFields(),
+            object: new ObjectFields(),
+            composition: new CompositionFields(allOf: $allOf, anyOf: $anyOf, oneOf: $oneOf),
         );
 
         $this->resolvedCache[$schema] = $resolved;

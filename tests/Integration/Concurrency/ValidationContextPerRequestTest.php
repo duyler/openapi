@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Integration\Concurrency;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Validator\Error\BreadcrumbManager;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -137,14 +137,14 @@ YAML;
     {
         $pool = new ValidatorPool();
 
-        $contextA = ValidationContext::create(
+        $contextA = ValidationContext::fromInit(new ValidationContextInit(
             pool: $pool,
             errorFormatter: new SimpleFormatter(),
-        );
-        $contextB = ValidationContext::create(
+        ));
+        $contextB = ValidationContext::fromInit(new ValidationContextInit(
             pool: $pool,
             errorFormatter: new SimpleFormatter(),
-        );
+        ));
 
         $contextA->enterBreadcrumb('users');
         $contextB->enterBreadcrumb('items');
@@ -176,8 +176,8 @@ YAML;
     {
         $pool = new ValidatorPool();
 
-        $contextA = ValidationContext::create(pool: $pool);
-        $contextB = ValidationContext::create(pool: $pool);
+        $contextA = ValidationContext::fromInit(new ValidationContextInit(pool: $pool));
+        $contextB = ValidationContext::fromInit(new ValidationContextInit(pool: $pool));
 
         self::assertSame(0, $contextA->depth());
         self::assertSame(0, $contextB->depth());
@@ -197,29 +197,23 @@ YAML;
     }
 
     #[Test]
-    public function shared_breadcrumb_manager_proves_isolation_failure_when_shared(): void
+    public function from_init_contexts_have_fully_independent_breadcrumbs(): void
     {
         $pool = new ValidatorPool();
-        $sharedBreadcrumbs = BreadcrumbManager::create();
 
-        $contextA = new ValidationContext(
-            breadcrumbs: $sharedBreadcrumbs,
+        $contextA = ValidationContext::fromInit(new ValidationContextInit(
             pool: $pool,
             errorFormatter: new SimpleFormatter(),
-        );
-        $contextB = new ValidationContext(
-            breadcrumbs: $sharedBreadcrumbs,
+        ));
+        $contextB = ValidationContext::fromInit(new ValidationContextInit(
             pool: $pool,
             errorFormatter: new SimpleFormatter(),
-        );
+        ));
 
         $contextA->enterBreadcrumb('a');
         $contextB->enterBreadcrumb('b');
 
-        self::assertSame('/a/b', $contextA->breadcrumbs->currentPath());
-        self::assertSame('/a/b', $contextB->breadcrumbs->currentPath());
-
-        $contextA->leaveBreadcrumb();
-        $contextB->leaveBreadcrumb();
+        self::assertSame('/a', $contextA->breadcrumbs->currentPath(), 'Context A must never observe context B breadcrumb.');
+        self::assertSame('/b', $contextB->breadcrumbs->currentPath(), 'Context B must never observe context A breadcrumb.');
     }
 }

@@ -18,7 +18,6 @@ use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Request\RequestValidatorInterface;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Override;
-use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -148,22 +147,6 @@ YAML;
         $operation = $validator->validateCallback($request, 'myCallback');
 
         $this->assertSame('myCallback', $operation->path);
-    }
-
-    #[Test]
-    #[IgnoreDeprecations]
-    public function builder_enable_strict_is_backward_compatible_noop(): void
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::CALLBACK_RUNTIME_TEMPLATE_YAML)
-            ->enableStrictCallbackRuntimeTemplate()
-            ->build();
-
-        $request = $this->psrFactory->createServerRequest('POST', '/attacker-controlled-url');
-
-        $this->expectException(UnresolvableCallbackPathException::class);
-
-        $validator->validateCallback($request, 'myCallback');
     }
 
     /**

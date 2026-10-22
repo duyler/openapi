@@ -44,8 +44,6 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-use Deprecated;
-
 use function dirname;
 use function realpath;
 use function sprintf;
@@ -219,22 +217,6 @@ final readonly class OpenApiValidatorBuilder
     public function withMaxRegexBacktracks(int $maxBacktracks): self
     {
         return $this->with(new BuilderConfig(maxRegexBacktracks: $maxBacktracks));
-    }
-
-    #[Deprecated(message: <<<'TXT'
-    since 1.x, will be removed in 2.0. Strict mode is now the
-                 default: callback expressions that use runtime templates
-                 such as `{$request.body#/callback_url}` throw an
-                 {@see \Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException} by default instead
-                 of being treated as wildcards that accept any URL. This
-                 method is retained as a no-op for backward compatibility
-                 with callers that explicitly opted in. To restore the
-                 legacy wildcard behaviour, use
-                 {@see disableStrictCallbackRuntimeTemplate()}.
-    TXT)]
-    public function enableStrictCallbackRuntimeTemplate(): self
-    {
-        return $this;
     }
 
     public function disableStrictCallbackRuntimeTemplate(): self

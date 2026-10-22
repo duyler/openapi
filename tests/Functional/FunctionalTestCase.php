@@ -8,10 +8,10 @@ use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\Parser\YamlParser;
 use Duyler\OpenApi\Schema\SchemaParserInterface;
-use Duyler\OpenApi\Validator\Error\BreadcrumbManager;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Error\Formatter\JsonFormatter;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
@@ -51,11 +51,10 @@ abstract class FunctionalTestCase extends TestCase
 
     protected function createContext(ErrorFormatterInterface $formatter = new SimpleFormatter()): ValidationContext
     {
-        return new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        return ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: $formatter,
-        );
+        ));
     }
 
     protected function createValidator(): SchemaValidatorWithContext
@@ -140,7 +139,7 @@ abstract class FunctionalTestCase extends TestCase
         }
     }
 
-    protected function getFormattedErrors(ValidationException $e, ErrorFormatterInterface $formatter): array
+    protected function formatValidationErrors(ValidationException $e, ErrorFormatterInterface $formatter): array
     {
         $errors = [];
         foreach ($e->getErrors() as $error) {

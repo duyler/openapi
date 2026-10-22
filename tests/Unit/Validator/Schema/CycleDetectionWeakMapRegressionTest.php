@@ -6,6 +6,10 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Schema;
 
 use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\InfoObject;
+use Duyler\OpenApi\Schema\Model\Internal\ArrayFields;
+use Duyler\OpenApi\Schema\Model\Internal\CompositionFields;
+use Duyler\OpenApi\Schema\Model\Internal\ObjectFields;
+use Duyler\OpenApi\Schema\Model\Internal\ScalarFields;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
@@ -154,7 +158,12 @@ final class CycleDetectionWeakMapRegressionTest extends TestCase
     private function createSchemaSelfReferencingViaComposition(): Schema
     {
         $schema = new Schema(type: 'object');
-        $schema = $schema->withOverrides(oneOf: [$schema]);
+        $schema = $schema->withOverrideGroups(
+            scalar: new ScalarFields(),
+            array: new ArrayFields(),
+            object: new ObjectFields(),
+            composition: new CompositionFields(oneOf: [$schema]),
+        );
 
         return $schema;
     }

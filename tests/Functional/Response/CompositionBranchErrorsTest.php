@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Functional\Response;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
+use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
@@ -64,7 +65,7 @@ final class CompositionBranchErrorsTest extends TestCase
         $exception = $this->assertRejects('null');
 
         $this->assertNotEmpty($exception->getErrors());
-        $this->assertNotSame('', $this->validator->getFormattedErrors($exception));
+        $this->assertNotSame('', (new SimpleFormatter())->formatException($exception));
         $this->assertSame('All of the schemas must match, but 1 failed', $exception->getMessage());
     }
 

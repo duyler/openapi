@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Functional\Schema;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
+use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -147,7 +148,7 @@ final class CompositionBranchErrorsTest extends TestCase
         foreach ($cases as [$schema, $data]) {
             $exception = $this->assertRejects($schema, $data);
 
-            $this->assertNotSame('', $this->validator->getFormattedErrors($exception), $schema);
+            $this->assertNotSame('', (new SimpleFormatter())->formatException($exception), $schema);
             $this->assertNoDuplicates($exception, $schema);
         }
     }

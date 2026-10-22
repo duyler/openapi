@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Functional\Request;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
+use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\MissingRequestBodyException;
 use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
@@ -517,7 +518,7 @@ XML;
 
             return '';
         } catch (ValidationException $e) {
-            return $e->getMessage() . $validator->getFormattedErrors($e);
+            return $e->getMessage() . (new SimpleFormatter())->formatException($e);
         } catch (AbstractValidationError $e) {
             return $e->getMessage() . ($e->suggestion() ?? '');
         } catch (RuntimeException $e) {

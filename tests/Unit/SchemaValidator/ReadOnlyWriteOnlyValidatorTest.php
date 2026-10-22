@@ -6,9 +6,9 @@ namespace Duyler\OpenApi\Test\Unit\SchemaValidator;
 
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Schema\Model\Schema;
-use Duyler\OpenApi\Validator\Error\BreadcrumbManager;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
@@ -40,12 +40,11 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
             ],
         );
 
-        $context = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: new SimpleFormatter(),
             mode: ValidatorMode::Request,
-        );
+        ));
 
         $data = ['id' => '123', 'name' => 'test'];
 
@@ -67,12 +66,11 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
             ],
         );
 
-        $context = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: new SimpleFormatter(),
             mode: ValidatorMode::Response,
-        );
+        ));
 
         $data = ['password' => 'secret', 'name' => 'test'];
 
@@ -94,12 +92,11 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
             ],
         );
 
-        $context = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: new SimpleFormatter(),
             mode: ValidatorMode::Response,
-        );
+        ));
 
         $data = ['id' => '123', 'name' => 'test'];
 
@@ -120,12 +117,11 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
             ],
         );
 
-        $context = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: new SimpleFormatter(),
             mode: ValidatorMode::Request,
-        );
+        ));
 
         $data = ['password' => 'secret', 'name' => 'test'];
 
@@ -164,12 +160,11 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
             ],
         );
 
-        $context = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: new SimpleFormatter(),
             mode: ValidatorMode::Request,
-        );
+        ));
 
         $data = ['name' => 'test'];
 
@@ -187,12 +182,11 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
             readOnly: true,
         );
 
-        $context = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: new SimpleFormatter(),
             mode: ValidatorMode::Request,
-        );
+        ));
 
         $validator->validate('some string', $schema, $context);
 
@@ -205,12 +199,11 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
         $validator = new ReadOnlyWriteOnlyValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()), pool: $this->pool, formatRegistry: BuiltinFormats::create()));
         $schema = new Schema(type: 'object');
 
-        $context = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: new SimpleFormatter(),
             mode: ValidatorMode::Request,
-        );
+        ));
 
         $validator->validate(['foo' => 'bar'], $schema, $context);
 
@@ -230,21 +223,19 @@ final class ReadOnlyWriteOnlyValidatorTest extends TestCase
             ],
         );
 
-        $requestContext = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $requestContext = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: new SimpleFormatter(),
             mode: ValidatorMode::Request,
-        );
+        ));
 
         $validator->validate(['password' => 'secret', 'name' => 'test'], $schema, $requestContext);
 
-        $responseContext = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $responseContext = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: new SimpleFormatter(),
             mode: ValidatorMode::Response,
-        );
+        ));
 
         $validator->validate(['id' => '123', 'name' => 'test'], $schema, $responseContext);
 

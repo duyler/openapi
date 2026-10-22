@@ -14,6 +14,7 @@ use PHPUnit\Framework\TestCase;
 use Duyler\OpenApi\Event\ArrayDispatcher;
 use Duyler\OpenApi\Event\ValidationFinishedEvent;
 use Duyler\OpenApi\Event\ValidationStartedEvent;
+use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Webhook\Exception\UnknownWebhookException;
 use Exception;
@@ -136,7 +137,7 @@ YAML;
             $this->validator->validateSchema(['age' => 30], '#/components/schemas/User');
             $this->fail('Expected ValidationException');
         } catch (ValidationException $e) {
-            $formatted = $this->validator->getFormattedErrors($e);
+            $formatted = (new SimpleFormatter())->formatException($e);
 
             self::assertIsString($formatted);
             self::assertNotEmpty($formatted);

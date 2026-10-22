@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 
 #[CoversClass(OneOfValidator::class)]
@@ -173,7 +174,7 @@ class OneOfValidatorTest extends TestCase
             oneOf: [$schema1, $schema2],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $this->validator->validate(null, $schema, $context);
 
         $this->expectNotToPerformAssertions();
@@ -188,7 +189,7 @@ class OneOfValidatorTest extends TestCase
             oneOf: [$schema1, $schema2],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $this->expectException(ValidationException::class);
 
         $this->validator->validate(null, $schema, $context);
@@ -203,7 +204,7 @@ class OneOfValidatorTest extends TestCase
             oneOf: [$schema1, $schema2],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $this->expectException(OneOfError::class);
 
         $this->validator->validate('hello', $schema, $context);
@@ -218,7 +219,7 @@ class OneOfValidatorTest extends TestCase
             oneOf: [$schema1, $schema2],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $this->validator->validate(42, $schema, $context);
 
         $this->expectNotToPerformAssertions();
@@ -233,7 +234,7 @@ class OneOfValidatorTest extends TestCase
             oneOf: [$schema1, $schema2],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: false);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: false));
         $this->expectException(ValidationException::class);
         $this->expectExceptionMessage('Exactly one of the schemas must match, but none did');
 
@@ -250,7 +251,7 @@ class OneOfValidatorTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $this->expectException(OneOfError::class);
 
@@ -267,7 +268,7 @@ class OneOfValidatorTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $this->validator->validate(null, $schema, $context);
 
         $this->expectNotToPerformAssertions();
@@ -297,7 +298,7 @@ class OneOfValidatorTest extends TestCase
             oneOf: [new Schema(type: 'object', required: ['id'])],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: false);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: false));
 
         $this->expectException(ValidationException::class);
 

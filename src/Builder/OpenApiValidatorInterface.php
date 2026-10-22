@@ -6,7 +6,6 @@ namespace Duyler\OpenApi\Builder;
 
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Schema\OpenApiDocument;
-use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Exception\BodyTooLargeException;
 use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException;
@@ -17,7 +16,6 @@ use Duyler\OpenApi\Validator\Operation;
 use InvalidArgumentException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Deprecated;
 use RuntimeException;
 
 /**
@@ -72,20 +70,6 @@ interface OpenApiValidatorInterface
      * @throws ValidationException If validation fails
      */
     public function validateSchema(mixed $data, string $schemaRef): void;
-
-    /**
-     * Get validation errors as formatted string.
-     *
-     * @see ErrorFormatterInterface::formatException()
-     *
-     * @param ValidationException $e Validation exception containing errors
-     * @return string Formatted error messages
-     */
-    #[Deprecated(message: <<<'TXT'
-    Use ErrorFormatterInterface::formatException() instead.
-                 This method will be removed in 2.0.
-    TXT)]
-    public function getFormattedErrors(ValidationException $e): string;
 
     /**
      * Validate webhook request against OpenAPI specification and return matched operation.

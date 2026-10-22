@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\OneOfError;
 use Duyler\OpenApi\Validator\Exception\TooManyErrorsError;
@@ -219,6 +220,6 @@ final class CompositionBranchOrderIndependenceTest extends TestCase
 
     private function context(): ValidationContext
     {
-        return ValidationContext::create($this->pool);
+        return ValidationContext::fromInit(new ValidationContextInit($this->pool));
     }
 }

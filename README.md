@@ -87,7 +87,6 @@ The interface exposes the following methods:
 | `validateRequest(ServerRequestInterface $request): Operation` | Validate and return matched operation |
 | `validateResponse(ResponseInterface $response, Operation $operation): void` | Validate response against operation |
 | `validateSchema(mixed $data, string $schemaRef): void` | Validate data against a schema reference |
-| `getFormattedErrors(ValidationException $e): string` | Format validation errors as string (**deprecated** in favor of `ErrorFormatterInterface::formatException()`, removed in 2.0) |
 | `validateWebhook(ServerRequestInterface $request, string $name): Operation` | Validate webhook request |
 | `validateCallback(ServerRequestInterface $request, string $name): Operation` | Validate callback request |
 | `getDocument(): OpenApiDocument` | Returns the loaded OpenAPI document for introspection or routing maps (available after `build()`) |
@@ -241,8 +240,6 @@ $validator = OpenApiValidatorBuilder::create()
 ```
 
 > **SECURITY WARNING**: `disableStrictCallbackRuntimeTemplate()` disables the protection against SSRF via attacker-controlled callback URLs: declared security checks still pass against an arbitrary URL when the runtime template is unresolvable. Use it only when callback URLs are validated at the application level (an allowlist of permitted outbound hosts, signed callback URLs, or destination validation before any outbound request is issued).
-
-The previous opt-in method `enableStrictCallbackRuntimeTemplate()` is retained as a deprecated no-op for backward compatibility: strict behaviour is now the default. The method will be removed in 2.0.
 
 ### Link Resolution
 
@@ -521,7 +518,6 @@ $validator = OpenApiValidatorBuilder::create()
 | `enableStrictFormats()` | Reject unknown format values instead of skipping | `false` |
 | `enableReportDeprecated()` | Log deprecated schema elements via PSR-3 logger | `true` |
 | `enableServerPathResolution()` | Strip server base path from request path before matching | `false` |
-| `enableStrictCallbackRuntimeTemplate()` | Deprecated no-op: strict mode is now the default. Will be removed in 2.0 | `true` (effective) |
 | `disableStrictCallbackRuntimeTemplate()` | Opt out of strict callback runtime template resolution. **SECURITY WARNING**: unresolvable callback expressions like `{$request.body#/callback_url}` are treated as wildcards that accept any URL, enabling SSRF via attacker-controlled callback URLs. Use only when callback URLs are validated at the application level. | `false` (opt-in legacy mode) |
 | `withExternalRefAllowedRoot(string $path)` | Directory that external `file://` `$ref` references must stay inside | `null` (auto-derived from spec path for file-loaded specs) |
 | `withExternalRefMaxBytes(int $bytes)` | Set max external ref file size | `10485760` (10 MB) |
@@ -714,6 +710,7 @@ All regular expressions in schemas are validated at parse time; an invalid patte
 All validation errors throw `ValidationException` which contains detailed error information:
 
 ```php
+use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 
 try {
@@ -731,8 +728,8 @@ try {
         );
     }
 
-    // Get formatted errors
-    $formatted = $validator->getFormattedErrors($e);
+    // Format errors via a formatter
+    $formatted = (new SimpleFormatter())->formatException($e);
     echo $formatted;
 }
 ```
@@ -763,8 +760,6 @@ Error formatters omit raw values unless constructed with `includeSensitiveValues
 ### Validation Error Reference
 
 All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schemaPath()`, `keyword()`, `message()`, `params()`, and `suggestion()` methods.
-
-> Note: The `getType()` method is deprecated in favor of `keyword()` and will be removed in 2.0. Both return the same validation keyword (e.g., `'type'`, `'minLength'`, `'format'`). Use `keyword()` in new code.
 
 #### Type and Value Errors
 
@@ -905,7 +900,7 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
-To format a `ValidationException` without holding a reference to the validator, call `ErrorFormatterInterface::formatException()` directly. This is the canonical replacement for the deprecated `OpenApiValidatorInterface::getFormattedErrors()` (removed in 2.0):
+To format a `ValidationException` without holding a reference to the validator, call `ErrorFormatterInterface::formatException()` directly:
 
 ```php
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;

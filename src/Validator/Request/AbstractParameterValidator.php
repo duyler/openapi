@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
@@ -26,11 +27,11 @@ abstract readonly class AbstractParameterValidator
     {
         $location = $this->getLocation();
 
-        $context = ValidationContext::create(
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             nullableAsType: $this->config->nullableAsType,
             emptyArrayStrategy: $this->config->emptyArrayStrategy,
-        );
+        ));
 
         foreach ($parameterSchemas as $param) {
             if (false === $param instanceof Parameter) {

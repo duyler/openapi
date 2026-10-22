@@ -19,6 +19,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 
@@ -208,7 +209,7 @@ class ItemsValidatorTest extends TestCase
             items: $itemSchema,
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $this->validator->validate(['a', null, 'b'], $schema, $context);
 
         $this->expectNotToPerformAssertions();
@@ -223,7 +224,7 @@ class ItemsValidatorTest extends TestCase
             items: $itemSchema,
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $this->validator->validate(['hello', 'world'], $schema, $context);
 
         $this->expectNotToPerformAssertions();
@@ -255,7 +256,7 @@ class ItemsValidatorTest extends TestCase
             items: $itemSchema,
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $this->validator->validate([1, 2, 3], $schema, $context);
 
         $this->expectNotToPerformAssertions();

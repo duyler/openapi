@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
@@ -615,7 +616,7 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: false,
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool));
         $context->markPropertyEvaluated('name');
 
         $succeeded = false;
@@ -638,7 +639,7 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: false,
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool));
         $context->markPropertyEvaluated('known');
 
         $this->expectException(UnevaluatedPropertyError::class);
@@ -658,7 +659,7 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: false,
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool));
         $context->markPropertyEvaluated('from_annotation');
 
         $succeeded = false;
@@ -685,7 +686,7 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: false,
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool));
         $context->markPropertyEvaluated('annotated');
 
         $succeeded = false;
@@ -731,7 +732,7 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: $unevaluatedSchema,
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool));
         $context->markPropertyEvaluated('evaluated_by_branch');
 
         $succeeded = false;
@@ -775,7 +776,7 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
             unevaluatedProperties: false,
         );
 
-        $context = ValidationContext::create($this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool));
 
         $this->expectException(UnevaluatedPropertyError::class);
 

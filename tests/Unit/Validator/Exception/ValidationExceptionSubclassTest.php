@@ -68,11 +68,6 @@ final class ValidationExceptionSubclassTest extends TestCase
             {
                 return null;
             }
-
-            public function getType(): string
-            {
-                return 'type';
-            }
         };
 
         $subclass = new class ('subclass', 0, null, [$formatError]) extends ValidationException {

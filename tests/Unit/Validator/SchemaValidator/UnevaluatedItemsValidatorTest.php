@@ -19,6 +19,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 
 use function sprintf;
@@ -269,7 +270,7 @@ class UnevaluatedItemsValidatorTest extends TestCase
             unevaluatedItems: $unevaluatedSchema,
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $succeeded = false;
 
@@ -342,7 +343,7 @@ class UnevaluatedItemsValidatorTest extends TestCase
             unevaluatedItems: $unevaluated,
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $context->markItemEvaluated(0);
         $context->markItemEvaluated(1);
 
@@ -388,7 +389,7 @@ class UnevaluatedItemsValidatorTest extends TestCase
             unevaluatedItems: $unevaluated,
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $context->markItemEvaluated(0);
         $context->markItemEvaluated(1);
         $context->markItemEvaluated(2);
@@ -459,7 +460,7 @@ class UnevaluatedItemsValidatorTest extends TestCase
             unevaluatedItems: $unevaluated,
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $context->markItemEvaluated(0);
         $context->markItemEvaluated(99);
 

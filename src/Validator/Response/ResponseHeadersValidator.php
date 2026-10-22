@@ -10,6 +10,7 @@ use Duyler\OpenApi\Validator\Coercion\Internal\BooleanCoercer;
 use Duyler\OpenApi\Validator\Coercion\Internal\IntegerCoercer;
 use Duyler\OpenApi\Validator\Coercion\NumberStringNormalizer;
 use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
 use Duyler\OpenApi\Validator\Exception\MissingParameterException;
@@ -62,11 +63,11 @@ final readonly class ResponseHeadersValidator
 
             if (null !== $value && null !== $header->schema) {
                 $coercedValue = $this->coerceValue($value, $header->schema, $name);
-                $context = ValidationContext::create(
+                $context = ValidationContext::fromInit(new ValidationContextInit(
                     pool: $this->pool,
                     nullableAsType: $this->config->nullableAsType,
                     emptyArrayStrategy: $this->config->emptyArrayStrategy,
-                );
+                ));
                 $this->schemaValidator->validate($coercedValue, $header->schema, $context);
             }
         }

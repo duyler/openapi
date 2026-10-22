@@ -15,15 +15,4 @@
             <directory name="vendor" />
         </ignoreFiles>
     </projectFiles>
-
-    <issueHandlers>
-        <DeprecatedMethod>
-            <errorLevel type="suppress">
-                <referencedMethod name="Duyler\OpenApi\Schema\Model\Schema::__construct" />
-                <referencedMethod name="Duyler\OpenApi\Schema\Model\Schema::withOverrides" />
-                <referencedMethod name="Duyler\OpenApi\Validator\Error\ValidationContext::__construct" />
-                <referencedMethod name="Duyler\OpenApi\Validator\Error\ValidationContext::create" />
-            </errorLevel>
-        </DeprecatedMethod>
-    </issueHandlers>
 </psalm>

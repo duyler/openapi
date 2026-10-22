@@ -19,9 +19,8 @@ interface ErrorFormatterInterface
     /**
      * Format a ValidationException's errors into a single string.
      *
-     * Replaces OpenApiValidatorInterface::getFormattedErrors() as the
-     * canonical way to format validation errors without holding a
-     * reference to the validator.
+     * This is the canonical way to format validation errors without
+     * holding a reference to the validator.
      */
     public function formatException(ValidationException $exception): string;
 }
