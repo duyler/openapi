@@ -110,6 +110,54 @@ final class SchemaKeywordAccumulatorTest extends TestCase
         $this->accumulator->schemaList(['allOf' => $value], 'allOf');
     }
 
+    #[Test]
+    public function schema_map_returns_null_for_missing_key(): void
+    {
+        self::assertNull($this->accumulator->schemaMap([], '$defs'));
+    }
+
+    #[Test]
+    public function schema_map_returns_null_for_null_value(): void
+    {
+        self::assertNull($this->accumulator->schemaMap(['$defs' => null], '$defs'));
+    }
+
+    #[Test]
+    public function schema_map_builds_map_from_bool_and_array_values(): void
+    {
+        $map = $this->accumulator->schemaMap(['$defs' => ['a' => ['type' => 'string'], 'b' => true]], '$defs');
+
+        self::assertCount(2, $map);
+        self::assertSame(['a', 'b'], array_keys($map));
+        self::assertInstanceOf(Schema::class, $map['a']);
+        self::assertInstanceOf(Schema::class, $map['b']);
+    }
+
+    #[Test]
+    public function schema_map_returns_empty_map_for_empty_value(): void
+    {
+        self::assertSame([], $this->accumulator->schemaMap(['$defs' => []], '$defs'));
+    }
+
+    #[Test]
+    public function schema_map_throws_with_key_and_type_on_garbage_element(): void
+    {
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Expected array or boolean for schema keyword "$defs", got int');
+
+        $this->accumulator->schemaMap(['$defs' => ['a' => ['type' => 'string'], 'b' => 42]], '$defs');
+    }
+
+    #[Test]
+    #[DataProvider('non_array_list_value_provider')]
+    public function schema_map_throws_invalid_schema_exception_on_non_array_value(mixed $value, string $type): void
+    {
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Expected array for schema keyword "$defs", got ' . $type);
+
+        $this->accumulator->schemaMap(['$defs' => $value], '$defs');
+    }
+
     public static function garbage_value_provider(): array
     {
         return [

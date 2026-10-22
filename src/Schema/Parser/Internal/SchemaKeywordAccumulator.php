@@ -9,6 +9,7 @@ use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\TypeFormatter;
 
+use function array_keys;
 use function array_map;
 use function array_values;
 use function is_array;
@@ -82,6 +83,47 @@ final readonly class SchemaKeywordAccumulator
                 ));
             },
             $items,
+        ));
+    }
+
+    /**
+     * @param array<array-key, mixed> $data
+     * @return ?array<string, Schema>
+     */
+    public function schemaMap(array $data, string $key): ?array
+    {
+        if (false === isset($data[$key])) {
+            return null;
+        }
+
+        if (false === is_array($data[$key])) {
+            throw new InvalidSchemaException(sprintf(
+                'Expected array for schema keyword "%s", got %s',
+                $key,
+                TypeFormatter::format($data[$key]),
+            ));
+        }
+
+        $map = [];
+
+        foreach (array_keys($data[$key]) as $name) {
+            $map[(string) $name] = $this->schemaMapEntry($data[$key][$name], $key);
+        }
+
+        return $map;
+    }
+
+    /** @param mixed $schemaData */
+    private function schemaMapEntry(mixed $schemaData, string $key): Schema
+    {
+        if (is_array($schemaData) || is_bool($schemaData)) {
+            return ($this->recurse)($schemaData);
+        }
+
+        throw new InvalidSchemaException(sprintf(
+            'Expected array or boolean for schema keyword "%s", got %s',
+            $key,
+            TypeFormatter::format($schemaData),
         ));
     }
 }

@@ -38,6 +38,8 @@ final readonly class Schema implements JsonSerializable
      * @param list<mixed>|null $enum
      * @param array<string, mixed>|null $examples
      * @param Xml|null $xml
+     * @param array<string, bool>|null $vocabulary
+     * @param array<string, Schema>|null $defs
      */
     public function __construct(
         public ?string $ref = null,
@@ -97,6 +99,13 @@ final readonly class Schema implements JsonSerializable
         public Schema|bool|null $contentSchema = null,
         public ?string $jsonSchemaDialect = null,
         public ?Xml $xml = null,
+        public ?string $id = null,
+        public ?string $anchor = null,
+        public ?string $dynamicAnchor = null,
+        public ?string $dynamicRef = null,
+        public ?string $comment = null,
+        public ?array $vocabulary = null,
+        public ?array $defs = null,
     ) {}
 
     /**
@@ -235,6 +244,13 @@ final readonly class Schema implements JsonSerializable
             contentSchema: $scalar->contentSchema ?? $this->contentSchema,
             jsonSchemaDialect: $scalar->jsonSchemaDialect ?? $this->jsonSchemaDialect,
             xml: $scalar->xml ?? $this->xml,
+            id: $this->id,
+            anchor: $this->anchor,
+            dynamicAnchor: $this->dynamicAnchor,
+            dynamicRef: $this->dynamicRef,
+            comment: $this->comment,
+            vocabulary: $this->vocabulary,
+            defs: $this->defs,
         );
     }
 

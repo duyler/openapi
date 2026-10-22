@@ -110,6 +110,12 @@ final class TypeHelper
         return ObjectTypeHelper::asStringMapOrNull($value);
     }
 
+    /** @return array<string, bool>|null */
+    public static function asBoolMapOrNull(mixed $value): ?array
+    {
+        return ObjectTypeHelper::asBoolMapOrNull($value);
+    }
+
     /** @return array<string, mixed>|null */
     public static function asStringMixedMapOrNull(mixed $value): ?array
     {

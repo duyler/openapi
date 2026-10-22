@@ -67,6 +67,13 @@ final readonly class SchemaFieldMetadata
             new FieldMetadata('contentSchema', 'contentSchema', FieldMetadata::CATEGORY_OBJECT),
             new FieldMetadata('jsonSchemaDialect', '$schema', FieldMetadata::CATEGORY_FLAT),
             new FieldMetadata('xml', 'xml', FieldMetadata::CATEGORY_FLAT),
+            new FieldMetadata('id', '$id', FieldMetadata::CATEGORY_FLAT),
+            new FieldMetadata('anchor', '$anchor', FieldMetadata::CATEGORY_FLAT),
+            new FieldMetadata('dynamicAnchor', '$dynamicAnchor', FieldMetadata::CATEGORY_FLAT),
+            new FieldMetadata('dynamicRef', '$dynamicRef', FieldMetadata::CATEGORY_FLAT),
+            new FieldMetadata('comment', '$comment', FieldMetadata::CATEGORY_FLAT),
+            new FieldMetadata('vocabulary', '$vocabulary', FieldMetadata::CATEGORY_FLAT),
+            new FieldMetadata('defs', '$defs', FieldMetadata::CATEGORY_OBJECT),
         ];
     }
 }

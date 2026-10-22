@@ -56,6 +56,12 @@ final readonly class ScalarSchemaKeywordParser
      *     example: mixed|null,
      *     examples: array<string, mixed>|null,
      *     enum: list<mixed>|null,
+     *     id: ?string,
+     *     anchor: ?string,
+     *     dynamicAnchor: ?string,
+     *     dynamicRef: ?string,
+     *     comment: ?string,
+     *     vocabulary: array<string, bool>|null,
      * }
      */
     public function build(array $data): array
@@ -100,10 +106,19 @@ final readonly class ScalarSchemaKeywordParser
                 ? TypeHelper::asStringMixedMapOrNull($data['examples'])
                 : null,
             'enum' => TypeHelper::asEnumListOrNull($data['enum'] ?? null),
+            'id' => TypeHelper::asStringOrNull($data['$id'] ?? null),
+            'anchor' => TypeHelper::asStringOrNull($data['$anchor'] ?? null),
+            'dynamicAnchor' => TypeHelper::asStringOrNull($data['$dynamicAnchor'] ?? null),
+            'dynamicRef' => TypeHelper::asStringOrNull($data['$dynamicRef'] ?? null),
+            'comment' => TypeHelper::asStringOrNull($data['$comment'] ?? null),
+            'vocabulary' => TypeHelper::asBoolMapOrNull($data['$vocabulary'] ?? null),
         ];
     }
 
-    /** @param array<array-key, mixed> $data */
+    /**
+     * @param array<array-key, mixed> $data
+     * @return string|array<int, string|null>|null
+     */
     private function resolveType(array $data): string|array|null
     {
         $type = TypeHelper::asTypeOrNull($data['type'] ?? null);

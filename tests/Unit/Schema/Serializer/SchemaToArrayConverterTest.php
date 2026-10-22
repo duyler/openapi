@@ -495,6 +495,13 @@ final class SchemaToArrayConverterTest extends TestCase
             'contentSchema',
             'jsonSchemaDialect',
             'xml',
+            'id',
+            'anchor',
+            'dynamicAnchor',
+            'dynamicRef',
+            'comment',
+            'vocabulary',
+            'defs',
             'hasDefault',
             'hasConst',
         ], array_keys($result));

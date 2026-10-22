@@ -130,6 +130,39 @@ final class TypeHelperCollaboratorsTest extends TestCase
     }
 
     #[Test]
+    public function object_as_bool_map_returns_map(): void
+    {
+        self::assertSame(['core' => true, 'custom' => false], ObjectTypeHelper::asBoolMap(['core' => true, 'custom' => false]));
+    }
+
+    #[Test]
+    public function object_as_bool_map_throws_on_non_array(): void
+    {
+        $this->expectException(TypeError::class);
+        ObjectTypeHelper::asBoolMap('not-a-map');
+    }
+
+    #[Test]
+    public function object_as_bool_map_throws_on_int_key(): void
+    {
+        $this->expectException(TypeError::class);
+        ObjectTypeHelper::asBoolMap([1 => true]);
+    }
+
+    #[Test]
+    public function object_as_bool_map_throws_on_non_bool_value(): void
+    {
+        $this->expectException(TypeError::class);
+        ObjectTypeHelper::asBoolMap(['core' => 'yes']);
+    }
+
+    #[Test]
+    public function object_as_bool_map_or_null_returns_null_for_null(): void
+    {
+        self::assertNull(ObjectTypeHelper::asBoolMapOrNull(null));
+    }
+
+    #[Test]
     public function composition_as_security_list_map_returns_normalized(): void
     {
         $result = CompositionTypeHelper::asSecurityListMap([

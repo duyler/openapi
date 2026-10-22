@@ -11,6 +11,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Parser\Internal\ArraySchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\Internal\CompositionSchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\Internal\ObjectSchemaKeywordParser;
+use Duyler\OpenApi\Schema\Parser\Internal\ResourceSchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\Internal\ScalarSchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\Internal\SchemaKeywordAccumulator;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -25,6 +26,7 @@ use function sprintf;
 #[CoversClass(ArraySchemaKeywordParser::class)]
 #[CoversClass(ObjectSchemaKeywordParser::class)]
 #[CoversClass(CompositionSchemaKeywordParser::class)]
+#[CoversClass(ResourceSchemaKeywordParser::class)]
 #[CoversClass(SchemaKeywordAccumulator::class)]
 final class SchemaKeywordParsersTest extends TestCase
 {
@@ -359,6 +361,106 @@ final class SchemaKeywordParsersTest extends TestCase
         self::assertTrue($args['unevaluatedProperties']);
         self::assertFalse($args['contentSchema']);
         self::assertNull($parser->build(['contentSchema' => null], $recurse)['contentSchema']);
+    }
+
+    #[Test]
+    public function resource_parser_returns_defs_map_with_bool_and_array_entries(): void
+    {
+        $parser = new ResourceSchemaKeywordParser();
+        $recurse = static fn(bool|array $data): Schema => new Schema(type: 'nested');
+
+        $args = $parser->build([
+            '$defs' => [
+                'objectSchema' => ['type' => 'string'],
+                'trueSchema' => true,
+                'falseSchema' => false,
+            ],
+        ], $recurse);
+
+        self::assertSame(['objectSchema', 'trueSchema', 'falseSchema'], array_keys($args['defs']));
+        self::assertInstanceOf(Schema::class, $args['defs']['objectSchema']);
+        self::assertInstanceOf(Schema::class, $args['defs']['trueSchema']);
+        self::assertInstanceOf(Schema::class, $args['defs']['falseSchema']);
+    }
+
+    #[Test]
+    public function resource_parser_returns_null_defs_when_keyword_absent(): void
+    {
+        $args = new ResourceSchemaKeywordParser()->build([], static fn(): Schema => new Schema());
+
+        self::assertNull($args['defs']);
+    }
+
+    #[Test]
+    public function resource_parser_returns_null_defs_for_null_value(): void
+    {
+        $args = new ResourceSchemaKeywordParser()->build(['$defs' => null], static fn(): Schema => new Schema());
+
+        self::assertNull($args['defs']);
+    }
+
+    #[Test]
+    public function resource_parser_throws_on_garbage_defs_element(): void
+    {
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Expected array or boolean for schema keyword "$defs", got int');
+
+        new ResourceSchemaKeywordParser()->build(
+            ['$defs' => ['a' => ['type' => 'string'], 'b' => 42]],
+            static fn(): Schema => new Schema(),
+        );
+    }
+
+    #[Test]
+    #[DataProvider('garbage_keyword_value_provider')]
+    public function resource_parser_throws_on_non_array_defs_value(mixed $value, string $type): void
+    {
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Expected array for schema keyword "$defs", got ' . $type);
+
+        new ResourceSchemaKeywordParser()->build(['$defs' => $value], static fn(): Schema => new Schema());
+    }
+
+    #[Test]
+    public function scalar_parser_collects_resource_identification_keywords(): void
+    {
+        $args = new ScalarSchemaKeywordParser()->build([
+            '$id' => 'https://example.com/root',
+            '$anchor' => 'nameAnchor',
+            '$dynamicAnchor' => 'node',
+            '$dynamicRef' => '#node',
+            '$comment' => 'resource comment',
+            '$vocabulary' => [
+                'https://json-schema.org/draft/2020-12/vocab/core' => true,
+                'https://example.com/vocab/custom' => false,
+            ],
+        ]);
+
+        self::assertSame('https://example.com/root', $args['id']);
+        self::assertSame('nameAnchor', $args['anchor']);
+        self::assertSame('node', $args['dynamicAnchor']);
+        self::assertSame('#node', $args['dynamicRef']);
+        self::assertSame('resource comment', $args['comment']);
+        self::assertSame(
+            [
+                'https://json-schema.org/draft/2020-12/vocab/core' => true,
+                'https://example.com/vocab/custom' => false,
+            ],
+            $args['vocabulary'],
+        );
+    }
+
+    #[Test]
+    public function scalar_parser_defaults_resource_keywords_to_null(): void
+    {
+        $args = new ScalarSchemaKeywordParser()->build([]);
+
+        self::assertNull($args['id']);
+        self::assertNull($args['anchor']);
+        self::assertNull($args['dynamicAnchor']);
+        self::assertNull($args['dynamicRef']);
+        self::assertNull($args['comment']);
+        self::assertNull($args['vocabulary']);
     }
 
     #[Test]
