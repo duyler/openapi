@@ -40,6 +40,7 @@ final readonly class Schema implements JsonSerializable
      * @param Xml|null $xml
      * @param array<string, bool>|null $vocabulary
      * @param array<string, Schema>|null $defs
+     * @param array<string, mixed>|null $extras
      */
     public function __construct(
         public ?string $ref = null,
@@ -106,6 +107,7 @@ final readonly class Schema implements JsonSerializable
         public ?string $comment = null,
         public ?array $vocabulary = null,
         public ?array $defs = null,
+        public ?array $extras = null,
     ) {}
 
     /**
@@ -251,6 +253,7 @@ final readonly class Schema implements JsonSerializable
             comment: $this->comment,
             vocabulary: $this->vocabulary,
             defs: $this->defs,
+            extras: $this->extras,
         );
     }
 

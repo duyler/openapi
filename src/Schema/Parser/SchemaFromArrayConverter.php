@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Schema\Parser;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Parser\Internal\ArraySchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\Internal\CompositionSchemaKeywordParser;
+use Duyler\OpenApi\Schema\Parser\Internal\ExtrasSchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\Internal\ObjectSchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\Internal\ObjectTypeHelper;
 use Duyler\OpenApi\Schema\Parser\Internal\ResourceSchemaKeywordParser;
@@ -30,6 +31,7 @@ final readonly class SchemaFromArrayConverter
         private ObjectSchemaKeywordParser $objectParser = new ObjectSchemaKeywordParser(),
         private CompositionSchemaKeywordParser $compositionParser = new CompositionSchemaKeywordParser(),
         private ResourceSchemaKeywordParser $resourceParser = new ResourceSchemaKeywordParser(),
+        private ExtrasSchemaKeywordParser $extrasParser = new ExtrasSchemaKeywordParser(),
     ) {
         $this->scalarParser = new ScalarSchemaKeywordParser($documentVersion, $deprecationLogger);
         $this->xmlParser = new XmlSchemaKeywordParser($documentVersion, $deprecationLogger);
@@ -45,6 +47,7 @@ final readonly class SchemaFromArrayConverter
         $xml = isset($data['xml']) && is_array($data['xml'])
             ? $this->xmlParser->build(ObjectTypeHelper::asStringMixedMapOrNull($data['xml']) ?? [])
             : null;
+        $extras = $this->extrasParser->build($data)['extras'];
 
         return new Schema(
             ...$this->scalarParser->build($data),
@@ -53,6 +56,7 @@ final readonly class SchemaFromArrayConverter
             ...$this->compositionParser->build($data, $recurse),
             ...$this->resourceParser->build($data, $recurse),
             xml: $xml,
+            extras: $extras,
         );
     }
 
