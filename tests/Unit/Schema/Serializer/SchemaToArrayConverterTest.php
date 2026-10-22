@@ -508,4 +508,14 @@ final class SchemaToArrayConverterTest extends TestCase
         self::assertSame(42, $result['default']);
         self::assertSame('x', $result['const']);
     }
+
+    #[Test]
+    public function extras_collision_with_known_keyword_overrides_known_field_in_wire_form(): void
+    {
+        $schema = new Schema(type: 'string', extras: ['type' => 'object']);
+
+        $result = new SchemaToArrayConverter()->toWireArray($schema);
+
+        self::assertSame(['type' => 'object'], $result);
+    }
 }

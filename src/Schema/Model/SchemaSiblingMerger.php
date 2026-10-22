@@ -80,13 +80,21 @@ final readonly class SchemaSiblingMerger
             else: $composition['else'],
             unevaluatedItems: $bound['unevaluatedItems'],
             example: $sibling->example ?? $resolved->example,
-            examples: $this->mergeExamples($resolved->examples, $sibling->examples),
+            examples: $this->scalarMerger->mergeMixedMap($resolved->examples, $sibling->examples),
             enum: $scalar['enum'],
             contentEncoding: $sibling->contentEncoding ?? $resolved->contentEncoding,
             contentMediaType: $sibling->contentMediaType ?? $resolved->contentMediaType,
             contentSchema: $bound['contentSchema'],
             jsonSchemaDialect: $sibling->jsonSchemaDialect ?? $resolved->jsonSchemaDialect,
             xml: $sibling->xml ?? $resolved->xml,
+            id: $resolved->id,
+            anchor: $resolved->anchor,
+            dynamicAnchor: $resolved->dynamicAnchor,
+            dynamicRef: $sibling->dynamicRef ?? $resolved->dynamicRef,
+            comment: $resolved->comment,
+            vocabulary: $resolved->vocabulary,
+            defs: $resolved->defs,
+            extras: $this->scalarMerger->mergeMixedMap($resolved->extras, $sibling->extras),
         );
     }
 
@@ -106,23 +114,5 @@ final readonly class SchemaSiblingMerger
         }
 
         return array_values(array_unique(array_merge($resolved, $sibling)));
-    }
-
-    /**
-     * @param ?array<string, mixed> $resolved
-     * @param ?array<string, mixed> $sibling
-     * @return ?array<string, mixed>
-     */
-    private function mergeExamples(?array $resolved, ?array $sibling): ?array
-    {
-        if (null === $sibling) {
-            return $resolved;
-        }
-
-        if (null === $resolved) {
-            return $sibling;
-        }
-
-        return array_merge($resolved, $sibling);
     }
 }
