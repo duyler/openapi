@@ -65,7 +65,7 @@ final class CompositionBranchErrorsTest extends TestCase
         $exception = $this->assertRejects('null');
 
         $this->assertNotEmpty($exception->getErrors());
-        $this->assertNotSame('', (new SimpleFormatter())->formatException($exception));
+        $this->assertNotSame('', new SimpleFormatter()->formatException($exception));
         $this->assertSame('All of the schemas must match, but 1 failed', $exception->getMessage());
     }
 

@@ -518,7 +518,7 @@ XML;
 
             return '';
         } catch (ValidationException $e) {
-            return $e->getMessage() . (new SimpleFormatter())->formatException($e);
+            return $e->getMessage() . new SimpleFormatter()->formatException($e);
         } catch (AbstractValidationError $e) {
             return $e->getMessage() . ($e->suggestion() ?? '');
         } catch (RuntimeException $e) {

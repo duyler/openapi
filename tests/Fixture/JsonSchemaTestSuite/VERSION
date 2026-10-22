@@ -1,0 +1,7 @@
+source: json-schema-org/JSON-Schema-Test-Suite
+url: https://github.com/json-schema-org/JSON-Schema-Test-Suite
+commit: 89e83a74014617ffbe79a56d83d14d054cd11417
+license: MIT
+section: tests/draft2020-12
+remotes: remotes/
+note: upstream per-draft branches are consolidated into main; tests/draft2020-12 is the draft2020-12 suite
