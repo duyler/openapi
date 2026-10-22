@@ -11,6 +11,7 @@ use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MaxPropertiesError;
 use Duyler\OpenApi\Validator\Exception\MinPropertiesError;
@@ -147,10 +148,10 @@ class ObjectLengthValidatorTest extends TestCase
     public function skip_empty_array_for_object_when_strategy_prefers_array(): void
     {
         $schema = new Schema(type: 'object', minProperties: 1);
-        $context = ValidationContext::create(
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             emptyArrayStrategy: EmptyArrayStrategy::PreferArray,
-        );
+        ));
 
         $this->validator->validate([], $schema, $context);
 
@@ -161,10 +162,10 @@ class ObjectLengthValidatorTest extends TestCase
     public function throw_min_properties_error_for_empty_array_when_strategy_allows_both(): void
     {
         $schema = new Schema(type: 'object', minProperties: 1);
-        $context = ValidationContext::create(
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             emptyArrayStrategy: EmptyArrayStrategy::AllowBoth,
-        );
+        ));
 
         $this->expectException(MinPropertiesError::class);
 
@@ -175,10 +176,10 @@ class ObjectLengthValidatorTest extends TestCase
     public function throw_min_properties_error_for_empty_array_when_strategy_prefers_object(): void
     {
         $schema = new Schema(type: 'object', minProperties: 1);
-        $context = ValidationContext::create(
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             emptyArrayStrategy: EmptyArrayStrategy::PreferObject,
-        );
+        ));
 
         $this->expectException(MinPropertiesError::class);
 
@@ -189,10 +190,10 @@ class ObjectLengthValidatorTest extends TestCase
     public function skip_non_empty_list_for_object_regardless_of_strategy(): void
     {
         $schema = new Schema(type: 'object', minProperties: 1);
-        $context = ValidationContext::create(
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             emptyArrayStrategy: EmptyArrayStrategy::PreferArray,
-        );
+        ));
 
         $this->validator->validate([1, 2, 3], $schema, $context);
 
@@ -203,10 +204,10 @@ class ObjectLengthValidatorTest extends TestCase
     public function validate_associative_array_with_min_properties_for_any_strategy(): void
     {
         $schema = new Schema(type: 'object', minProperties: 1);
-        $context = ValidationContext::create(
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             emptyArrayStrategy: EmptyArrayStrategy::PreferArray,
-        );
+        ));
 
         $this->validator->validate(['a' => 1], $schema, $context);
 

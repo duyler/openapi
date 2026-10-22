@@ -8,10 +8,10 @@ use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
-use Duyler\OpenApi\Validator\Error\BreadcrumbManager;
 use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
 use Duyler\OpenApi\Validator\Error\Formatter\JsonFormatter;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MinimumError;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
@@ -59,11 +59,10 @@ class ErrorHandlingIntegrationTest extends TestCase
         );
 
         $formatter = new SimpleFormatter();
-        $context = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: $formatter,
-        );
+        ));
         $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         try {
@@ -95,11 +94,10 @@ class ErrorHandlingIntegrationTest extends TestCase
         );
 
         $formatter = new DetailedFormatter();
-        $context = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: $formatter,
-        );
+        ));
         $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         try {
@@ -126,11 +124,10 @@ class ErrorHandlingIntegrationTest extends TestCase
         );
 
         $formatter = new JsonFormatter();
-        $context = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: $formatter,
-        );
+        ));
         $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         try {
@@ -170,11 +167,10 @@ class ErrorHandlingIntegrationTest extends TestCase
         );
 
         $formatter = new DetailedFormatter();
-        $context = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: $formatter,
-        );
+        ));
         $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         try {
@@ -203,11 +199,10 @@ class ErrorHandlingIntegrationTest extends TestCase
         );
 
         $formatter = new SimpleFormatter();
-        $context = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: $formatter,
-        );
+        ));
         $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         try {
@@ -239,11 +234,10 @@ class ErrorHandlingIntegrationTest extends TestCase
         );
 
         $formatter = new JsonFormatter();
-        $context = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: $formatter,
-        );
+        ));
         $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         try {
@@ -279,11 +273,10 @@ class ErrorHandlingIntegrationTest extends TestCase
         );
 
         $formatter = new DetailedFormatter();
-        $context = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: $formatter,
-        );
+        ));
         $validator = new SchemaValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         try {

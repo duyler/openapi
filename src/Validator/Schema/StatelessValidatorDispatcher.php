@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Schema\Internal\ApplicableValidators;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
@@ -33,7 +34,7 @@ final class StatelessValidatorDispatcher implements SchemaValidatorInterface
     public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
     {
         if (null === $context) {
-            $context = ValidationContext::create(pool: $this->pool);
+            $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
         }
 
         $context->incrementDepth();

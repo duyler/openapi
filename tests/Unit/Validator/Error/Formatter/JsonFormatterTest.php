@@ -110,11 +110,6 @@ class JsonFormatterTest extends TestCase
                     suggestion: null,
                 );
             }
-
-            public function getType(): string
-            {
-                return 'test';
-            }
         };
 
         $formatted = $this->formatter->formatMultiple([$error]);
@@ -187,11 +182,6 @@ class JsonFormatterTest extends TestCase
                     params: ['key' => INF],
                 );
             }
-
-            public function getType(): string
-            {
-                return 'test';
-            }
         };
 
         $this->expectException(ValueError::class);
@@ -213,11 +203,6 @@ class JsonFormatterTest extends TestCase
                     schemaPath: $schemaPath,
                     params: ['key' => NAN],
                 );
-            }
-
-            public function getType(): string
-            {
-                return 'test';
             }
         };
 

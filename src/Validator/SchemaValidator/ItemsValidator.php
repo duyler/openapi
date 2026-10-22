@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
@@ -89,7 +90,7 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
             $normalizedItem = SchemaValueNormalizer::normalize($item, $state->allowNull);
 
             if (null === $state->context) {
-                $state->context = ValidationContext::create(pool: $this->pool(), nullableAsType: $state->nullableAsType);
+                $state->context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool(), nullableAsType: $state->nullableAsType));
             }
 
             $state->context->enterBreadcrumbIndex($index);

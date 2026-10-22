@@ -52,13 +52,12 @@ final readonly class ValidationStack
     private readonly ValidatorConfiguration $validatorConfiguration;
 
     /**
-     * @deprecated since 1.x, will be removed in 2.0. Use {@see fromGroup()} instead.
      * @param int $maxJsonBodyBytes
      * @param int $maxMultipartBodyBytes
      * @param int $maxRegexBacktracks
      * @param int $maxStreamingRecords
      */
-    public function __construct(
+    private function __construct(
         public readonly OpenApiDocument $document,
         public readonly ValidatorPool $pool,
         public readonly FormatRegistry $formatRegistry,

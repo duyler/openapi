@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Override;
 
@@ -92,7 +93,7 @@ final readonly class PatternPropertiesValidator extends AbstractSchemaValidator 
                 $propertySchema = $patternProperties[$pattern];
 
                 if (null === $context) {
-                    $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
+                    $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool(), nullableAsType: $nullableAsType));
                 }
 
                 $context->enterBreadcrumb($propertyName);

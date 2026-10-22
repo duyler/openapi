@@ -22,6 +22,9 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Validation\CallbackValidator;
+use Duyler\OpenApi\Validator\Validation\Internal\RootServices;
+use Duyler\OpenApi\Validator\Validation\Internal\ValidationGroup;
+use Duyler\OpenApi\Validator\Validation\Internal\ValidatorOptions;
 use Duyler\OpenApi\Validator\Validation\ValidationStack;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -335,13 +338,15 @@ final class CallbackValidatorTest extends TestCase
         OpenApiDocument $document,
         ?EventDispatcherInterface $dispatcher = null,
     ): ValidationStack {
-        return new ValidationStack(
-            document: $document,
-            pool: new ValidatorPool(),
-            formatRegistry: new FormatRegistry(),
-            errorFormatter: new SimpleFormatter(),
-            refResolver: new RefResolver(),
-            eventDispatcher: $dispatcher,
-        );
+        return ValidationStack::fromGroup(new ValidationGroup(
+            root: new RootServices(
+                document: $document,
+                pool: new ValidatorPool(),
+                formatRegistry: new FormatRegistry(),
+                errorFormatter: new SimpleFormatter(),
+                refResolver: new RefResolver(),
+            ),
+            options: new ValidatorOptions(eventDispatcher: $dispatcher),
+        ));
     }
 }

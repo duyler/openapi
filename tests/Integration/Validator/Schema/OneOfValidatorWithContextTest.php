@@ -15,6 +15,7 @@ use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -45,7 +46,7 @@ final class OneOfValidatorWithContextTest extends TestCase
             '3.1.0',
             new InfoObject('Test API', '1.0.0'),
         );
-        $this->context = ValidationContext::create(pool: $this->pool);
+        $this->context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
         $this->statelessValidators = new StatelessValidatorRegistry($this->pool, BuiltinFormats::create());
         $this->validator = new OneOfValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
     }
@@ -143,7 +144,7 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+        $nullableContext = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $succeeded = false;
         try {
@@ -167,7 +168,7 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+        $nullableContext = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $succeeded = false;
         try {
@@ -192,7 +193,7 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+        $nullableContext = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $succeeded = false;
         try {
@@ -217,7 +218,7 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+        $nullableContext = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $this->expectException(ValidationException::class);
         $this->expectExceptionMessage('data must be an object');
@@ -236,7 +237,7 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $nonNullableContext = ValidationContext::create($this->pool, nullableAsType: false);
+        $nonNullableContext = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: false));
 
         $this->expectException(ValidationException::class);
         $this->expectExceptionMessage('data must be an object');
@@ -256,7 +257,7 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+        $nullableContext = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $succeeded = false;
         try {
@@ -696,7 +697,7 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+        $nullableContext = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $succeeded = false;
         try {
@@ -735,7 +736,7 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $nonNullableContext = ValidationContext::create($this->pool, nullableAsType: false);
+        $nonNullableContext = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: false));
 
         $this->expectException(ValidationException::class);
 
@@ -1167,7 +1168,7 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+        $nullableContext = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $succeeded = false;
         try {
@@ -1190,7 +1191,7 @@ final class OneOfValidatorWithContextTest extends TestCase
             ],
         );
 
-        $nullableContext = ValidationContext::create($this->pool, nullableAsType: true);
+        $nullableContext = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $this->expectException(ValidationException::class);
         $this->expectExceptionMessage('Data matches multiple schemas');

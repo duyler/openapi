@@ -11,7 +11,6 @@ use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Dto\ValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Exception\UnknownLinkException;
-use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Link\LinkContext;
 use Duyler\OpenApi\Validator\Link\ResolvedLink;
 use Override;
@@ -78,12 +77,6 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
     public function validateSchema(mixed $data, string $schemaRef): void
     {
         $this->dependencies->schemaValidation->validate($data, $schemaRef);
-    }
-
-    #[Override]
-    public function getFormattedErrors(ValidationException $e): string
-    {
-        return $this->dependencies->errorFormatter->formatMultiple($e->getErrors());
     }
 
     #[Override]

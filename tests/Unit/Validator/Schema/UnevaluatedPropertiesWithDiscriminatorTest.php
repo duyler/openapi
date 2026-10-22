@@ -10,6 +10,7 @@ use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
@@ -80,7 +81,7 @@ final class UnevaluatedPropertiesWithDiscriminatorTest extends TestCase
             components: new Components(schemas: ['Pet' => $petSchema, 'Cat' => $catSchema]),
         );
 
-        $parentContext = ValidationContext::create($this->pool);
+        $parentContext = ValidationContext::fromInit(new ValidationContextInit($this->pool));
 
         $this->discriminatorValidator->validate(
             ['petType' => 'cat', 'name' => 'Whiskers'],
@@ -126,7 +127,7 @@ final class UnevaluatedPropertiesWithDiscriminatorTest extends TestCase
             components: new Components(schemas: ['Parent' => $parentSchema, 'Target' => $targetSchema]),
         );
 
-        $parentContext = ValidationContext::create($this->pool);
+        $parentContext = ValidationContext::fromInit(new ValidationContextInit($this->pool));
 
         $this->discriminatorValidator->validate(
             ['petType' => 'cat'],
@@ -166,7 +167,7 @@ final class UnevaluatedPropertiesWithDiscriminatorTest extends TestCase
             components: new Components(schemas: ['Parent' => $parentSchema, 'Target' => $targetSchema]),
         );
 
-        $parentContext = ValidationContext::create($this->pool);
+        $parentContext = ValidationContext::fromInit(new ValidationContextInit($this->pool));
 
         $this->discriminatorValidator->validate(
             ['kind' => 'numbered', 'extra' => 42],
@@ -207,7 +208,7 @@ final class UnevaluatedPropertiesWithDiscriminatorTest extends TestCase
             components: new Components(schemas: ['Pet' => $petSchema, 'Cat' => $catSchema]),
         );
 
-        $parentContext = ValidationContext::create($this->pool);
+        $parentContext = ValidationContext::fromInit(new ValidationContextInit($this->pool));
 
         $this->expectException(ValidationException::class);
 
@@ -255,7 +256,7 @@ final class UnevaluatedPropertiesWithDiscriminatorTest extends TestCase
             components: new Components(schemas: ['Pet' => $petSchema, 'Cat' => $catSchema]),
         );
 
-        $parentContext = ValidationContext::create($this->pool);
+        $parentContext = ValidationContext::fromInit(new ValidationContextInit($this->pool));
 
         $caught = null;
 
@@ -309,7 +310,7 @@ final class UnevaluatedPropertiesWithDiscriminatorTest extends TestCase
             components: new Components(schemas: ['Pet' => $petSchema, 'Cat' => $catSchema]),
         );
 
-        $parentContext = ValidationContext::create($this->pool);
+        $parentContext = ValidationContext::fromInit(new ValidationContextInit($this->pool));
         $parentContext->incrementDepth();
         $depthBefore = $parentContext->depth();
 
@@ -400,7 +401,7 @@ final class UnevaluatedPropertiesWithDiscriminatorTest extends TestCase
             components: new Components(schemas: ['Pet' => $petSchema, 'Generic' => $genericSchema]),
         );
 
-        $parentContext = ValidationContext::create($this->pool);
+        $parentContext = ValidationContext::fromInit(new ValidationContextInit($this->pool));
 
         $this->discriminatorValidator->validate(
             ['anything' => 'value'],

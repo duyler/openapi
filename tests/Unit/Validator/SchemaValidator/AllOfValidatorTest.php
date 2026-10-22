@@ -10,6 +10,7 @@ use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -262,7 +263,7 @@ class AllOfValidatorTest extends TestCase
             allOf: [new Schema(type: 'object', required: ['id'])],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: false);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: false));
 
         $this->expectException(ValidationException::class);
 

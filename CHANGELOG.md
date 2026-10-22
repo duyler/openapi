@@ -5,6 +5,57 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0]
+
+### Removed
+
+- `Schema\Model\Schema::withOverrides()` is removed. Build a schema from
+  constraint groups with `Schema::fromConstraintGroups()` (static factory) and
+  apply partial updates with `Schema::withOverrideGroups()`, which takes the
+  four group DTOs `Schema\Model\Internal\ScalarFields`,
+  `ArrayFields`, `ObjectFields` and `CompositionFields` and replaces only the
+  fields that are non-null in the supplied groups (`nullable` is a separate
+  parameter, so it can be flipped back to `false`). The `Schema` constructor
+  is no longer deprecated: instantiating the model directly with named
+  arguments is the canonical API.
+- `Validator\Error\ValidationContext::create()` and the public
+  `ValidationContext` constructor are removed. Create contexts exclusively
+  through the named constructor
+  `ValidationContext::fromInit(Validator\Error\Internal\ValidationContextInit)`;
+  the DTO carries `pool`, `errorFormatter`, `nullableAsType`,
+  `emptyArrayStrategy` and `mode`, and the context always owns a fresh
+  `BreadcrumbManager`, so per-request isolation is guaranteed by construction.
+  Branch contexts keep using `forkForBranch()`.
+- The public `Validator\Validation\ValidationStack` constructor is removed.
+  Build a stack through `ValidationStack::fromGroup()` with a
+  `Validator\Validation\Internal\ValidationGroup` (`root`: `RootServices`
+  DTO, `options`: `ValidatorOptions` DTO, optional `bodyLimits`).
+- `Validator\Exception\ValidationErrorInterface::getType()` and all of its
+  implementations are removed. Use `keyword()`, which returns the same
+  validation keyword (`'type'`, `'minLength'`, `'format'`, ...).
+- `Builder\OpenApiValidatorInterface::getFormattedErrors()` is removed.
+  Format a `ValidationException` through
+  `Validator\Error\Formatter\ErrorFormatterInterface::formatException()`.
+  The output is byte-identical to the removed method when the validator was
+  built with the default formatter; otherwise call the configured formatter's
+  `formatException()` directly.
+- `Builder\OpenApiValidatorBuilder::enableStrictCallbackRuntimeTemplate()` is
+  removed. Strict callback runtime template resolution is the default; use
+  `disableStrictCallbackRuntimeTemplate()` to opt out (see the security
+  warning in the README).
+- `Validator\Exception\InvalidMultipleOfSchemaException::forLargeIntegerWithoutBcmath()`
+  is removed. `multipleOf` checks fall back to pure-PHP decimal string
+  modulus when the BCMath extension is unavailable, so the exception is never
+  thrown; `forNonPositiveValue()` remains.
+
+### Changed
+
+- `Validator\Error\ValidationContext` and `Validator\Validation\ValidationStack`
+  are now named-constructor-only services: their constructors are private and
+  the only creation entry points are `ValidationContext::fromInit()` and
+  `ValidationStack::fromGroup()`. Schema model classes keep public
+  constructors.
+
 ## [0.8.0]
 
 ### Added

@@ -12,12 +12,9 @@ final class InvalidDataTypeException extends InvalidArgumentException implements
 {
     use SanitizableExceptionTrait;
 
-    public readonly string $type;
-
     public function __construct(string $message, int $code = 0, ?Throwable $previous = null)
     {
         parent::__construct($message, $code, $previous);
-        $this->type = 'invalid';
     }
 
     #[Override]
@@ -54,11 +51,5 @@ final class InvalidDataTypeException extends InvalidArgumentException implements
     public function suggestion(): ?string
     {
         return null;
-    }
-
-    #[Override]
-    public function getType(): string
-    {
-        return $this->type;
     }
 }

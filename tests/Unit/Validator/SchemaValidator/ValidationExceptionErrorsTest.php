@@ -10,6 +10,7 @@ use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\DiscriminatorDataError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
@@ -73,7 +74,7 @@ final class ValidationExceptionErrorsTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create(pool: $this->pool, mode: ValidatorMode::Request);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool, mode: ValidatorMode::Request));
         $caught = null;
 
         try {
@@ -103,7 +104,7 @@ final class ValidationExceptionErrorsTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create(pool: $this->pool, mode: ValidatorMode::Response);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool, mode: ValidatorMode::Response));
         $caught = null;
 
         try {
@@ -142,7 +143,7 @@ final class ValidationExceptionErrorsTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
         $caught = null;
 
         try {
@@ -180,7 +181,7 @@ final class ValidationExceptionErrorsTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
         $caught = null;
 
         try {
@@ -216,7 +217,7 @@ final class ValidationExceptionErrorsTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
         $caught = null;
 
         try {
@@ -625,7 +626,7 @@ final class ValidationExceptionErrorsTest extends TestCase
         );
 
         $resolvedSchema = $this->refResolver->resolve('#/components/schemas/Pet', $document);
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
         $caught = null;
 
         try {

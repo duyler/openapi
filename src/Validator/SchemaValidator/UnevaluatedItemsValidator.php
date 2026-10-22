@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -102,7 +103,7 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
             $item = $data[$index];
 
             if (null === $context) {
-                $context = ValidationContext::create(pool: $this->pool(), nullableAsType: $nullableAsType);
+                $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool(), nullableAsType: $nullableAsType));
             }
 
             $context->enterBreadcrumbIndex($index);

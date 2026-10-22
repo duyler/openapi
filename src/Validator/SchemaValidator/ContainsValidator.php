@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\ContainsMatchError;
@@ -65,7 +66,7 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
     {
         $this->enforceContainsBounds(count($data), $schema, $dataPath);
 
-        $containsContext = $context ?? ValidationContext::create(pool: $this->pool());
+        $containsContext = $context ?? ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool()));
 
         foreach (array_keys($data) as $index) {
             /** @var int $index */
@@ -79,7 +80,7 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
     private function countSchemaMatches(array $data, Schema $containsSchema, ?ValidationContext $context, string $dataPath, ?int $maxContains = null): int
     {
         $validator = $this->createSchemaValidator();
-        $containsContext = $context ?? ValidationContext::create(pool: $this->pool());
+        $containsContext = $context ?? ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool()));
 
         $matchCount = 0;
 

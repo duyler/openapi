@@ -22,10 +22,7 @@ final class ValidationContext
     /** @var array<int, true> */
     private array $evaluatedItemIndices = [];
 
-    /**
-     * @deprecated since 1.x, will be removed in 2.0. Use {@see fromInit()} instead.
-     */
-    public function __construct(
+    private function __construct(
         public readonly BreadcrumbManager $breadcrumbs,
         public readonly ValidatorPool $pool,
         public readonly ErrorFormatterInterface $errorFormatter,
@@ -34,26 +31,6 @@ final class ValidationContext
         private int $depth = 0,
         public readonly ?ValidatorMode $mode = null,
     ) {}
-
-    /**
-     * @deprecated since 1.x, will be removed in 2.0. Use {@see fromInit()} instead.
-     */
-    public static function create(
-        ValidatorPool $pool,
-        ?ErrorFormatterInterface $errorFormatter = null,
-        bool $nullableAsType = true,
-        EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
-        ?ValidatorMode $mode = null,
-    ): self {
-        return new self(
-            breadcrumbs: BreadcrumbManager::create(),
-            pool: $pool,
-            errorFormatter: $errorFormatter ?? new SimpleFormatter(),
-            nullableAsType: $nullableAsType,
-            emptyArrayStrategy: $emptyArrayStrategy,
-            mode: $mode,
-        );
-    }
 
     public static function fromInit(ValidationContextInit $init): self
     {

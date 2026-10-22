@@ -8,6 +8,7 @@ use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
@@ -53,7 +54,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             ),
         );
 
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
 
         $data = ['ab', 'cd', 'valid_string'];
 
@@ -72,7 +73,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             items: new Schema(type: 'string'),
         );
 
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
 
         $validator->validateWithContext(['hello', 'world'], $schema, $context);
 
@@ -85,7 +86,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
         $validator = new ItemsValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $schema = new Schema(type: 'array');
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
 
         $validator->validateWithContext(['a', 'b'], $schema, $context);
 
@@ -102,7 +103,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             items: new Schema(type: 'integer'),
         );
 
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
 
         try {
             $validator->validateWithContext(['not_int'], $schema, $context);
@@ -125,7 +126,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
 
         $data = ['name' => 'ab', 'email' => 'not-an-email'];
 
@@ -146,7 +147,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
 
         $validator->validateWithContext(['name' => 'John'], $schema, $context);
 
@@ -166,7 +167,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
 
         $validator->validateWithContext(['name' => 'John'], $schema, $context);
 
@@ -179,7 +180,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
         $validator = new PropertiesValidatorWithContext(document: $this->document, dependencies: new SchemaValidatorDependencies(pool: $this->pool, refResolver: $this->refResolver, statelessValidators: $this->statelessValidators));
 
         $schema = new Schema(type: 'object');
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
 
         $validator->validateWithContext(['key' => 'value'], $schema, $context);
 
@@ -199,7 +200,7 @@ final class ContextValidatorsErrorAccumulationTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create(pool: $this->pool);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
 
         try {
             $validator->validateWithContext(['a' => 'string', 'b' => 'also_string'], $schema, $context);

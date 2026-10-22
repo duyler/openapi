@@ -13,6 +13,7 @@ use Duyler\OpenApi\Validator\Exception\DiscriminatorMismatchException;
 use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\TypeFormatter;
 
@@ -45,12 +46,12 @@ final readonly class DiscriminatorValidator
             return;
         }
 
-        $validationContext = $context ?? ValidationContext::create(
-            $this->dependencies->pool,
-            $this->dependencies->errorFormatter,
-            $this->configuration->nullableAsType,
-            $this->configuration->emptyArrayStrategy,
-        );
+        $validationContext = $context ?? ValidationContext::fromInit(new ValidationContextInit(
+            pool: $this->dependencies->pool,
+            errorFormatter: $this->dependencies->errorFormatter,
+            nullableAsType: $this->configuration->nullableAsType,
+            emptyArrayStrategy: $this->configuration->emptyArrayStrategy,
+        ));
 
         if (null === $discriminator->propertyName) {
             $this->validateWithoutPropertyName($data, $discriminator, $document, $validationContext);

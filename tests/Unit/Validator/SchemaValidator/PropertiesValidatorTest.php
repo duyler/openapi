@@ -20,6 +20,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use stdClass;
 
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 
@@ -337,7 +338,7 @@ class PropertiesValidatorTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $succeeded = false;
 
@@ -364,7 +365,7 @@ class PropertiesValidatorTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $succeeded = false;
 
@@ -389,7 +390,7 @@ class PropertiesValidatorTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $succeeded = false;
 
@@ -416,7 +417,7 @@ class PropertiesValidatorTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
 
         $succeeded = false;
 

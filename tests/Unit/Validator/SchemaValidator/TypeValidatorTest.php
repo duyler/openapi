@@ -11,6 +11,7 @@ use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -408,10 +409,10 @@ class TypeValidatorTest extends TestCase
     public function validate_array_type_with_empty_array_and_prefer_array_strategy(): void
     {
         $schema = new Schema(type: 'array');
-        $context = ValidationContext::create(
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             emptyArrayStrategy: EmptyArrayStrategy::PreferArray,
-        );
+        ));
 
         $succeeded = false;
 
@@ -429,10 +430,10 @@ class TypeValidatorTest extends TestCase
     public function throw_type_mismatch_error_for_empty_array_when_strategy_prefers_object(): void
     {
         $schema = new Schema(type: 'array');
-        $context = ValidationContext::create(
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             emptyArrayStrategy: EmptyArrayStrategy::PreferObject,
-        );
+        ));
 
         $this->expectException(TypeMismatchError::class);
 
@@ -443,10 +444,10 @@ class TypeValidatorTest extends TestCase
     public function throw_type_mismatch_error_for_empty_array_when_strategy_rejects(): void
     {
         $schema = new Schema(type: 'array');
-        $context = ValidationContext::create(
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             emptyArrayStrategy: EmptyArrayStrategy::Reject,
-        );
+        ));
 
         $this->expectException(TypeMismatchError::class);
 
@@ -457,10 +458,10 @@ class TypeValidatorTest extends TestCase
     public function validate_object_type_with_empty_array_and_prefer_object_strategy(): void
     {
         $schema = new Schema(type: 'object');
-        $context = ValidationContext::create(
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             emptyArrayStrategy: EmptyArrayStrategy::PreferObject,
-        );
+        ));
 
         $succeeded = false;
 
@@ -478,10 +479,10 @@ class TypeValidatorTest extends TestCase
     public function throw_type_mismatch_error_for_empty_array_as_object_when_strategy_prefers_array(): void
     {
         $schema = new Schema(type: 'object');
-        $context = ValidationContext::create(
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             emptyArrayStrategy: EmptyArrayStrategy::PreferArray,
-        );
+        ));
 
         $this->expectException(TypeMismatchError::class);
 
@@ -492,10 +493,10 @@ class TypeValidatorTest extends TestCase
     public function throw_type_mismatch_error_for_empty_array_as_object_when_strategy_rejects(): void
     {
         $schema = new Schema(type: 'object');
-        $context = ValidationContext::create(
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             emptyArrayStrategy: EmptyArrayStrategy::Reject,
-        );
+        ));
 
         $this->expectException(TypeMismatchError::class);
 
@@ -506,7 +507,7 @@ class TypeValidatorTest extends TestCase
     public function rejects_null_when_type_array_contains_null_and_nullable_as_type_disabled(): void
     {
         $schema = new Schema(type: ['string', 'null']);
-        $context = ValidationContext::create(pool: $this->pool, nullableAsType: false);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool, nullableAsType: false));
 
         $this->expectException(TypeMismatchError::class);
 
@@ -517,7 +518,7 @@ class TypeValidatorTest extends TestCase
     public function accepts_string_when_type_array_contains_null_and_nullable_as_type_disabled(): void
     {
         $schema = new Schema(type: ['string', 'null']);
-        $context = ValidationContext::create(pool: $this->pool, nullableAsType: false);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool, nullableAsType: false));
 
         $succeeded = false;
 
@@ -535,7 +536,7 @@ class TypeValidatorTest extends TestCase
     public function accepts_null_when_type_array_contains_null_with_default_nullable_as_type(): void
     {
         $schema = new Schema(type: ['string', 'null']);
-        $context = ValidationContext::create(pool: $this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool, nullableAsType: true));
 
         $succeeded = false;
 

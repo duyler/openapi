@@ -15,6 +15,7 @@ use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\SchemaValidator\ContentMediaTypeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\PatternValidator;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
@@ -57,7 +58,7 @@ final class RedosFuzzTest extends TestCase
 
         $start = hrtime(true);
         try {
-            $validator->validate($payload, $schema, ValidationContext::create(pool: $this->pool));
+            $validator->validate($payload, $schema, ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool)));
         } catch (PatternMismatchError|RuntimeException) {
         }
         $elapsedMs = (hrtime(true) - $start) / 1_000_000;
@@ -142,7 +143,7 @@ final class RedosFuzzTest extends TestCase
 
         $succeeded = false;
         try {
-            $validator->validate('foo-bar_baz', $schema, ValidationContext::create(pool: $this->pool));
+            $validator->validate('foo-bar_baz', $schema, ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool)));
             $succeeded = true;
         } catch (PatternMismatchError|RuntimeException) {
         }

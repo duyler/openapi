@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 
 #[CoversClass(AnyOfValidator::class)]
@@ -190,7 +191,7 @@ class AnyOfValidatorTest extends TestCase
             anyOf: [$schema1, $schema2],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $this->validator->validate(null, $schema, $context);
 
         $this->expectNotToPerformAssertions();
@@ -205,7 +206,7 @@ class AnyOfValidatorTest extends TestCase
             anyOf: [$schema1, $schema2],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $this->expectException(ValidationException::class);
 
         $this->validator->validate(null, $schema, $context);
@@ -220,7 +221,7 @@ class AnyOfValidatorTest extends TestCase
             anyOf: [$schema1, $schema2],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $this->validator->validate('hello', $schema, $context);
 
         $this->expectNotToPerformAssertions();
@@ -236,7 +237,7 @@ class AnyOfValidatorTest extends TestCase
             ],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: true);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
         $this->validator->validate(null, $schema, $context);
 
         $this->expectNotToPerformAssertions();
@@ -263,7 +264,7 @@ class AnyOfValidatorTest extends TestCase
             anyOf: [new Schema(type: 'object', required: ['id'])],
         );
 
-        $context = ValidationContext::create($this->pool, nullableAsType: false);
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: false));
 
         $this->expectException(ValidationException::class);
 

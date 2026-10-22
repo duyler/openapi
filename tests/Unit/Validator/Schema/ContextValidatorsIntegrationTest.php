@@ -15,7 +15,7 @@ use Duyler\OpenApi\Validator\Schema\PropertiesValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
-use Duyler\OpenApi\Validator\Error\BreadcrumbManager;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use PHPUnit\Framework\Attributes\Test;
@@ -50,12 +50,11 @@ final class ContextValidatorsIntegrationTest extends TestCase
             items: new Schema(type: 'integer'),
         );
 
-        $context = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: new SimpleFormatter(),
             nullableAsType: false,
-        );
+        ));
 
         $caught = false;
         try {
@@ -80,12 +79,11 @@ final class ContextValidatorsIntegrationTest extends TestCase
             ],
         );
 
-        $context = new ValidationContext(
-            breadcrumbs: BreadcrumbManager::create(),
+        $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
             errorFormatter: new SimpleFormatter(),
             nullableAsType: false,
-        );
+        ));
 
         $caught = false;
         try {

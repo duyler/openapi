@@ -11,6 +11,7 @@ use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
@@ -57,19 +58,19 @@ final class StatelessValidatorDispatcherTest extends TestCase
         $dispatcher = $this->createDispatcher();
         $schema = new Schema(type: 'string', nullable: true);
 
-        $lenient = ValidationContext::create(
+        $lenient = ValidationContext::fromInit(new ValidationContextInit(
             pool: new ValidatorPool(),
             nullableAsType: true,
-        );
+        ));
         $dispatcher->validate(null, $schema, $lenient);
         $this->addToAssertionCount(1);
 
         $this->expectException(TypeMismatchError::class);
 
-        $strict = ValidationContext::create(
+        $strict = ValidationContext::fromInit(new ValidationContextInit(
             pool: new ValidatorPool(),
             nullableAsType: false,
-        );
+        ));
         $dispatcher->validate(null, $schema, $strict);
     }
 
