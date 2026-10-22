@@ -47,6 +47,7 @@ final class SuiteValidatorFactory
 
         return OpenApiValidatorBuilder::create()
             ->fromJsonString(json_encode($document, JSON_THROW_ON_ERROR))
+            ->withExternalRefAllowedRoot(JsonSchemaSuiteLocator::remotesDirectory())
             ->build();
     }
 }

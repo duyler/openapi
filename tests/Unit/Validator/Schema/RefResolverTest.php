@@ -1536,6 +1536,305 @@ final class RefResolverTest extends TestCase
         $this->assertSame($externalSchema, $resolved);
     }
 
+    #[Test]
+    public function resolve_defs_pointer_with_slash_escape(): void
+    {
+        $target = new Schema(title: 'Slash');
+        $document = $this->documentWithSubject(
+            new Schema(
+                title: 'Subject',
+                defs: ['a/b' => $target],
+            ),
+        );
+
+        $resolved = $this->resolver->resolve('#/$defs/a~1b', $document);
+
+        $this->assertSame($target, $resolved);
+        $this->assertSame('Slash', $resolved->title);
+    }
+
+    #[Test]
+    public function resolve_defs_pointer_with_tilde_escape(): void
+    {
+        $target = new Schema(title: 'Tilde');
+        $document = $this->documentWithSubject(
+            new Schema(
+                title: 'Subject',
+                defs: ['m~n' => $target],
+            ),
+        );
+
+        $resolved = $this->resolver->resolve('#/$defs/m~0n', $document);
+
+        $this->assertSame($target, $resolved);
+        $this->assertSame('Tilde', $resolved->title);
+    }
+
+    #[Test]
+    public function resolve_nested_defs_pointer(): void
+    {
+        $leaf = new Schema(title: 'Leaf');
+        $document = $this->documentWithSubject(
+            new Schema(
+                title: 'Subject',
+                defs: [
+                    'Outer' => new Schema(defs: ['Inner' => $leaf]),
+                ],
+            ),
+        );
+
+        $resolved = $this->resolver->resolve('#/$defs/Outer/$defs/Inner', $document);
+
+        $this->assertSame($leaf, $resolved);
+    }
+
+    #[Test]
+    public function resolve_defs_pointer_into_properties(): void
+    {
+        $leaf = new Schema(title: 'Leaf');
+        $document = $this->documentWithSubject(
+            new Schema(
+                title: 'Subject',
+                defs: [
+                    'Outer' => new Schema(properties: ['inner' => $leaf]),
+                ],
+            ),
+        );
+
+        $resolved = $this->resolver->resolve('#/$defs/Outer/properties/inner', $document);
+
+        $this->assertSame($leaf, $resolved);
+    }
+
+    #[Test]
+    public function resolve_plain_name_fragment_by_anchor(): void
+    {
+        $target = new Schema(title: 'Anchored', anchor: 'myAnchor');
+        $document = $this->documentWithSubject(
+            new Schema(
+                title: 'Subject',
+                ref: '#myAnchor',
+                defs: ['A' => $target],
+            ),
+        );
+
+        $resolved = $this->resolver->resolve('#myAnchor', $document);
+
+        $this->assertSame($target, $resolved);
+    }
+
+    #[Test]
+    public function resolve_plain_name_fragment_by_dynamic_anchor(): void
+    {
+        $target = new Schema(title: 'Dynamic', dynamicAnchor: 'myDynamic');
+        $document = $this->documentWithSubject(
+            new Schema(
+                title: 'Subject',
+                defs: ['A' => $target],
+            ),
+        );
+
+        $resolved = $this->resolver->resolve('#myDynamic', $document);
+
+        $this->assertSame($target, $resolved);
+    }
+
+    #[Test]
+    public function throw_for_unknown_plain_name_fragment(): void
+    {
+        $document = $this->documentWithSubject(new Schema(title: 'Subject'));
+
+        $this->expectException(UnresolvableRefException::class);
+        $this->expectExceptionMessage('Fragment does not resolve to an anchor in the document');
+
+        $this->resolver->resolve('#unknown-anchor', $document);
+    }
+
+    #[Test]
+    public function ref_with_bare_hash_fragment_is_unresolvable(): void
+    {
+        $document = $this->documentWithSubject(new Schema(title: 'Subject'));
+
+        $this->expectException(UnresolvableRefException::class);
+        $this->expectExceptionMessage('Ref has an empty fragment');
+
+        $this->resolver->resolve('#', $document);
+    }
+
+    #[Test]
+    public function resolve_depth_offset_enforces_remaining_depth(): void
+    {
+        $schemas = [];
+        for ($i = 0; $i < 60; ++$i) {
+            $schemas['S' . $i] = $i < 59
+                ? new Schema(ref: '#/components/schemas/S' . ($i + 1))
+                : new Schema(title: 'Final');
+        }
+        $document = new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Test API', '1.0.0'),
+            components: new Components(schemas: $schemas),
+        );
+
+        $resolved = $this->resolver->resolve('#/components/schemas/S0', $document);
+
+        $this->assertSame('Final', $resolved->title);
+
+        $this->expectException(SchemaDepthExceededException::class);
+
+        $this->resolver->resolve('#/components/schemas/S0', $document, 5);
+    }
+
+    #[Test]
+    public function throw_for_non_ncname_fragment_without_pointer_decoding(): void
+    {
+        $decodedProbe = new Schema(title: 'ShouldNeverMatch', anchor: 'ta~1b');
+        $document = $this->documentWithSubject(
+            new Schema(
+                title: 'Subject',
+                defs: ['probe' => $decodedProbe],
+            ),
+        );
+
+        try {
+            $this->resolver->resolve('#ta~1b', $document);
+            $this->fail('Expected UnresolvableRefException for non-NCName fragment');
+        } catch (UnresolvableRefException $exception) {
+            $this->assertSame('Plain-name fragment is not a valid NCName', $exception->reason());
+            $this->assertNotSame(
+                'Fragment does not resolve to an anchor in the document',
+                $exception->reason(),
+            );
+        }
+    }
+
+    #[Test]
+    public function defs_pointer_cycle_throws_domain_exception(): void
+    {
+        $document = $this->documentWithSubject(
+            new Schema(
+                title: 'Subject',
+                defs: [
+                    'a' => new Schema(ref: '#/$defs/b'),
+                    'b' => new Schema(ref: '#/$defs/a'),
+                ],
+            ),
+        );
+
+        $this->expectException(UnresolvableRefException::class);
+        $this->expectExceptionMessage('Circular reference detected');
+
+        $this->resolver->resolve('#/$defs/a', $document);
+    }
+
+    #[Test]
+    public function anchor_cycle_throws_domain_exception(): void
+    {
+        $first = new Schema(anchor: 'firstAnchor', ref: '#secondAnchor');
+        $second = new Schema(anchor: 'secondAnchor', ref: '#firstAnchor');
+        $document = $this->documentWithSubject(
+            new Schema(
+                title: 'Subject',
+                defs: ['A' => $first, 'B' => $second],
+            ),
+        );
+
+        $this->expectException(UnresolvableRefException::class);
+        $this->expectExceptionMessage('Circular reference detected');
+
+        $this->resolver->resolve('#firstAnchor', $document);
+    }
+
+    #[Test]
+    public function resolve_uri_ref_with_anchor_scoped_to_resource(): void
+    {
+        $numberSchema = new Schema(id: 'child2', anchor: 'my_anchor', type: 'number');
+        $stringSchema = new Schema(anchor: 'my_anchor', type: 'string');
+        $document = $this->documentWithSubject(
+            new Schema(
+                title: 'Subject',
+                id: 'http://localhost:1234/draft2020-12/foobar',
+                ref: 'child1#my_anchor',
+                defs: [
+                    'A' => new Schema(
+                        id: 'child1',
+                        allOf: [$numberSchema, $stringSchema],
+                    ),
+                ],
+            ),
+        );
+
+        $resolved = $this->resolver->resolveSchemaWithOverride(
+            $document->components->schemas['Subject'],
+            $document,
+        );
+
+        $this->assertSame('string', $resolved->type);
+    }
+
+    #[Test]
+    public function resolve_uri_ref_with_plain_name_fragment_across_id_scope(): void
+    {
+        $target = new Schema(id: 'nested.json', defs: [
+            'B' => new Schema(anchor: 'foo', type: 'integer'),
+        ]);
+        $document = $this->documentWithSubject(
+            new Schema(
+                title: 'Subject',
+                id: 'http://localhost:1234/draft2020-12/root',
+                ref: 'http://localhost:1234/draft2020-12/nested.json#foo',
+                defs: ['A' => $target],
+            ),
+        );
+
+        $resolved = $this->resolver->resolveSchemaWithOverride(
+            $document->components->schemas['Subject'],
+            $document,
+        );
+
+        $this->assertSame('integer', $resolved->type);
+    }
+
+    #[Test]
+    public function resolve_defs_pointer_prefers_base_resource(): void
+    {
+        $target = new Schema(title: 'FromBase');
+        $document = $this->documentWithSubject(
+            new Schema(
+                title: 'Subject',
+                id: 'https://api.example.com/root.json',
+                defs: ['X' => $target],
+            ),
+            new Schema(
+                title: 'Other',
+                id: 'https://api.example.com/other.json',
+                defs: ['X' => new Schema(title: 'FromOther')],
+            ),
+        );
+
+        $resolved = $this->resolver->resolveSchemaWithOverride(
+            new Schema(ref: '#/$defs/X', id: 'https://api.example.com/root.json'),
+            $document,
+        );
+
+        $this->assertSame('FromBase', $resolved->title);
+    }
+
+    private function documentWithSubject(Schema $subject, ?Schema $second = null): OpenApiDocument
+    {
+        $schemas = ['Subject' => $subject];
+
+        if (null !== $second) {
+            $schemas['Second'] = $second;
+        }
+
+        return new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Test API', '1.0.0'),
+            components: new Components(schemas: $schemas),
+        );
+    }
+
     private function createNestedSchemaChain(int $depth, string $leafValue): Schema
     {
         $leaf = new Schema(ref: '#/components/schemas/' . $leafValue);

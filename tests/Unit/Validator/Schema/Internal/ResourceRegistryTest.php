@@ -18,7 +18,6 @@ use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 use WeakMap;
 
-use function count;
 use function gc_collect_cycles;
 
 final class CountingWalker implements SchemaSubschemaWalkerInterface
@@ -51,6 +50,7 @@ final class ResourceRegistryTest extends TestCase
 
     protected function setUp(): void
     {
+        self::resetRegistriesMap();
         $this->resolver = new RefResolver();
     }
 
@@ -195,6 +195,59 @@ final class ResourceRegistryTest extends TestCase
     }
 
     #[Test]
+    public function anchors_are_indexed_per_resource_uri(): void
+    {
+        $numberSchema = new Schema(id: 'child2', anchor: 'shared_anchor', type: 'number');
+        $stringSchema = new Schema(anchor: 'shared_anchor', type: 'string');
+        $root = new Schema(
+            id: 'https://api.example.com/foobar',
+            defs: [
+                'A' => new Schema(id: 'child1', allOf: [$numberSchema, $stringSchema]),
+            ],
+        );
+        $document = $this->documentWithSchemas(['A' => $root], 'https://api.example.com/openapi.json');
+
+        $registry = ResourceRegistry::forDocument($document, $this->resolver);
+
+        self::assertSame(
+            $numberSchema,
+            $registry->findAnchorIn('https://api.example.com/child2', 'shared_anchor'),
+        );
+        self::assertSame(
+            $stringSchema,
+            $registry->findAnchorIn('https://api.example.com/child1', 'shared_anchor'),
+        );
+        self::assertNull($registry->findAnchorIn('https://api.example.com/missing', 'shared_anchor'));
+        self::assertNull($registry->findDynamicAnchorIn('https://api.example.com/child1', 'shared_anchor'));
+        self::assertSame([$root], $registry->roots());
+    }
+
+    #[Test]
+    public function dynamic_anchors_are_indexed_per_resource_uri(): void
+    {
+        $dynamic = new Schema(dynamicAnchor: 'meta', id: 'meta.json');
+        $root = new Schema(id: 'https://api.example.com/root.json', defs: ['M' => $dynamic]);
+        $document = $this->documentWithSchemas(['A' => $root]);
+
+        $registry = ResourceRegistry::forDocument($document, $this->resolver);
+
+        self::assertSame($dynamic, $registry->findDynamicAnchorIn('https://api.example.com/meta.json', 'meta'));
+        self::assertNull($registry->findAnchorIn('https://api.example.com/meta.json', 'meta'));
+    }
+
+    #[Test]
+    public function anchors_without_resource_id_fall_into_document_base_bucket(): void
+    {
+        $anchored = new Schema(anchor: 'loose', id: 'loose.json');
+        $root = new Schema(defs: ['L' => $anchored]);
+        $document = $this->documentWithSchemas(['A' => $root]);
+
+        $registry = ResourceRegistry::forDocument($document, $this->resolver);
+
+        self::assertSame($anchored, $registry->findAnchorIn('loose.json', 'loose'));
+    }
+
+    #[Test]
     public function two_documents_have_independent_registries(): void
     {
         $schemaA = new Schema(anchor: 'shared-name', title: 'A');
@@ -218,12 +271,13 @@ final class ResourceRegistryTest extends TestCase
         ResourceRegistry::forDocument($document, $this->resolver);
 
         $map = self::registriesMap();
-        $withEntry = count($map);
+        self::assertCount(1, $map);
 
         unset($document);
         gc_collect_cycles();
+        gc_collect_cycles();
 
-        self::assertSame($withEntry - 1, count($map));
+        self::assertCount(0, $map);
     }
 
     #[Test]
@@ -239,6 +293,14 @@ final class ResourceRegistryTest extends TestCase
 
         self::assertSame($shared, $registry->findByAnchor('shared'));
         self::assertSame(3, $spy->traversals);
+    }
+
+    private static function resetRegistriesMap(): void
+    {
+        $property = new ReflectionProperty(ResourceRegistry::class, 'registries');
+        /** @var WeakMap<OpenApiDocument, ResourceRegistry> $map */
+        $map = new WeakMap();
+        $property->setValue(null, $map);
     }
 
     private static function registriesMap(): WeakMap

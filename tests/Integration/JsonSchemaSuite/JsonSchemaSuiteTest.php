@@ -35,6 +35,7 @@ final class JsonSchemaSuiteTest extends TestCase
         'propertyNames.json',
         'maxProperties.json',
         'if-then-else.json',
+        'anchor.json',
     ];
 
     public const array PENDING_SECTIONS = [
@@ -55,11 +56,10 @@ final class JsonSchemaSuiteTest extends TestCase
         'anyOf.json' => 'FS-16',
         'oneOf.json' => 'FS-16',
         'not.json' => 'FS-40',
-        'anchor.json' => 'FS-07',
         'boolean_schema.json' => 'FS-02',
         'content.json' => 'FS-20',
         'default.json' => 'FS-05',
-        'defs.json' => 'FS-07',
+        'defs.json' => 'FS-40',
         'dependentRequired.json' => 'FS-17',
         'dependentSchemas.json' => 'FS-17',
         'dynamicRef.json' => 'FS-10',

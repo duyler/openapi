@@ -97,6 +97,59 @@ YAML;
     }
 
     #[Test]
+    public function assert_confinement_passes_on_fragment_only_plain_name_ref(): void
+    {
+        $yaml = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: Plain-name fragment is same-document
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Foo:
+      $ref: '#myAnchor'
+YAML;
+
+        $detector = new ExternalRefDetector(new BuilderConfig(
+            specContent: $yaml,
+            specType: 'yaml',
+        ));
+
+        $detector->assertConfinement();
+
+        $this->addToAssertionCount(1);
+    }
+
+    #[Test]
+    public function assert_confinement_fail_closed_on_uri_ref_with_fragment(): void
+    {
+        $yaml = <<<'YAML'
+openapi: 3.2.0
+info:
+  title: URI reference with fragment
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Foo:
+      $ref: 'shared/bar.yaml#myAnchor'
+YAML;
+
+        $detector = new ExternalRefDetector(new BuilderConfig(
+            specContent: $yaml,
+            specType: 'yaml',
+        ));
+
+        try {
+            $detector->assertConfinement();
+            self::fail('URI reference with fragment must throw BuilderException (fail-closed).');
+        } catch (BuilderException $e) {
+            self::assertStringContainsString('externalRefAllowedRoot', $e->getMessage());
+        }
+    }
+
+    #[Test]
     public function assert_confinement_fail_closed_on_yaml_string_spec_with_external_ref(): void
     {
         $yaml = <<<'YAML'

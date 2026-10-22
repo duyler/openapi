@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.9.0]
 
+### Changed
+
+- `$ref` fragments are resolved by their JSON Schema 2020-12 kind. A fragment
+  starting with `/` is treated as a JSON Pointer (RFC 6901 `~0`/`~1` decoding
+  stays localized to pointer segments); any other fragment is a plain-name
+  fragment resolved through the `$anchor`/`$dynamicAnchor` indexes only, with
+  NCName validation and without tilde decoding. Pointer fragments rooted at
+  `$defs`, URI references whose resource matches an in-document `$id`, and
+  bare plain-name fragments resolve through the document resource registry
+  first and fall back to raw document navigation afterwards;
+  `UnresolvableRefException` is raised only after both are exhausted. Specs
+  containing bare-fragment `$ref` values (for example `#myAnchor`) no longer
+  require `externalRefAllowedRoot`, because a bare fragment never leaves the
+  document. Relative URI references resolve against the `$id` of the schema
+  carrying them, then against the document `$self`.
+
 ### Removed
 
 - `Schema\Model\Schema::withOverrides()` is removed. Build a schema from

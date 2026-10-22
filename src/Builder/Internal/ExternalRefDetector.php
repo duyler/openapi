@@ -164,7 +164,7 @@ final readonly class ExternalRefDetector
      */
     private function isExternalRefString(mixed $ref): bool
     {
-        return is_string($ref) && false === str_starts_with($ref, '#/');
+        return is_string($ref) && false === str_starts_with($ref, '#');
     }
 
     /** @return array<array-key, mixed> */

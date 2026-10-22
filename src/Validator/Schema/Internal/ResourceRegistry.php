@@ -24,6 +24,15 @@ final class ResourceRegistry
     /** @var array<string, Schema> */
     private array $byDynamicAnchor = [];
 
+    /** @var list<Schema> */
+    private array $roots = [];
+
+    /** @var array<string, array<string, Schema>> */
+    private array $byAnchorInResource = [];
+
+    /** @var array<string, array<string, Schema>> */
+    private array $byDynamicAnchorInResource = [];
+
     private function __construct(
         private readonly SchemaSubschemaWalkerInterface $walker,
     ) {}
@@ -75,6 +84,22 @@ final class ResourceRegistry
         return $this->byDynamicAnchor[$name] ?? null;
     }
 
+    /** @return list<Schema> */
+    public function roots(): array
+    {
+        return $this->roots;
+    }
+
+    public function findAnchorIn(string $resourceUri, string $name): ?Schema
+    {
+        return $this->byAnchorInResource[$resourceUri][$name] ?? null;
+    }
+
+    public function findDynamicAnchorIn(string $resourceUri, string $name): ?Schema
+    {
+        return $this->byDynamicAnchorInResource[$resourceUri][$name] ?? null;
+    }
+
     private function indexDocument(OpenApiDocument $document, RefResolverInterface $refResolver): void
     {
         $baseUri = $refResolver->getBaseUri($document);
@@ -84,6 +109,7 @@ final class ResourceRegistry
         $visited = new WeakMap();
 
         foreach ($roots as $rootSchema) {
+            $this->roots[] = $rootSchema;
             $this->indexSchema($rootSchema, $baseUri, $refResolver, $visited);
         }
     }
@@ -111,10 +137,12 @@ final class ResourceRegistry
 
         if (null !== $schema->anchor) {
             $this->byAnchor[$schema->anchor] ??= $schema;
+            $this->byAnchorInResource[$baseUri ?? ''][$schema->anchor] ??= $schema;
         }
 
         if (null !== $schema->dynamicAnchor) {
             $this->byDynamicAnchor[$schema->dynamicAnchor] ??= $schema;
+            $this->byDynamicAnchorInResource[$baseUri ?? ''][$schema->dynamicAnchor] ??= $schema;
         }
 
         foreach ($this->walker->iterateSubSchemas($schema) as $subSchema) {
