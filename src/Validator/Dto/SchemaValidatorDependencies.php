@@ -18,44 +18,19 @@ use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\QueryParser;
+use Duyler\OpenApi\Validator\Schema\Internal\KeywordValidatorAdapter;
+use Duyler\OpenApi\Validator\Schema\KeywordValidatorInterface;
+use Duyler\OpenApi\Validator\Schema\KeywordValidatorRegistry;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorDispatcher;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
-use Duyler\OpenApi\Validator\SchemaValidator\AdditionalPropertiesValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\AllOfValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\AnyOfValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ArrayLengthValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ConstValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ContentEncodingValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ContentMediaTypeValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ContainsValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\DependentRequiredValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\DependentSchemasValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\DeprecatedValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\DynamicRefValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\EnumValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\FormatValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\IfThenElseValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ItemsValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\NotValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\NumericRangeValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ObjectLengthValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\OneOfValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\PatternPropertiesValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\PatternValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\PrefixItemsValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\PropertiesValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\PropertyNamesValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\ReadOnlyWriteOnlyValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\RefResolvingSchemaValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\RequiredValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
-use Duyler\OpenApi\Validator\SchemaValidator\StringLengthValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\TypeValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedItemsValidator;
-use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedPropertiesValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -64,6 +39,7 @@ use WeakMap;
 
 use function array_filter;
 use function array_values;
+use function assert;
 use function in_array;
 
 /**
@@ -85,13 +61,12 @@ final class SchemaValidatorDependencies
     /** @var WeakMap<OpenApiDocument, SchemaValidatorWithContext> */
     private WeakMap $rootSchemaValidators;
 
-    /** @var array<class-string<SchemaValidatorInterface>, SchemaValidatorInterface>|null */
-    private ?array $validators = null;
-
     /** @var StatelessValidatorList|null */
     private ?array $statelessList = null;
 
     private ?SchemaValidatorInterface $statelessRoot = null;
+
+    private ?KeywordValidatorRegistry $keywordValidators = null;
 
     public function __construct(
         public readonly ValidatorPool $pool,
@@ -132,7 +107,7 @@ final class SchemaValidatorDependencies
     public function createStatelessList(): array
     {
         return $this->statelessList ??= array_values(array_filter(
-            $this->validators(),
+            $this->createFullList(),
             static fn(SchemaValidatorInterface $validator): bool => false === in_array(
                 $validator::class,
                 self::CONTEXT_HANDLED_VALIDATORS,
@@ -146,7 +121,13 @@ final class SchemaValidatorDependencies
      */
     public function createFullList(): array
     {
-        return array_values($this->validators());
+        $validators = [];
+
+        foreach ($this->keywordValidators()->all() as $keywordValidator) {
+            $validators[] = $this->schemaValidator($keywordValidator);
+        }
+
+        return $validators;
     }
 
     public function rootStatelessValidator(): SchemaValidatorInterface
@@ -182,41 +163,15 @@ final class SchemaValidatorDependencies
         return new RefResolvingSchemaValidator($validator, $this->refResolver, $this->document);
     }
 
-    /** @return array<class-string<SchemaValidatorInterface>, SchemaValidatorInterface> */
-    private function validators(): array
+    private function keywordValidators(): KeywordValidatorRegistry
     {
-        return $this->validators ??= [
-            AllOfValidator::class => new AllOfValidator($this),
-            AnyOfValidator::class => new AnyOfValidator($this),
-            ArrayLengthValidator::class => new ArrayLengthValidator($this),
-            ConstValidator::class => new ConstValidator($this),
-            ContainsValidator::class => new ContainsValidator($this),
-            DependentRequiredValidator::class => new DependentRequiredValidator($this),
-            DependentSchemasValidator::class => new DependentSchemasValidator($this),
-            DeprecatedValidator::class => new DeprecatedValidator($this),
-            DynamicRefValidator::class => new DynamicRefValidator($this),
-            EnumValidator::class => new EnumValidator($this),
-            FormatValidator::class => new FormatValidator($this),
-            IfThenElseValidator::class => new IfThenElseValidator($this),
-            ItemsValidator::class => new ItemsValidator($this),
-            NotValidator::class => new NotValidator($this),
-            NumericRangeValidator::class => new NumericRangeValidator($this),
-            ObjectLengthValidator::class => new ObjectLengthValidator($this),
-            OneOfValidator::class => new OneOfValidator($this),
-            PatternPropertiesValidator::class => new PatternPropertiesValidator($this),
-            PatternValidator::class => new PatternValidator($this),
-            PrefixItemsValidator::class => new PrefixItemsValidator($this),
-            PropertiesValidator::class => new PropertiesValidator($this),
-            PropertyNamesValidator::class => new PropertyNamesValidator($this),
-            ReadOnlyWriteOnlyValidator::class => new ReadOnlyWriteOnlyValidator($this),
-            RequiredValidator::class => new RequiredValidator($this),
-            StringLengthValidator::class => new StringLengthValidator($this),
-            TypeValidator::class => new TypeValidator($this),
-            UnevaluatedItemsValidator::class => new UnevaluatedItemsValidator($this),
-            UnevaluatedPropertiesValidator::class => new UnevaluatedPropertiesValidator($this),
-            AdditionalPropertiesValidator::class => new AdditionalPropertiesValidator($this),
-            ContentEncodingValidator::class => new ContentEncodingValidator($this),
-            ContentMediaTypeValidator::class => new ContentMediaTypeValidator($this),
-        ];
+        return $this->keywordValidators ??= KeywordValidatorRegistry::buildIn($this);
+    }
+
+    private function schemaValidator(KeywordValidatorInterface $keywordValidator): SchemaValidatorInterface
+    {
+        assert($keywordValidator instanceof KeywordValidatorAdapter);
+
+        return $keywordValidator->validator();
     }
 }
