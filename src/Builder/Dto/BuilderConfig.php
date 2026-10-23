@@ -9,6 +9,7 @@ use Duyler\OpenApi\Schema\Parser\DocumentRepository;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\Schema\ExternalRefResolverInterface;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -45,6 +46,7 @@ final readonly class BuilderConfig
         public readonly ?int $maxSpecSizeBytes = null,
         public readonly ?int $maxSpecDepth = null,
         public readonly ?DocumentRepository $documentRepository = null,
+        public readonly ?ExternalRefResolverInterface $externalRefResolver = null,
     ) {}
 
     public function merge(self $overrides): self
@@ -79,6 +81,7 @@ final readonly class BuilderConfig
             maxSpecSizeBytes: $overrides->maxSpecSizeBytes ?? $this->maxSpecSizeBytes,
             maxSpecDepth: $overrides->maxSpecDepth ?? $this->maxSpecDepth,
             documentRepository: $overrides->documentRepository ?? $this->documentRepository,
+            externalRefResolver: $overrides->externalRefResolver ?? $this->externalRefResolver,
         );
     }
 }

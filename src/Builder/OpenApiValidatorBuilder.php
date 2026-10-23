@@ -31,6 +31,7 @@ use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Validator\PathFinder;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
+use Duyler\OpenApi\Validator\Schema\ExternalRefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
@@ -174,6 +175,11 @@ final readonly class OpenApiValidatorBuilder
         }
 
         return $this->with(new BuilderConfig(externalRefAllowedRoot: $realPath));
+    }
+
+    public function withExternalRefResolver(ExternalRefResolverInterface $resolver): self
+    {
+        return $this->with(new BuilderConfig(externalRefResolver: $resolver));
     }
 
     public function withDocument(string $retrievalUri, string $content): self
@@ -369,6 +375,7 @@ final readonly class OpenApiValidatorBuilder
             logger: $securityVerboseLogger,
         );
         $refResolver = new RefResolver(
+            externalRefResolver: $this->config->externalRefResolver,
             builtinFileResolver: $fileResolver,
             documentRepository: $this->config->documentRepository,
         );
