@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
@@ -223,9 +224,11 @@ final readonly class DynamicRefValidator extends AbstractSchemaValidator impleme
 
     private function rootValidator(): SchemaValidatorWithContext
     {
+        $document = $this->requireDocument();
+
         return $this->dependencies->rootSchemaValidator(
-            $this->requireDocument(),
-            new ValidatorConfiguration(),
+            $document,
+            new ValidatorConfiguration(dialectProfile: DialectProfile::fromOpenApiVersion($document->openapi)),
         );
     }
 }

@@ -44,7 +44,7 @@ final readonly class TypeValidator extends AbstractSchemaValidator implements Ke
 
         $nullableAsType = $context?->nullableAsType ?? true;
 
-        if (null === $data && SchemaValueNormalizer::isNullableSchema($schema, $nullableAsType)) {
+        if (null === $data && SchemaValueNormalizer::isNullableSchema($schema, $nullableAsType, $context?->dialectProfile)) {
             return;
         }
 

@@ -125,7 +125,7 @@ abstract readonly class AbstractCompositionalValidator extends AbstractSchemaVal
      */
     private function normalizeForBranch(mixed $data, Schema $subSchema, ?ValidationContext $context): array|int|string|float|bool|null
     {
-        $allowNull = SchemaValueNormalizer::allowsNull($subSchema, $context?->nullableAsType ?? true);
+        $allowNull = SchemaValueNormalizer::allowsNull($subSchema, $context?->nullableAsType ?? true, $context?->dialectProfile);
 
         return SchemaValueNormalizer::normalize($data, $allowNull);
     }

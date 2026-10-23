@@ -57,7 +57,7 @@ final readonly class DependentSchemasValidator extends AbstractSchemaValidator i
         $validator = $this->createSchemaValidator();
 
         try {
-            $allowNull = SchemaValueNormalizer::allowsNull($dependentSchema, $nullableAsType);
+            $allowNull = SchemaValueNormalizer::allowsNull($dependentSchema, $nullableAsType, $context?->dialectProfile);
             $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
             $validator->validate($normalizedData, $dependentSchema, $context);
         } catch (InvalidDataTypeException $e) {

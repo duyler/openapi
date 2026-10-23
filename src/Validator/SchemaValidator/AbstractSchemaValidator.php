@@ -26,7 +26,7 @@ abstract readonly class AbstractSchemaValidator implements SchemaValidatorInterf
     protected function acceptsNullAsNullable(mixed $data, Schema $schema, ?ValidationContext $context): bool
     {
         return null === $data
-            && SchemaValueNormalizer::isNullableSchema($schema, $context?->nullableAsType ?? true);
+            && SchemaValueNormalizer::isNullableSchema($schema, $context?->nullableAsType ?? true, $context?->dialectProfile);
     }
 
     protected function getDataPath(?ValidationContext $context): string

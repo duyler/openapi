@@ -148,6 +148,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   properties are rejected where they previously passed. OpenAPI 3.1+
   documents keep applying `$ref` siblings per JSON Schema 2020-12
   §8.2.3.1, including per-hop merging along `$ref` chains.
+- OpenAPI 3.0 documents now treat `nullable: true` as an extension of an
+  explicit `type` in the same Schema Object (OAS 3.0.3 §4.7.24.2): a
+  `nullable` Schema Object without a `type` no longer makes `null`
+  acceptable, so `null` values for such properties are rejected where they
+  previously passed. `nullable: true` beside an explicit `type` keeps
+  accepting `null`, deferred decisions (`$ref`, `allOf`, `anyOf`, `oneOf`
+  branches) keep deferring, and a `not` sub-schema is now matched against a
+  `null` instance by the sub-schema's own keywords instead of rejecting the
+  match up front — so `not: {}` (the boolean `false` schema model) rejects
+  `null` as the suite requires. OpenAPI 3.1+ documents are unchanged,
+  including `type` unions with the `'null'` member and parser-side
+  `nullable` folding. The dialect decision is carried by the document's
+  `DialectProfile`, and the root-schema validator cache entry created while
+  resolving `$dynamicRef` without a validation context now derives the
+  profile from the document version instead of silently defaulting to 3.1.
 
 ## [0.8.0]
 

@@ -52,7 +52,7 @@ final readonly class OneOfValidatorWithContext
             return;
         }
 
-        if (null === $data && SchemaValueNormalizer::isNullableSchema($schema, $context->nullableAsType)) {
+        if (null === $data && SchemaValueNormalizer::isNullableSchema($schema, $context->nullableAsType, $context->dialectProfile)) {
             return;
         }
 
@@ -126,7 +126,7 @@ final readonly class OneOfValidatorWithContext
             $schemaPath = sprintf('/oneOf/%d', $index);
 
             try {
-                $allowNull = SchemaValueNormalizer::allowsNull($subSchema, $context->nullableAsType);
+                $allowNull = SchemaValueNormalizer::allowsNull($subSchema, $context->nullableAsType, $context->dialectProfile);
                 $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
                 $rootValidator->validateWithContext($normalizedData, $subSchema, $childContext);
                 ++$validCount;

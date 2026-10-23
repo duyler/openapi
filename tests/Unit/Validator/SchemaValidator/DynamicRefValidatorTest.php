@@ -398,6 +398,34 @@ final class DynamicRefValidatorTest extends TestCase
     }
 
     #[Test]
+    public function null_context_root_validation_applies_30_nullable_semantics(): void
+    {
+        $target = new Schema(
+            type: 'object',
+            properties: ['a' => new Schema(nullable: true)],
+        );
+        $validator = $this->createValidatorWithDocument($target, '3.0.3');
+
+        $this->expectException(InvalidDataTypeException::class);
+
+        $validator->validate(['a' => null], new Schema(dynamicRef: '#/components/schemas/Subject'));
+    }
+
+    #[Test]
+    public function null_context_root_validation_keeps_31_nullable_semantics(): void
+    {
+        $target = new Schema(
+            type: 'object',
+            properties: ['a' => new Schema(nullable: true)],
+        );
+        $validator = $this->createValidatorWithDocument($target);
+
+        $validator->validate(['a' => null], new Schema(dynamicRef: '#/components/schemas/Subject'));
+
+        self::addToAssertionCount(1);
+    }
+
+    #[Test]
     public function non_registry_resolver_exhausts_fallback_and_rethrows(): void
     {
         $resolver = $this->createStub(RefResolverInterface::class);
@@ -432,11 +460,11 @@ final class DynamicRefValidatorTest extends TestCase
         ));
     }
 
-    private function createValidatorWithDocument(Schema $resource): DynamicRefValidator
+    private function createValidatorWithDocument(Schema $resource, string $openapiVersion = '3.1.0'): DynamicRefValidator
     {
         $pool = new ValidatorPool();
         $document = new OpenApiDocument(
-            '3.1.0',
+            $openapiVersion,
             new InfoObject('DynamicRefValidatorTest', '1.0.0'),
             components: new Components(schemas: ['Subject' => $resource]),
         );

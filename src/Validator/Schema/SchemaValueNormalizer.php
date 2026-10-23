@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use stdClass;
 
@@ -50,23 +51,38 @@ final readonly class SchemaValueNormalizer
         ));
     }
 
-    public static function isNullableSchema(Schema $schema, bool $nullableAsType): bool
-    {
-        return $nullableAsType && $schema->nullable;
-    }
-
-    public static function allowsNull(Schema $schema, bool $nullableAsType = true): bool
+    public static function isNullableSchema(Schema $schema, bool $nullableAsType, ?DialectProfile $profile = null): bool
     {
         if (false === $nullableAsType) {
             return false;
         }
 
-        return $schema->nullable
-            || self::doesTypeIncludeNull($schema->type)
-            || null !== $schema->ref
-            || null !== $schema->allOf
-            || null !== $schema->anyOf
-            || null !== $schema->oneOf;
+        if (null === $schema->type && true === ($profile?->nullableRequiresType ?? false)) {
+            return false;
+        }
+
+        return $schema->nullable;
+    }
+
+    public static function allowsNull(Schema $schema, bool $nullableAsType = true, ?DialectProfile $profile = null): bool
+    {
+        if (false === $nullableAsType) {
+            return false;
+        }
+
+        if (self::doesTypeIncludeNull($schema->type)) {
+            return true;
+        }
+
+        if (null !== $schema->ref || null !== $schema->allOf || null !== $schema->anyOf || null !== $schema->oneOf) {
+            return true;
+        }
+
+        if (null === $schema->type && true === ($profile?->nullableRequiresType ?? false)) {
+            return false;
+        }
+
+        return $schema->nullable;
     }
 
     /**
