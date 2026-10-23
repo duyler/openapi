@@ -54,6 +54,7 @@ final class JsonSchemaSuiteTest extends TestCase
         'properties.json',
         'prefixItems.json',
         'boolean_schema.json',
+        'content.json',
     ];
 
     public const array PENDING_SECTIONS = [
@@ -69,7 +70,6 @@ final class JsonSchemaSuiteTest extends TestCase
         'patternProperties.json' => 'FS-40',
         'minProperties.json' => 'FS-40',
         'not.json' => 'FS-40',
-        'content.json' => 'FS-20',
         'defs.json' => 'FS-40',
         'format.json' => 'FS-25',
         'ref.json' => 'FS-40',

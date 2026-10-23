@@ -4,20 +4,44 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
+use Duyler\OpenApi\Event\ValidationWarningEvent;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidContentEncodingException;
+use Duyler\OpenApi\Validator\Util\Encoding\Base16SyntaxCheck;
+use Duyler\OpenApi\Validator\Util\Encoding\Base32HexSyntaxCheck;
+use Duyler\OpenApi\Validator\Util\Encoding\Base32SyntaxCheck;
+use Duyler\OpenApi\Validator\Util\Encoding\Base64SyntaxCheck;
+use Duyler\OpenApi\Validator\Util\Encoding\Base64UrlSyntaxCheck;
+use Duyler\OpenApi\Validator\Util\Encoding\EncodingSyntaxCheck;
+use Duyler\OpenApi\Validator\Util\Encoding\QuotedPrintableSyntaxCheck;
 use Override;
 
-use function base64_encode;
+use function array_key_exists;
 use function is_string;
+use function sprintf;
 
 final readonly class ContentEncodingValidator implements KeywordApplicable
 {
+    /** @var array<string, EncodingSyntaxCheck|null> */
+    private readonly array $encodingChecks;
+
     public function __construct(
         private readonly SchemaValidatorDependencies $dependencies,
-    ) {}
+    ) {
+        $this->encodingChecks = [
+            'base16' => new Base16SyntaxCheck(),
+            'base32' => new Base32SyntaxCheck(),
+            'base32hex' => new Base32HexSyntaxCheck(),
+            'base64' => new Base64SyntaxCheck($this->dependencies->contentDecoder),
+            'base64url' => new Base64UrlSyntaxCheck(),
+            'quoted-printable' => new QuotedPrintableSyntaxCheck(),
+            '7bit' => null,
+            '8bit' => null,
+            'binary' => null,
+        ];
+    }
 
     #[Override]
     public function isApplicable(Schema $schema): bool
@@ -36,25 +60,40 @@ final readonly class ContentEncodingValidator implements KeywordApplicable
             $context->annotate('contentEncoding', $schema->contentEncoding, $context->path());
         }
 
+        if (false === array_key_exists($schema->contentEncoding, $this->encodingChecks)) {
+            $this->warnUnknownEncoding($schema->contentEncoding, $schema, $context);
+        }
+
         if (false === $this->dependencies->contentAssertionsEnabled) {
             return;
         }
 
-        match ($schema->contentEncoding) {
-            'base64' => $this->validateBase64($data),
-            default => null,
-        };
+        $check = $this->encodingChecks[$schema->contentEncoding] ?? null;
+
+        if (null === $check) {
+            return;
+        }
+
+        if (false === $check->isValid($data)) {
+            throw new InvalidContentEncodingException($data, $schema->contentEncoding);
+        }
     }
 
-    private function validateBase64(string $data): void
+    private function warnUnknownEncoding(string $encoding, Schema $schema, ?ValidationContext $context): void
     {
-        $decoded = $this->dependencies->contentDecoder->decodeBase64($data);
+        $propertyPath = null === $context ? '/' : $context->path();
 
-        if (false === $decoded || base64_encode($decoded) !== $data) {
-            throw new InvalidContentEncodingException(
-                $data,
-                'base64',
-            );
-        }
+        $this->dependencies->eventDispatcher?->dispatch(
+            new ValidationWarningEvent(
+                propertyPath: $propertyPath,
+                propertyName: 'contentEncoding',
+                message: sprintf('Unrecognized contentEncoding "%s" is collected as an annotation', $encoding),
+                schemaRef: $schema->ref,
+            ),
+        );
+
+        $this->dependencies->logger->warning(
+            sprintf('Unrecognized contentEncoding "%s" at path "%s"', $encoding, $propertyPath),
+        );
     }
 }

@@ -132,6 +132,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   validation. Call `OpenApiValidatorBuilder::enableContentAssertions()` to restore the
   previous assertion behavior (strict base64 round-trip check and media type syntax
   validation) as a transitional mode until the full content assertion pipeline ships.
+- With `enableContentAssertions()`, `contentEncoding` assertions now cover the full
+  RFC 4648 family — `base16`, `base32`, `base32hex`, `base64`, `base64url` (padding
+  optional, canonical pad counts enforced, mixed padding rejected) — plus RFC 2045 §6.7
+  `quoted-printable` syntax validation (uppercase `=HH` escapes, `=CRLF` soft breaks,
+  tolerated trailing whitespace, CRLF-only line breaks). `7bit`, `8bit` and `binary`
+  remain identity encodings without data checks, and an unrecognized encoding token now
+  emits a PSR-14 `ValidationWarningEvent` plus a log warning instead of being ignored
+  silently. The strict canonical `base64` round-trip assertion is unchanged.
+- The official JSON Schema test suite section `content.json` is re-bound to the active
+  sections: it was previously parked pending the content assertion pipeline work; all 18
+  cases assert annotation-only content semantics and pass on the current validator,
+  following the rebind precedent of the earlier suite triage.
 
 ### Removed
 
