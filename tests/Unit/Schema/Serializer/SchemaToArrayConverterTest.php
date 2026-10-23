@@ -481,6 +481,7 @@ final class SchemaToArrayConverterTest extends TestCase
             'maxContains',
             'patternProperties',
             'propertyNames',
+            'dependentRequired',
             'dependentSchemas',
             'if',
             'then',

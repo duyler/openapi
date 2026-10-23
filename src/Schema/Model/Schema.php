@@ -25,6 +25,7 @@ final readonly class Schema implements JsonSerializable
      * @param Schema|bool|null $items
      * @param list<Schema>|null $prefixItems
      * @param array<string, Schema>|null $patternProperties
+     * @param array<string, list<string>>|null $dependentRequired
      * @param array<string, Schema>|null $dependentSchemas
      * @param Schema|bool|null $additionalProperties
      * @param Schema|bool|null $unevaluatedProperties
@@ -87,6 +88,7 @@ final readonly class Schema implements JsonSerializable
         public ?int $maxContains = null,
         public ?array $patternProperties = null,
         public Schema|bool|null $propertyNames = null,
+        public ?array $dependentRequired = null,
         public ?array $dependentSchemas = null,
         public Schema|bool|null $if = null,
         public Schema|bool|null $then = null,
@@ -165,6 +167,7 @@ final readonly class Schema implements JsonSerializable
             maxContains: $array->maxContains,
             patternProperties: $object->patternProperties,
             propertyNames: $object->propertyNames,
+            dependentRequired: $object->dependentRequired,
             dependentSchemas: $object->dependentSchemas,
             if: $composition->if,
             then: $composition->then,
@@ -233,6 +236,7 @@ final readonly class Schema implements JsonSerializable
             maxContains: $array->maxContains ?? $this->maxContains,
             patternProperties: $object->patternProperties ?? $this->patternProperties,
             propertyNames: $object->propertyNames ?? $this->propertyNames,
+            dependentRequired: $object->dependentRequired ?? $this->dependentRequired,
             dependentSchemas: $object->dependentSchemas ?? $this->dependentSchemas,
             if: $composition->if ?? $this->if,
             then: $composition->then ?? $this->then,
@@ -335,6 +339,7 @@ final readonly class Schema implements JsonSerializable
             && null === $this->additionalProperties
             && null === $this->unevaluatedProperties
             && null === $this->patternProperties
+            && null === $this->dependentRequired
             && null === $this->dependentSchemas
             && null === $this->propertyNames
         ) {
@@ -349,6 +354,7 @@ final readonly class Schema implements JsonSerializable
             additionalProperties: $this->additionalProperties,
             unevaluatedProperties: $this->unevaluatedProperties,
             patternProperties: $this->patternProperties,
+            dependentRequired: $this->dependentRequired,
             dependentSchemas: $this->dependentSchemas,
             propertyNames: $this->propertyNames,
         );

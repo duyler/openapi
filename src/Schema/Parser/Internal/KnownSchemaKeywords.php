@@ -9,6 +9,9 @@ use Duyler\OpenApi\Schema\Model\SchemaFieldMetadata;
 /** @internal */
 final class KnownSchemaKeywords
 {
+    /** @var list<string> */
+    private const array TRANSLATED_KEYWORDS = ['dependencies'];
+
     /** @var array<string, true>|null */
     private static ?array $registry = null;
 
@@ -26,6 +29,10 @@ final class KnownSchemaKeywords
 
         foreach (SchemaFieldMetadata::fields() as $field) {
             $registry[$field->openApiName] = true;
+        }
+
+        foreach (self::TRANSLATED_KEYWORDS as $keyword) {
+            $registry[$keyword] = true;
         }
 
         return $registry;

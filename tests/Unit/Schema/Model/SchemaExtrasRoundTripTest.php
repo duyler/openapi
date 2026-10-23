@@ -208,6 +208,27 @@ final class SchemaExtrasRoundTripTest extends TestCase
         self::assertFalse(KnownSchemaKeywords::isKnown('$recursiveRef'));
     }
 
+    #[Test]
+    public function translated_legacy_dependencies_keyword_is_known(): void
+    {
+        self::assertTrue(KnownSchemaKeywords::isKnown('dependencies'));
+    }
+
+    #[Test]
+    public function round_trip_omits_empty_dependent_required_map(): void
+    {
+        $schema = $this->parser->fromArray([
+            'type' => 'object',
+            'dependentRequired' => [],
+        ]);
+
+        self::assertNull($schema->dependentRequired);
+
+        $wire = $this->decode($schema->jsonSerialize());
+
+        self::assertArrayNotHasKey('dependentRequired', $wire);
+    }
+
     /** @return array<string, mixed> */
     private function decode(array $wire): array
     {

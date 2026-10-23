@@ -15,6 +15,7 @@ final readonly class ObjectFields
      * @param array<string, Schema>|null $properties
      * @param list<string>|null $required
      * @param array<string, Schema>|null $patternProperties
+     * @param array<string, list<string>>|null $dependentRequired
      * @param array<string, Schema>|null $dependentSchemas
      */
     public function __construct(
@@ -25,6 +26,7 @@ final readonly class ObjectFields
         public Schema|bool|null $additionalProperties = null,
         public Schema|bool|null $unevaluatedProperties = null,
         public ?array $patternProperties = null,
+        public ?array $dependentRequired = null,
         public ?array $dependentSchemas = null,
         public Schema|bool|null $propertyNames = null,
     ) {}

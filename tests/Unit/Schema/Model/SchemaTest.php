@@ -629,6 +629,22 @@ final class SchemaTest extends TestCase
     }
 
     #[Test]
+    public function json_serialize_includes_dependent_required(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            dependentRequired: [
+                'creditCard' => ['billingAddress'],
+            ],
+        );
+
+        $serialized = $schema->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertSame(['billingAddress'], $serialized['dependentRequired']['creditCard']);
+    }
+
+    #[Test]
     public function json_serialize_includes_if(): void
     {
         $schema = new Schema(

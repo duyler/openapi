@@ -210,6 +210,27 @@ final class SchemaSubDtoTest extends TestCase
         self::assertFalse(new NumericConstraints(minimum: 1.0)->isEmpty());
         self::assertFalse(new ArrayConstraints(minItems: 1)->isEmpty());
         self::assertFalse(new ObjectConstraints(minProperties: 1)->isEmpty());
+        self::assertFalse(new ObjectConstraints(dependentRequired: ['creditCard' => ['billingAddress']])->isEmpty());
         self::assertFalse(new CompositionConstraints(not: new Schema())->isEmpty());
+    }
+
+    #[Test]
+    public function object_constraints_groups_dependent_required(): void
+    {
+        $dependentRequired = ['creditCard' => ['billingAddress']];
+        $schema = new Schema(type: 'object', dependentRequired: $dependentRequired);
+
+        $constraints = $schema->objectConstraints();
+
+        self::assertNotNull($constraints);
+        self::assertSame($dependentRequired, $constraints->dependentRequired);
+    }
+
+    #[Test]
+    public function object_constraints_return_null_without_object_fields(): void
+    {
+        $schema = new Schema(type: 'string', minLength: 1);
+
+        self::assertNull($schema->objectConstraints());
     }
 }

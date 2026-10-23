@@ -74,6 +74,7 @@ final readonly class SchemaSiblingMerger
             maxContains: $sibling->maxContains ?? $resolved->maxContains,
             patternProperties: $composition['patternProperties'],
             propertyNames: $bound['propertyNames'],
+            dependentRequired: $this->mergeDependentRequired($resolved->dependentRequired, $sibling->dependentRequired),
             dependentSchemas: $composition['dependentSchemas'],
             if: $composition['if'],
             then: $composition['then'],
@@ -114,5 +115,32 @@ final readonly class SchemaSiblingMerger
         }
 
         return array_values(array_unique(array_merge($resolved, $sibling)));
+    }
+
+    /**
+     * @param ?array<string, list<string>> $resolved
+     * @param ?array<string, list<string>> $sibling
+     * @return ?array<string, list<string>>
+     */
+    private function mergeDependentRequired(?array $resolved, ?array $sibling): ?array
+    {
+        if (null === $sibling) {
+            return $resolved;
+        }
+
+        if (null === $resolved) {
+            return $sibling;
+        }
+
+        $merged = $resolved;
+
+        foreach ($sibling as $property => $requiredProperties) {
+            $merged[$property] = array_values(array_unique(array_merge(
+                $merged[$property] ?? [],
+                $requiredProperties,
+            )));
+        }
+
+        return $merged;
     }
 }

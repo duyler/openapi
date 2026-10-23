@@ -180,6 +180,7 @@ final class SchemaConstraintGroupsTest extends TestCase
         $properties = ['name' => new Schema(type: 'string')];
         $additional = new Schema(type: 'string');
         $patternProps = ['^[a-z]+$' => new Schema(type: 'string')];
+        $dependentRequired = ['creditCard' => ['billingAddress']];
         $dependent = ['foo' => new Schema(type: 'object')];
         $propertyNames = new Schema(pattern: '^[a-z]+$');
 
@@ -194,6 +195,7 @@ final class SchemaConstraintGroupsTest extends TestCase
                 additionalProperties: $additional,
                 unevaluatedProperties: false,
                 patternProperties: $patternProps,
+                dependentRequired: $dependentRequired,
                 dependentSchemas: $dependent,
                 propertyNames: $propertyNames,
             ),
@@ -207,6 +209,7 @@ final class SchemaConstraintGroupsTest extends TestCase
         self::assertSame($additional, $schema->additionalProperties);
         self::assertFalse($schema->unevaluatedProperties);
         self::assertSame($patternProps, $schema->patternProperties);
+        self::assertSame($dependentRequired, $schema->dependentRequired);
         self::assertSame($dependent, $schema->dependentSchemas);
         self::assertSame($propertyNames, $schema->propertyNames);
     }
@@ -400,7 +403,11 @@ final class SchemaConstraintGroupsTest extends TestCase
         $original = Schema::fromConstraintGroups(
             scalar: new ScalarFields(),
             array: new ArrayFields(),
-            object: new ObjectFields(required: ['a'], minProperties: 1),
+            object: new ObjectFields(
+                required: ['a'],
+                minProperties: 1,
+                dependentRequired: ['creditCard' => ['billingAddress']],
+            ),
             composition: new CompositionFields(),
         );
 
@@ -413,6 +420,27 @@ final class SchemaConstraintGroupsTest extends TestCase
 
         self::assertSame(['b'], $result->required);
         self::assertSame(1, $result->minProperties);
+        self::assertSame(['creditCard' => ['billingAddress']], $result->dependentRequired);
+    }
+
+    #[Test]
+    public function with_override_groups_overrides_dependent_required(): void
+    {
+        $original = Schema::fromConstraintGroups(
+            scalar: new ScalarFields(),
+            array: new ArrayFields(),
+            object: new ObjectFields(dependentRequired: ['creditCard' => ['billingAddress']]),
+            composition: new CompositionFields(),
+        );
+
+        $result = $original->withOverrideGroups(
+            scalar: new ScalarFields(),
+            array: new ArrayFields(),
+            object: new ObjectFields(dependentRequired: ['cardNumber' => ['cvv']]),
+            composition: new CompositionFields(),
+        );
+
+        self::assertSame(['cardNumber' => ['cvv']], $result->dependentRequired);
     }
 
     #[Test]

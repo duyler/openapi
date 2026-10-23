@@ -20,6 +20,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use TypeError;
 
 use function is_array;
 use function sprintf;
@@ -511,6 +512,200 @@ final class SchemaKeywordParsersTest extends TestCase
         self::assertNull($args['dynamicRef']);
         self::assertNull($args['comment']);
         self::assertNull($args['vocabulary']);
+    }
+
+    #[Test]
+    public function object_parser_builds_dependent_required_map(): void
+    {
+        $parser = new ObjectSchemaKeywordParser();
+        $recurse = static fn(): Schema => new Schema();
+
+        $args = $parser->build([
+            'dependentRequired' => [
+                'creditCard' => ['billingAddress'],
+                'coupon' => ['discount'],
+            ],
+        ], $recurse);
+
+        self::assertSame([
+            'creditCard' => ['billingAddress'],
+            'coupon' => ['discount'],
+        ], $args['dependentRequired']);
+    }
+
+    #[Test]
+    public function object_parser_defaults_dependent_required_to_null(): void
+    {
+        $parser = new ObjectSchemaKeywordParser();
+        $recurse = static fn(): Schema => new Schema();
+
+        self::assertNull($parser->build([], $recurse)['dependentRequired']);
+        self::assertNull($parser->build(['dependentRequired' => null], $recurse)['dependentRequired']);
+    }
+
+    #[Test]
+    public function object_parser_normalizes_empty_dependent_required_map_to_null(): void
+    {
+        $parser = new ObjectSchemaKeywordParser();
+        $recurse = static fn(): Schema => new Schema();
+
+        self::assertNull($parser->build(['dependentRequired' => []], $recurse)['dependentRequired']);
+    }
+
+    #[Test]
+    public function legacy_dependencies_merges_deduplicates_on_key_collision(): void
+    {
+        $parser = new ObjectSchemaKeywordParser();
+        $recurse = static fn(): Schema => new Schema();
+
+        $args = $parser->build([
+            'dependentRequired' => ['a' => ['foo', 'baz']],
+            'dependencies' => ['a' => ['foo', 'bar']],
+        ], $recurse);
+
+        self::assertSame(['a' => ['foo', 'baz', 'bar']], $args['dependentRequired']);
+    }
+
+    #[Test]
+    public function legacy_dependencies_schema_form_last_wins_on_key_collision(): void
+    {
+        $parser = new ObjectSchemaKeywordParser();
+        $recurse = static fn(bool|array $data): Schema => new Schema(type: $data['type'] ?? null);
+
+        $args = $parser->build([
+            'dependentSchemas' => ['x' => ['type' => 'object']],
+            'dependencies' => ['x' => ['type' => 'string']],
+        ], $recurse);
+
+        self::assertSame(['x'], array_keys($args['dependentSchemas']));
+        self::assertSame('string', $args['dependentSchemas']['x']->type);
+    }
+
+    #[Test]
+    public function legacy_dependencies_list_form_translates_to_dependent_required(): void
+    {
+        $parser = new ObjectSchemaKeywordParser();
+        $recurse = static fn(): Schema => new Schema();
+
+        $args = $parser->build(['dependencies' => ['bar' => ['foo']]], $recurse);
+
+        self::assertSame(['bar' => ['foo']], $args['dependentRequired']);
+        self::assertNull($args['dependentSchemas']);
+    }
+
+    #[Test]
+    public function legacy_dependencies_schema_form_translates_to_dependent_schemas(): void
+    {
+        $parser = new ObjectSchemaKeywordParser();
+        $recurse = static fn(bool|array $data): Schema => new Schema(type: 'nested');
+
+        $args = $parser->build(['dependencies' => ['bar' => ['required' => ['foo']]]], $recurse);
+
+        self::assertNull($args['dependentRequired']);
+        self::assertArrayHasKey('bar', $args['dependentSchemas']);
+        self::assertSame('nested', $args['dependentSchemas']['bar']->type);
+    }
+
+    #[Test]
+    public function legacy_dependencies_boolean_form_translates_to_dependent_schemas(): void
+    {
+        $parser = new ObjectSchemaKeywordParser();
+        $recurse = static fn(bool|array $data): Schema => new Schema(type: 'nested');
+
+        $args = $parser->build(['dependencies' => ['bar' => false]], $recurse);
+
+        self::assertNull($args['dependentRequired']);
+        self::assertArrayHasKey('bar', $args['dependentSchemas']);
+        self::assertSame('nested', $args['dependentSchemas']['bar']->type);
+    }
+
+    #[Test]
+    public function legacy_dependencies_empty_list_translates_vacuously(): void
+    {
+        $parser = new ObjectSchemaKeywordParser();
+        $recurse = static fn(): Schema => new Schema();
+
+        $args = $parser->build(['dependencies' => ['bar' => []]], $recurse);
+
+        self::assertNull($args['dependentRequired']);
+        self::assertNull($args['dependentSchemas']);
+    }
+
+    #[Test]
+    public function legacy_dependencies_merges_with_explicit_keywords(): void
+    {
+        $parser = new ObjectSchemaKeywordParser();
+        $recurse = static fn(): Schema => new Schema();
+
+        $args = $parser->build([
+            'dependentRequired' => ['a' => ['b']],
+            'dependencies' => ['c' => ['d']],
+        ], $recurse);
+
+        self::assertSame(['a' => ['b'], 'c' => ['d']], $args['dependentRequired']);
+    }
+
+    #[Test]
+    public function legacy_dependencies_schema_form_merges_with_explicit_dependent_schemas(): void
+    {
+        $parser = new ObjectSchemaKeywordParser();
+        $recurse = static fn(): Schema => new Schema();
+
+        $args = $parser->build([
+            'dependentSchemas' => ['x' => ['type' => 'object']],
+            'dependencies' => ['y' => ['type' => 'string']],
+        ], $recurse);
+
+        self::assertSame(['x', 'y'], array_keys($args['dependentSchemas']));
+    }
+
+    #[Test]
+    public function legacy_dependencies_mixed_forms_translate_into_both_maps(): void
+    {
+        $parser = new ObjectSchemaKeywordParser();
+        $recurse = static fn(): Schema => new Schema();
+
+        $args = $parser->build([
+            'dependencies' => [
+                'bar' => ['foo'],
+                'baz' => [],
+                'quux' => true,
+            ],
+        ], $recurse);
+
+        self::assertSame(['bar' => ['foo']], $args['dependentRequired']);
+        self::assertSame(['quux'], array_keys($args['dependentSchemas']));
+    }
+
+    #[Test]
+    public function legacy_dependencies_defaults_to_null_when_keyword_absent(): void
+    {
+        $parser = new ObjectSchemaKeywordParser();
+        $recurse = static fn(): Schema => new Schema();
+
+        $args = $parser->build(['required' => ['a']], $recurse);
+
+        self::assertNull($args['dependentRequired']);
+        self::assertNull($args['dependentSchemas']);
+    }
+
+    #[Test]
+    public function legacy_dependencies_throws_on_garbage_dependency_value(): void
+    {
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Expected array, boolean or list of strings for schema keyword "dependencies", got int');
+
+        new ObjectSchemaKeywordParser()->build(['dependencies' => ['bar' => 42]], static fn(): Schema => new Schema());
+    }
+
+    #[Test]
+    public function legacy_dependencies_throws_on_garbage_list_element(): void
+    {
+        $parser = new ObjectSchemaKeywordParser();
+
+        $this->expectException(TypeError::class);
+
+        $parser->build(['dependencies' => ['bar' => [42]]], static fn(): Schema => new Schema());
     }
 
     #[Test]

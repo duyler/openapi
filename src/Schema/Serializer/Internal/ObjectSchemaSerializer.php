@@ -54,6 +54,7 @@ final readonly class ObjectSchemaSerializer
             'unevaluatedProperties' => $schema->unevaluatedProperties,
             'patternProperties' => $schema->patternProperties,
             'propertyNames' => $schema->propertyNames,
+            'dependentRequired' => $schema->dependentRequired,
             'dependentSchemas' => $schema->dependentSchemas,
             'contentSchema' => $schema->contentSchema,
             'defs' => $schema->defs,

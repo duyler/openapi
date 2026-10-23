@@ -23,6 +23,7 @@ use Duyler\OpenApi\Validator\SchemaValidator\ConstValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContentEncodingValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContentMediaTypeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContainsValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\DependentRequiredValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\DependentSchemasValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\DeprecatedValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\DynamicRefValidator;
@@ -76,11 +77,11 @@ final class SchemaValidatorDependenciesListTest extends TestCase
     }
 
     #[Test]
-    public function create_full_list_returns_30_validators(): void
+    public function create_full_list_returns_31_validators(): void
     {
         $validators = $this->dependencies->createFullList();
 
-        self::assertCount(30, $validators);
+        self::assertCount(31, $validators);
     }
 
     #[Test]
@@ -99,6 +100,7 @@ final class SchemaValidatorDependenciesListTest extends TestCase
             ArrayLengthValidator::class,
             ConstValidator::class,
             ContainsValidator::class,
+            DependentRequiredValidator::class,
             DependentSchemasValidator::class,
             DeprecatedValidator::class,
             DynamicRefValidator::class,
@@ -139,11 +141,11 @@ final class SchemaValidatorDependenciesListTest extends TestCase
     }
 
     #[Test]
-    public function create_stateless_list_returns_27_validators(): void
+    public function create_stateless_list_returns_28_validators(): void
     {
         $validators = $this->dependencies->createStatelessList();
 
-        self::assertCount(27, $validators);
+        self::assertCount(28, $validators);
     }
 
     #[Test]
@@ -237,7 +239,7 @@ final class SchemaValidatorDependenciesListTest extends TestCase
             $expected,
         );
 
-        self::assertCount(27, $statelessList);
+        self::assertCount(28, $statelessList);
         self::assertCount(3, array_diff($fullClasses, $statelessClasses));
         self::assertSame($expectedClasses, $statelessClasses);
     }

@@ -23,6 +23,7 @@ use Duyler\OpenApi\Validator\SchemaValidator\ConstValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContainsValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContentEncodingValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContentMediaTypeValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\DependentRequiredValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\DependentSchemasValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\DynamicRefValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\DeprecatedValidator;
@@ -68,6 +69,7 @@ final class StatelessValidatorRegistryTest extends TestCase
             ArrayLengthValidator::class,
             ConstValidator::class,
             ContainsValidator::class,
+            DependentRequiredValidator::class,
             DependentSchemasValidator::class,
             DeprecatedValidator::class,
             DynamicRefValidator::class,

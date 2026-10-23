@@ -491,6 +491,60 @@ final class SchemaSiblingMergerTest extends TestCase
     }
 
     #[Test]
+    public function merge_dependent_required_unions_lists_per_key(): void
+    {
+        $resolved = new Schema(type: 'object', dependentRequired: [
+            'creditCard' => ['billingAddress'],
+            'shippingAddress' => ['name'],
+        ]);
+        $sibling = new Schema(dependentRequired: [
+            'creditCard' => ['cvv'],
+        ]);
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame([
+            'creditCard' => ['billingAddress', 'cvv'],
+            'shippingAddress' => ['name'],
+        ], $merged->dependentRequired);
+    }
+
+    #[Test]
+    public function merge_dependent_required_deduplicates_union_entries(): void
+    {
+        $resolved = new Schema(dependentRequired: ['creditCard' => ['billingAddress']]);
+        $sibling = new Schema(dependentRequired: ['creditCard' => ['billingAddress', 'cvv']]);
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame(['creditCard' => ['billingAddress', 'cvv']], $merged->dependentRequired);
+    }
+
+    #[Test]
+    public function merge_dependent_required_inherits_resolved_when_sibling_null(): void
+    {
+        $dependentRequired = ['creditCard' => ['billingAddress']];
+        $resolved = new Schema(dependentRequired: $dependentRequired);
+        $sibling = new Schema();
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame($dependentRequired, $merged->dependentRequired);
+    }
+
+    #[Test]
+    public function merge_dependent_required_inherits_sibling_when_resolved_null(): void
+    {
+        $dependentRequired = ['creditCard' => ['billingAddress']];
+        $resolved = new Schema(type: 'object');
+        $sibling = new Schema(dependentRequired: $dependentRequired);
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame($dependentRequired, $merged->dependentRequired);
+    }
+
+    #[Test]
     public function merge_enum_intersects_via_json_equals_int_float_equivalence(): void
     {
         $resolved = new Schema(enum: [1, 2, 3]);

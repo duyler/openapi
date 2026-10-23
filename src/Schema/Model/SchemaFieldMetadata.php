@@ -53,6 +53,7 @@ final readonly class SchemaFieldMetadata
             new FieldMetadata('maxContains', 'maxContains', FieldMetadata::CATEGORY_ARRAY),
             new FieldMetadata('patternProperties', 'patternProperties', FieldMetadata::CATEGORY_OBJECT),
             new FieldMetadata('propertyNames', 'propertyNames', FieldMetadata::CATEGORY_OBJECT),
+            new FieldMetadata('dependentRequired', 'dependentRequired', FieldMetadata::CATEGORY_OBJECT),
             new FieldMetadata('dependentSchemas', 'dependentSchemas', FieldMetadata::CATEGORY_OBJECT),
             new FieldMetadata('if', 'if', FieldMetadata::CATEGORY_COMPOSITION),
             new FieldMetadata('then', 'then', FieldMetadata::CATEGORY_COMPOSITION),

@@ -195,7 +195,7 @@ final class StatelessValidatorDispatcherTest extends TestCase
             $dependencies->createFullList(),
         );
 
-        self::assertCount(30, $classes);
+        self::assertCount(31, $classes);
         self::assertContains(ItemsValidator::class, $classes);
         self::assertContains(PropertiesValidator::class, $classes);
         self::assertContains(OneOfValidator::class, $classes);
