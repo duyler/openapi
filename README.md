@@ -529,8 +529,11 @@ $validator = OpenApiValidatorBuilder::create()
 | `withMaxStreamingRecords(int $max)` | Max number of records accepted from a single streaming response | `100000` |
 | `enableStrictStreaming()` | Malformed stream records throw `MalformedStreamRecordException` instead of being logged and skipped | `false` |
 | `disableStrictStreaming()` | Restore default fail-open streaming behaviour (malformed records logged and skipped) | `false` |
+| `enableContentAssertions()` | Assert content keywords instead of collecting them as annotations: decode by `contentEncoding`, check `contentMediaType` syntax, validate `contentSchema` through the pipeline (decoded values over `withMaxJsonBodySize()` raise `DecodedContentTooLargeException`); the outcome is also available as `ContentValidationResult` via `ValidationContext::contentResult()` | `false` (annotation-only; the lazy result never affects the outcome) |
 
 Deprecated reporting is enabled by default; without a PSR-3 logger the warnings go to `NullLogger` and produce no output. To suppress them, simply omit the logger (there is no `disableReportDeprecated()` method).
+
+The content assertion result is exposed per validation run through `ValidationContext::contentResult()`; when several string instances carry content keywords in one run (for example array items), the first instance in traversal order wins and later ones do not overwrite it. A top-level multi-instance result surface is tracked as a follow-up task (20a).
 
 ### EmptyArrayStrategy
 
@@ -1158,7 +1161,7 @@ The validator covers approximately 95% of JSON Schema draft 2020-12 keywords. Th
 
 - `$dynamicRef` / `$dynamicAnchor` - dynamic schema resolution
 - `$recursiveRef` / `$recursiveAnchor` - recursive schema resolution
-- `contentEncoding` / `contentMediaType` - **limited** support: base64 encoding and a fixed set of common media types (JSON, XML, text); custom encodings and media types are not supported.
+- `contentEncoding` / `contentMediaType` / `contentSchema` - asserted only with `enableContentAssertions()` (decode by `contentEncoding` covers `base64`/`base64url`, media syntax checks cover the recognized media type set, `contentSchema` validates the decoded value); without the flag the keywords are collected as annotations only. Custom encodings and media types are not asserted.
 - Custom vocabularies and keyword extensions
 
 The boolean schema form (`true` / `false`) is supported everywhere a schema is expected: `true` always passes and `false` always rejects.

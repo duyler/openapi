@@ -140,6 +140,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   remain identity encodings without data checks, and an unrecognized encoding token now
   emits a PSR-14 `ValidationWarningEvent` plus a log warning instead of being ignored
   silently. The strict canonical `base64` round-trip assertion is unchanged.
+- With `enableContentAssertions()`, content assertions now run the full pipeline: the string instance is decoded
+  according to `contentEncoding` (`base64` and `base64url`), the decoded content is checked against
+  `contentMediaType` (`application/json` is parsed, the other recognized media types keep their syntax checks), and
+  a declared `contentSchema` validates the decoded value through the regular schema validator, so sub-schema
+  violations reject the main validation. Previously `contentSchema` was ignored and only encoding/media syntax was
+  asserted. Decoded content exceeding the configured `maxJsonBodyBytes` cap raises
+  `DecodedContentTooLargeException` before parsing — the cap applies to every media type, not only JSON — and
+  unknown media types keep emitting the warning event. The pipeline outcome is exposed as a
+  `ContentValidationResult` (decoded value, media type validity, collected
+  sub-schema errors) through `ValidationContext::contentResult()`, and the pipeline accepts a skip-media flag for
+  callers that learn the media type from the message (content map/Encoding Object) instead of the schema.
+  Sub-schema validation runs only when `contentMediaType` is declared: per JSON Schema 2020-12 the `contentSchema`
+  keyword is bound to `contentMediaType`, so `contentSchema` without a media type stays an annotation in
+  assertions mode as well.
+- Without content assertions (annotation mode) the pipeline never runs during validation: `contentEncoding` and
+  `contentMediaType` remain annotations, the outcome is untouched, and the same `ContentValidationResult` is
+  attached to the validation context lazily — it computes on the first consumer read, so undecoded payloads stay
+  untouched unless the result is inspected.
 - The official JSON Schema test suite section `content.json` is re-bound to the active
   sections: it was previously parked pending the content assertion pipeline work; all 18
   cases assert annotation-only content semantics and pass on the current validator,

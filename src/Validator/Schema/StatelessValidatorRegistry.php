@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -30,6 +31,7 @@ final readonly class StatelessValidatorRegistry
         ?OpenApiDocument $document = null,
         ?RefResolverInterface $refResolver = null,
         bool $contentAssertionsEnabled = false,
+        int $maxDecodedContentBytes = ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES,
     ) {
         $dependencies = new SchemaValidatorDependencies(
             pool: $pool,
@@ -42,6 +44,7 @@ final readonly class StatelessValidatorRegistry
             reportDeprecated: $reportDeprecated,
             document: null === $refResolver ? null : $document,
             contentAssertionsEnabled: $contentAssertionsEnabled,
+            maxDecodedContentBytes: $maxDecodedContentBytes,
         );
 
         $this->validators = $dependencies->createStatelessList();

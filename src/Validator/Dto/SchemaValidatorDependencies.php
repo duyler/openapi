@@ -109,6 +109,7 @@ final class SchemaValidatorDependencies
         public readonly ?OpenApiDocument $document = null,
         public readonly bool $contentAssertionsEnabled = false,
         public readonly ContentDecoderInterface $contentDecoder = new NativeContentDecoder(),
+        public readonly int $maxDecodedContentBytes = ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES,
     ) {
         $this->logger = $logger ?? new NullLogger();
         $this->errorFormatter = $errorFormatter ?? new SimpleFormatter();

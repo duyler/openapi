@@ -133,6 +133,7 @@ final readonly class ValidationStack
             pregExecutor: $this->pregExecutor,
             document: $this->document,
             contentAssertionsEnabled: $this->contentAssertionsEnabled,
+            maxDecodedContentBytes: $this->maxJsonBodyBytes,
         );
 
         $this->schemaValidatorWithContext = $this->schemaValidatorDependencies->rootSchemaValidator(

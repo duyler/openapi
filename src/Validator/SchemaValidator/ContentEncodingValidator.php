@@ -24,12 +24,15 @@ use function sprintf;
 
 final readonly class ContentEncodingValidator implements KeywordApplicable
 {
+    private readonly ContentAssertionPipeline $pipeline;
+
     /** @var array<string, EncodingSyntaxCheck|null> */
     private readonly array $encodingChecks;
 
     public function __construct(
         private readonly SchemaValidatorDependencies $dependencies,
     ) {
+        $this->pipeline = new ContentAssertionPipeline($dependencies);
         $this->encodingChecks = [
             'base16' => new Base16SyntaxCheck(),
             'base32' => new Base32SyntaxCheck(),
@@ -65,6 +68,10 @@ final readonly class ContentEncodingValidator implements KeywordApplicable
         }
 
         if (false === $this->dependencies->contentAssertionsEnabled) {
+            if (null === $schema->contentMediaType && null !== $context) {
+                $context->attachContentResult($this->pipeline->defer($data, $schema, $context));
+            }
+
             return;
         }
 

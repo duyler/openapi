@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Error;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Dto\ContentValidationResult;
 use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\Dto\ValidationAnnotations;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
@@ -32,6 +33,8 @@ final class ValidationContext
     private array $evaluatedItemIndices = [];
 
     private ValidationAnnotations $annotations;
+
+    private ?ContentValidationResult $contentResult = null;
 
     /** @var WeakMap<Schema, string> */
     private WeakMap $dynamicRefTargets;
@@ -144,6 +147,16 @@ final class ValidationContext
         $this->annotations = $this->annotations->with($keyword, $path, $value);
     }
 
+    public function attachContentResult(ContentValidationResult $result): void
+    {
+        $this->contentResult ??= $result;
+    }
+
+    public function contentResult(): ?ContentValidationResult
+    {
+        return $this->contentResult;
+    }
+
     /**
      * @return array<string, list<array{path: string, value: mixed}>>
      */
@@ -165,6 +178,7 @@ final class ValidationContext
         $this->evaluatedPropertyNames += $child->evaluatedPropertyNames;
         $this->evaluatedItemIndices += $child->evaluatedItemIndices;
         $this->annotations = $this->annotations->merge($child->annotations);
+        $this->contentResult ??= $child->contentResult;
     }
 
     public function enterDynamicScope(Schema $resource): void

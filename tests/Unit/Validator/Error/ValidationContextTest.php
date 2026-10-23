@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Error;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Dto\ContentValidationResult;
 use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
 use Duyler\OpenApi\Validator\Error\Formatter\JsonFormatter;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
@@ -528,5 +529,40 @@ class ValidationContextTest extends TestCase
 
         $this->assertSame([$root], $child->dynamicScope());
         $this->assertSame([$root], $parent->dynamicScope());
+    }
+
+    #[Test]
+    public function content_result_from_merged_branch_is_readable_from_parent(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $child = $parent->forkForBranch();
+        $result = ContentValidationResult::eager(['a' => 1], true, []);
+
+        $child->attachContentResult($result);
+        $this->assertNull($parent->contentResult());
+
+        $parent->mergeChildAnnotations($child);
+
+        $this->assertSame($result, $parent->contentResult());
+    }
+
+    #[Test]
+    public function content_result_of_unmerged_branch_stays_hidden_and_first_attachment_wins(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $failedBranch = $parent->forkForBranch();
+        $failedBranch->attachContentResult(ContentValidationResult::eager('failed', true, []));
+
+        $this->assertNull($parent->contentResult());
+
+        $first = ContentValidationResult::eager('first', true, []);
+        $parent->attachContentResult($first);
+
+        $secondBranch = $parent->forkForBranch();
+        $secondBranch->attachContentResult(ContentValidationResult::eager('second', true, []));
+
+        $parent->mergeChildAnnotations($secondBranch);
+
+        $this->assertSame($first, $parent->contentResult());
     }
 }
