@@ -82,6 +82,7 @@ final readonly class ValidationStack
         public readonly ?LoggerInterface $securityVerboseLogger = null,
         public readonly bool $strictCoercion = true,
         public readonly ?DialectProfile $dialectProfile = null,
+        public readonly bool $contentAssertionsEnabled = false,
     ) {
         $this->validatorConfiguration = new ValidatorConfiguration(
             coercion: $this->coercion,
@@ -96,6 +97,7 @@ final readonly class ValidationStack
             maxStreamingRecords: $this->maxStreamingRecords,
             strictCoercion: $this->strictCoercion,
             dialectProfile: $this->dialectProfile,
+            contentAssertionsEnabled: $this->contentAssertionsEnabled,
         );
 
         $this->statelessValidators = new StatelessValidatorRegistry(
@@ -107,6 +109,7 @@ final readonly class ValidationStack
             $this->eventDispatcher,
             $this->document,
             $this->refResolver,
+            $this->contentAssertionsEnabled,
         );
 
         $this->schemaValidatorDependencies = new SchemaValidatorDependencies(
@@ -129,6 +132,7 @@ final readonly class ValidationStack
             regexValidator: $this->regexValidator,
             pregExecutor: $this->pregExecutor,
             document: $this->document,
+            contentAssertionsEnabled: $this->contentAssertionsEnabled,
         );
 
         $this->schemaValidatorWithContext = $this->schemaValidatorDependencies->rootSchemaValidator(
@@ -173,6 +177,7 @@ final readonly class ValidationStack
             securityVerboseLogger: $options->securityVerboseLogger,
             strictCoercion: $options->strictCoercion,
             dialectProfile: $options->dialectProfile,
+            contentAssertionsEnabled: $options->contentAssertionsEnabled,
         );
     }
 

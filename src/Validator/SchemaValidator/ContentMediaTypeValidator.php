@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\SchemaValidator;
 
+use Duyler\OpenApi\Event\ValidationWarningEvent;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
@@ -17,12 +18,12 @@ use SimpleXMLElement;
 
 use function array_all;
 use function assert;
-use function base64_decode;
 use function explode;
 use function is_string;
 use function json_decode;
 use function preg_quote;
 use function simplexml_load_string;
+use function sprintf;
 use function str_starts_with;
 use function substr_count;
 
@@ -56,6 +57,18 @@ final readonly class ContentMediaTypeValidator implements KeywordApplicable
             return;
         }
 
+        if (null !== $context) {
+            $context->annotate('contentMediaType', $schema->contentMediaType, $context->path());
+        }
+
+        if (false === $this->dependencies->contentAssertionsEnabled) {
+            if (false === $this->isRecognizedMediaType($schema->contentMediaType)) {
+                $this->warnUnknownMediaType($schema->contentMediaType, $schema, $context);
+            }
+
+            return;
+        }
+
         $decodedData = $this->decodeIfNeeded($data, $schema->contentEncoding);
 
         if (false === $decodedData) {
@@ -65,6 +78,24 @@ final readonly class ContentMediaTypeValidator implements KeywordApplicable
         $this->validateMediaTypeSyntax($decodedData, $schema->contentMediaType);
     }
 
+    private function warnUnknownMediaType(string $mediaType, Schema $schema, ?ValidationContext $context): void
+    {
+        $propertyPath = null === $context ? '/' : $context->path();
+
+        $this->dependencies->eventDispatcher?->dispatch(
+            new ValidationWarningEvent(
+                propertyPath: $propertyPath,
+                propertyName: 'contentMediaType',
+                message: sprintf('Unrecognized contentMediaType "%s" is collected as an annotation', $mediaType),
+                schemaRef: $schema->ref,
+            ),
+        );
+
+        $this->dependencies->logger->warning(
+            sprintf('Unrecognized contentMediaType "%s" at path "%s"', $mediaType, $propertyPath),
+        );
+    }
+
     private function decodeIfNeeded(string $data, ?string $encoding): string|false
     {
         if (null === $encoding) {
@@ -72,7 +103,7 @@ final readonly class ContentMediaTypeValidator implements KeywordApplicable
         }
 
         return match ($encoding) {
-            'base64' => base64_decode($data, strict: true),
+            'base64' => $this->dependencies->contentDecoder->decodeBase64($data),
             default => $data,
         };
     }

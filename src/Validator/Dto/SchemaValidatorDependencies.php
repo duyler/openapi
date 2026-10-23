@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Dto;
 
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\ContentDecoderInterface;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\NativeContentDecoder;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\JsonBodyParser;
@@ -105,6 +107,8 @@ final class SchemaValidatorDependencies
         public readonly RegexValidator $regexValidator = new RegexValidator(),
         public readonly PregExecutor $pregExecutor = new PregExecutor(),
         public readonly ?OpenApiDocument $document = null,
+        public readonly bool $contentAssertionsEnabled = false,
+        public readonly ContentDecoderInterface $contentDecoder = new NativeContentDecoder(),
     ) {
         $this->logger = $logger ?? new NullLogger();
         $this->errorFormatter = $errorFormatter ?? new SimpleFormatter();

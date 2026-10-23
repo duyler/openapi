@@ -27,6 +27,7 @@ final readonly class ValidatorOptions
         public readonly bool $strictCoercion = true,
         public readonly ?LoggerInterface $securityVerboseLogger = null,
         public readonly ?DialectProfile $dialectProfile = null,
+        public readonly bool $contentAssertionsEnabled = false,
     ) {}
 
     public function toValidatorConfiguration(): ValidatorConfiguration
@@ -44,6 +45,7 @@ final readonly class ValidatorOptions
             maxStreamingRecords: $this->maxStreamingRecords,
             strictCoercion: $this->strictCoercion,
             dialectProfile: $this->dialectProfile,
+            contentAssertionsEnabled: $this->contentAssertionsEnabled,
         );
     }
 }

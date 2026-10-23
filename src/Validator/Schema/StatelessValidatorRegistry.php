@@ -29,6 +29,7 @@ final readonly class StatelessValidatorRegistry
         ?EventDispatcherInterface $eventDispatcher = null,
         ?OpenApiDocument $document = null,
         ?RefResolverInterface $refResolver = null,
+        bool $contentAssertionsEnabled = false,
     ) {
         $dependencies = new SchemaValidatorDependencies(
             pool: $pool,
@@ -40,6 +41,7 @@ final readonly class StatelessValidatorRegistry
             strictFormats: $strictFormats,
             reportDeprecated: $reportDeprecated,
             document: null === $refResolver ? null : $document,
+            contentAssertionsEnabled: $contentAssertionsEnabled,
         );
 
         $this->validators = $dependencies->createStatelessList();

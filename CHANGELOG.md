@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.9.0]
 
+### Changed
+
+- `contentEncoding` and `contentMediaType` are annotation-only by default, matching JSON
+  Schema validation §8.1: string instance contents are no longer decoded, parsed or
+  validated, the keyword values are collected into validation annotations
+  (`contentEncoding`/`contentMediaType` keys) instead, and an unrecognized
+  `contentMediaType` emits a PSR-14 `ValidationWarningEvent` plus a log warning instead of
+  throwing. Previously an invalid `base64` value or an unrecognized media type failed
+  validation. Call `OpenApiValidatorBuilder::enableContentAssertions()` to restore the
+  previous assertion behavior (strict base64 round-trip check and media type syntax
+  validation) as a transitional mode until the full content assertion pipeline ships.
+
 ### Added
 
 - Multi-document OpenAPI descriptions (3.2 §4.1.2): `OpenApiValidatorBuilder::withDocument(string $retrievalUri,

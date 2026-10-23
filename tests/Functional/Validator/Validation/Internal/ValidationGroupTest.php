@@ -74,6 +74,7 @@ YAML;
         self::assertFalse($deps->reportDeprecated);
         self::assertFalse($deps->strictFormats);
         self::assertTrue($deps->strictCoercion);
+        self::assertFalse($deps->contentAssertionsEnabled);
         self::assertSame(ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES, $deps->maxJsonBodyBytes);
         self::assertSame(ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES, $deps->maxMultipartBodyBytes);
         self::assertSame(PregExecutor::DEFAULT_MAX_BACKTRACKS, $deps->maxRegexBacktracks);
@@ -106,6 +107,7 @@ YAML;
                 strictStreaming: true,
                 maxStreamingRecords: 42,
                 strictCoercion: false,
+                contentAssertionsEnabled: true,
             ),
             bodyLimits: new BodyLimits(
                 maxJsonBodyBytes: 1024,
@@ -123,6 +125,7 @@ YAML;
         self::assertTrue($deps->strictFormats);
         self::assertTrue($deps->strictStreaming);
         self::assertFalse($deps->strictCoercion);
+        self::assertTrue($deps->contentAssertionsEnabled);
         self::assertSame(1024, $deps->maxJsonBodyBytes);
         self::assertSame(2048, $deps->maxMultipartBodyBytes);
         self::assertSame(999, $deps->maxRegexBacktracks);
@@ -141,6 +144,7 @@ YAML;
             strictStreaming: true,
             maxStreamingRecords: 7,
             strictCoercion: false,
+            contentAssertionsEnabled: true,
         );
 
         $config = $options->toValidatorConfiguration();
@@ -152,6 +156,7 @@ YAML;
         self::assertTrue($config->strictFormats);
         self::assertTrue($config->strictStreaming);
         self::assertFalse($config->strictCoercion);
+        self::assertTrue($config->contentAssertionsEnabled);
         self::assertSame(7, $config->maxStreamingRecords);
         self::assertSame(ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES, $config->maxJsonBodyBytes);
         self::assertSame(ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES, $config->maxMultipartBodyBytes);

@@ -218,6 +218,11 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(reportDeprecated: true));
     }
 
+    public function enableContentAssertions(): self
+    {
+        return $this->with(new BuilderConfig(contentAssertionsEnabled: true));
+    }
+
     public function withMaxJsonBodySize(int $maxBytes): self
     {
         return $this->with(new BuilderConfig(maxJsonBodyBytes: $maxBytes));
@@ -402,6 +407,7 @@ final readonly class OpenApiValidatorBuilder
         $strictStreaming = $this->config->strictStreaming ?? false;
         $strictCallbackRuntimeTemplate = $this->config->strictCallbackRuntimeTemplate ?? true;
         $strictCoercion = $this->config->strictCoercion ?? true;
+        $contentAssertionsEnabled = $this->config->contentAssertionsEnabled ?? false;
 
         $context = ValidationStack::fromGroup(
             new ValidationGroup(
@@ -428,6 +434,7 @@ final readonly class OpenApiValidatorBuilder
                     strictCoercion: $strictCoercion,
                     securityVerboseLogger: $securityVerboseLogger,
                     dialectProfile: $dialectProfile,
+                    contentAssertionsEnabled: $contentAssertionsEnabled,
                 ),
                 bodyLimits: new BodyLimits(
                     maxJsonBodyBytes: $maxJsonBodyBytes,
@@ -453,6 +460,7 @@ final readonly class OpenApiValidatorBuilder
                 maxStreamingRecords: $maxStreamingRecords,
                 strictCoercion: $strictCoercion,
                 dialectProfile: $dialectProfile,
+                contentAssertionsEnabled: $contentAssertionsEnabled,
             ),
             dependencies: new ValidatorDependencies(
                 pool: $pool,

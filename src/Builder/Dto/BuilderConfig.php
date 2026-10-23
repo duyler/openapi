@@ -47,6 +47,7 @@ final readonly class BuilderConfig
         public readonly ?int $maxSpecDepth = null,
         public readonly ?DocumentRepository $documentRepository = null,
         public readonly ?ExternalRefResolverInterface $externalRefResolver = null,
+        public readonly ?bool $contentAssertionsEnabled = null,
     ) {}
 
     public function merge(self $overrides): self
@@ -82,6 +83,7 @@ final readonly class BuilderConfig
             maxSpecDepth: $overrides->maxSpecDepth ?? $this->maxSpecDepth,
             documentRepository: $overrides->documentRepository ?? $this->documentRepository,
             externalRefResolver: $overrides->externalRefResolver ?? $this->externalRefResolver,
+            contentAssertionsEnabled: $overrides->contentAssertionsEnabled ?? $this->contentAssertionsEnabled,
         );
     }
 }

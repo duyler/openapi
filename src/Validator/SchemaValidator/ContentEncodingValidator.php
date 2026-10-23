@@ -10,7 +10,6 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidContentEncodingException;
 use Override;
 
-use function base64_decode;
 use function base64_encode;
 use function is_string;
 
@@ -33,6 +32,14 @@ final readonly class ContentEncodingValidator implements KeywordApplicable
             return;
         }
 
+        if (null !== $context) {
+            $context->annotate('contentEncoding', $schema->contentEncoding, $context->path());
+        }
+
+        if (false === $this->dependencies->contentAssertionsEnabled) {
+            return;
+        }
+
         match ($schema->contentEncoding) {
             'base64' => $this->validateBase64($data),
             default => null,
@@ -41,7 +48,7 @@ final readonly class ContentEncodingValidator implements KeywordApplicable
 
     private function validateBase64(string $data): void
     {
-        $decoded = base64_decode($data, strict: true);
+        $decoded = $this->dependencies->contentDecoder->decodeBase64($data);
 
         if (false === $decoded || base64_encode($decoded) !== $data) {
             throw new InvalidContentEncodingException(
