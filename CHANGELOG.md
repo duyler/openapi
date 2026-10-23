@@ -134,6 +134,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   previously assembled with 3.1 union semantics. The message carries no
   document content. OpenAPI 3.1+ documents keep accepting `type` arrays,
   including the `'null'` member, and `nullable` folding is unchanged.
+- OpenAPI 3.0 documents now ignore schema keywords sitting next to `$ref`
+  (JSON Reference draft-03 §3: any members other than `$ref` SHALL be
+  ignored), at the referenced-property entry point and on every intermediate
+  `$ref` chain carrier alike: the resolved target is validated as-is instead
+  of being merged with the stub. A 3.0 `nullable: true` sibling of `$ref`
+  therefore no longer widens the target, so `null` values for such
+  properties are rejected where they previously passed. OpenAPI 3.1+
+  documents keep applying `$ref` siblings per JSON Schema 2020-12
+  §8.2.3.1, including per-hop merging along `$ref` chains.
 
 ## [0.8.0]
 

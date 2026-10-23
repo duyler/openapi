@@ -97,11 +97,11 @@ final class NullableRefSiblingTest extends TestCase
     }
 
     #[Test]
-    public function nullable_sibling_widens_non_nullable_target(): void
+    public function nullable_sibling_does_not_widen_non_nullable_target(): void
     {
-        $this->validator()->validateSchema(['p' => null], '#/components/schemas/RefPropNullableSibling');
+        $this->expectException(ValidationException::class);
 
-        $this->expectNotToPerformAssertions();
+        $this->validator()->validateSchema(['p' => null], '#/components/schemas/RefPropNullableSibling');
     }
 
     #[Test]

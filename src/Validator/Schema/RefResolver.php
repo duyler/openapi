@@ -54,6 +54,7 @@ final class RefResolver implements RefResolverInterface
             externalRefResolver: $this->externalRefResolver,
             registryProvider: $this->resourceRegistry(...),
             documentRepository: $this->documentRepository,
+            dialectProfile: $this->dialectProfile,
         );
     }
 
@@ -222,8 +223,13 @@ final class RefResolver implements RefResolverInterface
             return $schema;
         }
 
-        return $this->resolveSchemaRef($schema->ref, $document, $this->enclosingBaseUri($schema, $document, $baseUri))
-            ->withSibling($schema);
+        $resolved = $this->resolveSchemaRef($schema->ref, $document, $this->enclosingBaseUri($schema, $document, $baseUri));
+
+        if (false === $this->dialectProfile->refSiblingsApply) {
+            return $resolved;
+        }
+
+        return $resolved->withSibling($schema);
     }
 
     #[Override]

@@ -12,6 +12,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Model\SchemaSiblingMerger;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\Parser\DocumentRepository;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Schema\Exception\ExternalRefSecurityException;
@@ -58,6 +59,8 @@ final class DocumentNavigator
 
     private ?ChainResources $chainResources = null;
 
+    private readonly DialectProfile $dialectProfile;
+
     /**
      * @param Closure(OpenApiDocument): ResourceRegistry|null $registryProvider
      */
@@ -67,7 +70,10 @@ final class DocumentNavigator
         private readonly ?Closure $registryProvider = null,
         private readonly UriResolver $uriResolver = new UriResolver(),
         private readonly ?DocumentRepository $documentRepository = null,
-    ) {}
+        ?DialectProfile $dialectProfile = null,
+    ) {
+        $this->dialectProfile = $dialectProfile ?? DialectProfile::forOpenApi31();
+    }
 
     public function collectChainResources(ChainResources $chainResources): void
     {
@@ -371,6 +377,10 @@ final class DocumentNavigator
         Schema|Parameter|RequestBody|Response $resolved,
         Schema|Parameter|RequestBody|Response $carrier,
     ): Schema|Parameter|RequestBody|Response {
+        if (false === $this->dialectProfile->refSiblingsApply) {
+            return $resolved;
+        }
+
         if (false === $resolved instanceof Schema || false === $carrier instanceof Schema) {
             return $resolved;
         }
