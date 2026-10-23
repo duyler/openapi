@@ -44,6 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pinned by unit tests. `#` resolves to the root resource of its document,
   and a bare-URI reference to a registered document whose root carries a
   different `$id` resolves to that registered root.
+- `$ref` chains now apply the sibling keywords of every intermediate chain resource at each hop instead of dropping
+  them; entry resolution returns the entry schema with its `$ref` intact and the chain is followed at validation time.
 - `RefResolverInterface` gained `resolveSchemaEntry()`,
   `resolveSchemaWithOverrideAndChain()`, `scopeBaseUri()`,
   `findDynamicAnchorInScope()`, `registeredDocuments()` and an optional
