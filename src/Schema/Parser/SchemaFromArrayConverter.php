@@ -13,6 +13,7 @@ use Duyler\OpenApi\Schema\Parser\Internal\ObjectTypeHelper;
 use Duyler\OpenApi\Schema\Parser\Internal\ResourceSchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\Internal\ScalarSchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\Internal\XmlSchemaKeywordParser;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 
 use Closure;
 
@@ -23,17 +24,20 @@ final readonly class SchemaFromArrayConverter
 {
     private ScalarSchemaKeywordParser $scalarParser;
     private XmlSchemaKeywordParser $xmlParser;
+    private DialectProfile $dialectProfile;
 
     public function __construct(
         private string $documentVersion = '',
         private DeprecationLogger $deprecationLogger = new DeprecationLogger(),
+        ?DialectProfile $dialectProfile = null,
         private ArraySchemaKeywordParser $arrayParser = new ArraySchemaKeywordParser(),
         private ObjectSchemaKeywordParser $objectParser = new ObjectSchemaKeywordParser(),
         private CompositionSchemaKeywordParser $compositionParser = new CompositionSchemaKeywordParser(),
         private ResourceSchemaKeywordParser $resourceParser = new ResourceSchemaKeywordParser(),
         private ExtrasSchemaKeywordParser $extrasParser = new ExtrasSchemaKeywordParser(),
     ) {
-        $this->scalarParser = new ScalarSchemaKeywordParser($documentVersion, $deprecationLogger);
+        $this->dialectProfile = $dialectProfile ?? DialectProfile::forOpenApi31();
+        $this->scalarParser = new ScalarSchemaKeywordParser($documentVersion, $deprecationLogger, $this->dialectProfile);
         $this->xmlParser = new XmlSchemaKeywordParser($documentVersion, $deprecationLogger);
     }
 

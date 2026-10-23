@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
 use Duyler\OpenApi\Schema\Parser\DeprecationLogger;
 use Duyler\OpenApi\Schema\Parser\OpenApiBuildContext;
 use Duyler\OpenApi\Schema\Parser\TypeHelper;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 
 use function array_key_exists;
 use function in_array;
@@ -22,10 +23,20 @@ final readonly class ScalarSchemaKeywordParser
 {
     private const string DEPRECATION_VERSION_3_1 = '3.1.0';
 
+    private DialectProfile $dialectProfile;
+
     public function __construct(
         private string $documentVersion = '',
         private DeprecationLogger $deprecationLogger = new DeprecationLogger(),
-    ) {}
+        ?DialectProfile $dialectProfile = null,
+    ) {
+        $this->dialectProfile = $dialectProfile ?? DialectProfile::forOpenApi31();
+    }
+
+    public function dialectProfile(): DialectProfile
+    {
+        return $this->dialectProfile;
+    }
 
     /**
      * @param array<array-key, mixed> $data

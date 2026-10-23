@@ -51,6 +51,7 @@ final readonly class DiscriminatorValidator
             errorFormatter: $this->dependencies->errorFormatter,
             nullableAsType: $this->configuration->nullableAsType,
             emptyArrayStrategy: $this->configuration->emptyArrayStrategy,
+            dialectProfile: $this->configuration->dialectProfile,
         ));
 
         if (null === $discriminator->propertyName) {

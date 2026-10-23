@@ -67,6 +67,7 @@ final readonly class ResponseHeadersValidator
                     pool: $this->pool,
                     nullableAsType: $this->config->nullableAsType,
                     emptyArrayStrategy: $this->config->emptyArrayStrategy,
+                    dialectProfile: $this->config->dialectProfile,
                 ));
                 $this->schemaValidator->validate($coercedValue, $header->schema, $context);
             }

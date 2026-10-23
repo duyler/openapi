@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Error;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\Dto\ValidationAnnotations;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
@@ -21,6 +22,8 @@ use function count;
 final class ValidationContext
 {
     public const int MAX_DEPTH = 64;
+
+    public readonly DialectProfile $dialectProfile;
 
     /** @var array<string, true> */
     private array $evaluatedPropertyNames = [];
@@ -43,7 +46,9 @@ final class ValidationContext
         public readonly ?ValidatorMode $mode = null,
         /** @var list<Schema> */
         private array $dynamicScope = [],
+        ?DialectProfile $dialectProfile = null,
     ) {
+        $this->dialectProfile = $dialectProfile ?? DialectProfile::forOpenApi31();
         $this->annotations = new ValidationAnnotations();
         /** @var WeakMap<Schema, string> $dynamicRefTargets */
         $dynamicRefTargets = new WeakMap();
@@ -59,6 +64,7 @@ final class ValidationContext
             nullableAsType: $init->nullableAsType,
             emptyArrayStrategy: $init->emptyArrayStrategy,
             mode: $init->mode,
+            dialectProfile: $init->dialectProfile,
         );
     }
 
@@ -224,6 +230,7 @@ final class ValidationContext
             depth: $this->depth,
             mode: $this->mode,
             dynamicScope: $this->dynamicScope,
+            dialectProfile: $this->dialectProfile,
         );
     }
 }

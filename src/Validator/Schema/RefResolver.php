@@ -9,6 +9,7 @@ use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Schema\Parser\DocumentRepository;
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
 use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
@@ -35,6 +36,7 @@ final class RefResolver implements RefResolverInterface
 
     private readonly FileExternalRefResolver $builtinFileResolver;
     private readonly DocumentNavigator $navigator;
+    private readonly DialectProfile $dialectProfile;
 
     public function __construct(
         private readonly ?ExternalRefResolverInterface $externalRefResolver = null,
@@ -42,8 +44,10 @@ final class RefResolver implements RefResolverInterface
         private readonly UriResolver $uriResolver = new UriResolver(),
         private readonly DiscriminatorDetector $discriminatorDetector = new DiscriminatorDetector(),
         private readonly ?DocumentRepository $documentRepository = null,
+        ?DialectProfile $dialectProfile = null,
     ) {
         $this->clear();
+        $this->dialectProfile = $dialectProfile ?? DialectProfile::forOpenApi31();
         $this->builtinFileResolver = $builtinFileResolver ?? new FileExternalRefResolver();
         $this->navigator = new DocumentNavigator(
             builtinFileResolver: $this->builtinFileResolver,
@@ -51,6 +55,11 @@ final class RefResolver implements RefResolverInterface
             registryProvider: $this->resourceRegistry(...),
             documentRepository: $this->documentRepository,
         );
+    }
+
+    public function dialectProfile(): DialectProfile
+    {
+        return $this->dialectProfile;
     }
 
     #[Override]

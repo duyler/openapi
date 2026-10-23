@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Validation\Internal;
 
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -25,6 +26,7 @@ final readonly class ValidatorOptions
         public readonly int $maxStreamingRecords = ValidatorConfiguration::DEFAULT_MAX_STREAMING_RECORDS,
         public readonly bool $strictCoercion = true,
         public readonly ?LoggerInterface $securityVerboseLogger = null,
+        public readonly ?DialectProfile $dialectProfile = null,
     ) {}
 
     public function toValidatorConfiguration(): ValidatorConfiguration
@@ -41,6 +43,7 @@ final readonly class ValidatorOptions
             maxRegexBacktracks: ValidatorConfiguration::DEFAULT_MAX_REGEX_BACKTRACKS,
             maxStreamingRecords: $this->maxStreamingRecords,
             strictCoercion: $this->strictCoercion,
+            dialectProfile: $this->dialectProfile,
         );
     }
 }

@@ -14,6 +14,7 @@ use Duyler\OpenApi\Cache\SchemaCache;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\Parser\DocumentRepository;
 use Duyler\OpenApi\Schema\Parser\Internal\VocabularyGuard;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Dto\ValidatorDependencies;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
@@ -363,6 +364,7 @@ final readonly class OpenApiValidatorBuilder
 
     private function assembleValidator(OpenApiDocument $document): OpenApiValidatorInterface
     {
+        $dialectProfile = DialectProfile::fromOpenApiVersion($document->openapi);
         $maxRegexBacktracks = $this->config->maxRegexBacktracks ?? ValidatorConfiguration::DEFAULT_MAX_REGEX_BACKTRACKS;
         $pregExecutor = new PregExecutor($maxRegexBacktracks);
         $pool = $this->config->pool ?? new ValidatorPool();
@@ -385,6 +387,7 @@ final readonly class OpenApiValidatorBuilder
             externalRefResolver: $this->config->externalRefResolver,
             builtinFileResolver: $fileResolver,
             documentRepository: $this->config->documentRepository,
+            dialectProfile: $dialectProfile,
         );
 
         $coercion = $this->config->coercion ?? false;
@@ -424,6 +427,7 @@ final readonly class OpenApiValidatorBuilder
                     maxStreamingRecords: $maxStreamingRecords,
                     strictCoercion: $strictCoercion,
                     securityVerboseLogger: $securityVerboseLogger,
+                    dialectProfile: $dialectProfile,
                 ),
                 bodyLimits: new BodyLimits(
                     maxJsonBodyBytes: $maxJsonBodyBytes,
@@ -448,6 +452,7 @@ final readonly class OpenApiValidatorBuilder
                 maxRegexBacktracks: $maxRegexBacktracks,
                 maxStreamingRecords: $maxStreamingRecords,
                 strictCoercion: $strictCoercion,
+                dialectProfile: $dialectProfile,
             ),
             dependencies: new ValidatorDependencies(
                 pool: $pool,

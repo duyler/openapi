@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Parser;
 
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
+
 use function version_compare;
 
 /** @internal */
@@ -12,6 +14,8 @@ final class OpenApiBuildContext
     public const string DEPRECATION_VERSION = '3.2.0';
 
     public string $documentVersion = '';
+
+    public DialectProfile $dialectProfile;
 
     public InfoBuilder $infoBuilder;
     public SchemaBuilder $schemaBuilder;
@@ -22,6 +26,7 @@ final class OpenApiBuildContext
     public function __construct(
         public readonly DeprecationLogger $deprecationLogger = new DeprecationLogger(),
     ) {
+        $this->dialectProfile = DialectProfile::forOpenApi31();
         $this->infoBuilder = new InfoBuilder($this);
         $this->schemaBuilder = new SchemaBuilder($this);
         $this->securitySchemeBuilder = new SecuritySchemeBuilder($this);

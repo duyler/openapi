@@ -22,6 +22,7 @@ final readonly class SchemaBuilder
             return new SchemaFromArrayConverter(
                 $this->context->documentVersion,
                 $this->context->deprecationLogger,
+                $this->context->dialectProfile,
             )->fromArray($data);
         }
 

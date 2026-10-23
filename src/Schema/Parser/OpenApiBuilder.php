@@ -10,6 +10,7 @@ use Duyler\OpenApi\Schema\Model\SecurityRequirement;
 use Duyler\OpenApi\Schema\Model\Tags;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\SchemaParserInterface;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\Exception\InvalidUtf8Exception;
 use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
 use Duyler\OpenApi\Validator\TypeFormatter;
@@ -70,6 +71,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
     {
         $this->validateVersion($data);
         $this->context->documentVersion = (string) $data['openapi'];
+        $this->context->dialectProfile = DialectProfile::fromOpenApiVersion($this->context->documentVersion);
 
         $self = TypeHelper::asStringOrNull($data['$self'] ?? null);
         $this->validateSelfUri($self);

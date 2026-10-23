@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Validation;
 
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
@@ -80,6 +81,7 @@ final readonly class ValidationStack
         public readonly PregExecutor $pregExecutor = new PregExecutor(),
         public readonly ?LoggerInterface $securityVerboseLogger = null,
         public readonly bool $strictCoercion = true,
+        public readonly ?DialectProfile $dialectProfile = null,
     ) {
         $this->validatorConfiguration = new ValidatorConfiguration(
             coercion: $this->coercion,
@@ -93,6 +95,7 @@ final readonly class ValidationStack
             maxRegexBacktracks: $this->maxRegexBacktracks,
             maxStreamingRecords: $this->maxStreamingRecords,
             strictCoercion: $this->strictCoercion,
+            dialectProfile: $this->dialectProfile,
         );
 
         $this->statelessValidators = new StatelessValidatorRegistry(
@@ -169,6 +172,7 @@ final readonly class ValidationStack
             maxStreamingRecords: $options->maxStreamingRecords,
             securityVerboseLogger: $options->securityVerboseLogger,
             strictCoercion: $options->strictCoercion,
+            dialectProfile: $options->dialectProfile,
         );
     }
 
@@ -239,6 +243,7 @@ final readonly class ValidationStack
             nullableAsType: $this->nullableAsType,
             emptyArrayStrategy: $this->emptyArrayStrategy,
             strictCoercion: $this->strictCoercion,
+            dialectProfile: $this->dialectProfile,
         );
     }
 

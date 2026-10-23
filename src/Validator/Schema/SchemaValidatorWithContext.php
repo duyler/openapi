@@ -66,6 +66,7 @@ final readonly class SchemaValidatorWithContext
             nullableAsType: $this->configuration->nullableAsType,
             emptyArrayStrategy: $this->configuration->emptyArrayStrategy,
             mode: $mode,
+            dialectProfile: $this->configuration->dialectProfile,
         ));
 
         $this->doValidate($data, $schema, $context, true);
