@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `$vocabulary`, `$defs`) and unknown schema keywords are preserved through parse/serialize round-trip; they
   were previously silently dropped on load. Unknown keywords keep their values verbatim (vendor extensions,
   typos, `$recursiveRef` included), so re-serializing a schema reproduces the source document.
+- `DialectProfile` DTO (additive public API): the OpenAPI 3.0/3.1 dialect profile is derived once per document
+  from the `openapi` version (`DialectProfile::fromOpenApiVersion()`, with `forOpenApi30()`/`forOpenApi31()`
+  factories) and carried through ref resolution, validation context (including branch forks) and the schema
+  parser build path (`RefResolver::dialectProfile()` exposes it). Behavior is unchanged in this release: no
+  code path consumes the profile flags yet, and the stateless validation path keeps the 3.1 default.
 
 ### Changed
 
