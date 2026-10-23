@@ -9,8 +9,10 @@ use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\Internal\CacheKeyBuilder;
 use Duyler\OpenApi\Builder\Internal\ExternalRefDetector;
 use Duyler\OpenApi\Builder\Internal\SpecLoader;
+use Duyler\OpenApi\Builder\Internal\SpecParserFactory;
 use Duyler\OpenApi\Cache\SchemaCache;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Schema\Parser\DocumentRepository;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Dto\ValidatorDependencies;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
@@ -174,6 +176,20 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(externalRefAllowedRoot: $realPath));
     }
 
+    public function withDocument(string $retrievalUri, string $content): self
+    {
+        return $this->with(new BuilderConfig(
+            documentRepository: $this->documents()->withDocument(
+                retrievalUri: $retrievalUri,
+                content: $content,
+                parser: $this->specParserFactory()->forRegisteredDocument(
+                    $retrievalUri,
+                    $this->externalRefMaxBytes(),
+                ),
+            ),
+        ));
+    }
+
     public function enableSecurityValidation(): self
     {
         return $this->with(new BuilderConfig(securityValidation: true));
@@ -268,6 +284,7 @@ final readonly class OpenApiValidatorBuilder
     {
         $document = $this->specLoader()->load();
 
+        $this->assertRegisteredDocumentsWithinLimit();
         $this->externalRefDetector()->assertConfinement();
 
         return $this->assembleValidator($document);
@@ -276,6 +293,32 @@ final readonly class OpenApiValidatorBuilder
     private function with(BuilderConfig $overrides): self
     {
         return new self($this->config->merge($overrides));
+    }
+
+    private function documents(): DocumentRepository
+    {
+        return ($this->config->documentRepository ?? DocumentRepository::empty($this->externalRefMaxBytes()))
+            ->withMaxBytes($this->externalRefMaxBytes());
+    }
+
+    private function assertRegisteredDocumentsWithinLimit(): void
+    {
+        $this->config->documentRepository?->assertWithinLimit($this->externalRefMaxBytes());
+    }
+
+    private function externalRefMaxBytes(): int
+    {
+        return $this->config->externalRefMaxBytes ?? FileExternalRefResolver::DEFAULT_MAX_REF_BYTES;
+    }
+
+    private function specParserFactory(): SpecParserFactory
+    {
+        return new SpecParserFactory(
+            logger: $this->config->logger,
+            reportDeprecated: $this->config->reportDeprecated,
+            maxSpecSizeBytes: $this->config->maxSpecSizeBytes,
+            maxSpecDepth: $this->config->maxSpecDepth,
+        );
     }
 
     private function resolveSpecPath(string $path): string
@@ -322,10 +365,13 @@ final readonly class OpenApiValidatorBuilder
         $securityVerboseLogger = $this->config->securityVerboseLogger ?? new NullLogger();
         $fileResolver = new FileExternalRefResolver(
             allowedRoot: $this->config->externalRefAllowedRoot,
-            maxBytes: $this->config->externalRefMaxBytes ?? FileExternalRefResolver::DEFAULT_MAX_REF_BYTES,
+            maxBytes: $this->externalRefMaxBytes(),
             logger: $securityVerboseLogger,
         );
-        $refResolver = new RefResolver(builtinFileResolver: $fileResolver);
+        $refResolver = new RefResolver(
+            builtinFileResolver: $fileResolver,
+            documentRepository: $this->config->documentRepository,
+        );
 
         $coercion = $this->config->coercion ?? false;
         $nullableAsType = $this->config->nullableAsType ?? true;

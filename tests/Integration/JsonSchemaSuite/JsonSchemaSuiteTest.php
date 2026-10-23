@@ -66,7 +66,7 @@ final class JsonSchemaSuiteTest extends TestCase
         'format.json' => 'FS-25',
         'infinite-loop-detection.json' => 'FS-07',
         'ref.json' => 'FS-07',
-        'refRemote.json' => 'FS-09',
+        'refRemote.json' => 'FS-10',
         'unevaluatedItems.json' => 'FS-05',
         'unevaluatedProperties.json' => 'FS-05',
         'vocabulary.json' => 'FS-12',

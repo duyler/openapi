@@ -8,6 +8,8 @@ use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Schema\Parser\DocumentRepository;
+use Duyler\OpenApi\Schema\Parser\JsonParser;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
 use Duyler\OpenApi\Validator\Schema\ExternalRefResolverInterface;
@@ -249,6 +251,33 @@ final class DocumentNavigatorTest extends TestCase
             [],
             new WeakMap(),
         );
+    }
+
+    #[Test]
+    public function resolve_ref_denies_file_fallback_when_repository_present_without_allowed_root(): void
+    {
+        $repository = DocumentRepository::empty()->withDocument(
+            'https://api.example.com/v1.json',
+            '{"openapi":"3.1.0","info":{"title":"d","version":"1"}}',
+            new JsonParser(),
+        );
+
+        $navigator = new DocumentNavigator(
+            builtinFileResolver: new FileExternalRefResolver(),
+            documentRepository: $repository,
+        );
+
+        try {
+            $navigator->resolveRef(
+                'nowhere.json#/components/schemas/Shared',
+                new OpenApiDocument('', new InfoObject('', '')),
+                [],
+                new WeakMap(),
+            );
+            self::fail('Expected UnresolvableRefException to be thrown');
+        } catch (UnresolvableRefException $e) {
+            self::assertStringContainsString('file fallback is denied', $e->reason());
+        }
     }
 
     #[Test]

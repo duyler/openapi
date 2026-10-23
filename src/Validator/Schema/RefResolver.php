@@ -9,6 +9,7 @@ use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Schema\Parser\DocumentRepository;
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
 use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
 use Duyler\OpenApi\Validator\Schema\Internal\DiscriminatorDetector;
@@ -37,6 +38,7 @@ final class RefResolver implements RefResolverInterface
         ?FileExternalRefResolver $builtinFileResolver = null,
         private readonly UriResolver $uriResolver = new UriResolver(),
         private readonly DiscriminatorDetector $discriminatorDetector = new DiscriminatorDetector(),
+        private readonly ?DocumentRepository $documentRepository = null,
     ) {
         $this->clear();
         $this->builtinFileResolver = $builtinFileResolver ?? new FileExternalRefResolver();
@@ -44,6 +46,7 @@ final class RefResolver implements RefResolverInterface
             builtinFileResolver: $this->builtinFileResolver,
             externalRefResolver: $this->externalRefResolver,
             registryProvider: $this->resourceRegistry(...),
+            documentRepository: $this->documentRepository,
         );
     }
 

@@ -79,7 +79,8 @@ YAML;
             ->build();
 
         $contentHash = hash('sha256', self::MINIMAL_YAML);
-        $fingerprint = 'maxSpecDepth=100|maxSpecSizeBytes=1048576|externalRefAllowedRoot=|externalRefMaxBytes=10485760';
+        $fingerprint
+            = 'maxSpecDepth=100|maxSpecSizeBytes=1048576|externalRefAllowedRoot=|externalRefMaxBytes=10485760|documentRepository=';
         $expected = self::CONTENT_KEY_PREFIX . hash('sha256', $contentHash . '|' . $fingerprint);
 
         $uniqueKeys = $this->uniqueKeys($pool->capturedKeys());

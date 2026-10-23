@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Support;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 
+use function count;
 use function json_encode;
 
 use const JSON_THROW_ON_ERROR;
@@ -18,6 +19,8 @@ final class SuiteValidatorFactory
     /** @var array<string, OpenApiValidatorInterface> */
     private static array $validators = [];
 
+    private static ?OpenApiValidatorBuilder $remotesBuilder = null;
+
     public static function subjectSchemaRef(): string
     {
         return self::SUBJECT_SCHEMA_REF;
@@ -28,6 +31,11 @@ final class SuiteValidatorFactory
         $cacheKey = json_encode($schema, JSON_THROW_ON_ERROR);
 
         return self::$validators[$cacheKey] ??= self::build($schema);
+    }
+
+    public static function remotesCount(): int
+    {
+        return count(SuiteRemoteDocuments::all());
     }
 
     private static function build(mixed $schema): OpenApiValidatorInterface
@@ -45,9 +53,16 @@ final class SuiteValidatorFactory
             ],
         ];
 
-        return OpenApiValidatorBuilder::create()
-            ->fromJsonString(json_encode($document, JSON_THROW_ON_ERROR))
+        return self::builderWithRemotes()
             ->withExternalRefAllowedRoot(JsonSchemaSuiteLocator::remotesDirectory())
+            ->fromJsonString(json_encode($document, JSON_THROW_ON_ERROR))
             ->build();
+    }
+
+    private static function builderWithRemotes(): OpenApiValidatorBuilder
+    {
+        return self::$remotesBuilder ??= SuiteRemoteDocuments::register(
+            OpenApiValidatorBuilder::create(),
+        );
     }
 }

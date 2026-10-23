@@ -10,6 +10,7 @@ use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Schema\Parser\DocumentRepository;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Schema\Exception\ExternalRefSecurityException;
@@ -46,6 +47,14 @@ final readonly class DocumentNavigator
 
     private const string REASON_ANCHOR_UNRESOLVED = 'Fragment does not resolve to an anchor in the document';
 
+    private const string REASON_REGISTERED_ROOT_NOT_A_SCHEMA
+        = 'Registered document root is not a schema object; reference an $id or a fragment of the document';
+
+    private const string REASON_FILE_FALLBACK_DENIED
+        = 'External ref is not registered in the document repository; file fallback is denied because '
+        . 'externalRefAllowedRoot is not set. Call withExternalRefAllowedRoot($path), register the referenced '
+        . 'document via withDocument(), or inject a custom ExternalRefResolverInterface.';
+
     /**
      * @param Closure(OpenApiDocument): ResourceRegistry|null $registryProvider
      */
@@ -54,6 +63,7 @@ final readonly class DocumentNavigator
         private readonly ?ExternalRefResolverInterface $externalRefResolver = null,
         private readonly ?Closure $registryProvider = null,
         private readonly UriResolver $uriResolver = new UriResolver(),
+        private readonly ?DocumentRepository $documentRepository = null,
     ) {}
 
     /**
@@ -91,7 +101,7 @@ final readonly class DocumentNavigator
             return $viaRegistry;
         }
 
-        return $this->resolveExternalRef($ref, $visited);
+        return $this->resolveExternalRef($ref, $document, $baseUri, $visited, $cache, $depth);
     }
 
     /**
@@ -533,10 +543,27 @@ final readonly class DocumentNavigator
 
     /**
      * @param array<string, bool> $visited
+     * @param WeakMap<OpenApiDocument, RefCache> $cache
      * @return array{Schema|Parameter|RequestBody|Response, array<string, bool>}
      */
-    private function resolveExternalRef(string $ref, array $visited): array
-    {
+    private function resolveExternalRef(
+        string $ref,
+        OpenApiDocument $document,
+        ?string $baseUri,
+        array $visited,
+        WeakMap $cache,
+        int $depth,
+    ): array {
+        $viaRepository = $this->resolveViaRepository($ref, $document, $baseUri, $visited, $cache, $depth);
+
+        if (null !== $viaRepository) {
+            return $viaRepository;
+        }
+
+        if ($this->isFileFallbackDenied()) {
+            throw new UnresolvableRefException($ref, self::REASON_FILE_FALLBACK_DENIED);
+        }
+
         try {
             $resolver = $this->externalRefResolver ?? $this->builtinFileResolver;
 
@@ -552,6 +579,146 @@ final readonly class DocumentNavigator
                 previous: $e,
             );
         }
+    }
+
+    private function isFileFallbackDenied(): bool
+    {
+        return null !== $this->documentRepository
+            && [] !== $this->documentRepository->contents()
+            && null === $this->externalRefResolver
+            && null === $this->builtinFileResolver->allowedRoot();
+    }
+
+    /**
+     * @param array<string, bool> $visited
+     * @param WeakMap<OpenApiDocument, RefCache> $cache
+     * @return array{Schema|Parameter|RequestBody|Response, array<string, bool>}|null
+     */
+    private function resolveViaRepository(
+        string $ref,
+        OpenApiDocument $document,
+        ?string $baseUri,
+        array $visited,
+        WeakMap $cache,
+        int $depth,
+    ): ?array {
+        $repository = $this->documentRepository;
+
+        if (null === $repository) {
+            return null;
+        }
+
+        [$resourceUri, $fragment] = $this->splitUriRef($ref);
+
+        $match = $this->matchRetrievalUri($resourceUri, $repository, $document, $baseUri);
+
+        if (null === $match) {
+            return null;
+        }
+
+        [$targetDocument, $retrievalUri] = $match;
+
+        $this->assertNotCircular($ref, $visited);
+        $visited[$ref] = true;
+
+        $cached = $this->lookupCached($targetDocument, $ref, $cache);
+        if (null !== $cached) {
+            return [$cached, $visited];
+        }
+
+        $result = $this->resolveInRegisteredDocument($ref, $targetDocument, $retrievalUri, $fragment);
+
+        if (null !== $result->ref) {
+            return $this->resolveRef(
+                $result->ref,
+                $targetDocument,
+                $visited,
+                $cache,
+                $depth + 1,
+                $result->id ?? $retrievalUri,
+            );
+        }
+
+        $this->storeCached($targetDocument, $ref, $result, $cache);
+
+        return [$result, $visited];
+    }
+
+    /**
+     * @return array{OpenApiDocument, string}|null
+     */
+    private function matchRetrievalUri(
+        string $resourceUri,
+        DocumentRepository $repository,
+        OpenApiDocument $document,
+        ?string $baseUri,
+    ): ?array {
+        $exact = $repository->findByUri($resourceUri);
+
+        if (null !== $exact) {
+            return [$exact, $resourceUri];
+        }
+
+        foreach ([$baseUri, $document->self] as $candidate) {
+            if (null === $candidate || '' === $candidate) {
+                continue;
+            }
+
+            $absoluteUri = $this->uriResolver->combine($candidate, $resourceUri);
+            $combined = $repository->findByUri($absoluteUri);
+
+            if (null !== $combined) {
+                return [$combined, $absoluteUri];
+            }
+        }
+
+        foreach (array_keys($repository->contents()) as $registeredUri) {
+            $absoluteUri = $this->uriResolver->combine($registeredUri, $resourceUri);
+            $combined = $repository->findByUri($absoluteUri);
+
+            if (null !== $combined) {
+                return [$combined, $absoluteUri];
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveInRegisteredDocument(
+        string $ref,
+        OpenApiDocument $targetDocument,
+        string $retrievalUri,
+        ?string $fragment,
+    ): Schema|Parameter|RequestBody|Response {
+        if (null === $fragment || '' === $fragment) {
+            $root = $this->registry($targetDocument)?->findByUri($retrievalUri);
+
+            if (null === $root) {
+                throw new UnresolvableRefException($ref, self::REASON_REGISTERED_ROOT_NOT_A_SCHEMA);
+            }
+
+            return $root;
+        }
+
+        if (str_starts_with($fragment, '/')) {
+            $segments = array_map($this->decodePointerSegment(...), explode('/', substr($fragment, 1)));
+
+            try {
+                return $this->navigate($targetDocument, $segments);
+            } catch (UnresolvableRefException $e) {
+                throw new UnresolvableRefException($ref, $e->reason(), previous: $e);
+            }
+        }
+
+        $this->assertPlainNameFragment($fragment, $ref);
+
+        $registry = $this->registry($targetDocument);
+
+        return $registry?->findAnchorIn($retrievalUri, $fragment)
+            ?? $registry?->findByAnchor($fragment)
+            ?? $registry?->findDynamicAnchorIn($retrievalUri, $fragment)
+            ?? $registry?->findDynamicAnchor($fragment)
+            ?? throw new UnresolvableRefException($ref, self::REASON_ANCHOR_UNRESOLVED);
     }
 
     private function decodePointerSegment(string $segment): string

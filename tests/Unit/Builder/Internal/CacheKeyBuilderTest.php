@@ -6,6 +6,8 @@ namespace Duyler\OpenApi\Test\Unit\Builder\Internal;
 
 use Duyler\OpenApi\Builder\Dto\BuilderConfig;
 use Duyler\OpenApi\Builder\Internal\CacheKeyBuilder;
+use Duyler\OpenApi\Schema\Parser\DocumentRepository;
+use Duyler\OpenApi\Schema\Parser\JsonParser;
 use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -37,7 +39,8 @@ info:
 paths: {}
 YAML;
 
-    private const string DEFAULT_FINGERPRINT = 'maxSpecDepth=100|maxSpecSizeBytes=1048576|externalRefAllowedRoot=|externalRefMaxBytes=10485760';
+    private const string DEFAULT_FINGERPRINT
+        = 'maxSpecDepth=100|maxSpecSizeBytes=1048576|externalRefAllowedRoot=|externalRefMaxBytes=10485760|documentRepository=';
 
     #[Test]
     public function for_string_returns_content_prefix_with_sha256_hash(): void
@@ -226,9 +229,10 @@ YAML;
     }
 
     #[Test]
-    public function build_fingerprint_includes_all_four_config_components(): void
+    public function build_fingerprint_includes_all_five_config_components(): void
     {
-        $fingerprint = 'maxSpecDepth=100|maxSpecSizeBytes=1048576|externalRefAllowedRoot=|externalRefMaxBytes=10485760';
+        $fingerprint
+            = 'maxSpecDepth=100|maxSpecSizeBytes=1048576|externalRefAllowedRoot=|externalRefMaxBytes=10485760|documentRepository=';
 
         $key = $this->defaultBuilder()->forString(self::MINIMAL_YAML);
         $expected = CacheKeyBuilder::CONTENT_PREFIX
@@ -240,6 +244,35 @@ YAML;
             10_485_760,
             'Pin default external-ref byte cap: if this constant changes the fingerprint default must be updated in this test.',
         );
+    }
+
+    #[Test]
+    public function document_repository_change_produces_distinct_keys(): void
+    {
+        $keyWithoutRepository = $this->defaultBuilder()->forString(self::MINIMAL_YAML);
+
+        $withRepository = new CacheKeyBuilder(new BuilderConfig(
+            documentRepository: DocumentRepository::empty()->withDocument(
+                'https://api.example.com/v1.json',
+                $this->minimalJsonDocument(),
+                new JsonParser(),
+            ),
+        ));
+
+        self::assertNotSame(
+            $keyWithoutRepository,
+            $withRepository->forString(self::MINIMAL_YAML),
+            'Registered documents must scope the cache key (confinement verdicts must not leak across builds with and without a repository).',
+        );
+        self::assertSame(
+            $withRepository->forString(self::MINIMAL_YAML),
+            $withRepository->forString(self::MINIMAL_YAML),
+        );
+    }
+
+    private function minimalJsonDocument(): string
+    {
+        return '{"openapi":"3.1.0","info":{"title":"d","version":"1"}}';
     }
 
     private function defaultBuilder(): CacheKeyBuilder

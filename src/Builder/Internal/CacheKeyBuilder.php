@@ -40,11 +40,12 @@ final readonly class CacheKeyBuilder
     private function buildFingerprint(): string
     {
         return sprintf(
-            'maxSpecDepth=%d|maxSpecSizeBytes=%d|externalRefAllowedRoot=%s|externalRefMaxBytes=%d',
+            'maxSpecDepth=%d|maxSpecSizeBytes=%d|externalRefAllowedRoot=%s|externalRefMaxBytes=%d|documentRepository=%s',
             $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
             $this->config->maxSpecSizeBytes ?? YamlParser::DEFAULT_MAX_SPEC_BYTES,
             $this->config->externalRefAllowedRoot ?? '',
             $this->config->externalRefMaxBytes ?? FileExternalRefResolver::DEFAULT_MAX_REF_BYTES,
+            $this->config->documentRepository?->fingerprint() ?? '',
         );
     }
 }

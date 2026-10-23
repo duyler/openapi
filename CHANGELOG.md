@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.9.0]
 
+### Added
+
+- Multi-document OpenAPI descriptions (3.2 §4.1.2): `OpenApiValidatorBuilder::withDocument(string $retrievalUri,
+  string $content)` registers user-supplied documents by intended retrieval URI. Content is size-capped with the
+  same limit as `FileExternalRefResolver` (`withExternalRefMaxBytes()` and `DEFAULT_MAX_REF_BYTES` apply, re-checked
+  against the final limit at `build()`) and is parsed in full at registration time; parse failures raise
+  `DocumentParseException` carrying the retrieval URI without exposing document content. External `$ref` resolution
+  order is now: document repository (exact match, then base-URI combination against the current document `$self`)
+  → `file://` jail resolver → `UnresolvableRefException`. External `$ref` values inside the main spec and inside
+  registered documents must either be satisfied by the repository or require `externalRefAllowedRoot`; the
+  confinement verdict cache key includes the repository fingerprint.
+
 ### Changed
 
 - `$ref` fragments are resolved by their JSON Schema 2020-12 kind. A fragment
