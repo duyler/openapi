@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   → `file://` jail resolver → `UnresolvableRefException`. External `$ref` values inside the main spec and inside
   registered documents must either be satisfied by the repository or require `externalRefAllowedRoot`; the
   confinement verdict cache key includes the repository fingerprint.
+- Schema resource identification fields (`$id`, `$anchor`, `$dynamicAnchor`, `$dynamicRef`, `$comment`,
+  `$vocabulary`, `$defs`) and unknown schema keywords are preserved through parse/serialize round-trip; they
+  were previously silently dropped on load. Unknown keywords keep their values verbatim (vendor extensions,
+  typos, `$recursiveRef` included), so re-serializing a schema reproduces the source document.
 
 ### Changed
 

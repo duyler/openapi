@@ -22,6 +22,7 @@ final class JsonSchemaSuiteTest extends TestCase
 {
     public const array ACTIVE_SECTIONS = [
         'const.json',
+        'default.json',
         'maximum.json',
         'minimum.json',
         'exclusiveMaximum.json',
@@ -35,7 +36,11 @@ final class JsonSchemaSuiteTest extends TestCase
         'propertyNames.json',
         'maxProperties.json',
         'if-then-else.json',
+        'infinite-loop-detection.json',
         'anchor.json',
+        'optional/anchor.json',
+        'optional/id.json',
+        'optional/unknownKeyword.json',
     ];
 
     public const array PENDING_SECTIONS = [
@@ -46,7 +51,7 @@ final class JsonSchemaSuiteTest extends TestCase
         'maxLength.json' => 'FS-40',
         'pattern.json' => 'FS-40',
         'prefixItems.json' => 'FS-16',
-        'items.json' => 'FS-07',
+        'items.json' => 'FS-40',
         'contains.json' => 'FS-40',
         'properties.json' => 'FS-16',
         'required.json' => 'FS-40',
@@ -56,21 +61,18 @@ final class JsonSchemaSuiteTest extends TestCase
         'anyOf.json' => 'FS-16',
         'oneOf.json' => 'FS-16',
         'not.json' => 'FS-40',
-        'boolean_schema.json' => 'FS-02',
+        'boolean_schema.json' => 'FS-16',
         'content.json' => 'FS-20',
-        'default.json' => 'FS-05',
         'defs.json' => 'FS-40',
         'dependentRequired.json' => 'FS-17',
         'dependentSchemas.json' => 'FS-17',
         'dynamicRef.json' => 'FS-10',
         'format.json' => 'FS-25',
-        'infinite-loop-detection.json' => 'FS-07',
-        'ref.json' => 'FS-07',
+        'ref.json' => 'FS-40',
         'refRemote.json' => 'FS-10',
-        'unevaluatedItems.json' => 'FS-05',
-        'unevaluatedProperties.json' => 'FS-05',
+        'unevaluatedItems.json' => 'FS-40',
+        'unevaluatedProperties.json' => 'FS-40',
         'vocabulary.json' => 'FS-12',
-        'optional/anchor.json' => 'FS-07',
         'optional/bignum.json' => 'FS-40',
         'optional/cross-draft.json' => 'FS-13',
         'optional/dependencies-compatibility.json' => 'FS-17',
@@ -98,11 +100,9 @@ final class JsonSchemaSuiteTest extends TestCase
         'optional/format/uri-template.json' => 'FS-25',
         'optional/format/uri.json' => 'FS-25',
         'optional/format/uuid.json' => 'FS-25',
-        'optional/id.json' => 'FS-06',
         'optional/no-schema.json' => 'FS-13',
         'optional/non-bmp-regex.json' => 'FS-40',
-        'optional/refOfUnknownKeyword.json' => 'FS-03',
-        'optional/unknownKeyword.json' => 'FS-03',
+        'optional/refOfUnknownKeyword.json' => 'FS-40',
     ];
 
     public const array EXCLUDED_SECTIONS = [
