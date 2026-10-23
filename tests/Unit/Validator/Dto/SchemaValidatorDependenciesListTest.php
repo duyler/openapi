@@ -25,6 +25,7 @@ use Duyler\OpenApi\Validator\SchemaValidator\ContentMediaTypeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContainsValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\DependentSchemasValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\DeprecatedValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\DynamicRefValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\EnumValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\FormatValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\IfThenElseValidator;
@@ -75,11 +76,11 @@ final class SchemaValidatorDependenciesListTest extends TestCase
     }
 
     #[Test]
-    public function create_full_list_returns_29_validators(): void
+    public function create_full_list_returns_30_validators(): void
     {
         $validators = $this->dependencies->createFullList();
 
-        self::assertCount(29, $validators);
+        self::assertCount(30, $validators);
     }
 
     #[Test]
@@ -100,6 +101,7 @@ final class SchemaValidatorDependenciesListTest extends TestCase
             ContainsValidator::class,
             DependentSchemasValidator::class,
             DeprecatedValidator::class,
+            DynamicRefValidator::class,
             EnumValidator::class,
             FormatValidator::class,
             IfThenElseValidator::class,
@@ -137,11 +139,11 @@ final class SchemaValidatorDependenciesListTest extends TestCase
     }
 
     #[Test]
-    public function create_stateless_list_returns_26_validators(): void
+    public function create_stateless_list_returns_27_validators(): void
     {
         $validators = $this->dependencies->createStatelessList();
 
-        self::assertCount(26, $validators);
+        self::assertCount(27, $validators);
     }
 
     #[Test]
@@ -235,7 +237,7 @@ final class SchemaValidatorDependenciesListTest extends TestCase
             $expected,
         );
 
-        self::assertCount(26, $statelessList);
+        self::assertCount(27, $statelessList);
         self::assertCount(3, array_diff($fullClasses, $statelessClasses));
         self::assertSame($expectedClasses, $statelessClasses);
     }

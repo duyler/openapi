@@ -16,6 +16,8 @@ use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use WeakMap;
 
+use function count;
+
 final readonly class SchemaValidatorWithContext
 {
     private OneOfValidatorWithContext $oneOfValidator;
@@ -93,18 +95,36 @@ final readonly class SchemaValidatorWithContext
 
     private function doValidate(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
     {
-        $schema = $this->resolveRef($schema);
-        /** @var WeakMap<Schema, true> $visited */
-        $visited = new WeakMap();
-        $schema = $this->compositionResolver->resolveCompositionRefs($schema, $visited);
+        $entersWrapperScope = null !== $schema->id;
+        $entersResolvedScope = false;
+        $entersChainScopes = [];
+        $enclosingBaseUri = $this->dependencies->refResolver->scopeBaseUri($context->dynamicScope(), $this->document);
 
-        $entersDynamicScope = null !== $schema->id || $context->hasEmptyDynamicScope();
-
-        if ($entersDynamicScope) {
+        if ($entersWrapperScope) {
             $context->enterDynamicScope($schema);
         }
 
         try {
+            [$schema, $chainResources] = null !== $schema->ref
+                ? $this->dependencies->refResolver->resolveSchemaWithOverrideAndChain($schema, $this->document, $enclosingBaseUri)
+                : [$schema, []];
+
+            foreach ($chainResources as $chainResource) {
+                $context->enterDynamicScope($chainResource);
+                $entersChainScopes[] = $chainResource;
+            }
+
+            /** @var WeakMap<Schema, true> $visited */
+            $visited = new WeakMap();
+            $compositionBaseUri = $this->dependencies->refResolver->scopeBaseUri($context->dynamicScope(), $this->document);
+            $schema = $this->compositionResolver->resolveCompositionRefs($schema, $visited, $compositionBaseUri);
+
+            $entersResolvedScope = null !== $schema->id || $context->hasEmptyDynamicScope();
+
+            if ($entersResolvedScope) {
+                $context->enterDynamicScope($schema);
+            }
+
             $context->annotateSchemaExtras($schema);
 
             if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
@@ -128,18 +148,19 @@ final readonly class SchemaValidatorWithContext
             $this->dispatcher->validateInternal($data, $schema, $context);
             $this->dispatcher->dispatchPropertiesAndItems($data, $schema, $context, $useDiscriminator);
         } finally {
-            if ($entersDynamicScope) {
+            if ($entersResolvedScope) {
+                $context->leaveDynamicScope();
+            }
+
+            $chainScopeCount = count($entersChainScopes);
+
+            for ($chainIndex = 0; $chainIndex < $chainScopeCount; ++$chainIndex) {
+                $context->leaveDynamicScope();
+            }
+
+            if ($entersWrapperScope) {
                 $context->leaveDynamicScope();
             }
         }
-    }
-
-    private function resolveRef(Schema $schema): Schema
-    {
-        if (null === $schema->ref) {
-            return $schema;
-        }
-
-        return $this->dependencies->refResolver->resolveSchemaWithOverride($schema, $this->document);
     }
 }

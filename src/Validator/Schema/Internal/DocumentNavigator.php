@@ -9,6 +9,7 @@ use Duyler\OpenApi\Schema\Model\Parameter;
 use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Schema\Model\SchemaSiblingMerger;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\Parser\DocumentRepository;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
@@ -35,7 +36,7 @@ use function strpos;
 use function substr;
 
 /** @internal */
-final readonly class DocumentNavigator
+final class DocumentNavigator
 {
     private const int REF_ROOT_PREFIX_LENGTH = 2;
 
@@ -55,6 +56,8 @@ final readonly class DocumentNavigator
         . 'externalRefAllowedRoot is not set. Call withExternalRefAllowedRoot($path), register the referenced '
         . 'document via withDocument(), or inject a custom ExternalRefResolverInterface.';
 
+    private ?ChainResources $chainResources = null;
+
     /**
      * @param Closure(OpenApiDocument): ResourceRegistry|null $registryProvider
      */
@@ -65,6 +68,16 @@ final readonly class DocumentNavigator
         private readonly UriResolver $uriResolver = new UriResolver(),
         private readonly ?DocumentRepository $documentRepository = null,
     ) {}
+
+    public function collectChainResources(ChainResources $chainResources): void
+    {
+        $this->chainResources = $chainResources;
+    }
+
+    public function stopChainResourcesCollection(): void
+    {
+        $this->chainResources = null;
+    }
 
     /**
      * @param array<string, bool> $visited
@@ -78,30 +91,35 @@ final readonly class DocumentNavigator
         WeakMap $cache,
         int $depth = 0,
         ?string $baseUri = null,
+        bool $followChain = true,
     ): array {
         if ($depth >= ValidationContext::MAX_DEPTH) {
             throw new SchemaDepthExceededException(ValidationContext::MAX_DEPTH);
         }
 
+        if ('#' === $ref) {
+            return $this->resolveRootRef($ref, $document, $visited, $cache, $depth, $baseUri, $followChain);
+        }
+
         if (str_starts_with($ref, '#/')) {
-            return $this->resolvePointerRef($ref, $document, $visited, $cache, $depth, $baseUri);
+            return $this->resolvePointerRef($ref, $document, $visited, $cache, $depth, $baseUri, $followChain);
         }
 
         if (str_starts_with($ref, '#')) {
-            return $this->resolvePlainNameRef($ref, substr($ref, 1), $document, $visited, $cache, $depth, $baseUri);
+            return $this->resolvePlainNameRef($ref, substr($ref, 1), $document, $visited, $cache, $depth, $baseUri, $followChain);
         }
 
         [$resourceUri, $fragment] = $this->splitUriRef($ref);
 
         $viaRegistry = null === $this->registryProvider
             ? null
-            : $this->resolveUriRefViaRegistry($ref, $resourceUri, $fragment, $document, $visited, $cache, $depth, $baseUri);
+            : $this->resolveUriRefViaRegistry($ref, $resourceUri, $fragment, $document, $visited, $cache, $depth, $baseUri, $followChain);
 
         if (null !== $viaRegistry) {
             return $viaRegistry;
         }
 
-        return $this->resolveExternalRef($ref, $document, $baseUri, $visited, $cache, $depth);
+        return $this->resolveExternalRef($ref, $document, $baseUri, $visited, $cache, $depth, $followChain);
     }
 
     /**
@@ -186,6 +204,7 @@ final readonly class DocumentNavigator
         WeakMap $cache,
         int $depth,
         ?string $baseUri,
+        bool $followChain = true,
     ): array {
         $this->assertNotCircular($ref, $visited);
         $visited[$ref] = true;
@@ -198,13 +217,7 @@ final readonly class DocumentNavigator
         $result = $this->resolvePointerViaRegistry($ref, $document, $baseUri)
             ?? $this->navigateThrowing($ref, $document, explode('/', substr($ref, self::REF_ROOT_PREFIX_LENGTH)));
 
-        if (null !== $result->ref) {
-            return $this->resolveRef($result->ref, $document, $visited, $cache, $depth + 1, $result->id ?? $baseUri);
-        }
-
-        $this->storeCached($document, $ref, $result, $cache);
-
-        return [$result, $visited];
+        return $this->finishResolve($result, $ref, $document, $visited, $cache, $depth, $baseUri, $followChain);
     }
 
     /**
@@ -220,6 +233,7 @@ final readonly class DocumentNavigator
         WeakMap $cache,
         int $depth,
         ?string $baseUri,
+        bool $followChain = true,
     ): array {
         if ('' === $name) {
             throw new UnresolvableRefException($ref, self::REASON_EMPTY_FRAGMENT);
@@ -241,13 +255,7 @@ final readonly class DocumentNavigator
             throw new UnresolvableRefException($ref, self::REASON_ANCHOR_UNRESOLVED);
         }
 
-        if (null !== $result->ref) {
-            return $this->resolveRef($result->ref, $document, $visited, $cache, $depth + 1, $result->id ?? $baseUri);
-        }
-
-        $this->storeCached($document, $ref, $result, $cache);
-
-        return [$result, $visited];
+        return $this->finishResolve($result, $ref, $document, $visited, $cache, $depth, $baseUri, $followChain);
     }
 
     /**
@@ -264,6 +272,7 @@ final readonly class DocumentNavigator
         WeakMap $cache,
         int $depth,
         ?string $baseUri,
+        bool $followChain = true,
     ): ?array {
         $registry = $this->registry($document);
 
@@ -293,13 +302,144 @@ final readonly class DocumentNavigator
             throw new UnresolvableRefException($ref, self::REASON_ANCHOR_UNRESOLVED);
         }
 
-        if (null !== $result->ref) {
-            return $this->resolveRef($result->ref, $document, $visited, $cache, $depth + 1, $result->id ?? $baseUri);
+        $this->collectEnclosingResource($resourceSchema, $result);
+
+        return $this->finishResolve($result, $ref, $document, $visited, $cache, $depth, $baseUri, $followChain, $absoluteResourceUri);
+    }
+
+    /**
+     * @param array<string, bool> $visited
+     * @param WeakMap<OpenApiDocument, RefCache> $cache
+     * @return array{Schema|Parameter|RequestBody|Response, array<string, bool>}
+     */
+    private function finishResolve(
+        Schema|Parameter|RequestBody|Response $result,
+        string $ref,
+        OpenApiDocument $document,
+        array $visited,
+        WeakMap $cache,
+        int $depth,
+        ?string $baseUri,
+        bool $followChain,
+        ?string $resourceUri = null,
+    ): array {
+        if ($followChain && null !== $result->ref) {
+            $this->collectChainResource($result);
+
+            [$resolved, $visited] = $this->resolveRef(
+                $result->ref,
+                $document,
+                $visited,
+                $cache,
+                $depth + 1,
+                $resourceUri ?? $result->id ?? $baseUri,
+                $followChain,
+            );
+
+            return [$this->mergeChainSiblings($resolved, $result), $visited];
         }
 
-        $this->storeCached($document, $ref, $result, $cache);
+        if ($followChain) {
+            $this->storeCached($document, $ref, $result, $cache);
+        }
 
         return [$result, $visited];
+    }
+
+    private function collectChainResource(Schema|Parameter|RequestBody|Response|null $resource): void
+    {
+        if (null === $this->chainResources) {
+            return;
+        }
+
+        if (null === $resource) {
+            return;
+        }
+
+        if (false === $resource instanceof Schema || null === $resource->id) {
+            return;
+        }
+
+        $this->chainResources->add($resource);
+    }
+
+    /**
+     * @param Schema|Parameter|RequestBody|Response $resolved
+     * @return Schema|Parameter|RequestBody|Response
+     */
+    private function mergeChainSiblings(
+        Schema|Parameter|RequestBody|Response $resolved,
+        Schema|Parameter|RequestBody|Response $carrier,
+    ): Schema|Parameter|RequestBody|Response {
+        if (false === $resolved instanceof Schema || false === $carrier instanceof Schema) {
+            return $resolved;
+        }
+
+        return new SchemaSiblingMerger()->merge($resolved, $carrier);
+    }
+
+    /**
+     * @param array<string, bool> $visited
+     * @param WeakMap<OpenApiDocument, RefCache> $cache
+     * @return array{Schema|Parameter|RequestBody|Response, array<string, bool>}
+     */
+    private function resolveRootRef(
+        string $ref,
+        OpenApiDocument $document,
+        array $visited,
+        WeakMap $cache,
+        int $depth,
+        ?string $baseUri,
+        bool $followChain,
+    ): array {
+        $this->assertNotCircular($ref, $visited);
+        $visited[$ref] = true;
+
+        $cached = $this->lookupCached($document, $ref, $cache);
+        if (null !== $cached) {
+            return [$cached, $visited];
+        }
+
+        $registry = $this->registry($document);
+
+        if (null === $registry) {
+            throw new UnresolvableRefException($ref, self::REASON_ANCHOR_UNRESOLVED);
+        }
+
+        $fallbackBase = $baseUri ?? $document->self;
+        $resource = null;
+
+        foreach ($this->scopeRegistries($document) as $scopeRegistry) {
+            $resource = null === $fallbackBase ? null : $scopeRegistry->findByUri($fallbackBase);
+
+            if (null !== $resource) {
+                break;
+            }
+        }
+
+        $resource ??= $registry->roots()[0] ?? null;
+
+        if (null === $resource) {
+            throw new UnresolvableRefException($ref, self::REASON_ANCHOR_UNRESOLVED);
+        }
+
+        return $this->finishResolve($resource, $ref, $document, $visited, $cache, $depth, $baseUri, $followChain);
+    }
+
+    /** @return list<ResourceRegistry> */
+    private function scopeRegistries(OpenApiDocument $document): array
+    {
+        $registries = [];
+
+        foreach ([$document, ...($this->documentRepository?->documents() ?? [])] as $candidate) {
+            $registry = $this->registry($candidate);
+
+            if ($registry instanceof ResourceRegistry) {
+                $registries[] = $registry;
+            }
+        }
+
+        return $registries;
     }
 
     private function resolvePointerViaRegistry(
@@ -553,8 +693,9 @@ final readonly class DocumentNavigator
         array $visited,
         WeakMap $cache,
         int $depth,
+        bool $followChain = true,
     ): array {
-        $viaRepository = $this->resolveViaRepository($ref, $document, $baseUri, $visited, $cache, $depth);
+        $viaRepository = $this->resolveViaRepository($ref, $document, $baseUri, $visited, $cache, $depth, $followChain);
 
         if (null !== $viaRepository) {
             return $viaRepository;
@@ -601,6 +742,7 @@ final readonly class DocumentNavigator
         array $visited,
         WeakMap $cache,
         int $depth,
+        bool $followChain = true,
     ): ?array {
         $repository = $this->documentRepository;
 
@@ -628,18 +770,25 @@ final readonly class DocumentNavigator
 
         $result = $this->resolveInRegisteredDocument($ref, $targetDocument, $retrievalUri, $fragment);
 
-        if (null !== $result->ref) {
-            return $this->resolveRef(
+        if ($followChain && null !== $result->ref) {
+            $this->collectChainResource($result);
+
+            [$resolved, $visited] = $this->resolveRef(
                 $result->ref,
                 $targetDocument,
                 $visited,
                 $cache,
                 $depth + 1,
                 $result->id ?? $retrievalUri,
+                $followChain,
             );
+
+            return [$this->mergeChainSiblings($resolved, $result), $visited];
         }
 
-        $this->storeCached($targetDocument, $ref, $result, $cache);
+        if ($followChain) {
+            $this->storeCached($targetDocument, $ref, $result, $cache);
+        }
 
         return [$result, $visited];
     }
@@ -690,18 +839,37 @@ final readonly class DocumentNavigator
         string $retrievalUri,
         ?string $fragment,
     ): Schema|Parameter|RequestBody|Response {
+        $registry = $this->registry($targetDocument);
+
         if (null === $fragment || '' === $fragment) {
-            $root = $this->registry($targetDocument)?->findByUri($retrievalUri);
+            $root = $registry?->findByUri($retrievalUri);
+            $fallbackRoot = $registry?->roots()[0] ?? null;
+
+            $root ??= null !== $fallbackRoot && null !== $fallbackRoot->id ? $fallbackRoot : null;
 
             if (null === $root) {
                 throw new UnresolvableRefException($ref, self::REASON_REGISTERED_ROOT_NOT_A_SCHEMA);
             }
+
+            $this->collectChainResource($root);
 
             return $root;
         }
 
         if (str_starts_with($fragment, '/')) {
             $segments = array_map($this->decodePointerSegment(...), explode('/', substr($fragment, 1)));
+
+            $root = $registry?->findByUri($retrievalUri);
+
+            if (null !== $root) {
+                $fromRoot = $this->navigateFromSchema($root, $segments, 0);
+
+                if (null !== $fromRoot) {
+                    $this->collectEnclosingResource($root, $fromRoot);
+
+                    return $fromRoot;
+                }
+            }
 
             try {
                 return $this->navigate($targetDocument, $segments);
@@ -712,13 +880,24 @@ final readonly class DocumentNavigator
 
         $this->assertPlainNameFragment($fragment, $ref);
 
-        $registry = $this->registry($targetDocument);
-
-        return $registry?->findAnchorIn($retrievalUri, $fragment)
+        $anchored = $registry?->findAnchorIn($retrievalUri, $fragment)
             ?? $registry?->findByAnchor($fragment)
             ?? $registry?->findDynamicAnchorIn($retrievalUri, $fragment)
             ?? $registry?->findDynamicAnchor($fragment)
             ?? throw new UnresolvableRefException($ref, self::REASON_ANCHOR_UNRESOLVED);
+
+        $this->collectEnclosingResource($registry?->findByUri($retrievalUri), $anchored);
+
+        return $anchored;
+    }
+
+    private function collectEnclosingResource(
+        Schema|Parameter|RequestBody|Response|null $resource,
+        Schema|Parameter|RequestBody|Response $target,
+    ): void {
+        if (false === $target instanceof Schema || null === $target->id) {
+            $this->collectChainResource($resource);
+        }
     }
 
     private function decodePointerSegment(string $segment): string

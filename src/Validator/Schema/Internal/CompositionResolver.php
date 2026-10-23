@@ -31,7 +31,7 @@ final class CompositionResolver
     /**
      * @param WeakMap<Schema, true> $visited
      */
-    public function resolveCompositionRefs(Schema $schema, WeakMap $visited): Schema
+    public function resolveCompositionRefs(Schema $schema, WeakMap $visited, ?string $baseUri = null): Schema
     {
         if ($this->resolvedCache->offsetExists($schema)) {
             $cached = $this->resolvedCache[$schema];
@@ -52,17 +52,17 @@ final class CompositionResolver
 
         $visited[$schema] = true;
 
-        $allOf = $this->resolveCompositionArray($schema->allOf, $visited);
+        $allOf = $this->resolveCompositionArray($schema->allOf, $visited, $baseUri);
 
         $hasDiscriminator = null !== $schema->discriminator;
 
         $anyOf = $hasDiscriminator
             ? $schema->anyOf
-            : $this->resolveCompositionArray($schema->anyOf, $visited);
+            : $this->resolveCompositionArray($schema->anyOf, $visited, $baseUri);
 
         $oneOf = $hasDiscriminator
             ? $schema->oneOf
-            : $this->resolveCompositionArray($schema->oneOf, $visited);
+            : $this->resolveCompositionArray($schema->oneOf, $visited, $baseUri);
 
         if ($allOf === $schema->allOf && $anyOf === $schema->anyOf && $oneOf === $schema->oneOf) {
             $this->resolvedCache[$schema] = $schema;
@@ -87,7 +87,7 @@ final class CompositionResolver
      * @param WeakMap<Schema, true> $visited
      * @return list<Schema>|null
      */
-    private function resolveCompositionArray(?array $schemas, WeakMap $visited): ?array
+    private function resolveCompositionArray(?array $schemas, WeakMap $visited, ?string $baseUri): ?array
     {
         if (null === $schemas) {
             return null;
@@ -103,6 +103,7 @@ final class CompositionResolver
                 $candidate = $this->dependencies->refResolver->resolveSchemaWithOverride(
                     $subSchema,
                     $this->document,
+                    $baseUri,
                 );
 
                 if (null === $candidate->discriminator) {
@@ -111,7 +112,7 @@ final class CompositionResolver
                 }
             }
 
-            $recursivelyResolved = $this->resolveCompositionRefs($resolved, $visited);
+            $recursivelyResolved = $this->resolveCompositionRefs($resolved, $visited, $baseUri);
 
             if ($recursivelyResolved !== $resolved) {
                 $changed = true;

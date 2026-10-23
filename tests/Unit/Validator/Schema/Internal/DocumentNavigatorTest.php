@@ -454,7 +454,9 @@ final class DocumentNavigatorTest extends TestCase
 
         [$result,] = $navigator->resolveRef('a.json', $document, [], new WeakMap());
 
-        self::assertSame($target, $result);
+        self::assertNotSame($target, $result);
+        self::assertSame('string', $result->type);
+        self::assertSame('targetAnchor', $result->anchor);
     }
 
     #[Test]

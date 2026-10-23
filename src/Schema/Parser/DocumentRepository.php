@@ -64,6 +64,12 @@ final readonly class DocumentRepository
         return $this->documents[$uri] ?? null;
     }
 
+    /** @return array<string, OpenApiDocument> retrieval URI mapped to parsed document */
+    public function documents(): array
+    {
+        return $this->documents;
+    }
+
     /**
      * @return array<string, string> retrieval URI mapped to raw registered content
      */

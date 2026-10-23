@@ -25,6 +25,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `$dynamicRef` is now evaluated with the full JSON Schema 2020-12 dynamic
+  reference semantics (core §8.2.3.2, Appendix C) instead of being ignored.
+  Resolution happens at every encounter during validation, never at load time:
+  a plain-name fragment bookended by a matching `$dynamicAnchor` in the same
+  schema resource is replaced by the outermost matching `$dynamicAnchor` in the
+  dynamic scope; otherwise the keyword behaves like `$ref` (with `$anchor`
+  fallback). Schemas with `$dynamicRef` therefore validate by the recursive
+  semantics, so results can differ from the previous silently-ignoring build.
+  The dynamic scope tracks every `$id`-identified schema resource crossed by
+  validation, including `$ref` chain resources, and cyclic dynamic references
+  terminate instead of overflowing the stack: re-entering the same dynamic
+  reference target at the same data path within one run is skipped as already
+  evaluated, while depth-growing recursion (including branch forks that reset
+  the per-branch frame, e.g. not/oneOf/if-then-else) is stopped by the depth
+  limit (SchemaDepthExceededException, MAX_DEPTH=64). Verdicts on
+  spec-undefined infinitely recursive schemas are implementation-defined and
+  pinned by unit tests. `#` resolves to the root resource of its document,
+  and a bare-URI reference to a registered document whose root carries a
+  different `$id` resolves to that registered root.
+- `RefResolverInterface` gained `resolveSchemaEntry()`,
+  `resolveSchemaWithOverrideAndChain()`, `scopeBaseUri()`,
+  `findDynamicAnchorInScope()`, `registeredDocuments()` and an optional
+  `$baseUri` parameter on `resolveSchemaWithOverride()`. External
+  implementations of the interface must add these members to stay compatible.
 - `$ref` fragments are resolved by their JSON Schema 2020-12 kind. A fragment
   starting with `/` is treated as a JSON Pointer (RFC 6901 `~0`/`~1` decoding
   stays localized to pointer segments); any other fragment is a plain-name

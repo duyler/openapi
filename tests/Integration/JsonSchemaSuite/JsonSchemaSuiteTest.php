@@ -41,6 +41,9 @@ final class JsonSchemaSuiteTest extends TestCase
         'optional/anchor.json',
         'optional/id.json',
         'optional/unknownKeyword.json',
+        'dynamicRef.json',
+        'refRemote.json',
+        'optional/dynamicRef.json',
     ];
 
     public const array PENDING_SECTIONS = [
@@ -66,17 +69,14 @@ final class JsonSchemaSuiteTest extends TestCase
         'defs.json' => 'FS-40',
         'dependentRequired.json' => 'FS-17',
         'dependentSchemas.json' => 'FS-17',
-        'dynamicRef.json' => 'FS-10',
         'format.json' => 'FS-25',
         'ref.json' => 'FS-40',
-        'refRemote.json' => 'FS-10',
         'unevaluatedItems.json' => 'FS-40',
         'unevaluatedProperties.json' => 'FS-40',
         'vocabulary.json' => 'FS-12',
         'optional/bignum.json' => 'FS-40',
         'optional/cross-draft.json' => 'FS-13',
         'optional/dependencies-compatibility.json' => 'FS-17',
-        'optional/dynamicRef.json' => 'FS-10',
         'optional/float-overflow.json' => 'FS-40',
         'optional/format-assertion.json' => 'FS-25',
         'optional/format/date-time.json' => 'FS-25',

@@ -12,12 +12,15 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\Parser\DocumentRepository;
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
 use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
+use Duyler\OpenApi\Validator\Schema\Internal\ChainResources;
 use Duyler\OpenApi\Validator\Schema\Internal\DiscriminatorDetector;
 use Duyler\OpenApi\Validator\Schema\Internal\DocumentNavigator;
 use Duyler\OpenApi\Validator\Schema\Internal\ResourceRegistry;
 use Duyler\OpenApi\Validator\Schema\Internal\UriResolver;
 use Override;
 use WeakMap;
+
+use function array_values;
 
 final class RefResolver implements RefResolverInterface
 {
@@ -99,6 +102,26 @@ final class RefResolver implements RefResolverInterface
     public function resolve(string $ref, OpenApiDocument $document, int $depth = 0): Schema
     {
         return $this->resolveSchemaRef($ref, $document, $document->self, $depth);
+    }
+
+    #[Override]
+    public function resolveSchemaEntry(string $ref, OpenApiDocument $document): Schema
+    {
+        [$result,] = $this->navigator->resolveRef(
+            $ref,
+            $document,
+            [],
+            $this->cache,
+            0,
+            $document->self,
+            followChain: false,
+        );
+
+        if (false === $result instanceof Schema) {
+            throw new UnresolvableRefException($ref, 'Expected Schema but got ' . $result::class);
+        }
+
+        return $result;
     }
 
     #[Override]
@@ -184,14 +207,83 @@ final class RefResolver implements RefResolverInterface
     }
 
     #[Override]
-    public function resolveSchemaWithOverride(Schema $schema, OpenApiDocument $document): Schema
+    public function resolveSchemaWithOverride(Schema $schema, OpenApiDocument $document, ?string $baseUri = null): Schema
     {
         if (null === $schema->ref) {
             return $schema;
         }
 
-        return $this->resolveSchemaRef($schema->ref, $document, $schema->id ?? $document->self)
+        return $this->resolveSchemaRef($schema->ref, $document, $this->enclosingBaseUri($schema, $document, $baseUri))
             ->withSibling($schema);
+    }
+
+    #[Override]
+    public function resolveSchemaWithOverrideAndChain(
+        Schema $schema,
+        OpenApiDocument $document,
+        ?string $baseUri = null,
+    ): array {
+        $chainResources = new ChainResources();
+        $this->navigator->collectChainResources($chainResources);
+
+        try {
+            return [$this->resolveSchemaWithOverride($schema, $document, $baseUri), $chainResources->resources()];
+        } finally {
+            $this->navigator->stopChainResourcesCollection();
+        }
+    }
+
+    #[Override]
+    public function scopeBaseUri(array $frames, OpenApiDocument $document): ?string
+    {
+        $baseUri = $document->self;
+
+        foreach ($frames as $frame) {
+            if (null !== $frame->id) {
+                $baseUri = $this->combineBase($baseUri, $frame->id);
+            }
+        }
+
+        return $baseUri;
+    }
+
+    #[Override]
+    public function findDynamicAnchorInScope(array $frames, string $name, OpenApiDocument $document): ?Schema
+    {
+        $registries = $this->scopeRegistries($document);
+        $baseUri = $document->self;
+
+        foreach ($frames as $frame) {
+            if ($name === $frame->dynamicAnchor) {
+                return $frame;
+            }
+
+            if (null !== $frame->id) {
+                $baseUri = $this->combineBase($baseUri, $frame->id);
+            }
+
+            if (null === $baseUri) {
+                continue;
+            }
+
+            foreach ($registries as $registry) {
+                $anchor = $registry->findDynamicAnchorIn($baseUri, $name);
+
+                if (null !== $anchor) {
+                    return $anchor;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    #[Override]
+    public function registeredDocuments(): array
+    {
+        return null === $this->documentRepository
+            ? []
+            : array_values($this->documentRepository->documents());
     }
 
     #[Override]
@@ -264,6 +356,32 @@ final class RefResolver implements RefResolverInterface
             content: $resolved->content,
             links: $resolved->links,
         );
+    }
+
+    private function combineBase(?string $baseUri, string $id): string
+    {
+        return null === $baseUri ? $id : $this->uriResolver->combine($baseUri, $id);
+    }
+
+    private function enclosingBaseUri(Schema $schema, OpenApiDocument $document, ?string $enclosingBaseUri): ?string
+    {
+        if (null === $schema->id) {
+            return $enclosingBaseUri ?? $document->self;
+        }
+
+        return $this->combineBase($enclosingBaseUri, $schema->id);
+    }
+
+    /** @return list<ResourceRegistry> */
+    private function scopeRegistries(OpenApiDocument $document): array
+    {
+        $registries = [];
+
+        foreach ([$document, ...$this->registeredDocuments()] as $candidate) {
+            $registries[] = $this->resourceRegistry($candidate);
+        }
+
+        return $registries;
     }
 
     private function resolveSchemaRef(string $ref, OpenApiDocument $document, ?string $baseUri, int $depth = 0): Schema

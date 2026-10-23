@@ -1651,14 +1651,38 @@ final class RefResolverTest extends TestCase
     }
 
     #[Test]
-    public function ref_with_bare_hash_fragment_is_unresolvable(): void
+    public function entry_resolution_does_not_poison_chain_following_cache(): void
     {
-        $document = $this->documentWithSubject(new Schema(title: 'Subject'));
+        $final = new Schema(id: 'final', title: 'Final', type: 'string');
+        $middle = new Schema(id: 'middle', ref: 'final', description: 'middle');
+        $subject = new Schema(
+            id: 'https://example.com/doc',
+            ref: 'middle',
+            defs: ['middle' => $middle, 'final' => $final],
+        );
+        $document = $this->documentWithSubject($subject);
 
-        $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage('Ref has an empty fragment');
+        $entry = $this->resolver->resolveSchemaEntry('#/components/schemas/Subject', $document);
 
-        $this->resolver->resolve('#', $document);
+        self::assertNotNull($entry->ref);
+
+        $resolved = $this->resolver->resolve('#/components/schemas/Subject', $document);
+
+        self::assertNull($resolved->ref);
+        self::assertSame('Final', $resolved->title);
+        self::assertSame('middle', $resolved->description);
+        self::assertSame('string', $resolved->type);
+    }
+
+    #[Test]
+    public function ref_with_bare_hash_fragment_resolves_to_document_root(): void
+    {
+        $subject = new Schema(title: 'Subject');
+        $document = $this->documentWithSubject($subject);
+
+        $resolved = $this->resolver->resolve('#', $document);
+
+        self::assertSame($subject, $resolved);
     }
 
     #[Test]

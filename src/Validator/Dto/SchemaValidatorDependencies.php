@@ -31,6 +31,7 @@ use Duyler\OpenApi\Validator\SchemaValidator\ContentMediaTypeValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\ContainsValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\DependentSchemasValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\DeprecatedValidator;
+use Duyler\OpenApi\Validator\SchemaValidator\DynamicRefValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\EnumValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\FormatValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\IfThenElseValidator;
@@ -186,6 +187,7 @@ final class SchemaValidatorDependencies
             ContainsValidator::class => new ContainsValidator($this),
             DependentSchemasValidator::class => new DependentSchemasValidator($this),
             DeprecatedValidator::class => new DeprecatedValidator($this),
+            DynamicRefValidator::class => new DynamicRefValidator($this),
             EnumValidator::class => new EnumValidator($this),
             FormatValidator::class => new FormatValidator($this),
             IfThenElseValidator::class => new IfThenElseValidator($this),

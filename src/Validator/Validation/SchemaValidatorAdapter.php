@@ -43,7 +43,7 @@ final readonly class SchemaValidatorAdapter
             callback: function () use ($data, $schemaRef): void {
                 $this->logger->info(sprintf('Resolving schema ref: %s', $schemaRef));
 
-                $schema = $this->context->refResolver->resolve($schemaRef, $this->context->document);
+                $schema = $this->context->refResolver->resolveSchemaEntry($schemaRef, $this->context->document);
 
                 $this->logger->info(sprintf('Validating schema: %s', $schemaRef));
 

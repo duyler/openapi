@@ -13,6 +13,7 @@ use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use WeakMap;
 
 use function array_pop;
 use function count;
@@ -29,6 +30,9 @@ final class ValidationContext
 
     private ValidationAnnotations $annotations;
 
+    /** @var WeakMap<Schema, string> */
+    private WeakMap $dynamicRefTargets;
+
     private function __construct(
         public readonly BreadcrumbManager $breadcrumbs,
         public readonly ValidatorPool $pool,
@@ -41,6 +45,9 @@ final class ValidationContext
         private array $dynamicScope = [],
     ) {
         $this->annotations = new ValidationAnnotations();
+        /** @var WeakMap<Schema, string> $dynamicRefTargets */
+        $dynamicRefTargets = new WeakMap();
+        $this->dynamicRefTargets = $dynamicRefTargets;
     }
 
     public static function fromInit(ValidationContextInit $init): self
@@ -188,6 +195,22 @@ final class ValidationContext
         }
 
         return null;
+    }
+
+    public function enterDynamicRefTarget(Schema $target, string $path): bool
+    {
+        if (isset($this->dynamicRefTargets[$target]) && $this->dynamicRefTargets[$target] === $path) {
+            return false;
+        }
+
+        $this->dynamicRefTargets[$target] = $path;
+
+        return true;
+    }
+
+    public function leaveDynamicRefTarget(Schema $target): void
+    {
+        unset($this->dynamicRefTargets[$target]);
     }
 
     public function forkForBranch(): self

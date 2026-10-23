@@ -15,6 +15,7 @@ use function is_object;
 use function is_resource;
 use function is_scalar;
 use function sprintf;
+use function is_string;
 
 final readonly class SchemaValueNormalizer
 {
@@ -73,6 +74,10 @@ final readonly class SchemaValueNormalizer
      */
     public static function doesTypeIncludeNull(string|array|null $type): bool
     {
+        if (is_string($type)) {
+            return 'null' === $type;
+        }
+
         if (false === is_array($type)) {
             return false;
         }

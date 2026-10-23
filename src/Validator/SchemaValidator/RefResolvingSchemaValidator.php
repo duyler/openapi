@@ -10,6 +10,8 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Override;
 
+use function count;
+
 /** @internal */
 final readonly class RefResolvingSchemaValidator implements SchemaValidatorInterface
 {
@@ -22,10 +24,42 @@ final readonly class RefResolvingSchemaValidator implements SchemaValidatorInter
     #[Override]
     public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
     {
-        if (null !== $schema->ref) {
-            $schema = $this->refResolver->resolveSchemaWithOverride($schema, $this->document);
+        $entersScope = null !== $schema->id && null !== $context;
+        $enclosingBaseUri = null === $context
+            ? null
+            : $this->refResolver->scopeBaseUri($context->dynamicScope(), $this->document);
+
+        if ($entersScope) {
+            $context->enterDynamicScope($schema);
         }
 
-        $this->inner->validate($data, $schema, $context);
+        try {
+            [$schema, $chainResources] = null !== $schema->ref
+                ? $this->refResolver->resolveSchemaWithOverrideAndChain($schema, $this->document, $enclosingBaseUri)
+                : [$schema, []];
+
+            $entersChainScopes = [];
+
+            if (null !== $context) {
+                foreach ($chainResources as $chainResource) {
+                    $context->enterDynamicScope($chainResource);
+                    $entersChainScopes[] = $chainResource;
+                }
+            }
+
+            try {
+                $this->inner->validate($data, $schema, $context);
+            } finally {
+                $chainScopeCount = count($entersChainScopes);
+
+                for ($chainIndex = 0; $chainIndex < $chainScopeCount; ++$chainIndex) {
+                    $context?->leaveDynamicScope();
+                }
+            }
+        } finally {
+            if ($entersScope) {
+                $context?->leaveDynamicScope();
+            }
+        }
     }
 }
