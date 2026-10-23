@@ -113,6 +113,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the only creation entry points are `ValidationContext::fromInit()` and
   `ValidationStack::fromGroup()`. Schema model classes keep public
   constructors.
+- Documents declaring `$vocabulary` (core §8.1.2) are now checked once per
+  document at build time. A vocabulary URI outside the supported set
+  (2020-12 `core`, `applicator`, `unevaluated`, `validation`, `meta-data`,
+  `format-annotation`, `format-assertion`, `content`, and the OAS 3.1 base
+  vocabulary) with the value `true` refuses the build with
+  `Schema\Exception\VocabularyNotSupportedException` carrying the
+  unsupported URI (the same document previously assembled without a
+  diagnostic). The same URI with the value `false` builds and dispatches an
+  `Event\VocabularyDisabledWarningEvent`; schemas keeping legacy
+  `$recursiveRef`/`$recursiveAnchor` keywords in extras build and dispatch an
+  `Event\LegacyKeywordWarningEvent` pointing at the `$dynamicRef`/
+  `$dynamicAnchor` replacements. URI comparison is byte-wise, so differently
+  cased or normalized URIs are treated as unsupported. Registered
+  `withDocument()` resources stay outside the guard: cross-draft resources may
+  legitimately declare another dialect's vocabularies.
 
 ## [0.8.0]
 

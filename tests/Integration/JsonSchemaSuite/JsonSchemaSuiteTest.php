@@ -73,7 +73,7 @@ final class JsonSchemaSuiteTest extends TestCase
         'ref.json' => 'FS-40',
         'unevaluatedItems.json' => 'FS-40',
         'unevaluatedProperties.json' => 'FS-40',
-        'vocabulary.json' => 'FS-12',
+        'vocabulary.json' => 'FS-24',
         'optional/bignum.json' => 'FS-40',
         'optional/cross-draft.json' => 'FS-13',
         'optional/dependencies-compatibility.json' => 'FS-17',

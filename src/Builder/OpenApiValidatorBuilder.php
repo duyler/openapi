@@ -13,6 +13,7 @@ use Duyler\OpenApi\Builder\Internal\SpecParserFactory;
 use Duyler\OpenApi\Cache\SchemaCache;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\Parser\DocumentRepository;
+use Duyler\OpenApi\Schema\Parser\Internal\VocabularyGuard;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Dto\ValidatorDependencies;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
@@ -292,8 +293,14 @@ final readonly class OpenApiValidatorBuilder
 
         $this->assertRegisteredDocumentsWithinLimit();
         $this->externalRefDetector()->assertConfinement();
+        $this->assertSupportedVocabularies($document);
 
         return $this->assembleValidator($document);
+    }
+
+    private function assertSupportedVocabularies(OpenApiDocument $document): void
+    {
+        new VocabularyGuard()->guard($document, $this->config->eventDispatcher);
     }
 
     private function with(BuilderConfig $overrides): self
