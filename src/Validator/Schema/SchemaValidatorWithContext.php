@@ -58,8 +58,12 @@ final readonly class SchemaValidatorWithContext
         );
     }
 
-    public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidatorMode $mode = null): void
-    {
+    public function validate(
+        array|int|string|float|bool|null $data,
+        Schema $schema,
+        ?ValidatorMode $mode = null,
+        bool $skipContentMediaType = false,
+    ): void {
         $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->dependencies->pool,
             errorFormatter: $this->dependencies->errorFormatter,
@@ -67,6 +71,7 @@ final readonly class SchemaValidatorWithContext
             emptyArrayStrategy: $this->configuration->emptyArrayStrategy,
             mode: $mode,
             dialectProfile: $this->configuration->dialectProfile,
+            skipContentMediaType: $skipContentMediaType,
         ));
 
         $this->doValidate($data, $schema, $context, true);

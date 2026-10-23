@@ -42,13 +42,22 @@ final readonly class ContentMediaTypeValidator implements KeywordApplicable
             $context->annotate('contentMediaType', $schema->contentMediaType, $context->path());
         }
 
+        $skipMediaType = null !== $context
+            && $context->skipContentMediaType
+            && 0 === $context->depth();
+
         if (false === $this->dependencies->contentAssertionsEnabled) {
             if (false === $this->pipeline->isRecognizedMediaType($schema->contentMediaType)) {
                 $this->warnUnknownMediaType($schema->contentMediaType, $schema, $context);
             }
 
             if (null !== $context) {
-                $context->attachContentResult($this->pipeline->defer($data, $schema, $context));
+                $context->attachContentResult($this->pipeline->defer(
+                    $data,
+                    $schema,
+                    $context,
+                    skipMediaType: $skipMediaType,
+                ));
             }
 
             return;
@@ -56,7 +65,7 @@ final readonly class ContentMediaTypeValidator implements KeywordApplicable
 
         $context ??= ValidationContext::fromInit(new ValidationContextInit(pool: $this->dependencies->pool));
 
-        $result = $this->pipeline->assert($data, $schema, $context);
+        $result = $this->pipeline->assert($data, $schema, $context, skipMediaType: $skipMediaType);
 
         if (false === $result->isMediaTypeValid()) {
             throw new InvalidContentMediaTypeException($data, $schema->contentMediaType);

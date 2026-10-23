@@ -22,5 +22,6 @@ final readonly class ValidationContextInit
         public readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         public readonly ?ValidatorMode $mode = null,
         public readonly ?DialectProfile $dialectProfile = null,
+        public readonly bool $skipContentMediaType = false,
     ) {}
 }

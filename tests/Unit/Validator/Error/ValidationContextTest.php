@@ -565,4 +565,36 @@ class ValidationContextTest extends TestCase
 
         $this->assertSame($first, $parent->contentResult());
     }
+
+    #[Test]
+    public function skip_content_media_type_is_false_by_default(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+
+        $this->assertFalse($context->skipContentMediaType);
+    }
+
+    #[Test]
+    public function skip_content_media_type_is_taken_from_init(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(
+            pool: new ValidatorPool(),
+            skipContentMediaType: true,
+        ));
+
+        $this->assertTrue($context->skipContentMediaType);
+    }
+
+    #[Test]
+    public function fork_for_branch_preserves_skip_content_media_type(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(
+            pool: new ValidatorPool(),
+            skipContentMediaType: true,
+        ));
+
+        $child = $parent->forkForBranch();
+
+        $this->assertTrue($child->skipContentMediaType);
+    }
 }

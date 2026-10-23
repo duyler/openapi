@@ -50,6 +50,7 @@ final class ValidationContext
         /** @var list<Schema> */
         private array $dynamicScope = [],
         ?DialectProfile $dialectProfile = null,
+        public readonly bool $skipContentMediaType = false,
     ) {
         $this->dialectProfile = $dialectProfile ?? DialectProfile::forOpenApi31();
         $this->annotations = new ValidationAnnotations();
@@ -68,6 +69,7 @@ final class ValidationContext
             emptyArrayStrategy: $init->emptyArrayStrategy,
             mode: $init->mode,
             dialectProfile: $init->dialectProfile,
+            skipContentMediaType: $init->skipContentMediaType,
         );
     }
 
@@ -245,6 +247,7 @@ final class ValidationContext
             mode: $this->mode,
             dynamicScope: $this->dynamicScope,
             dialectProfile: $this->dialectProfile,
+            skipContentMediaType: $this->skipContentMediaType,
         );
     }
 }
