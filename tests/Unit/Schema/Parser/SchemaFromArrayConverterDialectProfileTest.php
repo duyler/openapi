@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Schema\Parser;
 
+use Duyler\OpenApi\Schema\Exception\TypeArrayNotSupportedException;
 use Duyler\OpenApi\Schema\Parser\Internal\ScalarSchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\SchemaFromArrayConverter;
 use Duyler\OpenApi\Validator\Dto\DialectProfile;
@@ -13,6 +14,26 @@ use ReflectionProperty;
 
 final class SchemaFromArrayConverterDialectProfileTest extends TestCase
 {
+    #[Test]
+    public function converter_openapi_30_profile_rejects_type_array(): void
+    {
+        $converter = new SchemaFromArrayConverter('3.0.0', dialectProfile: DialectProfile::forOpenApi30());
+
+        $this->expectException(TypeArrayNotSupportedException::class);
+
+        $converter->fromArray(['type' => ['string', 'null']]);
+    }
+
+    #[Test]
+    public function converter_openapi_31_profile_keeps_type_array(): void
+    {
+        $converter = new SchemaFromArrayConverter('3.1.0');
+
+        $schema = $converter->fromArray(['type' => ['string', 'null']]);
+
+        self::assertSame(['string', 'null'], $schema->type);
+    }
+
     #[Test]
     public function converter_forwards_openapi_30_profile_to_scalar_parser(): void
     {

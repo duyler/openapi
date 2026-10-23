@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Unit\Schema\Parser\Internal;
 
 use Closure;
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
+use Duyler\OpenApi\Schema\Exception\TypeArrayNotSupportedException;
 use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Parser\Internal\ArraySchemaKeywordParser;
@@ -14,6 +15,7 @@ use Duyler\OpenApi\Schema\Parser\Internal\ObjectSchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\Internal\ResourceSchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\Internal\ScalarSchemaKeywordParser;
 use Duyler\OpenApi\Schema\Parser\Internal\SchemaKeywordAccumulator;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -21,6 +23,7 @@ use PHPUnit\Framework\TestCase;
 
 use function is_array;
 use function sprintf;
+use function str_contains;
 
 #[CoversClass(ScalarSchemaKeywordParser::class)]
 #[CoversClass(ArraySchemaKeywordParser::class)]
@@ -80,6 +83,53 @@ final class SchemaKeywordParsersTest extends TestCase
         $args = new ScalarSchemaKeywordParser('3.0.0')->build(['type' => 'string', 'nullable' => true]);
 
         self::assertSame('string', $args['type']);
+    }
+
+    #[Test]
+    public function scalar_parser_openapi_30_profile_rejects_type_array(): void
+    {
+        $parser = new ScalarSchemaKeywordParser('3.0.0', dialectProfile: DialectProfile::forOpenApi30());
+
+        $this->expectException(TypeArrayNotSupportedException::class);
+        $this->expectExceptionMessage('Type arrays are not allowed in OpenAPI 3.0 documents');
+
+        $parser->build(['type' => ['string', 'null']]);
+    }
+
+    #[Test]
+    public function scalar_parser_openapi_30_reject_message_does_not_expose_spec_values(): void
+    {
+        $parser = new ScalarSchemaKeywordParser('3.0.0', dialectProfile: DialectProfile::forOpenApi30());
+
+        try {
+            $parser->build(['type' => ['string', 'null']]);
+            self::fail(TypeArrayNotSupportedException::class . ' was not thrown');
+        } catch (TypeArrayNotSupportedException $exception) {
+            $message = $exception->getMessage();
+
+            self::assertTrue(str_contains($message, 'Type arrays are not allowed'));
+            self::assertFalse(str_contains($message, "'string'"));
+            self::assertFalse(str_contains($message, "'null'"));
+            self::assertFalse(str_contains($message, '['));
+        }
+    }
+
+    #[Test]
+    public function scalar_parser_openapi_31_profile_keeps_type_array(): void
+    {
+        $args = new ScalarSchemaKeywordParser('3.1.0')->build(['type' => ['string', 'null']]);
+
+        self::assertSame(['string', 'null'], $args['type']);
+    }
+
+    #[Test]
+    public function scalar_parser_openapi_30_profile_keeps_empty_type_array(): void
+    {
+        $parser = new ScalarSchemaKeywordParser('3.0.0', dialectProfile: DialectProfile::forOpenApi30());
+
+        $args = $parser->build(['type' => []]);
+
+        self::assertSame([], $args['type']);
     }
 
     #[Test]

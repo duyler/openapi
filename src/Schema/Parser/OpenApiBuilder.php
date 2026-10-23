@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Schema\Parser;
 
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
+use Duyler\OpenApi\Schema\Exception\TypeArrayNotSupportedException;
 use Duyler\OpenApi\Schema\Model\Servers;
 use Duyler\OpenApi\Schema\Model\SecurityRequirement;
 use Duyler\OpenApi\Schema\Model\Tags;
@@ -52,7 +53,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             }
 
             return $this->buildDocument($data);
-        } catch (InvalidSchemaException|InvalidUtf8Exception|SpecTooLargeException $e) {
+        } catch (InvalidSchemaException|InvalidUtf8Exception|SpecTooLargeException|TypeArrayNotSupportedException $e) {
             throw $e;
         } catch (Throwable $e) {
             throw new InvalidSchemaException(

@@ -23,8 +23,9 @@ final class NullableRefSiblingTest extends TestCase
             NullableString:
               type: string
               nullable: true
-            UnionNullString:
-              type: [string, 'null']
+            NullAdmittingString:
+              type: string
+              nullable: true
             NonNullableString:
               type: string
 
@@ -49,7 +50,7 @@ final class NullableRefSiblingTest extends TestCase
               type: object
               properties:
                 p:
-                  $ref: '#/components/schemas/UnionNullString'
+                  $ref: '#/components/schemas/NullAdmittingString'
             RefPropNullableSibling:
               type: object
               properties:
@@ -88,7 +89,7 @@ final class NullableRefSiblingTest extends TestCase
     }
 
     #[Test]
-    public function ref_to_type_union_with_null_accepts_null(): void
+    public function ref_to_null_admitting_schema_accepts_null(): void
     {
         $this->validator()->validateSchema(['p' => null], '#/components/schemas/RefPropTypeUnion');
 

@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Builder\Internal;
 
 use Duyler\OpenApi\Builder\Dto\BuilderConfig;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
+use Duyler\OpenApi\Schema\Exception\TypeArrayNotSupportedException;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Exception\InvalidUtf8Exception;
 use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
@@ -112,7 +113,7 @@ final readonly class SpecLoader
             );
 
             return $parser->forSpecType($this->config->specType)->parse($content);
-        } catch (InvalidUtf8Exception|SpecTooLargeException $e) {
+        } catch (InvalidUtf8Exception|SpecTooLargeException|TypeArrayNotSupportedException $e) {
             throw $e;
         } catch (Exception $e) {
             throw new BuilderException(

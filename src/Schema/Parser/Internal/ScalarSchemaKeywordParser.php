@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Schema\Parser\Internal;
 
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
+use Duyler\OpenApi\Schema\Exception\TypeArrayNotSupportedException;
 use Duyler\OpenApi\Schema\Parser\DeprecationLogger;
 use Duyler\OpenApi\Schema\Parser\OpenApiBuildContext;
 use Duyler\OpenApi\Schema\Parser\TypeHelper;
@@ -133,6 +134,10 @@ final readonly class ScalarSchemaKeywordParser
     private function resolveType(array $data): string|array|null
     {
         $type = TypeHelper::asTypeOrNull($data['type'] ?? null);
+
+        if (false === $this->dialectProfile->allowTypeArray && is_array($type) && [] !== $type) {
+            throw TypeArrayNotSupportedException::forOpenApi30();
+        }
 
         if (false === $this->isVersion30() && isset($data['nullable']) && is_bool($data['nullable']) && $data['nullable']) {
             $baseType = match (true) {

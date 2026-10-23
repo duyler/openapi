@@ -128,6 +128,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cased or normalized URIs are treated as unsupported. Registered
   `withDocument()` resources stay outside the guard: cross-draft resources may
   legitimately declare another dialect's vocabularies.
+- OpenAPI 3.0 documents now refuse schemas whose `type` keyword is an array
+  (OAS 3.0.3 §4.7.24.1 requires a string): `build()` raises
+  `Schema\Exception\TypeArrayNotSupportedException` where the same document
+  previously assembled with 3.1 union semantics. The message carries no
+  document content. OpenAPI 3.1+ documents keep accepting `type` arrays,
+  including the `'null'` member, and `nullable` folding is unchanged.
 
 ## [0.8.0]
 
