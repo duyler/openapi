@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Request\Internal;
 
 use Duyler\OpenApi\Schema\Model\Encoding;
 
+/** @internal */
 final readonly class OrderedMultipartPlan
 {
     /**
