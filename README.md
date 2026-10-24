@@ -533,7 +533,7 @@ $validator = OpenApiValidatorBuilder::create()
 
 Deprecated reporting is enabled by default; without a PSR-3 logger the warnings go to `NullLogger` and produce no output. To suppress them, simply omit the logger (there is no `disableReportDeprecated()` method).
 
-The content assertion result is exposed per validation run through `ValidationContext::contentResult()`; when several string instances carry content keywords in one run (for example array items), the first instance in traversal order wins and later ones do not overwrite it. A top-level multi-instance result surface is tracked as a follow-up task (20a).
+The content assertion result is exposed per validation run through `ValidationContext::contentResult()`; when several string instances carry content keywords in one run (for example array items), the first instance in traversal order wins and later ones do not overwrite it. A top-level multi-instance result surface is tracked as a follow-up task.
 
 ### EmptyArrayStrategy
 

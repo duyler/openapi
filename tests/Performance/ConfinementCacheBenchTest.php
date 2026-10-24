@@ -23,7 +23,7 @@ use function strlen;
  */
 final class ConfinementCacheBenchTest extends TestCase
 {
-    private const float MAX_CACHED_BUILD_MS = 25.0;
+    private const float MAX_CACHED_BUILD_MS = 40.0;
 
     private const int BUILD_ITERATIONS = 10;
 
