@@ -14,7 +14,6 @@ use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
 use function array_key_exists;
 use function explode;
 use function implode;
-use function preg_match;
 use function str_ends_with;
 use function str_starts_with;
 use function strtolower;
@@ -24,13 +23,7 @@ use function trim;
 /** @internal */
 final readonly class MultipartEncodingApplier
 {
-    private const int MAX_NESTING_DEPTH = 1;
-
     private const string CONTENT_TYPE_HEADER = 'content-type';
-
-    private const string CONTENT_DISPOSITION_HEADER = 'content-disposition';
-
-    private const string PART_NAME_PATTERN = '/(?:^|;)\s*name="(?<name>[^"]*)"/i';
 
     private const string KEYWORD_ENCODING = 'encoding';
 
@@ -41,6 +34,7 @@ final readonly class MultipartEncodingApplier
     public function __construct(
         private readonly MultipartBodyParser $multipartParser,
         private readonly ?PartHeaderValueValidator $headerValueValidator = null,
+        private readonly int $maxNestingDepth = MultipartInstanceResolver::MAX_NESTING_DEPTH,
     ) {}
 
     /**
@@ -237,7 +231,7 @@ final readonly class MultipartEncodingApplier
      */
     private function applyNested(string $content, Encoding $partEncoding, array $headers, int $depth): void
     {
-        if ($depth + 1 > self::MAX_NESTING_DEPTH) {
+        if ($depth + 1 > $this->maxNestingDepth) {
             return;
         }
 
@@ -292,17 +286,7 @@ final readonly class MultipartEncodingApplier
      */
     private function partName(array $headers): ?string
     {
-        $disposition = $headers[self::CONTENT_DISPOSITION_HEADER] ?? null;
-
-        if (null === $disposition) {
-            return null;
-        }
-
-        if (1 === preg_match(self::PART_NAME_PATTERN, $disposition, $matches)) {
-            return $matches['name'];
-        }
-
-        return null;
+        return PartDisposition::name($headers);
     }
 
     private function mediaTypeOf(string $headerValue): string

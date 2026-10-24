@@ -245,7 +245,7 @@ YAML;
     }
 
     #[Test]
-    public function multipart_form_data_request_parses_and_validates(): void
+    public function multipart_form_data_parts_populate_object_properties_and_validate(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlFile(FixtureLocator::path('request-validation-specs/multipart-data.yaml'))
@@ -271,16 +271,9 @@ YAML;
             ->withHeader('Content-Type', 'multipart/form-data; boundary=----TestBoundary12345')
             ->withBody($this->psrFactory->createStream($multipartBody));
 
-        $exceptionCaught = false;
-        $exceptionMessage = '';
-        try {
-            $validator->validateRequest($request);
-        } catch (ValidationException $e) {
-            $exceptionCaught = true;
-            $exceptionMessage = $e->getMessage();
-        }
+        $operation = $validator->validateRequest($request);
 
-        $this->assertTrue($exceptionCaught, 'Multipart data parsed as array triggers schema validation');
-        $this->assertStringContainsString('file', $exceptionMessage);
+        self::assertSame('POST', $operation->method);
+        self::assertSame('/upload', $operation->path);
     }
 }

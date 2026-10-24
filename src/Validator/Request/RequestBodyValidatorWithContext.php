@@ -19,6 +19,7 @@ use Duyler\OpenApi\Validator\Example\ValidatesExamplesTrait;
 use Duyler\OpenApi\Validator\ExternalMediaType;
 use Duyler\OpenApi\Validator\Request\Internal\EncodingHeaderRefResolver;
 use Duyler\OpenApi\Validator\Request\Internal\MultipartEncodingApplier;
+use Duyler\OpenApi\Validator\Request\Internal\MultipartInstanceResolver;
 use Duyler\OpenApi\Validator\Request\Internal\OrderedMultipartPlanner;
 use Duyler\OpenApi\Validator\Request\Internal\PartHeaderValueValidator;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
@@ -27,11 +28,14 @@ use Duyler\OpenApi\Validator\TypeGuarantor;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Override;
 
+use function is_array;
 use function str_starts_with;
 
 final readonly class RequestBodyValidatorWithContext implements RequestBodyValidatorInterface
 {
     use ValidatesExamplesTrait;
+
+    private const string FORM_DATA_MEDIA_TYPE = 'multipart/form-data';
 
     private SchemaValidatorWithContext $contextSchemaValidator;
     private RequestBodyCoercer $coercer;
@@ -39,6 +43,7 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
     private readonly ExampleValidator $exampleValidator;
     private readonly MultipartEncodingApplier $encodingApplier;
     private readonly OrderedMultipartPlanner $orderedPlanner;
+    private readonly MultipartInstanceResolver $instanceResolver;
     private readonly EncodingHeaderRefResolver $encodingHeaderRefs;
 
     public function __construct(
@@ -63,7 +68,11 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
                 ),
             ),
         );
-        $this->orderedPlanner = new OrderedMultipartPlanner();
+        $this->instanceResolver = new MultipartInstanceResolver(
+            multipartParser: $this->dependencies->bodyParser->multipartParser(),
+            xmlParser: $this->dependencies->bodyParser->xmlParser(),
+        );
+        $this->orderedPlanner = new OrderedMultipartPlanner($this->instanceResolver);
         $this->encodingHeaderRefs = new EncodingHeaderRefResolver();
 
         $this->contextSchemaValidator = $this->dependencies->rootSchemaValidator(
@@ -186,6 +195,14 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
 
         $this->applyMultipartEncoding($body, $contentType, $requestMediaType, $content);
 
+        if (null !== $schema
+            && $this->isNamedMultipart($requestMediaType, $schema)
+            && is_array($parsedBody)
+        ) {
+            /** @var list<array{headers: string, content: string}> $parsedBody */
+            return $this->instanceResolver->namedValues($parsedBody, $content->encoding, $schema);
+        }
+
         return $parsedBody;
     }
 
@@ -216,6 +233,15 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
         }
 
         return null !== $content->prefixEncoding || null !== $content->itemEncoding;
+    }
+
+    private function isNamedMultipart(string $requestMediaType, Schema $schema): bool
+    {
+        if (self::FORM_DATA_MEDIA_TYPE !== $requestMediaType) {
+            return false;
+        }
+
+        return null !== $schema->properties && [] !== $schema->properties;
     }
 
     private function applyMultipartEncoding(

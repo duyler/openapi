@@ -10,7 +10,9 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\InvalidEncodingConfigurationException;
 use Duyler\OpenApi\Validator\Exception\PartContentTypeMismatchError;
 use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
+use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use Duyler\OpenApi\Validator\Request\Internal\MultipartEncodingApplier;
+use Duyler\OpenApi\Validator\Request\Internal\MultipartInstanceResolver;
 use Duyler\OpenApi\Validator\Request\Internal\OrderedMultipartPlan;
 use Duyler\OpenApi\Validator\Request\Internal\OrderedMultipartPlanner;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -24,7 +26,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function plan_maps_parts_to_prefix_items_and_item_encoding_by_position(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $parts = [
             ['headers' => 'Content-Type: application/json', 'content' => '{"author":"a"}'],
             ['headers' => 'Content-Type: text/plain', 'content' => 'trailing'],
@@ -53,7 +55,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function shorter_instance_ignores_extra_prefix_encodings(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $applier = new MultipartEncodingApplier(new MultipartBodyParser());
         $parts = [
             ['headers' => 'Content-Type: application/json', 'content' => '{"author":"a"}'],
@@ -76,7 +78,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function binary_part_stays_raw_content(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $binary = "PNG\x00\x01\xFF\xFE";
         $parts = [
             ['headers' => 'Content-Type: application/json', 'content' => '{"author":"a"}'],
@@ -98,7 +100,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function json_part_without_content_type_header_is_decoded_by_schema_default(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $parts = [
             ['headers' => 'Content-Disposition: form-data; name="meta"', 'content' => '{"author":"a"}'],
         ];
@@ -113,7 +115,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function text_part_with_json_like_content_stays_a_raw_string(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $parts = [
             ['headers' => 'Content-Type: text/plain', 'content' => '{"author":"a"}'],
         ];
@@ -128,7 +130,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function instance_values_drop_the_trailing_line_break(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $parts = [
             ['headers' => 'Content-Type: text/plain', 'content' => " Annual Report \r\n"],
             ['headers' => 'Content-Type: text/plain', 'content' => "second\n"],
@@ -150,7 +152,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function apply_with_positional_only_configuration_is_a_no_op(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $applier = new MultipartEncodingApplier(new MultipartBodyParser());
         $parts = [
             [
@@ -171,7 +173,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function encoding_field_together_with_prefix_encoding_is_rejected(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $mediaType = new MediaType(
             encoding: ['doc' => new Encoding(contentType: 'application/xml')],
             prefixEncoding: [new Encoding()],
@@ -186,7 +188,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function encoding_field_together_with_item_encoding_is_rejected(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $mediaType = new MediaType(
             encoding: ['doc' => new Encoding(contentType: 'application/xml')],
             itemEncoding: new Encoding(),
@@ -200,7 +202,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function positional_encoding_without_array_schema_or_item_schema_is_rejected(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $mediaType = new MediaType(prefixEncoding: [new Encoding()]);
 
         $this->expectException(InvalidEncodingConfigurationException::class);
@@ -212,7 +214,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function item_schema_satisfies_the_array_model_requirement(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $mediaType = new MediaType(
             itemSchema: new Schema(type: 'string'),
             prefixEncoding: [new Encoding(contentType: 'text/plain')],
@@ -230,7 +232,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function prefix_items_keyword_satisfies_the_array_model_requirement(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $mediaType = new MediaType(prefixEncoding: [new Encoding()]);
 
         $plan = $planner->plan(
@@ -245,7 +247,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function union_type_with_array_entry_satisfies_the_array_model_requirement(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $mediaType = new MediaType(prefixEncoding: [new Encoding(contentType: 'application/json')]);
 
         $plan = $planner->plan(
@@ -260,7 +262,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function malformed_json_falls_back_to_the_raw_content(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $parts = [
             ['headers' => 'Content-Type: application/json', 'content' => '{"author":'],
         ];
@@ -275,7 +277,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function boolean_items_schema_is_treated_as_type_absent(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $parts = [
             ['headers' => 'Content-Type: application/json', 'content' => '{"a":1}'],
             ['headers' => '', 'content' => '{"b":2}'],
@@ -295,7 +297,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function apply_applies_positional_encoding_content_types(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $applier = new MultipartEncodingApplier(new MultipartBodyParser());
         $parts = [
             ['headers' => 'Content-Type: application/json', 'content' => '{"author":"a"}'],
@@ -319,7 +321,7 @@ final class OrderedMultipartPlannerTest extends TestCase
     #[Test]
     public function apply_reports_content_type_mismatch_with_prefix_keyword_and_index(): void
     {
-        $planner = new OrderedMultipartPlanner();
+        $planner = $this->planner();
         $applier = new MultipartEncodingApplier(new MultipartBodyParser());
         $parts = [
             ['headers' => 'Content-Type: text/plain', 'content' => 'not json'],
@@ -338,5 +340,15 @@ final class OrderedMultipartPlannerTest extends TestCase
 
             return;
         }
+    }
+
+    private function planner(): OrderedMultipartPlanner
+    {
+        return new OrderedMultipartPlanner(
+            instanceResolver: new MultipartInstanceResolver(
+                multipartParser: new MultipartBodyParser(),
+                xmlParser: new XmlBodyParser(),
+            ),
+        );
     }
 }

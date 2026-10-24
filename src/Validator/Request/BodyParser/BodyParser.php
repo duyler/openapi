@@ -21,6 +21,11 @@ final readonly class BodyParser
         return $this->multipartParser;
     }
 
+    public function xmlParser(): XmlBodyParser
+    {
+        return $this->xmlParser;
+    }
+
     public function parse(
         string $body,
         string $mediaType,

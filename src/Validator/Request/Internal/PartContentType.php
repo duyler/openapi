@@ -25,6 +25,10 @@ final readonly class PartContentType
 
     private const string JSON_SUFFIX = '+json';
 
+    private const string XML = 'application/xml';
+
+    private const string TEXT_XML = 'text/xml';
+
     private const string NULL_TYPE = 'null';
 
     public static function effective(?string $headerValue, ?Encoding $encoding, ?Schema $schema): string
@@ -47,6 +51,16 @@ final readonly class PartContentType
     public static function isJson(string $contentType): bool
     {
         return self::JSON === $contentType || str_ends_with($contentType, self::JSON_SUFFIX);
+    }
+
+    public static function isXml(string $contentType): bool
+    {
+        return self::XML === $contentType || self::TEXT_XML === $contentType;
+    }
+
+    public static function isWildcard(string $contentType): bool
+    {
+        return str_ends_with($contentType, '/*');
     }
 
     public static function defaultForSchema(?Schema $schema): string

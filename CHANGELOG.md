@@ -83,9 +83,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   effective content type of a part follows the §4.15.1.1 default table (header, then
   `encoding.contentType`, then the schema-type default) and is exposed for reuse by nested
   multipart handling.
+- Nested `multipart/mixed` request bodies (3.2 §4.15.4.10): a part whose effective content
+  type is `multipart/*` is now parsed recursively into a typed part tree, so nested parts
+  enter the JSON data model one level deeper (nested array schemas map `prefixItems`/`items`
+  by position, nested object schemas map `Content-Disposition` names to properties, and the
+  §4.15.1.1 default content-type table applies to nested leaves the same way, including
+  JSON decoding of JSON-typed leaves and XML parsing of `application/xml`/`text/xml`
+  leaves). A declared `contentType` wildcard (`type/*`, `*/*`) on a part without a
+  `Content-Type` header JSON-decodes the part only when its schema position expects an
+  object or array. Recursion is capped (one nested level below the outer body); a payload
+  that nests deeper raises `Validator\Exception\MultipartNestingDepthException` instead of
+  recursing unbounded. Schema-less bodies keep the previous pass-through behavior and the
+  wire parser remains a boundary splitter with no knowledge of the Encoding model.
 
 ### Changed
 
+- `multipart/form-data` request bodies with an object schema declaring `properties` now
+  populate the object from the parts' `Content-Disposition` names (3.2 §4.15.4.5, RFC7578
+  §4.3): a part named like a property fills that property, several parts sharing one name
+  are collected into the property's array (a single part of an array-typed property
+  becomes a one-item array), and duplicate names against a scalar property produce a list
+  that fails the property's type check instead of silently dropping parts. Requests that
+  previously failed validation with a `required` error while sending a matching named part
+  now validate. Object schemas without `properties` keep the previous raw part-list
+  behavior, and non-form-data multipart subtypes are unaffected.
 - `Encoding` Object `contentType` now accepts the OAS 3.2 §4.15.4.1 list form:
   the wire value may be a single media type string or an array of media type
   strings (for example `["text/css", "image/*"]`), `Schema\Model\Encoding::$contentType`
