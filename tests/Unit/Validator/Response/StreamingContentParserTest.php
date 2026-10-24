@@ -249,7 +249,7 @@ final class StreamingContentParserTest extends TestCase
         $result = $this->parser->parse($body, 'text/event-stream');
 
         self::assertCount(1, $result);
-        self::assertSame('hello', $result[0]['data']);
+        self::assertSame("\nhello", $result[0]['data']);
     }
 
     #[Test]
@@ -1098,7 +1098,7 @@ final class StreamingContentParserTest extends TestCase
         $result = $this->parser->parseServerSentEvents("data\ndata: hello\n\n");
 
         self::assertCount(1, $result);
-        self::assertSame('hello', $result[0]['data']);
+        self::assertSame("\nhello", $result[0]['data']);
     }
 
     #[Test]

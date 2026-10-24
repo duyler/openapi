@@ -56,9 +56,13 @@ final class StreamingFormatRoutingTest extends TestCase
             'x-ndjson is streaming ndjson' => ['application/x-ndjson', true, NdJsonParser::class],
             'json-seq is streaming jsonseq' => ['application/json-seq', true, JsonSeqParser::class],
             'vendor suffixed json-seq is not streaming' => ['application/vnd.foo+json-seq', false, null],
+            'geo json-seq is sequential without a stream parser' => ['application/geo+json-seq', false, null],
+            'multipart mixed is sequential without a stream parser' => ['multipart/mixed', false, null],
             'event-stream is streaming sse' => ['text/event-stream', true, SseParser::class],
             'regular json is not streaming' => ['application/json', false, null],
             'ndjson with charset parameter routes ndjson' => ['application/x-ndjson; charset=utf-8', true, NdJsonParser::class],
+            'octet stream with quoted event stream routes sse' => ['application/octet-stream; charset="text/event-stream"', true, SseParser::class],
+            'octet stream with quoted ndjson routes ndjson' => ['application/octet-stream; x="application/x-ndjson"', true, NdJsonParser::class],
         ];
     }
 

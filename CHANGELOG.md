@@ -221,6 +221,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   suite runner now also treats the raw `InvalidFormatException` (the package's fail-fast
   format error convention) as an invalid verdict.
 
+### Fixed
+
+- Server-Sent Events records now concatenate a value-only `data` field onto a
+  preceding empty `data` line per the WHATWG event-stream algorithm: an event
+  stream of `data:` followed by `data: hello` yields the event data `"\nhello"`
+  (leading newline preserved) instead of replacing the accumulated buffer with
+  `"hello"`. Concatenation of non-empty `data` lines and the empty-string result
+  of a lone `data:` line are unchanged.
+
 ### Removed
 
 - `Schema\Model\Schema::withOverrides()` is removed. Build a schema from

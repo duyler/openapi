@@ -149,6 +149,26 @@ final class StreamingResponseValidationTest extends TestCase
     }
 
     #[Test]
+    public function sse_spec_fixture_record_with_multiline_data_retry_and_comment_validates(): void
+    {
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlFile(FixtureLocator::path('response-validation-specs/streaming.yaml'))
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('GET', '/spec-events');
+        $operation = $validator->validateRequest($request);
+
+        $body = "event: x\ndata: line1\ndata: line2\nretry: 10\n\n: comment\n";
+
+        $response = $this->psrFactory->createResponse(200)
+            ->withHeader('Content-Type', 'text/event-stream')
+            ->withBody($this->psrFactory->createStream($body));
+
+        $validator->validateResponse($response, $operation);
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
     public function json_seq_valid_response(): void
     {
         $validator = OpenApiValidatorBuilder::create()

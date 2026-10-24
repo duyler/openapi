@@ -1181,7 +1181,7 @@ $validator->validateResponse($response, $operation);
 
 ### Server-Sent Events (SSE)
 
-Each event consists of `event`, `data`, `id`, and `retry` fields; comment lines (starting with `:`) are ignored. The `data` field is automatically decoded from JSON when possible, and an event that carries `data:` but no `event:` field is assigned the W3C default event type `message`.
+Each event consists of `event`, `data`, `id`, and `retry` fields; comment lines (starting with `:`) are ignored. Multiple `data` fields are combined with LF separators (an empty `data:` line contributes an empty line), matching the WHATWG Server-Sent Events algorithm. A `retry` field is emitted as an integer when numeric and dropped otherwise. The `data` field is automatically decoded from JSON when possible, and an event that carries `data:` but no `event:` field is assigned the W3C default event type `message`.
 
 ### JSON Text Sequences (RFC 7464)
 

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Response;
 
+use Duyler\OpenApi\Validator\Response\Internal\MediaTypeClassifier;
+use Duyler\OpenApi\Validator\Response\Internal\MediaTypeKind;
 use Duyler\OpenApi\Validator\Response\StreamingMediaTypeDetector;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -82,5 +84,21 @@ final class StreamingMediaTypeDetectorTest extends TestCase
     public function rejects_octet_stream(): void
     {
         self::assertFalse(StreamingMediaTypeDetector::isStreaming('application/octet-stream'));
+    }
+
+    #[Test]
+    public function sequential_geo_json_seq_stays_outside_streaming_routing(): void
+    {
+        self::assertSame(MediaTypeKind::Sequential, MediaTypeClassifier::classify('application/geo+json-seq'));
+        self::assertFalse(StreamingMediaTypeDetector::isStreaming('application/geo+json-seq'));
+        self::assertNull(StreamingMediaTypeDetector::detect('application/geo+json-seq'));
+    }
+
+    #[Test]
+    public function sequential_multipart_mixed_stays_outside_streaming_routing(): void
+    {
+        self::assertSame(MediaTypeKind::Sequential, MediaTypeClassifier::classify('multipart/mixed'));
+        self::assertFalse(StreamingMediaTypeDetector::isStreaming('multipart/mixed'));
+        self::assertNull(StreamingMediaTypeDetector::detect('multipart/mixed'));
     }
 }
