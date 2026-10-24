@@ -225,6 +225,28 @@ final class EncodingTest extends TestCase
     }
 
     #[Test]
+    public function json_serialize_preserves_content_type_string_shape(): void
+    {
+        $encoding = new Encoding(contentType: 'text/html');
+
+        $serialized = $encoding->jsonSerialize();
+
+        self::assertIsString($serialized['contentType']);
+        self::assertSame('text/html', $serialized['contentType']);
+    }
+
+    #[Test]
+    public function json_serialize_preserves_content_type_list_shape(): void
+    {
+        $encoding = new Encoding(contentType: ['text/css', 'image/*']);
+
+        $serialized = $encoding->jsonSerialize();
+
+        self::assertIsArray($serialized['contentType']);
+        self::assertSame(['text/css', 'image/*'], $serialized['contentType']);
+    }
+
+    #[Test]
     public function json_serialize_emits_fields_in_wire_order(): void
     {
         $headers = new Headers([]);

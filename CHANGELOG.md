@@ -54,6 +54,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `Encoding` Object `contentType` now accepts the OAS 3.2 §4.15.4.1 list form:
+  the wire value may be a single media type string or an array of media type
+  strings (for example `["text/css", "image/*"]`), `Schema\Model\Encoding::$contentType`
+  carries the union `string|list<string>|null`, and serialization emits back the
+  original wire shape, so round-tripping preserves string form and list form
+  verbatim. An empty array, an array containing non-string members, or a
+  non-string non-array value raises `Schema\Exception\InvalidContentTypeException`
+  at parse time. Streaming consumers read the item parser media type from the
+  first list element (`ExternalMediaType::primary()`) and use the full list only
+  for media type matching, and `ExternalMediaType::isDefined()` applies any-of
+  semantics to the list. Code that type-assumes `string` on
+  `Encoding::$contentType` must handle the list form.
 - Unknown schema keywords are rejected at build time by default (strict
   keywords): a keyword outside the legal set (the known JSON Schema 2020-12 and
   OAS base-vocabulary keywords, vendor `x-` extensions, the legacy

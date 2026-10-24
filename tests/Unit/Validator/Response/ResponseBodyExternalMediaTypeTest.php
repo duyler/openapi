@@ -248,6 +248,89 @@ final class ResponseBodyExternalMediaTypeTest extends TestCase
     }
 
     #[Test]
+    public function item_root_content_media_type_check_is_skipped_for_stream_interface_items_with_content_type_list(): void
+    {
+        $content = new Content([
+            'application/jsonl' => new MediaType(
+                itemSchema: new Schema(type: 'string', contentMediaType: 'application/xml'),
+                itemEncoding: new Encoding(contentType: ['application/jsonl', 'image/*']),
+            ),
+        ]);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validateStream($this->createStream('"not xml"' . "\n" . '"still not xml"'), 'application/jsonl', $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected item root content media type check to be skipped, got: %s', $e->getMessage()));
+        }
+
+        self::assertTrue($succeeded);
+    }
+
+    #[Test]
+    public function first_element_of_item_encoding_content_type_list_selects_the_stream_item_parser(): void
+    {
+        $content = new Content([
+            'text/plain' => new MediaType(
+                itemSchema: new Schema(type: 'object'),
+                itemEncoding: new Encoding(contentType: ['application/jsonl', 'image/*']),
+            ),
+        ]);
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validateStream($this->createStream('"scalar"' . "\n"), 'text/plain', $content);
+    }
+
+    #[Test]
+    public function item_root_content_media_type_check_is_skipped_for_streaming_body_with_content_type_list(): void
+    {
+        $body = '"not xml"' . "\n" . '"still not xml"';
+        $content = new Content([
+            'application/jsonl' => new MediaType(
+                itemSchema: new Schema(type: 'string', contentMediaType: 'application/xml'),
+                itemEncoding: new Encoding(contentType: ['application/jsonl', 'image/*']),
+            ),
+        ]);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate($body, 'application/jsonl', $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected item root content media type check to be skipped, got: %s', $e->getMessage()));
+        }
+
+        self::assertTrue($succeeded);
+    }
+
+    #[Test]
+    public function first_element_of_item_encoding_content_type_list_selects_the_streaming_body_parser(): void
+    {
+        $body = '"scalar"' . "\n";
+        $content = new Content([
+            'application/jsonl' => new MediaType(
+                itemSchema: new Schema(type: 'object'),
+                itemEncoding: new Encoding(contentType: ['image/*', 'application/jsonl']),
+            ),
+        ]);
+
+        $succeeded = false;
+
+        try {
+            $this->validator->validate($body, 'application/jsonl', $content);
+            $succeeded = true;
+        } catch (RuntimeException $e) {
+            self::fail(sprintf('Expected the first list element to select the item parser, got: %s', $e->getMessage()));
+        }
+
+        self::assertTrue($succeeded);
+    }
+
+    #[Test]
     public function content_media_type_check_applies_without_external_media_type(): void
     {
         $schemaValidator = $this->dependencies->rootSchemaValidator(

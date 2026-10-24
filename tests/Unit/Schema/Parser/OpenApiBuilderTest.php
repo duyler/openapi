@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Schema\Parser;
 
+use Duyler\OpenApi\Schema\Exception\InvalidContentTypeException;
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
 use Duyler\OpenApi\Schema\Model\Callbacks;
 use Duyler\OpenApi\Schema\Model\Components;
@@ -2230,6 +2231,34 @@ final class OpenApiBuilderTest extends TestCase
 
         $this->expectException(InvalidSchemaException::class);
         $this->expectExceptionMessage('Invalid $self URI: not-a-valid-uri');
+        $this->parser->parse($json);
+    }
+
+    #[Test]
+    public function build_document_with_empty_encoding_content_type_list_refuses(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [
+                '/profile' => [
+                    'put' => [
+                        'requestBody' => [
+                            'content' => [
+                                'multipart/form-data' => [
+                                    'schema' => ['type' => 'object'],
+                                    'encoding' => ['avatar' => ['contentType' => []]],
+                                ],
+                            ],
+                        ],
+                        'responses' => ['200' => ['description' => 'ok']],
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->expectException(InvalidContentTypeException::class);
+        $this->expectExceptionMessage('Encoding contentType must be a string or a non-empty list of strings');
         $this->parser->parse($json);
     }
 

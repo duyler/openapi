@@ -109,6 +109,53 @@ JSON;
     }
 
     #[Test]
+    public function round_trip_preserves_encoding_content_type_wire_forms(): void
+    {
+        $json = <<<'JSON'
+{
+    "openapi": "3.2.0",
+    "info": {"title": "Encoding round-trip", "version": "1.0.0"},
+    "paths": {
+        "/profile": {
+            "put": {
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {"type": "object"},
+                            "encoding": {
+                                "page": {"contentType": "text/html"},
+                                "assets": {"contentType": ["text/css", "image/*"]}
+                            }
+                        }
+                    }
+                },
+                "responses": {"200": {"description": "Updated"}}
+            }
+        }
+    }
+}
+JSON;
+
+        $first = new JsonParser()->parse($json);
+        $firstJson = json_encode($first, JSON_THROW_ON_ERROR);
+
+        self::assertStringContainsString('"contentType":"text\/html"', $firstJson);
+        self::assertStringContainsString('"contentType":["text\/css","image\/*"]', $firstJson);
+
+        $second = new JsonParser()->parse($firstJson);
+        $secondJson = json_encode($second, JSON_THROW_ON_ERROR);
+
+        self::assertSame($firstJson, $secondJson);
+
+        $encoding = $second->paths->paths['/profile']->put->requestBody->content->mediaTypes['multipart/form-data']->encoding;
+
+        self::assertIsString($encoding['page']->contentType);
+        self::assertSame('text/html', $encoding['page']->contentType);
+        self::assertIsArray($encoding['assets']->contentType);
+        self::assertSame(['text/css', 'image/*'], $encoding['assets']->contentType);
+    }
+
+    #[Test]
     public function round_trip_preserves_components_responses_headers_links_examples(): void
     {
         $json = <<<'JSON'

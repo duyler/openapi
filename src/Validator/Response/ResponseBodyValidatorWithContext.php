@@ -124,7 +124,10 @@ final readonly class ResponseBodyValidatorWithContext
 
         $itemContentType = $mediaTypeSchema->itemEncoding?->contentType;
         $skipContentMediaType = ExternalMediaType::isDefined($itemContentType, $mediaTypeKey);
-        $items = $this->streamingParser->parseStream($stream, $itemContentType ?? $contentType);
+        $items = $this->streamingParser->parseStream(
+            $stream,
+            ExternalMediaType::primary($itemContentType, $contentType),
+        );
 
         foreach ($items as $item) {
             if (null === $item) {
@@ -185,7 +188,10 @@ final readonly class ResponseBodyValidatorWithContext
 
         $itemContentType = $mediaType->itemEncoding?->contentType;
         $skipContentMediaType = ExternalMediaType::isDefined($itemContentType, $mediaTypeKey);
-        $items = $this->streamingParser->parse($body, $itemContentType ?? $contentType);
+        $items = $this->streamingParser->parse(
+            $body,
+            ExternalMediaType::primary($itemContentType, $contentType),
+        );
 
         foreach ($items as $item) {
             if (null === $item) {

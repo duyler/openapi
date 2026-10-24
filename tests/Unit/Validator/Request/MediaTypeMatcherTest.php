@@ -134,4 +134,20 @@ final class MediaTypeMatcherTest extends TestCase
 
         $this->assertNull($matched);
     }
+
+    #[Test]
+    public function part_content_type_is_accepted_by_wildcard_within_encoding_content_type_list(): void
+    {
+        $matched = MediaTypeMatcher::findMatch('image/png', ['text/css', 'image/*']);
+
+        $this->assertSame('image/*', $matched);
+    }
+
+    #[Test]
+    public function part_content_type_is_accepted_by_exact_entry_within_encoding_content_type_list(): void
+    {
+        $matched = MediaTypeMatcher::findMatch('text/css', ['text/css', 'image/*']);
+
+        $this->assertSame('text/css', $matched);
+    }
 }
