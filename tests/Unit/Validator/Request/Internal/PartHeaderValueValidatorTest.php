@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Request\Internal;
 
+use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\Header;
+use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
@@ -195,6 +197,35 @@ final class PartHeaderValueValidatorTest extends TestCase
             'not a uri',
             new Header(schema: new Schema(type: 'string', format: 'uri')),
         );
+    }
+
+    #[Test]
+    public function content_map_without_any_schema_skips_value_validation(): void
+    {
+        $validator = $this->createValidator();
+        $header = new Header(
+            required: true,
+            content: new Content(['text/plain' => new MediaType()]),
+        );
+
+        $validator->validate('X-Custom', 'anything goes', $header);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function content_map_schema_validates_the_header_value(): void
+    {
+        $validator = $this->createValidator();
+        $header = new Header(
+            content: new Content([
+                'text/plain' => new MediaType(schema: new Schema(type: 'string', format: 'uri')),
+            ]),
+        );
+
+        $validator->validate('Content-Location', 'https://example.com/page', $header);
+
+        $this->expectNotToPerformAssertions();
     }
 
     private function createValidator(): PartHeaderValueValidator

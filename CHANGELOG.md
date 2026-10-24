@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Streaming multipart request validation (3.2 §4.15.4.8): a `multipart/*` request is now
+  processed part by part straight from the PSR-7 stream instead of being read into a single
+  buffer. `RequestValidator` routes multipart requests through the new
+  `RequestBodyValidatorInterface::validateStream()` entry point (implementors of the
+  interface must add the method); the internal `StreamingMultipartDetector` decides the
+  routing by media type (case-insensitive, matching content-type negotiation), and requests
+  whose matched Media Type Object does not declare `prefixEncoding`/`itemEncoding` fall back
+  to the previous buffered pipeline after a limit-checked read, so `multipart/form-data` and
+  named-part validation keep their exact former behavior. Ordered multipart bodies are split
+  incrementally by the CRLF-anchored boundary framing of RFC 2046: a delimiter candidate must
+  sit at a line start and be followed by `--` (close) or transport padding plus CRLF per
+  RFC 2046 §5.1.1 — a close candidate followed by any other byte (for example a fake
+  `--boundary--garbage` sequence inside binary part content) is treated as part content, not
+  as the end of the body; a bare close delimiter without the trailing CRLF is still accepted
+  at the true end of the stream, and boundary-token prefixes inside part content no longer
+  create phantom parts. Each completed part is encoded-asserted, coerced (when coercion is
+  enabled, per part via `RequestBodyCoercer` + `TypeGuarantor`) and validated against
+  `prefixItems[i] ?? itemSchema ?? schema.items` — the same schema also drives the part value
+  shaping and part-level example warnings — item-level results are available as parts arrive,
+  while whole-array keywords (for example `minItems`) are not validated on the streaming
+  ordered multipart path. Existing limits are reused: more than 1000 parts raise
+  `Validator\Exception\MultipartBodyTooLargeException`, a single part larger than
+  `withMaxMultipartBodySize()` raises `Validator\Exception\BodyTooLargeException`, and the
+  nested-multipart recursion applies the same `MultipartNestingDepthException` depth cap
+  configured for the buffered resolver and applier. Known limitation: on the streaming
+  ordered multipart path a whitespace-only body against `required: true` is not rejected
+  (`MissingRequestBodyException` stays a buffered-path behavior), because rejecting it would
+  require buffering; an empty (zero-byte) stream is still rejected.
+- Byte-range parts (3.2 §4.15.4.9, RFC 9110 §14.5/§14.6): a part `Content-Range` header
+  declared in `encoding.headers` is parsed strictly into the `ByteRange` value object
+  (`first`/`last`/`complete`, nullable for `*`) by `ByteRangePartParser`. The parser accepts
+  exactly `bytes <first>-<last>/<complete>`, `bytes <first>-<last>/*` and `bytes */<complete>`;
+  a missing `/complete` part, a missing `bytes ` prefix, trailing garbage or a trailing line
+  break, and a range whose last byte position precedes the first are rejected with
+  `Validator\Exception\InvalidContentRangeException` (keyword `format`).
+
+### Changed
+
 - Multi-document OpenAPI descriptions (3.2 §4.1.2): `OpenApiValidatorBuilder::withDocument(string $retrievalUri,
   string $content)` registers user-supplied documents by intended retrieval URI. Content is size-capped with the
   same limit as `FileExternalRefResolver` (`withExternalRefMaxBytes()` and `DEFAULT_MAX_REF_BYTES` apply, re-checked
@@ -97,6 +135,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wire parser remains a boundary splitter with no knowledge of the Encoding model.
 
 ### Changed
+
+- Part headers declared in Encoding Objects with a content-based Header Object
+  (`content.<media type>.schema`) are now value-validated with the same coercion rules used
+  for `schema`-based headers; previously such headers were checked for presence only. As a
+  consequence, a value that fails the media type's schema (for example a `format: uri`
+  violation on `Content-Location`) is rejected, and a declared part `Content-Range` header
+  is additionally parsed strictly per RFC 9110 (see Added).
+- `multipart/form-data` requests are wire-parsed once per validation: the encoding applier
+  now receives the already-split parts instead of re-splitting the raw body, removing the
+  duplicate multipart parse from the named-part pipeline.
+- Every `multipart/*` request now enters validation through the streaming entry point;
+  requests without positional encodings behave exactly as before (the body is read within
+  the existing body-size limits and validated by the unchanged buffered pipeline), while
+  positional (ordered) multipart bodies are validated part by part without buffering the
+  whole payload.
 
 - `multipart/form-data` request bodies with an object schema declaring `properties` now
   populate the object from the parts' `Content-Disposition` names (3.2 §4.15.4.5, RFC7578

@@ -12,7 +12,6 @@ use Psr\Http\Message\ServerRequestInterface;
 use Duyler\OpenApi\Schema\Model\Parameter;
 
 use function is_array;
-use function str_starts_with;
 
 final readonly class RequestValidator implements RequestValidatorInterface
 {
@@ -69,10 +68,18 @@ final readonly class RequestValidator implements RequestValidatorInterface
         $this->cookieValidator->validateWithHeader($cookies, $cookieHeader, $parameterSchemas);
 
         $contentType = $request->getHeaderLine('Content-Type');
-        $maxBytes = str_starts_with($contentType, 'multipart/')
-            ? $this->configuration->maxMultipartBodyBytes
-            : $this->configuration->maxJsonBodyBytes;
-        $body = BodyReader::readSafely($request->getBody(), $maxBytes);
+
+        if (StreamingMultipartDetector::isStreaming($contentType)) {
+            $this->bodyValidator->validateStream(
+                $request->getBody(),
+                $contentType,
+                $operation->requestBody,
+            );
+
+            return;
+        }
+
+        $body = BodyReader::readSafely($request->getBody(), $this->configuration->maxJsonBodyBytes);
         $this->bodyValidator->validate($body, $contentType, $operation->requestBody);
     }
 }

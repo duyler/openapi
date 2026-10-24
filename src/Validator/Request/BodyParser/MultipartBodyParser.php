@@ -16,9 +16,8 @@ use const PREG_UNMATCHED_AS_NULL;
 
 final readonly class MultipartBodyParser
 {
+    public const int MAX_MULTIPART_PARTS = 1000;
     private const string BOUNDARY_PATTERN = '/boundary=(?:"(?<quoted>[^"]+)"|(?<unquoted>[^\s;]+))/i';
-
-    private const int MAX_MULTIPART_PARTS = 1000;
 
     /**
      * @return list<array{headers: string, content: string}>
@@ -29,8 +28,7 @@ final readonly class MultipartBodyParser
             return [];
         }
 
-        $boundary = $this->extractBoundaryFromContentType($fullContentType)
-            ?? $this->inferBoundaryFromBody($body);
+        $boundary = self::boundaryFromContentType($fullContentType) ?? self::boundaryFromBody($body);
 
         if (null === $boundary) {
             return [];
@@ -60,7 +58,7 @@ final readonly class MultipartBodyParser
         return $parts;
     }
 
-    private function extractBoundaryFromContentType(string $contentType): ?string
+    public static function boundaryFromContentType(string $contentType): ?string
     {
         if (1 === preg_match(self::BOUNDARY_PATTERN, $contentType, $matches, PREG_UNMATCHED_AS_NULL)) {
             return $matches['quoted'] ?? $matches['unquoted'];
@@ -69,7 +67,7 @@ final readonly class MultipartBodyParser
         return null;
     }
 
-    private function inferBoundaryFromBody(string $body): ?string
+    public static function boundaryFromBody(string $body): ?string
     {
         if (1 === preg_match('/^--(?<boundary>[^\r\n]+)/', $body, $matches)) {
             return $matches['boundary'];

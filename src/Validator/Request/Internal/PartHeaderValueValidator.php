@@ -47,11 +47,15 @@ final readonly class PartHeaderValueValidator
 
     public function validate(string $name, string $value, Header $header): void
     {
-        if (null === $header->schema) {
+        ByteRangePartParser::parse(headerName: $name, headerValue: $value);
+
+        $schema = $header->schema ?? $this->contentSchema($header);
+
+        if (null === $schema) {
             return;
         }
 
-        $coercedValue = $this->coerceValue($value, $header->schema, $name);
+        $coercedValue = $this->coerceValue($value, $schema, $name);
 
         $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->pool,
@@ -60,7 +64,24 @@ final readonly class PartHeaderValueValidator
             dialectProfile: $this->config->dialectProfile,
         ));
 
-        $this->schemaValidator->validate($coercedValue, $header->schema, $context);
+        $this->schemaValidator->validate($coercedValue, $schema, $context);
+    }
+
+    private function contentSchema(Header $header): ?Schema
+    {
+        $content = $header->content;
+
+        if (null === $content) {
+            return null;
+        }
+
+        foreach ($content->mediaTypes as $mediaType) {
+            if (null !== $mediaType->schema) {
+                return $mediaType->schema;
+            }
+        }
+
+        return null;
     }
 
     private function coerceValue(string $value, Schema $schema, string $headerName): array|int|string|float|bool

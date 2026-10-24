@@ -134,6 +134,16 @@ final class RequestBodyRequiredTest extends TestCase
     }
 
     #[Test]
+    public function pass_when_not_required_and_null_content_with_a_non_empty_body(): void
+    {
+        $requestBody = new RequestBody(required: false);
+
+        $this->validator->validate('anything', 'application/json', $requestBody);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
     public function pass_when_required_and_valid_body(): void
     {
         $requestBody = new RequestBody(

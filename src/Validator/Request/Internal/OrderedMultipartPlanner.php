@@ -43,7 +43,7 @@ final readonly class OrderedMultipartPlanner
         $plan->applyTo($applier);
     }
 
-    private function assertConfiguration(MediaType $mediaType, Schema $schema): void
+    public function assertConfiguration(MediaType $mediaType, ?Schema $schema): void
     {
         if (null !== $mediaType->encoding) {
             throw InvalidEncodingConfigurationException::mixedModes();
@@ -54,10 +54,14 @@ final readonly class OrderedMultipartPlanner
         }
     }
 
-    private function hasArrayModel(MediaType $mediaType, Schema $schema): bool
+    private function hasArrayModel(MediaType $mediaType, ?Schema $schema): bool
     {
         if (null !== $mediaType->itemSchema) {
             return true;
+        }
+
+        if (null === $schema) {
+            return false;
         }
 
         $type = $schema->type;

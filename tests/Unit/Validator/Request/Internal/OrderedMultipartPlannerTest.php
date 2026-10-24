@@ -342,6 +342,17 @@ final class OrderedMultipartPlannerTest extends TestCase
         }
     }
 
+    #[Test]
+    public function configuration_without_array_model_or_item_schema_is_rejected(): void
+    {
+        $planner = $this->planner();
+        $mediaType = new MediaType(prefixEncoding: [new Encoding(contentType: 'text/plain')]);
+
+        $this->expectException(InvalidEncodingConfigurationException::class);
+
+        $planner->assertConfiguration($mediaType, null);
+    }
+
     private function planner(): OrderedMultipartPlanner
     {
         return new OrderedMultipartPlanner(

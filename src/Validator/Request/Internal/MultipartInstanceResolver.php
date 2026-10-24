@@ -45,9 +45,41 @@ final readonly class MultipartInstanceResolver
         ?Encoding $itemEncoding,
         ?Schema $schema,
     ): array {
-        $nodes = $this->positionalNodes($parts, $schema, $prefixEncoding, $itemEncoding, 0);
+        $values = [];
 
-        return array_map(static fn(MultipartPartNode $node): mixed => $node->value, $nodes);
+        foreach ($parts as $index => $part) {
+            $values[] = $this->positionalValue(
+                part: $part,
+                index: $index,
+                schema: $schema,
+                prefixEncoding: $prefixEncoding,
+                itemEncoding: $itemEncoding,
+            );
+        }
+
+        return $values;
+    }
+
+    /**
+     * @param array{headers: string, content: string} $part
+     * @param array<int, Encoding>|null $prefixEncoding
+     */
+    public function positionalValue(
+        array $part,
+        int $index,
+        ?Schema $schema,
+        ?array $prefixEncoding,
+        ?Encoding $itemEncoding,
+        ?Schema $partSchema = null,
+    ): string|bool|int|float|array|null {
+        $prefixItems = $schema?->prefixItems ?? [];
+
+        return $this->partNode(
+            part: $part,
+            partSchema: $partSchema ?? $prefixItems[$index] ?? $this->itemsSchema($schema),
+            partEncoding: $prefixEncoding[$index] ?? $itemEncoding,
+            depth: 0,
+        )->value;
     }
 
     /**

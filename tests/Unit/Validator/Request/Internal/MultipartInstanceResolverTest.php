@@ -269,6 +269,22 @@ final class MultipartInstanceResolverTest extends TestCase
     }
 
     #[Test]
+    public function explicit_part_schema_overrides_the_positional_schema_for_value_shaping(): void
+    {
+        $resolver = $this->resolver();
+        $value = $resolver->positionalValue(
+            part: ['headers' => '', 'content' => '{"author":"a"}'],
+            index: 0,
+            schema: new Schema(type: 'array', items: new Schema(type: 'string')),
+            prefixEncoding: [new Encoding(contentType: 'application/*')],
+            itemEncoding: null,
+            partSchema: new Schema(type: 'object'),
+        );
+
+        self::assertSame(['author' => 'a'], $value);
+    }
+
+    #[Test]
     public function wildcard_encoding_decodes_json_when_the_position_expects_a_structured_value(): void
     {
         $resolver = $this->resolver();

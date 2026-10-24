@@ -62,7 +62,7 @@ final readonly class MultipartEncodingApplier
     }
 
     /**
-     * @param list<array{headers: string, content: string}> $parts
+     * @param array<int, array{headers: string, content: string}> $parts
      * @param array<int, Encoding>|null $prefixEncoding
      * @param array<string, Encoding>|null $encoding
      */
@@ -82,7 +82,7 @@ final readonly class MultipartEncodingApplier
     }
 
     /**
-     * @param list<array{headers: string, content: string}> $parts
+     * @param array<int, array{headers: string, content: string}> $parts
      * @param array<int, Encoding>|null $prefixEncoding
      * @param array<string, Encoding>|null $encoding
      */
