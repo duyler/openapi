@@ -16,6 +16,14 @@ final class SuiteValidatorFactory
 {
     private const string SUBJECT_SCHEMA_REF = '#/components/schemas/Subject';
 
+    /**
+     * @var list<string>
+     */
+    private const array SUITE_UNKNOWN_KEYWORDS = [
+        'array_of_schemas',
+        'object_of_schemas',
+    ];
+
     /** @var array<string, OpenApiValidatorInterface> */
     private static array $validators = [];
 
@@ -55,6 +63,7 @@ final class SuiteValidatorFactory
 
         return self::builderWithRemotes()
             ->withExternalRefAllowedRoot(JsonSchemaSuiteLocator::remotesDirectory())
+            ->withAllowedUnknownKeywords(...self::SUITE_UNKNOWN_KEYWORDS)
             ->fromJsonString(json_encode($document, JSON_THROW_ON_ERROR))
             ->build();
     }

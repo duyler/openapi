@@ -357,6 +357,8 @@ $validator = OpenApiValidatorBuilder::create()
 
 The keyword value is read from the schema `extras` collected by the parser; custom keywords are never added to the schema model. Multiple `withKeywordValidator()` calls accumulate, and re-registering a keyword replaces its validator while keeping its dispatch slot. The replacement is complete for stateless-dispatched keywords only: the built-in `items`, `properties`, and `oneOf` keywords are additionally dispatched by the context path, which always runs its unconditional built-in handling, so a validator registered under them runs in addition to it and cannot fully replace it. Registered keywords run after the whole built-in set (including `unevaluatedItems`/`unevaluatedProperties`), so applicator-style custom keywords cannot place themselves ahead of them. A keyword without a registration stays an extras annotation (see `ValidationContext::annotations()`) and does not affect the validation outcome.
 
+Unknown schema keywords are rejected by default: at `build()` time the document is traversed once and any keyword outside the legal set — the known JSON Schema 2020-12 and OAS base-vocabulary keywords (`discriminator`, `example`, `externalDocs`, `xml`), vendor `x-` extensions, the legacy `$recursiveRef`/`$recursiveAnchor` keys, keywords registered through `withKeywordValidator()`, and the `withAllowedUnknownKeywords()` allow-list — raises `InvalidSchemaException` naming the keyword, so typos such as `requird` fail fast instead of silently becoming inert extras. `disableStrictKeywords()` restores the annotation-only mode, and `withAllowedUnknownKeywords(string ...$keywords)` legalizes individual keywords. The check covers the main spec only; documents registered with `withDocument()` are not traversed.
+
 ### Type Coercion
 
 Enable automatic type conversion for query parameters and request body:
@@ -541,6 +543,8 @@ $validator = OpenApiValidatorBuilder::create()
 | `withSecurityVerboseLogging(LoggerInterface $logger)` | Debug-level logging of security validation details and external ref paths | `null` |
 | `withFormat(string $type, string $format, FormatValidatorInterface $validator)` | Register custom format | - |
 | `withKeywordValidator(string $keyword, KeywordValidatorInterface $validator)` | Register a validator for a custom schema keyword; the keyword value is read from schema `extras`, registered keywords dispatch after the built-in set | - |
+| `withAllowedUnknownKeywords(string ...$keywords)` | Legalize individual unknown schema keywords point-wise under the default strict-keywords mode | `[]` |
+| `disableStrictKeywords()` | Restore the annotation mode for unknown schema keywords: they stay in `extras` and produce annotations instead of failing the build | `false` (strict rejection is the default) |
 | `withValidatorPool(ValidatorPool $pool)` | Set custom validator pool | `new ValidatorPool()` |
 | `withLogger(LoggerInterface $logger)` | Set PSR-3 logger | `null` |
 | `withEmptyArrayStrategy(EmptyArrayStrategy $strategy)` | Set empty array validation strategy | `AllowBoth` |

@@ -22,6 +22,105 @@ final class SchemaSubschemaWalkerTest extends TestCase
     }
 
     #[Test]
+    public function iterate_sub_schemas_yields_relative_pointer_segments_as_keys(): void
+    {
+        $property = new Schema(type: 'string');
+        $prefixItem = new Schema(type: 'integer');
+        $allOfItem = new Schema(type: 'object');
+        $anyOfItem = new Schema(type: 'number');
+        $oneOfItem = new Schema(type: 'boolean');
+        $patternProperty = new Schema(type: 'string');
+        $dependentSchema = new Schema(type: 'object');
+        $defSchema = new Schema(type: 'string');
+        $items = new Schema(type: 'string');
+        $not = new Schema(type: 'null');
+        $contains = new Schema(type: 'string');
+        $propertyNames = new Schema(type: 'string');
+        $if = new Schema(type: 'object');
+        $then = new Schema(type: 'object');
+        $else = new Schema(type: 'object');
+        $unevaluatedItems = new Schema(type: 'string');
+        $additionalProperties = new Schema(type: 'string');
+        $unevaluatedProperties = new Schema(type: 'string');
+        $contentSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            properties: ['name' => $property],
+            prefixItems: [$prefixItem],
+            allOf: [$allOfItem],
+            anyOf: [$anyOfItem],
+            oneOf: [$oneOfItem],
+            patternProperties: ['^s' => $patternProperty],
+            dependentSchemas: ['credit' => $dependentSchema],
+            defs: ['Def' => $defSchema],
+            items: $items,
+            not: $not,
+            contains: $contains,
+            propertyNames: $propertyNames,
+            if: $if,
+            then: $then,
+            else: $else,
+            unevaluatedItems: $unevaluatedItems,
+            additionalProperties: $additionalProperties,
+            unevaluatedProperties: $unevaluatedProperties,
+            contentSchema: $contentSchema,
+        );
+
+        $yielded = $this->collectWithKeys($schema);
+
+        self::assertSame([
+            'properties/name' => $property,
+            'prefixItems/0' => $prefixItem,
+            'allOf/0' => $allOfItem,
+            'anyOf/0' => $anyOfItem,
+            'oneOf/0' => $oneOfItem,
+            'patternProperties/^s' => $patternProperty,
+            'dependentSchemas/credit' => $dependentSchema,
+            'defs/Def' => $defSchema,
+            'items' => $items,
+            'not' => $not,
+            'contains' => $contains,
+            'propertyNames' => $propertyNames,
+            'if' => $if,
+            'then' => $then,
+            'else' => $else,
+            'unevaluatedItems' => $unevaluatedItems,
+            'additionalProperties' => $additionalProperties,
+            'unevaluatedProperties' => $unevaluatedProperties,
+            'contentSchema' => $contentSchema,
+        ], $yielded);
+    }
+
+    #[Test]
+    public function iterate_sub_schemas_escape_map_key_tokens(): void
+    {
+        $tildeProperty = new Schema(type: 'string');
+        $slashProperty = new Schema(type: 'string');
+        $mixedProperty = new Schema(type: 'string');
+        $slashPatternProperty = new Schema(type: 'string');
+        $tildePatternProperty = new Schema(type: 'string');
+        $dependentSchema = new Schema(type: 'object');
+        $defSchema = new Schema(type: 'string');
+        $schema = new Schema(
+            properties: ['a~b' => $tildeProperty, 'foo/bar' => $slashProperty, 'a~/b' => $mixedProperty],
+            patternProperties: ['^a/b$' => $slashPatternProperty, 'p~q' => $tildePatternProperty],
+            dependentSchemas: ['a/b' => $dependentSchema],
+            defs: ['a~b' => $defSchema],
+        );
+
+        $yielded = $this->collectWithKeys($schema);
+
+        self::assertSame([
+            'properties/a~0b' => $tildeProperty,
+            'properties/foo~1bar' => $slashProperty,
+            'properties/a~0~1b' => $mixedProperty,
+            'patternProperties/^a~1b$' => $slashPatternProperty,
+            'patternProperties/p~0q' => $tildePatternProperty,
+            'dependentSchemas/a~1b' => $dependentSchema,
+            'defs/a~0b' => $defSchema,
+        ], $yielded);
+    }
+
+    #[Test]
     public function iterate_sub_schemas_yields_every_composition_key(): void
     {
         $property = new Schema(type: 'string');
@@ -146,6 +245,20 @@ final class SchemaSubschemaWalkerTest extends TestCase
         $yielded = $this->collect(new Schema(type: 'string'));
 
         self::assertSame([], $yielded);
+    }
+
+    /**
+     * @return array<string, Schema>
+     */
+    private function collectWithKeys(Schema $schema): array
+    {
+        $yielded = [];
+
+        foreach ($this->walker->iterateSubSchemas($schema) as $segment => $subSchema) {
+            $yielded[$segment] = $subSchema;
+        }
+
+        return $yielded;
     }
 
     /**

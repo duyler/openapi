@@ -17,6 +17,9 @@ use Psr\Log\LoggerInterface;
 
 final readonly class BuilderConfig
 {
+    /**
+     * @param list<string>|null $allowedUnknownKeywords
+     */
     public function __construct(
         public readonly ?string $specPath = null,
         public readonly ?string $specContent = null,
@@ -50,6 +53,8 @@ final readonly class BuilderConfig
         public readonly ?ExternalRefResolverInterface $externalRefResolver = null,
         public readonly ?bool $contentAssertionsEnabled = null,
         public readonly ?KeywordValidatorRegistry $keywordValidators = null,
+        public readonly ?bool $strictKeywords = null,
+        public readonly ?array $allowedUnknownKeywords = null,
     ) {}
 
     public function merge(self $overrides): self
@@ -87,6 +92,8 @@ final readonly class BuilderConfig
             externalRefResolver: $overrides->externalRefResolver ?? $this->externalRefResolver,
             contentAssertionsEnabled: $overrides->contentAssertionsEnabled ?? $this->contentAssertionsEnabled,
             keywordValidators: $overrides->keywordValidators ?? $this->keywordValidators,
+            strictKeywords: $overrides->strictKeywords ?? $this->strictKeywords,
+            allowedUnknownKeywords: $overrides->allowedUnknownKeywords ?? $this->allowedUnknownKeywords,
         );
     }
 }

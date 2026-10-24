@@ -46,6 +46,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Unknown schema keywords are rejected at build time by default (strict
+  keywords): a keyword outside the legal set (the known JSON Schema 2020-12 and
+  OAS base-vocabulary keywords, vendor `x-` extensions, the legacy
+  `$recursiveRef`/`$recursiveAnchor` keys, keywords registered through
+  `withKeywordValidator()`, and the explicit allow-list) raises
+  `InvalidSchemaException` naming the keyword while the document is parsed, so
+  typos such as `requird` fail fast instead of silently degrading to unused
+  extras. `disableStrictKeywords()` restores the previous annotation mode
+  (unknown keywords stay extras and produce annotations), and
+  `withAllowedUnknownKeywords(string ...$keywords)` legalizes individual
+  keywords point-wise; both compose with the rest of the builder. The check is
+  a single traversal of the already-parsed document, applied to the main spec
+  only (documents registered via `withDocument()` are not guarded).
 - `$dynamicRef` is now evaluated with the full JSON Schema 2020-12 dynamic
   reference semantics (core §8.2.3.2, Appendix C) instead of being ignored.
   Resolution happens at every encounter during validation, never at load time:

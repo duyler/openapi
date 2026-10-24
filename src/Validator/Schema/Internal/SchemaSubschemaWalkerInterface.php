@@ -11,7 +11,7 @@ use Generator;
 interface SchemaSubschemaWalkerInterface
 {
     /**
-     * @return Generator<array-key, Schema, void, void>
+     * @return Generator<string, Schema, void, void> the key is the relative JSON Pointer segment from the parent schema
      */
     public function iterateSubSchemas(Schema $schema): Generator;
 

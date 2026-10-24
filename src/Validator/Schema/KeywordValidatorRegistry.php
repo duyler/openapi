@@ -134,6 +134,11 @@ final readonly class KeywordValidatorRegistry
         return $this->validators[$keyword] ?? null;
     }
 
+    public function has(string $keyword): bool
+    {
+        return isset($this->validators[$keyword]);
+    }
+
     /**
      * @return list<KeywordValidatorInterface>
      */

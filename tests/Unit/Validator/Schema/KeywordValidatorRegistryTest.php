@@ -132,6 +132,26 @@ final class KeywordValidatorRegistryTest extends TestCase
     }
 
     #[Test]
+    public function has_returns_true_for_registered_keyword(): void
+    {
+        $registry = $this->registry->with('x-custom', new FakeKeywordValidator());
+
+        self::assertTrue($registry->has('x-custom'));
+    }
+
+    #[Test]
+    public function has_returns_false_for_unregistered_keyword(): void
+    {
+        self::assertFalse($this->registry->has('nonexistent'));
+    }
+
+    #[Test]
+    public function has_returns_true_for_builtin_keyword(): void
+    {
+        self::assertTrue($this->registry->has('minimum'));
+    }
+
+    #[Test]
     public function with_replaces_builtin_keyword_slot_in_place(): void
     {
         $before = $this->registry->all();
