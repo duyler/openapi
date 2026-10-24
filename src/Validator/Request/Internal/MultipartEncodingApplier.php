@@ -24,6 +24,7 @@ use function strtolower;
 use function substr;
 use function trim;
 
+/** @internal */
 final readonly class MultipartEncodingApplier
 {
     private const int MAX_NESTING_DEPTH = 1;
