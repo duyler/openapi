@@ -6,5 +6,6 @@ composer.lock
 /.php-cs-fixer.cache
 /coverage.xml
 /coverage-text.txt
+/coverage-summary.txt
 /infection.log
 .DS_Store

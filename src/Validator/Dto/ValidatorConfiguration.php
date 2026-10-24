@@ -34,5 +34,6 @@ final readonly class ValidatorConfiguration
         public readonly ?DialectProfile $dialectProfile = null,
         public readonly bool $contentAssertionsEnabled = false,
         public readonly FormatAssertionMode $formatAssertionMode = FormatAssertionMode::Assertion,
+        public readonly bool $lenientResponses = false,
     ) {}
 }

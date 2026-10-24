@@ -30,6 +30,7 @@ final readonly class ValidatorOptions
         public readonly ?DialectProfile $dialectProfile = null,
         public readonly bool $contentAssertionsEnabled = false,
         public readonly FormatAssertionMode $formatAssertionMode = FormatAssertionMode::Assertion,
+        public readonly bool $lenientResponses = false,
     ) {}
 
     public function toValidatorConfiguration(): ValidatorConfiguration
@@ -49,6 +50,7 @@ final readonly class ValidatorOptions
             dialectProfile: $this->dialectProfile,
             contentAssertionsEnabled: $this->contentAssertionsEnabled,
             formatAssertionMode: $this->formatAssertionMode,
+            lenientResponses: $this->lenientResponses,
         );
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Response;
 
+use Duyler\OpenApi\Event\UnsupportedResponseMediaTypeWarningEvent;
 use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\Schema;
@@ -11,6 +12,7 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
+use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
 use Duyler\OpenApi\Validator\Example\ExampleValidator;
 use Duyler\OpenApi\Validator\Example\ValidatesExamplesTrait;
 use Duyler\OpenApi\Validator\ExternalMediaType;
@@ -64,11 +66,20 @@ final readonly class ResponseBodyValidatorWithContext
 
         $mediaType = $this->negotiator->getMediaType($contentType);
         $mediaTypeKey = MediaTypeMatcher::findMatch($mediaType, array_keys($content->mediaTypes));
-        $mediaTypeSchema = null === $mediaTypeKey ? null : $content->mediaTypes[$mediaTypeKey];
 
-        if (null === $mediaTypeSchema || null === $mediaTypeKey) {
+        if (null === $mediaTypeKey) {
+            if (false === $this->configuration->lenientResponses) {
+                throw new UnsupportedMediaTypeException($contentType, array_keys($content->mediaTypes));
+            }
+
+            $this->dependencies->eventDispatcher?->dispatch(
+                UnsupportedResponseMediaTypeWarningEvent::forType($contentType),
+            );
+
             return;
         }
+
+        $mediaTypeSchema = $content->mediaTypes[$mediaTypeKey];
 
         if (StreamingMediaTypeDetector::isStreaming($contentType)) {
             $this->validateStreamingContent($body, $mediaTypeSchema, $contentType, $mediaTypeKey);
@@ -90,11 +101,20 @@ final readonly class ResponseBodyValidatorWithContext
 
         $mediaType = $this->negotiator->getMediaType($contentType);
         $mediaTypeKey = MediaTypeMatcher::findMatch($mediaType, array_keys($content->mediaTypes));
-        $mediaTypeSchema = null === $mediaTypeKey ? null : $content->mediaTypes[$mediaTypeKey];
 
-        if (null === $mediaTypeSchema || null === $mediaTypeKey) {
+        if (null === $mediaTypeKey) {
+            if (false === $this->configuration->lenientResponses) {
+                throw new UnsupportedMediaTypeException($contentType, array_keys($content->mediaTypes));
+            }
+
+            $this->dependencies->eventDispatcher?->dispatch(
+                UnsupportedResponseMediaTypeWarningEvent::forType($contentType),
+            );
+
             return;
         }
+
+        $mediaTypeSchema = $content->mediaTypes[$mediaTypeKey];
 
         $schema = $mediaTypeSchema->itemSchema ?? $mediaTypeSchema->schema;
 

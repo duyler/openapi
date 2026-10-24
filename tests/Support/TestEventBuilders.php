@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Support;
 
 use Duyler\OpenApi\Event\ArrayDispatcher;
+use Duyler\OpenApi\Event\UnsupportedResponseMediaTypeWarningEvent;
 use Duyler\OpenApi\Event\ValidationErrorEvent;
 use Duyler\OpenApi\Event\ValidationFinishedEvent;
 use Duyler\OpenApi\Event\ValidationStartedEvent;
@@ -45,5 +46,19 @@ final class TestEventBuilders
         }
 
         return new ArrayDispatcher($listeners);
+    }
+
+    /**
+     * @param list<UnsupportedResponseMediaTypeWarningEvent> $warnings
+     */
+    public static function unsupportedMediaTypeWarningCollector(array &$warnings): ArrayDispatcher
+    {
+        return new ArrayDispatcher([
+            UnsupportedResponseMediaTypeWarningEvent::class => [
+                static function (UnsupportedResponseMediaTypeWarningEvent $event) use (&$warnings): void {
+                    $warnings[] = $event;
+                },
+            ],
+        ]);
     }
 }

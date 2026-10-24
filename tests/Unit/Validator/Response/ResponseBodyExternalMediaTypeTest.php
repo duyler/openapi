@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Response;
 
+use Duyler\OpenApi\Event\UnsupportedResponseMediaTypeWarningEvent;
 use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\Encoding;
 use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\Model\InfoObject;
+use Duyler\OpenApi\Test\Support\RecordingEventDispatcher;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -269,13 +271,29 @@ final class ResponseBodyExternalMediaTypeTest extends TestCase
     #[Test]
     public function skip_stream_interface_validation_when_media_type_not_found(): void
     {
+        $dispatcher = new RecordingEventDispatcher();
         $content = new Content([
             'application/json' => new MediaType(),
         ]);
+        $validator = new ResponseBodyValidatorWithContext(
+            document: $this->document,
+            dependencies: new SchemaValidatorDependencies(
+                pool: new ValidatorPool(),
+                refResolver: new RefResolver(),
+                statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), BuiltinFormats::create()),
+                formatRegistry: BuiltinFormats::create(),
+                bodyParser: $this->dependencies->bodyParser,
+                eventDispatcher: $dispatcher,
+            ),
+            configuration: new ValidatorConfiguration(lenientResponses: true),
+        );
 
-        $this->validator->validateStream($this->createStream('"x"'), 'application/jsonl', $content);
+        $validator->validateStream($this->createStream('"x"'), 'application/jsonl', $content);
 
-        $this->addToAssertionCount(1);
+        self::assertCount(1, $dispatcher->events);
+        $warning = $dispatcher->events[0];
+        self::assertInstanceOf(UnsupportedResponseMediaTypeWarningEvent::class, $warning);
+        self::assertSame('application/jsonl', $warning->mediaType);
     }
 
     #[Test]

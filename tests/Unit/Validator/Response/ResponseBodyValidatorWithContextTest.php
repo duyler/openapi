@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Response;
 
+use Duyler\OpenApi\Event\UnsupportedResponseMediaTypeWarningEvent;
 use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Test\Support\RecordingEventDispatcher;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
@@ -25,8 +28,11 @@ use Duyler\OpenApi\Validator\Response\ResponseTypeCoercer;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Http\Message\StreamInterface;
 use Duyler\OpenApi\Schema\Model\Encoding;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
@@ -43,35 +49,7 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
     #[Override]
     protected function setUp(): void
     {
-        $pool = new ValidatorPool();
-        $document = new OpenApiDocument(
-            openapi: '3.2.0',
-            info: new InfoObject(
-                title: 'Test API',
-                version: '1.0.0',
-            ),
-        );
-        $negotiator = new ContentTypeNegotiator();
-        $jsonParser = new JsonBodyParser();
-        $formParser = new FormBodyParser(new QueryParser());
-        $multipartParser = new MultipartBodyParser();
-        $textParser = new TextBodyParser();
-        $xmlParser = new XmlBodyParser();
-        $typeCoercer = new ResponseTypeCoercer();
-        $bodyParser = new BodyParser($jsonParser, $formParser, $multipartParser, $textParser, $xmlParser);
-
-        $dependencies = new SchemaValidatorDependencies(
-            pool: $pool,
-            refResolver: new RefResolver(),
-            statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
-            formatRegistry: BuiltinFormats::create(),
-            bodyParser: $bodyParser,
-        );
-
-        $this->validator = new ResponseBodyValidatorWithContext(
-            document: $document,
-            dependencies: $dependencies,
-        );
+        $this->validator = $this->createResponseBodyValidator(new ValidatorConfiguration());
     }
 
     #[Test]
@@ -123,6 +101,11 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
     #[Test]
     public function skip_validation_when_media_type_not_found(): void
     {
+        $dispatcher = new RecordingEventDispatcher();
+        $validator = $this->createResponseBodyValidator(
+            new ValidatorConfiguration(lenientResponses: true),
+            $dispatcher,
+        );
         $body = '{"id":123}';
         $contentType = 'application/xml';
         $content = new Content([
@@ -131,13 +114,17 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
 
         $succeeded = false;
         try {
-            $this->validator->validate($body, $contentType, $content);
+            $validator->validate($body, $contentType, $content);
             $succeeded = true;
         } catch (RuntimeException $e) {
             self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
         }
 
         self::assertSame(true, $succeeded);
+        self::assertCount(1, $dispatcher->events);
+        $warning = $dispatcher->events[0];
+        self::assertInstanceOf(UnsupportedResponseMediaTypeWarningEvent::class, $warning);
+        self::assertSame('application/xml', $warning->mediaType);
     }
 
     #[Test]
@@ -714,6 +701,11 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
     #[Test]
     public function non_matching_content_type_skips_validation(): void
     {
+        $dispatcher = new RecordingEventDispatcher();
+        $validator = $this->createResponseBodyValidator(
+            new ValidatorConfiguration(lenientResponses: true),
+            $dispatcher,
+        );
         $body = '{"id":123}';
         $contentType = 'application/json';
         $content = new Content([
@@ -728,12 +720,130 @@ final class ResponseBodyValidatorWithContextTest extends TestCase
 
         $succeeded = false;
         try {
-            $this->validator->validate($body, $contentType, $content);
+            $validator->validate($body, $contentType, $content);
             $succeeded = true;
         } catch (RuntimeException $e) {
             self::fail(sprintf('Expected non-matching content type to skip validation, got: %s', $e->getMessage()));
         }
 
         self::assertSame(true, $succeeded);
+        self::assertCount(1, $dispatcher->events);
+        $warning = $dispatcher->events[0];
+        self::assertInstanceOf(UnsupportedResponseMediaTypeWarningEvent::class, $warning);
+        self::assertSame('application/json', $warning->mediaType);
+    }
+
+    #[Test]
+    public function unknown_media_type_throws_unsupported_media_type_exception(): void
+    {
+        $body = '{"id":123}';
+        $contentType = 'application/x-unknown';
+        $content = new Content([
+            'application/json' => new MediaType(),
+        ]);
+
+        try {
+            $this->validator->validate($body, $contentType, $content);
+            self::fail('Expected UnsupportedMediaTypeException');
+        } catch (UnsupportedMediaTypeException $exception) {
+            self::assertSame('application/x-unknown', $exception->mediaType);
+            self::assertStringNotContainsString('application/x-unknown', $exception->getMessage());
+        }
+    }
+
+    #[Test]
+    public function unknown_media_type_stream_throws_unsupported_media_type_exception(): void
+    {
+        $content = new Content([
+            'application/json' => new MediaType(),
+        ]);
+
+        try {
+            $this->validator->validateStream($this->createStream('{"id":123}'), 'application/x-unknown', $content);
+            self::fail('Expected UnsupportedMediaTypeException');
+        } catch (UnsupportedMediaTypeException $exception) {
+            self::assertSame('application/x-unknown', $exception->mediaType);
+            self::assertStringNotContainsString('application/x-unknown', $exception->getMessage());
+        }
+    }
+
+    #[Test]
+    public function lenient_mode_skips_unknown_media_type_and_dispatches_warning(): void
+    {
+        $dispatcher = new RecordingEventDispatcher();
+        $validator = $this->createResponseBodyValidator(
+            new ValidatorConfiguration(lenientResponses: true),
+            $dispatcher,
+        );
+        $content = new Content([
+            'application/json' => new MediaType(),
+        ]);
+
+        $validator->validate('{"id":123}', 'application/x-unknown', $content);
+
+        self::assertCount(1, $dispatcher->events);
+        $warning = $dispatcher->events[0];
+        self::assertInstanceOf(UnsupportedResponseMediaTypeWarningEvent::class, $warning);
+        self::assertSame('application/x-unknown', $warning->mediaType);
+    }
+
+    #[Test]
+    public function lenient_mode_stream_skips_unknown_media_type_and_dispatches_warning(): void
+    {
+        $dispatcher = new RecordingEventDispatcher();
+        $validator = $this->createResponseBodyValidator(
+            new ValidatorConfiguration(lenientResponses: true),
+            $dispatcher,
+        );
+        $content = new Content([
+            'application/json' => new MediaType(),
+        ]);
+
+        $validator->validateStream($this->createStream('{"id":123}'), 'application/x-unknown', $content);
+
+        self::assertCount(1, $dispatcher->events);
+        $warning = $dispatcher->events[0];
+        self::assertInstanceOf(UnsupportedResponseMediaTypeWarningEvent::class, $warning);
+        self::assertSame('application/x-unknown', $warning->mediaType);
+    }
+
+    private function createResponseBodyValidator(
+        ValidatorConfiguration $configuration,
+        ?EventDispatcherInterface $eventDispatcher = null,
+    ): ResponseBodyValidatorWithContext {
+        $pool = new ValidatorPool();
+        $document = new OpenApiDocument(
+            openapi: '3.2.0',
+            info: new InfoObject(
+                title: 'Test API',
+                version: '1.0.0',
+            ),
+        );
+        $jsonParser = new JsonBodyParser();
+        $formParser = new FormBodyParser(new QueryParser());
+        $multipartParser = new MultipartBodyParser();
+        $textParser = new TextBodyParser();
+        $xmlParser = new XmlBodyParser();
+        $bodyParser = new BodyParser($jsonParser, $formParser, $multipartParser, $textParser, $xmlParser);
+
+        $dependencies = new SchemaValidatorDependencies(
+            pool: $pool,
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry($pool, BuiltinFormats::create()),
+            formatRegistry: BuiltinFormats::create(),
+            bodyParser: $bodyParser,
+            eventDispatcher: $eventDispatcher,
+        );
+
+        return new ResponseBodyValidatorWithContext(
+            document: $document,
+            dependencies: $dependencies,
+            configuration: $configuration,
+        );
+    }
+
+    private function createStream(string $body): StreamInterface
+    {
+        return new Psr17Factory()->createStream($body);
     }
 }

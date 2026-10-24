@@ -250,6 +250,11 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(formatAssertionMode: $mode));
     }
 
+    public function withLenientResponses(): self
+    {
+        return $this->with(new BuilderConfig(lenientResponses: true));
+    }
+
     public function enableReportDeprecated(): self
     {
         return $this->with(new BuilderConfig(reportDeprecated: true));
@@ -376,6 +381,7 @@ final readonly class OpenApiValidatorBuilder
             dialectProfile: DialectProfile::fromOpenApiVersion($document->openapi),
             contentAssertionsEnabled: $this->config->contentAssertionsEnabled ?? false,
             formatAssertionMode: $this->config->formatAssertionMode ?? FormatAssertionMode::Assertion,
+            lenientResponses: $this->config->lenientResponses ?? false,
         );
     }
 
@@ -486,6 +492,7 @@ final readonly class OpenApiValidatorBuilder
         $strictCoercion = $configuration->strictCoercion;
         $contentAssertionsEnabled = $configuration->contentAssertionsEnabled;
         $formatAssertionMode = $configuration->formatAssertionMode;
+        $lenientResponses = $configuration->lenientResponses;
 
         $context = ValidationStack::fromGroup(
             new ValidationGroup(
@@ -515,6 +522,7 @@ final readonly class OpenApiValidatorBuilder
                     dialectProfile: $dialectProfile,
                     contentAssertionsEnabled: $contentAssertionsEnabled,
                     formatAssertionMode: $formatAssertionMode,
+                    lenientResponses: $lenientResponses,
                 ),
                 bodyLimits: new BodyLimits(
                     maxJsonBodyBytes: $maxJsonBodyBytes,

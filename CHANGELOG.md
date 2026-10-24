@@ -67,6 +67,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keywords point-wise; both compose with the rest of the builder. The check is
   a single traversal of the already-parsed document, applied to the main spec
   only (documents registered via `withDocument()` are not guarded).
+- Response bodies are now validated fail-closed against the declared
+  Content-Type: a response media type matching none of the operation's
+  declared response media types (exact, `type/*` or `*/*`) raises
+  `UnsupportedMediaTypeException` on both the buffered and the streaming
+  validation path instead of silently skipping body validation. The
+  exception message lists only the declared media types and never echoes
+  the offending Content-Type, matching the request-path contract.
+  `OpenApiValidatorBuilder::withLenientResponses()` restores the previous
+  permissive behavior and makes every skip observable: each skipped
+  response body dispatches an `UnsupportedResponseMediaTypeWarningEvent` event
+  (PSR-14) carrying the unmatched media type.
 - `$dynamicRef` is now evaluated with the full JSON Schema 2020-12 dynamic
   reference semantics (core §8.2.3.2, Appendix C) instead of being ignored.
   Resolution happens at every encounter during validation, never at load time:

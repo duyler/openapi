@@ -87,6 +87,7 @@ final readonly class ValidationStack
         public readonly bool $contentAssertionsEnabled = false,
         public readonly KeywordValidatorRegistry $keywordValidators = new KeywordValidatorRegistry(),
         public readonly FormatAssertionMode $formatAssertionMode = FormatAssertionMode::Assertion,
+        public readonly bool $lenientResponses = false,
     ) {
         $this->validatorConfiguration = new ValidatorConfiguration(
             coercion: $this->coercion,
@@ -103,6 +104,7 @@ final readonly class ValidationStack
             dialectProfile: $this->dialectProfile,
             contentAssertionsEnabled: $this->contentAssertionsEnabled,
             formatAssertionMode: $this->formatAssertionMode,
+            lenientResponses: $this->lenientResponses,
         );
 
         $this->statelessValidators = new StatelessValidatorRegistry(
@@ -190,6 +192,7 @@ final readonly class ValidationStack
             contentAssertionsEnabled: $options->contentAssertionsEnabled,
             keywordValidators: $root->keywordValidators,
             formatAssertionMode: $options->formatAssertionMode,
+            lenientResponses: $options->lenientResponses,
         );
     }
 

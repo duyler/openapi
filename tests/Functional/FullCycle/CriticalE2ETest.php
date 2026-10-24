@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Functional\FullCycle;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Test\Support\FixtureLocator;
+use Duyler\OpenApi\Test\Support\TestEventBuilders;
 use Duyler\OpenApi\Validator\Exception\MissingRequestBodyException;
 use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -216,8 +217,13 @@ YAML;
     #[Test]
     public function wrong_response_content_type_skips_body_validation(): void
     {
+        $warnings = [];
+        $dispatcher = TestEventBuilders::unsupportedMediaTypeWarningCollector($warnings);
+
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::PETSTORE_SPEC)
+            ->withEventDispatcher($dispatcher)
+            ->withLenientResponses()
             ->build();
 
         $request = $this->psrFactory->createServerRequest('POST', '/pets')
@@ -234,7 +240,8 @@ YAML;
 
         $validator->validateResponse($response, $operation);
 
-        $this->expectNotToPerformAssertions();
+        self::assertCount(1, $warnings);
+        self::assertSame('text/xml', $warnings[0]->mediaType);
     }
 
     #[Test]
