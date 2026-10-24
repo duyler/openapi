@@ -80,6 +80,24 @@ final class HeaderTest extends TestCase
     }
 
     #[Test]
+    public function json_serialize_ref_only_header_reduces_to_the_reference_object(): void
+    {
+        $header = new Header(ref: '#/components/headers/ContentLocation');
+
+        $serialized = $header->jsonSerialize();
+
+        self::assertSame(['$ref' => '#/components/headers/ContentLocation'], $serialized);
+    }
+
+    #[Test]
+    public function header_without_ref_serializes_without_reference_key(): void
+    {
+        $serialized = new Header(description: 'plain')->jsonSerialize();
+
+        self::assertArrayNotHasKey('$ref', $serialized);
+    }
+
+    #[Test]
     public function json_serialize_excludes_null_fields(): void
     {
         $schema = new Schema(

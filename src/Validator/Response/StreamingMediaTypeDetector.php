@@ -23,10 +23,10 @@ final readonly class StreamingMediaTypeDetector
         }
 
         return match (true) {
-            str_contains($mediaType, 'application/jsonl'),
-            str_contains($mediaType, 'application/x-ndjson') => StreamingFormat::NdJson,
-            str_contains($mediaType, 'text/event-stream') => StreamingFormat::Sse,
-            str_contains($mediaType, 'application/json-seq') => StreamingFormat::JsonSeq,
+            str_contains($mediaType, MediaTypeClassifier::APPLICATION_JSONL),
+            str_contains($mediaType, MediaTypeClassifier::APPLICATION_X_NDJSON) => StreamingFormat::NdJson,
+            str_contains($mediaType, MediaTypeClassifier::TEXT_EVENT_STREAM) => StreamingFormat::Sse,
+            str_contains($mediaType, MediaTypeClassifier::APPLICATION_JSON_SEQ) => StreamingFormat::JsonSeq,
             default => null,
         };
     }

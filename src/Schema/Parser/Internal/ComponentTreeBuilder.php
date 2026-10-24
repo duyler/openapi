@@ -152,6 +152,7 @@ final readonly class ComponentTreeBuilder
         }
 
         return new Header(
+            ref: TypeHelper::asStringOrNull($data['$ref'] ?? null),
             description: TypeHelper::asStringOrNull($data['description'] ?? null),
             required: (bool) ($data['required'] ?? false),
             deprecated: (bool) ($data['deprecated'] ?? false),

@@ -9,6 +9,7 @@ use Duyler\OpenApi\Schema\Model\Header;
 use Duyler\OpenApi\Schema\Model\Headers;
 use Duyler\OpenApi\Validator\Exception\MissingPartHeaderError;
 use Duyler\OpenApi\Validator\Exception\PartContentTypeMismatchError;
+use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
 use Duyler\OpenApi\Validator\Request\Internal\MultipartEncodingApplier;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -26,7 +27,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function matching_nested_content_types_pass_without_errors(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToParts(
             parts: $this->topLevelParts(
@@ -46,7 +47,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function mismatched_nested_content_type_throws_part_content_type_mismatch_error(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         try {
             $applier->applyToParts(
@@ -75,7 +76,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function missing_encoding_fields_exit_early_without_splitting(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToBody('not a multipart body', 'multipart/mixed; boundary=' . self::OUTER_BOUNDARY);
 
@@ -85,7 +86,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function nesting_deeper_than_one_level_is_passed_through_without_errors(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $deeperEncoding = new Encoding(
             prefixEncoding: [
@@ -123,7 +124,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function missing_required_nested_header_throws_missing_part_header_error(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         try {
             $applier->applyToParts(
@@ -157,7 +158,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function present_required_nested_header_passes(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToParts(
             parts: $this->topLevelParts(
@@ -183,7 +184,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function content_type_list_matches_any_list_entry(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToParts(
             parts: $this->topLevelParts(
@@ -205,9 +206,33 @@ final class MultipartEncodingApplierTest extends TestCase
     }
 
     #[Test]
+    public function comma_separated_content_type_string_matches_any_entry(): void
+    {
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
+
+        $applier->applyToParts(
+            parts: $this->topLevelParts(
+                innerBody: $this->body(
+                    self::INNER_BOUNDARY,
+                    $this->part('Content-Type: text/javascript', 'value()'),
+                ),
+            ),
+            prefixEncoding: [
+                new Encoding(),
+                new Encoding(
+                    contentType: 'multipart/mixed',
+                    prefixEncoding: [new Encoding(contentType: 'text/css,text/javascript,image/*')],
+                ),
+            ],
+        );
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
     public function wildcard_content_type_matches_subtype(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToParts(
             parts: $this->topLevelParts(
@@ -237,7 +262,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function wildcard_all_content_type_matches_any_part(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToParts(
             parts: $this->topLevelParts(
@@ -267,7 +292,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function wildcard_content_type_mismatch_throws_error(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         try {
             $applier->applyToParts(
@@ -298,7 +323,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function content_type_list_mismatch_reports_all_expected_entries(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         try {
             $applier->applyToParts(
@@ -329,7 +354,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function item_encoding_applies_to_parts_beyond_prefix(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToParts(
             parts: $this->topLevelParts(
@@ -356,7 +381,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function item_encoding_mismatch_throws_error_with_item_keyword(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         try {
             $applier->applyToParts(
@@ -391,7 +416,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function encoding_by_name_applies_to_named_nested_part(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToParts(
             parts: $this->topLevelParts(
@@ -418,7 +443,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function encoding_by_name_mismatch_throws_error_with_encoding_keyword(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         try {
             $applier->applyToParts(
@@ -451,7 +476,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function encoding_by_name_resolved_when_filename_precedes_name(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         try {
             $applier->applyToParts(
@@ -488,7 +513,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function content_type_in_encoding_headers_is_ignored(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToParts(
             parts: $this->topLevelParts(
@@ -514,7 +539,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function part_without_content_type_header_skips_content_type_assertion(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToParts(
             parts: $this->topLevelParts(
@@ -538,7 +563,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function content_type_matching_is_case_insensitive(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToParts(
             parts: $this->topLevelParts(
@@ -562,7 +587,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function non_multipart_part_with_nested_encoding_fields_is_skipped(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToParts(
             parts: [
@@ -584,7 +609,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function nested_content_type_falls_back_to_the_encoding_declaration(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         try {
             $applier->applyToParts(
@@ -619,7 +644,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function non_multipart_encoding_fallback_is_skipped(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToParts(
             parts: [
@@ -641,7 +666,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function empty_content_type_list_declares_no_expectation(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToParts(
             parts: $this->topLevelParts(
@@ -665,7 +690,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function named_part_without_content_disposition_is_skipped(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToParts(
             parts: $this->topLevelParts(
@@ -689,7 +714,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function disposition_without_name_parameter_is_skipped(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToParts(
             parts: $this->topLevelParts(
@@ -713,7 +738,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function line_feed_only_part_headers_are_parsed(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $applier->applyToParts(
             parts: $this->topLevelParts(
@@ -737,7 +762,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function apply_to_body_splits_the_top_level_body_and_applies_encoding(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $innerBody = $this->body(
             self::INNER_BOUNDARY,
@@ -767,7 +792,7 @@ final class MultipartEncodingApplierTest extends TestCase
     #[Test]
     public function apply_to_body_applies_item_encoding_without_prefix_encoding(): void
     {
-        $applier = new MultipartEncodingApplier();
+        $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $topBody = $this->body(
             self::OUTER_BOUNDARY,

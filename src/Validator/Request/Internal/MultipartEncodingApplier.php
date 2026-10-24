@@ -12,14 +12,11 @@ use Duyler\OpenApi\Validator\ExternalMediaType;
 use Duyler\OpenApi\Validator\Request\BodyParser\MultipartBodyParser;
 
 use function array_key_exists;
-use function count;
 use function explode;
 use function implode;
-use function is_array;
 use function preg_match;
 use function str_ends_with;
 use function str_starts_with;
-use function str_replace;
 use function strtolower;
 use function substr;
 use function trim;
@@ -42,7 +39,8 @@ final readonly class MultipartEncodingApplier
     private const string KEYWORD_ITEM_ENCODING = 'itemEncoding';
 
     public function __construct(
-        private readonly MultipartBodyParser $multipartParser = new MultipartBodyParser(),
+        private readonly MultipartBodyParser $multipartParser,
+        private readonly ?PartHeaderValueValidator $headerValueValidator = null,
     ) {}
 
     /**
@@ -102,7 +100,7 @@ final readonly class MultipartEncodingApplier
         int $depth,
     ): void {
         foreach ($parts as $index => $part) {
-            $headers = $this->headerMap($part['headers']);
+            $headers = PartHeaders::map($part['headers']);
             $resolved = $this->resolveEncoding($prefixEncoding, $itemEncoding, $encoding, $index, $headers);
 
             if (null === $resolved) {
@@ -170,9 +168,8 @@ final readonly class MultipartEncodingApplier
         }
 
         $actual = $this->mediaTypeOf($actualHeader);
-        $candidates = is_array($expected) ? $expected : [$expected];
 
-        foreach ($candidates as $candidate) {
+        foreach ($this->contentTypeCandidates($expected) as $candidate) {
             if ($this->mediaTypeMatches($actual, $candidate)) {
                 return;
             }
@@ -180,10 +177,31 @@ final readonly class MultipartEncodingApplier
 
         throw new PartContentTypeMismatchError(
             keyword: $keyword,
-            expected: implode(', ', $candidates),
+            expected: implode(', ', $this->contentTypeCandidates($expected)),
             actual: $actual,
             partIndex: $index,
         );
+    }
+
+    /**
+     * @param string|list<string> $expected
+     * @return list<string>
+     */
+    private function contentTypeCandidates(string|array $expected): array
+    {
+        $candidates = [];
+
+        foreach ((array) $expected as $entry) {
+            foreach (explode(',', $entry) as $candidate) {
+                $trimmed = trim($candidate);
+
+                if ('' !== $trimmed) {
+                    $candidates[] = $trimmed;
+                }
+            }
+        }
+
+        return $candidates;
     }
 
     /**
@@ -202,8 +220,14 @@ final readonly class MultipartEncodingApplier
                 continue;
             }
 
-            if ($header->required && false === array_key_exists($lowerName, $partHeaders)) {
+            $value = $partHeaders[$lowerName] ?? null;
+
+            if ($header->required && null === $value) {
                 throw new MissingPartHeaderError(headerName: $name, partIndex: $index);
+            }
+
+            if (null !== $value) {
+                $this->headerValueValidator?->validate(name: $name, value: $value, header: $header);
             }
         }
     }
@@ -279,27 +303,6 @@ final readonly class MultipartEncodingApplier
         }
 
         return null;
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function headerMap(string $rawHeaders): array
-    {
-        $lines = explode("\n", str_replace("\r\n", "\n", $rawHeaders));
-        $headers = [];
-
-        foreach ($lines as $line) {
-            $pair = explode(':', $line, 2);
-
-            if (2 !== count($pair)) {
-                continue;
-            }
-
-            $headers[strtolower(trim($pair[0]))] = trim($pair[1]);
-        }
-
-        return $headers;
     }
 
     private function mediaTypeOf(string $headerValue): string

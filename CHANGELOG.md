@@ -64,6 +64,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are not content-type asserted, deeper than one level of nesting is passed through untouched,
   and schema-level recursion into nested multipart values stays out of scope; the wire parser
   remains a boundary splitter with no knowledge of the Encoding model.
+- Ordered (unnamed) multipart request bodies (3.2 §4.15.4.6, §4.15.4.7): a `multipart/*` Media
+  Type Object carrying `prefixEncoding`/`itemEncoding` together with an array schema (or
+  `itemSchema`) is validated positionally — parts map to `prefixItems`/`items` and to
+  `prefixEncoding`/`itemEncoding` by index, `Content-Disposition` names do not participate,
+  an instance shorter than `prefixEncoding` ignores the surplus Encoding Objects, and part
+  values enter the JSON data model (JSON-decoded when the part's effective content type is
+  JSON, raw text otherwise) so the schema validator applies per-position assertions.
+  `encoding` combined with `prefixEncoding`/`itemEncoding` raises
+  `Validator\Exception\InvalidEncodingConfigurationException`, as does positional encoding
+  without an array schema or `itemSchema` (§4.14.1, §4.14.5.2). Part `headers` declared in
+  Encoding Objects now carry full Header Object semantics: a referenced header
+  (`$ref` into `#/components/headers/...`) is resolved from the document's components, a
+  required header missing on its part raises `MissingPartHeaderError`, and a present header
+  value is validated against the header's `schema` with the same coercion rules used for
+  response headers. Media type keys with parameters (for example
+  `multipart/related; type=text/html`) now match requests by media type proper. The
+  effective content type of a part follows the §4.15.1.1 default table (header, then
+  `encoding.contentType`, then the schema-type default) and is exposed for reuse by nested
+  multipart handling.
 
 ### Changed
 

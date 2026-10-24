@@ -9,15 +9,23 @@ use function str_contains;
 /** @internal */
 final readonly class MediaTypeClassifier
 {
+    public const string APPLICATION_JSONL = 'application/jsonl';
+
+    public const string APPLICATION_X_NDJSON = 'application/x-ndjson';
+
+    public const string APPLICATION_JSON_SEQ = 'application/json-seq';
+
+    public const string TEXT_EVENT_STREAM = 'text/event-stream';
+
     /** @var array<string, MediaTypeKind> */
     private const array CLASSIFICATION = [
         'application/geo+json-seq' => MediaTypeKind::Sequential,
         'application/json' => MediaTypeKind::Complete,
-        'application/json-seq' => MediaTypeKind::Sequential,
-        'application/jsonl' => MediaTypeKind::Sequential,
+        self::APPLICATION_JSON_SEQ => MediaTypeKind::Sequential,
+        self::APPLICATION_JSONL => MediaTypeKind::Sequential,
         'application/octet-stream' => MediaTypeKind::BinaryStream,
         'application/pdf' => MediaTypeKind::Complete,
-        'application/x-ndjson' => MediaTypeKind::Sequential,
+        self::APPLICATION_X_NDJSON => MediaTypeKind::Sequential,
         'application/x-www-form-urlencoded' => MediaTypeKind::Complete,
         'application/xml' => MediaTypeKind::Complete,
         'image/gif' => MediaTypeKind::Complete,
@@ -26,7 +34,7 @@ final readonly class MediaTypeClassifier
         'image/svg+xml' => MediaTypeKind::Complete,
         'multipart/form-data' => MediaTypeKind::Complete,
         'multipart/mixed' => MediaTypeKind::Sequential,
-        'text/event-stream' => MediaTypeKind::Sequential,
+        self::TEXT_EVENT_STREAM => MediaTypeKind::Sequential,
         'text/html' => MediaTypeKind::Complete,
         'text/plain' => MediaTypeKind::Complete,
         'text/xml' => MediaTypeKind::Complete,

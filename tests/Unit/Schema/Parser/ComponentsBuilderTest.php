@@ -134,6 +134,30 @@ final class ComponentsBuilderTest extends TestCase
     }
 
     #[Test]
+    public function build_header_keeps_the_reference(): void
+    {
+        $header = $this->componentsBuilder->buildHeader([
+            '$ref' => '#/components/headers/ContentLocation',
+        ]);
+
+        self::assertSame('#/components/headers/ContentLocation', $header->ref);
+        self::assertFalse($header->required);
+        self::assertNull($header->schema);
+    }
+
+    #[Test]
+    public function build_header_without_reference_keeps_ref_null(): void
+    {
+        $header = $this->componentsBuilder->buildHeader([
+            'description' => 'plain',
+            'required' => true,
+        ]);
+
+        self::assertNull($header->ref);
+        self::assertTrue($header->required);
+    }
+
+    #[Test]
     public function build_header_logs_allow_empty_value_deprecation_under_3_2(): void
     {
         $this->context->documentVersion = '3.2.0';
