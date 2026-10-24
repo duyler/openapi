@@ -51,6 +51,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the run annotations. `strictFormats` keeps its semantics: an unknown format token raises
   `InvalidFormatException` in assertion mode when strict formats are enabled; annotation
   mode never raises.
+- Nested encoding application for multipart request bodies (3.2 §4.15.2): Encoding Objects
+  reached through the Media Type Object's `prefixEncoding`/`itemEncoding`/`encoding` fields
+  are now applied one level deep to nested parts. A nested part's resolved Encoding Object
+  checks the part's `Content-Type` against `contentType` (string or list form, `type/*`
+  wildcards included, parameters and case ignored), enforces required `headers` on the part
+  (`Content-Type` inside `encoding.headers` is ignored per §4.15.1.1), and, when the part is
+  itself a multipart body, wire-splits it once by its own boundary to apply the nested
+  fields to the inner parts. Mismatches raise `Validator\Exception\PartContentTypeMismatchError`
+  (keyword `prefixEncoding`, `itemEncoding` or `encoding`) and a missing required part header
+  raises `Validator\Exception\MissingPartHeaderError`. Parts without a `Content-Type` header
+  are not content-type asserted, deeper than one level of nesting is passed through untouched,
+  and schema-level recursion into nested multipart values stays out of scope; the wire parser
+  remains a boundary splitter with no knowledge of the Encoding model.
 
 ### Changed
 

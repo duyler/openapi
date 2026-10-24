@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Request;
 
+use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
@@ -14,10 +15,13 @@ use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
 use Duyler\OpenApi\Validator\Example\ExampleValidator;
 use Duyler\OpenApi\Validator\Example\ValidatesExamplesTrait;
 use Duyler\OpenApi\Validator\ExternalMediaType;
+use Duyler\OpenApi\Validator\Request\Internal\MultipartEncodingApplier;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\TypeGuarantor;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Override;
+
+use function str_starts_with;
 
 final readonly class RequestBodyValidatorWithContext implements RequestBodyValidatorInterface
 {
@@ -27,6 +31,7 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
     private RequestBodyCoercer $coercer;
     private readonly ContentTypeNegotiator $negotiator;
     private readonly ExampleValidator $exampleValidator;
+    private readonly MultipartEncodingApplier $encodingApplier;
 
     public function __construct(
         private readonly OpenApiDocument $document,
@@ -35,6 +40,9 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
     ) {
         $this->negotiator = new ContentTypeNegotiator($this->dependencies->pregExecutor);
         $this->exampleValidator = new ExampleValidator();
+        $this->encodingApplier = new MultipartEncodingApplier(
+            multipartParser: $this->dependencies->bodyParser->multipartParser(),
+        );
 
         $this->contextSchemaValidator = $this->dependencies->rootSchemaValidator(
             $this->document,
@@ -89,6 +97,8 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
 
         $parsedBody = $this->dependencies->bodyParser->parse($body, $requestMediaType, $contentType);
 
+        $this->applyMultipartEncoding($body, $contentType, $requestMediaType, $content);
+
         if (null !== $content->schema) {
             $schema = $content->schema;
 
@@ -122,5 +132,24 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
                 $this->dependencies->eventDispatcher,
             );
         }
+    }
+
+    private function applyMultipartEncoding(
+        string $body,
+        string $contentType,
+        string $requestMediaType,
+        MediaType $content,
+    ): void {
+        if (false === str_starts_with($requestMediaType, 'multipart/')) {
+            return;
+        }
+
+        $this->encodingApplier->applyToBody(
+            body: $body,
+            fullContentType: $contentType,
+            prefixEncoding: $content->prefixEncoding,
+            itemEncoding: $content->itemEncoding,
+            encoding: $content->encoding,
+        );
     }
 }

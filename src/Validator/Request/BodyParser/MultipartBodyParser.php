@@ -21,7 +21,7 @@ final readonly class MultipartBodyParser
     private const int MAX_MULTIPART_PARTS = 1000;
 
     /**
-     * @return list<array<array-key, mixed>>
+     * @return list<array{headers: string, content: string}>
      */
     public function parse(string $body, string $fullContentType = ''): array
     {
@@ -78,6 +78,9 @@ final readonly class MultipartBodyParser
         return null;
     }
 
+    /**
+     * @return array{headers: string, content: string}|null
+     */
     private function parsePart(string $section): ?array
     {
         $parts = explode("\r\n\r\n", $section, 2);

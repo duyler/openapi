@@ -16,6 +16,11 @@ final readonly class BodyParser
         private readonly XmlBodyParser $xmlParser,
     ) {}
 
+    public function multipartParser(): MultipartBodyParser
+    {
+        return $this->multipartParser;
+    }
+
     public function parse(
         string $body,
         string $mediaType,
