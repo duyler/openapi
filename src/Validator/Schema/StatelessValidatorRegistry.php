@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\FormatAssertionMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -33,6 +34,7 @@ final readonly class StatelessValidatorRegistry
         bool $contentAssertionsEnabled = false,
         int $maxDecodedContentBytes = ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES,
         ?KeywordValidatorRegistry $customKeywordValidators = null,
+        FormatAssertionMode $formatAssertionMode = FormatAssertionMode::Assertion,
     ) {
         $dependencies = new SchemaValidatorDependencies(
             pool: $pool,
@@ -47,6 +49,7 @@ final readonly class StatelessValidatorRegistry
             contentAssertionsEnabled: $contentAssertionsEnabled,
             maxDecodedContentBytes: $maxDecodedContentBytes,
             customKeywordValidators: $customKeywordValidators,
+            formatAssertionMode: $formatAssertionMode,
         );
 
         $this->validators = $dependencies->createStatelessList();

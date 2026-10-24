@@ -96,6 +96,27 @@ final class FormatRegistryTest extends TestCase
     }
 
     #[Test]
+    public function types_returns_domains_in_registration_order_for_known_format(): void
+    {
+        $validator = new TestValidator();
+        $registry = new FormatRegistry()
+            ->registerFormat('number', 'custom', $validator)
+            ->registerFormat('string', 'custom', $validator)
+            ->registerFormat('integer', 'custom', $validator)
+            ->registerFormat('string', 'other', $validator);
+
+        $this->assertSame(['number', 'string', 'integer'], $registry->types('custom'));
+    }
+
+    #[Test]
+    public function types_returns_empty_list_for_unknown_format(): void
+    {
+        $registry = new FormatRegistry();
+
+        $this->assertSame([], $registry->types('nonexistent'));
+    }
+
+    #[Test]
     public function with_base_merges_entries_with_user_overriding_base(): void
     {
         $baseValidator = new TestValidator();

@@ -28,6 +28,7 @@ use Duyler\OpenApi\Validator\Validation\Internal\ValidatorOptions;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\FormatAssertionMode;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Duyler\OpenApi\Validator\Link\LinkResolver;
 use Duyler\OpenApi\Validator\OpenApiValidator;
@@ -244,6 +245,11 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(strictFormats: true));
     }
 
+    public function withFormatAssertionMode(FormatAssertionMode $mode): self
+    {
+        return $this->with(new BuilderConfig(formatAssertionMode: $mode));
+    }
+
     public function enableReportDeprecated(): self
     {
         return $this->with(new BuilderConfig(reportDeprecated: true));
@@ -369,6 +375,7 @@ final readonly class OpenApiValidatorBuilder
             strictCoercion: $this->config->strictCoercion ?? true,
             dialectProfile: DialectProfile::fromOpenApiVersion($document->openapi),
             contentAssertionsEnabled: $this->config->contentAssertionsEnabled ?? false,
+            formatAssertionMode: $this->config->formatAssertionMode ?? FormatAssertionMode::Assertion,
         );
     }
 
@@ -478,6 +485,7 @@ final readonly class OpenApiValidatorBuilder
         $strictCallbackRuntimeTemplate = $this->config->strictCallbackRuntimeTemplate ?? true;
         $strictCoercion = $configuration->strictCoercion;
         $contentAssertionsEnabled = $configuration->contentAssertionsEnabled;
+        $formatAssertionMode = $configuration->formatAssertionMode;
 
         $context = ValidationStack::fromGroup(
             new ValidationGroup(
@@ -506,6 +514,7 @@ final readonly class OpenApiValidatorBuilder
                     securityVerboseLogger: $securityVerboseLogger,
                     dialectProfile: $dialectProfile,
                     contentAssertionsEnabled: $contentAssertionsEnabled,
+                    formatAssertionMode: $formatAssertionMode,
                 ),
                 bodyLimits: new BodyLimits(
                     maxJsonBodyBytes: $maxJsonBodyBytes,

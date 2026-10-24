@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Functional\Builder;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+use Duyler\OpenApi\Validator\FormatAssertionMode;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -216,5 +217,49 @@ YAML;
         $this->expectException(InvalidFormatException::class);
 
         $validator->validateRequest($request);
+    }
+
+    #[Test]
+    public function annotation_mode_invalid_format_in_request_body_passes(): void
+    {
+        $yaml = <<<'YAML'
+openapi: 3.1.0
+info:
+  title: Body Annotation Formats API
+  version: 1.0.0
+paths:
+  /users:
+    post:
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+              required:
+                - email
+      responses:
+        '201':
+          description: Created
+YAML;
+
+        $validator = OpenApiValidatorBuilder::create()
+            ->fromYamlString($yaml)
+            ->withFormatAssertionMode(FormatAssertionMode::Annotation)
+            ->build();
+
+        $request = $this->psrFactory->createServerRequest('POST', '/users')
+            ->withHeader('Content-Type', 'application/json')
+            ->withBody($this->psrFactory->createStream('{"email": "not-an-email"}'));
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertSame('/users', $operation->path);
+        $this->assertSame('POST', $operation->method);
     }
 }

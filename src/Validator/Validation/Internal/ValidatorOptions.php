@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Validation\Internal;
 
 use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
+use Duyler\OpenApi\Validator\FormatAssertionMode;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -28,6 +29,7 @@ final readonly class ValidatorOptions
         public readonly ?LoggerInterface $securityVerboseLogger = null,
         public readonly ?DialectProfile $dialectProfile = null,
         public readonly bool $contentAssertionsEnabled = false,
+        public readonly FormatAssertionMode $formatAssertionMode = FormatAssertionMode::Assertion,
     ) {}
 
     public function toValidatorConfiguration(): ValidatorConfiguration
@@ -46,6 +48,7 @@ final readonly class ValidatorOptions
             strictCoercion: $this->strictCoercion,
             dialectProfile: $this->dialectProfile,
             contentAssertionsEnabled: $this->contentAssertionsEnabled,
+            formatAssertionMode: $this->formatAssertionMode,
         );
     }
 }

@@ -8,6 +8,7 @@ use Duyler\OpenApi\Test\Support\JsonSchemaSuiteCase;
 use Duyler\OpenApi\Test\Support\JsonSchemaSuiteCaseLoader;
 use Duyler\OpenApi\Test\Support\JsonSchemaSuiteLocator;
 use Duyler\OpenApi\Test\Support\SuiteValidatorFactory;
+use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -42,6 +43,13 @@ final class JsonSchemaSuiteTest extends TestCase
         'anchor.json',
         'optional/anchor.json',
         'optional/dependencies-compatibility.json',
+        'optional/format-assertion.json',
+        'optional/format/date.json',
+        'optional/format/ipv4.json',
+        'optional/format/ipv6.json',
+        'optional/format/json-pointer.json',
+        'optional/format/regex.json',
+        'optional/format/unknown.json',
         'optional/id.json',
         'optional/no-schema.json',
         'optional/unknownKeyword.json',
@@ -71,7 +79,7 @@ final class JsonSchemaSuiteTest extends TestCase
         'minProperties.json' => 'FS-40',
         'not.json' => 'FS-40',
         'defs.json' => 'FS-40',
-        'format.json' => 'FS-25',
+        'format.json' => 'FS-40',
         'ref.json' => 'FS-40',
         'unevaluatedItems.json' => 'FS-40',
         'unevaluatedProperties.json' => 'FS-40',
@@ -79,34 +87,27 @@ final class JsonSchemaSuiteTest extends TestCase
         'optional/bignum.json' => 'FS-40',
         'optional/cross-draft.json' => 'FS-40',
         'optional/float-overflow.json' => 'FS-40',
-        'optional/format-assertion.json' => 'FS-25',
-        'optional/format/date-time.json' => 'FS-25',
-        'optional/format/date.json' => 'FS-25',
-        'optional/format/duration.json' => 'FS-25',
-        'optional/format/ecmascript-regex.json' => 'FS-25',
-        'optional/format/email.json' => 'FS-25',
-        'optional/format/hostname.json' => 'FS-25',
-        'optional/format/idn-email.json' => 'FS-25',
-        'optional/format/idn-hostname.json' => 'FS-25',
-        'optional/format/ipv4.json' => 'FS-25',
-        'optional/format/ipv6.json' => 'FS-25',
-        'optional/format/iri-reference.json' => 'FS-25',
-        'optional/format/iri.json' => 'FS-25',
-        'optional/format/json-pointer.json' => 'FS-25',
-        'optional/format/regex.json' => 'FS-25',
-        'optional/format/relative-json-pointer.json' => 'FS-25',
-        'optional/format/time.json' => 'FS-25',
-        'optional/format/unknown.json' => 'FS-25',
-        'optional/format/uri-reference.json' => 'FS-25',
-        'optional/format/uri-template.json' => 'FS-25',
-        'optional/format/uri.json' => 'FS-25',
-        'optional/format/uuid.json' => 'FS-25',
+        'optional/format/date-time.json' => 'FS-40',
+        'optional/format/duration.json' => 'FS-40',
+        'optional/format/email.json' => 'FS-40',
+        'optional/format/hostname.json' => 'FS-40',
+        'optional/format/idn-email.json' => 'FS-40',
+        'optional/format/idn-hostname.json' => 'FS-40',
+        'optional/format/iri-reference.json' => 'FS-40',
+        'optional/format/iri.json' => 'FS-40',
+        'optional/format/relative-json-pointer.json' => 'FS-40',
+        'optional/format/time.json' => 'FS-40',
+        'optional/format/uri-reference.json' => 'FS-40',
+        'optional/format/uri-template.json' => 'FS-40',
+        'optional/format/uri.json' => 'FS-40',
+        'optional/format/uuid.json' => 'FS-40',
         'optional/non-bmp-regex.json' => 'FS-40',
         'optional/refOfUnknownKeyword.json' => 'FS-40',
     ];
 
     public const array EXCLUDED_SECTIONS = [
         'optional/ecmascript-regex.json',
+        'optional/format/ecmascript-regex.json',
     ];
 
     public static function suiteCases(): array
@@ -147,7 +148,7 @@ final class JsonSchemaSuiteTest extends TestCase
 
         try {
             $validator->validateSchema($case->instance, SuiteValidatorFactory::subjectSchemaRef());
-        } catch (ValidationException) {
+        } catch (ValidationException|InvalidFormatException) {
             $isValid = false;
         }
 

@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\ContentDecoderInterface;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\FormatAssertionMode;
 use Duyler\OpenApi\Validator\NativeContentDecoder;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
@@ -92,6 +93,7 @@ final class SchemaValidatorDependencies
         public readonly ContentDecoderInterface $contentDecoder = new NativeContentDecoder(),
         public readonly int $maxDecodedContentBytes = ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES,
         public readonly ?KeywordValidatorRegistry $customKeywordValidators = null,
+        public readonly FormatAssertionMode $formatAssertionMode = FormatAssertionMode::Assertion,
     ) {
         $this->logger = $logger ?? new NullLogger();
         $this->errorFormatter = $errorFormatter ?? new SimpleFormatter();

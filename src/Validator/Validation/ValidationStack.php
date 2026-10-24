@@ -12,6 +12,7 @@ use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\FormatAssertionMode;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
@@ -85,6 +86,7 @@ final readonly class ValidationStack
         public readonly ?DialectProfile $dialectProfile = null,
         public readonly bool $contentAssertionsEnabled = false,
         public readonly KeywordValidatorRegistry $keywordValidators = new KeywordValidatorRegistry(),
+        public readonly FormatAssertionMode $formatAssertionMode = FormatAssertionMode::Assertion,
     ) {
         $this->validatorConfiguration = new ValidatorConfiguration(
             coercion: $this->coercion,
@@ -100,6 +102,7 @@ final readonly class ValidationStack
             strictCoercion: $this->strictCoercion,
             dialectProfile: $this->dialectProfile,
             contentAssertionsEnabled: $this->contentAssertionsEnabled,
+            formatAssertionMode: $this->formatAssertionMode,
         );
 
         $this->statelessValidators = new StatelessValidatorRegistry(
@@ -113,6 +116,7 @@ final readonly class ValidationStack
             $this->refResolver,
             $this->contentAssertionsEnabled,
             customKeywordValidators: $this->keywordValidators,
+            formatAssertionMode: $this->formatAssertionMode,
         );
 
         $this->schemaValidatorDependencies = new SchemaValidatorDependencies(
@@ -138,6 +142,7 @@ final readonly class ValidationStack
             contentAssertionsEnabled: $this->contentAssertionsEnabled,
             maxDecodedContentBytes: $this->maxJsonBodyBytes,
             customKeywordValidators: $this->keywordValidators,
+            formatAssertionMode: $this->formatAssertionMode,
         );
 
         $this->schemaValidatorWithContext = $this->schemaValidatorDependencies->rootSchemaValidator(
@@ -184,6 +189,7 @@ final readonly class ValidationStack
             dialectProfile: $options->dialectProfile,
             contentAssertionsEnabled: $options->contentAssertionsEnabled,
             keywordValidators: $root->keywordValidators,
+            formatAssertionMode: $options->formatAssertionMode,
         );
     }
 

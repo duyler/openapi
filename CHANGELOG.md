@@ -43,6 +43,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `unevaluatedItems`/`unevaluatedProperties`), so applicator-style custom keywords cannot
   place themselves ahead of them; a keyword without a registration stays an extras
   annotation and does not affect the validation outcome.
+- Format assertion mode switch: `OpenApiValidatorBuilder::withFormatAssertionMode(FormatAssertionMode $mode)`
+  selects between `FormatAssertionMode::Assertion` (the default; format keywords are
+  asserted, behavior unchanged) and `FormatAssertionMode::Annotation` (format keywords are
+  only collected as validation annotations and never asserted, matching the JSON Schema
+  2020-12 annotation default). In both modes the applied `format` keyword is recorded in
+  the run annotations. `strictFormats` keeps its semantics: an unknown format token raises
+  `InvalidFormatException` in assertion mode when strict formats are enabled; annotation
+  mode never raises.
 
 ### Changed
 
@@ -187,6 +195,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sections: it was previously parked pending the content assertion pipeline work; all 18
   cases assert annotation-only content semantics and pass on the current validator,
   following the rebind precedent of the earlier suite triage.
+- Formats on schemas without an explicit `type` are no longer ignored: the format is
+  resolved against the instance domain (string/number/integer) and asserted for matching
+  instances in assertion mode.
+- The format sections of the official JSON Schema test suite are re-classified after the
+  format assertion mode work: the format-assertion, date, ipv4, ipv6, json-pointer, regex
+  and unknown-format sections (242 cases) join the active sections and pass in the default
+  assertion profile; `optional/format/ecmascript-regex.json` joins the excluded sections
+  (PCRE is not ECMA-262); `format.json` and the remaining `optional/format/*` sections stay
+  pending on the suite residue backlog until the builtin format validators reach full suite
+  conformance and the runner gains per-section validator profiles. `format.json` declares
+  the annotation-default profile and is fully green under
+  `withFormatAssertionMode(Annotation)` — a dedicated replay test pins all 133 cases. The
+  suite runner now also treats the raw `InvalidFormatException` (the package's fail-fast
+  format error convention) as an invalid verdict.
 
 ### Removed
 
