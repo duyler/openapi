@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\PregExecutor;
+use Duyler\OpenApi\Validator\Schema\KeywordValidatorRegistry;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -25,5 +26,6 @@ final readonly class RootServices
         public readonly PathRegexCache $pathRegexCache = new PathRegexCache(),
         public readonly RegexValidator $regexValidator = new RegexValidator(),
         public readonly PregExecutor $pregExecutor = new PregExecutor(),
+        public readonly KeywordValidatorRegistry $keywordValidators = new KeywordValidatorRegistry(),
     ) {}
 }

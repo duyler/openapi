@@ -35,6 +35,8 @@ use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Schema\ExternalRefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
+use Duyler\OpenApi\Validator\Schema\KeywordValidatorInterface;
+use Duyler\OpenApi\Validator\Schema\KeywordValidatorRegistry;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\Validation\CallbackValidator;
@@ -137,6 +139,13 @@ final readonly class OpenApiValidatorBuilder
         $registry = $userRegistry->registerFormat($type, $format, $validator);
 
         return $this->with(new BuilderConfig(formatRegistry: $registry));
+    }
+
+    public function withKeywordValidator(string $keyword, KeywordValidatorInterface $validator): self
+    {
+        $userRegistry = $this->config->keywordValidators ?? new KeywordValidatorRegistry();
+
+        return $this->with(new BuilderConfig(keywordValidators: $userRegistry->with($keyword, $validator)));
     }
 
     public function enableCoercion(): self
@@ -420,6 +429,7 @@ final readonly class OpenApiValidatorBuilder
                     pathRegexCache: $pathRegexCache,
                     regexValidator: $regexValidator,
                     pregExecutor: $pregExecutor,
+                    keywordValidators: $this->config->keywordValidators ?? new KeywordValidatorRegistry(),
                 ),
                 options: new ValidatorOptions(
                     coercion: $coercion,

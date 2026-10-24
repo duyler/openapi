@@ -9,9 +9,13 @@ use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\InvalidPatternException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Schema\Internal\CustomKeywordValidatorAdapter;
+use Duyler\OpenApi\Validator\Schema\KeywordValidatorInterface;
+use Duyler\OpenApi\Validator\Schema\KeywordValidatorRegistry;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorDispatcher;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
@@ -57,6 +61,7 @@ use function array_any;
 use function array_diff;
 use function array_find;
 use function array_map;
+use function array_slice;
 use function array_values;
 use function in_array;
 use function str_repeat;
@@ -291,6 +296,128 @@ final class SchemaValidatorDependenciesListTest extends TestCase
         self::assertSame($root, $dependencies->rootStatelessValidator());
     }
 
+    #[Test]
+    public function create_full_list_appends_custom_keyword_validators_after_builtin_set(): void
+    {
+        $custom = new DispatchSpyKeywordValidator();
+        $dependencies = new SchemaValidatorDependencies(
+            pool: new ValidatorPool(),
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), BuiltinFormats::create()),
+            formatRegistry: BuiltinFormats::create(),
+            customKeywordValidators: new KeywordValidatorRegistry()
+                ->with('x-first', $custom)
+                ->with('x-second', new DispatchSpyKeywordValidator()),
+        );
+
+        $validators = $dependencies->createFullList();
+
+        self::assertCount(33, $validators);
+        self::assertSame($custom, $validators[31]->validator());
+        self::assertInstanceOf(CustomKeywordValidatorAdapter::class, $validators[31]);
+        self::assertInstanceOf(CustomKeywordValidatorAdapter::class, $validators[32]);
+        self::assertSame($this->builtinClasses(), $this->classesOf(array_slice($validators, 0, 31)));
+    }
+
+    #[Test]
+    public function custom_keyword_validator_wrapped_by_adapter_filters_by_extras_applicability(): void
+    {
+        $spy = new DispatchSpyKeywordValidator();
+        $dependencies = new SchemaValidatorDependencies(
+            pool: new ValidatorPool(),
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), BuiltinFormats::create()),
+            formatRegistry: BuiltinFormats::create(),
+            customKeywordValidators: new KeywordValidatorRegistry()->with('x-spy', $spy),
+        );
+
+        $root = $dependencies->rootStatelessValidator();
+        $withExtra = new Schema(type: 'integer', extras: ['x-spy' => true]);
+        $withoutExtra = new Schema(type: 'integer');
+
+        $root->validate(1, $withExtra);
+        $root->validate(1, $withoutExtra);
+
+        self::assertSame([$withExtra], $spy->validatedSchemas);
+    }
+
+    #[Test]
+    public function re_registered_keyword_validator_dispatches_once_on_stateless_root(): void
+    {
+        $spy = new DispatchSpyKeywordValidator();
+        $dependencies = new SchemaValidatorDependencies(
+            pool: new ValidatorPool(),
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), BuiltinFormats::create()),
+            formatRegistry: BuiltinFormats::create(),
+            customKeywordValidators: new KeywordValidatorRegistry()
+                ->with('x-spy', new DispatchSpyKeywordValidator())
+                ->with('x-spy', $spy),
+        );
+
+        $root = $dependencies->rootStatelessValidator();
+        $schema = new Schema(type: 'integer', extras: ['x-spy' => true]);
+
+        $root->validate(1, $schema);
+        $root->validate(1, $schema);
+
+        self::assertSame([$schema, $schema], $spy->validatedSchemas);
+    }
+
+    #[Test]
+    public function custom_registry_overrides_builtin_keyword_slot_in_place(): void
+    {
+        $custom = new DispatchSpyKeywordValidator();
+        $dependencies = new SchemaValidatorDependencies(
+            pool: new ValidatorPool(),
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), BuiltinFormats::create()),
+            formatRegistry: BuiltinFormats::create(),
+            customKeywordValidators: new KeywordValidatorRegistry()->with('type', $custom),
+        );
+
+        $validators = $dependencies->createFullList();
+
+        self::assertCount(31, $validators);
+        self::assertSame($custom, $validators[25]->validator());
+        self::assertSame(array_slice($this->builtinClasses(), 0, 25), $this->classesOf(array_slice($validators, 0, 25)));
+        self::assertSame($this->builtinTailClasses(), $this->classesOf(array_slice($validators, 26)));
+    }
+
+    /**
+     * @return list<class-string>
+     */
+    private function builtinClasses(): array
+    {
+        return array_map(
+            static fn(SchemaValidatorInterface $validator): string => $validator::class,
+            $this->dependencies->createFullList(),
+        );
+    }
+
+    /**
+     * @return list<class-string>
+     */
+    private function builtinTailClasses(): array
+    {
+        $classes = $this->builtinClasses();
+
+        return array_slice($classes, 26);
+    }
+
+    /**
+     * @param list<SchemaValidatorInterface> $validators
+     *
+     * @return list<class-string>
+     */
+    private function classesOf(array $validators): array
+    {
+        return array_map(
+            static fn(SchemaValidatorInterface $validator): string => $validator::class,
+            $validators,
+        );
+    }
+
     private static function assertContainsTypeValidator(array $validators): void
     {
         $found = array_find(
@@ -333,5 +460,23 @@ final class SchemaValidatorDependenciesListTest extends TestCase
             new InfoObject('Shared list', '1.0.0'),
             components: new Components(schemas: []),
         );
+    }
+}
+
+final class DispatchSpyKeywordValidator implements KeywordValidatorInterface
+{
+    /** @var list<Schema> */
+    public array $validatedSchemas = [];
+
+    #[Override]
+    public function appliesTo(Schema $schema): bool
+    {
+        return null !== ($schema->extras['x-spy'] ?? null);
+    }
+
+    #[Override]
+    public function validate(mixed $data, Schema $schema, ValidationContext $context): void
+    {
+        $this->validatedSchemas[] = $schema;
     }
 }

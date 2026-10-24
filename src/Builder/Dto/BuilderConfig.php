@@ -10,6 +10,7 @@ use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\Schema\ExternalRefResolverInterface;
+use Duyler\OpenApi\Validator\Schema\KeywordValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -48,6 +49,7 @@ final readonly class BuilderConfig
         public readonly ?DocumentRepository $documentRepository = null,
         public readonly ?ExternalRefResolverInterface $externalRefResolver = null,
         public readonly ?bool $contentAssertionsEnabled = null,
+        public readonly ?KeywordValidatorRegistry $keywordValidators = null,
     ) {}
 
     public function merge(self $overrides): self
@@ -84,6 +86,7 @@ final readonly class BuilderConfig
             documentRepository: $overrides->documentRepository ?? $this->documentRepository,
             externalRefResolver: $overrides->externalRefResolver ?? $this->externalRefResolver,
             contentAssertionsEnabled: $overrides->contentAssertionsEnabled ?? $this->contentAssertionsEnabled,
+            keywordValidators: $overrides->keywordValidators ?? $this->keywordValidators,
         );
     }
 }

@@ -32,6 +32,7 @@ use Duyler\OpenApi\Validator\Request\RequestBodyValidatorWithContext;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
+use Duyler\OpenApi\Validator\Schema\KeywordValidatorRegistry;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
@@ -83,6 +84,7 @@ final readonly class ValidationStack
         public readonly bool $strictCoercion = true,
         public readonly ?DialectProfile $dialectProfile = null,
         public readonly bool $contentAssertionsEnabled = false,
+        public readonly KeywordValidatorRegistry $keywordValidators = new KeywordValidatorRegistry(),
     ) {
         $this->validatorConfiguration = new ValidatorConfiguration(
             coercion: $this->coercion,
@@ -110,6 +112,7 @@ final readonly class ValidationStack
             $this->document,
             $this->refResolver,
             $this->contentAssertionsEnabled,
+            customKeywordValidators: $this->keywordValidators,
         );
 
         $this->schemaValidatorDependencies = new SchemaValidatorDependencies(
@@ -134,6 +137,7 @@ final readonly class ValidationStack
             document: $this->document,
             contentAssertionsEnabled: $this->contentAssertionsEnabled,
             maxDecodedContentBytes: $this->maxJsonBodyBytes,
+            customKeywordValidators: $this->keywordValidators,
         );
 
         $this->schemaValidatorWithContext = $this->schemaValidatorDependencies->rootSchemaValidator(
@@ -179,6 +183,7 @@ final readonly class ValidationStack
             strictCoercion: $options->strictCoercion,
             dialectProfile: $options->dialectProfile,
             contentAssertionsEnabled: $options->contentAssertionsEnabled,
+            keywordValidators: $root->keywordValidators,
         );
     }
 

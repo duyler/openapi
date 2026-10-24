@@ -32,6 +32,7 @@ final readonly class StatelessValidatorRegistry
         ?RefResolverInterface $refResolver = null,
         bool $contentAssertionsEnabled = false,
         int $maxDecodedContentBytes = ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES,
+        ?KeywordValidatorRegistry $customKeywordValidators = null,
     ) {
         $dependencies = new SchemaValidatorDependencies(
             pool: $pool,
@@ -45,6 +46,7 @@ final readonly class StatelessValidatorRegistry
             document: null === $refResolver ? null : $document,
             contentAssertionsEnabled: $contentAssertionsEnabled,
             maxDecodedContentBytes: $maxDecodedContentBytes,
+            customKeywordValidators: $customKeywordValidators,
         );
 
         $this->validators = $dependencies->createStatelessList();

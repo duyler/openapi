@@ -18,6 +18,7 @@ use Duyler\OpenApi\Validator\Request\BodyParser\TextBodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\QueryParser;
+use Duyler\OpenApi\Validator\Schema\Internal\CustomKeywordValidatorAdapter;
 use Duyler\OpenApi\Validator\Schema\Internal\KeywordValidatorAdapter;
 use Duyler\OpenApi\Validator\Schema\KeywordValidatorInterface;
 use Duyler\OpenApi\Validator\Schema\KeywordValidatorRegistry;
@@ -39,7 +40,6 @@ use WeakMap;
 
 use function array_filter;
 use function array_values;
-use function assert;
 use function in_array;
 
 /**
@@ -68,6 +68,12 @@ final class SchemaValidatorDependencies
 
     private ?KeywordValidatorRegistry $keywordValidators = null;
 
+    /**
+     * @param KeywordValidatorRegistry|null $customKeywordValidators user-registered keyword validators as passed by the
+     *                                                              builder, kept unmerged on this instance; the
+     *                                                              memoized `keywordValidators` cache merges them
+     *                                                              with the built-in set once per instance
+     */
     public function __construct(
         public readonly ValidatorPool $pool,
         public readonly RefResolverInterface $refResolver,
@@ -85,6 +91,7 @@ final class SchemaValidatorDependencies
         public readonly bool $contentAssertionsEnabled = false,
         public readonly ContentDecoderInterface $contentDecoder = new NativeContentDecoder(),
         public readonly int $maxDecodedContentBytes = ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES,
+        public readonly ?KeywordValidatorRegistry $customKeywordValidators = null,
     ) {
         $this->logger = $logger ?? new NullLogger();
         $this->errorFormatter = $errorFormatter ?? new SimpleFormatter();
@@ -165,13 +172,16 @@ final class SchemaValidatorDependencies
 
     private function keywordValidators(): KeywordValidatorRegistry
     {
-        return $this->keywordValidators ??= KeywordValidatorRegistry::buildIn($this);
+        return $this->keywordValidators ??= ($this->customKeywordValidators ?? new KeywordValidatorRegistry())
+            ->withBase(KeywordValidatorRegistry::buildIn($this));
     }
 
     private function schemaValidator(KeywordValidatorInterface $keywordValidator): SchemaValidatorInterface
     {
-        assert($keywordValidator instanceof KeywordValidatorAdapter);
+        if ($keywordValidator instanceof KeywordValidatorAdapter) {
+            return $keywordValidator->validator();
+        }
 
-        return $keywordValidator->validator();
+        return new CustomKeywordValidatorAdapter($keywordValidator, $this->pool);
     }
 }

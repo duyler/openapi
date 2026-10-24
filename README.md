@@ -324,6 +324,39 @@ $validator = OpenApiValidatorBuilder::create()
 
 Formats registered via `withFormat()` override built-in validators whenever both target the same `(type, format)` pair — the same mechanism is used to replace built-ins (see [Overriding Built-in Validators](#overriding-built-in-validators)).
 
+### Custom Keyword Validators
+
+Register validators for user-defined schema keywords:
+
+```php
+use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
+use Duyler\OpenApi\Validator\Schema\KeywordValidatorInterface;
+
+class EvenNumberKeywordValidator implements KeywordValidatorInterface
+{
+    public function appliesTo(Schema $schema): bool
+    {
+        return null !== ($schema->extras['x-even'] ?? null);
+    }
+
+    public function validate(mixed $data, Schema $schema, ValidationContext $context): void
+    {
+        if (0 !== $data % 2) {
+            throw new EvenNumberError($data, $context->path());
+        }
+    }
+}
+
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withKeywordValidator('x-even', new EvenNumberKeywordValidator())
+    ->build();
+```
+
+The keyword value is read from the schema `extras` collected by the parser; custom keywords are never added to the schema model. Multiple `withKeywordValidator()` calls accumulate, and re-registering a keyword replaces its validator while keeping its dispatch slot. The replacement is complete for stateless-dispatched keywords only: the built-in `items`, `properties`, and `oneOf` keywords are additionally dispatched by the context path, which always runs its unconditional built-in handling, so a validator registered under them runs in addition to it and cannot fully replace it. Registered keywords run after the whole built-in set (including `unevaluatedItems`/`unevaluatedProperties`), so applicator-style custom keywords cannot place themselves ahead of them. A keyword without a registration stays an extras annotation (see `ValidationContext::annotations()`) and does not affect the validation outcome.
+
 ### Type Coercion
 
 Enable automatic type conversion for query parameters and request body:
@@ -507,6 +540,7 @@ $validator = OpenApiValidatorBuilder::create()
 | `withDetailedErrors(bool $includeSensitive)` | Use `DetailedFormatter`; `true` includes sensitive values in output | `DetailedFormatter` (sensitive values omitted) |
 | `withSecurityVerboseLogging(LoggerInterface $logger)` | Debug-level logging of security validation details and external ref paths | `null` |
 | `withFormat(string $type, string $format, FormatValidatorInterface $validator)` | Register custom format | - |
+| `withKeywordValidator(string $keyword, KeywordValidatorInterface $validator)` | Register a validator for a custom schema keyword; the keyword value is read from schema `extras`, registered keywords dispatch after the built-in set | - |
 | `withValidatorPool(ValidatorPool $pool)` | Set custom validator pool | `new ValidatorPool()` |
 | `withLogger(LoggerInterface $logger)` | Set PSR-3 logger | `null` |
 | `withEmptyArrayStrategy(EmptyArrayStrategy $strategy)` | Set empty array validation strategy | `AllowBoth` |

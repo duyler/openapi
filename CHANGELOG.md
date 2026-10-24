@@ -31,6 +31,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `dependencies` keyword translated at parse time (list form to dependentRequired,
   schema/boolean form to dependentSchemas, empty list as vacuum), registered in the known
   keyword set.
+- Custom schema keyword validation (public part of the keyword-validator registry):
+  `OpenApiValidatorBuilder::withKeywordValidator(string $keyword, KeywordValidatorInterface $validator)`
+  registers a validator for a user-defined schema keyword (calls accumulate; re-registering
+  a keyword replaces its validator while keeping its dispatch slot — fully for
+  stateless-dispatched keywords only, since built-in `items`/`properties`/`oneOf`
+  are additionally dispatched by the context path and cannot be fully replaced).
+  Keyword values are read
+  from the schema `extras` produced by the parser — custom keywords are never added to the
+  schema model. Registered keywords dispatch after the whole built-in set (including
+  `unevaluatedItems`/`unevaluatedProperties`), so applicator-style custom keywords cannot
+  place themselves ahead of them; a keyword without a registration stays an extras
+  annotation and does not affect the validation outcome.
 
 ### Changed
 
