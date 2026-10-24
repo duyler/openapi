@@ -263,6 +263,22 @@ YAML;
     }
 
     #[Test]
+    public function object_part_without_content_type_header_is_decoded_as_json_by_schema_default(): void
+    {
+        $validator = $this->buildValidator(self::ORDERED_UNNAMED_SPEC);
+        $request = $this->createMultipartRequest('mixed', [
+            [
+                'headers' => 'Content-Disposition: form-data; name="meta"',
+                'content' => '{"author":"A","created":"2026-10-24T10:00:00Z","copyright":"c","license":"l"}',
+            ],
+        ]);
+
+        $operation = $validator->validateRequest($request);
+
+        $this->assertOperationMatches($operation, 'POST', '/upload');
+    }
+
+    #[Test]
     public function related_payload_with_content_location_on_every_part_is_accepted(): void
     {
         $validator = $this->buildValidator(self::ORDERED_REQUIRED_HEADER_SPEC);
