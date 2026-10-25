@@ -56,18 +56,21 @@ final readonly class PropertiesValidatorWithContext
                 $allowNull = SchemaValueNormalizer::allowsNull($propertySchema, $context->nullableAsType, $context->dialectProfile);
                 $value = SchemaValueNormalizer::normalize($data[$name], $allowNull);
 
+                $childContext = $context->forkForBranch();
                 $context->enterBreadcrumb($name);
 
                 try {
                     if ($useDiscriminator) {
-                        $rootValidator->validateWithContext($value, $propertySchema, $context);
+                        $rootValidator->validateWithContext($value, $propertySchema, $childContext);
                     } else {
-                        $rootValidator->validateWithContextIgnoringDiscriminator($value, $propertySchema, $context);
+                        $rootValidator->validateWithContextIgnoringDiscriminator($value, $propertySchema, $childContext);
                     }
-                    $context->markPropertyEvaluated($name);
                 } finally {
                     $context->leaveBreadcrumb();
                 }
+
+                $context->markPropertyEvaluated($name);
+                $context->mergeChildAnnotations($childContext);
             } catch (DiscriminatorMismatchException|
                 InvalidDiscriminatorValueException|
                 InvalidFormatException|

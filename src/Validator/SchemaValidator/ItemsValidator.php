@@ -97,10 +97,11 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
 
             try {
                 $state->validator->validate($normalizedItem, $state->itemsSchema, $state->context);
-                $state->context->markItemEvaluated($index);
             } finally {
                 $state->context->leaveBreadcrumb();
             }
+
+            $state->context->markItemEvaluated($index);
         } catch (InvalidDataTypeException|InvalidFormatException|AbstractValidationError|ValidationException $e) {
             $this->wrapItemValidationException(
                 $e,

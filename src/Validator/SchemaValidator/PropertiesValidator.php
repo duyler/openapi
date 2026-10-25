@@ -60,10 +60,11 @@ final readonly class PropertiesValidator extends AbstractSchemaValidator impleme
 
             try {
                 $validator->validate($normalized, $propertySchema, $context);
-                $context->markPropertyEvaluated($name);
             } finally {
                 $context->leaveBreadcrumb();
             }
+
+            $context->markPropertyEvaluated($name);
         } catch (InvalidDataTypeException $e) {
             throw new ValidationException(
                 sprintf('Property "%s" has invalid data type: %s', $name, $e->getMessage()),

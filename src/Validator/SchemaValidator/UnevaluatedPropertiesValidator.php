@@ -39,6 +39,12 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
             return;
         }
 
+        if (is_bool($schema->unevaluatedProperties) && $schema->unevaluatedProperties) {
+            $this->markAllPropertiesEvaluated($data, $context);
+
+            return;
+        }
+
         $evaluatedProperties = $this->getEvaluatedProperties($schema, $data, $context);
         $unevaluatedProperties = array_diff(array_keys($data), $evaluatedProperties);
         /** @var array<array-key, string> $stringUnevaluatedProperties */
@@ -50,10 +56,6 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
             return;
         }
 
-        if ($schema->unevaluatedProperties) {
-            return;
-        }
-
         if ([] !== $stringUnevaluatedProperties) {
             $propertyName = array_values($stringUnevaluatedProperties)[0];
             throw new UnevaluatedPropertyError(
@@ -61,6 +63,20 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
                 schemaPath: '/unevaluatedProperties',
                 propertyName: $propertyName,
             );
+        }
+    }
+
+    /**
+     * @param array<array-key, mixed> $data
+     */
+    private function markAllPropertiesEvaluated(array $data, ?ValidationContext $context): void
+    {
+        foreach (array_keys($data) as $propertyName) {
+            if (false === is_string($propertyName)) {
+                continue;
+            }
+
+            $context?->markPropertyEvaluated($propertyName);
         }
     }
 
@@ -85,6 +101,7 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
 
             try {
                 $validator->validate($value, $unevaluatedProperties, $context);
+                $context->markPropertyEvaluated($propertyName);
             } finally {
                 $context->leaveBreadcrumb();
             }

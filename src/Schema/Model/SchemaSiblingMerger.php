@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Schema\Model;
 use Duyler\OpenApi\Schema\Model\Internal\BoundSiblingMerger;
 use Duyler\OpenApi\Schema\Model\Internal\CompositionSiblingMerger;
 use Duyler\OpenApi\Schema\Model\Internal\ScalarSiblingMerger;
+use Duyler\OpenApi\Schema\Model\Internal\SiblingApplicatorFields;
 use Duyler\OpenApi\Schema\Model\Internal\SiblingMergeContext;
 
 use function array_merge;
@@ -24,10 +25,48 @@ final readonly class SchemaSiblingMerger
     public function merge(Schema $resolved, Schema $sibling): Schema
     {
         $context = new SiblingMergeContext($resolved, $sibling);
-
-        $scalar = $this->scalarMerger->merge($context);
         $bound = $this->boundMerger->merge($context);
-        $composition = $this->compositionMerger->merge($context);
+        $applicators = SiblingApplicatorFields::merged($this->compositionMerger, $context, $bound);
+
+        return $this->build($resolved, $sibling, $bound, $applicators);
+    }
+
+    public function mergeTargetSide(Schema $resolved, Schema $sibling): Schema
+    {
+        $context = new SiblingMergeContext($resolved, $sibling);
+        $bound = $this->boundMerger->merge($context);
+
+        return $this->build($resolved, $sibling, $bound, SiblingApplicatorFields::fromResolved($resolved));
+    }
+
+    /**
+     * @param array{
+     *     maximum: ?float,
+     *     exclusiveMaximum: ?float,
+     *     minimum: ?float,
+     *     exclusiveMinimum: ?float,
+     *     maxLength: ?int,
+     *     minLength: ?int,
+     *     maxItems: ?int,
+     *     minItems: ?int,
+     *     maxProperties: ?int,
+     *     minProperties: ?int,
+     *     uniqueItems: ?bool,
+     *     not: Schema|bool|null,
+     *     items: Schema|bool|null,
+     *     additionalProperties: Schema|bool|null,
+     *     unevaluatedProperties: Schema|bool|null,
+     *     contains: Schema|bool|null,
+     *     propertyNames: Schema|bool|null,
+     *     unevaluatedItems: Schema|bool|null,
+     *     contentSchema: Schema|bool|null,
+     *     prefixItems: ?list<Schema>,
+     * } $bound
+     */
+    private function build(Schema $resolved, Schema $sibling, array $bound, SiblingApplicatorFields $applicators): Schema
+    {
+        $context = new SiblingMergeContext($resolved, $sibling);
+        $scalar = $this->scalarMerger->merge($context);
 
         return new Schema(
             ref: null,
@@ -59,29 +98,29 @@ final readonly class SchemaSiblingMerger
             maxProperties: $bound['maxProperties'],
             minProperties: $bound['minProperties'],
             required: $this->mergeRequired($resolved->required, $sibling->required),
-            allOf: $composition['allOf'],
-            anyOf: $composition['anyOf'],
-            oneOf: $composition['oneOf'],
-            not: $bound['not'],
+            allOf: $applicators->allOf,
+            anyOf: $applicators->anyOf,
+            oneOf: $applicators->oneOf,
+            not: $applicators->not,
             discriminator: $sibling->discriminator ?? $resolved->discriminator,
-            properties: $composition['properties'],
-            additionalProperties: $bound['additionalProperties'],
-            unevaluatedProperties: $bound['unevaluatedProperties'],
-            items: $bound['items'],
-            prefixItems: $bound['prefixItems'],
-            contains: $bound['contains'],
+            properties: $applicators->properties,
+            additionalProperties: $applicators->additionalProperties,
+            unevaluatedProperties: $applicators->unevaluatedProperties,
+            items: $applicators->items,
+            prefixItems: $applicators->prefixItems,
+            contains: $applicators->contains,
             minContains: $sibling->minContains ?? $resolved->minContains,
             maxContains: $sibling->maxContains ?? $resolved->maxContains,
-            patternProperties: $composition['patternProperties'],
-            propertyNames: $bound['propertyNames'],
+            patternProperties: $applicators->patternProperties,
+            propertyNames: $applicators->propertyNames,
             dependentRequired: $this->mergeDependentRequired($resolved->dependentRequired, $sibling->dependentRequired),
-            dependentSchemas: $composition['dependentSchemas'],
-            if: $composition['if'],
-            then: $composition['then'],
-            else: $composition['else'],
-            unevaluatedItems: $bound['unevaluatedItems'],
+            dependentSchemas: $applicators->dependentSchemas,
+            if: $applicators->if,
+            then: $applicators->then,
+            else: $applicators->else,
+            unevaluatedItems: $applicators->unevaluatedItems,
             example: $sibling->example ?? $resolved->example,
-            examples: $this->scalarMerger->mergeMixedMap($resolved->examples, $sibling->examples),
+            examples: $this->scalarMerger->mergeExamples($resolved->examples, $sibling->examples),
             enum: $scalar['enum'],
             contentEncoding: $sibling->contentEncoding ?? $resolved->contentEncoding,
             contentMediaType: $sibling->contentMediaType ?? $resolved->contentMediaType,

@@ -31,8 +31,18 @@ final readonly class RefResolvingSchemaValidator implements SchemaValidatorInter
 
         try {
             $this->inner->validate($data, $frame->schema, $context);
+            $this->validateCompanion($frame->companion, $data, $context);
         } finally {
             $this->scopeResolver->leave($frame, $context);
         }
+    }
+
+    private function validateCompanion(?Schema $companion, array|int|string|float|bool|null $data, ?ValidationContext $context): void
+    {
+        if (null === $companion || null === $context) {
+            return;
+        }
+
+        $this->inner->validate($data, $companion, $context);
     }
 }

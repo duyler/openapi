@@ -122,6 +122,12 @@ final class TypeHelper
         return ObjectTypeHelper::asStringMixedMapOrNull($value);
     }
 
+    /** @return array<int|string, mixed>|null */
+    public static function asStringOrIntKeyMixedMapOrNull(mixed $value): ?array
+    {
+        return ObjectTypeHelper::asStringOrIntKeyMixedMapOrNull($value);
+    }
+
     /** @return list<mixed> */
     public static function asEnumList(mixed $value): array
     {

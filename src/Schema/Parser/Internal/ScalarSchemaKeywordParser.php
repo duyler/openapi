@@ -66,7 +66,7 @@ final readonly class ScalarSchemaKeywordParser
      *     contentMediaType: ?string,
      *     jsonSchemaDialect: ?string,
      *     example: mixed|null,
-     *     examples: array<string, mixed>|null,
+     *     examples: array<int|string, mixed>|null,
      *     enum: list<mixed>|null,
      *     id: ?string,
      *     anchor: ?string,
@@ -115,7 +115,7 @@ final readonly class ScalarSchemaKeywordParser
             'jsonSchemaDialect' => TypeHelper::asStringOrNull($data['$schema'] ?? null),
             'example' => $data['example'] ?? null,
             'examples' => isset($data['examples']) && is_array($data['examples'])
-                ? TypeHelper::asStringMixedMapOrNull($data['examples'])
+                ? TypeHelper::asStringOrIntKeyMixedMapOrNull($data['examples'])
                 : null,
             'enum' => TypeHelper::asEnumListOrNull($data['enum'] ?? null),
             'id' => TypeHelper::asStringOrNull($data['$id'] ?? null),

@@ -1,0 +1,6 @@
+source: json-schema-org/json-schema-spec
+url: https://github.com/json-schema-org/json-schema-spec
+commit: f6fbd1936dd8a12c5f511bd77baf222e4515356e
+files: schema.json + meta/*.json (draft 2020-12 metaschema)
+retrieval-uris: https://json-schema.org/draft/2020-12/schema, https://json-schema.org/draft/2020-12/meta/*
+note: vendored byte-for-byte from the canonical URIs served at json-schema.org; content checksums in draft2020-12/SHA256SUMS

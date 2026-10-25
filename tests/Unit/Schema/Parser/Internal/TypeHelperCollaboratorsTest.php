@@ -130,6 +130,27 @@ final class TypeHelperCollaboratorsTest extends TestCase
     }
 
     #[Test]
+    public function object_as_string_or_int_key_mixed_map_or_null_returns_null_for_null(): void
+    {
+        self::assertNull(ObjectTypeHelper::asStringOrIntKeyMixedMapOrNull(null));
+    }
+
+    #[Test]
+    public function object_as_string_or_int_key_mixed_map_or_null_preserves_mixed_values(): void
+    {
+        $result = ObjectTypeHelper::asStringOrIntKeyMixedMapOrNull(['a' => 1, 0 => 'list']);
+
+        self::assertSame(['a' => 1, 0 => 'list'], $result);
+    }
+
+    #[Test]
+    public function object_as_string_or_int_key_mixed_map_or_null_throws_on_non_array(): void
+    {
+        $this->expectException(TypeError::class);
+        ObjectTypeHelper::asStringOrIntKeyMixedMapOrNull('scalar');
+    }
+
+    #[Test]
     public function object_as_bool_map_returns_map(): void
     {
         self::assertSame(['core' => true, 'custom' => false], ObjectTypeHelper::asBoolMap(['core' => true, 'custom' => false]));

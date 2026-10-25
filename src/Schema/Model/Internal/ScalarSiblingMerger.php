@@ -148,11 +148,29 @@ final readonly class ScalarSiblingMerger implements SiblingMergerStrategy
     }
 
     /**
-     * @param ?array<string, mixed> $resolved
-     * @param ?array<string, mixed> $sibling
-     * @return ?array<string, mixed>
+     * @param array<string, mixed>|null $resolved
+     * @param array<string, mixed>|null $sibling
+     * @return array<string, mixed>|null
      */
     public function mergeMixedMap(?array $resolved, ?array $sibling): ?array
+    {
+        if (null === $sibling) {
+            return $resolved;
+        }
+
+        if (null === $resolved) {
+            return $sibling;
+        }
+
+        return array_merge($resolved, $sibling);
+    }
+
+    /**
+     * @param array<int|string, mixed>|null $resolved
+     * @param array<int|string, mixed>|null $sibling
+     * @return array<int|string, mixed>|null
+     */
+    public function mergeExamples(?array $resolved, ?array $sibling): ?array
     {
         if (null === $sibling) {
             return $resolved;

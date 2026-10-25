@@ -460,9 +460,33 @@ final class OneOfValidatorWithContextTest extends TestCase
      */
     public static function rejectedNullBranchProvider(): iterable
     {
-        yield 'untyped branch' => [new Schema(required: ['a']), 'object'];
         yield 'scalar type' => [new Schema(type: 'string'), 'string'];
         yield 'type array' => [new Schema(type: ['string', 'integer']), 'string|integer'];
+    }
+
+    /**
+     * @return iterable<string, array{Schema, mixed}>
+     */
+    public static function acceptingNullBranchProvider(): iterable
+    {
+        yield 'untyped branch' => [new Schema(required: ['a']), null];
+    }
+
+    #[Test]
+    #[DataProvider('acceptingNullBranchProvider')]
+    public function validate_accepts_null_when_branch_has_no_type(Schema $branch, mixed $data): void
+    {
+        $schema = new Schema(oneOf: [$branch]);
+
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext($data, $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]

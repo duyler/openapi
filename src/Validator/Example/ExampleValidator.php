@@ -121,7 +121,7 @@ final readonly class ExampleValidator
     }
 
     /**
-     * @param array<string, mixed> $source
+     * @param array<int|string, mixed> $source
      * @param list<mixed> $target
      * @return list<mixed>
      */

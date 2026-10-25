@@ -12,6 +12,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\Model\SchemaSiblingMerger;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\Parser\DocumentRepository;
+use Duyler\OpenApi\Schema\Parser\SchemaFromArrayConverter;
 use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
@@ -29,8 +30,10 @@ use function count;
 use function explode;
 use function implode;
 use function is_array;
+use function is_bool;
 use function is_object;
 use function preg_match;
+use function rawurldecode;
 use function str_replace;
 use function str_starts_with;
 use function strpos;
@@ -42,6 +45,14 @@ final class DocumentNavigator
     private const int REF_ROOT_PREFIX_LENGTH = 2;
 
     private const string NCNAME_PATTERN = '/^[A-Za-z_][A-Za-z0-9_.\-]*$/';
+
+    private const string REASON_PROPERTY_MISSING = 'Property does not exist';
+
+    private const string REASON_ARRAY_KEY_MISSING = 'Array key does not exist';
+
+    private const string REASON_VALUE_NULL = 'Value is null';
+
+    private const string REASON_VALUE_NOT_CONTAINER = 'Value is not an object or array';
 
     private const string REASON_NOT_NCNAME = 'Plain-name fragment is not a valid NCName';
 
@@ -58,6 +69,8 @@ final class DocumentNavigator
         . 'document via withDocument(), or inject a custom ExternalRefResolverInterface.';
 
     private ?ChainResources $chainResources = null;
+
+    private ?SchemaFromArrayConverter $rawSchemaConverter = null;
 
     private readonly DialectProfile $dialectProfile;
 
@@ -170,19 +183,19 @@ final class DocumentNavigator
         $value = match (true) {
             is_array($container) => array_key_exists($property, $container)
                 ? $container[$property]
-                : throw new UnresolvableRefException($property, 'Array key does not exist'),
+                : throw new UnresolvableRefException($property, self::REASON_ARRAY_KEY_MISSING),
             property_exists($container, $property) => $container->$property,
-            default => throw new UnresolvableRefException($property, 'Property does not exist'),
+            default => throw new UnresolvableRefException($property, self::REASON_PROPERTY_MISSING),
         };
 
         if (null === $value) {
-            throw new UnresolvableRefException($property, 'Value is null');
+            throw new UnresolvableRefException($property, self::REASON_VALUE_NULL);
         }
 
         if (false === is_object($value) && false === is_array($value)) {
             throw new UnresolvableRefException(
                 $property,
-                'Value is not an object or array',
+                self::REASON_VALUE_NOT_CONTAINER,
             );
         }
 
@@ -220,10 +233,35 @@ final class DocumentNavigator
             return [$cached, $visited];
         }
 
-        $result = $this->resolvePointerViaRegistry($ref, $document, $baseUri)
-            ?? $this->navigateThrowing($ref, $document, explode('/', substr($ref, self::REF_ROOT_PREFIX_LENGTH)));
+        $result = str_starts_with($ref, '#/$defs')
+            ? $this->resolvePointerViaRegistry($ref, $document, $baseUri)
+                ?? $this->navigateThrowing($ref, $document, explode('/', substr($ref, self::REF_ROOT_PREFIX_LENGTH)))
+            : $this->resolvePointerViaDocumentOrResource($ref, $document, $baseUri);
 
         return $this->finishResolve($result, $ref, $document, $visited, $cache, $depth, $baseUri, $followChain);
+    }
+
+    private function resolvePointerViaDocumentOrResource(
+        string $ref,
+        OpenApiDocument $document,
+        ?string $baseUri,
+    ): Schema|Parameter|RequestBody|Response {
+        try {
+            return $this->navigateThrowing($ref, $document, explode('/', substr($ref, self::REF_ROOT_PREFIX_LENGTH)));
+        } catch (UnresolvableRefException $exception) {
+            if (false === $this->isMissingPointerReason($exception->reason())) {
+                throw $exception;
+            }
+
+            return $this->resolvePointerViaRegistry($ref, $document, $baseUri)
+                ?? throw $exception;
+        }
+    }
+
+    private function isMissingPointerReason(string $reason): bool
+    {
+        return self::REASON_PROPERTY_MISSING === $reason
+            || self::REASON_ARRAY_KEY_MISSING === $reason;
     }
 
     /**
@@ -462,25 +500,46 @@ final class DocumentNavigator
             explode('/', substr($ref, 1)),
         );
 
-        if ('$defs' !== ($segments[1] ?? null)) {
+        if ('' !== ($segments[0] ?? null)) {
             return null;
         }
 
-        $registry = $this->registry($document);
+        foreach ($this->pointerRegistries($document, $baseUri) as $registry) {
+            foreach ($this->pointerRoots($registry, $baseUri) as $root) {
+                $result = $this->navigateFromSchema($root, $segments, 1);
 
-        if (null === $registry) {
-            return null;
-        }
-
-        foreach ($this->pointerRoots($registry, $baseUri) as $root) {
-            $result = $this->navigateFromSchema($root, $segments, 1);
-
-            if (null !== $result) {
-                return $result;
+                if (null !== $result) {
+                    return $result;
+                }
             }
         }
 
         return null;
+    }
+
+    /** @return list<ResourceRegistry> */
+    private function pointerRegistries(OpenApiDocument $document, ?string $baseUri): array
+    {
+        $registries = [];
+        $primary = $this->registry($document);
+
+        if (null !== $primary) {
+            $registries[] = $primary;
+        }
+
+        if (null === $baseUri) {
+            return $registries;
+        }
+
+        foreach ($this->documentRepository?->documents() ?? [] as $candidate) {
+            $candidateRegistry = $this->registry($candidate);
+
+            if (null !== $candidateRegistry && null !== $candidateRegistry->findByUri($baseUri)) {
+                $registries[] = $candidateRegistry;
+            }
+        }
+
+        return $registries;
     }
 
     private function resolveFragmentInResource(
@@ -521,12 +580,24 @@ final class DocumentNavigator
         $count = count($segments);
 
         for ($i = $offset; $i < $count; ++$i) {
+            if (is_bool($current)) {
+                break;
+            }
+
             $segment = '$defs' === $segments[$i] ? 'defs' : $segments[$i];
 
             try {
                 $current = $this->getProperty($current, $segment);
             } catch (UnresolvableRefException) {
-                return null;
+                $extrasValue = $current instanceof Schema
+                    ? $current->extras[$segment] ?? null
+                    : null;
+
+                if (false === is_array($extrasValue) && false === is_bool($extrasValue)) {
+                    return null;
+                }
+
+                $current = $extrasValue;
             }
         }
 
@@ -539,7 +610,33 @@ final class DocumentNavigator
             return $current;
         }
 
+        if (is_bool($current)) {
+            return $this->rawSchemaConverter()->fromArray($current);
+        }
+
+        if (is_array($current) && [] !== $current && false === $this->isSchemaCollection($current)) {
+            return $this->rawSchemaConverter()->fromArray($current);
+        }
+
         return null;
+    }
+
+    /** @param array<array-key, mixed> $current */
+    private function isSchemaCollection(array $current): bool
+    {
+        $schemaValues = array_filter(
+            $current,
+            static fn(mixed $value): bool => $value instanceof Schema || is_bool($value),
+        );
+
+        return [] !== $schemaValues;
+    }
+
+    private function rawSchemaConverter(): SchemaFromArrayConverter
+    {
+        return $this->rawSchemaConverter ??= new SchemaFromArrayConverter(
+            dialectProfile: $this->dialectProfile,
+        );
     }
 
     private function findAnchoredSchema(string $name, ?ResourceRegistry $registry): ?Schema
@@ -912,6 +1009,8 @@ final class DocumentNavigator
 
     private function decodePointerSegment(string $segment): string
     {
-        return str_replace(['~1', '~0'], ['/', '~'], $segment);
+        $decoded = rawurldecode($segment);
+
+        return str_replace(['~1', '~0'], ['/', '~'], $decoded);
     }
 }

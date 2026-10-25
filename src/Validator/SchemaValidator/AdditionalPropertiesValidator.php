@@ -179,10 +179,11 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
 
             try {
                 $validator->validate($value, $additionalSchema, $context);
-                $context->markPropertyEvaluated($keyString);
             } finally {
                 $context->leaveBreadcrumb();
             }
+
+            $context->markPropertyEvaluated($keyString);
         }
     }
 }

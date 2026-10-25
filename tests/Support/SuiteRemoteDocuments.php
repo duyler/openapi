@@ -28,6 +28,8 @@ final class SuiteRemoteDocuments
 
     private const string JSON_EXTENSION = '.json';
 
+    private const string METASCHEMA_BASE_URI = 'https://json-schema.org/draft/2020-12/';
+
     /** @var array<string, string>|null */
     private static ?array $documents = null;
 
@@ -43,7 +45,43 @@ final class SuiteRemoteDocuments
     /** @return array<string, string> retrieval URI mapped to envelope JSON content */
     public static function all(): array
     {
-        return self::$documents ??= self::build();
+        return self::$documents ??= array_merge(self::buildRemotes(), self::buildMetaschema());
+    }
+
+    /** @return array<string, string> */
+    private static function buildMetaschema(): array
+    {
+        $metaschemaDirectory = JsonSchemaSuiteLocator::metaschemaDirectory();
+        $documents = [];
+
+        foreach (self::remoteFiles($metaschemaDirectory) as $remoteFile) {
+            $path = (string) $remoteFile->getPathname();
+            $relativePath = substr($path, strlen($metaschemaDirectory . '/'));
+            $canonicalPath = self::dropJsonExtension($relativePath);
+            $retrievalUri = self::METASCHEMA_BASE_URI . $canonicalPath;
+
+            $documents[$retrievalUri] = self::envelope(
+                $retrievalUri,
+                self::decodeJson((string) file_get_contents($path)),
+            );
+        }
+
+        return $documents;
+    }
+
+    private static function dropJsonExtension(string $path): string
+    {
+        if (false === str_ends_with($path, self::JSON_EXTENSION)) {
+            return $path;
+        }
+
+        return substr($path, 0, -strlen(self::JSON_EXTENSION));
+    }
+
+    /** @return array<string, string> */
+    private static function buildRemotes(): array
+    {
+        return self::build();
     }
 
     /** @return array<string, string> */
@@ -51,7 +89,6 @@ final class SuiteRemoteDocuments
     {
         $remotesDirectory = JsonSchemaSuiteLocator::remotesDirectory();
         $documents = [];
-
         foreach (self::remoteFiles($remotesDirectory) as $remoteFile) {
             $path = (string) $remoteFile->getPathname();
             $retrievalUri = JsonSchemaSuiteLocator::REMOTE_BASE_URI

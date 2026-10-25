@@ -39,6 +39,19 @@ paths:
               schema:
                 allOf:
                   - $ref: '#/components/schemas/RequestId'
+  /codes:
+    get:
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Code'
+                maxLength: 5
+      responses:
+        '200':
+          description: OK
 components:
   schemas:
     Code:
@@ -121,6 +134,33 @@ YAML;
         $validator->validateResponse($response, $operation);
 
         $this->addToAssertionCount(1);
+    }
+
+    #[Test]
+    public function ref_branch_sibling_is_enforced_from_context_path(): void
+    {
+        $validator = $this->createValidator();
+
+        try {
+            $validator->validateRequest(
+                $this->psrFactory->createServerRequest('GET', '/codes?code=toolongvalue'),
+            );
+            self::fail('Expected ref sibling maxLength error for long code');
+        } catch (ValidationException|AbstractValidationError $exception) {
+            self::assertSame('maxLength', $this->firstError($exception)->keyword());
+        }
+    }
+
+    #[Test]
+    public function ref_branch_sibling_accepts_value_within_sibling_bound(): void
+    {
+        $validator = $this->createValidator();
+
+        $operation = $validator->validateRequest(
+            $this->psrFactory->createServerRequest('GET', '/codes?code=abcde'),
+        );
+
+        self::assertSame('/codes', $operation->path);
     }
 
     private function createValidator(): OpenApiValidatorInterface

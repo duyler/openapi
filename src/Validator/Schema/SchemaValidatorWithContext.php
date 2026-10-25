@@ -122,6 +122,7 @@ final readonly class SchemaValidatorWithContext
 
             if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
                 $this->oneOfValidator->validateWithContext($data, $schema, $context);
+                $this->validateCompanion($frame->companion, $data, $context, $useDiscriminator);
 
                 return;
             }
@@ -130,6 +131,7 @@ final readonly class SchemaValidatorWithContext
                 $this->dispatcher->validateInternal($data, $schema, $context);
                 $this->discriminatorValidator->validate($data, $schema, $this->document, '/', $context);
                 $this->dispatcher->dispatchPropertiesAndItems($data, $schema, $context, $useDiscriminator);
+                $this->validateCompanion($frame->companion, $data, $context, $useDiscriminator);
 
                 return;
             }
@@ -140,6 +142,8 @@ final readonly class SchemaValidatorWithContext
 
             $this->dispatcher->validateInternal($data, $schema, $context);
             $this->dispatcher->dispatchPropertiesAndItems($data, $schema, $context, $useDiscriminator);
+
+            $this->validateCompanion($frame->companion, $data, $context, $useDiscriminator);
         } finally {
             if ($entersResolvedScope) {
                 $context->leaveDynamicScope();
@@ -147,5 +151,19 @@ final readonly class SchemaValidatorWithContext
 
             $this->scopeResolver->leave($frame, $context);
         }
+    }
+
+    private function validateCompanion(
+        ?Schema $companion,
+        array|int|string|float|bool|null $data,
+        ValidationContext $context,
+        bool $useDiscriminator,
+    ): void {
+        if (null === $companion) {
+            return;
+        }
+
+        $this->dispatcher->validateInternal($data, $companion, $context);
+        $this->dispatcher->dispatchPropertiesAndItems($data, $companion, $context, $useDiscriminator);
     }
 }

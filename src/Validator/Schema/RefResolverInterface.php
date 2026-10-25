@@ -145,6 +145,21 @@ interface RefResolverInterface
     ): array;
 
     /**
+     * Resolve the `$ref` target without merging sibling keywords into it, returning the
+     * sibling schema (with the `$ref` field dropped) as a separate companion application
+     * whenever the dialect applies reference siblings
+     *
+     * @param string|null $baseUri Absolute base URI of the resource enclosing the schema
+     * @return array{Schema, Schema|null, list<Schema>} Resolved target, companion sibling, chain resources
+     * @throws Exception\UnresolvableRefException
+     */
+    public function resolveSchemaWithCompanionAndChain(
+        Schema $schema,
+        OpenApiDocument $document,
+        ?string $baseUri = null,
+    ): array;
+
+    /**
      * Fold the dynamic scope frames (outermost first) into the absolute base URI
      * of the innermost frame resource, anchored at the document `$self`
      *

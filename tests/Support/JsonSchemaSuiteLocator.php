@@ -28,6 +28,11 @@ final class JsonSchemaSuiteLocator
         return self::suiteFile('remotes');
     }
 
+    public static function metaschemaDirectory(): string
+    {
+        return self::suiteFile('metaschema/draft2020-12');
+    }
+
     public static function remoteFixturePath(string $uri): ?string
     {
         $escapedBaseUri = preg_quote(self::REMOTE_BASE_URI, '#');

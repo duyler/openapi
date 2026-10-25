@@ -225,4 +225,40 @@ final class ScalarSiblingMergerTest extends TestCase
 
         self::assertSame(['x' => 1, 'y' => 3, 'z' => 4], $result);
     }
+
+    #[Test]
+    public function merge_examples_unions_with_sibling_overriding_duplicates(): void
+    {
+        $merger = new ScalarSiblingMerger();
+
+        $result = $merger->mergeExamples(['x' => 1, 'y' => 2], ['y' => 3, 'z' => 4]);
+
+        self::assertSame(['x' => 1, 'y' => 3, 'z' => 4], $result);
+    }
+
+    #[Test]
+    public function merge_examples_returns_resolved_when_sibling_is_null(): void
+    {
+        $merger = new ScalarSiblingMerger();
+
+        self::assertSame(['x' => 1], $merger->mergeExamples(['x' => 1], null));
+    }
+
+    #[Test]
+    public function merge_examples_returns_sibling_when_resolved_is_null(): void
+    {
+        $merger = new ScalarSiblingMerger();
+
+        self::assertSame(['y' => 2], $merger->mergeExamples(null, ['y' => 2]));
+    }
+
+    #[Test]
+    public function merge_examples_reindexes_numeric_keys_as_list_concatenation(): void
+    {
+        $merger = new ScalarSiblingMerger();
+
+        $result = $merger->mergeExamples([5 => 'a', 6 => 'b'], [0 => 'c']);
+
+        self::assertSame(['a', 'b', 'c'], $result);
+    }
 }

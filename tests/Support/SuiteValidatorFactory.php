@@ -22,6 +22,8 @@ final class SuiteValidatorFactory
     private const array SUITE_UNKNOWN_KEYWORDS = [
         'array_of_schemas',
         'object_of_schemas',
+        'unknown-keyword',
+        'unknown/keyword',
     ];
 
     /** @var array<string, OpenApiValidatorInterface> */

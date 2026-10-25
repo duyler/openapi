@@ -26,10 +26,10 @@ final class ValidationContext
 
     public readonly DialectProfile $dialectProfile;
 
-    /** @var array<string, true> */
+    /** @var array<string, array<string, true>> */
     private array $evaluatedPropertyNames = [];
 
-    /** @var array<int, true> */
+    /** @var array<string, array<int, true>> */
     private array $evaluatedItemIndices = [];
 
     private ValidationAnnotations $annotations;
@@ -109,34 +109,34 @@ final class ValidationContext
 
     public function markPropertyEvaluated(string $name): void
     {
-        $this->evaluatedPropertyNames[$name] = true;
+        $this->evaluatedPropertyNames[$this->breadcrumbs->currentPath()][$name] = true;
     }
 
     public function markItemEvaluated(int $index): void
     {
-        $this->evaluatedItemIndices[$index] = true;
+        $this->evaluatedItemIndices[$this->breadcrumbs->currentPath()][$index] = true;
     }
 
     /** @return list<string> */
     public function evaluatedPropertyNames(): array
     {
-        return array_keys($this->evaluatedPropertyNames);
+        return array_keys($this->evaluatedPropertyNames[$this->breadcrumbs->currentPath()] ?? []);
     }
 
     /** @return list<int> */
     public function evaluatedItemIndices(): array
     {
-        return array_keys($this->evaluatedItemIndices);
+        return array_keys($this->evaluatedItemIndices[$this->breadcrumbs->currentPath()] ?? []);
     }
 
     public function hasPropertyBeenEvaluated(string $name): bool
     {
-        return isset($this->evaluatedPropertyNames[$name]);
+        return isset($this->evaluatedPropertyNames[$this->breadcrumbs->currentPath()][$name]);
     }
 
     public function hasItemBeenEvaluated(int $index): bool
     {
-        return isset($this->evaluatedItemIndices[$index]);
+        return isset($this->evaluatedItemIndices[$this->breadcrumbs->currentPath()][$index]);
     }
 
     public function path(): string
@@ -177,8 +177,14 @@ final class ValidationContext
 
     public function mergeChildAnnotations(self $child): void
     {
-        $this->evaluatedPropertyNames += $child->evaluatedPropertyNames;
-        $this->evaluatedItemIndices += $child->evaluatedItemIndices;
+        foreach ($child->evaluatedPropertyNames as $path => $names) {
+            $this->evaluatedPropertyNames[$path] = ($this->evaluatedPropertyNames[$path] ?? []) + $names;
+        }
+
+        foreach ($child->evaluatedItemIndices as $path => $indices) {
+            $this->evaluatedItemIndices[$path] = ($this->evaluatedItemIndices[$path] ?? []) + $indices;
+        }
+
         $this->annotations = $this->annotations->merge($child->annotations);
         $this->contentResult ??= $child->contentResult;
     }

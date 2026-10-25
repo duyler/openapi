@@ -46,6 +46,10 @@ final readonly class ItemsValidatorWithContext
             return;
         }
 
+        if (false === array_is_list($data)) {
+            return;
+        }
+
         if (is_bool($schema->items)) {
             BooleanItemsValidator::validate($data, $schema, $context);
 
@@ -65,19 +69,22 @@ final readonly class ItemsValidatorWithContext
             }
 
             try {
+                $childContext = $context->forkForBranch();
                 $context->enterBreadcrumbIndex($index);
 
                 try {
                     $normalizedItem = SchemaValueNormalizer::normalize($arrayItem, $allowNull);
                     if ($useDiscriminator) {
-                        $rootValidator->validateWithContext($normalizedItem, $itemSchema, $context);
+                        $rootValidator->validateWithContext($normalizedItem, $itemSchema, $childContext);
                     } else {
-                        $rootValidator->validateWithContextIgnoringDiscriminator($normalizedItem, $itemSchema, $context);
+                        $rootValidator->validateWithContextIgnoringDiscriminator($normalizedItem, $itemSchema, $childContext);
                     }
-                    $context->markItemEvaluated($index);
                 } finally {
                     $context->leaveBreadcrumb();
                 }
+
+                $context->markItemEvaluated($index);
+                $context->mergeChildAnnotations($childContext);
             } catch (DiscriminatorMismatchException|
                 InvalidDiscriminatorValueException|
                 InvalidFormatException|

@@ -759,4 +759,58 @@ final class ItemsValidatorWithContextTest extends TestCase
 
         $this->expectNotToPerformAssertions();
     }
+
+    #[Test]
+    public function validate_ignores_non_array_objects(): void
+    {
+        $itemSchema = new Schema(type: 'integer');
+        $schema = new Schema(items: $itemSchema);
+
+        $this->validator->validateWithContext(['foo' => 'bar'], $schema, $this->context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_ignores_javascript_pseudo_array(): void
+    {
+        $itemSchema = new Schema(type: 'integer');
+        $schema = new Schema(items: $itemSchema);
+
+        $this->validator->validateWithContext([0 => 'invalid', 'length' => 1], $schema, $this->context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_accepts_null_item_when_schema_has_no_type(): void
+    {
+        $schema = new Schema(prefixItems: [new Schema()], items: false);
+
+        $this->validator->validateWithContext([null], $schema, $this->context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function validate_ignoring_discriminator_reports_invalid_items(): void
+    {
+        $itemSchema = new Schema(type: 'string');
+        $schema = new Schema(items: $itemSchema);
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validateWithContextIgnoringDiscriminator(['valid', 123], $schema, $this->context);
+    }
+
+    #[Test]
+    public function validate_ignoring_discriminator_marks_items_evaluated(): void
+    {
+        $itemSchema = new Schema(type: 'string');
+        $schema = new Schema(items: $itemSchema);
+
+        $this->validator->validateWithContextIgnoringDiscriminator(['valid'], $schema, $this->context);
+
+        self::assertTrue($this->context->hasItemBeenEvaluated(0));
+    }
 }

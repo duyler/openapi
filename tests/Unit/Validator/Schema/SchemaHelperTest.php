@@ -265,7 +265,7 @@ final class SchemaHelperTest extends TestCase
         yield 'allOf' => [new Schema(allOf: [new Schema(type: 'string')]), true];
         yield 'anyOf' => [new Schema(anyOf: [new Schema(type: 'string')]), true];
         yield 'oneOf' => [new Schema(oneOf: [new Schema(type: 'string')]), true];
-        yield 'not is not a deferral' => [new Schema(not: new Schema(type: 'string')), false];
+        yield 'untyped schema with not still allows null' => [new Schema(not: new Schema(type: 'string')), true];
     }
 
     #[Test]

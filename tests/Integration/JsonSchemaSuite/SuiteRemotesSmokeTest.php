@@ -13,6 +13,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 use function sprintf;
+use function str_starts_with;
 
 final class SuiteRemotesSmokeTest extends TestCase
 {
@@ -28,11 +29,41 @@ final class SuiteRemotesSmokeTest extends TestCase
             $document = $parser->parse($content);
 
             self::assertNotNull($document->self, sprintf('Envelope $self must be set for %s', $retrievalUri));
+
+            if (str_starts_with($retrievalUri, 'https://json-schema.org/')) {
+                self::assertSame(
+                    $retrievalUri,
+                    (string) $document->self,
+                    sprintf('Metaschema envelope $self must equal the canonical URI for %s', $retrievalUri),
+                );
+
+                continue;
+            }
+
             self::assertStringStartsWith(
                 JsonSchemaSuiteLocator::REMOTE_BASE_URI,
                 (string) $document->self,
                 sprintf('Envelope $self must be a suite URI for %s', $retrievalUri),
             );
+        }
+    }
+
+    #[Test]
+    public function metaschema_documents_are_registered_under_canonical_uris(): void
+    {
+        $documents = SuiteRemoteDocuments::all();
+
+        foreach ([
+            'https://json-schema.org/draft/2020-12/schema',
+            'https://json-schema.org/draft/2020-12/meta/core',
+            'https://json-schema.org/draft/2020-12/meta/applicator',
+            'https://json-schema.org/draft/2020-12/meta/unevaluated',
+            'https://json-schema.org/draft/2020-12/meta/validation',
+            'https://json-schema.org/draft/2020-12/meta/meta-data',
+            'https://json-schema.org/draft/2020-12/meta/format-annotation',
+            'https://json-schema.org/draft/2020-12/meta/content',
+        ] as $canonicalUri) {
+            self::assertArrayHasKey($canonicalUri, $documents, sprintf('Missing metaschema document: %s', $canonicalUri));
         }
     }
 

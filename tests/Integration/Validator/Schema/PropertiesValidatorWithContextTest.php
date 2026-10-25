@@ -776,4 +776,30 @@ final class PropertiesValidatorWithContextTest extends TestCase
 
         $this->expectNotToPerformAssertions();
     }
+
+    #[Test]
+    public function validate_ignoring_discriminator_reports_invalid_property(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+        );
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validateWithContextIgnoringDiscriminator(['name' => 123], $schema, $this->context);
+    }
+
+    #[Test]
+    public function validate_ignoring_discriminator_marks_property_evaluated(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            properties: ['name' => new Schema(type: 'string')],
+        );
+
+        $this->validator->validateWithContextIgnoringDiscriminator(['name' => 'ok'], $schema, $this->context);
+
+        self::assertTrue($this->context->hasPropertyBeenEvaluated('name'));
+    }
 }

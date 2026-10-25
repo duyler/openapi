@@ -100,10 +100,11 @@ final readonly class PatternPropertiesValidator extends AbstractSchemaValidator 
 
                 try {
                     $validator->validate($propertyValue, $propertySchema, $context);
-                    $context->markPropertyEvaluated($propertyName);
                 } finally {
                     $context->leaveBreadcrumb();
                 }
+
+                $context->markPropertyEvaluated($propertyName);
             }
         }
     }

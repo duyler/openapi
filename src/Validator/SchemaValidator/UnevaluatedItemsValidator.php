@@ -18,6 +18,7 @@ use function array_values;
 use function count;
 use function is_array;
 use function is_bool;
+use function is_int;
 
 final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
@@ -39,6 +40,8 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
         }
 
         if (is_bool($schema->unevaluatedItems) && $schema->unevaluatedItems) {
+            $this->markAllItemsEvaluated($data, $context);
+
             return;
         }
 
@@ -110,9 +113,24 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
 
             try {
                 $validator->validate($item, $unevaluatedItems, $context);
+                $context->markItemEvaluated($index);
             } finally {
                 $context->leaveBreadcrumb();
             }
+        }
+    }
+
+    /**
+     * @param array<array-key, mixed> $data
+     */
+    private function markAllItemsEvaluated(array $data, ?ValidationContext $context): void
+    {
+        foreach (array_keys($data) as $index) {
+            if (false === is_int($index)) {
+                continue;
+            }
+
+            $context?->markItemEvaluated($index);
         }
     }
 

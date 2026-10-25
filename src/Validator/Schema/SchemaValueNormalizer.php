@@ -78,8 +78,8 @@ final readonly class SchemaValueNormalizer
             return true;
         }
 
-        if (null === $schema->type && true === ($profile?->nullableRequiresType ?? false)) {
-            return false;
+        if (null === $schema->type) {
+            return false === ($profile?->nullableRequiresType ?? false);
         }
 
         return $schema->nullable;

@@ -249,6 +249,32 @@ final class RefResolver implements RefResolverInterface
     }
 
     #[Override]
+    public function resolveSchemaWithCompanionAndChain(
+        Schema $schema,
+        OpenApiDocument $document,
+        ?string $baseUri = null,
+    ): array {
+        $chainResources = new ChainResources();
+        $this->navigator->collectChainResources($chainResources);
+
+        try {
+            if (null === $schema->ref) {
+                return [$schema, null, $chainResources->resources()];
+            }
+
+            $resolved = $this->resolveSchemaWithOverride($schema, $document, $baseUri);
+
+            $companion = $this->dialectProfile->refSiblingsApply
+                ? $schema->withoutReference()
+                : null;
+
+            return [$resolved, $companion, $chainResources->resources()];
+        } finally {
+            $this->navigator->stopChainResourcesCollection();
+        }
+    }
+
+    #[Override]
     public function scopeBaseUri(array $frames, OpenApiDocument $document): ?string
     {
         $baseUri = $document->self;

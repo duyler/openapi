@@ -41,7 +41,9 @@ final class JsonSchemaSuiteTest extends TestCase
         'if-then-else.json',
         'infinite-loop-detection.json',
         'anchor.json',
+        'items.json',
         'optional/anchor.json',
+        'optional/refOfUnknownKeyword.json',
         'optional/dependencies-compatibility.json',
         'optional/format-assertion.json',
         'optional/format/date.json',
@@ -63,6 +65,9 @@ final class JsonSchemaSuiteTest extends TestCase
         'prefixItems.json',
         'boolean_schema.json',
         'content.json',
+        'ref.json',
+        'unevaluatedItems.json',
+        'unevaluatedProperties.json',
     ];
 
     public const array PENDING_SECTIONS = [
@@ -72,7 +77,6 @@ final class JsonSchemaSuiteTest extends TestCase
         'minLength.json' => 'FS-40',
         'maxLength.json' => 'FS-40',
         'pattern.json' => 'FS-40',
-        'items.json' => 'FS-40',
         'contains.json' => 'FS-40',
         'required.json' => 'FS-40',
         'patternProperties.json' => 'FS-40',
@@ -80,9 +84,6 @@ final class JsonSchemaSuiteTest extends TestCase
         'not.json' => 'FS-40',
         'defs.json' => 'FS-40',
         'format.json' => 'FS-40',
-        'ref.json' => 'FS-40',
-        'unevaluatedItems.json' => 'FS-40',
-        'unevaluatedProperties.json' => 'FS-40',
         'vocabulary.json' => 'FS-40',
         'optional/bignum.json' => 'FS-40',
         'optional/cross-draft.json' => 'FS-40',
@@ -102,7 +103,6 @@ final class JsonSchemaSuiteTest extends TestCase
         'optional/format/uri.json' => 'FS-40',
         'optional/format/uuid.json' => 'FS-40',
         'optional/non-bmp-regex.json' => 'FS-40',
-        'optional/refOfUnknownKeyword.json' => 'FS-40',
     ];
 
     public const array EXCLUDED_SECTIONS = [

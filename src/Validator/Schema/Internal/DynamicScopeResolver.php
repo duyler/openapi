@@ -34,9 +34,9 @@ final readonly class DynamicScopeResolver
         $enteredChainResources = [];
 
         try {
-            [$schema, $chainResources] = null !== $schema->ref
-                ? $this->refResolver->resolveSchemaWithOverrideAndChain($schema, $this->document, $enclosingBaseUri)
-                : [$schema, []];
+            [$schema, $companion, $chainResources] = null !== $schema->ref
+                ? $this->refResolver->resolveSchemaWithCompanionAndChain($schema, $this->document, $enclosingBaseUri)
+                : [$schema, null, []];
 
             if (null !== $context) {
                 foreach ($chainResources as $chainResource) {
@@ -50,7 +50,7 @@ final readonly class DynamicScopeResolver
             throw $throwable;
         }
 
-        return new DynamicScopeFrame($schema, $enteredChainResources, $entersWrapperScope);
+        return new DynamicScopeFrame($schema, $enteredChainResources, $entersWrapperScope, $companion);
     }
 
     public function leave(DynamicScopeFrame $frame, ?ValidationContext $context): void

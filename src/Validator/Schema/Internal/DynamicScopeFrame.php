@@ -6,15 +6,17 @@ namespace Duyler\OpenApi\Validator\Schema\Internal;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 
-/** @internal */
+/**
+ * @internal
+ *
+ * @param list<Schema> $chainResources
+ */
 final readonly class DynamicScopeFrame
 {
-    /**
-     * @param list<Schema> $chainResources
-     */
     public function __construct(
         public readonly Schema $schema,
         public readonly array $chainResources,
         public readonly bool $entersWrapperScope,
+        public readonly ?Schema $companion = null,
     ) {}
 }

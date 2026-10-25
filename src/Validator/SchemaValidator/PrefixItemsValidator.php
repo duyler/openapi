@@ -77,10 +77,11 @@ final readonly class PrefixItemsValidator extends AbstractSchemaValidator implem
 
             try {
                 $state->validator->validate($value, $subSchema, $state->context);
-                $state->context->markItemEvaluated($index);
             } finally {
                 $state->context->leaveBreadcrumb();
             }
+
+            $state->context->markItemEvaluated($index);
         } catch (InvalidDataTypeException|InvalidFormatException|AbstractValidationError|ValidationException $e) {
             $this->wrapItemValidationException(
                 $e,

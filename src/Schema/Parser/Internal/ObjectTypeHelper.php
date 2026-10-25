@@ -86,4 +86,19 @@ final readonly class ObjectTypeHelper
         /** @var array<string, mixed> $value */
         return $value;
     }
+
+    /** @return array<int|string, mixed>|null */
+    public static function asStringOrIntKeyMixedMapOrNull(mixed $value): ?array
+    {
+        if (null === $value) {
+            return null;
+        }
+
+        if (false === is_array($value)) {
+            throw new TypeError('Expected string or integer keyed mixed map, got ' . TypeFormatter::format($value));
+        }
+
+        /** @var array<int|string, mixed> $value */
+        return $value;
+    }
 }

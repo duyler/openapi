@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Vendored the canonical draft 2020-12 metaschema (`https://json-schema.org/draft/2020-12/schema`
+  and its seven `meta/*` documents) byte-for-byte under `tests/Fixture/JsonSchemaTestSuite/metaschema/`
+  with source commit pin, per-file SHA-256 checksums and the upstream license notice. The JSON Schema
+  Test Suite runner registers these documents by their canonical retrieval URIs, so suite cases that
+  reference the metaschema (for example `ref.json` "remote ref, containing refs itself") now validate
+  against the real 2020-12 metaschema instead of failing scheme allowlisting; product file-resolution
+  allowlisting is unchanged.
+
 - Streaming multipart request validation (3.2 §4.15.4.8): a `multipart/*` request is now
   processed part by part straight from the PSR-7 stream instead of being read into a single
   buffer. `RequestValidator` routes multipart requests through the new
@@ -128,6 +136,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   output and the sanitized verbose logging; the `@internal` marker is removed.
 
 ### Changed
+
+- Core instance semantics for schema validation (draft 2020-12 conformance; JSON Schema Test Suite
+  sections `items`, `ref`, `optional/refOfUnknownKeyword`, `unevaluatedItems`, `unevaluatedProperties`
+  — 318 cases — are now active and green):
+  - JSON Pointer fragments now percent-decode before `~0`/`~1` unescaping per RFC 3986/RFC 6901
+    (`%25` → `%`, `%22` → `"`), so definitions like `percent%field` referenced as
+    `#/$defs/percent%25field` resolve; `$ref: "#"` inside a subschema resolves to the root of the
+    enclosing schema resource.
+  - Local pointer references (`#/...`) that miss the OpenAPI envelope now resolve against the root of
+    the enclosing schema resource (`#/properties/foo`, `#/prefixItems/0`) and against unknown-keyword
+    values kept verbatim in schema extras (`#/unknown-keyword`, `#/properties/foo/unknown-keyword`)
+    and against list entries of the 2020-12 `examples` keyword (`#/examples/0`); references into
+    documents registered via `withDocument()` resolve their local pointers against that document's
+    resource. Envelope-rooted pointers (`#/components/...`) keep their previous fast path and do not
+    touch the resource registry.
+  - `items`/`prefixItems` apply to JSON arrays only: JSON objects (including JavaScript-style
+    pseudo-arrays such as `{"0": ..., "length": 1}`) no longer feed their keys into item indexes, and
+    `null` items validate against subschemas that do not restrict `type` (2020-12 semantics; OAS 3.0
+    `nullableRequiresType` profiles keep their behavior).
+  - The 2020-12 `examples` keyword accepts the JSON Schema list form alongside the OAS map form
+    (parser, sibling merge, serializer round-trip and example collection).
+  - `unevaluatedProperties`/`unevaluatedItems` now track evaluated names and indexes per instance
+    location: an inner property or item does not satisfy an `unevaluated` keyword at another
+    location; `unevaluatedProperties: true` / `unevaluatedItems: true` evaluate everything they
+    cover so nested `allOf`-scoped guards compose; a schema-typed `unevaluated*` target marks the
+    properties/items it applies to as evaluated; and sibling applicator keywords of a `$ref` schema
+    (its `properties`) are applied as a separate sibling application whose annotations are invisible
+    inside the `$ref` target (a `$ref` creates a new evaluation scope), while non-evaluation sibling
+    keywords (`nullable`, bounds, `required`) keep merging into the resolved target as before.
+- Suite runner: the five sections above are activated (1180 suite cases skipped overall, 1094 of
+  them held by `FS-40` per the pool decomposition attribution).
 
 - `UnsupportedSecuritySchemeException` message wording: with the full built-in handler set
   (apiKey, http/basic, http/bearer, http/digest, mutualTLS, oauth2, openIdConnect) the message
