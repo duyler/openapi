@@ -391,6 +391,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   serialization emits the normalized value. `oauth2MetadataUrl` is now validated
   as an absolute URI at parse time; a malformed value raises
   `Schema\Exception\InvalidSchemaException` without echoing the offending value.
+- Security scheme dispatch is now extensible through a handler registry instead
+  of the hardcoded `http`/`apiKey` match chain inside `SecurityValidator`.
+  **BC break for direct integrators.** The `SecurityValidator` constructor drops
+  its unused `ApiKeyValidator` parameter; handlers are resolved through the new
+  `Validator\Security\SecuritySchemeHandlerRegistry` (built with the built-in
+  bearer and api key handlers in one place), and custom scheme support is
+  declared by implementing the new `Validator\Security\SecuritySchemeHandlerInterface`
+  (`supports()` + `validate()`), with the registry picking the first handler
+  whose `supports()` returns true. `with()` prepends a handler ahead of the
+  built-in set so a user handler overrides a built-in one. Request-visible
+  behavior is unchanged: the OR/AND requirement semantics, the
+  `UnsupportedSecuritySchemeException` for scheme types without a handler, and
+  the `httpScheme` parameter reported for non-bearer `http` subschemes all stay
+  exactly as before; `http/basic`, `http/digest`, `oauth2`, `openIdConnect` and
+  `mutualTLS` keep raising the unsupported-scheme error until dedicated
+  built-in handlers land.
 
 ### Fixed
 
