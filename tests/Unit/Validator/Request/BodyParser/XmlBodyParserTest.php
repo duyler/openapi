@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Request\BodyParser;
 
+use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Schema\Model\Xml;
+use Duyler\OpenApi\Test\Support\RecordingEventDispatcher;
+use Duyler\OpenApi\Validator\Exception\BodyTooLargeException;
 use Duyler\OpenApi\Validator\Request\BodyParser\XmlBodyParser;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -12,6 +16,7 @@ use function file_put_contents;
 use function is_array;
 use function is_string;
 use function sprintf;
+use function str_repeat;
 use function sys_get_temp_dir;
 use function tempnam;
 use function uniqid;
@@ -194,7 +199,7 @@ XML;
         $result = $this->parser->parse($xml);
 
         $this->assertSame(
-            ['@active' => 'true', 'name' => 'John', 'nickname' => null],
+            ['@active' => 'true', 'name' => 'John', 'nickname' => ''],
             $result,
         );
     }
@@ -214,7 +219,7 @@ XML;
     {
         $result = $this->parser->parse('<list><item/><item/><item/></list>');
 
-        self::assertSame(['item' => [null, null, null]], $result);
+        self::assertSame(['item' => ['', '', '']], $result);
     }
 
     #[Test]
@@ -226,11 +231,72 @@ XML;
     }
 
     #[Test]
-    public function empty_element_returned_as_null(): void
+    public function empty_element_returned_as_empty_string(): void
     {
         $result = $this->parser->parse('<empty/>');
 
+        $this->assertSame('', $result);
+    }
+
+    #[Test]
+    public function whitespace_only_root_text_is_preserved_untrimmed(): void
+    {
+        $result = $this->parser->parse('<root>  </root>');
+
+        $this->assertSame('  ', $result);
+    }
+
+    #[Test]
+    public function xsi_nil_with_alternative_prefix_is_null(): void
+    {
+        $result = $this->parser->parse(
+            '<product>'
+            . '<related xmlns:x="http://www.w3.org/2001/XMLSchema-instance" x:nil="true"/></product>',
+        );
+
+        $this->assertSame(['related' => null], $result);
+    }
+
+    #[Test]
+    public function xsi_nil_root_element_returned_as_null(): void
+    {
+        $result = $this->parser->parse(
+            '<empty xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:nil="true"/>',
+        );
+
         $this->assertNull($result);
+    }
+
+    #[Test]
+    public function xsi_nil_child_element_returned_as_null(): void
+    {
+        $result = $this->parser->parse(
+            '<product>'
+            . '<related xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:nil="true"/></product>',
+        );
+
+        $this->assertSame(['related' => null], $result);
+    }
+
+    #[Test]
+    public function xsi_nil_numeric_one_form_returned_as_null(): void
+    {
+        $result = $this->parser->parse(
+            '<product>'
+            . '<related xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:nil="1"/></product>',
+        );
+
+        $this->assertSame(['related' => null], $result);
+    }
+
+    #[Test]
+    public function nil_attribute_without_xsi_namespace_is_not_null(): void
+    {
+        $result = $this->parser->parse(
+            '<product xmlns:x="urn:other" x:nil="true"/>',
+        );
+
+        $this->assertSame(['@x:nil' => 'true'], $result);
     }
 
     #[Test]
@@ -618,5 +684,192 @@ XML;
         $this->assertArrayHasKey(1, $result['atom:link']);
         $this->assertSame('https://a.example.com', $result['atom:link'][0]['@href']);
         $this->assertSame('https://b.example.com', $result['atom:link'][1]['@href']);
+    }
+
+    #[Test]
+    public function product_with_nulls_fixture_maps_xsi_nil_and_omitted_attribute_to_null(): void
+    {
+        $xml = <<<'XML_WRAP'
+        <product>
+            <description>Thing</description>
+            <related xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:nil="true"/>
+        </product>
+        XML_WRAP;
+
+        $result = $this->parser->parse($xml, $this->productSchema());
+
+        $this->assertSame(
+            ['count' => null, 'description' => 'Thing', 'related' => null],
+            $result,
+        );
+    }
+
+    #[Test]
+    public function product_without_nulls_fixture_keeps_empty_element_not_null(): void
+    {
+        $xml = '<product count="42"><description>Thing</description><related></related></product>';
+
+        $result = $this->parser->parse($xml, $this->productSchema());
+
+        $this->assertIsArray($result);
+        $this->assertNotNull($result['related']);
+        $this->assertSame(
+            ['count' => '42', 'description' => 'Thing', 'related' => []],
+            $result,
+        );
+    }
+
+    #[Test]
+    public function omitted_attribute_without_nullable_type_is_omitted(): void
+    {
+        $schema = new Schema(type: 'object', properties: [
+            'count' => new Schema(type: 'number', xml: new Xml(nodeType: 'attribute')),
+            'description' => new Schema(type: 'string'),
+        ]);
+
+        $result = $this->parser->parse('<product><description>Thing</description></product>', $schema);
+
+        $this->assertSame(['description' => 'Thing'], $result);
+    }
+
+    #[Test]
+    public function namespaced_property_mapped_by_namespace(): void
+    {
+        $schema = new Schema(type: 'object', properties: [
+            'id' => new Schema(type: 'integer', xml: new Xml(nodeType: 'attribute')),
+            'name' => new Schema(
+                type: 'string',
+                xml: new Xml(namespace: 'https://example.com/schema/sample', prefix: 'sample'),
+            ),
+        ]);
+
+        $xml = <<<'XML'
+<Person id="123">
+    <sample:name xmlns:sample="https://example.com/schema/sample">example</sample:name>
+</Person>
+XML;
+
+        $result = $this->parser->parse($xml, $schema);
+
+        $this->assertSame(['id' => '123', 'name' => 'example'], $result);
+    }
+
+    #[Test]
+    public function wrapped_array_is_unwrapped_when_unambiguous(): void
+    {
+        $schema = new Schema(type: 'object', properties: [
+            'animals' => new Schema(
+                type: 'array',
+                xml: new Xml(wrapped: true),
+                items: new Schema(type: 'string', xml: new Xml(name: 'animal')),
+            ),
+        ]);
+
+        $xml = '<document><animals><animal>dog</animal><animal>cat</animal></animals></document>';
+
+        $result = $this->parser->parse($xml, $schema);
+
+        $this->assertSame(['animals' => ['dog', 'cat']], $result);
+    }
+
+    #[Test]
+    public function ambiguous_wrapped_array_passed_through_with_warning(): void
+    {
+        $dispatcher = new RecordingEventDispatcher();
+        $parser = new XmlBodyParser(eventDispatcher: $dispatcher);
+        $schema = new Schema(type: 'object', properties: [
+            'animals' => new Schema(
+                type: 'array',
+                xml: new Xml(wrapped: true),
+                items: new Schema(type: 'string', xml: new Xml(name: 'animal')),
+            ),
+        ]);
+
+        $xml = '<document><animal>dog</animal><animal>cat</animal></document>';
+
+        $result = $parser->parse($xml, $schema);
+
+        $this->assertSame(['animals' => ['dog', 'cat']], $result);
+        $this->assertCount(1, $dispatcher->events);
+        $this->assertSame('animals', $dispatcher->events[0]->propertyName);
+    }
+
+    #[Test]
+    public function text_node_property_mapped_from_element_text(): void
+    {
+        $schema = new Schema(type: 'object', properties: [
+            'kind' => new Schema(type: 'string', xml: new Xml(nodeType: 'attribute')),
+            'name' => new Schema(type: 'string', xml: new Xml(nodeType: 'text')),
+        ]);
+
+        $result = $this->parser->parse('<animal kind="Cat">Fluffy</animal>', $schema);
+
+        $this->assertSame(['kind' => 'Cat', 'name' => 'Fluffy'], $result);
+    }
+
+    #[Test]
+    public function cdata_node_property_mapped_from_cdata_section(): void
+    {
+        $schema = new Schema(type: 'object', properties: [
+            'content' => new Schema(type: 'string', xml: new Xml(nodeType: 'cdata')),
+        ]);
+
+        $result = $this->parser->parse('<doc><![CDATA[<html>bold</html>]]></doc>', $schema);
+
+        $this->assertSame(['content' => '<html>bold</html>'], $result);
+    }
+
+    #[Test]
+    public function inline_node_type_merges_nested_properties_into_parent(): void
+    {
+        $schema = new Schema(type: 'object', properties: [
+            'meta' => new Schema(
+                type: 'object',
+                xml: new Xml(nodeType: 'none'),
+                properties: [
+                    'kind' => new Schema(type: 'string', xml: new Xml(nodeType: 'attribute')),
+                ],
+            ),
+            'title' => new Schema(type: 'string'),
+        ]);
+
+        $result = $this->parser->parse('<doc kind="a"><title>t</title></doc>', $schema);
+
+        $this->assertSame(['kind' => 'a', 'title' => 't'], $result);
+    }
+
+    #[Test]
+    public function malformed_xml_with_schema_still_degrades_to_raw_body(): void
+    {
+        $invalidXml = '<product><unclosed>';
+
+        $result = $this->parser->parse($invalidXml, $this->productSchema());
+
+        $this->assertSame($invalidXml, $result);
+    }
+
+    #[Test]
+    public function schema_aware_parse_still_enforces_byte_cap(): void
+    {
+        $parser = new XmlBodyParser(maxXmlBytes: 16);
+
+        $this->expectException(BodyTooLargeException::class);
+
+        $parser->parse('<product>' . str_repeat('x', 32) . '</product>', $this->productSchema());
+    }
+
+    private function productSchema(): Schema
+    {
+        return new Schema(
+            type: 'object',
+            xml: new Xml(name: 'product'),
+            required: ['count', 'description', 'related'],
+            properties: [
+                'count' => new Schema(type: ['number', 'null'], xml: new Xml(nodeType: 'attribute')),
+                'rating' => new Schema(type: 'string', xml: new Xml(nodeType: 'attribute')),
+                'description' => new Schema(type: 'string'),
+                'related' => new Schema(type: ['object', 'null']),
+            ],
+        );
     }
 }

@@ -103,7 +103,7 @@ final class SchemaValidatorDependencies
             formParser: new FormBodyParser(new QueryParser()),
             multipartParser: new MultipartBodyParser(),
             textParser: new TextBodyParser(),
-            xmlParser: new XmlBodyParser(),
+            xmlParser: new XmlBodyParser(eventDispatcher: $this->eventDispatcher),
         );
         /** @var WeakMap<OpenApiDocument, SchemaValidatorWithContext> $rootSchemaValidators */
         $rootSchemaValidators = new WeakMap();

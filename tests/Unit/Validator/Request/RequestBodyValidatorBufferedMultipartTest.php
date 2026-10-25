@@ -111,6 +111,38 @@ final class RequestBodyValidatorBufferedMultipartTest extends TestCase
     }
 
     #[Test]
+    public function malformed_xml_part_degrades_to_raw_content_and_fails_type_validation(): void
+    {
+        $mediaType = new MediaType(
+            schema: new Schema(type: 'object', properties: [
+                'doc' => new Schema(type: 'object', properties: [
+                    'from' => new Schema(type: 'string'),
+                ]),
+            ]),
+            encoding: ['doc' => new Encoding(contentType: 'application/xml')],
+        );
+
+        $body = "--b\r\n"
+            . "Content-Disposition: form-data; name=\"doc\"\r\n"
+            . "Content-Type: application/xml\r\n"
+            . "\r\n"
+            . '<unclosed>' . "\r\n"
+            . '--b--';
+
+        try {
+            $this->validator->validate(
+                $body,
+                'multipart/form-data; boundary=b',
+                new RequestBody(required: true, content: new Content(['multipart/form-data' => $mediaType])),
+            );
+
+            $this->fail('Expected the malformed XML part to fail type validation');
+        } catch (ValidationException $exception) {
+            self::assertSame('type', $exception->getErrors()[0]->keyword());
+        }
+    }
+
+    #[Test]
     public function multipart_without_encodings_keeps_the_raw_body_for_non_form_data(): void
     {
         $this->validator->validate(

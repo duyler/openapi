@@ -288,7 +288,7 @@ final readonly class RequestBodyValidatorWithContext implements RequestBodyValid
             return $this->parseMultipartBody($body, $contentType, $requestMediaType, $content, $schema);
         }
 
-        return $this->dependencies->bodyParser->parse($body, $requestMediaType, $contentType);
+        return $this->dependencies->bodyParser->parse($body, $requestMediaType, $contentType, $schema);
     }
 
     /**

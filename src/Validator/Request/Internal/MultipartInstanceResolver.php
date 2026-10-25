@@ -266,7 +266,7 @@ final readonly class MultipartInstanceResolver
         }
 
         if (PartContentType::isXml($effectiveType)) {
-            return $this->xmlParser->parse($content);
+            return $this->xmlParser->parse($content, $schema);
         }
 
         if (PartContentType::isWildcard($effectiveType) && $this->expectsStructured($schema)) {

@@ -44,9 +44,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a missing `/complete` part, a missing `bytes ` prefix, trailing garbage or a trailing line
   break, and a range whose last byte position precedes the first are rejected with
   `Validator\Exception\InvalidContentRangeException` (keyword `format`).
+- XML Object semantics for XML request bodies (3.2 §4.26): an XML body validated against a schema
+  is now mapped through the XML Object model instead of generic name-based parsing. Element and
+  attribute nodes are matched by the XML Object `name`/`namespace`/`prefix` fields (namespace URI
+  identity, per §4.26.4), `nodeType` (`element`/`attribute`/`text`/`cdata`/`none`) is honored
+  together with the deprecated `attribute`/`wrapped` boolean fields, `nodeType: none` schemas
+  inline their subschemas under the parent node, arrays map as unwrapped item sequences or
+  `wrapped`/`nodeType: element` wrappers, and named `prefixItems` map positionally by node name.
+  §4.26.5 null handling: an element carrying `xsi:nil="true"` (detected namespace-awarely against
+  `http://www.w3.org/2001/XMLSchema-instance`) maps to `null`; an omitted attribute maps to `null`
+  when the property schema allows `null` (type includes `"null"`) and the property is omitted
+  otherwise; an absent element node always means an absent property (`null` is never inferred from
+  a missing node). The mapping is schema-driven projection only — it is not XML Schema validation
+  (ADR, Epoch C boundary). Schemas whose shape cannot determine a mapping (free-form objects,
+  unnamed array items) keep the generic pass-through shape; a schema carrying `$ref`/`$dynamicRef`
+  defaults to `nodeType: none` (§4.26.1), so a property whose `$ref` stays unresolved contributes
+  no property to the mapped value. A declared wrapper that does not match the document is reported
+  as a `ValidationWarningEvent` (carrying `propertyName` and `propertyPath`) and the node passes
+  through unmodified instead of failing. The mapping applies to `application/xml`/
+  `text/xml` request bodies (the media type schema is now passed into `BodyParser::parse()` and
+  `XmlBodyParser::parse()` as an optional parameter — existing signatures stay source-compatible)
+  and to multipart XML leaves (`MultipartInstanceResolver` feeds the part schema in). All
+  simplexml operations keep running inside `LibxmlSecuredContext`, and the 1 MiB XML byte cap
+  (`DEFAULT_MAX_XML_BYTES`) plus `BodyTooLargeException` apply unchanged, including multipart
+  leaves.
 
 ### Changed
 
+- XML empty-element parse semantics (3.2 §4.26.5): an empty element without `xsi:nil` — root
+  (`<empty/>`), child (`<nickname/>`) or repeated (`<item/><item/>`) — now maps to an empty string
+  `''` instead of `null` in generic XML parsing; `null` is now reserved for `xsi:nil="true"`
+  elements only (detected against the XML Schema-instance namespace URI regardless of the bound
+  prefix, in both generic and schema-driven paths). In the schema-driven mapping an empty element
+  is typed by its schema: when the element type allows `object` or `array` it maps to an empty
+  object/list (`[]`; for a union the composite branch wins over scalar branches), and to `''` for
+  scalar types — the §4.26.6.8 `productNoNulls` fixture
+  (`<product count="42"><description>Thing</description><related></related></product>` →
+  `related: {}`) now validates without errors. Whitespace-only leaf text stays untrimmed
+  (`<root>  </root>` → `'  '`), matching child leaf values, while `text`/`cdata` node mapping and
+  mixed-content `#text` stay trimmed. Root arrays without named items now collect children across
+  all namespaces, not only the default one. This is a deliberate breaking change of the previously
+  pinned `empty element → null` behavior: per §4.26.5/§4.26.6.8 an empty element is a value
+  (`''`/`{}`), not `null` — and only `<related xsi:nil="true"/>` denotes `null`.
 - Multi-document OpenAPI descriptions (3.2 §4.1.2): `OpenApiValidatorBuilder::withDocument(string $retrievalUri,
   string $content)` registers user-supplied documents by intended retrieval URI. Content is size-capped with the
   same limit as `FileExternalRefResolver` (`withExternalRefMaxBytes()` and `DEFAULT_MAX_REF_BYTES` apply, re-checked

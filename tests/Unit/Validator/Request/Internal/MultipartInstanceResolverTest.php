@@ -62,6 +62,58 @@ final class MultipartInstanceResolverTest extends TestCase
     }
 
     #[Test]
+    public function xml_leaf_parts_apply_xml_object_mapping_from_part_schema(): void
+    {
+        $resolver = $this->resolver();
+        $schema = new Schema(
+            type: 'object',
+            properties: [
+                'note' => new Schema(
+                    type: ['object', 'null'],
+                    properties: [
+                        'from' => new Schema(type: ['string', 'null']),
+                    ],
+                ),
+            ],
+        );
+
+        $values = $resolver->namedValues(
+            parts: [
+                [
+                    'headers' => 'Content-Disposition: form-data; name="note"',
+                    'content' => '<note><from xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:nil="true"/></note>',
+                ],
+            ],
+            encoding: ['note' => new Encoding(contentType: 'application/xml')],
+            schema: $schema,
+        );
+
+        self::assertSame(['note' => ['from' => null]], $values);
+    }
+
+    #[Test]
+    public function xml_leaf_parts_with_schema_without_xml_model_keep_generic_mapping(): void
+    {
+        $resolver = $this->resolver();
+        $schema = new Schema(type: 'object', properties: [
+            'note' => new Schema(type: ['object', 'null']),
+        ]);
+
+        $values = $resolver->namedValues(
+            parts: [
+                [
+                    'headers' => 'Content-Disposition: form-data; name="note"',
+                    'content' => '<note><from>A</from></note>',
+                ],
+            ],
+            encoding: ['note' => new Encoding(contentType: 'application/xml')],
+            schema: $schema,
+        );
+
+        self::assertSame(['note' => ['from' => 'A']], $values);
+    }
+
+    #[Test]
     public function positional_values_recurse_into_nested_multipart_by_prefix_positions(): void
     {
         $resolver = $this->resolver();

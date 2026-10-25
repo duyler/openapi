@@ -134,7 +134,7 @@ final readonly class ValidationStack
                 formParser: new FormBodyParser(new QueryParser()),
                 multipartParser: new MultipartBodyParser(),
                 textParser: new TextBodyParser(),
-                xmlParser: new XmlBodyParser(logger: $this->logger),
+                xmlParser: new XmlBodyParser(logger: $this->logger, eventDispatcher: $this->eventDispatcher),
             ),
             strictFormats: $this->strictFormats,
             reportDeprecated: $this->reportDeprecated,
