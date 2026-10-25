@@ -94,11 +94,11 @@ final class SecurityValidatorCharacterizationTest extends TestCase
         $request = $this->factory->createServerRequest('GET', '/users');
         $securityRequirements = new SecurityRequirement([
             ['bearerAuth' => []],
-            ['OAuth2' => ['read']],
+            ['unknownAuth' => ['read']],
         ]);
         $securitySchemes = [
             'bearerAuth' => new SecurityScheme(type: 'http', scheme: 'bearer'),
-            'OAuth2' => new SecurityScheme(type: 'oauth2'),
+            'unknownAuth' => new SecurityScheme(type: 'unknownSchemeType'),
         ];
 
         try {
@@ -111,8 +111,8 @@ final class SecurityValidatorCharacterizationTest extends TestCase
             ));
             $this->fail('Expected UnsupportedSecuritySchemeException was not thrown');
         } catch (UnsupportedSecuritySchemeException $e) {
-            $this->assertSame('OAuth2', $e->schemeName);
-            $this->assertSame('oauth2', $e->schemeType);
+            $this->assertSame('unknownAuth', $e->schemeName);
+            $this->assertSame('unknownSchemeType', $e->schemeType);
         }
     }
 
@@ -122,12 +122,12 @@ final class SecurityValidatorCharacterizationTest extends TestCase
         $validator = new SecurityValidator();
         $request = $this->factory->createServerRequest('GET', '/users');
         $securityRequirements = new SecurityRequirement([
-            ['OAuth2' => []],
-            ['openIdConnect' => []],
+            ['unknownAuth' => []],
+            ['anotherUnknownAuth' => []],
         ]);
         $securitySchemes = [
-            'OAuth2' => new SecurityScheme(type: 'oauth2'),
-            'openIdConnect' => new SecurityScheme(type: 'openIdConnect'),
+            'unknownAuth' => new SecurityScheme(type: 'unknownSchemeType'),
+            'anotherUnknownAuth' => new SecurityScheme(type: 'anotherUnknownSchemeType'),
         ];
 
         try {
@@ -140,7 +140,7 @@ final class SecurityValidatorCharacterizationTest extends TestCase
             ));
             $this->fail('Expected UnsupportedSecuritySchemeException was not thrown');
         } catch (UnsupportedSecuritySchemeException $e) {
-            $this->assertSame('OAuth2', $e->schemeName, 'The first unsupported alternative must win.');
+            $this->assertSame('unknownAuth', $e->schemeName, 'The first unsupported alternative must win.');
         }
     }
 

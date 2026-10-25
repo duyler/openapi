@@ -11,7 +11,13 @@ use Duyler\OpenApi\Validator\Security\Internal\ApiKeyValidator;
 use Duyler\OpenApi\Validator\Security\Internal\BasicAuthHandler;
 use Duyler\OpenApi\Validator\Security\Internal\BearerAuthHandler;
 use Duyler\OpenApi\Validator\Security\Internal\BearerAuthValidator;
+use Duyler\OpenApi\Validator\Security\Internal\BearerPresenceValidator;
 use Duyler\OpenApi\Validator\Security\Internal\DigestAuthHandler;
+use Duyler\OpenApi\Validator\Security\Internal\MutualTlsHandler;
+use Duyler\OpenApi\Validator\Security\Internal\OAuth2Handler;
+use Duyler\OpenApi\Validator\Security\Internal\OpenIdConnectHandler;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * Immutable ordered registry of security scheme handlers.
@@ -33,13 +39,18 @@ final readonly class SecuritySchemeHandlerRegistry
         private readonly array $handlers = [],
     ) {}
 
-    public static function buildIn(PregExecutor $pregExecutor): self
+    public static function buildIn(PregExecutor $pregExecutor, ?LoggerInterface $logger = null): self
     {
+        $logger ??= new NullLogger();
+
         return new self([
             new BasicAuthHandler($pregExecutor),
             new DigestAuthHandler($pregExecutor),
             new BearerAuthHandler(new BearerAuthValidator($pregExecutor)),
             new ApiKeyHandler(new ApiKeyValidator()),
+            new MutualTlsHandler($logger),
+            new OAuth2Handler(new BearerPresenceValidator($pregExecutor, $logger)),
+            new OpenIdConnectHandler(new BearerPresenceValidator($pregExecutor, $logger)),
         ]);
     }
 

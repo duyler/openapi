@@ -82,9 +82,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bearer handler shape (debug level, scheme name, scheme type and location only). The built-in
   registry order is basic, digest, bearer, api key, so a custom handler registered through
   `with()` still wins over every built-in one; `http/bearer` dispatch is unchanged.
+- Built-in security scheme handlers for mutual TLS, OAuth2 and OpenID Connect security schemes
+  (3.2 §4.27.5, §4.27.2, §4.27.3): `mutualTLS`, `oauth2` and `openIdConnect` schemes are now
+  dispatched to dedicated built-in handlers in the `Validator\Security` registry instead of
+  raising `UnsupportedSecuritySchemeException`. The mTLS handler is a presence heuristic over
+  request headers only (`SSL_CLIENT_CERT`, `X-SSL-CERT`, `X-Client-Cert`, case-insensitive):
+  any of them present means success plus a `warning`-level log entry on every triggering
+  validation (client-supplied `X-SSL-*` headers are spoofable when a reverse proxy does not
+  rewrite them — presence is trusted proxy configuration, never proof of authentication;
+  `getServerParams()` is intentionally not consulted), and no candidate header means the
+  generic missing-credentials error. The oauth2 and openIdConnect handlers are Bearer presence
+  checks (case-insensitive `Authorization: Bearer <token>` pattern shared with the
+  `http/bearer` validator): a missing or malformed header raises the generic
+  missing-credentials error with scheme type `oauth2`/`openIdConnect`, and a valid one succeeds
+  plus a debug log entry carrying the scheme's declared scopes — the union of the `scopes` maps
+  of all five OAuth flows (`implicit`, `password`, `clientCredentials`, `authorizationCode`,
+  `deviceAuthorization`, first flow wins on key collisions) merged with the flat scheme-level
+  `scopes` map when present. No token introspection, no network calls, and no token or
+  certificate values in logs — the depth stays at presence and format. The oauth2 handler
+  format-checks `oauth2MetadataUrl` when present and the openIdConnect handler format-checks
+  `openIdConnectUrl` when present (invalid absolute URI raises the generic
+  missing-credentials error at request time; the URI predicate and message are shared with the
+  parse-time validation in `SecuritySchemeBuilder`, which keeps raising
+  `InvalidSchemaException` while parsing the document). The built-in registry order is basic,
+  digest, bearer, api key, mutual TLS, oauth2, open ID connect, so a custom handler registered
+  through `with()` still wins over every built-in one; the `http/bearer` fallback (bearer
+  pattern applied to every `http` scheme without its own handler) remains the dispatch path
+  for future `http` subschemes.
 
 ### Changed
 
+- `UnsupportedSecuritySchemeException` message wording: with the full built-in handler set
+  (apiKey, http/basic, http/bearer, http/digest, mutualTLS, oauth2, openIdConnect) the message
+  no longer claims that the package "validates apiKey and http/bearer only" — it now states the
+  fact that no built-in handler exists for the scheme type/subscheme and that a custom security
+  scheme handler must be registered to validate it. The exception is now raised only for types
+  or `http` subschemes without a built-in handler (for example `http/negotiate` or an entirely
+  unknown type); scheme name, scheme type and `httpScheme` properties are unchanged.
 - XML empty-element parse semantics (3.2 §4.26.5): an empty element without `xsi:nil` — root
   (`<empty/>`), child (`<nickname/>`) or repeated (`<item/><item/>`) — now maps to an empty string
   `''` instead of `null` in generic XML parsing; `null` is now reserved for `xsi:nil="true"`

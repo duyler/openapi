@@ -29,7 +29,7 @@ final readonly class SecurityValidator
         private readonly PregExecutor $pregExecutor = new PregExecutor(),
     ) {
         $this->logger = $logger ?? new NullLogger();
-        $this->handlerRegistry = SecuritySchemeHandlerRegistry::buildIn($this->pregExecutor);
+        $this->handlerRegistry = SecuritySchemeHandlerRegistry::buildIn($this->pregExecutor, $this->logger);
     }
 
     public function validate(SecurityValidationContext $context): void

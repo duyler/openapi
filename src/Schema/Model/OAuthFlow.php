@@ -10,6 +10,9 @@ use Override;
 
 final readonly class OAuthFlow implements JsonSerializable
 {
+    /**
+     * @param array<string, string>|null $scopes
+     */
     public function __construct(
         public ?string $authorizationUrl = null,
         public ?string $tokenUrl = null,

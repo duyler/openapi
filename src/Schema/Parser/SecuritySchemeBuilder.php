@@ -5,15 +5,13 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Schema\Parser;
 
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
+use Duyler\OpenApi\Schema\Internal\MetadataUri;
 use Duyler\OpenApi\Schema\Model\OAuthFlow;
 use Duyler\OpenApi\Schema\Model\OAuthFlows;
 use Duyler\OpenApi\Schema\Model\SecurityScheme;
 
-use function filter_var;
 use function is_array;
 use function strtolower;
-
-use const FILTER_VALIDATE_URL;
 
 final readonly class SecuritySchemeBuilder
 {
@@ -90,12 +88,8 @@ final readonly class SecuritySchemeBuilder
 
     private function validateOauth2MetadataUrl(?string $oauth2MetadataUrl): void
     {
-        if (null === $oauth2MetadataUrl) {
-            return;
-        }
-
-        if (false === filter_var($oauth2MetadataUrl, FILTER_VALIDATE_URL)) {
-            throw new InvalidSchemaException('Security scheme oauth2MetadataUrl must be a valid absolute URI');
+        if (false === MetadataUri::isValid($oauth2MetadataUrl)) {
+            throw new InvalidSchemaException(MetadataUri::invalidMessage('oauth2MetadataUrl'));
         }
     }
 }
