@@ -7,7 +7,9 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Security;
 use Duyler\OpenApi\Schema\Model\SecurityRequirement;
 use Duyler\OpenApi\Schema\Model\SecurityScheme;
 use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
+use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
@@ -90,7 +92,7 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
     }
 
     #[Test]
-    public function http_digest_scheme_throws_unsupported_exception_with_http_scheme_descriptor(): void
+    public function http_digest_without_header_reports_missing_credentials_error(): void
     {
         $validator = new SecurityValidator();
         $request = $this->factory->createServerRequest('GET', '/users');
@@ -112,11 +114,47 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
                 securityRequirements: $securityRequirements,
                 securitySchemes: $securitySchemes,
             ));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('digestAuth', $error->schemeName(reveal: true));
+            $this->assertSame('http/digest', $error->schemeType(reveal: true));
+            $this->assertSame('Authorization header', $error->location(reveal: true));
+        }
+    }
+
+    #[Test]
+    public function directly_built_uppercase_basic_scheme_falls_back_to_bearer_and_throws_unsupported(): void
+    {
+        $validator = new SecurityValidator();
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('Authorization', 'Basic dXNlcjpwYXNz');
+        $securityRequirements = new SecurityRequirement([
+            ['basicAuth' => []],
+        ]);
+        $securitySchemes = [
+            'basicAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'Basic',
+            ),
+        ];
+
+        try {
+            $validator->validate(new SecurityValidationContext(
+                request: $request,
+                path: '/users',
+                method: 'GET',
+                securityRequirements: $securityRequirements,
+                securitySchemes: $securitySchemes,
+            ));
             $this->fail('Expected UnsupportedSecuritySchemeException was not thrown');
         } catch (UnsupportedSecuritySchemeException $e) {
-            $this->assertSame('digestAuth', $e->schemeName);
+            $this->assertSame('basicAuth', $e->schemeName);
             $this->assertSame('http', $e->schemeType);
-            $this->assertSame('digest', $e->httpScheme);
+            $this->assertSame('basic', $e->httpScheme);
         }
     }
 

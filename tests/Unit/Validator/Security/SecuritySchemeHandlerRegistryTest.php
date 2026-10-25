@@ -8,7 +8,9 @@ use Duyler\OpenApi\Schema\Model\SecurityScheme;
 use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Security\Internal\ApiKeyHandler;
+use Duyler\OpenApi\Validator\Security\Internal\BasicAuthHandler;
 use Duyler\OpenApi\Validator\Security\Internal\BearerAuthHandler;
+use Duyler\OpenApi\Validator\Security\Internal\DigestAuthHandler;
 use Duyler\OpenApi\Validator\Security\Internal\SchemeCredentialReporter;
 use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerInterface;
 use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerRegistry;
@@ -38,27 +40,39 @@ final class SecuritySchemeHandlerRegistryTest extends TestCase
 
         $handlers = $registry->all();
 
-        self::assertCount(2, $handlers);
-        self::assertInstanceOf(BearerAuthHandler::class, $handlers[0]);
-        self::assertInstanceOf(ApiKeyHandler::class, $handlers[1]);
+        self::assertCount(4, $handlers);
+        self::assertInstanceOf(BasicAuthHandler::class, $handlers[0]);
+        self::assertInstanceOf(DigestAuthHandler::class, $handlers[1]);
+        self::assertInstanceOf(BearerAuthHandler::class, $handlers[2]);
+        self::assertInstanceOf(ApiKeyHandler::class, $handlers[3]);
     }
 
     #[Test]
-    public function build_in_finds_bearer_handler_for_http_scheme(): void
-    {
-        $registry = SecuritySchemeHandlerRegistry::buildIn(new PregExecutor());
-
-        $handler = $registry->findSupporting(new SecurityScheme(type: 'http', scheme: 'bearer'));
-
-        self::assertInstanceOf(BearerAuthHandler::class, $handler);
-    }
-
-    #[Test]
-    public function build_in_routes_every_http_subscheme_to_the_bearer_handler(): void
+    public function build_in_finds_basic_handler_for_http_basic_scheme(): void
     {
         $registry = SecuritySchemeHandlerRegistry::buildIn(new PregExecutor());
 
         $handler = $registry->findSupporting(new SecurityScheme(type: 'http', scheme: 'basic'));
+
+        self::assertInstanceOf(BasicAuthHandler::class, $handler);
+    }
+
+    #[Test]
+    public function build_in_finds_digest_handler_for_http_digest_scheme(): void
+    {
+        $registry = SecuritySchemeHandlerRegistry::buildIn(new PregExecutor());
+
+        $handler = $registry->findSupporting(new SecurityScheme(type: 'http', scheme: 'digest'));
+
+        self::assertInstanceOf(DigestAuthHandler::class, $handler);
+    }
+
+    #[Test]
+    public function build_in_finds_bearer_handler_for_http_bearer_scheme(): void
+    {
+        $registry = SecuritySchemeHandlerRegistry::buildIn(new PregExecutor());
+
+        $handler = $registry->findSupporting(new SecurityScheme(type: 'http', scheme: 'bearer'));
 
         self::assertInstanceOf(BearerAuthHandler::class, $handler);
     }
@@ -101,10 +115,12 @@ final class SecuritySchemeHandlerRegistryTest extends TestCase
         $extended = $registry->with($custom);
 
         $handlers = $extended->all();
-        self::assertCount(3, $handlers);
+        self::assertCount(5, $handlers);
         self::assertSame($custom, $handlers[0]);
-        self::assertInstanceOf(BearerAuthHandler::class, $handlers[1]);
-        self::assertInstanceOf(ApiKeyHandler::class, $handlers[2]);
+        self::assertInstanceOf(BasicAuthHandler::class, $handlers[1]);
+        self::assertInstanceOf(DigestAuthHandler::class, $handlers[2]);
+        self::assertInstanceOf(BearerAuthHandler::class, $handlers[3]);
+        self::assertInstanceOf(ApiKeyHandler::class, $handlers[4]);
         self::assertSame($custom, $extended->findSupporting(new SecurityScheme(type: 'http', scheme: 'bearer')));
     }
 
@@ -148,7 +164,7 @@ final class SecuritySchemeHandlerRegistryTest extends TestCase
         $extended = $registry->with($custom);
 
         self::assertNotSame($registry, $extended);
-        self::assertCount(2, $registry->all());
+        self::assertCount(4, $registry->all());
         self::assertInstanceOf(
             BearerAuthHandler::class,
             $registry->findSupporting(new SecurityScheme(type: 'http', scheme: 'bearer')),
@@ -166,7 +182,7 @@ final class SecuritySchemeHandlerRegistryTest extends TestCase
 
         self::assertSame($custom, $merged->findSupporting(new SecurityScheme(type: 'http', scheme: 'bearer')));
         self::assertInstanceOf(ApiKeyHandler::class, $merged->findSupporting(new SecurityScheme(type: 'apiKey')));
-        self::assertCount(3, $merged->all());
+        self::assertCount(5, $merged->all());
         self::assertSame(count($user->all()) + count($base->all()), count($merged->all()));
     }
 }

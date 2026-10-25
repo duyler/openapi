@@ -8,8 +8,10 @@ use Duyler\OpenApi\Schema\Model\SecurityScheme;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Security\Internal\ApiKeyHandler;
 use Duyler\OpenApi\Validator\Security\Internal\ApiKeyValidator;
+use Duyler\OpenApi\Validator\Security\Internal\BasicAuthHandler;
 use Duyler\OpenApi\Validator\Security\Internal\BearerAuthHandler;
 use Duyler\OpenApi\Validator\Security\Internal\BearerAuthValidator;
+use Duyler\OpenApi\Validator\Security\Internal\DigestAuthHandler;
 
 /**
  * Immutable ordered registry of security scheme handlers.
@@ -34,6 +36,8 @@ final readonly class SecuritySchemeHandlerRegistry
     public static function buildIn(PregExecutor $pregExecutor): self
     {
         return new self([
+            new BasicAuthHandler($pregExecutor),
+            new DigestAuthHandler($pregExecutor),
             new BearerAuthHandler(new BearerAuthValidator($pregExecutor)),
             new ApiKeyHandler(new ApiKeyValidator()),
         ]);

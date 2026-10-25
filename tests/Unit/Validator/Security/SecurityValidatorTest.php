@@ -336,7 +336,7 @@ final class SecurityValidatorTest extends TestCase
     }
 
     #[Test]
-    public function http_basic_returns_unsupported_scheme_error(): void
+    public function http_basic_with_valid_credentials_passes(): void
     {
         $request = $this->factory->createServerRequest('GET', '/users')
             ->withHeader('Authorization', 'Basic dXNlcjpwYXNz');
@@ -350,16 +350,35 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        $this->expectException(UnsupportedSecuritySchemeException::class);
-
         $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
-    public function http_basic_throws_unsupported_scheme_exception_with_descriptor(): void
+    public function http_digest_with_valid_credentials_passes(): void
     {
         $request = $this->factory->createServerRequest('GET', '/users')
-            ->withHeader('Authorization', 'Basic dXNlcjpwYXNz');
+            ->withHeader('Authorization', 'Digest username="Mufasa", realm="testrealm@host.com", nonce="abc123", qop=auth');
+        $securityRequirements = new SecurityRequirement([
+            ['digestAuth' => []],
+        ]);
+        $securitySchemes = [
+            'digestAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'digest',
+            ),
+        ];
+
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function http_basic_without_header_reports_missing_credentials_error(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users');
         $securityRequirements = new SecurityRequirement([
             ['basicAuth' => []],
         ]);
@@ -372,14 +391,15 @@ final class SecurityValidatorTest extends TestCase
 
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
-            $this->fail('Expected UnsupportedSecuritySchemeException was not thrown');
-        } catch (UnsupportedSecuritySchemeException $e) {
-            $this->assertSame('basicAuth', $e->schemeName);
-            $this->assertSame('http', $e->schemeType);
-            $this->assertSame('basic', $e->httpScheme);
-            $this->assertStringContainsString('http/basic', $e->getMessage());
-            $this->assertStringContainsString('basicAuth', $e->getMessage());
-            $this->assertSame($e->getMessage(), (string) $e);
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('basicAuth', $error->schemeName(reveal: true));
+            $this->assertSame('http/basic', $error->schemeType(reveal: true));
+            $this->assertSame('Authorization header', $error->location(reveal: true));
         }
     }
 

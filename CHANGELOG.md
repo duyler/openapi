@@ -68,6 +68,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   simplexml operations keep running inside `LibxmlSecuredContext`, and the 1 MiB XML byte cap
   (`DEFAULT_MAX_XML_BYTES`) plus `BodyTooLargeException` apply unchanged, including multipart
   leaves.
+- Built-in security scheme handlers for HTTP Basic and HTTP Digest authentication
+  (RFC 7617/7616): `http/basic` and `http/digest` schemes are now dispatched to dedicated
+  built-in handlers in the `Validator\Security` registry instead of raising
+  `UnsupportedSecuritySchemeException`. Both handlers stay at the presence-and-format depth of
+  the bearer handler: the `Authorization` header must carry the `Basic`/`Digest` prefix
+  (case-insensitive) followed by a well-formed token (`Basic`, exactly one space and a
+  base64/base64url token per RFC 7617) or a well-formed `key=value` parameter list (`Digest`,
+  comma-separated with optional whitespace, values as RFC 7230 tokens or quoted strings with
+  backslash escapes per RFC 7616). Credential values are never decoded, compared or reported:
+  failures raise the generic missing-credentials error with scheme type `http/basic` or
+  `http/digest` and location `Authorization header`, and the verbose log entry keeps the exact
+  bearer handler shape (debug level, scheme name, scheme type and location only). The built-in
+  registry order is basic, digest, bearer, api key, so a custom handler registered through
+  `with()` still wins over every built-in one; `http/bearer` dispatch is unchanged.
 
 ### Changed
 
@@ -404,9 +418,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   behavior is unchanged: the OR/AND requirement semantics, the
   `UnsupportedSecuritySchemeException` for scheme types without a handler, and
   the `httpScheme` parameter reported for non-bearer `http` subschemes all stay
-  exactly as before; `http/basic`, `http/digest`, `oauth2`, `openIdConnect` and
-  `mutualTLS` keep raising the unsupported-scheme error until dedicated
-  built-in handlers land.
+  exactly as before; `oauth2`, `openIdConnect` and `mutualTLS` keep raising the
+  unsupported-scheme error until dedicated built-in handlers land (`http/basic` and
+  `http/digest` gain theirs in this release, see Added above).
 
 ### Fixed
 
