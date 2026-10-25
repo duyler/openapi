@@ -41,6 +41,8 @@ use Duyler\OpenApi\Validator\Schema\KeywordValidatorInterface;
 use Duyler\OpenApi\Validator\Schema\KeywordValidatorRegistry;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
+use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerInterface;
+use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerRegistry;
 use Duyler\OpenApi\Validator\Validation\CallbackValidator;
 use Duyler\OpenApi\Validator\Validation\RequestValidationHandler;
 use Duyler\OpenApi\Validator\Validation\ResponseValidationHandler;
@@ -150,6 +152,13 @@ final readonly class OpenApiValidatorBuilder
         $userRegistry = $this->keywordValidators();
 
         return $this->with(new BuilderConfig(keywordValidators: $userRegistry->with($keyword, $validator)));
+    }
+
+    public function withSecuritySchemeHandler(SecuritySchemeHandlerInterface $handler): self
+    {
+        $userRegistry = $this->config->securitySchemeHandlers ?? new SecuritySchemeHandlerRegistry();
+
+        return $this->with(new BuilderConfig(securitySchemeHandlers: $userRegistry->with($handler)));
     }
 
     public function disableStrictKeywords(): self
@@ -466,6 +475,12 @@ final readonly class OpenApiValidatorBuilder
         $pathFinder = new PathFinder($document, $pathRegexCache, $pregExecutor);
         $logger = $this->config->logger ?? new NullLogger();
         $securityVerboseLogger = $this->config->securityVerboseLogger ?? new NullLogger();
+        $userSecurityRegistry = $this->config->securitySchemeHandlers;
+        $securitySchemeHandlers = null === $userSecurityRegistry
+            ? null
+            : $userSecurityRegistry->withBase(
+                SecuritySchemeHandlerRegistry::buildIn($pregExecutor, $securityVerboseLogger),
+            );
         $fileResolver = new FileExternalRefResolver(
             allowedRoot: $this->config->externalRefAllowedRoot,
             maxBytes: $this->externalRefMaxBytes(),
@@ -523,6 +538,7 @@ final readonly class OpenApiValidatorBuilder
                     contentAssertionsEnabled: $contentAssertionsEnabled,
                     formatAssertionMode: $formatAssertionMode,
                     lenientResponses: $lenientResponses,
+                    securitySchemeHandlers: $securitySchemeHandlers,
                 ),
                 bodyLimits: new BodyLimits(
                     maxJsonBodyBytes: $maxJsonBodyBytes,

@@ -9,7 +9,7 @@ use Duyler\OpenApi\Schema\Model\SecurityScheme;
 use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
 use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Security\Internal\MutualTlsHandler;
-use Duyler\OpenApi\Validator\Security\Internal\SchemeCredentialReporter;
+use Duyler\OpenApi\Validator\Security\SchemeCredentialReporter;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Override;

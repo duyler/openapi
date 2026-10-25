@@ -12,6 +12,7 @@ use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\FormatAssertionMode;
 use Duyler\OpenApi\Validator\Schema\ExternalRefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\KeywordValidatorRegistry;
+use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -58,6 +59,7 @@ final readonly class BuilderConfig
         public readonly ?array $allowedUnknownKeywords = null,
         public readonly ?FormatAssertionMode $formatAssertionMode = null,
         public readonly ?bool $lenientResponses = null,
+        public readonly ?SecuritySchemeHandlerRegistry $securitySchemeHandlers = null,
     ) {}
 
     public function merge(self $overrides): self
@@ -99,6 +101,7 @@ final readonly class BuilderConfig
             allowedUnknownKeywords: $overrides->allowedUnknownKeywords ?? $this->allowedUnknownKeywords,
             formatAssertionMode: $overrides->formatAssertionMode ?? $this->formatAssertionMode,
             lenientResponses: $overrides->lenientResponses ?? $this->lenientResponses,
+            securitySchemeHandlers: $overrides->securitySchemeHandlers ?? $this->securitySchemeHandlers,
         );
     }
 }

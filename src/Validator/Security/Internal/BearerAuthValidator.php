@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\PregRuntimeException;
 use Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException;
 use Duyler\OpenApi\Validator\PregExecutor;
+use Duyler\OpenApi\Validator\Security\SchemeCredentialReporter;
 use Psr\Http\Message\ServerRequestInterface;
 
 use function strtolower;

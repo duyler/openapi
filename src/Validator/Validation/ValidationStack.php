@@ -39,6 +39,7 @@ use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorDispatcher;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
+use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerRegistry;
 use Duyler\OpenApi\Validator\Validation\Internal\ValidationGroup;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -88,6 +89,7 @@ final readonly class ValidationStack
         public readonly KeywordValidatorRegistry $keywordValidators = new KeywordValidatorRegistry(),
         public readonly FormatAssertionMode $formatAssertionMode = FormatAssertionMode::Assertion,
         public readonly bool $lenientResponses = false,
+        public readonly ?SecuritySchemeHandlerRegistry $securitySchemeHandlers = null,
     ) {
         $this->validatorConfiguration = new ValidatorConfiguration(
             coercion: $this->coercion,
@@ -193,6 +195,7 @@ final readonly class ValidationStack
             keywordValidators: $root->keywordValidators,
             formatAssertionMode: $options->formatAssertionMode,
             lenientResponses: $options->lenientResponses,
+            securitySchemeHandlers: $options->securitySchemeHandlers,
         );
     }
 

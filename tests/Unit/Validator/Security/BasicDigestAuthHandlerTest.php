@@ -9,7 +9,7 @@ use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Security\Internal\BasicAuthHandler;
 use Duyler\OpenApi\Validator\Security\Internal\DigestAuthHandler;
-use Duyler\OpenApi\Validator\Security\Internal\SchemeCredentialReporter;
+use Duyler\OpenApi\Validator\Security\SchemeCredentialReporter;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Override;
 use PHPUnit\Framework\Attributes\Test;

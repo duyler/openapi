@@ -14,7 +14,7 @@ use Duyler\OpenApi\Validator\Security\Internal\DigestAuthHandler;
 use Duyler\OpenApi\Validator\Security\Internal\MutualTlsHandler;
 use Duyler\OpenApi\Validator\Security\Internal\OAuth2Handler;
 use Duyler\OpenApi\Validator\Security\Internal\OpenIdConnectHandler;
-use Duyler\OpenApi\Validator\Security\Internal\SchemeCredentialReporter;
+use Duyler\OpenApi\Validator\Security\SchemeCredentialReporter;
 use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerInterface;
 use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerRegistry;
 use Nyholm\Psr7\Factory\Psr17Factory;

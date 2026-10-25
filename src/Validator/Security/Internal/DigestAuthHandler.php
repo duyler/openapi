@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\SecurityScheme;
 use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\PregRuntimeException;
 use Duyler\OpenApi\Validator\PregExecutor;
+use Duyler\OpenApi\Validator\Security\SchemeCredentialReporter;
 use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerInterface;
 use Override;
 use Psr\Http\Message\ServerRequestInterface;

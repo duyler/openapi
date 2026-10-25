@@ -10,10 +10,15 @@ use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
+use Duyler\OpenApi\Validator\Security\SchemeCredentialReporter;
+use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerInterface;
+use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerRegistry;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 
 use function str_repeat;
@@ -748,8 +753,29 @@ final class SecurityValidatorTest extends TestCase
             $this->assertStringContainsString('unknownSchemeType', $e->getMessage());
             $this->assertStringContainsString('unknownAuth', $e->getMessage());
             $this->assertStringContainsString('no built-in handler', $e->getMessage());
+            $this->assertStringContainsString('withSecuritySchemeHandler()', $e->getMessage());
             $this->assertSame($e->getMessage(), (string) $e);
         }
+    }
+
+    #[Test]
+    public function custom_handler_registry_replaces_builtin_dispatch(): void
+    {
+        $handler = new UnknownSchemeTypeHandler();
+        $validator = new SecurityValidator(handlerRegistry: new SecuritySchemeHandlerRegistry([$handler]));
+        $request = $this->factory->createServerRequest('GET', '/users');
+        $securityRequirements = new SecurityRequirement([
+            ['unknownAuth' => []],
+        ]);
+        $securitySchemes = [
+            'unknownAuth' => new SecurityScheme(
+                type: 'unknownSchemeType',
+            ),
+        ];
+
+        $validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+
+        $this->assertSame(['unknownAuth'], $handler->validatedSchemeNames);
     }
 
     #[Test]
@@ -1016,5 +1042,30 @@ final class SpyLogger implements LoggerInterface
     public function log($level, $message, array $context = []): void
     {
         $this->records[] = ['level' => (string) $level, 'message' => $message, 'context' => $context];
+    }
+}
+
+final class UnknownSchemeTypeHandler implements SecuritySchemeHandlerInterface
+{
+    /**
+     * @var list<string>
+     */
+    public array $validatedSchemeNames = [];
+
+    #[Override]
+    public function supports(SecurityScheme $scheme): bool
+    {
+        return 'unknownSchemeType' === $scheme->type;
+    }
+
+    #[Override]
+    public function validate(
+        ServerRequestInterface $request,
+        SecurityScheme $scheme,
+        SchemeCredentialReporter $reporter,
+    ): ?MissingSecurityCredentialsError {
+        $this->validatedSchemeNames[] = $reporter->schemeName;
+
+        return null;
     }
 }

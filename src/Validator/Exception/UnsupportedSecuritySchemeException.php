@@ -21,7 +21,7 @@ final class UnsupportedSecuritySchemeException extends RuntimeException
 
         parent::__construct(sprintf(
             'Security scheme "%s" uses unsupported type "%s": no built-in handler for the scheme type/subscheme; '
-            . 'register a custom security scheme handler to validate it.',
+            . 'register a custom handler via OpenApiValidatorBuilder::withSecuritySchemeHandler() to validate it.',
             $schemeName,
             $descriptor,
         ));

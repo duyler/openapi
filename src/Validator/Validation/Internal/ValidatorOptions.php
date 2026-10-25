@@ -8,6 +8,7 @@ use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\FormatAssertionMode;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
+use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerRegistry;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -31,6 +32,7 @@ final readonly class ValidatorOptions
         public readonly bool $contentAssertionsEnabled = false,
         public readonly FormatAssertionMode $formatAssertionMode = FormatAssertionMode::Assertion,
         public readonly bool $lenientResponses = false,
+        public readonly ?SecuritySchemeHandlerRegistry $securitySchemeHandlers = null,
     ) {}
 
     public function toValidatorConfiguration(): ValidatorConfiguration

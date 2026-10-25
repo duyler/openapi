@@ -10,7 +10,6 @@ use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\PregExecutor;
-use Duyler\OpenApi\Validator\Security\Internal\SchemeCredentialReporter;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -27,9 +26,11 @@ final readonly class SecurityValidator
     public function __construct(
         ?LoggerInterface $logger = null,
         private readonly PregExecutor $pregExecutor = new PregExecutor(),
+        ?SecuritySchemeHandlerRegistry $handlerRegistry = null,
     ) {
         $this->logger = $logger ?? new NullLogger();
-        $this->handlerRegistry = SecuritySchemeHandlerRegistry::buildIn($this->pregExecutor, $this->logger);
+        $this->handlerRegistry = $handlerRegistry
+            ?? SecuritySchemeHandlerRegistry::buildIn($this->pregExecutor, $this->logger);
     }
 
     public function validate(SecurityValidationContext $context): void

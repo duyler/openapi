@@ -41,7 +41,11 @@ final readonly class CallbackValidator
             $context->pregExecutor,
             $this->logger,
         );
-        $this->securityValidator = new SecurityValidator($context->securityVerboseLogger, $context->pregExecutor);
+        $this->securityValidator = new SecurityValidator(
+            $context->securityVerboseLogger,
+            $context->pregExecutor,
+            $context->securitySchemeHandlers,
+        );
     }
 
     public function validate(ServerRequestInterface $request, string $callbackName): Operation

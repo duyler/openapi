@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator\Security\Internal;
 use Duyler\OpenApi\Schema\Internal\MetadataUri;
 use Duyler\OpenApi\Schema\Model\SecurityScheme;
 use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
+use Duyler\OpenApi\Validator\Security\SchemeCredentialReporter;
 use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerInterface;
 use Override;
 use Psr\Http\Message\ServerRequestInterface;

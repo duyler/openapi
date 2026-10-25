@@ -12,7 +12,7 @@ use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Security\Internal\BearerPresenceValidator;
 use Duyler\OpenApi\Validator\Security\Internal\OAuth2Handler;
 use Duyler\OpenApi\Validator\Security\Internal\OpenIdConnectHandler;
-use Duyler\OpenApi\Validator\Security\Internal\SchemeCredentialReporter;
+use Duyler\OpenApi\Validator\Security\SchemeCredentialReporter;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Override;
 use PHPUnit\Framework\Attributes\Test;

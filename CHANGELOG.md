@@ -109,16 +109,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   through `with()` still wins over every built-in one; the `http/bearer` fallback (bearer
   pattern applied to every `http` scheme without its own handler) remains the dispatch path
   for future `http` subschemes.
+- `OpenApiValidatorBuilder::withSecuritySchemeHandler(SecuritySchemeHandlerInterface $handler): self`
+  (fluent, repeatable): registers a custom security scheme handler through the public builder
+  surface, closing breaking#10 — user-defined security schemes (for example an introspection
+  stub for `http/bearer` or a custom apiKey location) are now implementable without touching
+  package internals. The handler is prepended ahead of the current handler list in
+  `Validator\Security\SecuritySchemeHandlerRegistry`, and the first handler whose `supports()`
+  returns true wins the scheme lookup, so a user handler overrides every built-in one for the
+  schemes it claims (basic, digest, bearer, api key, mutual TLS, oauth2, openIdConnect);
+  registering two competing handlers makes the last `with()` call win (LIFO order). The merged
+  registry (user handlers first, built-in set behind them) is shared by request, webhook and
+  callback security validation; the OR/AND security requirement semantics are unchanged.
+- `SchemeCredentialReporter` is promoted from `Validator\Security\Internal` to the public
+  `Validator\Security` namespace: the reporter type appears in the public
+  `SecuritySchemeHandlerInterface::validate()` signature, so external handler implementations
+  must be able to name it. The class keeps its shape (public `schemeName`,
+  `reportMissing(schemeType, location)`), its caller-safe `MissingSecurityCredentialsError`
+  output and the sanitized verbose logging; the `@internal` marker is removed.
 
 ### Changed
 
 - `UnsupportedSecuritySchemeException` message wording: with the full built-in handler set
   (apiKey, http/basic, http/bearer, http/digest, mutualTLS, oauth2, openIdConnect) the message
   no longer claims that the package "validates apiKey and http/bearer only" — it now states the
-  fact that no built-in handler exists for the scheme type/subscheme and that a custom security
-  scheme handler must be registered to validate it. The exception is now raised only for types
-  or `http` subschemes without a built-in handler (for example `http/negotiate` or an entirely
-  unknown type); scheme name, scheme type and `httpScheme` properties are unchanged.
+  fact that no built-in handler exists for the scheme type/subscheme and points to the public
+  registration entry point: a custom handler must be registered via
+  `OpenApiValidatorBuilder::withSecuritySchemeHandler()` to validate it. The exception is now
+  raised only for types or `http` subschemes without a built-in handler (for example
+  `http/negotiate` or an entirely unknown type); scheme name, scheme type and `httpScheme`
+  properties are unchanged.
 - XML empty-element parse semantics (3.2 §4.26.5): an empty element without `xsi:nil` — root
   (`<empty/>`), child (`<nickname/>`) or repeated (`<item/><item/>`) — now maps to an empty string
   `''` instead of `null` in generic XML parsing; `null` is now reserved for `xsi:nil="true"`
