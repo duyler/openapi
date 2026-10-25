@@ -377,6 +377,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `withFormatAssertionMode(Annotation)` — a dedicated replay test pins all 133 cases. The
   suite runner now also treats the raw `InvalidFormatException` (the package's fail-fast
   format error convention) as an invalid verdict.
+- Security Scheme Objects now model the OAS 3.2 security surface (§4.27–4.29).
+  **BC break for direct integrators.** The OAuth Flows Object wire key
+  `deviceCode` is renamed to `deviceAuthorization` (§4.28.1), so the device flow
+  no longer disappears when a 3.2 document is parsed; documents still using the
+  pre-release `deviceCode` spelling build with the flow silently absent — the old
+  key is not accepted (no deprecation cycle applies). `SecurityScheme` gains the
+  `deprecated` boolean field (§4.27): it is parsed and serialized, so a
+  `deprecated: true` scheme survives round-trip instead of being dropped, and the
+  flow-level `deprecated` field of OAuth Flow Objects keeps its separate meaning.
+  The `scheme` field is normalized to lowercase at parse time (RFC 9110 §11.1
+  case-insensitivity): `Basic` and `basic` produce identical models, and
+  serialization emits the normalized value. `oauth2MetadataUrl` is now validated
+  as an absolute URI at parse time; a malformed value raises
+  `Schema\Exception\InvalidSchemaException` without echoing the offending value.
 
 ### Fixed
 

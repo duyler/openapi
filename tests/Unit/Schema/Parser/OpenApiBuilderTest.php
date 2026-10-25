@@ -651,7 +651,7 @@ final class OpenApiBuilderTest extends TestCase
                                 'refreshUrl' => 'https://example.com/refresh',
                                 'scopes' => ['read' => 'Read access', 'write' => 'Write access'],
                             ],
-                            'deviceCode' => [
+                            'deviceAuthorization' => [
                                 'tokenUrl' => 'https://example.com/token',
                                 'deviceAuthorizationUrl' => 'https://example.com/device/code',
                                 'scopes' => ['read' => 'Read access'],
@@ -678,11 +678,11 @@ final class OpenApiBuilderTest extends TestCase
         $this->assertSame('https://example.com/refresh', $scheme->flows->authorizationCode->refreshUrl);
         $this->assertSame(['read' => 'Read access', 'write' => 'Write access'], $scheme->flows->authorizationCode->scopes);
 
-        $this->assertNotNull($scheme->flows->deviceCode);
-        $this->assertSame('https://example.com/token', $scheme->flows->deviceCode->tokenUrl);
-        $this->assertSame('https://example.com/device/code', $scheme->flows->deviceCode->deviceAuthorizationUrl);
-        $this->assertSame(['read' => 'Read access'], $scheme->flows->deviceCode->scopes);
-        $this->assertFalse($scheme->flows->deviceCode->deprecated);
+        $this->assertNotNull($scheme->flows->deviceAuthorization);
+        $this->assertSame('https://example.com/token', $scheme->flows->deviceAuthorization->tokenUrl);
+        $this->assertSame('https://example.com/device/code', $scheme->flows->deviceAuthorization->deviceAuthorizationUrl);
+        $this->assertSame(['read' => 'Read access'], $scheme->flows->deviceAuthorization->scopes);
+        $this->assertFalse($scheme->flows->deviceAuthorization->deprecated);
     }
 
     #[Test]

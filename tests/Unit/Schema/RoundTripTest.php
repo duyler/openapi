@@ -197,4 +197,67 @@ JSON;
 
         self::assertSame($firstJson, $secondJson);
     }
+
+    #[Test]
+    public function round_trip_preserves_security_scheme_3_2_fields(): void
+    {
+        $json = <<<'JSON'
+{
+    "openapi": "3.2.0",
+    "info": {"title": "Security 3.2 round-trip", "version": "1.0.0"},
+    "components": {
+        "securitySchemes": {
+            "oauth2": {
+                "type": "oauth2",
+                "oauth2MetadataUrl": "https://auth.example.com/.well-known/oauth-authorization-server",
+                "deprecated": true,
+                "flows": {
+                    "deviceAuthorization": {
+                        "authorizationUrl": "https://auth.example.com/authorize",
+                        "tokenUrl": "https://auth.example.com/token",
+                        "refreshUrl": "https://auth.example.com/refresh",
+                        "deviceAuthorizationUrl": "https://auth.example.com/device/code",
+                        "scopes": {"read": "Read access", "write": "Write access"},
+                        "deprecated": false
+                    }
+                }
+            },
+            "basicAuth": {"type": "http", "scheme": "Basic", "deprecated": true}
+        }
+    }
+}
+JSON;
+
+        $first = new JsonParser()->parse($json);
+        $firstJson = json_encode($first, JSON_THROW_ON_ERROR);
+
+        $oauth2Scheme = $first->components->securitySchemes['oauth2'];
+        self::assertTrue($oauth2Scheme->deprecated);
+        self::assertSame('https://auth.example.com/.well-known/oauth-authorization-server', $oauth2Scheme->oauth2MetadataUrl);
+        self::assertNotNull($oauth2Scheme->flows);
+        self::assertNotNull($oauth2Scheme->flows->deviceAuthorization);
+        self::assertSame('https://auth.example.com/device/code', $oauth2Scheme->flows->deviceAuthorization->deviceAuthorizationUrl);
+        self::assertSame('https://auth.example.com/token', $oauth2Scheme->flows->deviceAuthorization->tokenUrl);
+        self::assertSame('https://auth.example.com/refresh', $oauth2Scheme->flows->deviceAuthorization->refreshUrl);
+        self::assertSame(['read' => 'Read access', 'write' => 'Write access'], $oauth2Scheme->flows->deviceAuthorization->scopes);
+        self::assertFalse($oauth2Scheme->flows->deviceAuthorization->deprecated);
+        self::assertStringContainsString('"deviceAuthorization":{', $firstJson);
+        self::assertStringNotContainsString('"deviceCode"', $firstJson);
+
+        $basicScheme = $first->components->securitySchemes['basicAuth'];
+        self::assertSame('basic', $basicScheme->scheme);
+        self::assertTrue($basicScheme->deprecated);
+
+        $second = new JsonParser()->parse($firstJson);
+        $secondJson = json_encode($second, JSON_THROW_ON_ERROR);
+
+        self::assertSame($firstJson, $secondJson);
+
+        $secondScheme = $second->components->securitySchemes['oauth2'];
+        self::assertTrue($secondScheme->deprecated);
+        self::assertSame('https://auth.example.com/.well-known/oauth-authorization-server', $secondScheme->oauth2MetadataUrl);
+        self::assertNotNull($secondScheme->flows->deviceAuthorization);
+        self::assertSame('https://auth.example.com/device/code', $secondScheme->flows->deviceAuthorization->deviceAuthorizationUrl);
+        self::assertSame('basic', $second->components->securitySchemes['basicAuth']->scheme);
+    }
 }

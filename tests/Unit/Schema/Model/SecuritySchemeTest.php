@@ -201,6 +201,34 @@ final class SecuritySchemeTest extends TestCase
     }
 
     #[Test]
+    public function security_scheme_has_deprecated_flag(): void
+    {
+        $scheme = new SecurityScheme(
+            type: 'apiKey',
+            deprecated: true,
+        );
+
+        $serialized = $scheme->jsonSerialize();
+
+        self::assertTrue($scheme->deprecated);
+        self::assertArrayHasKey('deprecated', $serialized);
+        self::assertTrue($serialized['deprecated']);
+    }
+
+    #[Test]
+    public function security_scheme_without_deprecated_flag_serializes_no_deprecated_key(): void
+    {
+        $scheme = new SecurityScheme(
+            type: 'apiKey',
+        );
+
+        $serialized = $scheme->jsonSerialize();
+
+        self::assertNull($scheme->deprecated);
+        self::assertArrayNotHasKey('deprecated', $serialized);
+    }
+
+    #[Test]
     public function security_scheme_with_full_oauth_flows(): void
     {
         $authorizationCode = new OAuthFlow(
@@ -208,7 +236,7 @@ final class SecuritySchemeTest extends TestCase
             tokenUrl: 'https://example.com/oauth/token',
             scopes: ['read' => 'Read access', 'write' => 'Write access'],
         );
-        $deviceCode = new OAuthFlow(
+        $deviceAuthorization = new OAuthFlow(
             tokenUrl: 'https://example.com/oauth/token',
             deviceAuthorizationUrl: 'https://example.com/device/code',
             scopes: ['read' => 'Read access'],
@@ -216,7 +244,7 @@ final class SecuritySchemeTest extends TestCase
         );
         $flows = new OAuthFlows(
             authorizationCode: $authorizationCode,
-            deviceCode: $deviceCode,
+            deviceAuthorization: $deviceAuthorization,
         );
 
         $scheme = new SecurityScheme(
@@ -230,7 +258,7 @@ final class SecuritySchemeTest extends TestCase
         self::assertSame('OAuth 2.0 with Device Authorization Flow', $scheme->description);
         self::assertNotNull($scheme->flows);
         self::assertNotNull($scheme->flows->authorizationCode);
-        self::assertNotNull($scheme->flows->deviceCode);
+        self::assertNotNull($scheme->flows->deviceAuthorization);
         self::assertSame(
             'https://auth.example.com/.well-known/oauth-authorization-server',
             $scheme->oauth2MetadataUrl,
@@ -371,6 +399,7 @@ final class SecuritySchemeTest extends TestCase
             flows: $flows,
             openIdConnectUrl: 'https://example.com/openid',
             oauth2MetadataUrl: 'https://example.com/metadata',
+            deprecated: true,
             authorizationUrl: 'https://example.com/authorize',
             tokenUrl: 'https://example.com/token',
             refreshUrl: 'https://example.com/refresh',
@@ -389,6 +418,7 @@ final class SecuritySchemeTest extends TestCase
             'flows' => $flows->jsonSerialize(),
             'openIdConnectUrl' => 'https://example.com/openid',
             'oauth2MetadataUrl' => 'https://example.com/metadata',
+            'deprecated' => true,
             'authorizationUrl' => 'https://example.com/authorize',
             'tokenUrl' => 'https://example.com/token',
             'refreshUrl' => 'https://example.com/refresh',

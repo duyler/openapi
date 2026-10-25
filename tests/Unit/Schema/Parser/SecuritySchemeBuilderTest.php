@@ -123,7 +123,7 @@ final class SecuritySchemeBuilderTest extends TestCase
                 'tokenUrl' => 'https://example.com/token',
                 'scopes' => [],
             ],
-            'deviceCode' => [
+            'deviceAuthorization' => [
                 'deviceAuthorizationUrl' => 'https://example.com/device',
                 'tokenUrl' => 'https://example.com/token',
                 'scopes' => [],
@@ -136,9 +136,9 @@ final class SecuritySchemeBuilderTest extends TestCase
         self::assertNotNull($flows->password);
         self::assertNotNull($flows->clientCredentials);
         self::assertNotNull($flows->authorizationCode);
-        self::assertNotNull($flows->deviceCode);
-        self::assertSame('https://example.com/device', $flows->deviceCode->deviceAuthorizationUrl);
-        self::assertTrue($flows->deviceCode->deprecated);
+        self::assertNotNull($flows->deviceAuthorization);
+        self::assertSame('https://example.com/device', $flows->deviceAuthorization->deviceAuthorizationUrl);
+        self::assertTrue($flows->deviceAuthorization->deprecated);
     }
 
     #[Test]
@@ -150,7 +150,101 @@ final class SecuritySchemeBuilderTest extends TestCase
         self::assertNull($flows->password);
         self::assertNull($flows->clientCredentials);
         self::assertNull($flows->authorizationCode);
-        self::assertNull($flows->deviceCode);
+        self::assertNull($flows->deviceAuthorization);
+    }
+
+    #[Test]
+    public function build_oauth_flows_ignores_legacy_device_code_wire_key(): void
+    {
+        $flows = $this->securitySchemeBuilder->buildOAuthFlows([
+            'deviceCode' => [
+                'deviceAuthorizationUrl' => 'https://example.com/device',
+                'tokenUrl' => 'https://example.com/token',
+                'scopes' => [],
+            ],
+        ]);
+
+        self::assertNull($flows->deviceAuthorization);
+    }
+
+    #[Test]
+    public function build_security_scheme_normalizes_scheme_to_lowercase(): void
+    {
+        $upperScheme = $this->securitySchemeBuilder->buildSecurityScheme([
+            'type' => 'http',
+            'scheme' => 'Basic',
+        ]);
+
+        $lowerScheme = $this->securitySchemeBuilder->buildSecurityScheme([
+            'type' => 'http',
+            'scheme' => 'basic',
+        ]);
+
+        $mixedScheme = $this->securitySchemeBuilder->buildSecurityScheme([
+            'type' => 'http',
+            'scheme' => 'BeArEr',
+        ]);
+
+        self::assertSame('basic', $upperScheme->scheme);
+        self::assertSame('basic', $lowerScheme->scheme);
+        self::assertSame('bearer', $mixedScheme->scheme);
+        self::assertSame($lowerScheme->jsonSerialize(), $upperScheme->jsonSerialize());
+    }
+
+    #[Test]
+    public function build_security_scheme_with_deprecated_flag(): void
+    {
+        $deprecatedScheme = $this->securitySchemeBuilder->buildSecurityScheme([
+            'type' => 'apiKey',
+            'name' => 'X-API-Key',
+            'in' => 'header',
+            'deprecated' => true,
+        ]);
+
+        $activeScheme = $this->securitySchemeBuilder->buildSecurityScheme([
+            'type' => 'apiKey',
+            'name' => 'X-API-Key',
+            'in' => 'header',
+            'deprecated' => false,
+        ]);
+
+        self::assertTrue($deprecatedScheme->deprecated);
+        self::assertFalse($activeScheme->deprecated);
+    }
+
+    #[Test]
+    public function build_security_scheme_without_deprecated_flag_yields_null(): void
+    {
+        $scheme = $this->securitySchemeBuilder->buildSecurityScheme([
+            'type' => 'apiKey',
+            'name' => 'X-API-Key',
+            'in' => 'header',
+        ]);
+
+        self::assertNull($scheme->deprecated);
+    }
+
+    #[Test]
+    public function build_security_scheme_with_flat_scopes(): void
+    {
+        $scheme = $this->securitySchemeBuilder->buildSecurityScheme([
+            'type' => 'oauth2',
+            'scopes' => ['read' => 'Read access'],
+        ]);
+
+        self::assertSame(['read' => 'Read access'], $scheme->scopes);
+    }
+
+    #[Test]
+    public function build_security_scheme_throws_for_invalid_oauth2_metadata_url(): void
+    {
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Security scheme oauth2MetadataUrl must be a valid absolute URI');
+
+        $this->securitySchemeBuilder->buildSecurityScheme([
+            'type' => 'oauth2',
+            'oauth2MetadataUrl' => 'not a uri',
+        ]);
     }
 
     #[Test]

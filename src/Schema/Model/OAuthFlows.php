@@ -15,7 +15,7 @@ final readonly class OAuthFlows implements JsonSerializable
         public ?OAuthFlow $password = null,
         public ?OAuthFlow $clientCredentials = null,
         public ?OAuthFlow $authorizationCode = null,
-        public ?OAuthFlow $deviceCode = null,
+        public ?OAuthFlow $deviceAuthorization = null,
     ) {}
 
     /**
@@ -28,7 +28,7 @@ final readonly class OAuthFlows implements JsonSerializable
             new FieldMetadata('password', 'password', accessor: static fn(self $model): ?array => $model->password?->jsonSerialize()),
             new FieldMetadata('clientCredentials', 'clientCredentials', accessor: static fn(self $model): ?array => $model->clientCredentials?->jsonSerialize()),
             new FieldMetadata('authorizationCode', 'authorizationCode', accessor: static fn(self $model): ?array => $model->authorizationCode?->jsonSerialize()),
-            new FieldMetadata('deviceCode', 'deviceCode', accessor: static fn(self $model): ?array => $model->deviceCode?->jsonSerialize()),
+            new FieldMetadata('deviceAuthorization', 'deviceAuthorization', accessor: static fn(self $model): ?array => $model->deviceAuthorization?->jsonSerialize()),
         ];
     }
 
