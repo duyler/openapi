@@ -15,7 +15,9 @@ use Duyler\OpenApi\Validator\Exception\ValidationErrorInterface;
  * their own exceptions, while in annotations mode this value object computes
  * its state lazily on the first accessor call and never affects the outcome.
  *
- * @api Public API: exposed through ValidationContext::contentResult().
+ * @api Public API: exposed through ValidationContext::contentResult() and,
+ *      for every content instance of the run, through contentResults() and
+ *      contentResultAtPath() keyed by data path.
  */
 final class ContentValidationResult
 {

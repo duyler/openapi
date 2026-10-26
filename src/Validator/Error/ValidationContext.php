@@ -36,6 +36,9 @@ final class ValidationContext
 
     private ?ContentValidationResult $contentResult = null;
 
+    /** @var array<string, ContentValidationResult> */
+    private array $contentResults = [];
+
     /** @var WeakMap<Schema, string> */
     private WeakMap $dynamicRefTargets;
 
@@ -151,12 +154,37 @@ final class ValidationContext
 
     public function attachContentResult(ContentValidationResult $result): void
     {
+        $path = $this->breadcrumbs->currentPath();
         $this->contentResult ??= $result;
+        $this->contentResults[$path] ??= $result;
     }
 
     public function contentResult(): ?ContentValidationResult
     {
         return $this->contentResult;
+    }
+
+    /**
+     * Every content pipeline result of the run keyed by the data path of its
+     * string instance, in attach/merge order. When several results reach the
+     * same data path (for example matching oneOf/anyOf branches), the result
+     * of the first attach in traversal/merge order is kept. The first-wins
+     * slot stays available through contentResult().
+     *
+     * @return array<string, ContentValidationResult>
+     */
+    public function contentResults(): array
+    {
+        return $this->contentResults;
+    }
+
+    /**
+     * The content pipeline result of the instance validated at the given data
+     * path, or null when no content-keyword instance was validated there.
+     */
+    public function contentResultAtPath(string $path): ?ContentValidationResult
+    {
+        return $this->contentResults[$path] ?? null;
     }
 
     /**
@@ -187,6 +215,7 @@ final class ValidationContext
 
         $this->annotations = $this->annotations->merge($child->annotations);
         $this->contentResult ??= $child->contentResult;
+        $this->contentResults += $child->contentResults;
     }
 
     public function enterDynamicScope(Schema $resource): void

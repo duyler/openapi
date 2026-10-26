@@ -567,6 +567,81 @@ class ValidationContextTest extends TestCase
     }
 
     #[Test]
+    public function content_results_accumulate_per_path_in_traversal_order(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $root = ContentValidationResult::eager('root', true, []);
+        $first = ContentValidationResult::eager('first', true, []);
+        $second = ContentValidationResult::eager('second', true, []);
+
+        $context->attachContentResult($root);
+        $context->enterBreadcrumbIndex(0);
+        $context->attachContentResult($first);
+        $context->leaveBreadcrumb();
+        $context->enterBreadcrumbIndex(1);
+        $context->attachContentResult($second);
+        $context->leaveBreadcrumb();
+
+        $this->assertSame($root, $context->contentResult());
+        $this->assertSame(['/' => $root, '/0' => $first, '/1' => $second], $context->contentResults());
+        $this->assertSame($first, $context->contentResultAtPath('/0'));
+        $this->assertSame($second, $context->contentResultAtPath('/1'));
+        $this->assertNull($context->contentResultAtPath('/2'));
+    }
+
+    #[Test]
+    public function repeated_attachment_on_the_same_path_keeps_the_first_result(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $first = ContentValidationResult::eager('first', true, []);
+        $second = ContentValidationResult::eager('second', true, []);
+
+        $context->attachContentResult($first);
+        $context->attachContentResult($second);
+
+        $this->assertSame(['/' => $first], $context->contentResults());
+        $this->assertSame($first, $context->contentResultAtPath('/'));
+    }
+
+    #[Test]
+    public function merged_branch_content_results_extend_the_list_without_overwriting_existing_paths(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $kept = ContentValidationResult::eager('kept', true, []);
+        $parent->enterBreadcrumbIndex(0);
+        $parent->attachContentResult($kept);
+        $parent->leaveBreadcrumb();
+
+        $child = $parent->forkForBranch();
+        $overwritten = ContentValidationResult::eager('overwritten', true, []);
+        $appended = ContentValidationResult::eager('appended', true, []);
+        $child->enterBreadcrumbIndex(0);
+        $child->attachContentResult($overwritten);
+        $child->leaveBreadcrumb();
+        $child->enterBreadcrumbIndex(1);
+        $child->attachContentResult($appended);
+        $child->leaveBreadcrumb();
+
+        $parent->mergeChildAnnotations($child);
+
+        $this->assertSame(['/0' => $kept, '/1' => $appended], $parent->contentResults());
+        $this->assertSame($kept, $parent->contentResultAtPath('/0'));
+        $this->assertSame($appended, $parent->contentResultAtPath('/1'));
+    }
+
+    #[Test]
+    public function branch_fork_starts_without_content_results(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $parent->attachContentResult(ContentValidationResult::eager('parent', true, []));
+
+        $child = $parent->forkForBranch();
+
+        $this->assertSame([], $child->contentResults());
+        $this->assertNull($child->contentResultAtPath('/'));
+    }
+
+    #[Test]
     public function skip_content_media_type_is_false_by_default(): void
     {
         $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));

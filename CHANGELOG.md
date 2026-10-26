@@ -461,6 +461,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Sub-schema validation runs only when `contentMediaType` is declared: per JSON Schema 2020-12 the `contentSchema`
   keyword is bound to `contentMediaType`, so `contentSchema` without a media type stays an annotation in
   assertions mode as well.
+- Every content instance of a validation run is now addressable instead of first-wins-only:
+  `ValidationContext::contentResults()` returns all content pipeline results of the run keyed
+  by the data path of their string instance (`/0`, `/props/payload`, …) in attach/merge order,
+  `ValidationContext::contentResultAtPath()` reads a single instance result by path, and
+  `contentResult()` keeps returning the first instance in traversal order. Results merged from
+  successful compositional branches (oneOf/anyOf/if-then-else/discriminator) join the list in
+  attach/merge order, results of failed branches never enter it, and when several results reach
+  the same data path the result of the first attach is kept. Deferred results still compute
+  lazily on the first read after the run and stay memoized.
 - Without content assertions (annotation mode) the pipeline never runs during validation: `contentEncoding` and
   `contentMediaType` remain annotations, the outcome is untouched, and the same `ContentValidationResult` is
   attached to the validation context lazily — it computes on the first consumer read, so undecoded payloads stay
