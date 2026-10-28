@@ -6,15 +6,24 @@ namespace Duyler\OpenApi\Test\Support;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
+use Duyler\OpenApi\Validator\FormatAssertionMode;
 
 use function count;
 use function json_encode;
+use function sprintf;
 
 use const JSON_THROW_ON_ERROR;
 
 final class SuiteValidatorFactory
 {
     private const string SUBJECT_SCHEMA_REF = '#/components/schemas/Subject';
+
+    /**
+     * @var array<string, FormatAssertionMode>
+     */
+    private const array SECTION_FORMAT_ASSERTION_MODES = [
+        'format.json' => FormatAssertionMode::Annotation,
+    ];
 
     /**
      * @var list<string>
@@ -36,11 +45,16 @@ final class SuiteValidatorFactory
         return self::SUBJECT_SCHEMA_REF;
     }
 
-    public static function forSchema(mixed $schema): OpenApiValidatorInterface
+    public static function forSchema(mixed $schema, ?string $section = null): OpenApiValidatorInterface
     {
-        $cacheKey = json_encode($schema, JSON_THROW_ON_ERROR);
+        $formatAssertionMode = null === $section ? null : self::SECTION_FORMAT_ASSERTION_MODES[$section] ?? null;
+        $cacheKey = sprintf(
+            '%s|%s',
+            json_encode($schema, JSON_THROW_ON_ERROR),
+            $formatAssertionMode?->name ?? FormatAssertionMode::Assertion->name,
+        );
 
-        return self::$validators[$cacheKey] ??= self::build($schema);
+        return self::$validators[$cacheKey] ??= self::build($schema, $formatAssertionMode);
     }
 
     public static function remotesCount(): int
@@ -48,7 +62,7 @@ final class SuiteValidatorFactory
         return count(SuiteRemoteDocuments::all());
     }
 
-    private static function build(mixed $schema): OpenApiValidatorInterface
+    private static function build(mixed $schema, ?FormatAssertionMode $formatAssertionMode): OpenApiValidatorInterface
     {
         $document = [
             'openapi' => '3.1.0',
@@ -63,9 +77,15 @@ final class SuiteValidatorFactory
             ],
         ];
 
-        return self::builderWithRemotes()
+        $builder = self::builderWithRemotes()
             ->withExternalRefAllowedRoot(JsonSchemaSuiteLocator::remotesDirectory())
-            ->withAllowedUnknownKeywords(...self::SUITE_UNKNOWN_KEYWORDS)
+            ->withAllowedUnknownKeywords(...self::SUITE_UNKNOWN_KEYWORDS);
+
+        if (null !== $formatAssertionMode) {
+            $builder = $builder->withFormatAssertionMode($formatAssertionMode);
+        }
+
+        return $builder
             ->fromJsonString(json_encode($document, JSON_THROW_ON_ERROR))
             ->build();
     }

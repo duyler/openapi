@@ -30,6 +30,7 @@ final class JsonSchemaSuiteTest extends TestCase
         'minimum.json',
         'exclusiveMaximum.json',
         'exclusiveMinimum.json',
+        'format.json',
         'minItems.json',
         'maxItems.json',
         'uniqueItems.json',
@@ -97,7 +98,6 @@ final class JsonSchemaSuiteTest extends TestCase
         'minProperties.json' => 'FS-40',
         'not.json' => 'FS-40',
         'defs.json' => 'FS-40',
-        'format.json' => 'FS-40',
         'vocabulary.json' => 'FS-40',
         'optional/bignum.json' => 'FS-40',
         'optional/cross-draft.json' => 'FS-40',
@@ -142,7 +142,7 @@ final class JsonSchemaSuiteTest extends TestCase
             ));
         }
 
-        $validator = SuiteValidatorFactory::forSchema($case->schema);
+        $validator = SuiteValidatorFactory::forSchema($case->schema, $case->section);
 
         $isValid = true;
 
