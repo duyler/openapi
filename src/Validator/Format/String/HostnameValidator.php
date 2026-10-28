@@ -8,22 +8,11 @@ use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Override;
 
-use function function_exists;
-use function idn_to_ascii;
-use function sprintf;
-use function strlen;
-
-use const IDNA_NONTRANSITIONAL_TO_ASCII;
-use const INTL_IDNA_VARIANT_UTS46;
-
 final readonly class HostnameValidator extends AbstractStringFormatValidator
 {
-    private const string HOSTNAME_PATTERN = '/^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/';
-
-    private const int MAX_HOSTNAME_LENGTH = 253;
-
     public function __construct(
         private readonly PregExecutor $pregExecutor = new PregExecutor(),
+        private readonly IdnProcessor $idnProcessor = new IdnProcessor(),
     ) {}
 
     #[Override]
@@ -35,30 +24,8 @@ final readonly class HostnameValidator extends AbstractStringFormatValidator
     #[Override]
     protected function validateString(string $data): void
     {
-        if (strlen($data) > self::MAX_HOSTNAME_LENGTH) {
-            throw new InvalidFormatException('hostname', $data, sprintf('Hostname must not exceed %d characters', self::MAX_HOSTNAME_LENGTH));
-        }
-
-        $normalized = $this->toAscii($data);
-
-        if (1 !== $this->pregExecutor->match(self::HOSTNAME_PATTERN, $normalized)) {
+        if (false === $this->idnProcessor->isAsciiHostname($data)) {
             throw new InvalidFormatException('hostname', $data, 'Invalid hostname format');
         }
-    }
-
-    private function toAscii(string $hostname): string
-    {
-        if ('' === $hostname) {
-            return $hostname;
-        }
-
-        if (function_exists('idn_to_ascii')) {
-            $result = idn_to_ascii($hostname, IDNA_NONTRANSITIONAL_TO_ASCII, INTL_IDNA_VARIANT_UTS46);
-            if (false !== $result) {
-                return $result;
-            }
-        }
-
-        return $hostname;
     }
 }

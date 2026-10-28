@@ -1204,6 +1204,19 @@ The validator covers approximately 95% of JSON Schema draft 2020-12 keywords. Th
 
 The boolean schema form (`true` / `false`) is supported everywhere a schema is expected: `true` always passes and `false` always rejects.
 
+### Format validation without ext-intl
+
+The `hostname` and `idn-hostname` formats delegate UTS#46 IDNA2008 mapping and validity checks to ICU (ext-intl) via `IdnProcessor`. When the extension is absent, validation fails closed instead of passing input through unchecked:
+
+- `idn-hostname` rejects non-ASCII input and Punycode (`xn--`) A-labels (A-label verification requires ICU decode/encode round-trips); only plain LDH ASCII labels can be validated.
+- `hostname` rejects `xn--` A-labels for the same reason; plain ASCII LDH hostnames remain fully validated (RFC 1034/1123 rules are ICU-independent).
+
+`idn-email` and `email` do not use ICU at all — they are pure-PHP RFC 5321/6531 implementations. Install ext-intl in production when schemas declare `idn-hostname` (or `hostname` with A-labels) to get full RFC 5891/5892 validation.
+
+### `hostname` A-label verification and the frozen RFC 5892 code-point table
+
+A-label verification (`xn--` labels) in `hostname`/`idn-hostname` checks the decoded U-label against a frozen RFC 5892 Appendix B.1 PVALID table derived from Unicode 5.2 — the version the RFC was published with — while ICU (ext-intl) validates U-labels against the current Unicode version. Code points assigned after Unicode 5.2 are therefore treated as DISALLOWED by the A-label check, even when modern ICU accepts the corresponding U-label: an A-label whose U-label contains such a newer code point is rejected while the equivalent U-label form may pass. This asymmetry is deliberate conservatism (fail closed) — trusting the ICU verdict over the frozen table would require overriding a spec-frozen table at runtime and was considered riskier than rejecting rarely used recently assigned code points. Domains composed of pre-Unicode-5.2 code points validate identically in both forms.
+
 ### `$ref` and null values (known limitation)
 
 When a `properties` or `items` subschema is declared as `{$ref: '#/...'}` and only the **resolved target** allows `null` (via `type: [..., 'null']` rather than a `nullable: true` sibling on the `$ref` stub), a `null` value on that property or item is rejected as `InvalidDataTypeException` even though the resolved target allows it. Non-null values are unaffected. Workaround: declare `nullable: true` as a sibling of the `$ref` — the sibling flag and the target's own nullability are combined with AND semantics, per OpenAPI 3.x `nullable` sibling-extension rules.
@@ -1244,6 +1257,7 @@ To validate OAuth2 / OpenID Connect tokens, remove those schemes from the spec a
 ## Requirements
 
 - **PHP 8.4 or higher** - Uses modern PHP features (readonly classes, match expressions, etc.)
+- **ext-intl (recommended)** - Enables full UTS#46 IDNA2008 validation for `idn-hostname` and Punycode (`xn--`) A-label verification for `hostname`/`idn-hostname`. Without it those validators fail closed: non-ASCII input and A-labels are rejected instead of accepted unchecked (see [Limitations](#limitations)).
 - **PSR-7 HTTP message** - `psr/http-message ^2.0`. Use any PSR-7 implementation (`nyholm/psr7`, `guzzle/psr7`, `laminas/laminas-diactoros`).
 - **PSR-6 cache** - `psr/cache ^3.0` (e.g., `symfony/cache`, `cache/cache`)
 - **PSR-14 events** - `psr/event-dispatcher ^1.0` (e.g., `symfony/event-dispatcher`)

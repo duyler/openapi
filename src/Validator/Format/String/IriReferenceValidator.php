@@ -10,13 +10,10 @@ use Override;
 
 final readonly class IriReferenceValidator extends AbstractStringFormatValidator
 {
-    private readonly UriReferenceValidator $inner;
-
     public function __construct(
         private readonly PregExecutor $pregExecutor = new PregExecutor(),
-    ) {
-        $this->inner = new UriReferenceValidator($this->pregExecutor);
-    }
+        private readonly UriGrammar $uriGrammar = new UriGrammar(),
+    ) {}
 
     #[Override]
     protected function getFormatName(): string
@@ -27,10 +24,8 @@ final readonly class IriReferenceValidator extends AbstractStringFormatValidator
     #[Override]
     protected function validateString(string $data): void
     {
-        try {
-            $this->inner->validate($data);
-        } catch (InvalidFormatException $e) {
-            throw new InvalidFormatException('iri-reference', $data, $e->getMessage());
+        if (false === $this->uriGrammar->isUriReference($data, true)) {
+            throw new InvalidFormatException('iri-reference', $data, 'Invalid IRI reference format');
         }
     }
 }

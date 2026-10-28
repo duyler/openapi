@@ -10,19 +10,10 @@ use Override;
 
 final readonly class UriReferenceValidator extends AbstractStringFormatValidator
 {
-    private const string RELATIVE_REF_PATTERN = '~^(?:'
-        . '//[^\s/?#]*(?:/[^\s?#]*)?'
-        . '|'
-        . '/?[^\s?#]*'
-        . ')(?:\?[^\s#]*)?(?:\#[^\s]*)?$~u';
-
-    private readonly UriValidator $inner;
-
     public function __construct(
         private readonly PregExecutor $pregExecutor = new PregExecutor(),
-    ) {
-        $this->inner = new UriValidator($this->pregExecutor);
-    }
+        private readonly UriGrammar $uriGrammar = new UriGrammar(),
+    ) {}
 
     #[Override]
     protected function getFormatName(): string
@@ -33,23 +24,8 @@ final readonly class UriReferenceValidator extends AbstractStringFormatValidator
     #[Override]
     protected function validateString(string $data): void
     {
-        if ($this->isAbsoluteUri($data)) {
-            return;
-        }
-
-        if (1 !== $this->pregExecutor->match(self::RELATIVE_REF_PATTERN, $data)) {
+        if (false === $this->uriGrammar->isUriReference($data, false)) {
             throw new InvalidFormatException('uri-reference', $data, 'Invalid URI reference format');
-        }
-    }
-
-    private function isAbsoluteUri(string $data): bool
-    {
-        try {
-            $this->inner->validate($data);
-
-            return true;
-        } catch (InvalidFormatException) {
-            return false;
         }
     }
 }

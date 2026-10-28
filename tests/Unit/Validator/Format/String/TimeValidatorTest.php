@@ -43,6 +43,12 @@ final class TimeValidatorTest extends TestCase
             'max positive offset boundary' => ['10:30:00+14:00'],
             'max negative offset boundary' => ['10:30:00-14:00'],
             'offset hour 13 with max minute' => ['10:30:00+13:59'],
+            'offset hour 23 with minute per rfc 3339' => ['10:30:00+23:30'],
+            'negative offset hour 23 per rfc 3339' => ['10:30:00-23:30'],
+            'leap second with positive offset normalizing to utc' => ['01:29:60+01:30'],
+            'leap second with large positive offset normalizing to utc' => ['23:29:60+23:30'],
+            'leap second with negative offset normalizing to utc' => ['15:59:60-08:00'],
+            'leap second with large negative offset normalizing to utc' => ['00:29:60-23:30'],
         ];
     }
 
@@ -77,12 +83,9 @@ final class TimeValidatorTest extends TestCase
             'invalid timezone suffix' => ['10:30:00XYZ'],
             'letters in time' => ['aa:bb:cc'],
             'negative time' => ['-10:30:00'],
-            'offset exceeds plus fourteen hours' => ['10:30:00+15:00'],
-            'offset exceeds minus fourteen hours' => ['10:30:00-15:00'],
+            'offset hour twenty four' => ['10:30:00+24:00'],
             'offset minutes exceed fifty nine' => ['10:30:00+03:60'],
-            'positive boundary hour with non-zero minute' => ['10:30:00+14:01'],
-            'positive boundary hour with max minute' => ['10:30:00+14:59'],
-            'negative boundary hour with non-zero minute' => ['10:30:00-14:01'],
+            'trailing newline' => ["10:30:00Z\n"],
         ];
     }
 
@@ -158,7 +161,7 @@ final class TimeValidatorTest extends TestCase
     public function time_leap_second_non_utc_rejected(): void
     {
         $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Leap second requires UTC end-of-day');
+        $this->expectExceptionMessage('Leap second requires 23:59:60 UTC after offset normalization');
 
         $this->validator->validate('23:59:60+05:00');
     }
@@ -232,7 +235,7 @@ final class TimeValidatorTest extends TestCase
     {
         $this->expectException(InvalidFormatException::class);
 
-        $this->validator->validate('10:30:00+15:00');
+        $this->validator->validate('10:30:00+24:00');
     }
 
     #[Test]

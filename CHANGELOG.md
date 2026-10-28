@@ -137,6 +137,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Built-in string format validators now conform to the official draft 2020-12 format
+  test suite: all 14 `optional/format/*` sections (646 cases) are active and green.
+  Format validation becomes stricter and more correct — schemas asserting the formats
+  below now reject inputs they previously accepted and accept inputs they previously
+  rejected:
+  - `hostname` is ASCII-only per RFC 1034/1123 (non-ASCII input — full-width label
+    separators, the Kelvin sign, IDN separators — is no longer silently mapped through
+    IDNA and is rejected); `xn--` A-labels are verified (Punycode decode, RFC 5892
+    code-point validity, canonical re-encode round-trip), so invalid, non-canonical or
+    disallowed-content Punycode labels are rejected.
+  - `idn-hostname` performs full IDNA2008 validation: UTS#46 mapping and validity
+    through ext-intl plus the rules ICU does not implement — RFC 5892 Appendix A
+    CONTEXTO rules (MIDDLE DOT, GREEK KERAIA, HEBREW GERESH/GERSHAYIM, KATAKANA
+    MIDDLE DOT, Arabic-Indic digit mixing), the RFC 5892 §2.6 DISALLOWED exceptions
+    (Arabic tatweel, Nko lajanyalan, Hangul tone marks, vertical kana repeat marks,
+    vertical ideographic iteration mark), and RFC 5891 §4.4 A-label verification
+    (decode to a U-label, RFC 5892 code-point classes, canonical round-trip) with
+    Bidi and join-control checks. When the ext-intl extension is absent the validator
+    fails closed: non-ASCII input and A-labels are rejected instead of passing through
+    unchecked. Installing ext-intl in production is recommended whenever schemas declare
+    `idn-hostname` (or `hostname` with `xn--` A-labels) so full IDNA2008 validation is
+    performed rather than the fail-closed fallback.
+  - `uri`, `uri-reference`, `iri` and `iri-reference` validate the full RFC 3986/3987
+    grammar per component: scheme, userinfo (at most one `@`), host (bracketed IP
+    literals validated as addresses, including embedded IPv4 octets; unbracketed hosts
+    must not contain colons), path/query/fragment character classes and
+    percent-encoding triplets. One deliberate deviation from the RFC 3986 grammar
+    (`port = *DIGIT`, which sets no range): a numeric port part must not exceed 65535 —
+    this cap is a validator semantic bound, not part of the RFC grammar. Characters
+    forbidden by the RFCs — space, `"`, `<`, `>`, `\`, `^`, `` ` ``, `{`, `|`, `}`,
+    `]` outside brackets, control characters and (for `uri`/`uri-reference`) any
+    non-ASCII byte — are rejected. `iri`/`iri-reference` accept UCSCHAR and (in
+    queries) IPRIVATE per RFC 3987.
+  - `uri-template` validates the RFC 6570 grammar: literal character classes,
+    expression structure (optional operator, non-empty var-list, no empty varspecs,
+    no trailing commas), `varname` composition (dots only between varchars,
+    pct-encoded varchars allowed), the prefix modifier (one to four digits, positive,
+    no leading zero), the explode modifier, and their non-combinability. An apostrophe
+    in a literal is accepted per RFC 6570 §2.1 (RFC 3986 reserved characters).
+  - `email` validates pure RFC 5321 §4.1.2/§4.1.3 mailboxes and is ASCII-only:
+    SMTPUTF8 input is no longer accepted (it belongs to `idn-email`, RFC 6531).
+    Domains no longer require a dotted TLD — single-label domains and all-numeric
+    labels are valid per RFC 5321 — while quoted local parts keep supporting spaces,
+    `@` and quoted pairs. Address literals validate strictly: four IPv4 octets ≤ 255
+    and case-insensitive `IPv6:` tags with real IPv6 addresses.
+  - `idn-email` implements RFC 6531/6532 SMTPUTF8 instead of forwarding to the ASCII
+    validator: UTF-8 local parts (dot-atom and quoted forms) without an NFC
+    requirement — C1 controls and noncharacters included — and UTF-8 domain labels
+    with Ldh constraints (no leading/trailing hyphen, no empty labels, no leading or
+    trailing dot).
+  - `time` and `date-time` accept the full RFC 3339 numeric offset range
+    (`±00:00`–`±23:59`; previously only `±00:00`–`±14:00` was accepted) and a leap
+    second (`:60`) is valid whenever the local time normalized by its offset equals
+    `23:59:60` UTC — for example `15:59:60-08:00` — instead of only literal `Z`/
+    `±00:00` offsets at `23:59:60`. Offsets of `±24:00` and beyond remain invalid,
+    and trailing line breaks are rejected.
+  - `duration` enforces RFC 3339 duration composition: `Y`/`M`/`D` and `H`/`M`/`S`
+    components must appear in order (`P1Y2D`, `PT1H2S` and `P1YT` are rejected;
+    `P1Y1M1DT1H1M1S` is valid) and weeks are standalone (`P1W2D` is rejected).
+  - `uuid` validates the RFC 4122 syntactic pattern (8-4-4-4-12 hex digits): version
+    and variant nibbles are no longer restricted, so hypothetical future versions
+    (for example version nibble `f`) and non-RFC-4122 variant nibbles are accepted.
+  - `relative-json-pointer` fixes the JSON Pointer part grammar (RFC 6901): pointer
+    parts with multiple reference tokens (`0/foo/bar`, `120/foo/bar`) validate again,
+    and trailing line breaks after the integer prefix are rejected.
+- Suite runner: the fourteen `optional/format/*` sections join the active sections
+  (646 cases); the `FS-40` pending residue drops from 1094 to 448 cases (skipped
+  suite cases drop from 1180 to 534).
+
 - Core instance semantics for schema validation (draft 2020-12 conformance; JSON Schema Test Suite
   sections `items`, `ref`, `optional/refOfUnknownKeyword`, `unevaluatedItems`, `unevaluatedProperties`
   — 318 cases — are now active and green):

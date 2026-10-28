@@ -11,6 +11,7 @@ use Override;
 
 use function is_string;
 use function sprintf;
+use function strlen;
 
 abstract readonly class AbstractStringFormatValidator implements FormatValidatorInterface
 {
@@ -39,4 +40,42 @@ abstract readonly class AbstractStringFormatValidator implements FormatValidator
     abstract protected function getFormatName(): string;
 
     abstract protected function validateString(string $data): void;
+
+    final protected function findQuotedStringEnd(string $data, bool $asciiOnly): ?int
+    {
+        $length = strlen($data);
+        $position = 1;
+
+        while ($position < $length) {
+            $char = $data[$position];
+
+            if ('\\' === $char) {
+                if ($position + 1 >= $length) {
+                    return null;
+                }
+
+                $escaped = $data[$position + 1];
+
+                if ($escaped < ' ' || $escaped > '~') {
+                    return null;
+                }
+
+                $position += 2;
+
+                continue;
+            }
+
+            if ('"' === $char) {
+                return $position;
+            }
+
+            if (true === $asciiOnly && ($char < ' ' || $char > '~')) {
+                return null;
+            }
+
+            $position++;
+        }
+
+        return null;
+    }
 }

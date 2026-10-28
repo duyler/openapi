@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+use Duyler\OpenApi\Validator\Format\String\IriValidator;
 use Duyler\OpenApi\Validator\Format\String\UriValidator;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -132,10 +133,22 @@ final class UriValidatorTest extends TestCase
     }
 
     #[Test]
-    public function idn_host_uri_accepted_per_rfc_3986(): void
+    public function idn_host_uri_rejected_per_rfc_3986(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid URI format');
+
+        $this->validator->validate('https://' . "\xd0\xbf\xd1\x80\xd0\xb8\xd0\xbc\xd0\xb5\xd1\x80.\xd1\x80\xd1\x84");
+    }
+
+    #[Test]
+    public function idn_host_iri_accepted_per_rfc_3987(): void
     {
         $this->expectNotToPerformAssertions();
-        $this->validator->validate('https://' . "\xd0\xbf\xd1\x80\xd0\xb8\xd0\xbc\xd0\xb5\xd1\x80.\xd1\x80\xd1\x84");
+
+        $iriValidator = new IriValidator();
+
+        $iriValidator->validate('https://' . "\xd0\xbf\xd1\x80\xd0\xb8\xd0\xbc\xd0\xb5\xd1\x80.\xd1\x80\xd1\x84");
     }
 
     #[Test]
@@ -264,7 +277,7 @@ final class UriValidatorTest extends TestCase
         }
 
         $this->assertNotNull($exception, 'Port-out-of-range URI must be rejected');
-        $this->assertSame('Invalid URI: port out of range', $exception->getMessage());
+        $this->assertSame('Invalid URI format', $exception->getMessage());
         $this->assertStringNotContainsString('99999', $exception->getMessage());
     }
 
@@ -281,7 +294,7 @@ final class UriValidatorTest extends TestCase
         }
 
         $this->assertNotNull($exception, 'Out-of-range port must trigger InvalidFormatException');
-        $this->assertSame('Invalid URI: port out of range', $exception->getMessage());
+        $this->assertSame('Invalid URI format', $exception->getMessage());
         $this->assertStringNotContainsString(
             'javascript',
             $exception->getMessage(),
@@ -320,6 +333,28 @@ final class UriValidatorTest extends TestCase
             'port 65535 is valid (MAX_PORT boundary)' => ['http://example.com:65535/', true],
             'port 65536 is rejected (first value above MAX_PORT)' => ['http://example.com:65536/', false],
             'URI "http://example.com:/path" is valid via path-absolute fallback (regex absorbs //example.com:/path as path-absolute hier-part, not authority+empty-port)' => ['http://example.com:/path', true],
+            'percent-encoding with non-hex digit is rejected per RFC 3986' => ['http://example.com/%6G', false],
+            'incomplete percent-encoding triplet is rejected' => ['http://example.com/%A', false],
+            'lone percent sign is rejected' => ['http://example.com/%', false],
+            'backslash in path is rejected' => ['https://example.org/foobar\\.txt', false],
+            'double quote in path is rejected' => ['https://example.org/foobar".txt', false],
+            'angle brackets in path are rejected' => ['https://example.org/foobar<>.txt', false],
+            'curly braces in path are rejected' => ['https://example.org/foobar{}.txt', false],
+            'circumflex accent in path is rejected' => ['https://example.org/foobar^.txt', false],
+            'grave accent in path is rejected' => ['https://example.org/foobar`.txt', false],
+            'vertical bar in path is rejected' => ['https://example.org/foobar|.txt', false],
+            'unescaped non-ascii in path is rejected per RFC 3986' => ["https://example.org/foobar\u{AE}.txt", false],
+            'bracket in userinfo position is rejected' => ['https://[@example.org/test.txt', false],
+            'non-numeric port is rejected' => ['http://example.com:abc/path', false],
+            'ipv6 host without enclosing brackets is rejected' => ['http://2001:0db8:85a3:0000:0000:8a2e:0370:7334', false],
+            'embedded ipv4 with leading zero in ipv6 literal is rejected' => ['http://[::ffff:01.2.3.4]', false],
+            'square brackets in path are rejected' => ['http:/[::1]', false],
+            'trailing newline is rejected' => ["http://foo.bar/\n", false],
+            'more than one at-sign in authority is rejected' => ['https://a@b@example.com/', false],
+            'query with parentheses and fragment is valid' => ['http://foo.com/blah_(wikipedia)_blah#cite-1', true],
+            'query and fragment are valid' => ['http://foo.bar/?baz=qux#quux', true],
+            'ldap uri with ipv6 host and triple-delimiter query is valid' => ['ldap://[2001:db8::7]/c=GB?objectClass?one', true],
+            'percent-encoded space in query is valid' => ['http://foo.bar/?q=Test%20URL-encoded%20stuff', true],
         ];
     }
 

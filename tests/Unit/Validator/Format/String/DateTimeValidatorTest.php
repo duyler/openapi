@@ -168,7 +168,7 @@ final class DateTimeValidatorTest extends TestCase
     public function leap_second_non_utc_rejected(): void
     {
         $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Leap second requires UTC end-of-day');
+        $this->expectExceptionMessage('Leap second requires 23:59:60 UTC after offset normalization');
 
         $this->validator->validate('2016-12-31T23:59:60+14:00');
     }
@@ -177,9 +177,17 @@ final class DateTimeValidatorTest extends TestCase
     public function leap_second_non_end_of_day_rejected(): void
     {
         $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Leap second requires UTC end-of-day');
+        $this->expectExceptionMessage('Leap second requires 23:59:60 UTC after offset normalization');
 
         $this->validator->validate('2016-12-31T22:59:60Z');
+    }
+
+    #[Test]
+    public function leap_second_with_offset_normalizing_to_utc_accepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('1998-12-31T15:59:60.123-08:00');
     }
 
     #[Test]
@@ -199,27 +207,27 @@ final class DateTimeValidatorTest extends TestCase
     }
 
     #[Test]
-    public function reject_offset_above_max_positive_boundary_minute(): void
+    public function validate_offset_hour_twenty_three_per_rfc_3339(): void
     {
-        $this->expectException(InvalidFormatException::class);
+        $this->expectNotToPerformAssertions();
 
-        $this->validator->validate('2024-01-15T10:30:00+14:01');
+        $this->validator->validate('2024-01-15T10:30:00+23:30');
     }
 
     #[Test]
-    public function reject_offset_at_boundary_hour_with_max_minute(): void
+    public function reject_offset_hour_twenty_four(): void
     {
         $this->expectException(InvalidFormatException::class);
 
-        $this->validator->validate('2024-01-15T10:30:00+14:59');
+        $this->validator->validate('2024-01-15T10:30:00+24:00');
     }
 
     #[Test]
-    public function reject_offset_below_max_negative_boundary_minute(): void
+    public function reject_offset_hour_twenty_four_negative(): void
     {
         $this->expectException(InvalidFormatException::class);
 
-        $this->validator->validate('2024-01-15T10:30:00-14:01');
+        $this->validator->validate('1990-12-31T15:59:59-24:00');
     }
 
     #[Test]

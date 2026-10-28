@@ -10,7 +10,7 @@ use Override;
 
 final readonly class RelativeJsonPointerValidator extends AbstractStringFormatValidator
 {
-    private const string RELATIVE_POINTER_PATTERN = '/^(0|[1-9]\d*)(#|\/(\/(?:[^~\/]|~0|~1)*)*)?$/';
+    private const string RELATIVE_POINTER_PATTERN = '/^(?:0|[1-9][0-9]*)(?:#|(?:\/(?:[^~\/]|~0|~1)*)*)?\z/';
 
     public function __construct(
         private readonly PregExecutor $pregExecutor = new PregExecutor(),

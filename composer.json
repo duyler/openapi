@@ -45,7 +45,7 @@
         "giorgiosironi/eris": "^1.0"
     },
     "suggest": {
-        "ext-intl": "Required for full SMTPUTF8 (RFC 6531) and IDNA hostname validation; permissive regex fallback when absent",
+        "ext-intl": "Enables full UTS#46 IDNA2008 idn-hostname validation and hostname/idn-hostname xn-- A-label verification; without it those validators fail closed (reject non-ASCII input and A-labels)",
         "nyholm/psr7": "PSR-7 implementation used in tests; use any PSR-7 implementation in production",
         "psr/http-server-middleware": "Required if you implement the PSR-15 middleware example from README",
         "symfony/cache": "PSR-6 cache implementation for SchemaCache",
