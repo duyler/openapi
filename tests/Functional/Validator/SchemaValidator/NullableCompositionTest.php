@@ -357,6 +357,24 @@ final class NullableCompositionTest extends TestCase
         $this->discriminatedPetValidator()->validateSchema(null, '#/components/schemas/Pet');
     }
 
+    #[Test]
+    public function null_is_rejected_for_untyped_nullable_one_of_member_in_openapi_30(): void
+    {
+        $this->expectException(ValidationException::class);
+
+        $this->discriminatedPetValidatorWithInlineNullableMember('3.0.3')->validateSchema(null, '#/components/schemas/Pet');
+    }
+
+    #[Test]
+    public function null_is_accepted_for_untyped_nullable_one_of_member_in_openapi_31(): void
+    {
+        $validator = $this->discriminatedPetValidatorWithInlineNullableMember('3.1.0');
+
+        $validator->validateSchema(null, '#/components/schemas/Pet');
+
+        $this->expectNotToPerformAssertions();
+    }
+
     /**
      * @return iterable<string, array{0: string}>
      */
@@ -398,6 +416,36 @@ final class NullableCompositionTest extends TestCase
         $this->expectException(ValidationException::class);
 
         $validator->validateSchema(['id' => 1], '#/components/schemas/IfElseNullable');
+    }
+
+    private function discriminatedPetValidatorWithInlineNullableMember(string $openapiVersion): OpenApiValidatorInterface
+    {
+        $yaml = <<<YAML
+            openapi: $openapiVersion
+            info:
+              title: Nullable discriminated oneOf with inline untyped nullable member
+              version: 1.0.0
+            components:
+              schemas:
+                Cat:
+                  type: object
+                  required: [petType, meows]
+                  properties:
+                    petType:
+                      type: string
+                    meows:
+                      type: boolean
+                Pet:
+                  discriminator:
+                    propertyName: petType
+                    mapping:
+                      cat: '#/components/schemas/Cat'
+                  oneOf:
+                    - nullable: true
+                    - \$ref: '#/components/schemas/Cat'
+            YAML;
+
+        return OpenApiValidatorBuilder::create()->fromYamlString($yaml)->build();
     }
 
     private function discriminatedPetValidator(): OpenApiValidatorInterface

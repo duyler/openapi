@@ -88,6 +88,9 @@ The detailed per-change entries for every feature below follow in the [0.9.0] se
 
 - `withMaxJsonBodySize()` is now enforced on buffered request bodies (previously the cap was
   silently ignored on that path and only the decoded-content pipeline honoured it).
+- The discriminated `oneOf` null short-circuit honours the 3.0 dialect profile: an inline
+  untyped `nullable: true` member no longer makes `null` acceptable in OpenAPI 3.0 documents
+  (3.1 semantics are unchanged), completing the `nullableRequiresType` rule of change 9.
 
 ## [0.9.0]
 

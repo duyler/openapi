@@ -69,7 +69,7 @@ final readonly class OneOfValidatorWithContext
         if (
             null === $data
             && null !== $schema->oneOf
-            && $this->hasNullableSchema($schema->oneOf)
+            && $this->hasNullableSchema($schema->oneOf, $context)
             && $context->nullableAsType
         ) {
             return;
@@ -104,10 +104,10 @@ final readonly class OneOfValidatorWithContext
         };
     }
 
-    private function hasNullableSchema(array $oneOf): bool
+    private function hasNullableSchema(array $oneOf, ValidationContext $context): bool
     {
-        return array_any($oneOf, fn(Schema $subSchema): bool => $subSchema->nullable
-            || SchemaValueNormalizer::doesTypeIncludeNull($subSchema->type));
+        return array_any($oneOf, fn(Schema $subSchema): bool => SchemaValueNormalizer::doesTypeIncludeNull($subSchema->type)
+            || SchemaValueNormalizer::isNullableSchema($subSchema, $context->nullableAsType, $context->dialectProfile));
     }
 
     private function validateWithoutDiscriminator(mixed $data, array $oneOf, ValidationContext $context): void
