@@ -249,6 +249,7 @@ final readonly class ValidationStack
                 config: $parameterConfig,
             ),
             bodyValidator: $this->buildRequestBodyValidator(),
+            configuration: $this->validatorConfiguration,
         );
     }
 

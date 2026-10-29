@@ -11,6 +11,7 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\Parser\DocumentRepository;
 use Duyler\OpenApi\Schema\Parser\JsonParser;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
+use Duyler\OpenApi\Validator\Schema\Exception\ExternalRefSecurityException;
 use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
 use Duyler\OpenApi\Validator\Schema\ExternalRefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
@@ -242,15 +243,19 @@ final class DocumentNavigatorTest extends TestCase
     #[Test]
     public function resolve_ref_surfaces_external_security_violation_as_unresolvable(): void
     {
-        $this->expectException(UnresolvableRefException::class);
-        $this->expectExceptionMessage('External ref not resolved');
-
-        $this->navigator->resolveRef(
-            'https://example.com/x.json',
-            new OpenApiDocument('', new InfoObject('', '')),
-            [],
-            new WeakMap(),
-        );
+        try {
+            $this->navigator->resolveRef(
+                'https://example.com/x.json',
+                new OpenApiDocument('', new InfoObject('', '')),
+                [],
+                new WeakMap(),
+            );
+            self::fail('Expected UnresolvableRefException to be thrown');
+        } catch (UnresolvableRefException $e) {
+            self::assertStringContainsString('External ref not resolved', $e->reason());
+            self::assertStringContainsString('withExternalRefResolver()', $e->reason());
+            self::assertInstanceOf(ExternalRefSecurityException::class, $e->getPrevious());
+        }
     }
 
     #[Test]
@@ -277,6 +282,7 @@ final class DocumentNavigatorTest extends TestCase
             self::fail('Expected UnresolvableRefException to be thrown');
         } catch (UnresolvableRefException $e) {
             self::assertStringContainsString('file fallback is denied', $e->reason());
+            self::assertStringContainsString('withExternalRefResolver()', $e->reason());
         }
     }
 

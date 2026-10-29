@@ -10,20 +10,26 @@ OpenAPI 3.2 validator for PHP 8.4+
 
 ## Features
 
-- **OpenAPI 3.2 Support** - JSON Schema draft 2020-12 validation with known limitations (see Limitations)
+- **OpenAPI 3.2 Support** - Full JSON Schema draft 2020-12 core ($id, $anchor, $dynamicRef, $defs, $vocabulary) with dialect branching for 3.0/3.1 (see Feature Coverage)
 - **JSON Schema Validation** - Full JSON Schema draft 2020-12 validation with 30 validators
 - **PSR-7 Integration** - PSR-7 HTTP message validation (works with any PSR-7 implementation)
 - **Request Validation** - Validate path parameters, query parameters, headers, cookies, and request body
-- **Response Validation** - Validate status codes, headers, and response bodies
+- **Response Validation** - Validate status codes, headers, and response bodies (fail-closed content negotiation)
 - **Multiple Content Types** - Support for JSON, form-data, multipart, text, and XML
+- **Streaming Multipart** - Multipart request bodies are validated part by part straight from the PSR-7 stream (ordered parts, nested multipart, byte ranges)
+- **XML Object Mapping** - Request XML bodies are projected through the OpenAPI 3.2 XML Object model (node types, namespaces, null handling)
 - **Built-in Format Validators** - 26 built-in validators (email, UUID, date-time, URI, IPv4/IPv6, int32, int64, iri, uri-template, regex, etc.)
 - **Custom Format Validators** - Easily register custom format validators
+- **Custom Keyword Validators** - Register validators for custom schema keywords via `withKeywordValidator()`
+- **Strict Keywords** - Unknown schema keywords fail the build by default; opt out per keyword or globally
+- **Security Scheme Handlers** - Presence/format validation for basic, digest, bearer, apiKey, mutualTLS, oauth2, and openIdConnect plus a registry for custom handlers
 - **Discriminator Support** - Full support for polymorphic schemas with discriminators
 - **Type Coercion** - Optional automatic type conversion
 - **PSR-6 Caching** - Cache parsed OpenAPI documents for better performance
 - **PSR-14 Events** - Subscribe to validation lifecycle events
 - **Error Formatting** - Multiple error formatters (simple, detailed, JSON)
 - **Webhooks Support** - Validate incoming webhook requests
+- **Multi-Document Specs** - Register companion OpenAPI documents by retrieval URI via `withDocument()`
 - **Streaming Validation** - Validate NDJSON, SSE, and JSON Text Sequences responses
 - **Schema Registry** - Manage multiple schema versions
 
@@ -142,23 +148,76 @@ components:
       $ref: 'components/user.yaml#/UserSchema'
 ```
 
-Only `file://` URIs and scheme-less relative paths are allowed; every other scheme — `http://`, `data://`, `phar://`, or any other PHP stream wrapper — is rejected with `ExternalRefSecurityException`, surfaced as `UnresolvableRefException`. To enable other schemes, inject a custom `ExternalRefResolverInterface` implementation:
+Only `file://` URIs and scheme-less relative paths are allowed; every other scheme — `http://`, `data://`, `phar://`, or any other PHP stream wrapper — is rejected with `ExternalRefSecurityException`, surfaced as `UnresolvableRefException`. To enable other schemes, inject a custom `ExternalRefResolverInterface` implementation through `withExternalRefResolver()`:
 
 ```php
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Schema\Parser\ExternalSchemaBuilder;
 use Duyler\OpenApi\Validator\Schema\ExternalRefResolverInterface;
-use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Psr\Http\Client\ClientInterface;
+use Psr\Http\Message\RequestFactoryInterface;
+use RuntimeException;
 
-final class MyHttpExternalRefResolver implements ExternalRefResolverInterface
+use function json_decode;
+use function json_last_error;
+use function strlen;
+
+use const JSON_ERROR_NONE;
+
+final class HttpExternalRefResolver implements ExternalRefResolverInterface
 {
+    private const int MAX_RESPONSE_BYTES = 10_485_760;
+
+    public function __construct(
+        private readonly ClientInterface $client,
+        private readonly RequestFactoryInterface $requestFactory,
+        private readonly ExternalSchemaBuilder $schemaBuilder = new ExternalSchemaBuilder(),
+    ) {}
+
     public function resolve(string $ref): Schema
     {
-        // fetch $ref over HTTP, return Schema
+        $this->assertAllowedHost($ref);
+
+        $response = $this->client->sendRequest(
+            $this->requestFactory->createRequest('GET', $ref),
+        );
+
+        if (200 !== $response->getStatusCode()) {
+            throw new RuntimeException(sprintf('External ref %s: HTTP %d', $ref, $response->getStatusCode()));
+        }
+
+        $body = (string) $response->getBody();
+
+        if (strlen($body) > self::MAX_RESPONSE_BYTES) {
+            throw new RuntimeException(sprintf('External ref %s exceeds the %d byte cap', $ref, self::MAX_RESPONSE_BYTES));
+        }
+
+        $data = json_decode($body, true, 512);
+
+        if (JSON_ERROR_NONE !== json_last_error() || !is_array($data)) {
+            throw new RuntimeException(sprintf('External ref %s is not a JSON object', $ref));
+        }
+
+        return $this->schemaBuilder->buildSchemaFromData($data);
+    }
+
+    private function assertAllowedHost(string $ref): void
+    {
+        $host = parse_url($ref, PHP_URL_HOST);
+
+        if (!is_string($host) || !in_array($host, ['specs.example.com'], true)) {
+            throw new RuntimeException(sprintf('External ref host %s is not allowlisted', var_export($host, true)));
+        }
     }
 }
 
-$refResolver = new RefResolver(new MyHttpExternalRefResolver());
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->withExternalRefResolver(new HttpExternalRefResolver($client, $requestFactory))
+    ->build();
 ```
+
+A custom resolver takes over the network and its security: keep a host allowlist, a response size cap, and connection/response timeouts in the implementation, and do not follow redirects across host boundaries — the validator performs no SSRF checks on custom resolvers. When the referenced document is known at deploy time, prefer registering it through `withDocument(string $retrievalUri, string $content)` instead: registered documents are parsed in full before validation and need no network access.
 
 To defend against `../../../etc/passwd` style path traversal and symlink escapes, the builtin resolver accepts an optional `allowedRoot`: both the requested path and the root are resolved via `realpath()`, and any reference outside the root is refused:
 
@@ -460,6 +519,9 @@ Available events:
 | `ValidationFinishedEvent` | Dispatched after validation completes |
 | `ValidationErrorEvent` | Dispatched when validation fails |
 | `ValidationWarningEvent` | Dispatched for non-fatal validation warnings |
+| `UnsupportedResponseMediaTypeWarningEvent` | Dispatched for every skipped response body under `withLenientResponses()`; carries the unmatched media type |
+| `VocabularyDisabledWarningEvent` | Dispatched when a document declares a supported vocabulary with `$vocabulary: false` |
+| `LegacyKeywordWarningEvent` | Dispatched for legacy `$recursiveRef`/`$recursiveAnchor` keywords; points at the `$dynamicRef`/`$dynamicAnchor` replacements |
 
 Listeners can also be registered after construction. `ArrayDispatcher` is immutable: `listen()` returns a **new** instance, so reassign the result — chaining without reassignment silently discards the added listeners:
 
@@ -545,6 +607,11 @@ $validator = OpenApiValidatorBuilder::create()
 | `withKeywordValidator(string $keyword, KeywordValidatorInterface $validator)` | Register a validator for a custom schema keyword; the keyword value is read from schema `extras`, registered keywords dispatch after the built-in set | - |
 | `withAllowedUnknownKeywords(string ...$keywords)` | Legalize individual unknown schema keywords point-wise under the default strict-keywords mode | `[]` |
 | `disableStrictKeywords()` | Restore the annotation mode for unknown schema keywords: they stay in `extras` and produce annotations instead of failing the build | `false` (strict rejection is the default) |
+| `withFormatAssertionMode(FormatAssertionMode $mode)` | Select the format keyword semantics: `FormatAssertionMode::Assertion` (assert, default) or `FormatAssertionMode::Annotation` (collect as annotations only, matching the JSON Schema 2020-12 default) | `FormatAssertionMode::Assertion` |
+| `withLenientResponses()` | Restore permissive response content negotiation: a response media type matching no declared media type skips body validation and dispatches `UnsupportedResponseMediaTypeWarningEvent` instead of throwing `UnsupportedMediaTypeException` | `false` (fail-closed default) |
+| `withSecuritySchemeHandler(SecuritySchemeHandlerInterface $handler)` | Register a custom security scheme handler (fluent, repeatable; the last registration wins for schemes its `supports()` claims) | built-in handler set |
+| `withExternalRefResolver(ExternalRefResolverInterface $resolver)` | Replace the builtin `file://`-only external `$ref` resolver (for example with an HTTP resolver); see [External `$ref` Resolution](#external-ref-resolution) | `null` (builtin `FileExternalRefResolver`) |
+| `withDocument(string $retrievalUri, string $content)` | Register a companion OpenAPI document by intended retrieval URI for external `$ref` resolution; parsed in full at registration time | - |
 | `withValidatorPool(ValidatorPool $pool)` | Set custom validator pool | `new ValidatorPool()` |
 | `withLogger(LoggerInterface $logger)` | Set PSR-3 logger | `null` |
 | `withEmptyArrayStrategy(EmptyArrayStrategy $strategy)` | Set empty array validation strategy | `AllowBoth` |
@@ -818,6 +885,7 @@ All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schem
 | Error Type | Keyword | Description |
 |------------|---------|-------------|
 | `InvalidFormatException` | `format` | Format validation failed (email, URI, etc.) |
+| `InvalidContentRangeException` | `format` | Part `Content-Range` header (3.2 §4.15.4.9) is not a valid `bytes <first>-<last>/<complete>` range |
 
 #### String Validation Errors
 
@@ -890,7 +958,13 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | Exception | Description |
 |-----------|-------------|
 | `BodyTooLargeException` | Request or response body exceeded the configured body-size cap; rejected before full materialisation |
+| `DecodedContentTooLargeException` | Content payload decoded by the assertion pipeline (`enableContentAssertions()`) exceeds `withMaxJsonBodySize()` before parsing |
+| `DocumentParseException` | Document registered via `withDocument()` failed to parse; carries the retrieval URI, never the document content |
+| `InvalidEncodingConfigurationException` | Multipart Media Type Object combines `encoding` with `prefixEncoding`/`itemEncoding`, or declares positional encoding without an array schema / `itemSchema` |
+| `MissingPartHeaderError` | Part header declared `required` in an Encoding Object is missing on the part |
 | `MultipartBodyTooLargeException` | Multipart request yielded more than 1000 parts (part-count cap); extends `\RuntimeException` |
+| `MultipartNestingDepthException` | Multipart payload nests deeper than the one nested level below the outer body |
+| `PartContentTypeMismatchError` | Part `Content-Type` does not match the `contentType` declared by the resolved Encoding Object |
 | `BuilderException` | Builder precondition failure: spec file unreadable, `withExternalRefAllowedRoot` path does not exist, or other builder-state violation |
 | `ExternalRefSecurityException` | External `$ref` violates builtin resolver security policy (non-allowlisted scheme, path traversal outside the allowed root). Surfaced by `RefResolver` as `UnresolvableRefException` |
 | `ExternalRefTooLargeException` | External `$ref` file exceeds the configured size limit (default 10 MB); extends `\RuntimeException` |
@@ -909,6 +983,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `RefResolutionException` | Failed to resolve `$ref` reference |
 | `SchemaDepthExceededException` | Maximum schema nesting depth exceeded |
 | `SpecTooLargeException` | Spec payload exceeded `maxSpecSize` / `maxSpecDepth`, or YAML anchor/alias caps were tripped. Carries only the metric, actual count, and cap — never the payload |
+| `StreamRecordTooLargeException` | Streaming line or record exceeded the internal length cap; extends `\RuntimeException` |
 | `TooManyContainsValidationsError` | `contains` keyword evaluated more matching items than the internal cap (DoS defence on attacker-controlled arrays) |
 | `TooManyErrorsError` | Composition validator (`oneOf` / `anyOf` / `allOf`) accumulated more errors than the internal cap (DoS defence on deeply-nested schemas) |
 | `TooManyItemsForUniqueCheckError` | `uniqueItems: true` evaluated on an array larger than 100 000 items; guards against quadratic uniqueness scans |
@@ -917,10 +992,12 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `UnknownLinkException` | `resolveLink()` / `resolveLinkWithContext()` invoked with a link name not declared under `components/links`; extends `\InvalidArgumentException` |
 | `UnknownCallbackException` | `validateCallback()` invoked with a callback name not declared in the spec; extends `\InvalidArgumentException` |
 | `UnknownWebhookException` | `validateWebhook()` invoked with a webhook name not declared in the spec; extends `\InvalidArgumentException` |
+| `TypeArrayNotSupportedException` | OpenAPI 3.0 document declares `type` as an array (3.0.3 requires a string); build refuses the document. 3.1+ keeps array types |
 | `UnresolvableCallbackPathException` | Callback runtime template (e.g. `{$request.body#/callback_url}`) cannot be resolved in strict mode |
-| `UnresolvableRefException` | `$ref` cannot be resolved against the spec or allowed external-ref root. `ExternalRefSecurityException` is surfaced through this class |
-| `UnsupportedMediaTypeException` | Content-Type not supported by the operation |
-| `UnsupportedSecuritySchemeException` | Spec declares a security scheme type this library does not validate (`oauth2`, `openIdConnect`, `http/basic`, `http/digest`, `mutualTLS`, or unknown). Extends `\RuntimeException`, **not** wrapped into `ValidationException` (see [Security Validation](#security-validation)) |
+| `UnresolvableRefException` | `$ref` cannot be resolved against the spec, the registered documents, or the allowed external-ref root. `ExternalRefSecurityException` is surfaced through this class |
+| `UnsupportedMediaTypeException` | Content-Type not supported by the operation (requests: always; responses: by default, see `withLenientResponses()`) |
+| `UnsupportedSecuritySchemeException` | Spec declares a security scheme type or `http` subscheme with no built-in or registered handler (for example `http/negotiate` or an unknown type). The message points to `withSecuritySchemeHandler()`. Extends `\RuntimeException`, **not** wrapped into `ValidationException` (see [Security Validation](#security-validation)) |
+| `VocabularyNotSupportedException` | Document declares `$vocabulary: true` for a vocabulary the validator does not support (core §8.1.2 refuse semantics) |
 | `VersionNotFoundException` | Requested schema name or version is not registered (thrown by `SchemaRegistry::getOrFail()`) |
 | `SchemaAlreadyRegisteredException` | Schema name+version pair is already registered (thrown by `SchemaRegistry::register()`; use `registerOrReplace()` for explicit overwrite) |
 | `ServerVariableException` | Server URL template substitution failed: a required `{var}` was missing from the configured `ServerVariableOverride` map, or the request URL did not match any declared server |
@@ -1191,18 +1268,59 @@ Each record is prefixed with a record separator byte (`0x1E`), which avoids ambi
 
 By default, malformed records (invalid JSON) are logged and skipped: the parser yields `null` for such items and the validator skips them. Enable `enableStrictStreaming()` to throw `MalformedStreamRecordException` instead. A parsed item that fails schema validation always throws `ValidationException` immediately, and a stream yielding more than `withMaxStreamingRecords()` records (default 100 000) throws `TooManyRecordsException`.
 
-## Limitations
+## Feature Coverage
 
-### JSON Schema Coverage
+| Area | Status | Default | Opt-in / Opt-out |
+|---|---|---|---|
+| JSON Schema 2020-12 core: `$ref` chains with sibling application, `$id`, `$anchor`, `$defs`, `$dynamicAnchor`, `$dynamicRef` (dynamic scope, outermost anchor, per-encounter resolution), `$vocabulary` guard, `$comment`, unknown-keyword `extras` | Complete | - | - |
+| Applicators and validation keywords (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `prefixItems`, `items`, `contains`, `properties`, `patternProperties`, `additionalProperties`, `propertyNames`, `dependentRequired`, `dependentSchemas`, string/numeric/array/object bounds, `enum`, `const`) | Complete | - | - |
+| `unevaluatedProperties` / `unevaluatedItems` with per-location evaluation tracking | Complete | - | - |
+| Boolean schemas (`true` / `false`) everywhere a schema is expected | Complete | - | - |
+| Unknown schema keywords (strict keywords) | Complete | Reject unknown keywords at build time | `disableStrictKeywords()`, `withAllowedUnknownKeywords()` |
+| Annotation results (unknown keywords, `content*`, `format`) | Complete | Annotations | `enableContentAssertions()`, `withFormatAssertionMode()` |
+| `contentEncoding` / `contentMediaType` / `contentSchema` | Complete: annotations by default; opt-in pipeline decodes RFC 4648 encodings and quoted-printable, checks media syntax, validates `contentSchema` | Annotations | `enableContentAssertions()` |
+| Format vocabulary: 26 built-in validators conforming to the draft 2020-12 format test suite | Complete | Assertion | `withFormatAssertionMode(FormatAssertionMode::Annotation)`, `enableStrictFormats()` |
+| OpenAPI dialect branching (3.0: string `type` only, `$ref` siblings ignored, `nullable` requires explicit `type`; 3.1+: 2020-12 semantics) | Complete | Derived from the document `openapi` version | - |
+| Multi-document descriptions (3.2 §4.1.2): user-supplied documents with retrieval URIs, full parsing before ref resolution | Complete | `file://` jail resolver only | `withDocument()`, `withExternalRefResolver()` |
+| Media Types (3.2 §4.14): complete vs streaming content, sequential media types, binary streams | Complete | - | - |
+| Content negotiation (request and response, RFC 7231 wildcard matching) | Complete | Fail-closed on unmatched media types (both directions) | `withLenientResponses()` |
+| Multipart (3.2 §4.15): named parts, ordered parts, nested encoding, nested `multipart/mixed`, byte ranges, streaming part-by-part validation | Complete | Streaming routing by media type | - |
+| XML Object (3.2 §4.26): schema-driven projection of XML request bodies | Complete (projection, not XML Schema validation) | - | - |
+| Security Scheme model (3.2 §4.27-4.29): all five types, `deprecated`, `deviceAuthorization` flow, case-insensitive `scheme`, `oauth2MetadataUrl` / `openIdConnectUrl` | Complete | - | - |
+| Security runtime: presence/format credential checks | Complete at presence/format depth (no token verification) | Off | `enableSecurityValidation()`; `withSecuritySchemeHandler()` for custom schemes |
+| Custom schema keywords | Complete | Unregistered keyword stays an extras annotation | `withKeywordValidator()` |
 
-The validator covers approximately 95% of JSON Schema draft 2020-12 keywords. The following are not fully supported:
+### Media Types (OpenAPI 3.2 §4.14)
 
-- `$dynamicRef` / `$dynamicAnchor` - dynamic schema resolution
-- `$recursiveRef` / `$recursiveAnchor` - recursive schema resolution
-- `contentEncoding` / `contentMediaType` / `contentSchema` - asserted only with `enableContentAssertions()` (decode by `contentEncoding` covers `base64`/`base64url`, media syntax checks cover the recognized media type set, `contentSchema` validates the decoded value); without the flag the keywords are collected as annotations only. Custom encodings and media types are not asserted.
-- Custom vocabularies and keyword extensions
+Response media types are classified per §4.14.3:
 
-The boolean schema form (`true` / `false`) is supported everywhere a schema is expected: `true` always passes and `false` always rejects.
+- **Complete content** (`application/json`, `application/xml`, `text/*`, form media types) is buffered within the body-size caps and validated as one document.
+- **Sequential media types** (`application/jsonl` / `application/x-ndjson`, `application/json-seq`, `text/event-stream`) are validated record by record against `itemSchema` (see [Streaming Response Validation](#streaming-response-validation)).
+- **Binary streams** (for example `application/octet-stream`) are pass-through bodies bounded by the body-size caps; their schema (if any) is asserted against the raw value.
+
+Multipart requests route through the streaming entry point (`RequestBodyValidatorInterface::validateStream()`) and are split part by part straight from the PSR-7 stream; bodies without positional encodings (`prefixEncoding`/`itemEncoding`) fall back to the buffered pipeline after a limit-checked read. Integrators implementing `RequestBodyValidatorInterface` directly must provide `validateStream()`.
+
+### Multipart Request Bodies
+
+- Object schemas populate properties from `Content-Disposition` names; repeated names collect into arrays.
+- Ordered (unnamed) multipart bodies with an array schema map parts to `prefixItems`/`items` and `prefixEncoding`/`itemEncoding` by position; `Content-Disposition` names do not participate.
+- Encoding Objects reached through `prefixEncoding`/`itemEncoding`/`encoding` apply one level deep to nested parts, including wire-splitting of nested `multipart/mixed` (deeper nesting raises `MultipartNestingDepthException`).
+- Part headers in Encoding Objects carry full Header Object semantics: referenced headers resolve from `#/components/headers/...` (external or malformed header `$ref` values stay unresolved and are treated as declarations without a schema), required headers raise `MissingPartHeaderError`, and content-based headers (`content.<media type>.schema`) are value-validated with coercion. A `$ref` nested inside a `content` schema is not resolved; such headers keep presence-only semantics. Byte-range headers parse strictly per RFC 9110 (`InvalidContentRangeException` otherwise).
+- Encoding `contentType` accepts the string or list form, and media type keys with parameters match by media type proper.
+
+Streaming-path limitations: whole-array keywords (`minItems`, `maxItems`) and media-type-level example warnings are not applied on the streaming ordered-multipart path (part-level assertions are); a whitespace-only body against `required: true` is not rejected there (a zero-byte stream still is); a body whose media type has no declared schema is skipped silently on the streaming path, matching the buffered pass-through semantics. XML leaves inside multipart keep the 1 MiB XML byte cap and raise `BodyTooLargeException` beyond it.
+
+### XML Object (OpenAPI 3.2 §4.26)
+
+XML request bodies (`application/xml`, `text/xml`) are projected through the XML Object model: element/attribute matching by `name`/`namespace`/`prefix`, `nodeType` handling including `none` (subschemas inline under the parent node), unwrapped and `wrapped` arrays, positional `prefixItems`, and §4.26.5 null handling (`xsi:nil="true"` maps to `null`; an omitted nullable attribute maps to `null`; an absent element never infers `null`). An empty element maps to a value typed by its schema (`''` for scalars, `[]`/`{}` for composite types), never to `null`. Whitespace-only leaf text stays untrimmed. Schemas carrying `$ref`/`$dynamicRef` default to `nodeType: none`, and `$ref` nested inside `properties` subschemas is not resolved by the XML mapper: such properties are omitted from the projected value (required properties then fail closed, optional ones pass through untouched). The mapping is schema-driven projection only — it is not XML Schema validation.
+
+### Strict Keywords
+
+Unknown schema keywords are rejected at `build()` time by default: any keyword outside the legal set — JSON Schema 2020-12 and OAS base-vocabulary keywords, vendor `x-` extensions, legacy `$recursiveRef`/`$recursiveAnchor`, keywords registered through `withKeywordValidator()`, and the `withAllowedUnknownKeywords()` allow-list — raises `InvalidSchemaException` naming the keyword, so typos such as `requird` fail fast. `disableStrictKeywords()` restores annotation mode, and registering a keyword validator doubles as legalizing that keyword. The guard covers the main spec only; documents registered with `withDocument()` are not traversed. See [Custom Keyword Validators](#custom-keyword-validators) for the registration semantics.
+
+### Format Assertion Modes
+
+`withFormatAssertionMode()` selects between `FormatAssertionMode::Assertion` (formats are asserted; the package default) and `FormatAssertionMode::Annotation` (formats are collected as validation annotations and never asserted, matching the JSON Schema 2020-12 annotation default of §7.2.2). The Assertion default is a deliberate package profile for an HTTP contract validator — it deviates from the spec's annotation-by-default recommendation, and `Annotation` is available when strict conformance is required. In both modes the applied format is recorded in the run annotations, and `enableStrictFormats()` additionally rejects unknown format tokens (assertion mode only). The builtin format validators conform to the official draft 2020-12 format test suite (all twenty vendored `optional/format/*` sections except `ecmascript-regex` (PCRE/ECMA-262 engine boundary)), and the suite's `format.json` annotation profile is fully green under `FormatAssertionMode::Annotation`.
 
 ### Format validation without ext-intl
 
@@ -1217,9 +1335,9 @@ The `hostname` and `idn-hostname` formats delegate UTS#46 IDNA2008 mapping and v
 
 A-label verification (`xn--` labels) in `hostname`/`idn-hostname` checks the decoded U-label against a frozen RFC 5892 Appendix B.1 PVALID table derived from Unicode 5.2 — the version the RFC was published with — while ICU (ext-intl) validates U-labels against the current Unicode version. Code points assigned after Unicode 5.2 are therefore treated as DISALLOWED by the A-label check, even when modern ICU accepts the corresponding U-label: an A-label whose U-label contains such a newer code point is rejected while the equivalent U-label form may pass. This asymmetry is deliberate conservatism (fail closed) — trusting the ICU verdict over the frozen table would require overriding a spec-frozen table at runtime and was considered riskier than rejecting rarely used recently assigned code points. Domains composed of pre-Unicode-5.2 code points validate identically in both forms.
 
-### `$ref` and null values (known limitation)
+### URI validation bounds
 
-When a `properties` or `items` subschema is declared as `{$ref: '#/...'}` and only the **resolved target** allows `null` (via `type: [..., 'null']` rather than a `nullable: true` sibling on the `$ref` stub), a `null` value on that property or item is rejected as `InvalidDataTypeException` even though the resolved target allows it. Non-null values are unaffected. Workaround: declare `nullable: true` as a sibling of the `$ref` — the sibling flag and the target's own nullability are combined with AND semantics, per OpenAPI 3.x `nullable` sibling-extension rules.
+`oauth2MetadataUrl` (and `openIdConnectUrl`) are format-checked at parse time and at request time as absolute URIs using the ASCII RFC 3986 `FILTER_VALIDATE_URL` predicate; IRI (non-ASCII) metadata URIs are rejected. This is narrower than the IRI forms the `iri` format accepts and is deliberate: metadata URLs are validated without ICU dependency. Schemas asserting `format: iri` are unaffected.
 
 ### `unevaluatedProperties` / `unevaluatedItems`
 
@@ -1227,37 +1345,94 @@ Both keywords are honoured — including across `allOf` / `anyOf` / `oneOf`, `if
 
 ### Content Negotiation
 
-Request body validation honours RFC 7231 §3.1.1.1 wildcard patterns declared in the OpenAPI specification. The most specific declaration wins:
+Request and response body validation share one matcher and honour RFC 7231 §3.1.1.1 wildcard patterns declared in the OpenAPI specification. The most specific declaration wins:
 
 1. Exact match (e.g., `application/json`)
 2. Subtype wildcard (e.g., `application/*`)
 3. Universal wildcard (`*/*`)
 
-When a wildcard declaration matches, the request body is parsed according to the concrete `Content-Type` sent by the client, so a spec `application/*` with a request `Content-Type: application/json` is decoded as JSON. A request whose `Content-Type` does not match any declared media type is rejected with `UnsupportedMediaTypeException` (fail-closed).
-
-Response body validation does not expand wildcards: media type matching uses literal string comparison, and a response `Content-Type` that does not match a declared media type simply skips response body validation.
+When a wildcard declaration matches, the body is parsed according to the concrete `Content-Type` sent by the client, so a spec `application/*` with a `Content-Type: application/json` body is decoded as JSON. The negotiation is symmetric: a request or a response whose `Content-Type` does not match any declared media type is rejected with `UnsupportedMediaTypeException` (fail-closed). `withLenientResponses()` restores the permissive response behavior and makes every skip observable: each skipped response body dispatches an `UnsupportedResponseMediaTypeWarningEvent` (PSR-14) carrying the unmatched media type.
 
 ### Security Validation
 
-Security scheme validation is opt-in (`enableSecurityValidation()`) and performs **presence-only** checks: it verifies that required credentials are present in the request but does not verify their correctness. Token introspection, JWT verification, JWKS resolution, and OAuth flows are out of scope.
+Security scheme validation is opt-in (`enableSecurityValidation()`) and stays at **presence and format** depth: it verifies that required credentials are present in the request and well-formed, but credential correctness is **not verified** — tokens are not introspected, JWTs are not verified, JWKS is not resolved, and OAuth flows are not executed. Passing validation never means the caller is authenticated.
 
-Supported scheme types:
+Every scheme type of the OpenAPI 3.2 model has a built-in handler:
 
-- `http/bearer` - checks for the `Authorization: Bearer ...` header (case-insensitive scheme prefix)
-- `apiKey` (`query`, `header`, `cookie`) - checks for the named parameter in the specified location
+| Scheme | Check |
+|--------|-------|
+| `http` / `basic` | `Authorization: Basic <base64 token>` prefix and token shape (RFC 7617), case-insensitive prefix |
+| `http` / `digest` | `Authorization: Digest` with a well-formed `key=value` parameter list (RFC 7616) |
+| `http` / `bearer` (and any other `http` subscheme without its own handler) | `Authorization: Bearer <token>` prefix, case-insensitive |
+| `apiKey` (`query`, `header`, `cookie`) | Named parameter present in the declared location |
+| `mutualTLS` | Presence heuristic over request headers (`SSL_CLIENT_CERT`, `X-SSL-CERT`, `X-Client-Cert`) |
+| `oauth2` | `Authorization: Bearer <token>` presence; declared scopes logged at debug level; `oauth2MetadataUrl` format-checked when declared |
+| `openIdConnect` | `Authorization: Bearer <token>` presence; `openIdConnectUrl` format-checked when declared |
 
-Any other scheme type declared in the spec (`http/basic`, `http/digest`, `oauth2`, `openIdConnect`, `mutualTLS`, or unknown) throws `UnsupportedSecuritySchemeException` at request-validation time. The exception extends `\RuntimeException` and is **not** wrapped into `ValidationException`, so catch it separately in your middleware.
+The handlers are tried in the order above, so a subscheme with a dedicated handler wins over the generic bearer fallback. A scheme type no handler claims (an unknown type such as `fooAuth`) raises `UnsupportedSecuritySchemeException` at request-validation time; its message names the type and points to the registration entry point below. The exception extends `\RuntimeException` and is **not** wrapped into `ValidationException`, so catch it separately in your middleware.
 
-The `security` keyword is a list of OR-alternatives, each an AND-dict of schemes. An AND list containing an unsupported scheme fails closed with `UnsupportedSecuritySchemeException`, even when a supported sibling in the same dict would have passed. In an OR list, supported alternatives are still tried; if none succeeds, the unsupported-scheme error is re-thrown.
+> **mTLS trust disclaimer**: the mutualTLS handler reads client-certificate headers that any client can set. When a reverse proxy terminates TLS, presence of these headers is trusted proxy configuration, never proof of authentication — make sure the proxy strips and rewrites `X-SSL-*` headers from client traffic, or register a custom handler with your platform's actual certificate identity.
+
+Custom handlers replace built-ins for the schemes they claim. Implement `SecuritySchemeHandlerInterface` and register it through the fluent, repeatable `withSecuritySchemeHandler()`; the first handler whose `supports()` returns true wins, so a user handler overrides every built-in one for those schemes, and the last `with()` call wins between two competing handlers:
+
+```php
+use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
+use Duyler\OpenApi\Schema\Model\SecurityScheme;
+use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
+use Duyler\OpenApi\Validator\Security\SchemeCredentialReporter;
+use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerInterface;
+use Psr\Http\Message\ServerRequestInterface;
+
+use function preg_match;
+use function sprintf;
+
+final class IntrospectionBearerHandler implements SecuritySchemeHandlerInterface
+{
+    public function __construct(
+        private readonly string $activeToken,
+    ) {}
+
+    public function supports(SecurityScheme $scheme): bool
+    {
+        return 'http' === $scheme->type && 'bearer' === $scheme->scheme;
+    }
+
+    public function validate(
+        ServerRequestInterface $request,
+        SecurityScheme $scheme,
+        SchemeCredentialReporter $reporter,
+    ): ?MissingSecurityCredentialsError {
+        $header = $request->getHeaderLine('Authorization');
+
+        if (1 !== preg_match('/^Bearer\s+(\S+)$/i', $header, $matches)
+            || $matches[1] !== $this->activeToken) {
+            return $reporter->reportMissing(
+                sprintf('%s/%s', $scheme->type, $scheme->scheme),
+                'Authorization header',
+            );
+        }
+
+        return null;
+    }
+}
+
+$validator = OpenApiValidatorBuilder::create()
+    ->fromYamlFile('openapi.yaml')
+    ->enableSecurityValidation()
+    ->withSecuritySchemeHandler(new IntrospectionBearerHandler($activeToken))
+    ->build();
+```
+
+A production handler would call the introspection endpoint or the JWKS verifier in `validate()`; returning `null` means the credentials passed, returning `MissingSecurityCredentialsError` from `reportMissing()` fails the check with the same sanitized error shape the built-ins use.
+
+The `security` keyword is a list of OR-alternatives, each an AND-dict of schemes. An AND list containing a scheme with no handler fails closed with `UnsupportedSecuritySchemeException`, even when a supported sibling in the same dict would have passed. In an OR list, supported alternatives are still tried; if none succeeds, the unsupported-scheme error is re-thrown.
 
 By default, credential failures return a generic message (`'Authentication required: missing or invalid credentials'`) that does not reveal which scheme was checked or where the credential was expected. Provide a PSR-3 logger via `withSecurityVerboseLogging()` to get scheme details at debug level (declared OAuth2 scopes are logged there as well), or read them programmatically via the opt-in `reveal: true` getters (see [Exception Sanitization](#exception-sanitization)).
-
-To validate OAuth2 / OpenID Connect tokens, remove those schemes from the spec and validate the token at the application layer — for example, in a PSR-15 middleware calling your introspection endpoint or JWKS verifier. The security validator has no extension point for custom scheme handlers; a missing handler is reported via the exception instead of silently bypassed.
 
 ## Requirements
 
 - **PHP 8.4 or higher** - Uses modern PHP features (readonly classes, match expressions, etc.)
-- **ext-intl (recommended)** - Enables full UTS#46 IDNA2008 validation for `idn-hostname` and Punycode (`xn--`) A-label verification for `hostname`/`idn-hostname`. Without it those validators fail closed: non-ASCII input and A-labels are rejected instead of accepted unchecked (see [Limitations](#limitations)).
+- **ext-intl (recommended)** - Enables full UTS#46 IDNA2008 validation for `idn-hostname` and Punycode (`xn--`) A-label verification for `hostname`/`idn-hostname`. Without it those validators fail closed: non-ASCII input and A-labels are rejected instead of accepted unchecked (see [Feature Coverage](#feature-coverage)).
 - **PSR-7 HTTP message** - `psr/http-message ^2.0`. Use any PSR-7 implementation (`nyholm/psr7`, `guzzle/psr7`, `laminas/laminas-diactoros`).
 - **PSR-6 cache** - `psr/cache ^3.0` (e.g., `symfony/cache`, `cache/cache`)
 - **PSR-14 events** - `psr/event-dispatcher ^1.0` (e.g., `symfony/event-dispatcher`)

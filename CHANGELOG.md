@@ -5,6 +5,90 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0]
+
+Consolidated release of the full OpenAPI 3.2 / JSON Schema 2020-12 implementation program.
+The detailed per-change entries for every feature below follow in the [0.9.0] section.
+
+### Breaking Changes
+
+1. `contentEncoding` / `contentMediaType` / `contentSchema` are annotation-only by default (validation
+   §8.1): string contents are no longer decoded, parsed or validated unless
+   `OpenApiValidatorBuilder::enableContentAssertions()` is called.
+2. An unknown `contentMediaType` no longer throws `InvalidContentMediaTypeException`: it is collected as
+   an annotation and emits a `ValidationWarningEvent`; in assertion mode it warns and skips instead of failing.
+3. `contentEncoding` assertions (opt-in) cover the full RFC 4648 family plus quoted-printable, and
+   `7bit`/`8bit`/`binary` are identity encodings; previously only `base64` was asserted and other
+   encodings were skipped silently.
+4. `contentSchema` is now applied by the assertion pipeline (decode, media check, sub-schema validation)
+   instead of being parsed and ignored.
+5. Response body validation is fail-closed by default: an unmatched response media type raises
+   `UnsupportedMediaTypeException` instead of skipping validation. `withLenientResponses()` restores the
+   previous behavior and dispatches `UnsupportedResponseMediaTypeWarningEvent` per skipped body.
+6. Unknown schema keywords are rejected at build time by default (strict keywords) instead of being
+   silently dropped. Opt out with `disableStrictKeywords()`, legalize individual keywords with
+   `withAllowedUnknownKeywords()`, or register a handler with `withKeywordValidator()`; keyword values
+   stay preserved in `extras` in every mode.
+7. `$dynamicRef` / `$dynamicAnchor` are fully implemented (dynamic scope, outermost anchor,
+   per-encounter resolution) instead of being silently ignored, so results can differ on schemas using them.
+8. `$id`, `$anchor`, `$defs`, `$vocabulary` and `$comment` are parsed and honoured instead of dropped;
+   `$vocabulary: true` for an unsupported vocabulary refuses the build with
+   `VocabularyNotSupportedException`.
+9. OpenAPI 3.0 documents validate by the 3.0 dialect: array `type` is refused
+   (`TypeArrayNotSupportedException`), keywords beside `$ref` are ignored, and `nullable: true` without an
+   explicit `type` no longer makes `null` acceptable.
+10. Security validation dispatches through a handler registry with built-in presence/format handlers for
+    `http/basic`, `http/bearer`, `http/digest`, `apiKey`, `mutualTLS`, `oauth2` and `openIdConnect`
+    instead of throwing `UnsupportedSecuritySchemeException` for everything but bearer/apiKey. The
+    exception remains for scheme types without any handler; register custom handlers with
+    `withSecuritySchemeHandler()`.
+11. OAuth Flows serialize the device flow under the `deviceAuthorization` wire key (the pre-release
+    `deviceCode` key is no longer accepted), `SecurityScheme` gains `deprecated`, `scheme` is normalized
+    to lowercase, and `oauth2MetadataUrl` is validated as an absolute URI at parse time.
+12. Custom schema keyword validation is public API: `KeywordValidatorInterface` +
+    `withKeywordValidator()` replace the hardcoded validator list.
+13. External `$ref` resolution is pluggable: `withExternalRefResolver()` injects a custom
+    `ExternalRefResolverInterface`, and `withDocument()` registers companion documents by retrieval URI;
+    previously the builder only created the builtin `file://` resolver and documents could not be supplied.
+14. Unchanged by design: format keywords stay asserted by default (the package's HTTP-validator profile).
+    Explicit handle: `withFormatAssertionMode(FormatAssertionMode::Annotation)` switches to the JSON
+    Schema 2020-12 annotation default.
+15. Unchanged by design: `http`/`https` external `$ref` targets stay denied by the builtin resolver
+    (SSRF). Explicit handle: supply the documents with `withDocument()`, or inject a network resolver
+    with `withExternalRefResolver()`.
+
+### Added
+
+- Epoch A — Reference and Resource Model: schema resource identification fields, `extras` round-trip
+  for unknown keywords, the per-document resource registry, full `$dynamicRef` dynamic-scope
+  semantics, the `$vocabulary` guard with refuse semantics, legacy `$recursiveRef`/`$recursiveAnchor`
+  warning events, and multi-document support (`withDocument()`, `withExternalRefResolver()`).
+- Epoch B — Schema Semantics: the `DialectProfile` 3.0/3.1 branching, `dependentRequired` (plus the
+  legacy draft-07 `dependencies` translation), the annotation-only `content*` default with the full
+  opt-in assertion pipeline (`ContentValidationResult`, `contentResults()`/`contentResultAtPath()`),
+  the public keyword-validator registry, strict unknown keywords by default, and the complete format
+  vocabulary with the `withFormatAssertionMode()` switch.
+- Epoch C — HTTP Surface: fail-closed response content negotiation with the lenient opt-out,
+  media-type kind classification (complete vs streaming vs sequential vs binary), the multipart 3.2
+  surface (nested encoding, ordered unnamed parts, byte ranges, nested `multipart/mixed`, streaming
+  part-by-part validation, `contentType` list form), and XML Object projection for XML request bodies.
+- Epoch D — Security: the full 3.2 Security Scheme model, the `SecuritySchemeHandlerInterface`
+  registry with seven built-in presence/format handlers, `withSecuritySchemeHandler()`, and the
+  promotion of `SchemeCredentialReporter` to the public `Validator\Security` namespace.
+
+### Changed
+
+- Domain exceptions of the spec parse phase surface raw from the builder instead of being wrapped
+  into `BuilderException`: `TypeArrayNotSupportedException` (OpenAPI 3.0 array `type`),
+  `InvalidUtf8Exception` and `SpecTooLargeException` pass through uncaught, so callers can catch
+  the domain type directly; every other parse failure keeps the `BuilderException` wrapper with
+  the original exception as `previous`.
+
+### Fixed
+
+- `withMaxJsonBodySize()` is now enforced on buffered request bodies (previously the cap was
+  silently ignored on that path and only the decoded-content pipeline honoured it).
+
 ## [0.9.0]
 
 ### Added
@@ -138,7 +222,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Built-in string format validators now conform to the official draft 2020-12 format
-  test suite: all 14 `optional/format/*` sections (646 cases) are active and green.
+  test suite: all twenty vendored `optional/format/*` sections except `ecmascript-regex`
+  (PCRE/ECMA-262 engine boundary) are active and green; the fourteen sections activated
+  by the conformance repair contribute 646 cases.
   Format validation becomes stricter and more correct — schemas asserting the formats
   below now reject inputs they previously accepted and accept inputs they previously
   rejected:
@@ -270,6 +356,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   → `file://` jail resolver → `UnresolvableRefException`. External `$ref` values inside the main spec and inside
   registered documents must either be satisfied by the repository or require `externalRefAllowedRoot`; the
   confinement verdict cache key includes the repository fingerprint.
+- `OpenApiValidatorBuilder::withExternalRefResolver(ExternalRefResolverInterface $resolver): self` injects a custom
+  external `$ref` resolver ahead of the builtin `file://` jail resolver, closing the gap where the interface existed
+  but the builder never accepted one. The injected resolver serves every scheme (for example `https://` documents),
+  while the builtin scheme allowlist, path jail and size caps stay in force whenever no custom resolver is
+  registered; the `UnresolvableRefException` confinement message now points at this entry point.
 - Schema resource identification fields (`$id`, `$anchor`, `$dynamicAnchor`, `$dynamicRef`, `$comment`,
   `$vocabulary`, `$defs`) and unknown schema keywords are preserved through parse/serialize round-trip; they
   were previously silently dropped on load. Unknown keywords keep their values verbatim (vendor extensions,

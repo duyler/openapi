@@ -64,9 +64,9 @@ final class DocumentNavigator
         = 'Registered document root is not a schema object; reference an $id or a fragment of the document';
 
     private const string REASON_FILE_FALLBACK_DENIED
-        = 'External ref is not registered in the document repository; file fallback is denied because '
-        . 'externalRefAllowedRoot is not set. Call withExternalRefAllowedRoot($path), register the referenced '
-        . 'document via withDocument(), or inject a custom ExternalRefResolverInterface.';
+        = 'External ref is not registered in the document repository; file fallback is denied '
+        . '(externalRefAllowedRoot is not set). Call withExternalRefAllowedRoot($path), register the document '
+        . 'via withDocument(), or inject a resolver via withExternalRefResolver().';
 
     private ?ChainResources $chainResources = null;
 
@@ -820,10 +820,8 @@ final class DocumentNavigator
             throw new UnresolvableRefException(
                 $ref,
                 'External ref not resolved. Builtin FileExternalRefResolver allows only '
-                . 'file:// URIs and scheme-less relative paths; every other scheme '
-                . '(http, https, ftp, php, phar, data, compress.zlib, zip, expect, '
-                . 'ssh2, rar, ogg, glob, etc.) is rejected. Inject a custom '
-                . 'ExternalRefResolverInterface implementation to enable other schemes.',
+                . 'file:// URIs and scheme-less relative paths; every other scheme is rejected. '
+                . 'Register a custom resolver via OpenApiValidatorBuilder::withExternalRefResolver().',
                 previous: $e,
             );
         }
