@@ -11,14 +11,14 @@ OpenAPI 3.2 validator for PHP 8.4+
 ## Features
 
 - **OpenAPI 3.2 Support** - Full JSON Schema draft 2020-12 core ($id, $anchor, $dynamicRef, $defs, $vocabulary) with dialect branching for 3.0/3.1 (see Feature Coverage)
-- **JSON Schema Validation** - Full JSON Schema draft 2020-12 validation with 30 validators
+- **JSON Schema Validation** - Full JSON Schema draft 2020-12 validation (applicators, validation, composition, content, and `unevaluated*` keywords)
 - **PSR-7 Integration** - PSR-7 HTTP message validation (works with any PSR-7 implementation)
 - **Request Validation** - Validate path parameters, query parameters, headers, cookies, and request body
 - **Response Validation** - Validate status codes, headers, and response bodies (fail-closed content negotiation)
 - **Multiple Content Types** - Support for JSON, form-data, multipart, text, and XML
 - **Streaming Multipart** - Multipart request bodies are validated part by part straight from the PSR-7 stream (ordered parts, nested multipart, byte ranges)
 - **XML Object Mapping** - Request XML bodies are projected through the OpenAPI 3.2 XML Object model (node types, namespaces, null handling)
-- **Built-in Format Validators** - 26 built-in validators (email, UUID, date-time, URI, IPv4/IPv6, int32, int64, iri, uri-template, regex, etc.)
+- **Built-in Format Validators** - Format validators covering the full OAS format vocabulary (uri, iri, idn, email, time, uuid and more), suite-conformant
 - **Custom Format Validators** - Easily register custom format validators
 - **Custom Keyword Validators** - Register validators for custom schema keywords via `withKeywordValidator()`
 - **Strict Keywords** - Unknown schema keywords fail the build by default; opt out per keyword or globally
@@ -416,7 +416,7 @@ $validator = OpenApiValidatorBuilder::create()
 
 The keyword value is read from the schema `extras` collected by the parser; custom keywords are never added to the schema model. Multiple `withKeywordValidator()` calls accumulate, and re-registering a keyword replaces its validator while keeping its dispatch slot. The replacement is complete for stateless-dispatched keywords only: the built-in `items`, `properties`, and `oneOf` keywords are additionally dispatched by the context path, which always runs its unconditional built-in handling, so a validator registered under them runs in addition to it and cannot fully replace it. Registered keywords run after the whole built-in set (including `unevaluatedItems`/`unevaluatedProperties`), so applicator-style custom keywords cannot place themselves ahead of them. A keyword without a registration stays an extras annotation (see `ValidationContext::annotations()`) and does not affect the validation outcome.
 
-Unknown schema keywords are rejected by default: at `build()` time the document is traversed once and any keyword outside the legal set — the known JSON Schema 2020-12 and OAS base-vocabulary keywords (`discriminator`, `example`, `externalDocs`, `xml`), vendor `x-` extensions, the legacy `$recursiveRef`/`$recursiveAnchor` keys, keywords registered through `withKeywordValidator()`, and the `withAllowedUnknownKeywords()` allow-list — raises `InvalidSchemaException` naming the keyword, so typos such as `requird` fail fast instead of silently becoming inert extras. `disableStrictKeywords()` restores the annotation-only mode, and `withAllowedUnknownKeywords(string ...$keywords)` legalizes individual keywords. The check covers the main spec only; documents registered with `withDocument()` are not traversed.
+Unknown schema keywords are rejected at `build()` time by default; registering a validator for a keyword doubles as legalizing it. See [Strict Keywords](#strict-keywords) for the full legal set and the opt-out methods.
 
 ### Type Coercion
 
@@ -634,7 +634,7 @@ $validator = OpenApiValidatorBuilder::create()
 | `withMaxStreamingRecords(int $max)` | Max number of records accepted from a single streaming response | `100000` |
 | `enableStrictStreaming()` | Malformed stream records throw `MalformedStreamRecordException` instead of being logged and skipped | `false` |
 | `disableStrictStreaming()` | Restore default fail-open streaming behaviour (malformed records logged and skipped) | `false` |
-| `enableContentAssertions()` | Assert content keywords instead of collecting them as annotations: decode by `contentEncoding`, check `contentMediaType` syntax, validate `contentSchema` through the pipeline (decoded values over `withMaxJsonBodySize()` raise `DecodedContentTooLargeException`); the outcome is also available as `ContentValidationResult` via `ValidationContext::contentResult()` and, for every content instance of the run, via `contentResults()`/`contentResultAtPath()` keyed by data path | `false` (annotation-only; the lazy result never affects the outcome) |
+| `enableContentAssertions()` | Assert content keywords instead of collecting them as annotations: decode by `contentEncoding`, check `contentMediaType` syntax, validate `contentSchema` through the pipeline (decoded values over `withMaxJsonBodySize()` raise `DecodedContentTooLargeException`); the outcome is exposed as `ContentValidationResult` via `ValidationContext::contentResult()` / `contentResults()` / `contentResultAtPath()` — see below | `false` (annotation-only; the lazy result never affects the outcome) |
 
 Deprecated reporting is enabled by default; without a PSR-3 logger the warnings go to `NullLogger` and produce no output. To suppress them, simply omit the logger (there is no `disableReportDeprecated()` method).
 
@@ -749,6 +749,14 @@ $middleware = new ValidationMiddleware($validator);
 
 The validator supports the following JSON Schema draft 2020-12 keywords:
 
+### Core Keywords
+- `$schema` - Stored as the document dialect (`jsonSchemaDialect`)
+- `$id` / `$anchor` - Schema identification and plain-name fragments
+- `$defs` - Schema definitions referenced by `$ref`
+- `$dynamicAnchor` / `$dynamicRef` - Dynamic scoping (outermost anchor, per-encounter resolution)
+- `$vocabulary` - Vocabulary declaration guard
+- `$comment` - Ignored annotation
+
 ### Type Validation
 - `type` - String, number, integer, boolean, array, object, null
 - `enum` - Enumerated values
@@ -806,6 +814,15 @@ All regular expressions in schemas are validated at parse time; an invalid patte
 - `oneOf` - Must match exactly one schema
 - `not` - Must not match schema
 - `if` / `then` / `else` - Conditional validation
+
+### Annotation and Metadata Keywords
+- `title` / `description` / `summary` - Documentation annotations (`summary` is the 3.2 `$ref` sibling)
+- `default` - Default value annotation
+- `deprecated` - Deprecated elements are reported via PSR-14 warning and PSR-3 logger (see `enableReportDeprecated()`)
+- `readOnly` / `writeOnly` - Directional enforcement: `readOnly` properties are rejected in request payloads, `writeOnly` in response payloads
+- `example` / `examples` - Example annotations
+- `contentEncoding` / `contentMediaType` / `contentSchema` - Content annotations by default (see `enableContentAssertions()`)
+- `externalDocs` / `xml` - OpenAPI base-vocabulary annotations
 
 ### Advanced Keywords
 - `$ref` - Schema references
@@ -888,6 +905,15 @@ All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schem
 | `InvalidFormatException` | `format` | Format validation failed (email, URI, etc.) |
 | `InvalidContentRangeException` | `format` | Part `Content-Range` header (3.2 §4.15.4.9) is not a valid `bytes <first>-<last>/<complete>` range |
 
+#### Content Errors
+
+Thrown by the content pipelines; assertions run only under `enableContentAssertions()` — in annotation mode these keywords never fail validation.
+
+| Error Type | Keyword | Description |
+|------------|---------|-------------|
+| `InvalidContentMediaTypeException` | `contentMediaType` | Value does not match the declared `contentMediaType` (e.g. not parseable JSON) |
+| `InvalidContentEncodingException` | `contentEncoding` | Value is not a valid `contentEncoding`-encoded string |
+
 #### String Validation Errors
 
 | Error Type | Keyword | Description |
@@ -922,6 +948,7 @@ All errors implement `ValidationErrorInterface` and provide `dataPath()`, `schem
 | Error Type | Keyword | Description |
 |------------|---------|-------------|
 | `RequiredError` | `required` | Required property is missing |
+| `DependentRequiredError` | `dependentRequired` | Property required by a present `dependentRequired` trigger property is missing |
 | `MinPropertiesError` | `minProperties` | Object has fewer properties than required |
 | `MaxPropertiesError` | `maxProperties` | Object has more properties than allowed |
 | `AdditionalPropertyError` | `additionalProperties` | Additional property present despite additionalProperties: false |
@@ -973,6 +1000,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `InvalidMultipleOfSchemaException` | Schema declares `multipleOf` ≤ 0 (mathematically unsatisfiable) |
 | `InvalidParameterException` | Parameter value is malformed or invalid |
 | `InvalidPatternException` | Invalid regex pattern in schema definition |
+| `InvalidNumericStringException` | Numeric string cannot be canonicalised during strict type coercion (e.g. scientific-notation exponent beyond the double-precision boundary) |
 | `InvalidSchemaException` | Spec parsing failed (malformed OpenAPI document) |
 | `InvalidUtf8Exception` | Input is not valid UTF-8 (RFC 8259 §8.1) |
 | `MalformedStreamRecordException` | Streaming response record (NDJSON / SSE / JSON Text Sequence) failed to parse AND `enableStrictStreaming()` is on; under default fail-open streaming the record is logged and skipped instead |
@@ -1020,20 +1048,7 @@ $validator = OpenApiValidatorBuilder::create()
     ->build();
 ```
 
-To format a `ValidationException` without holding a reference to the validator, call `ErrorFormatterInterface::formatException()` directly:
-
-```php
-use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
-use Duyler\OpenApi\Validator\Exception\ValidationException;
-
-$formatter = new SimpleFormatter();
-
-try {
-    $operation = $validator->validateRequest($request);
-} catch (ValidationException $e) {
-    echo $formatter->formatException($e);
-}
-```
+To format a `ValidationException` without holding a reference to the validator, call `ErrorFormatterInterface::formatException()` directly — see the example in [Validation Exceptions](#validation-exceptions).
 
 `ErrorFormatterInterface` exposes three methods; `formatException()` is the canonical entry point (the others are useful when you hold individual errors rather than a full exception):
 
@@ -1188,7 +1203,7 @@ $validator = OpenApiValidatorBuilder::create()
 
 ### Long-Running Processes
 
-The validator instance is safe to reuse across requests in long-running processes that use the **prefork execution model** (PHP-FPM, RoadRunner, FrankenPHP non-threaded) — no extra configuration needed. Under **Swoole coroutines** or **FrankenPHP threaded workers**, shared mutable state requires care: give the validator pool a lock (`ValidatorPool::forCoroutineRuntime(new \Swoole\Lock())`) or use one pool per coroutine/worker, as described in [Validator Pool](#validator-pool). XML body validation uses libxml global state, and functions like `json_last_error()` and `DateTime::getLastErrors()` are process-global, so these code paths are not coroutine-safe. If the OpenAPI specification changes at runtime, rebuild the validator; old instances are garbage-collected when no longer referenced.
+The validator instance is safe to reuse across requests in long-running processes that use the **prefork execution model** (PHP-FPM, RoadRunner, FrankenPHP non-threaded) — no extra configuration needed. Under **Swoole coroutines** or **FrankenPHP threaded workers**, shared mutable state requires care — see [Validator Pool](#validator-pool) for the lock-per-pool prescription. XML body validation uses libxml global state, and functions like `json_last_error()` and `DateTime::getLastErrors()` are process-global, so these code paths are not coroutine-safe. If the OpenAPI specification changes at runtime, rebuild the validator; old instances are garbage-collected when no longer referenced.
 
 ## Streaming Response Validation
 

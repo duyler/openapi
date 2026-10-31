@@ -5,13 +5,11 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
-use Duyler\OpenApi\Validator\PregExecutor;
 use Override;
 
 final readonly class IdnHostnameValidator extends AbstractStringFormatValidator
 {
     public function __construct(
-        private readonly PregExecutor $pregExecutor = new PregExecutor(),
         private readonly IdnProcessor $idnProcessor = new IdnProcessor(),
     ) {}
 

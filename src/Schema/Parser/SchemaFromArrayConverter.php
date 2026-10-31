@@ -24,11 +24,10 @@ final readonly class SchemaFromArrayConverter
 {
     private ScalarSchemaKeywordParser $scalarParser;
     private XmlSchemaKeywordParser $xmlParser;
-    private DialectProfile $dialectProfile;
 
     public function __construct(
-        private string $documentVersion = '',
-        private DeprecationLogger $deprecationLogger = new DeprecationLogger(),
+        string $documentVersion = '',
+        DeprecationLogger $deprecationLogger = new DeprecationLogger(),
         ?DialectProfile $dialectProfile = null,
         private ArraySchemaKeywordParser $arrayParser = new ArraySchemaKeywordParser(),
         private ObjectSchemaKeywordParser $objectParser = new ObjectSchemaKeywordParser(),
@@ -36,8 +35,8 @@ final readonly class SchemaFromArrayConverter
         private ResourceSchemaKeywordParser $resourceParser = new ResourceSchemaKeywordParser(),
         private ExtrasSchemaKeywordParser $extrasParser = new ExtrasSchemaKeywordParser(),
     ) {
-        $this->dialectProfile = $dialectProfile ?? DialectProfile::forOpenApi31();
-        $this->scalarParser = new ScalarSchemaKeywordParser($documentVersion, $deprecationLogger, $this->dialectProfile);
+        $profile = $dialectProfile ?? DialectProfile::forOpenApi31();
+        $this->scalarParser = new ScalarSchemaKeywordParser($documentVersion, $deprecationLogger, $profile);
         $this->xmlParser = new XmlSchemaKeywordParser($documentVersion, $deprecationLogger);
     }
 

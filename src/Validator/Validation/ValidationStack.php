@@ -51,7 +51,6 @@ final readonly class ValidationStack
     public readonly RequestValidator $requestValidator;
     public readonly ResponseValidatorWithContext $responseValidator;
     public readonly SchemaValidatorWithContext $schemaValidatorWithContext;
-    private readonly StatelessValidatorRegistry $statelessValidators;
     private readonly SchemaValidatorDependencies $schemaValidatorDependencies;
     private readonly ValidatorConfiguration $validatorConfiguration;
 
@@ -109,7 +108,7 @@ final readonly class ValidationStack
             lenientResponses: $this->lenientResponses,
         );
 
-        $this->statelessValidators = new StatelessValidatorRegistry(
+        $statelessValidators = new StatelessValidatorRegistry(
             $this->pool,
             $this->formatRegistry,
             $this->strictFormats,
@@ -126,7 +125,7 @@ final readonly class ValidationStack
         $this->schemaValidatorDependencies = new SchemaValidatorDependencies(
             pool: $this->pool,
             refResolver: $this->refResolver,
-            statelessValidators: $this->statelessValidators,
+            statelessValidators: $statelessValidators,
             logger: $this->logger,
             eventDispatcher: $this->eventDispatcher,
             errorFormatter: $this->errorFormatter,

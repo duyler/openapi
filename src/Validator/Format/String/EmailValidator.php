@@ -99,7 +99,6 @@ final readonly class EmailValidator extends AbstractStringFormatValidator
                 return false;
             }
 
-            $localPart = substr($data, 0, $localEnd + 1);
             $domainPart = substr($data, $localEnd + 1);
 
             if ('' === $domainPart || '@' !== $domainPart[0]) {

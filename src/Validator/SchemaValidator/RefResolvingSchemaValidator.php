@@ -18,10 +18,10 @@ final readonly class RefResolvingSchemaValidator implements SchemaValidatorInter
 
     public function __construct(
         private SchemaValidatorInterface $inner,
-        private RefResolverInterface $refResolver,
-        private OpenApiDocument $document,
+        RefResolverInterface $refResolver,
+        OpenApiDocument $document,
     ) {
-        $this->scopeResolver = new DynamicScopeResolver($this->refResolver, $this->document);
+        $this->scopeResolver = new DynamicScopeResolver($refResolver, $document);
     }
 
     #[Override]

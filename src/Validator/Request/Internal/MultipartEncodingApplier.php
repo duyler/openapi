@@ -38,30 +38,6 @@ final readonly class MultipartEncodingApplier
     ) {}
 
     /**
-     * @param array<int, Encoding>|null $prefixEncoding
-     * @param array<string, Encoding>|null $encoding
-     */
-    public function applyToBody(
-        string $body,
-        string $fullContentType,
-        ?array $prefixEncoding = null,
-        ?Encoding $itemEncoding = null,
-        ?array $encoding = null,
-    ): void {
-        if (null === $prefixEncoding && null === $itemEncoding && null === $encoding) {
-            return;
-        }
-
-        $this->applyParts(
-            parts: $this->multipartParser->parse($body, $fullContentType),
-            prefixEncoding: $prefixEncoding,
-            itemEncoding: $itemEncoding,
-            encoding: $encoding,
-            depth: 0,
-        );
-    }
-
-    /**
      * @param array<int, array{headers: string, content: string}> $parts
      * @param array<int, Encoding>|null $prefixEncoding
      * @param array<string, Encoding>|null $encoding

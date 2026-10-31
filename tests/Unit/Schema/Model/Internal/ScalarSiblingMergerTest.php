@@ -33,6 +33,24 @@ final class ScalarSiblingMergerTest extends TestCase
     }
 
     #[Test]
+    public function merge_conflicting_scalar_siblings_normalize_to_null_or_intersection(): void
+    {
+        $merger = new ScalarSiblingMerger();
+
+        self::assertNull($merger->mergeFormat('json', 'date-time'));
+        self::assertSame('json', $merger->mergeFormat('json', null));
+        self::assertSame(['a'], $merger->mergeEnum(null, ['a']));
+        self::assertSame('b', $merger->mergeType(['a', 'b'], ['b', 'c']));
+        self::assertSame(['b', 'c'], $merger->mergeType(['a', 'b', 'c'], ['b', 'c', 'd']));
+        self::assertNull($merger->mergeType(['a'], ['b']));
+        self::assertSame(['y'], $merger->mergeEnum(['x', 'y'], ['y', 'z']));
+        self::assertNull($merger->mergeNullableIdentical(2.0, 3.0));
+        self::assertNull($merger->mergeNullableIdentical('^a', '^b'));
+        self::assertSame(['x' => 1], $merger->mergeMixedMap(['x' => 1], null));
+        self::assertSame(['x' => 1], $merger->mergeMixedMap(null, ['x' => 1]));
+    }
+
+    #[Test]
     public function merge_nullable_keeps_resolved_nullable_when_sibling_omits_it(): void
     {
         $resolved = new Schema(type: 'string', nullable: true);
@@ -204,16 +222,6 @@ final class ScalarSiblingMergerTest extends TestCase
             ->collectScalarFieldAdditions($resolved, $sibling);
 
         self::assertSame([], $additions);
-    }
-
-    #[Test]
-    public function merge_string_list_dedupes_and_unions(): void
-    {
-        $merger = new ScalarSiblingMerger();
-
-        $result = $merger->mergeStringList(['a', 'b'], ['b', 'c']);
-
-        self::assertSame(['a', 'b', 'c'], $result);
     }
 
     #[Test]

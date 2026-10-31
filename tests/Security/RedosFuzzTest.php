@@ -123,7 +123,7 @@ final class RedosFuzzTest extends TestCase
     #[Test]
     public function uri_validation_still_works(): void
     {
-        $validator = new UriValidator(new PregExecutor());
+        $validator = new UriValidator();
 
         $succeeded = false;
         try {

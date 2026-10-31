@@ -15,8 +15,6 @@ use function strtolower;
 
 final readonly class SecuritySchemeBuilder
 {
-    public function __construct(private OpenApiBuildContext $context) {}
-
     public function buildSecurityScheme(array $data): SecurityScheme
     {
         if (false === isset($data['type'])) {

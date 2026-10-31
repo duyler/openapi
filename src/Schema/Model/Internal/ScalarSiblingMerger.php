@@ -9,7 +9,6 @@ use Duyler\OpenApi\Validator\Schema\JsonEquals;
 
 use function array_intersect;
 use function array_merge;
-use function array_unique;
 use function array_uintersect;
 use function array_values;
 use function count;
@@ -127,24 +126,6 @@ final readonly class ScalarSiblingMerger implements SiblingMergerStrategy
         }
 
         return null;
-    }
-
-    /**
-     * @param ?list<string> $resolved
-     * @param ?list<string> $sibling
-     * @return ?list<string>
-     */
-    public function mergeStringList(?array $resolved, ?array $sibling): ?array
-    {
-        if (null === $sibling) {
-            return $resolved;
-        }
-
-        if (null === $resolved) {
-            return $sibling;
-        }
-
-        return array_values(array_unique(array_merge($resolved, $sibling)));
     }
 
     /**

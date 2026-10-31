@@ -27,9 +27,9 @@ final class OpenApiBuildContext
         public readonly DeprecationLogger $deprecationLogger = new DeprecationLogger(),
     ) {
         $this->dialectProfile = DialectProfile::forOpenApi31();
-        $this->infoBuilder = new InfoBuilder($this);
+        $this->infoBuilder = new InfoBuilder();
         $this->schemaBuilder = new SchemaBuilder($this);
-        $this->securitySchemeBuilder = new SecuritySchemeBuilder($this);
+        $this->securitySchemeBuilder = new SecuritySchemeBuilder();
         $this->pathItemBuilder = new PathItemBuilder($this);
         $this->componentsBuilder = new ComponentsBuilder($this);
     }

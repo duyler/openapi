@@ -34,25 +34,4 @@ final readonly class ValidatorOptions
         public readonly bool $lenientResponses = false,
         public readonly ?SecuritySchemeHandlerRegistry $securitySchemeHandlers = null,
     ) {}
-
-    public function toValidatorConfiguration(): ValidatorConfiguration
-    {
-        return new ValidatorConfiguration(
-            coercion: $this->coercion,
-            nullableAsType: $this->nullableAsType,
-            emptyArrayStrategy: $this->emptyArrayStrategy,
-            reportDeprecated: $this->reportDeprecated,
-            strictFormats: $this->strictFormats,
-            maxJsonBodyBytes: ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES,
-            maxMultipartBodyBytes: ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES,
-            strictStreaming: $this->strictStreaming,
-            maxRegexBacktracks: ValidatorConfiguration::DEFAULT_MAX_REGEX_BACKTRACKS,
-            maxStreamingRecords: $this->maxStreamingRecords,
-            strictCoercion: $this->strictCoercion,
-            dialectProfile: $this->dialectProfile,
-            contentAssertionsEnabled: $this->contentAssertionsEnabled,
-            formatAssertionMode: $this->formatAssertionMode,
-            lenientResponses: $this->lenientResponses,
-        );
-    }
 }

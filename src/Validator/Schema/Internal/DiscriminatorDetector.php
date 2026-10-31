@@ -111,12 +111,6 @@ final readonly class DiscriminatorDetector
         yield from $this->walker->iterateSubSchemas($schema);
     }
 
-    /** @return list<Schema> */
-    public function collectSingleSubSchemas(Schema $schema): array
-    {
-        return $this->walker->collectSingleSubSchemas($schema);
-    }
-
     /**
      * @param WeakMap<Schema, true> $visited
      * @param Closure(string, OpenApiDocument): Schema $resolver

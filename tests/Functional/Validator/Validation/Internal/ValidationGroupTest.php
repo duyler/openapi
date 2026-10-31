@@ -133,36 +133,6 @@ YAML;
     }
 
     #[Test]
-    public function validator_options_to_configuration_round_trip(): void
-    {
-        $options = new ValidatorOptions(
-            coercion: true,
-            nullableAsType: false,
-            emptyArrayStrategy: EmptyArrayStrategy::PreferArray,
-            reportDeprecated: true,
-            strictFormats: true,
-            strictStreaming: true,
-            maxStreamingRecords: 7,
-            strictCoercion: false,
-            contentAssertionsEnabled: true,
-        );
-
-        $config = $options->toValidatorConfiguration();
-
-        self::assertTrue($config->coercion);
-        self::assertFalse($config->nullableAsType);
-        self::assertSame(EmptyArrayStrategy::PreferArray, $config->emptyArrayStrategy);
-        self::assertTrue($config->reportDeprecated);
-        self::assertTrue($config->strictFormats);
-        self::assertTrue($config->strictStreaming);
-        self::assertFalse($config->strictCoercion);
-        self::assertTrue($config->contentAssertionsEnabled);
-        self::assertSame(7, $config->maxStreamingRecords);
-        self::assertSame(ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES, $config->maxJsonBodyBytes);
-        self::assertSame(ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES, $config->maxMultipartBodyBytes);
-    }
-
-    #[Test]
     public function root_services_defaults_propagate(): void
     {
         $document = $this->buildDocument();

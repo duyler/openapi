@@ -43,9 +43,9 @@ final class BuiltinFormats
         $registry = $registry->registerFormat('string', 'date', new DateValidator($pregExecutor));
         $registry = $registry->registerFormat('string', 'time', new TimeValidator($pregExecutor));
         $registry = $registry->registerFormat('string', 'email', new EmailValidator($pregExecutor));
-        $registry = $registry->registerFormat('string', 'uri', new UriValidator($pregExecutor));
+        $registry = $registry->registerFormat('string', 'uri', new UriValidator());
         $registry = $registry->registerFormat('string', 'uuid', new UuidValidator($pregExecutor));
-        $registry = $registry->registerFormat('string', 'hostname', new HostnameValidator($pregExecutor));
+        $registry = $registry->registerFormat('string', 'hostname', new HostnameValidator());
         $registry = $registry->registerFormat('string', 'ipv4', new Ipv4Validator());
         $registry = $registry->registerFormat('string', 'ipv6', new Ipv6Validator());
         $registry = $registry->registerFormat('string', 'byte', new ByteValidator());
@@ -68,11 +68,11 @@ final class BuiltinFormats
         $registry = $registry->registerFormat('string', 'password', new PasswordValidator());
 
         $registry = $registry->registerFormat('string', 'idn-email', new IdnEmailValidator($pregExecutor));
-        $registry = $registry->registerFormat('string', 'idn-hostname', new IdnHostnameValidator($pregExecutor));
-        $registry = $registry->registerFormat('string', 'iri', new IriValidator($pregExecutor));
-        $registry = $registry->registerFormat('string', 'iri-reference', new IriReferenceValidator($pregExecutor));
+        $registry = $registry->registerFormat('string', 'idn-hostname', new IdnHostnameValidator());
+        $registry = $registry->registerFormat('string', 'iri', new IriValidator());
+        $registry = $registry->registerFormat('string', 'iri-reference', new IriReferenceValidator());
 
-        $registry = $registry->registerFormat('string', 'uri-reference', new UriReferenceValidator($pregExecutor));
+        $registry = $registry->registerFormat('string', 'uri-reference', new UriReferenceValidator());
         $registry = $registry->registerFormat('string', 'uri-template', new UriTemplateValidator($pregExecutor));
         $registry = $registry->registerFormat('string', 'regex', new RegexFormatValidator($pregExecutor));
 

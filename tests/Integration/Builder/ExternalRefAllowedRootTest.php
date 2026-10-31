@@ -9,6 +9,7 @@ use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Validator\Schema\Exception\ExternalRefSecurityException;
 use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
 use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
+use Duyler\OpenApi\Validator\Schema\Internal\DocumentNavigator;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -216,9 +217,9 @@ YAML,
     {
         $resolver = new RefResolver();
 
-        $reflected = new ReflectionProperty(RefResolver::class, 'builtinFileResolver');
+        $navigator = new ReflectionProperty(RefResolver::class, 'navigator')->getValue($resolver);
 
-        $builtin = $reflected->getValue($resolver);
+        $builtin = new ReflectionProperty(DocumentNavigator::class, 'builtinFileResolver')->getValue($navigator);
 
         $this->assertInstanceOf(FileExternalRefResolver::class, $builtin);
 
@@ -238,9 +239,11 @@ YAML,
 
         $resolver = new RefResolver(builtinFileResolver: $injected);
 
-        $reflected = new ReflectionProperty(RefResolver::class, 'builtinFileResolver');
+        $navigator = new ReflectionProperty(RefResolver::class, 'navigator')->getValue($resolver);
 
-        $this->assertSame($injected, $reflected->getValue($resolver));
+        $stored = new ReflectionProperty(DocumentNavigator::class, 'builtinFileResolver')->getValue($navigator);
+
+        $this->assertSame($injected, $stored);
     }
 
     private function writeFile(string $path, string $content): void

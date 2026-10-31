@@ -25,11 +25,11 @@ final readonly class StreamingContentParser
     private JsonSeqParser $jsonSeq;
 
     public function __construct(
-        private readonly LoggerInterface $logger = new NullLogger(),
-        private readonly int $maxLineLength = self::DEFAULT_MAX_LINE_LENGTH,
-        private readonly int $maxRecordLength = self::DEFAULT_MAX_RECORD_LENGTH,
-        private readonly bool $strictStreaming = false,
-        private readonly int $maxRecords = self::DEFAULT_MAX_RECORDS,
+        LoggerInterface $logger = new NullLogger(),
+        int $maxLineLength = self::DEFAULT_MAX_LINE_LENGTH,
+        int $maxRecordLength = self::DEFAULT_MAX_RECORD_LENGTH,
+        bool $strictStreaming = false,
+        int $maxRecords = self::DEFAULT_MAX_RECORDS,
     ) {
         $lineReader = new StreamLineReader($maxLineLength);
 

@@ -36,7 +36,7 @@ final readonly class ResponseBodyValidatorWithContext
     private readonly ExampleValidator $exampleValidator;
 
     public function __construct(
-        private readonly OpenApiDocument $document,
+        OpenApiDocument $document,
         private readonly SchemaValidatorDependencies $dependencies,
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
     ) {
@@ -50,7 +50,7 @@ final readonly class ResponseBodyValidatorWithContext
         $this->exampleValidator = new ExampleValidator();
 
         $this->contextSchemaValidator = $this->dependencies->rootSchemaValidator(
-            $this->document,
+            $document,
             $this->configuration,
         );
     }

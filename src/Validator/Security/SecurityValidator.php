@@ -25,12 +25,12 @@ final readonly class SecurityValidator
 
     public function __construct(
         ?LoggerInterface $logger = null,
-        private readonly PregExecutor $pregExecutor = new PregExecutor(),
+        PregExecutor $pregExecutor = new PregExecutor(),
         ?SecuritySchemeHandlerRegistry $handlerRegistry = null,
     ) {
         $this->logger = $logger ?? new NullLogger();
         $this->handlerRegistry = $handlerRegistry
-            ?? SecuritySchemeHandlerRegistry::buildIn($this->pregExecutor, $this->logger);
+            ?? SecuritySchemeHandlerRegistry::buildIn($pregExecutor, $this->logger);
     }
 
     public function validate(SecurityValidationContext $context): void

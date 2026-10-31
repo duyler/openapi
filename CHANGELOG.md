@@ -84,6 +84,12 @@ The detailed per-change entries for every feature below follow in the [0.9.0] se
   the domain type directly; every other parse failure keeps the `BuilderException` wrapper with
   the original exception as `previous`.
 
+### Removed
+
+- `LinkContext::fromGroups()` and the internal `Link\Internal\RequestScope`/`ResponseScope` DTOs
+  (unused static factory over internal types; the `LinkContext` constructor remains the single
+  supported instantiation path).
+
 ### Fixed
 
 - `withMaxJsonBodySize()` is now enforced on buffered request bodies (previously the cap was
@@ -93,6 +99,10 @@ The detailed per-change entries for every feature below follow in the [0.9.0] se
   (3.1 semantics are unchanged), completing the `nullableRequiresType` rule of change 9.
 
 ## [0.9.0]
+
+> [!NOTE]
+> Entries in this section include the full-spec-implementation work continued after the 0.9.0
+> release cut (at commit 14be707); see [0.10.0] for the consolidated release notes of that effort.
 
 ### Added
 
@@ -1026,7 +1036,7 @@ internal-only unless explicitly marked as public API.
   the 56-parameter `withOverrides()` constructor. The legacy constructor
   is retained (PHPDoc-only `@deprecated`, no runtime attribute) so the 5
   internal callers do not trigger an `E_DEPRECATED` cascade; it will be
-  removed in 2.0. See `.ai/reports/adr-schema-constructor.md`.
+  removed in 2.0 (per the internal schema-constructor ADR).
 - Post-refactor behavioral snapshot tests for 3 risk zones
   (`tests/Integration/PostRefactorBehavioralSnapshotTest.php`) covering
   discriminator annotation propagation, streaming-content parser edge
@@ -1060,8 +1070,7 @@ internal-only unless explicitly marked as public API.
   refactored; validator constructor signatures and DTO grouping aligned
   with `SchemaValidatorDependencies` as the canonical DTO.
 - **Codebase-wide code-style cleanup** (386 violations from the
-  `.ai/research/code-style-violations.md` audit, closed across 22
-  partitioned tasks):
+  internal code-style audit, closed across 22 partitioned tasks):
   - §3 Yoda canonical form applied across 28 sites in 17 files.
   - §5 magic values extracted into named constants.
   - §7 redundancy: `&$` reference accumulators, duplicated code,
@@ -1337,7 +1346,7 @@ Older SPEC/SEC series:
   composition keywords with §8.2.3 ALL OF semantics (SPEC-02B).
 - `ArrayLengthValidator::encodeArrayKey()` canonicalizes array keys before
   `json_encode` for `uniqueItems` per §4.2.2 (SPEC-03B).
-- Documentation: `.ai/guides/process-violations-review-work.md` forbids
+- Documentation: the internal review-work process guide forbids
   working-tree mutation during review-work (RACE-CONDITION-PROCESS).
 
 ### Security

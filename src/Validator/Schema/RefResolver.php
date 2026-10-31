@@ -34,12 +34,11 @@ final class RefResolver implements RefResolverInterface
     /** @var WeakMap<Schema, bool> */
     private WeakMap $hasRefCache;
 
-    private readonly FileExternalRefResolver $builtinFileResolver;
     private readonly DocumentNavigator $navigator;
     private readonly DialectProfile $dialectProfile;
 
     public function __construct(
-        private readonly ?ExternalRefResolverInterface $externalRefResolver = null,
+        ?ExternalRefResolverInterface $externalRefResolver = null,
         ?FileExternalRefResolver $builtinFileResolver = null,
         private readonly UriResolver $uriResolver = new UriResolver(),
         private readonly DiscriminatorDetector $discriminatorDetector = new DiscriminatorDetector(),
@@ -48,10 +47,10 @@ final class RefResolver implements RefResolverInterface
     ) {
         $this->clear();
         $this->dialectProfile = $dialectProfile ?? DialectProfile::forOpenApi31();
-        $this->builtinFileResolver = $builtinFileResolver ?? new FileExternalRefResolver();
+        $builtin = $builtinFileResolver ?? new FileExternalRefResolver();
         $this->navigator = new DocumentNavigator(
-            builtinFileResolver: $this->builtinFileResolver,
-            externalRefResolver: $this->externalRefResolver,
+            builtinFileResolver: $builtin,
+            externalRefResolver: $externalRefResolver,
             registryProvider: $this->resourceRegistry(...),
             documentRepository: $this->documentRepository,
             dialectProfile: $this->dialectProfile,

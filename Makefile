@@ -20,7 +20,7 @@ cs-fix:
 
 .PHONY: rector
 rector:
-	docker-compose run --rm php vendor/bin/rector
+	docker-compose run --rm php vendor/bin/rector --dry-run
 
 .PHONY: shell
 shell:

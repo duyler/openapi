@@ -30,14 +30,14 @@ final readonly class CallbackValidator
     public function __construct(
         private readonly ValidationStack $context,
         private readonly bool $securityValidation = false,
-        private readonly bool $strictCallbackRuntimeTemplate = true,
+        bool $strictCallbackRuntimeTemplate = true,
     ) {
         $this->eventDispatcher = $context->eventDispatcher;
         $this->logger = $context->logger;
         $this->callbackValidator = new InnerCallbackValidator(
             $context->requestValidator,
             $context->pathRegexCache,
-            $this->strictCallbackRuntimeTemplate,
+            $strictCallbackRuntimeTemplate,
             $context->pregExecutor,
             $this->logger,
         );

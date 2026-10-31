@@ -74,11 +74,18 @@ final class MultipartEncodingApplierTest extends TestCase
     }
 
     #[Test]
-    public function missing_encoding_fields_exit_early_without_splitting(): void
+    public function apply_to_parts_without_encoding_fields_is_a_no_op(): void
     {
         $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
-        $applier->applyToBody('not a multipart body', 'multipart/mixed; boundary=' . self::OUTER_BOUNDARY);
+        $applier->applyToParts(
+            parts: $this->topLevelParts(
+                innerBody: $this->body(
+                    self::INNER_BOUNDARY,
+                    $this->part('Content-Type: application/xml', '<note/>'),
+                ),
+            ),
+        );
 
         $this->expectNotToPerformAssertions();
     }
@@ -760,8 +767,9 @@ final class MultipartEncodingApplierTest extends TestCase
     }
 
     #[Test]
-    public function apply_to_body_splits_the_top_level_body_and_applies_encoding(): void
+    public function parsed_top_level_parts_apply_prefix_encoding_with_nested_parts(): void
     {
+        $parser = new MultipartBodyParser();
         $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $innerBody = $this->body(
@@ -780,9 +788,8 @@ final class MultipartEncodingApplierTest extends TestCase
             ),
         );
 
-        $applier->applyToBody(
-            body: $topBody,
-            fullContentType: 'multipart/mixed; boundary=' . self::OUTER_BOUNDARY,
+        $applier->applyToParts(
+            parts: $parser->parse($topBody, 'multipart/mixed; boundary=' . self::OUTER_BOUNDARY),
             prefixEncoding: $this->fixturePrefixEncoding(),
         );
 
@@ -790,8 +797,9 @@ final class MultipartEncodingApplierTest extends TestCase
     }
 
     #[Test]
-    public function apply_to_body_applies_item_encoding_without_prefix_encoding(): void
+    public function parsed_top_level_parts_apply_item_encoding_without_prefix_encoding(): void
     {
+        $parser = new MultipartBodyParser();
         $applier = new MultipartEncodingApplier(new MultipartBodyParser());
 
         $topBody = $this->body(
@@ -801,9 +809,8 @@ final class MultipartEncodingApplierTest extends TestCase
         );
 
         try {
-            $applier->applyToBody(
-                body: $topBody,
-                fullContentType: 'multipart/mixed; boundary=' . self::OUTER_BOUNDARY,
+            $applier->applyToParts(
+                parts: $parser->parse($topBody, 'multipart/mixed; boundary=' . self::OUTER_BOUNDARY),
                 itemEncoding: new Encoding(contentType: 'text/plain'),
             );
         } catch (PartContentTypeMismatchError $error) {

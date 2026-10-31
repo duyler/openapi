@@ -33,7 +33,7 @@ final readonly class UnknownKeywordGuard
     public function __construct(
         private readonly SchemaSubschemaWalkerInterface $walker = new SchemaSubschemaWalker(),
         private readonly KeywordValidatorRegistry $registry = new KeywordValidatorRegistry(),
-        private readonly array $allowedUnknownKeywords = [],
+        array $allowedUnknownKeywords = [],
         private readonly bool $strictKeywords = true,
         private readonly DocumentSchemaCollector $documentSchemaCollector = new DocumentSchemaCollector(),
     ) {

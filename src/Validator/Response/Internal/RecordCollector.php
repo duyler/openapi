@@ -40,12 +40,12 @@ final class RecordCollector
     private readonly string $malformedLogContextKey;
 
     public function __construct(
-        private readonly StreamingFormat $format,
+        StreamingFormat $format,
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly bool $strictStreaming = false,
         private readonly int $maxRecords = self::DEFAULT_MAX_RECORDS,
     ) {
-        [$this->malformedLogMessage, $this->malformedLogContextKey] = match ($this->format) {
+        [$this->malformedLogMessage, $this->malformedLogContextKey] = match ($format) {
             StreamingFormat::NdJson => [self::NDJSON_MALFORMED_LOG_MESSAGE, self::NDJSON_MALFORMED_LOG_CONTEXT_KEY],
             StreamingFormat::JsonSeq => [self::JSON_SEQ_MALFORMED_LOG_MESSAGE, self::JSON_SEQ_MALFORMED_LOG_CONTEXT_KEY],
             StreamingFormat::Sse => [self::SSE_MALFORMED_LOG_MESSAGE, self::SSE_MALFORMED_LOG_CONTEXT_KEY],

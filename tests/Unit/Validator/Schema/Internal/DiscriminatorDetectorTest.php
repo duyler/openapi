@@ -325,21 +325,6 @@ final class DiscriminatorDetectorTest extends TestCase
         self::assertContains($oneOfItem, $yielded);
     }
 
-    #[Test]
-    public function collect_single_sub_schemas_excludes_boolean_and_null_entries(): void
-    {
-        $schema = new Schema(
-            items: new Schema(type: 'string'),
-            additionalProperties: true,
-            unevaluatedItems: null,
-        );
-
-        $collected = $this->detector->collectSingleSubSchemas($schema);
-
-        self::assertCount(1, $collected);
-        self::assertInstanceOf(Schema::class, $collected[0]);
-    }
-
     private function emptyDocument(): OpenApiDocument
     {
         return new OpenApiDocument('3.2.0', new InfoObject('Test', '1.0.0'));

@@ -30,7 +30,7 @@ final readonly class XmlBodyParser
     public function __construct(
         private readonly int $maxXmlBytes = self::DEFAULT_MAX_XML_BYTES,
         private readonly ?LoggerInterface $logger = null,
-        private readonly ?EventDispatcherInterface $eventDispatcher = null,
+        ?EventDispatcherInterface $eventDispatcher = null,
     ) {
         $this->mappingApplier = new XmlMappingApplier($eventDispatcher);
     }

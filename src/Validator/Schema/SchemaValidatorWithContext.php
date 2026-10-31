@@ -21,17 +21,9 @@ final readonly class SchemaValidatorWithContext
 {
     private OneOfValidatorWithContext $oneOfValidator;
     private DiscriminatorValidator $discriminatorValidator;
-    private PropertiesValidatorWithContext $propertiesValidator;
-    private ItemsValidatorWithContext $itemsValidator;
     private CompositionResolver $compositionResolver;
     private PropertiesAndItemsDispatcher $dispatcher;
     private DynamicScopeResolver $scopeResolver;
-
-    /** @var WeakMap<Schema, Schema> */
-    private WeakMap $resolvedCache;
-
-    /** @var WeakMap<Schema, list<SchemaValidatorInterface>> */
-    private WeakMap $applicableStatelessValidators;
 
     public function __construct(
         private OpenApiDocument $document,
@@ -40,22 +32,20 @@ final readonly class SchemaValidatorWithContext
     ) {
         $this->oneOfValidator = new OneOfValidatorWithContext($this->document, $this->dependencies, $this->configuration);
         $this->discriminatorValidator = new DiscriminatorValidator($this->dependencies, $this->configuration);
-        $this->propertiesValidator = new PropertiesValidatorWithContext($this->document, $this->dependencies, $this->configuration);
-        $this->itemsValidator = new ItemsValidatorWithContext($this->document, $this->dependencies, $this->configuration);
+        $propertiesValidator = new PropertiesValidatorWithContext($this->document, $this->dependencies, $this->configuration);
+        $itemsValidator = new ItemsValidatorWithContext($this->document, $this->dependencies, $this->configuration);
         /** @var WeakMap<Schema, Schema> $resolvedCache */
         $resolvedCache = new WeakMap();
-        $this->resolvedCache = $resolvedCache;
         /** @var WeakMap<Schema, list<SchemaValidatorInterface>> $applicableStatelessValidators */
         $applicableStatelessValidators = new WeakMap();
-        $this->applicableStatelessValidators = $applicableStatelessValidators;
 
-        $this->compositionResolver = new CompositionResolver($this->document, $this->dependencies, $this->resolvedCache);
+        $this->compositionResolver = new CompositionResolver($this->document, $this->dependencies, $resolvedCache);
         $this->scopeResolver = new DynamicScopeResolver($this->dependencies->refResolver, $this->document);
         $this->dispatcher = new PropertiesAndItemsDispatcher(
             $this->dependencies,
-            $this->propertiesValidator,
-            $this->itemsValidator,
-            $this->applicableStatelessValidators,
+            $propertiesValidator,
+            $itemsValidator,
+            $applicableStatelessValidators,
         );
     }
 
