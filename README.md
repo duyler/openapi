@@ -797,6 +797,7 @@ All regular expressions in schemas are validated at parse time; an invalid patte
 - `minProperties` / `maxProperties` - Property count constraints
 - `patternProperties` - Pattern-based property validation
 - `propertyNames` - Property name validation
+- `dependentRequired` - Conditional required properties
 - `dependentSchemas` - Conditional schema application
 
 ### Composition Keywords
@@ -960,6 +961,7 @@ These exceptions extend `RuntimeException`, `Exception`, or `InvalidArgumentExce
 | `BodyTooLargeException` | Request or response body exceeded the configured body-size cap; rejected before full materialisation |
 | `DecodedContentTooLargeException` | Content payload decoded by the assertion pipeline (`enableContentAssertions()`) exceeds `withMaxJsonBodySize()` before parsing |
 | `DocumentParseException` | Document registered via `withDocument()` failed to parse; carries the retrieval URI, never the document content |
+| `InvalidContentTypeException` | Encoding Object `contentType` is neither a string nor a non-empty list of strings; rejected at parse time by `ComponentTreeBuilder` |
 | `InvalidEncodingConfigurationException` | Multipart Media Type Object combines `encoding` with `prefixEncoding`/`itemEncoding`, or declares positional encoding without an array schema / `itemSchema` |
 | `MissingPartHeaderError` | Part header declared `required` in an Encoding Object is missing on the part |
 | `MultipartBodyTooLargeException` | Multipart request yielded more than 1000 parts (part-count cap); extends `\RuntimeException` |

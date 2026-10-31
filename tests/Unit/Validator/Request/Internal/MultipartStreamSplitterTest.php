@@ -353,6 +353,20 @@ final class MultipartStreamSplitterTest extends TestCase
     }
 
     #[Test]
+    public function single_junk_character_before_a_bare_lf_does_not_split(): void
+    {
+        $binary = "value\r\n--sepX\nstill the same part\r\n--sep--";
+
+        $body = "--sep\r\n"
+            . "\r\n"
+            . $binary;
+
+        $parts = $this->split($body, 9);
+
+        self::assertSame([['headers' => '', 'content' => "value\r\n--sepX\nstill the same part"]], $parts);
+    }
+
+    #[Test]
     public function part_count_over_the_cap_raises_the_domain_exception(): void
     {
         $body = "--sep\r\n\r\nx\r\n--sep--";

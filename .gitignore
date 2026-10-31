@@ -1,4 +1,5 @@
 .idea/
+.ai/
 vendor/
 coverage/
 .phpunit.cache/
