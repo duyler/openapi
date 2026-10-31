@@ -41,11 +41,34 @@ final readonly class JsonEquals
 
             return (float) $a === (float) $b;
         }
+        if ($a instanceof JsonContainer || $b instanceof JsonContainer) {
+            return self::containersEqual($a, $b);
+        }
+
         if (is_array($a) && is_array($b)) {
             return self::arraysEqual($a, $b);
         }
 
         return $a === $b;
+    }
+
+    private static function containersEqual(mixed $a, mixed $b): bool
+    {
+        $aItems = JsonShape::arrayValues($a);
+        $bItems = JsonShape::arrayValues($b);
+
+        if (null !== $aItems && null !== $bItems) {
+            return self::arraysEqual($aItems, $bItems);
+        }
+
+        $aProperties = JsonShape::objectValues($a);
+        $bProperties = JsonShape::objectValues($b);
+
+        if (null !== $aProperties && null !== $bProperties) {
+            return self::arraysEqual($aProperties, $bProperties);
+        }
+
+        return false;
     }
 
     /**

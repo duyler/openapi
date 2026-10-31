@@ -11,6 +11,7 @@ use Duyler\OpenApi\Validator\Exception\NestedValidationError;
 use Duyler\OpenApi\Validator\Exception\TooManyErrorsError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Schema\JsonContainer;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\SchemaValidator\Internal\BranchOutcome;
@@ -120,10 +121,7 @@ abstract readonly class AbstractCompositionalValidator extends AbstractSchemaVal
         }
     }
 
-    /**
-     * @return array<array-key, mixed>|int|string|float|bool|null
-     */
-    private function normalizeForBranch(mixed $data, Schema $subSchema, ?ValidationContext $context): array|int|string|float|bool|null
+    private function normalizeForBranch(mixed $data, Schema $subSchema, ?ValidationContext $context): JsonContainer|array|int|string|float|bool|null
     {
         $allowNull = SchemaValueNormalizer::allowsNull($subSchema, $context?->nullableAsType ?? true, $context?->dialectProfile);
 

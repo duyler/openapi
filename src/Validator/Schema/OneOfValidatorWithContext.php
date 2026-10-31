@@ -19,8 +19,8 @@ use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\TypeFormatter;
 
 use function implode;
-use function is_array;
 use function sprintf;
+use function is_array;
 
 final readonly class OneOfValidatorWithContext
 {
@@ -75,7 +75,9 @@ final readonly class OneOfValidatorWithContext
             return;
         }
 
-        if (false === is_array($data)) {
+        $values = JsonShape::objectValues($data);
+
+        if (null === $values) {
             throw new ValidationException(
                 'Discriminator validation failed: data must be an object',
                 errors: [
@@ -89,7 +91,7 @@ final readonly class OneOfValidatorWithContext
 
         $dataPath = $context->breadcrumbs->currentPath();
 
-        $this->discriminatorValidator->validate($data, $schema, $this->document, $dataPath, $context);
+        $this->discriminatorValidator->validate($values, $schema, $this->document, $dataPath, $context);
     }
 
     /**

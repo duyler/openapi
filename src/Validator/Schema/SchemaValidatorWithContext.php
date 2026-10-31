@@ -50,7 +50,7 @@ final readonly class SchemaValidatorWithContext
     }
 
     public function validate(
-        array|int|string|float|bool|null $data,
+        mixed $data,
         Schema $schema,
         ?ValidatorMode $mode = null,
         bool $skipContentMediaType = false,
@@ -68,7 +68,7 @@ final readonly class SchemaValidatorWithContext
         $this->doValidate($data, $schema, $context, true);
     }
 
-    public function validateWithContext(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context): void
+    public function validateWithContext(mixed $data, Schema $schema, ValidationContext $context): void
     {
         $context->incrementDepth();
 
@@ -79,7 +79,7 @@ final readonly class SchemaValidatorWithContext
         }
     }
 
-    public function validateWithContextIgnoringDiscriminator(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context): void
+    public function validateWithContextIgnoringDiscriminator(mixed $data, Schema $schema, ValidationContext $context): void
     {
         $context->incrementDepth();
 
@@ -90,7 +90,7 @@ final readonly class SchemaValidatorWithContext
         }
     }
 
-    private function doValidate(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
+    private function doValidate(mixed $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
     {
         $entersResolvedScope = false;
         $frame = $this->scopeResolver->enter($schema, $context);
@@ -145,7 +145,7 @@ final readonly class SchemaValidatorWithContext
 
     private function validateCompanion(
         ?Schema $companion,
-        array|int|string|float|bool|null $data,
+        mixed $data,
         ValidationContext $context,
         bool $useDiscriminator,
     ): void {

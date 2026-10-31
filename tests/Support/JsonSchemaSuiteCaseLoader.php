@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Support;
 
+use Duyler\OpenApi\Validator\Schema\JsonInstanceNormalizer;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RuntimeException;
 use SplFileInfo;
+use stdClass;
 
 use function file_get_contents;
 use function is_array;
 use function json_decode;
+use function json_encode;
 use function sort;
 use function sprintf;
 use function str_replace;
@@ -49,13 +52,13 @@ final class JsonSchemaSuiteCaseLoader
             $groups = self::decodeGroups($filePath);
 
             foreach ($groups as $group) {
-                foreach ($group['tests'] as $test) {
+                foreach ($group->tests as $test) {
                     $cases[] = new JsonSchemaSuiteCase(
                         section: $section,
-                        description: sprintf('%s / %s', $group['description'], $test['description']),
-                        schema: $group['schema'],
-                        instance: $test['data'],
-                        expectedValid: $test['valid'],
+                        description: sprintf('%s / %s', $group->description, $test->description),
+                        schema: self::toAssoc($group->schema),
+                        instance: JsonInstanceNormalizer::normalize($test->data),
+                        expectedValid: $test->valid,
                     );
                 }
             }
@@ -91,15 +94,23 @@ final class JsonSchemaSuiteCaseLoader
         return str_replace(DIRECTORY_SEPARATOR, '/', $relativePath);
     }
 
-    /** @return list<array{description: string, schema: mixed, tests: list<array{description: string, data: mixed, valid: bool}>}> */
+    /** @return list<stdClass> */
     private static function decodeGroups(string $filePath): array
     {
-        $decoded = json_decode((string) file_get_contents($filePath), true, 512, JSON_THROW_ON_ERROR);
+        $decoded = json_decode((string) file_get_contents($filePath), false, 512, JSON_THROW_ON_ERROR);
 
         if (false === is_array($decoded)) {
             throw new RuntimeException(sprintf('Suite section is not a JSON array of groups: %s', $filePath));
         }
 
+        /** @var list<stdClass> */
         return $decoded;
+    }
+
+    private static function toAssoc(mixed $value): mixed
+    {
+        $encoded = json_encode($value, JSON_THROW_ON_ERROR);
+
+        return json_decode($encoded, true, 512, JSON_THROW_ON_ERROR);
     }
 }

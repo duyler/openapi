@@ -9,17 +9,16 @@ use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AdditionalPropertyError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Schema\JsonShape;
 use Override;
 
 use function array_diff;
 use function array_filter;
-use function array_is_list;
 use function array_keys;
 use function array_values;
 use function assert;
 use function count;
 use function implode;
-use function is_array;
 use function sprintf;
 
 final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidator implements KeywordApplicable
@@ -35,7 +34,9 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
-        if (false === is_array($data) || array_is_list($data)) {
+        $values = JsonShape::objectValues($data);
+
+        if (null === $values) {
             return;
         }
 
@@ -43,7 +44,7 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
             return;
         }
 
-        $additionalKeys = $this->computeAdditionalKeys($data, $schema);
+        $additionalKeys = $this->computeAdditionalKeys($values, $schema);
 
         if ([] === $additionalKeys) {
             return;
@@ -58,7 +59,7 @@ final readonly class AdditionalPropertiesValidator extends AbstractSchemaValidat
         }
 
         if ($schema->additionalProperties instanceof Schema) {
-            $this->validateAdditionalSchemas($data, $schema->additionalProperties, $additionalKeys, $context);
+            $this->validateAdditionalSchemas($values, $schema->additionalProperties, $additionalKeys, $context);
 
             return;
         }

@@ -31,7 +31,7 @@ final class StatelessValidatorDispatcher implements SchemaValidatorInterface
     }
 
     #[Override]
-    public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
+    public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
         if (null === $context) {
             $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));

@@ -7,10 +7,10 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Schema\JsonShape;
 use Override;
 
 use function array_keys;
-use function is_array;
 use function is_string;
 
 final readonly class PatternPropertiesValidator extends AbstractSchemaValidator implements KeywordApplicable
@@ -28,14 +28,16 @@ final readonly class PatternPropertiesValidator extends AbstractSchemaValidator 
             return;
         }
 
-        if (false === is_array($data)) {
+        $values = JsonShape::objectValues($data);
+
+        if (null === $values) {
             return;
         }
 
         /** @var array<string, Schema> $patternProperties */
         $patternProperties = $schema->patternProperties;
         $normalizedPatterns = $this->normalizePatterns($patternProperties);
-        $this->applyPatterns($data, $patternProperties, $normalizedPatterns, $context);
+        $this->applyPatterns($values, $patternProperties, $normalizedPatterns, $context);
     }
 
     /**

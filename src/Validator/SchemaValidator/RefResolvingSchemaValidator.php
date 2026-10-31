@@ -25,7 +25,7 @@ final readonly class RefResolvingSchemaValidator implements SchemaValidatorInter
     }
 
     #[Override]
-    public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
+    public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
         $frame = $this->scopeResolver->enter($schema, $context);
 
@@ -37,7 +37,7 @@ final readonly class RefResolvingSchemaValidator implements SchemaValidatorInter
         }
     }
 
-    private function validateCompanion(?Schema $companion, array|int|string|float|bool|null $data, ?ValidationContext $context): void
+    private function validateCompanion(?Schema $companion, mixed $data, ?ValidationContext $context): void
     {
         if (null === $companion || null === $context) {
             return;

@@ -10,6 +10,7 @@ use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Schema\JsonContainer;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
@@ -152,10 +153,7 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
         $context->mergeChildAnnotations($childContext);
     }
 
-    /**
-     * @return array<array-key, mixed>|int|string|float|bool|null
-     */
-    private function normalizeFor(mixed $data, Schema $subSchema, ?ValidationContext $context): array|int|string|float|bool|null
+    private function normalizeFor(mixed $data, Schema $subSchema, ?ValidationContext $context): JsonContainer|array|int|string|float|bool|null
     {
         $allowNull = SchemaValueNormalizer::allowsNull(
             $subSchema,

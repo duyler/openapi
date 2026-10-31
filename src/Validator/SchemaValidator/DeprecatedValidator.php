@@ -7,10 +7,10 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Event\ValidationWarningEvent;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Schema\JsonShape;
 use Override;
 
 use function array_key_exists;
-use function is_array;
 use function sprintf;
 
 final readonly class DeprecatedValidator extends AbstractSchemaValidator
@@ -26,7 +26,9 @@ final readonly class DeprecatedValidator extends AbstractSchemaValidator
             return;
         }
 
-        if (false === is_array($data)) {
+        $values = JsonShape::objectValues($data);
+
+        if (null === $values) {
             return;
         }
 
@@ -37,7 +39,7 @@ final readonly class DeprecatedValidator extends AbstractSchemaValidator
                 continue;
             }
 
-            if (false === array_key_exists($name, $data)) {
+            if (false === array_key_exists($name, $values)) {
                 continue;
             }
 

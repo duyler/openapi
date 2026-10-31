@@ -12,7 +12,9 @@ use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\MaxItemsError;
 use Duyler\OpenApi\Validator\Exception\MinItemsError;
 use Duyler\OpenApi\Validator\Exception\TooManyItemsForUniqueCheckError;
+use Duyler\OpenApi\Validator\Schema\JsonContainer;
 use Duyler\OpenApi\Validator\Schema\JsonEquals;
+use Duyler\OpenApi\Validator\Schema\JsonShape;
 use Duyler\OpenApi\Validator\SchemaValidator\Internal\ScalarKeyCodec;
 use Duyler\OpenApi\Validator\SchemaValidator\Trait\LengthValidationTrait;
 use Override;
@@ -61,12 +63,14 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
-        if (false === is_array($data)) {
+        $values = JsonShape::arrayValues($data);
+
+        if (null === $values) {
             return;
         }
 
         $dataPath = $this->getDataPath($context);
-        $count = count($data);
+        $count = count($values);
 
         $this->validateLength(
             actual: $count,
@@ -77,7 +81,7 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
         );
 
         if ($schema->uniqueItems) {
-            $uniqueCount = $this->countUniqueItems($data, $dataPath);
+            $uniqueCount = $this->countUniqueItems($values, $dataPath);
 
             if ($uniqueCount !== $count) {
                 throw new DuplicateItemsError(
@@ -174,6 +178,10 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
 
     private function itemsEqual(mixed $a, mixed $b): bool
     {
+        if ($a instanceof JsonContainer || $b instanceof JsonContainer) {
+            return JsonEquals::equals($a, $b);
+        }
+
         if (is_array($a) && is_array($b)) {
             return $this->encodeArrayKey($a) === $this->encodeArrayKey($b);
         }
@@ -193,11 +201,29 @@ final readonly class ArrayLengthValidator extends AbstractSchemaValidator implem
             return 'a:' . $this->encodeArrayKey($item);
         }
 
+        if ($item instanceof JsonContainer) {
+            return 'c:' . $this->encodeContainerKey($item);
+        }
+
         if (is_object($item)) {
             return serialize($item);
         }
 
         return $this->scalarKeyCodec->encode($item);
+    }
+
+    private function encodeContainerKey(JsonContainer $container): string
+    {
+        return json_encode(
+            [
+                'kind' => $container->kind->name,
+                'values' => array_map(
+                    fn(mixed $value): mixed => $value instanceof JsonContainer ? $this->encodeContainerKey($value) : $value,
+                    $container->values,
+                ),
+            ],
+            JSON_THROW_ON_ERROR,
+        );
     }
 
     private function ensureJsonCompatible(mixed $value): void

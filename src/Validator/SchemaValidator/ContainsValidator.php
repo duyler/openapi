@@ -13,12 +13,11 @@ use Duyler\OpenApi\Validator\Exception\MaxContainsError;
 use Duyler\OpenApi\Validator\Exception\MinContainsError;
 use Duyler\OpenApi\Validator\Exception\TooManyContainsValidationsError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Schema\JsonShape;
 use Override;
 
-use function array_is_list;
 use function array_keys;
 use function count;
-use function is_array;
 use function is_bool;
 
 final readonly class ContainsValidator extends AbstractSchemaValidator implements KeywordApplicable
@@ -38,14 +37,16 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
             return;
         }
 
-        if (false === is_array($data) || false === array_is_list($data)) {
+        $values = JsonShape::arrayValues($data);
+
+        if (null === $values) {
             return;
         }
 
         $dataPath = $this->getDataPath($context);
 
         if (is_bool($schema->contains) && $schema->contains) {
-            $this->validateBooleanTrueContains($data, $schema, $context, $dataPath);
+            $this->validateBooleanTrueContains($values, $schema, $context, $dataPath);
 
             return;
         }
@@ -58,7 +59,7 @@ final readonly class ContainsValidator extends AbstractSchemaValidator implement
 
         /** @var Schema $containsSchema */
         $containsSchema = $schema->contains;
-        $matchCount = $this->countSchemaMatches($data, $containsSchema, $context, $dataPath, $schema->maxContains);
+        $matchCount = $this->countSchemaMatches($values, $containsSchema, $context, $dataPath, $schema->maxContains);
         $this->enforceContainsBounds($matchCount, $schema, $dataPath);
     }
 

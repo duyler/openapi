@@ -12,12 +12,12 @@ use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\NestedValidationError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Schema\JsonShape;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
 use function array_key_exists;
-use function is_array;
 use function sprintf;
 
 final readonly class DependentSchemasValidator extends AbstractSchemaValidator implements KeywordApplicable
@@ -35,16 +35,18 @@ final readonly class DependentSchemasValidator extends AbstractSchemaValidator i
             return;
         }
 
-        if (false === is_array($data)) {
+        $values = JsonShape::objectValues($data);
+
+        if (null === $values) {
             return;
         }
 
         foreach ($schema->dependentSchemas as $propertyName => $dependentSchema) {
-            if (false === array_key_exists($propertyName, $data)) {
+            if (false === array_key_exists($propertyName, $values)) {
                 continue;
             }
 
-            $this->validateDependent($data, $propertyName, $dependentSchema, $context);
+            $this->validateDependent($values, $propertyName, $dependentSchema, $context);
         }
     }
 

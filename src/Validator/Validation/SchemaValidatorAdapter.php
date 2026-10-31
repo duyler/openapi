@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\EventDispatchingTrait;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Internal\ValidationEventPayload;
+use Duyler\OpenApi\Validator\Schema\JsonContainer;
 use Duyler\OpenApi\Validator\TypeFormatter;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -55,13 +56,16 @@ final readonly class SchemaValidatorAdapter
 
     private function validateAgainstSchema(mixed $data, Schema $schema): void
     {
-        if (null !== $data && false === is_scalar($data) && false === is_array($data)) {
+        if (null !== $data
+            && false === is_scalar($data)
+            && false === is_array($data)
+            && false === $data instanceof JsonContainer
+        ) {
             throw new InvalidDataTypeException(
                 sprintf('Data must be scalar, array, or null, got %s', TypeFormatter::format($data)),
             );
         }
 
-        /** @var array<int|string, mixed>|int|string|float|bool|null $data */
         $this->context->schemaValidatorWithContext->validate($data, $schema);
     }
 }

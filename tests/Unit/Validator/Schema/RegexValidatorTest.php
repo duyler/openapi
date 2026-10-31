@@ -72,15 +72,14 @@ final class RegexValidatorTest extends TestCase
     public function pattern_without_delimiters_normalized(): void
     {
         $result = $this->validator->normalize('^test$');
-        self::assertSame('#^test$#', $result);
+        self::assertSame('#^test$#u', $result);
     }
 
     #[Test]
     public function pattern_with_delimiters_not_normalized(): void
     {
-        $pattern = '/^test$/';
-        $result = $this->validator->normalize($pattern);
-        self::assertSame($pattern, $result);
+        $result = $this->validator->normalize('/^test$/');
+        self::assertSame('/^test$/u', $result);
     }
 
     #[Test]
@@ -128,7 +127,7 @@ final class RegexValidatorTest extends TestCase
     {
         $result = $this->validator->normalize('path/to/resource');
 
-        self::assertSame('#path/to/resource#', $result);
+        self::assertSame('#path/to/resource#u', $result);
 
         self::assertSame(1, preg_match($result, 'path/to/resource'));
         self::assertSame(0, preg_match($result, 'other/value'));
@@ -139,7 +138,7 @@ final class RegexValidatorTest extends TestCase
     {
         $result = $this->validator->normalize('hello~world');
 
-        self::assertSame('#hello~world#', $result);
+        self::assertSame('#hello~world#u', $result);
 
         self::assertSame(1, preg_match($result, 'hello~world'));
     }
@@ -149,7 +148,7 @@ final class RegexValidatorTest extends TestCase
     {
         $result = $this->validator->normalize('section#anchor');
 
-        self::assertSame('~section#anchor~', $result);
+        self::assertSame('~section#anchor~u', $result);
 
         self::assertSame(1, preg_match($result, 'section#anchor'));
     }
@@ -159,7 +158,7 @@ final class RegexValidatorTest extends TestCase
     {
         $result = $this->validator->normalize('path/~value#frag');
 
-        self::assertSame('!path/~value#frag!', $result);
+        self::assertSame('!path/~value#frag!u', $result);
 
         self::assertSame(1, preg_match($result, 'path/~value#frag'));
     }
@@ -181,27 +180,31 @@ final class RegexValidatorTest extends TestCase
     }
 
     #[Test]
-    public function normalize_already_delimited_pattern_unchanged(): void
+    public function normalize_already_delimited_pattern_gets_unicode_modifier(): void
     {
-        $pattern = '/^test$/';
-        $result = $this->validator->normalize($pattern);
-        self::assertSame($pattern, $result);
+        $result = $this->validator->normalize('/^test$/');
+        self::assertSame('/^test$/u', $result);
     }
 
     #[Test]
-    public function normalize_hash_delimited_pattern_unchanged(): void
+    public function normalize_hash_delimited_pattern_gets_unicode_modifier(): void
     {
-        $pattern = '#^test$#';
-        $result = $this->validator->normalize($pattern);
-        self::assertSame($pattern, $result);
+        $result = $this->validator->normalize('#^test$#');
+        self::assertSame('#^test$#u', $result);
     }
 
     #[Test]
-    public function normalize_tilde_delimited_pattern_unchanged(): void
+    public function normalize_tilde_delimited_pattern_gets_unicode_modifier(): void
     {
-        $pattern = '~^test$~';
-        $result = $this->validator->normalize($pattern);
-        self::assertSame($pattern, $result);
+        $result = $this->validator->normalize('~^test$~');
+        self::assertSame('~^test$~u', $result);
+    }
+
+    #[Test]
+    public function normalize_delimited_pattern_with_existing_unicode_modifier_unchanged(): void
+    {
+        $result = $this->validator->normalize('#^test$#u');
+        self::assertSame('#^test$#u', $result);
     }
 
     #[Test]
@@ -209,7 +212,7 @@ final class RegexValidatorTest extends TestCase
     {
         $result = $this->validator->normalize('#~!|@%+;path/to/resource');
 
-        self::assertSame('/#~!|@%+;path\/to\/resource/', $result);
+        self::assertSame('/#~!|@%+;path\/to\/resource/u', $result);
 
         self::assertSame(1, preg_match($result, '#~!|@%+;path/to/resource'));
         self::assertSame(0, preg_match($result, 'other/value'));
@@ -220,7 +223,7 @@ final class RegexValidatorTest extends TestCase
     {
         $result = $this->validator->normalize('path|value@here/now');
 
-        self::assertSame('#path|value@here/now#', $result);
+        self::assertSame('#path|value@here/now#u', $result);
 
         self::assertSame(1, preg_match($result, 'path|value@here/now'));
     }
@@ -230,7 +233,7 @@ final class RegexValidatorTest extends TestCase
     {
         $result = $this->validator->normalize('#~|path/to/resource');
 
-        self::assertSame('!#~|path/to/resource!', $result);
+        self::assertSame('!#~|path/to/resource!u', $result);
 
         self::assertSame(1, preg_match($result, '#~|path/to/resource'));
     }
@@ -289,7 +292,7 @@ final class RegexValidatorTest extends TestCase
         $validator->normalize('^a$');
         $validator->normalize('^b$');
 
-        self::assertSame('#^b$#', $validator->normalize('^b$'));
+        self::assertSame('#^b$#u', $validator->normalize('^b$'));
     }
 
     #[Test]
@@ -297,7 +300,7 @@ final class RegexValidatorTest extends TestCase
     {
         $result = $this->validator->normalize('\d+');
 
-        self::assertSame('#\d+#', $result);
+        self::assertSame('#\d+#u', $result);
         self::assertSame(1, preg_match($result, '123'));
     }
 
@@ -306,7 +309,7 @@ final class RegexValidatorTest extends TestCase
     {
         $result = $this->validator->normalize(' test');
 
-        self::assertSame('# test#', $result);
+        self::assertSame('# test#u', $result);
         self::assertSame(1, preg_match($result, ' test'));
     }
 
@@ -324,7 +327,7 @@ final class RegexValidatorTest extends TestCase
     {
         $result = $this->validator->normalize('#test#i');
 
-        self::assertSame('#test#i', $result);
+        self::assertSame('#test#iu', $result);
     }
 
     #[Test]
@@ -332,7 +335,7 @@ final class RegexValidatorTest extends TestCase
     {
         $result = $this->validator->normalize('#test#');
 
-        self::assertSame('#test#', $result);
+        self::assertSame('#test#u', $result);
     }
 
     #[Test]
@@ -341,6 +344,61 @@ final class RegexValidatorTest extends TestCase
         $result = $this->validator->normalize('#test#e');
 
         self::assertNotSame('#test#e', $result);
+    }
+
+    #[Test]
+    public function normalize_translates_unicode_property_escape_to_category(): void
+    {
+        $result = $this->validator->normalize('^\\p{Letter}+$');
+
+        self::assertSame('#^\\p{L}+$#u', $result);
+        self::assertSame(1, preg_match($result, 'ÀBc'));
+        self::assertSame(0, preg_match($result, '123'));
+    }
+
+    #[Test]
+    public function normalize_translates_uppercase_unicode_property_escape_to_category(): void
+    {
+        $result = $this->validator->normalize('^\\P{Letter}+$');
+
+        self::assertSame('#^\\P{L}+$#u', $result);
+        self::assertSame(1, preg_match($result, '123'));
+        self::assertSame(0, preg_match($result, 'ÀBc'));
+    }
+
+    #[Test]
+    public function normalize_translates_all_known_unicode_category_aliases(): void
+    {
+        self::assertSame('#\\p{Lu}#u', $this->validator->normalize('\\p{Uppercase_Letter}'));
+        self::assertSame('#\\p{Nd}#u', $this->validator->normalize('\\p{Decimal_Number}'));
+        self::assertSame('#\\p{Cs}#u', $this->validator->normalize('\\p{Surrogate}'));
+    }
+
+    #[Test]
+    public function normalize_keeps_unknown_unicode_property_name_untouched(): void
+    {
+        $result = $this->validator->normalize('^\\p{Unknown_Property}+$');
+
+        self::assertSame('#^\\p{Unknown_Property}+$#u', $result);
+    }
+
+    #[Test]
+    public function normalized_pattern_matches_non_bmp_code_points(): void
+    {
+        $result = $this->validator->normalize('^👍+$');
+
+        self::assertSame('#^👍+$#u', $result);
+        self::assertSame(1, preg_match($result, '👍'));
+        self::assertSame(0, preg_match($result, 'a'));
+    }
+
+    #[Test]
+    public function normalized_unicode_category_pattern_matches_astral_char(): void
+    {
+        $result = $this->validator->normalize('^\\p{Letter}{2}$');
+
+        self::assertSame(1, preg_match($result, '𝐀a'));
+        self::assertSame(0, preg_match($result, '𝄞'));
     }
 
     #[Test]
@@ -430,7 +488,7 @@ final class RegexValidatorTest extends TestCase
 
         $result = $this->validator->normalize('^a$');
 
-        self::assertSame('#^a$#', $result);
+        self::assertSame('#^a$#u', $result);
         self::assertSame(1, $this->normalizeCacheSize());
     }
 

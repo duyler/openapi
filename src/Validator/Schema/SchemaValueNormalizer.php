@@ -20,12 +20,13 @@ use function is_string;
 
 final readonly class SchemaValueNormalizer
 {
-    /**
-     * @return array<int|string, mixed>|int|string|float|bool|null
-     */
-    public static function normalize(mixed $value, bool $allowNull = false): array|int|string|float|bool|null
+    public static function normalize(mixed $value, bool $allowNull = false): JsonContainer|array|int|string|float|bool|null
     {
         if (null === $value && $allowNull) {
+            return $value;
+        }
+
+        if ($value instanceof JsonContainer) {
             return $value;
         }
 

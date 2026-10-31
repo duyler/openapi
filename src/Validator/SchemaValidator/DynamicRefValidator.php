@@ -11,6 +11,7 @@ use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
+use Duyler\OpenApi\Validator\Schema\JsonContainer;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\TypeFormatter;
@@ -53,9 +54,9 @@ final readonly class DynamicRefValidator extends AbstractSchemaValidator impleme
         $this->validateTarget($instance, $target, $context);
     }
 
-    private function assertValidatable(mixed $data): array|int|string|float|bool|null
+    private function assertValidatable(mixed $data): JsonContainer|array|int|string|float|bool|null
     {
-        if (null === $data || is_scalar($data) || is_array($data)) {
+        if (null === $data || is_scalar($data) || is_array($data) || $data instanceof JsonContainer) {
             return $data;
         }
 
@@ -83,7 +84,7 @@ final readonly class DynamicRefValidator extends AbstractSchemaValidator impleme
     }
 
     private function validateTarget(
-        array|int|string|float|bool|null $data,
+        mixed $data,
         Schema $target,
         ValidationContext $context,
     ): void {

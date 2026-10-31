@@ -164,7 +164,7 @@ class PropertyNamesValidatorTest extends TestCase
         );
 
         $this->expectException(InvalidPatternException::class);
-        $this->expectExceptionMessage('Invalid regex pattern "#[invalid#":');
+        $this->expectExceptionMessage('Invalid regex pattern "#[invalid#u":');
 
         $this->validator->validate(['name' => 'value'], $schema);
     }

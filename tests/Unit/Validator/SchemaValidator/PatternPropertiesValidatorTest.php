@@ -285,7 +285,7 @@ class PatternPropertiesValidatorTest extends TestCase
         );
 
         $this->expectException(InvalidPatternException::class);
-        $this->expectExceptionMessage('Invalid regex pattern "#[invalid#":');
+        $this->expectExceptionMessage('Invalid regex pattern "#[invalid#u":');
 
         $this->validator->validate(['invalid' => 'a'], $schema);
     }
@@ -302,7 +302,7 @@ class PatternPropertiesValidatorTest extends TestCase
         );
 
         $this->expectException(InvalidPatternException::class);
-        $this->expectExceptionMessage('Invalid regex pattern "/[invalid/":');
+        $this->expectExceptionMessage('Invalid regex pattern "/[invalid/u":');
 
         $this->validator->validate(['invalid' => 'a'], $schema);
     }

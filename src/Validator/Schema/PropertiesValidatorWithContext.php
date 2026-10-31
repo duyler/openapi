@@ -28,19 +28,25 @@ final readonly class PropertiesValidatorWithContext
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
     ) {}
 
-    public function validateWithContext(array $data, Schema $schema, ValidationContext $context): void
+    public function validateWithContext(mixed $data, Schema $schema, ValidationContext $context): void
     {
         $this->validate($data, $schema, $context, true);
     }
 
-    public function validateWithContextIgnoringDiscriminator(array $data, Schema $schema, ValidationContext $context): void
+    public function validateWithContextIgnoringDiscriminator(mixed $data, Schema $schema, ValidationContext $context): void
     {
         $this->validate($data, $schema, $context, false);
     }
 
-    private function validate(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
+    private function validate(mixed $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
     {
         if (null === $schema->properties || [] === $schema->properties) {
+            return;
+        }
+
+        $values = JsonShape::objectValues($data);
+
+        if (null === $values) {
             return;
         }
 
@@ -48,13 +54,13 @@ final readonly class PropertiesValidatorWithContext
         $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
 
         foreach ($schema->properties as $name => $propertySchema) {
-            if (false === array_key_exists($name, $data)) {
+            if (false === array_key_exists($name, $values)) {
                 continue;
             }
 
             try {
                 $allowNull = SchemaValueNormalizer::allowsNull($propertySchema, $context->nullableAsType, $context->dialectProfile);
-                $value = SchemaValueNormalizer::normalize($data[$name], $allowNull);
+                $value = SchemaValueNormalizer::normalize($values[$name], $allowNull);
 
                 $childContext = $context->forkForBranch();
                 $context->enterBreadcrumb($name);

@@ -8,12 +8,12 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\RequiredError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Schema\JsonShape;
 use Override;
 
 use function array_key_exists;
 use function array_map;
 use function implode;
-use function is_array;
 
 final readonly class RequiredValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
@@ -30,7 +30,9 @@ final readonly class RequiredValidator extends AbstractSchemaValidator implement
             return;
         }
 
-        if (false === is_array($data)) {
+        $values = JsonShape::objectValues($data);
+
+        if (null === $values) {
             return;
         }
 
@@ -38,7 +40,7 @@ final readonly class RequiredValidator extends AbstractSchemaValidator implement
         $errors = [];
 
         foreach ($schema->required as $field) {
-            if (false === array_key_exists($field, $data)) {
+            if (false === array_key_exists($field, $values)) {
                 $errors[] = new RequiredError(
                     property: $field,
                     dataPath: $dataPath,

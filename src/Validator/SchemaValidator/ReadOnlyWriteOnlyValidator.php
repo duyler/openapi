@@ -9,11 +9,11 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\ReadOnlyPropertyError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Exception\WriteOnlyPropertyError;
+use Duyler\OpenApi\Validator\Schema\JsonShape;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Override;
 
 use function array_key_exists;
-use function is_array;
 use function sprintf;
 
 final readonly class ReadOnlyWriteOnlyValidator extends AbstractSchemaValidator
@@ -29,12 +29,14 @@ final readonly class ReadOnlyWriteOnlyValidator extends AbstractSchemaValidator
             return;
         }
 
-        if (false === is_array($data)) {
+        $values = JsonShape::objectValues($data);
+
+        if (null === $values) {
             return;
         }
 
         foreach ($schema->properties as $name => $propertySchema) {
-            if (false === array_key_exists($name, $data)) {
+            if (false === array_key_exists($name, $values)) {
                 continue;
             }
 

@@ -55,7 +55,7 @@ final class ProfileCapturingSpyValidator implements SchemaValidatorInterface
     public ?ValidationContext $observedContext = null;
 
     #[Override]
-    public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
+    public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
         $this->observedContext = $context;
     }

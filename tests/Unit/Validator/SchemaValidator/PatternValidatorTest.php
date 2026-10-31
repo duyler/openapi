@@ -395,10 +395,10 @@ class PatternValidatorTest extends TestCase
     }
 
     #[Test]
-    public function length_cap_allows_pattern_at_exact_1024_bytes(): void
+    public function length_cap_allows_pattern_when_normalized_at_exact_1024_bytes(): void
     {
-        $exactLengthPattern = '/' . str_repeat('a', 1022) . '/';
-        $subject = str_repeat('a', 1022);
+        $exactLengthPattern = '/' . str_repeat('a', 1021) . '/';
+        $subject = str_repeat('a', 1021);
 
         $schema = new Schema(type: 'string', pattern: $exactLengthPattern);
 
@@ -412,5 +412,17 @@ class PatternValidatorTest extends TestCase
         }
 
         self::assertTrue($succeeded);
+    }
+
+    #[Test]
+    public function length_cap_applies_to_normalized_pattern_with_unicode_modifier(): void
+    {
+        $rawPatternAtLimit = '/' . str_repeat('a', 1022) . '/';
+        $schema = new Schema(type: 'string', pattern: $rawPatternAtLimit);
+
+        $this->expectException(InvalidPatternException::class);
+        $this->expectExceptionMessage('Pattern exceeds maximum length of 1024 bytes');
+
+        $this->validator->validate('a', $schema);
     }
 }

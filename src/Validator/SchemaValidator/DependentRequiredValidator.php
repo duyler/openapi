@@ -8,12 +8,12 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\DependentRequiredError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Schema\JsonShape;
 use Override;
 
 use function array_key_exists;
 use function array_map;
 use function implode;
-use function is_array;
 
 final readonly class DependentRequiredValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
@@ -30,7 +30,9 @@ final readonly class DependentRequiredValidator extends AbstractSchemaValidator 
             return;
         }
 
-        if (false === is_array($data)) {
+        $values = JsonShape::objectValues($data);
+
+        if (null === $values) {
             return;
         }
 
@@ -38,12 +40,12 @@ final readonly class DependentRequiredValidator extends AbstractSchemaValidator 
         $errors = [];
 
         foreach ($schema->dependentRequired as $triggerProperty => $requiredProperties) {
-            if (false === array_key_exists($triggerProperty, $data)) {
+            if (false === array_key_exists($triggerProperty, $values)) {
                 continue;
             }
 
             foreach ($requiredProperties as $requiredProperty) {
-                if (false === array_key_exists($requiredProperty, $data)) {
+                if (false === array_key_exists($requiredProperty, $values)) {
                     $errors[] = new DependentRequiredError(
                         property: $requiredProperty,
                         triggerProperty: $triggerProperty,

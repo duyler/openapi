@@ -128,7 +128,7 @@ final class DynamicRefValidatorTest extends TestCase
             public function __construct(private array &$observations) {}
 
             #[Override]
-            public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
+            public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
             {
                 $scope = null === $context ? [] : $context->dynamicScope();
 

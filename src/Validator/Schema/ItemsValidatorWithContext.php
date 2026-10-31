@@ -30,28 +30,30 @@ final readonly class ItemsValidatorWithContext
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
     ) {}
 
-    public function validateWithContext(array $data, Schema $schema, ValidationContext $context): void
+    public function validateWithContext(mixed $data, Schema $schema, ValidationContext $context): void
     {
         $this->validate($data, $schema, $context, true);
     }
 
-    public function validateWithContextIgnoringDiscriminator(array $data, Schema $schema, ValidationContext $context): void
+    public function validateWithContextIgnoringDiscriminator(mixed $data, Schema $schema, ValidationContext $context): void
     {
         $this->validate($data, $schema, $context, false);
     }
 
-    private function validate(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
+    private function validate(mixed $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
     {
         if (null === $schema->items) {
             return;
         }
 
-        if (false === array_is_list($data)) {
+        $values = JsonShape::arrayValues($data);
+
+        if (null === $values) {
             return;
         }
 
         if (is_bool($schema->items)) {
-            BooleanItemsValidator::validate($data, $schema, $context);
+            BooleanItemsValidator::validate($values, $schema, $context);
 
             return;
         }
@@ -62,7 +64,7 @@ final readonly class ItemsValidatorWithContext
         $allowNull = SchemaValueNormalizer::allowsNull($itemSchema, $context->nullableAsType, $context->dialectProfile);
         $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
 
-        foreach ($data as $index => $arrayItem) {
+        foreach ($values as $index => $arrayItem) {
             /** @var int $index */
             if ($index < $prefixCount) {
                 continue;

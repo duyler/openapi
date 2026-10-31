@@ -27,7 +27,7 @@ final readonly class CustomKeywordValidatorAdapter implements KeywordApplicable
     }
 
     #[Override]
-    public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
+    public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
         $this->validator->validate(
             $data,
