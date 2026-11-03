@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Functional\FullCycle\OpenApi32;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -202,7 +201,7 @@ YAML;
     }
 
     #[Test]
-    public function discriminator_without_default_mapping_throws_unknown_value(): void
+    public function discriminator_without_default_mapping_falls_back_to_one_of_validation_in_32(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::DISCRIMINATOR_WITHOUT_DEFAULT_SPEC)
@@ -214,13 +213,15 @@ YAML;
 
         try {
             $validator->validateSchema($data, '#/components/schemas/Pet');
-        } catch (UnknownDiscriminatorValueException $e) {
+        } catch (ValidationException $e) {
             $caught = $e;
         }
 
-        self::assertNotNull($caught, 'Unknown discriminator without defaultMapping must throw');
-        self::assertSame('discriminator', $caught->keyword());
-        self::assertSame('elephant', $caught->params()['value']);
+        self::assertNotNull(
+            $caught,
+            '3.2 hint: unknown value without defaultMapping falls back to oneOf validation (payload matches no branch → INVALID).',
+        );
+        self::assertStringContainsString('none did', $caught->getMessage());
     }
 
     #[Test]

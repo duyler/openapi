@@ -10,6 +10,7 @@ use function ini_get;
 use function ini_set;
 use function preg_last_error;
 use function preg_last_error_msg;
+use function preg_replace_callback;
 use function preg_split;
 use function restore_error_handler;
 use function set_error_handler;
@@ -102,6 +103,32 @@ final readonly class PregExecutor
 
         try {
             $result = preg_split($pattern, $subject, $limit);
+            $this->assertNoPcreError();
+
+            return $result;
+        } finally {
+            restore_error_handler();
+            ini_set('pcre.recursion_limit', $previousRecursion);
+            ini_set('pcre.backtrack_limit', $previousBacktrack);
+        }
+    }
+
+    /**
+     * @param non-empty-string $pattern
+     * @param callable(array<array-key, string>): string $callback
+     * @return string|null
+     */
+    public function replaceCallback(string $pattern, callable $callback, string $subject): ?string
+    {
+        $previousBacktrack = $this->capturePreviousBacktrackLimit();
+        $previousRecursion = $this->capturePreviousRecursionLimit();
+
+        ini_set('pcre.backtrack_limit', (string) $this->maxBacktracks);
+        ini_set('pcre.recursion_limit', (string) $this->maxRecursionLimit);
+        set_error_handler(static fn(int $errno) => E_WARNING === $errno);
+
+        try {
+            $result = preg_replace_callback($pattern, $callback, $subject);
             $this->assertNoPcreError();
 
             return $result;

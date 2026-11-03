@@ -5,6 +5,81 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0]
+
+Canonical-correctness release: audit findings B1, M1-M6, m2, m3, m4 and m8.
+
+### Breaking Changes
+
+1. Parameter `explode` now defaults to `true` for the effective style `form` (query and cookie
+   parameters without an explicit `style`); an explicit `explode` in the spec always wins. Serialized
+   documents may emit `explode: true` where they previously omitted it. Opt out with
+   `OpenApiValidatorBuilder::withLegacyExplodeDefaults()`.
+2. A Parameter Object declaring both `content` and `schema` fails the build with
+   `InvalidSchemaException` (every location and `components/parameters`); exactly one of the two
+   forms must be used.
+3. In OpenAPI 3.0 documents the `required` check no longer applies to `readOnly` properties during
+   request validation (OAS 3.0.3: "required will take effect on the response only"). Sending a
+   `readOnly` property in a request body is still rejected. Opt out with
+   `OpenApiValidatorBuilder::enforceRequiredForReadOnly()`.
+4. In OpenAPI 3.2 documents the discriminator is a hint: an unknown or invalid discriminator value
+   falls back to plain `oneOf` validation instead of rejecting the payload, so the outcome follows
+   the regular `oneOf` logic. OpenAPI 3.0/3.1 documents keep the decisive semantics. Opt out with
+   `OpenApiValidatorBuilder::withDecisiveDiscriminator()`.
+5. Canonical `$id`/anchor diagnostics run at build time: a duplicate `$id` (different schema
+   instances behind one URI), an `$id` containing a fragment, and an `$anchor`/`$dynamicAnchor`
+   value that does not match `^[A-Za-z_][-A-Za-z0-9._]*$` fail the build with
+   `DuplicateSchemaIdException`, `SchemaIdFragmentException` or `InvalidAnchorException`
+   (previously the registry silently kept the first occurrence and ignored anchor spellings).
+
+### Added
+
+- `OpenApiValidatorBuilder::withLegacyExplodeDefaults()`, `enforceRequiredForReadOnly()` and
+  `withDecisiveDiscriminator()` opt-outs (see Breaking Changes 1, 3 and 4).
+- `validateCallback(ServerRequestInterface $request, string $callbackName, ?CallbackContext $context = null)`
+  and the `Validator\Callback\CallbackContext` DTO: callback runtime expressions —
+  `{$request.body#/{pointer}}`, `{$method}`, `{$url}`, `{$request.path.{name}}`,
+  `{$request.query.{name}}`, `{$request.header.{name}}` — are evaluated against the triggering
+  request when the context is supplied, and the resolved path is compared with the request path.
+  Without the context the previous strict fail-closed/lax fallback rules apply unchanged; with the
+  context an unresolvable expression raises `UnresolvableCallbackPathException` instead of
+  wildcarding, and `$response.*`/`$statusCode` expressions are unresolvable by definition for a
+  callback.
+- Content parameters are validated for every location (`query`, `header`, `path`, `cookie`): the
+  value is parsed by the first declared media type — JSON media types (`application/json`,
+  `+json` suffixes) are decoded, malformed JSON raises `InvalidParameterException` — and validated
+  against the media type schema. Non-JSON media types keep the raw string value.
+- `int32`/`int64` formats are additionally registered under `type: number` (the `type: integer`
+  registrations are preserved), so `type: number` + `format: int64` asserts the 64-bit range.
+- Three build-time schema diagnostics (see Breaking Changes 5) plus forced resource-registry
+  construction: the registry is built during `build()` instead of lazily on the first `$ref`
+  resolution, so the diagnostics surface there.
+- `PackageInfo::VERSION` exposes the package release.
+
+### Changed
+
+- The parsed-document cache fingerprint includes the package version (`PackageInfo::VERSION`):
+  after upgrading, every cached document is regenerated automatically — a one-time cache warm-up
+  with no user action; stale entries expire by TTL.
+
+### Fixed
+
+- `unevaluatedItems` / `unevaluatedProperties` annotations are now written on the parent instance
+  path: an `allOf` branch carrying `unevaluated*` keywords marks the items/properties it evaluated
+  for the parent `unevaluated*` check, so `{allOf: [{unevaluatedItems: {type: integer}}],
+  unevaluatedItems: false}` validates `[1, 2]` instead of rejecting it.
+- Numeric formats follow the OAS data type format rules: `int32`/`int64` validate integer-valued
+  floats (`3e9` raises an int32 range error, `2.0` passes, `1e19` raises an int64 range error by
+  comparing beyond `PHP_INT_MAX` as a float, and `1.5` raises "requires an integer value");
+  `float`/`double` accept integer values when the schema declares `type: number` (integer `5` is a
+  number); `int32`/`int64` are asserted under `type: number` as well.
+
+### Documented
+
+- `uniqueItems`, `const` and `enum` compare numbers through the internal scalar key codec: integers
+  above the IEEE-754 double safe-integer boundary (2^53) and their mathematically equal float
+  spellings are **not** considered equal — see the note in the README's Array Validation section.
+
 ## [0.10.0]
 
 Consolidated release of the full OpenAPI 3.2 / JSON Schema 2020-12 implementation program.

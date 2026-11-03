@@ -11,10 +11,14 @@ use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\DiscriminatorDataError;
+use Duyler\OpenApi\Validator\Exception\DiscriminatorMismatchException;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
+use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
+use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\NestedValidationError;
 use Duyler\OpenApi\Validator\Exception\OneOfError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\TypeFormatter;
 
@@ -90,6 +94,21 @@ final readonly class OneOfValidatorWithContext
         }
 
         $dataPath = $context->breadcrumbs->currentPath();
+
+        if ($context->dialectProfile->discriminatorIsHint) {
+            try {
+                $this->discriminatorValidator->validate($values, $schema, $this->document, $dataPath, $context);
+            } catch (
+                UnknownDiscriminatorValueException
+                |MissingDiscriminatorPropertyException
+                |InvalidDiscriminatorValueException
+                |DiscriminatorMismatchException
+            ) {
+                $this->validateWithoutDiscriminator($data, $schema->oneOf ?? [], $context);
+            }
+
+            return;
+        }
 
         $this->discriminatorValidator->validate($values, $schema, $this->document, $dataPath, $context);
     }

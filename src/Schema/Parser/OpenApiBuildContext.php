@@ -15,6 +15,8 @@ final class OpenApiBuildContext
 
     public string $documentVersion = '';
 
+    public ?bool $legacyExplodeDefaults = null;
+
     public DialectProfile $dialectProfile;
 
     public InfoBuilder $infoBuilder;

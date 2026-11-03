@@ -10,7 +10,7 @@ OpenAPI 3.2 validator for PHP 8.4+
 
 ## Features
 
-- **OpenAPI 3.2 Support** - Full JSON Schema draft 2020-12 core ($id, $anchor, $dynamicRef, $defs, $vocabulary) with dialect branching for 3.0/3.1 (see Feature Coverage)
+- **OpenAPI 3.2 Support** - JSON Schema draft 2020-12 core ($id, $anchor, $dynamicRef, $defs, $vocabulary) with dialect branching for 3.0/3.1 (see [Feature Coverage](#feature-coverage))
 - **JSON Schema Validation** - Full JSON Schema draft 2020-12 validation (applicators, validation, composition, content, and `unevaluated*` keywords)
 - **PSR-7 Integration** - PSR-7 HTTP message validation (works with any PSR-7 implementation)
 - **Request Validation** - Validate path parameters, query parameters, headers, cookies, and request body
@@ -94,7 +94,7 @@ The interface exposes the following methods:
 | `validateResponse(ResponseInterface $response, Operation $operation): void` | Validate response against operation |
 | `validateSchema(mixed $data, string $schemaRef): void` | Validate data against a schema reference |
 | `validateWebhook(ServerRequestInterface $request, string $name): Operation` | Validate webhook request |
-| `validateCallback(ServerRequestInterface $request, string $name): Operation` | Validate callback request |
+| `validateCallback(ServerRequestInterface $request, string $name, ?CallbackContext $context = null): Operation` | Validate callback request; with a `CallbackContext` the runtime expressions in the callback path are evaluated against the triggering request |
 | `getDocument(): OpenApiDocument` | Returns the loaded OpenAPI document for introspection or routing maps (available after `build()`) |
 | `resolveLink(string $linkName, array $responseData): ResolvedLink` | Resolve link parameters from response data (response body only) |
 | `resolveLinkWithContext(string $linkName, LinkContext $context): ResolvedLink` | Resolve link parameters with full Runtime Expression support |
@@ -299,6 +299,26 @@ $validator = OpenApiValidatorBuilder::create()
 ```
 
 > **SECURITY WARNING**: `disableStrictCallbackRuntimeTemplate()` disables the protection against SSRF via attacker-controlled callback URLs: declared security checks still pass against an arbitrary URL when the runtime template is unresolvable. Use it only when callback URLs are validated at the application level (an allowlist of permitted outbound hosts, signed callback URLs, or destination validation before any outbound request is issued).
+
+#### Runtime Expressions with a Callback Context
+
+Supplying a `CallbackContext` makes the validator evaluate runtime expressions in the callback path template against the triggering request data instead of applying the fallback rules above. Every `{...}` insertion — `{$request.body#/id}`, `{$method}`, `{$url}`, `{$request.path.{name}}`, `{$request.query.{name}}`, `{$request.header.{name}}` — is resolved, and the resolved path is compared with the request path (full URLs compare by their path part). An unresolvable expression — an unknown mapping value, a missing body pointer, or a `$response.*`/`$statusCode` expression, which cannot exist for a triggering request — raises `UnresolvableCallbackPathException` even in lax mode.
+
+```php
+use Duyler\OpenApi\Validator\Callback\CallbackContext;
+
+$context = new CallbackContext(
+    requestBody: ['id' => 'abc'],
+    method: 'POST',
+    url: 'https://hooks.example/abc',
+);
+
+$operation = $validator->validateCallback($request, 'onEvent', $context);
+```
+
+For a callback path template `/items/{$request.body#/id}/done` and the context above, the request must target `/items/abc/done`. Without the context the same expression follows the strict/lax rules from the warning above.
+
+> **SENSITIVE CONTEXT WARNING**: `CallbackContext` carries triggering-request data that may contain sensitive values — `Authorization` headers, cookies, tokens inside the body. Do not log the whole object, do not embed it (or its individual values) into exception messages or error responses, and restrict access to `requestHeaders`/`requestBody` to the code paths that need them.
 
 ### Link Resolution
 
@@ -624,6 +644,9 @@ $validator = OpenApiValidatorBuilder::create()
 | `enableReportDeprecated()` | Log deprecated schema elements via PSR-3 logger | `true` |
 | `enableServerPathResolution()` | Strip server base path from request path before matching | `false` |
 | `disableStrictCallbackRuntimeTemplate()` | Opt out of strict callback runtime template resolution. **SECURITY WARNING**: unresolvable callback expressions like `{$request.body#/callback_url}` are treated as wildcards that accept any URL, enabling SSRF via attacker-controlled callback URLs. Use only when callback URLs are validated at the application level. | `false` (opt-in legacy mode) |
+| `withLegacyExplodeDefaults()` | Restore the 0.10 `explode` default: `form`-style parameters no longer explode by default (the 0.11 canonical default explodes `form`-style parameters, explicit `explode` in the spec always wins) | `false` (canonical explode default since 0.11) |
+| `enforceRequiredForReadOnly()` | Enforce `required` for `readOnly` properties during request validation even in OpenAPI 3.0 documents (OAS 3.0.3 defers `required` for `readOnly` to the response; sending a `readOnly` property stays rejected either way) | `false` (request relaxation is the 3.0 default since 0.11) |
+| `withDecisiveDiscriminator()` | Make the discriminator decisive in OpenAPI 3.2 documents: an unknown or invalid discriminator value rejects the payload instead of falling back to plain `oneOf` validation; 3.0/3.1 keep decisive semantics | `false` (hint semantics in 3.2 since 0.11) |
 | `withExternalRefAllowedRoot(string $path)` | Directory that external `file://` `$ref` references must stay inside | `null` (auto-derived from spec path for file-loaded specs) |
 | `withExternalRefMaxBytes(int $bytes)` | Set max external ref file size | `10485760` (10 MB) |
 | `withMaxSpecSize(int $bytes)` | Max allowed spec payload size in bytes (YAML and JSON) | `1048576` (1 MB) |
@@ -796,7 +819,7 @@ All regular expressions in schemas are validated at parse time; an invalid patte
 - `uniqueItems` - Unique item requirement
 - `contains` / `minContains` / `maxContains` - Item presence validation
 
-`uniqueItems`, `enum`, and `const` use JSON instance equality: `1` and `1.0` are equal, object key order is irrelevant, and `bool` is distinct from `int`. Arrays larger than 100 000 items are rejected for `uniqueItems` instead of being scanned for duplicates.
+`uniqueItems`, `enum`, and `const` use JSON instance equality: `1` and `1.0` are equal, object key order is irrelevant, and `bool` is distinct from `int`. Numeric comparison goes through an internal scalar key codec, so an integer above the IEEE-754 double safe-integer boundary (2^53) and its mathematically equal float spelling are **not** considered equal — comparisons above that boundary stay per-type (int vs float). Arrays larger than 100 000 items are rejected for `uniqueItems` instead of being scanned for duplicates.
 
 ### Object Validation
 - `properties` - Property definitions
@@ -1306,6 +1329,14 @@ By default, malformed records (invalid JSON) are logged and skipped: the parser 
 | Security Scheme model (3.2 §4.27-4.29): all five types, `deprecated`, `deviceAuthorization` flow, case-insensitive `scheme`, `oauth2MetadataUrl` / `openIdConnectUrl` | Complete | - | - |
 | Security runtime: presence/format credential checks | Complete at presence/format depth (no token verification) | Off | `enableSecurityValidation()`; `withSecuritySchemeHandler()` for custom schemes |
 | Custom schema keywords | Complete | Unregistered keyword stays an extras annotation | `withKeywordValidator()` |
+| Canonical `explode` default (OAS form semantics: a `form`-style parameter explodes by default; explicit `explode` wins) | Complete since 0.11.0 | Exploded for `form`/`cookie` | `withLegacyExplodeDefaults()` |
+| Parameter `content` validation for every location (`query`/`header`/`path`/`cookie`): JSON media types decoded, malformed JSON rejected, value validated by the media schema | Complete since 0.11.0 | Asserted | - |
+| Callback runtime expressions (`{$request.body#/{pointer}}`, `{$method}`, `{$url}`, request paths) evaluated from a `CallbackContext` | Complete since 0.11.0 | Strict fail-closed without a context | `validateCallback(..., new CallbackContext(...))`, `disableStrictCallbackRuntimeTemplate()` |
+| Discriminator semantics per dialect (3.2: hint with `oneOf` fallback; 3.0/3.1: decisive) | Complete since 0.11.0 | Hint in 3.2, decisive in 3.0/3.1 | `withDecisiveDiscriminator()` |
+| `readOnly` + `required` relaxation for request validation (OAS 3.0.3) | Complete since 0.11.0 | Relaxed in 3.0 requests | `enforceRequiredForReadOnly()` |
+| Build-time `$id`/`$anchor` diagnostics: duplicate `$id`, `$id` fragments, invalid anchor names | Complete since 0.11.0 | Enforced at build | - |
+| Numeric formats: `int32`/`int64` under `type: number`, integer-valued floats for `int32`/`int64`, integer acceptance for `float`/`double` | Complete since 0.11.0 | Asserted | - |
+| `uniqueItems` / `const` / `enum` numeric equality boundary: integers above 2^53 and their mathematically equal float spellings are not equal | Complete (documented boundary; no fix planned) | - | - |
 
 ### Media Types (OpenAPI 3.2 §4.14)
 

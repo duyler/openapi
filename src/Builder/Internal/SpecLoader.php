@@ -110,6 +110,7 @@ final readonly class SpecLoader
                 reportDeprecated: $this->config->reportDeprecated,
                 maxSpecSizeBytes: $this->config->maxSpecSizeBytes,
                 maxSpecDepth: $this->config->maxSpecDepth,
+                legacyExplodeDefaults: $this->config->legacyExplodeDefaults,
             );
 
             return $parser->forSpecType($this->config->specType)->parse($content);

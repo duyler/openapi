@@ -64,6 +64,9 @@ final class BuiltinFormats
         $registry = $registry->registerFormat('integer', 'int32', new IntegerRangeValidator('int32', -2_147_483_648, 2_147_483_647));
         $registry = $registry->registerFormat('integer', 'int64', new IntegerRangeValidator('int64', PHP_INT_MIN, PHP_INT_MAX));
 
+        $registry = $registry->registerFormat('number', 'int32', new IntegerRangeValidator('int32', -2_147_483_648, 2_147_483_647));
+        $registry = $registry->registerFormat('number', 'int64', new IntegerRangeValidator('int64', PHP_INT_MIN, PHP_INT_MAX));
+
         $registry = $registry->registerFormat('string', 'binary', new BinaryValidator());
         $registry = $registry->registerFormat('string', 'password', new PasswordValidator());
 

@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Throwable;
 
 use function sprintf;
 use function is_float;
@@ -98,45 +99,35 @@ class FormatValidatorTest extends TestCase
     }
 
     #[Test]
-    public function float_format_rejects_integer_value(): void
+    public function float_format_accepts_integer_value(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString($this->buildSpec('number', 'float'))
             ->build();
 
-        $caught = null;
-
         try {
             $validator->validateSchema(42, self::SCHEMA_REF);
-            self::fail('Expected InvalidFormatException for integer value with float format');
-        } catch (InvalidFormatException $e) {
-            $caught = $e;
+        } catch (Throwable $e) {
+            self::fail('integer 42 is mathematically a number — format:float must accept it: ' . $e->getMessage());
         }
 
-        self::assertInstanceOf(InvalidFormatException::class, $caught);
-        self::assertSame('float', $caught->params()['format']);
-        self::assertArrayNotHasKey('value', $caught->params());
-        self::assertSame(42, $caught->value(reveal: true));
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
-    public function double_format_rejects_integer_value(): void
+    public function double_format_accepts_integer_value(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString($this->buildSpec('number', 'double'))
             ->build();
 
-        $caught = null;
-
         try {
             $validator->validateSchema(7, self::SCHEMA_REF);
-            self::fail('Expected InvalidFormatException for integer value with double format');
-        } catch (InvalidFormatException $e) {
-            $caught = $e;
+        } catch (Throwable $e) {
+            self::fail('integer 7 is mathematically a number — format:double must accept it: ' . $e->getMessage());
         }
 
-        self::assertInstanceOf(InvalidFormatException::class, $caught);
-        self::assertSame('double', $caught->params()['format']);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -250,8 +241,6 @@ class FormatValidatorTest extends TestCase
             'duration' => ['duration', 'string', 'not-a-duration'],
             'json-pointer' => ['json-pointer', 'string', 'invalid pointer'],
             'relative-json-pointer' => ['relative-json-pointer', 'string', 'not-a-pointer'],
-            'float' => ['float', 'number', 42],
-            'double' => ['double', 'number', 7],
         ];
     }
 

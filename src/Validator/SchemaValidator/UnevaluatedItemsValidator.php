@@ -115,10 +115,11 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
 
             try {
                 $validator->validate($item, $unevaluatedItems, $context);
-                $context->markItemEvaluated($index);
             } finally {
                 $context->leaveBreadcrumb();
             }
+
+            $context->markItemEvaluated($index);
         }
     }
 

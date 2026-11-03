@@ -349,6 +349,50 @@ class PregExecutorTest extends TestCase
         self::assertSame('333', $captured);
     }
 
+    #[Test]
+    public function replace_callback_with_named_groups_succeeds(): void
+    {
+        $executor = new PregExecutor();
+
+        $result = $executor->replaceCallback(
+            '/{(?<name>\w+)}/',
+            static fn(array $matches): string => strtoupper($matches['name']),
+            'Hello {user}, meet {admin}',
+        );
+
+        self::assertSame('Hello USER, meet ADMIN', $result);
+    }
+
+    #[Test]
+    public function replace_callback_throws_on_compile_error(): void
+    {
+        $executor = new PregExecutor();
+
+        $this->expectException(PregRuntimeException::class);
+        $this->expectExceptionMessage('PCRE error ');
+
+        $executor->replaceCallback('/[unclosed/', static fn(array $matches): string => '', 'abc');
+    }
+
+    #[Test]
+    public function replace_callback_restores_recursion_limit_on_callback_exception(): void
+    {
+        ini_set('pcre.recursion_limit', '777777');
+        $executor = new PregExecutor(maxRecursionLimit: 100);
+
+        try {
+            $executor->replaceCallback(
+                '/{(?<name>\w+)}/',
+                static fn(array $matches): string => throw new RuntimeException('probe'),
+                '{first}',
+            );
+            self::fail('Expected RuntimeException from the replacement callback');
+        } catch (RuntimeException) {
+        }
+
+        self::assertSame('777777', ini_get('pcre.recursion_limit'));
+    }
+
     private function captureRecursionLimitDuringMatch(bool $matchAll, int $maxRecursionLimit): string
     {
         $autoloadPath = dirname(__DIR__, 3) . '/vendor/autoload.php';

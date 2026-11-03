@@ -220,25 +220,25 @@ class FormatAssertionModeTest extends TestCase
     }
 
     #[Test]
-    public function number_domain_rejects_integer_for_typeless_float_format(): void
+    public function number_domain_accepts_integer_for_typeless_float_format(): void
     {
         $validator = $this->createValidator(FormatAssertionMode::Assertion, false);
         $schema = new Schema(format: 'float');
 
-        $this->expectException(InvalidFormatException::class);
-
         $validator->validate(42, $schema, $this->context);
+
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
-    public function assertion_mode_rejects_integer_for_typed_float_format(): void
+    public function assertion_mode_accepts_integer_for_typed_float_format(): void
     {
         $validator = $this->createValidator(FormatAssertionMode::Assertion, false);
         $schema = new Schema(type: 'number', format: 'float');
 
-        $this->expectException(InvalidFormatException::class);
-
         $validator->validate(42, $schema, $this->context);
+
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]

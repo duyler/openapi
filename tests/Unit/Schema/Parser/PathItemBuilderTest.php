@@ -16,6 +16,7 @@ use stdClass;
 
 final class PathItemBuilderTest extends TestCase
 {
+    private const array JSON_CONTENT = ['application/json' => ['schema' => ['type' => 'string']]];
     private PathItemBuilder $pathItemBuilder;
     private OpenApiBuildContext $context;
 
@@ -322,5 +323,103 @@ final class PathItemBuilderTest extends TestCase
             'in' => 'query',
             'example' => new stdClass(),
         ]);
+    }
+
+    #[Test]
+    #[DataProvider('implicit_explode_default_provider')]
+    public function implicit_explode_is_computed_from_effective_style(array $parameterData, bool $legacy, bool $expectedExplode): void
+    {
+        if ($legacy) {
+            $this->context->legacyExplodeDefaults = true;
+        }
+
+        $parameter = $this->pathItemBuilder->buildParameter(['name' => 'p'] + $parameterData);
+
+        self::assertSame($expectedExplode, $parameter->explode);
+    }
+
+    public static function implicit_explode_default_provider(): array
+    {
+        return [
+            'query without style defaults to exploded form' => [['in' => 'query'], false, true],
+            'query with form style defaults to exploded form' => [['in' => 'query', 'style' => 'form'], false, true],
+            'query with pipeDelimited style does not explode' => [['in' => 'query', 'style' => 'pipeDelimited'], false, false],
+            'path defaults to simple without explode' => [['in' => 'path'], false, false],
+            'header with simple style does not explode' => [['in' => 'header', 'style' => 'simple'], false, false],
+            'cookie without style defaults to exploded form' => [['in' => 'cookie'], false, true],
+            'explicit explode false wins over form default' => [['in' => 'query', 'style' => 'form', 'explode' => false], false, false],
+            'legacy mode forces implicit explode false for query' => [['in' => 'query'], true, false],
+            'legacy mode forces implicit explode false for cookie' => [['in' => 'cookie'], true, false],
+            'legacy mode keeps explicit explode true' => [['in' => 'query', 'explode' => true], true, true],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('content_and_schema_rejection_provider')]
+    public function parameter_with_both_content_and_schema_is_rejected(array $parameterData): void
+    {
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Parameter must not have both "schema" and "content"');
+
+        $this->pathItemBuilder->buildParameter(['name' => 'p'] + $parameterData);
+    }
+
+    public static function content_and_schema_rejection_provider(): array
+    {
+        $cases = [];
+
+        foreach (['query', 'header', 'path', 'cookie'] as $location) {
+            $cases["{$location} content with schema array"] = [
+                ['in' => $location, 'schema' => ['type' => 'integer'], 'content' => self::JSON_CONTENT],
+            ];
+            $cases["{$location} content with boolean schema true"] = [
+                ['in' => $location, 'schema' => true, 'content' => self::JSON_CONTENT],
+            ];
+            $cases["{$location} content with boolean schema false"] = [
+                ['in' => $location, 'schema' => false, 'content' => self::JSON_CONTENT],
+            ];
+        }
+
+        return $cases;
+    }
+
+    #[Test]
+    #[DataProvider('single_value_form_provider')]
+    public function parameter_with_single_value_form_or_none_builds(array $parameterData): void
+    {
+        $parameter = $this->pathItemBuilder->buildParameter(['name' => 'p'] + $parameterData);
+
+        self::assertNotNull($parameter);
+    }
+
+    public static function single_value_form_provider(): array
+    {
+        $cases = [];
+
+        foreach (['query', 'header', 'path', 'cookie'] as $location) {
+            $cases["{$location} content only"] = [
+                ['in' => $location, 'content' => self::JSON_CONTENT],
+            ];
+            $cases["{$location} schema array only"] = [
+                ['in' => $location, 'schema' => ['type' => 'integer']],
+            ];
+            $cases["{$location} neither content nor schema"] = [
+                ['in' => $location],
+            ];
+        }
+
+        return $cases;
+    }
+
+    #[Test]
+    public function ref_parameter_with_content_and_schema_keys_builds_by_ref_branch(): void
+    {
+        $parameter = $this->pathItemBuilder->buildParameter([
+            '$ref' => '#/components/parameters/legacy',
+            'content' => self::JSON_CONTENT,
+            'schema' => ['type' => 'integer'],
+        ]);
+
+        self::assertSame('#/components/parameters/legacy', $parameter->ref);
     }
 }

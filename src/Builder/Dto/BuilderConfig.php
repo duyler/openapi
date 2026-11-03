@@ -60,6 +60,9 @@ final readonly class BuilderConfig
         public readonly ?FormatAssertionMode $formatAssertionMode = null,
         public readonly ?bool $lenientResponses = null,
         public readonly ?SecuritySchemeHandlerRegistry $securitySchemeHandlers = null,
+        public readonly ?bool $legacyExplodeDefaults = null,
+        public readonly ?bool $enforceRequiredForReadOnly = null,
+        public readonly ?bool $decisiveDiscriminator = null,
     ) {}
 
     public function merge(self $overrides): self
@@ -102,6 +105,9 @@ final readonly class BuilderConfig
             formatAssertionMode: $overrides->formatAssertionMode ?? $this->formatAssertionMode,
             lenientResponses: $overrides->lenientResponses ?? $this->lenientResponses,
             securitySchemeHandlers: $overrides->securitySchemeHandlers ?? $this->securitySchemeHandlers,
+            legacyExplodeDefaults: $overrides->legacyExplodeDefaults ?? $this->legacyExplodeDefaults,
+            enforceRequiredForReadOnly: $overrides->enforceRequiredForReadOnly ?? $this->enforceRequiredForReadOnly,
+            decisiveDiscriminator: $overrides->decisiveDiscriminator ?? $this->decisiveDiscriminator,
         );
     }
 }

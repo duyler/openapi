@@ -12,6 +12,8 @@ use Duyler\OpenApi\Validator\Callback\Exception\UnknownCallbackException;
 use Duyler\OpenApi\Validator\Exception\PregRuntimeException;
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
 use Duyler\OpenApi\Validator\Exception\UnresolvableCallbackPathException;
+use Duyler\OpenApi\Validator\Link\Internal\ExpressionData;
+use Duyler\OpenApi\Validator\Link\Internal\RuntimeExpressionEvaluator;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
 use Duyler\OpenApi\Validator\Internal\PathItemParameterMerger;
@@ -21,6 +23,7 @@ use Psr\Log\LoggerInterface;
 
 use function array_key_exists;
 use function assert;
+use function is_scalar;
 use function is_string;
 use function parse_url;
 use function sprintf;
@@ -36,6 +39,8 @@ final readonly class CallbackValidator
 {
     private const string PATH_ITEM_REF_PREFIX = '#/components/pathItems/';
 
+    private const string RUNTIME_EXPRESSION_INSERTION_PATTERN = '/\{(\$[^}]+)\}/';
+
     /** @var list<string> */
     private const array HTTP_METHODS = [
         'get',
@@ -49,6 +54,8 @@ final readonly class CallbackValidator
         'query',
     ];
 
+    private readonly RuntimeExpressionEvaluator $runtimeExpressionEvaluator;
+
     /**
      * @param bool $strictCallbackRuntimeTemplate
      */
@@ -58,16 +65,19 @@ final readonly class CallbackValidator
         private readonly bool $strictCallbackRuntimeTemplate = true,
         private readonly PregExecutor $pregExecutor = new PregExecutor(),
         private readonly ?LoggerInterface $logger = null,
-    ) {}
+    ) {
+        $this->runtimeExpressionEvaluator = new RuntimeExpressionEvaluator();
+    }
 
     public function validate(
         ServerRequestInterface $request,
         string $callbackName,
         OpenApiDocument $document,
+        ?CallbackContext $context = null,
     ): Operation {
         $pathItems = $this->findCallbacks($callbackName, $document);
 
-        $matched = $this->extractOperation($request, $callbackName, $pathItems, $document);
+        $matched = $this->extractOperation($request, $callbackName, $pathItems, $document, $context);
         $operation = $matched[0];
         $pathTemplate = $matched[1];
 
@@ -152,12 +162,13 @@ final readonly class CallbackValidator
         string $callbackName,
         array $pathItems,
         OpenApiDocument $document,
+        ?CallbackContext $context = null,
     ): array {
         $method = strtolower($request->getMethod());
         $requestPath = $request->getUri()->getPath();
 
         foreach ($pathItems as $expression => $pathItem) {
-            $pathTemplate = $this->resolvePathTemplate($expression, $requestPath);
+            $pathTemplate = $this->resolvePathTemplate($expression, $requestPath, $context);
 
             if (null === $pathTemplate) {
                 continue;
@@ -180,14 +191,18 @@ final readonly class CallbackValidator
     /**
      * @return string|null
      */
-    private function resolvePathTemplate(string $expression, string $requestPath): ?string
+    private function resolvePathTemplate(string $expression, string $requestPath, ?CallbackContext $context = null): ?string
     {
         if (str_contains($expression, '{$')) {
-            if ($this->strictCallbackRuntimeTemplate) {
-                throw new UnresolvableCallbackPathException($expression);
+            if (null === $context) {
+                if ($this->strictCallbackRuntimeTemplate) {
+                    throw new UnresolvableCallbackPathException($expression);
+                }
+
+                return $requestPath;
             }
 
-            return $requestPath;
+            return $this->resolveRuntimeExpressionPath($expression, $requestPath, $context);
         }
 
         if (str_starts_with($expression, 'http://') || str_starts_with($expression, 'https://')) {
@@ -221,6 +236,64 @@ final readonly class CallbackValidator
         }
 
         return $expression === $requestPath ? $expression : null;
+    }
+
+    private function resolveRuntimeExpressionPath(string $expression, string $requestPath, CallbackContext $context): ?string
+    {
+        $resolved = $this->evaluateExpressionTemplate($expression, $context);
+
+        if (str_starts_with($resolved, 'http://') || str_starts_with($resolved, 'https://')) {
+            $parsedPath = parse_url($resolved, PHP_URL_PATH);
+
+            if (is_string($parsedPath) && $parsedPath === $requestPath) {
+                return $parsedPath;
+            }
+
+            return null;
+        }
+
+        return $resolved === $requestPath ? $resolved : null;
+    }
+
+    private function evaluateExpressionTemplate(string $expression, CallbackContext $context): string
+    {
+        $data = new ExpressionData(
+            url: $context->url,
+            method: $context->method,
+            requestBody: $context->requestBody,
+            requestHeaders: $context->requestHeaders,
+            queryParams: $context->queryParams,
+            pathParams: $context->pathParams,
+        );
+
+        try {
+            $resolved = $this->pregExecutor->replaceCallback(
+                self::RUNTIME_EXPRESSION_INSERTION_PATTERN,
+                function (array $matches) use ($data, $expression): string {
+                    $resolved = $this->runtimeExpressionEvaluator->resolve($matches[1], $data);
+
+                    if (false === is_scalar($resolved) || '' === (string) $resolved) {
+                        throw new UnresolvableCallbackPathException($expression);
+                    }
+
+                    return (string) $resolved;
+                },
+                $expression,
+            );
+        } catch (RefResolutionException $e) {
+            $this->logger?->warning('Callback runtime expression pointer failed', [
+                'callback_expression_length' => strlen($expression),
+                'exception' => $e,
+            ]);
+
+            throw new UnresolvableCallbackPathException($expression);
+        }
+
+        if (null === $resolved || '' === $resolved) {
+            throw new UnresolvableCallbackPathException($expression);
+        }
+
+        return $resolved;
     }
 
     private function resolvePathItemRef(PathItem $pathItem, OpenApiDocument $document): PathItem

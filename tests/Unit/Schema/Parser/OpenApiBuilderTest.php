@@ -363,7 +363,6 @@ final class OpenApiBuilderTest extends TestCase
                                 'style' => 'form',
                                 'explode' => true,
                                 'allowReserved' => true,
-                                'schema' => ['type' => 'string'],
                                 'examples' => ['example1' => ['value' => 'test']],
                                 'content' => [
                                     'application/json' => [
@@ -390,7 +389,7 @@ final class OpenApiBuilderTest extends TestCase
         $this->assertSame('form', $param->style);
         $this->assertTrue($param->explode);
         $this->assertTrue($param->allowReserved);
-        $this->assertInstanceOf(Schema::class, $param->schema);
+        $this->assertNull($param->schema);
         $this->assertInstanceOf(Content::class, $param->content);
     }
 

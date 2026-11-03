@@ -21,10 +21,11 @@ final class JsonParser extends OpenApiBuilder
 
     public function __construct(
         ?DeprecationLogger $deprecationLogger = null,
+        ?bool $legacyExplodeDefaults = null,
         int $maxSpecDepth = SpecSizeGuard::DEFAULT_MAX_SPEC_DEPTH,
         int $maxSpecBytes = SpecSizeGuard::DEFAULT_MAX_SPEC_BYTES,
     ) {
-        parent::__construct($deprecationLogger);
+        parent::__construct($deprecationLogger, $legacyExplodeDefaults);
         $this->specSizeGuard = new SpecSizeGuard($maxSpecBytes, $maxSpecDepth);
     }
 

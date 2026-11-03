@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Validation;
 
+use Duyler\OpenApi\Validator\Callback\CallbackContext;
 use Duyler\OpenApi\Validator\Callback\CallbackValidator as InnerCallbackValidator;
 use Duyler\OpenApi\Validator\EventDispatchingTrait;
 use Duyler\OpenApi\Validator\Internal\ValidationEventPayload;
@@ -48,7 +49,7 @@ final readonly class CallbackValidator
         );
     }
 
-    public function validate(ServerRequestInterface $request, string $callbackName): Operation
+    public function validate(ServerRequestInterface $request, string $callbackName, ?CallbackContext $context = null): Operation
     {
         $method = $request->getMethod();
 
@@ -59,11 +60,12 @@ final readonly class CallbackValidator
                 path: $callbackName,
                 method: $method,
             ),
-            callback: function () use ($request, $callbackName, $method): Operation {
+            callback: function () use ($request, $callbackName, $method, $context): Operation {
                 $schemaOperation = $this->callbackValidator->validate(
                     $request,
                     $callbackName,
                     $this->context->document,
+                    $context,
                 );
 
                 if ($this->securityValidation) {

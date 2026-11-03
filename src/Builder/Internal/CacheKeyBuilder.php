@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Builder\Internal;
 
 use Duyler\OpenApi\Builder\Dto\BuilderConfig;
+use Duyler\OpenApi\PackageInfo;
 use Duyler\OpenApi\Schema\Parser\YamlParser;
 use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
 
@@ -19,6 +20,7 @@ final readonly class CacheKeyBuilder
 
     public function __construct(
         private BuilderConfig $config,
+        private string $packageVersion = PackageInfo::VERSION,
     ) {}
 
     public function forFile(string $path, string $content): string
@@ -40,7 +42,8 @@ final readonly class CacheKeyBuilder
     private function buildFingerprint(): string
     {
         return sprintf(
-            'maxSpecDepth=%d|maxSpecSizeBytes=%d|externalRefAllowedRoot=%s|externalRefMaxBytes=%d|documentRepository=%s',
+            'packageVersion=%s|maxSpecDepth=%d|maxSpecSizeBytes=%d|externalRefAllowedRoot=%s|externalRefMaxBytes=%d|documentRepository=%s',
+            $this->packageVersion,
             $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
             $this->config->maxSpecSizeBytes ?? YamlParser::DEFAULT_MAX_SPEC_BYTES,
             $this->config->externalRefAllowedRoot ?? '',

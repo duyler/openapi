@@ -11,7 +11,9 @@ use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedPropertiesValidator;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\ValidatorPool;
@@ -781,5 +783,78 @@ class UnevaluatedPropertiesValidatorTest extends TestCase
         $this->expectException(UnevaluatedPropertyError::class);
 
         $this->validator->validate(['known' => 'value', 'unknown' => 1], $schema, $context);
+    }
+
+    #[Test]
+    public function properties_annotated_by_composition_branch_satisfy_parent_unevaluated_properties_false(): void
+    {
+        $schema = new Schema(
+            allOf: [new Schema(unevaluatedProperties: new Schema(type: 'integer'))],
+            unevaluatedProperties: false,
+        );
+
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
+
+        $succeeded = false;
+
+        try {
+            $this->rootValidator()->validate(['x' => 1], $schema, $context);
+            $succeeded = true;
+        } catch (ValidationException|RuntimeException $e) {
+            self::fail(sprintf('Parent unevaluatedProperties:false must accept properties annotated by the allOf branch on the parent instance path, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function unevaluated_properties_false_without_annotating_branch_still_rejects_properties(): void
+    {
+        $schema = new Schema(unevaluatedProperties: false);
+
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
+
+        $caught = null;
+
+        try {
+            $this->rootValidator()->validate(['x' => 1], $schema, $context);
+        } catch (ValidationException|RuntimeException $e) {
+            $caught = $e;
+        }
+
+        self::assertNotNull($caught, 'Without an annotating branch, unevaluatedProperties:false must reject every property');
+    }
+
+    #[Test]
+    public function property_annotations_from_failed_composition_branch_do_not_reach_parent(): void
+    {
+        $schema = new Schema(
+            allOf: [new Schema(unevaluatedProperties: new Schema(type: 'string'))],
+            unevaluatedProperties: false,
+        );
+
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
+
+        $caught = null;
+
+        try {
+            $this->rootValidator()->validate(['x' => 1], $schema, $context);
+        } catch (ValidationException|RuntimeException $e) {
+            $caught = $e;
+        }
+
+        self::assertNotNull($caught, 'The failed branch (string vs integer) must not annotate properties for the parent unevaluatedProperties:false');
+    }
+
+    private function rootValidator(): SchemaValidatorInterface
+    {
+        $dependencies = new SchemaValidatorDependencies(
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()),
+            pool: $this->pool,
+            formatRegistry: BuiltinFormats::create(),
+        );
+
+        return $dependencies->rootStatelessValidator();
     }
 }

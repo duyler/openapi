@@ -166,6 +166,21 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(strictKeywords: false));
     }
 
+    public function withLegacyExplodeDefaults(): self
+    {
+        return $this->with(new BuilderConfig(legacyExplodeDefaults: true));
+    }
+
+    public function enforceRequiredForReadOnly(): self
+    {
+        return $this->with(new BuilderConfig(enforceRequiredForReadOnly: true));
+    }
+
+    public function withDecisiveDiscriminator(): self
+    {
+        return $this->with(new BuilderConfig(decisiveDiscriminator: true));
+    }
+
     public function withAllowedUnknownKeywords(string ...$keywords): self
     {
         if ([] === $keywords) {
@@ -374,6 +389,16 @@ final readonly class OpenApiValidatorBuilder
 
     private function validatorConfiguration(OpenApiDocument $document): ValidatorConfiguration
     {
+        $dialectProfile = DialectProfile::fromOpenApiVersion($document->openapi);
+
+        if (true === $this->config->enforceRequiredForReadOnly) {
+            $dialectProfile = $dialectProfile->withReadOnlyRequiredRelaxation(false);
+        }
+
+        if (true === $this->config->decisiveDiscriminator) {
+            $dialectProfile = $dialectProfile->withDiscriminatorIsHint(false);
+        }
+
         return new ValidatorConfiguration(
             coercion: $this->config->coercion ?? false,
             nullableAsType: $this->config->nullableAsType ?? true,
@@ -387,7 +412,7 @@ final readonly class OpenApiValidatorBuilder
             maxRegexBacktracks: $this->config->maxRegexBacktracks ?? ValidatorConfiguration::DEFAULT_MAX_REGEX_BACKTRACKS,
             maxStreamingRecords: $this->config->maxStreamingRecords ?? ValidatorConfiguration::DEFAULT_MAX_STREAMING_RECORDS,
             strictCoercion: $this->config->strictCoercion ?? true,
-            dialectProfile: DialectProfile::fromOpenApiVersion($document->openapi),
+            dialectProfile: $dialectProfile,
             contentAssertionsEnabled: $this->config->contentAssertionsEnabled ?? false,
             formatAssertionMode: $this->config->formatAssertionMode ?? FormatAssertionMode::Assertion,
             lenientResponses: $this->config->lenientResponses ?? false,
@@ -492,6 +517,7 @@ final readonly class OpenApiValidatorBuilder
             documentRepository: $this->config->documentRepository,
             dialectProfile: $dialectProfile,
         );
+        $refResolver->resourceRegistry($document);
 
         $coercion = $configuration->coercion;
         $nullableAsType = $configuration->nullableAsType;

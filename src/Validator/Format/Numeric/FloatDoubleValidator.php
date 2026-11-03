@@ -12,6 +12,7 @@ use InvalidArgumentException;
 
 use function is_float;
 use function is_infinite;
+use function is_int;
 use function is_nan;
 
 final readonly class FloatDoubleValidator implements FormatValidatorInterface
@@ -30,6 +31,10 @@ final readonly class FloatDoubleValidator implements FormatValidatorInterface
     #[Override]
     public function validate(mixed $data): void
     {
+        if (is_int($data)) {
+            return;
+        }
+
         if (false === is_float($data)) {
             throw new InvalidFormatException(
                 $this->format,

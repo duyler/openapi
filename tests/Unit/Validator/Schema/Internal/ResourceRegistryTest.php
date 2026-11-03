@@ -8,11 +8,15 @@ use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Schema\Exception\DuplicateSchemaIdException;
+use Duyler\OpenApi\Validator\Schema\Exception\InvalidAnchorException;
+use Duyler\OpenApi\Validator\Schema\Exception\SchemaIdFragmentException;
 use Duyler\OpenApi\Validator\Schema\Internal\ResourceRegistry;
 use Duyler\OpenApi\Validator\Schema\Internal\SchemaSubschemaWalker;
 use Duyler\OpenApi\Validator\Schema\Internal\SchemaSubschemaWalkerInterface;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Generator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
@@ -81,16 +85,68 @@ final class ResourceRegistryTest extends TestCase
     }
 
     #[Test]
-    public function first_occurrence_wins_for_duplicate_id(): void
+    public function duplicate_id_from_different_instances_throws(): void
     {
         $first = new Schema(id: 'dup.json', anchor: 'dupAnchor', title: 'first');
-        $second = new Schema(id: 'dup.json', anchor: 'dupAnchor', title: 'second');
+        $second = new Schema(id: 'dup.json', title: 'second');
         $document = $this->documentWithSchemas(['First' => $first, 'Second' => $second]);
+
+        $this->expectException(DuplicateSchemaIdException::class);
+        $this->expectExceptionMessage('dup.json');
+
+        ResourceRegistry::forDocument($document, $this->resolver);
+    }
+
+    #[Test]
+    public function id_with_non_empty_fragment_throws(): void
+    {
+        $schema = new Schema(id: 'https://example.com/schemas/x.json#fragment');
+        $document = $this->documentWithSchemas(['A' => $schema]);
+
+        $this->expectException(SchemaIdFragmentException::class);
+        $this->expectExceptionMessage('https://example.com/schemas/x.json#fragment');
+
+        ResourceRegistry::forDocument($document, $this->resolver);
+    }
+
+    #[Test]
+    #[DataProvider('invalid_anchor_provider')]
+    public function invalid_anchor_value_throws(string $keyword, string $anchor): void
+    {
+        $schema = 'anchor' === $keyword
+            ? new Schema(anchor: $anchor)
+            : new Schema(dynamicAnchor: $anchor);
+        $document = $this->documentWithSchemas(['A' => $schema]);
+
+        $this->expectException(InvalidAnchorException::class);
+        $this->expectExceptionMessage($anchor);
+
+        ResourceRegistry::forDocument($document, $this->resolver);
+    }
+
+    public static function invalid_anchor_provider(): array
+    {
+        return [
+            'anchor starting with digit' => ['anchor', '1bad'],
+            'anchor starting with dash' => ['anchor', '-bad'],
+            'anchor with space' => ['anchor', 'has space'],
+            'dynamicAnchor starting with digit' => ['dynamicAnchor', '9dynamic'],
+            'dynamicAnchor with slash' => ['dynamicAnchor', 'a/b'],
+            'anchor with trailing newline (not matched by \\z)' => ['anchor', "anchor\n"],
+            'dynamicAnchor with trailing newline (not matched by \\z)' => ['dynamicAnchor', "anchor\n"],
+        ];
+    }
+
+    #[Test]
+    public function same_instance_indexed_through_two_components_is_not_duplicate(): void
+    {
+        $shared = new Schema(id: 'shared.json', anchor: 'sharedAnchor');
+        $document = $this->documentWithSchemas(['First' => $shared, 'Second' => $shared]);
 
         $registry = ResourceRegistry::forDocument($document, $this->resolver);
 
-        self::assertSame($first, $registry->findByUri('dup.json'));
-        self::assertSame($first, $registry->findByAnchor('dupAnchor'));
+        self::assertSame($shared, $registry->findByUri('shared.json'));
+        self::assertSame($shared, $registry->findByAnchor('sharedAnchor'));
     }
 
     #[Test]

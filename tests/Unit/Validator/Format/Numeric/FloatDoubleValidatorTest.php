@@ -56,11 +56,13 @@ final class FloatDoubleValidatorTest extends TestCase
     }
 
     #[Test]
-    public function throw_error_for_integer(): void
+    public function integer_value_is_valid_for_float_and_double(): void
     {
-        $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Value must be a float');
+        $this->expectNotToPerformAssertions();
         $this->floatValidator->validate(42);
+        $this->floatValidator->validate(5);
+        $this->doubleValidator->validate(42);
+        $this->doubleValidator->validate(5);
     }
 
     #[Test]

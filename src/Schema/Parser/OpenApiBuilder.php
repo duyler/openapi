@@ -33,8 +33,10 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
     public function __construct(
         ?DeprecationLogger $deprecationLogger = null,
+        ?bool $legacyExplodeDefaults = null,
     ) {
         $this->context = new OpenApiBuildContext($deprecationLogger ?? new DeprecationLogger());
+        $this->context->legacyExplodeDefaults = $legacyExplodeDefaults;
     }
 
     #[Override]

@@ -129,7 +129,6 @@
   </file>
   <file src="src/Validator/Link/LinkResolver.php">
     <MixedAssignment>
-      <code><![CDATA[$current]]></code>
       <code><![CDATA[$expression]]></code>
       <code><![CDATA[$resolved[$name]]]></code>
     </MixedAssignment>

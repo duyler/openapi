@@ -103,10 +103,11 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
 
             try {
                 $validator->validate($value, $unevaluatedProperties, $context);
-                $context->markPropertyEvaluated($propertyName);
             } finally {
                 $context->leaveBreadcrumb();
             }
+
+            $context->markPropertyEvaluated($propertyName);
         }
     }
 

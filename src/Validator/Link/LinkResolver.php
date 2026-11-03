@@ -5,26 +5,17 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Link;
 
 use Duyler\OpenApi\Schema\Model\Link;
-use Duyler\OpenApi\Validator\Exception\RefResolutionException;
+use Duyler\OpenApi\Validator\Link\Internal\ExpressionData;
+use Duyler\OpenApi\Validator\Link\Internal\RuntimeExpressionEvaluator;
 
-use function array_key_exists;
-use function array_is_list;
-use function array_map;
-use function count;
-use function ctype_digit;
-use function explode;
-use function implode;
-use function is_array;
 use function is_string;
-use function preg_match;
-use function sprintf;
-use function str_replace;
-use function strtolower;
-use function strval;
-use function trim;
 
 final readonly class LinkResolver
 {
+    public function __construct(
+        private readonly RuntimeExpressionEvaluator $runtimeExpressionEvaluator = new RuntimeExpressionEvaluator(),
+    ) {}
+
     public function resolve(Link $link, LinkContext $context): ResolvedLink
     {
         $parameters = $this->resolveParameters($link->parameters, $context);
@@ -62,136 +53,19 @@ final readonly class LinkResolver
             return $expression;
         }
 
-        return match (true) {
-            '$url' === $expression => $context->url,
-            '$method' === $expression => $context->method,
-            '$statusCode' === $expression => $context->statusCode,
-            default => $this->resolveRuntimeExpression($expression, $context),
-        };
-    }
-
-    private function resolveRuntimeExpression(string $expression, LinkContext $context): mixed
-    {
-        if (1 === preg_match(
-            '/^\$(?<scope>request|response)\.(?<source>path|query|header)\.(?<name>[a-zA-Z0-9_.\-]+)$/',
+        return $this->runtimeExpressionEvaluator->resolve(
             $expression,
-            $matches,
-        )) {
-            return $this->resolveNamedExpression(
-                $matches['scope'],
-                $matches['source'],
-                $matches['name'],
-                $context,
-            );
-        }
-
-        if (1 === preg_match(
-            '/^\$(?<scope>request|response)\.(?<source>body|header|query)(?:#(?<path>\/.+))?$/',
-            $expression,
-            $matches,
-        )) {
-            return $this->extractByPath(
-                $this->resolvePointerData($matches['scope'], $matches['source'], $context),
-                $matches['path'] ?? null,
-            );
-        }
-
-        return $expression;
-    }
-
-    private function resolveNamedExpression(
-        string $scope,
-        string $source,
-        string $name,
-        LinkContext $context,
-    ): mixed {
-        return match (true) {
-            'request' === $scope && 'path' === $source => $context->pathParams[$name] ?? null,
-            'request' === $scope && 'query' === $source => $context->queryParams[$name] ?? null,
-            'request' === $scope && 'header' === $source => $this->lookupHeader($context->requestHeaders, $name),
-            'response' === $scope && 'query' === $source => $context->queryParams[$name] ?? null,
-            'response' === $scope && 'header' === $source => $this->lookupHeader($context->headers, $name),
-            default => null,
-        };
-    }
-
-    private function resolvePointerData(string $scope, string $source, LinkContext $context): mixed
-    {
-        return match (true) {
-            'request' === $scope && 'body' === $source => $context->requestBody,
-            'request' === $scope && 'header' === $source => $context->requestHeaders,
-            'request' === $scope && 'query' === $source => $context->queryParams,
-            'response' === $scope && 'body' === $source => $context->body,
-            'response' === $scope && 'header' === $source => $context->headers,
-            'response' === $scope && 'query' === $source => $context->queryParams,
-            default => null,
-        };
-    }
-
-    /**
-     * @param array<string, string|list<string>> $headers
-     */
-    private function lookupHeader(array $headers, string $name): ?string
-    {
-        $needle = strtolower($name);
-
-        foreach ($headers as $key => $value) {
-            if (strtolower($key) !== $needle) {
-                continue;
-            }
-
-            if (is_array($value)) {
-                return implode(',', array_map(strval(...), $value));
-            }
-
-            return $value;
-        }
-
-        return null;
-    }
-
-    private function extractByPath(mixed $data, ?string $path): mixed
-    {
-        if (null === $path || '' === $path) {
-            return $data;
-        }
-
-        if (false === is_array($data)) {
-            return null;
-        }
-
-        /** @var list<string> $segments */
-        $segments = explode('/', trim($path, '/'));
-
-        $segments = array_map(
-            static fn(string $segment): string => str_replace(['~1', '~0'], ['/', '~'], $segment),
-            $segments,
+            new ExpressionData(
+                url: $context->url,
+                method: $context->method,
+                statusCode: $context->statusCode,
+                requestBody: $context->requestBody,
+                requestHeaders: $context->requestHeaders,
+                queryParams: $context->queryParams,
+                pathParams: $context->pathParams,
+                body: $context->body,
+                headers: $context->headers,
+            ),
         );
-
-        /** @var mixed $current */
-        $current = $data;
-
-        foreach ($segments as $segment) {
-            if (
-                is_array($current)
-                && array_is_list($current)
-                && ctype_digit($segment)
-                && (int) $segment >= count($current)
-            ) {
-                throw new RefResolutionException(sprintf(
-                    'Array index %s out of bounds (length %d)',
-                    $segment,
-                    count($current),
-                ));
-            }
-
-            if (false === is_array($current) || false === array_key_exists($segment, $current)) {
-                return null;
-            }
-
-            $current = $current[$segment];
-        }
-
-        return $current;
     }
 }

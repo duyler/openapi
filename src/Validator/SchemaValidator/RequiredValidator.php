@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\RequiredError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\JsonShape;
+use Duyler\OpenApi\Validator\ValidatorMode;
 use Override;
 
 use function array_key_exists;
@@ -41,6 +42,10 @@ final readonly class RequiredValidator extends AbstractSchemaValidator implement
 
         foreach ($schema->required as $field) {
             if (false === array_key_exists($field, $values)) {
+                if ($this->isReadOnlyRelaxedInRequest($schema, $field, $context)) {
+                    continue;
+                }
+
                 $errors[] = new RequiredError(
                     property: $field,
                     dataPath: $dataPath,
@@ -55,5 +60,13 @@ final readonly class RequiredValidator extends AbstractSchemaValidator implement
                 errors: $errors,
             );
         }
+    }
+
+    private function isReadOnlyRelaxedInRequest(Schema $schema, string $field, ?ValidationContext $context): bool
+    {
+        return null !== $context
+            && ValidatorMode::Request === $context->mode
+            && $context->dialectProfile->readOnlyRequiredRelaxation
+            && true === ($schema->properties[$field] ?? null)?->readOnly;
     }
 }

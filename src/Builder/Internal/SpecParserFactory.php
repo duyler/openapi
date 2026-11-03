@@ -30,6 +30,7 @@ final readonly class SpecParserFactory
         private ?bool $reportDeprecated = null,
         private ?int $maxSpecSizeBytes = null,
         private ?int $maxSpecDepth = null,
+        private ?bool $legacyExplodeDefaults = null,
     ) {}
 
     public function forSpecType(?string $specType, ?int $maxSpecBytes = null): SchemaParserInterface
@@ -40,11 +41,13 @@ final readonly class SpecParserFactory
         return match ($specType) {
             'yaml' => new YamlParser(
                 deprecationLogger: $deprecationLogger,
+                legacyExplodeDefaults: $this->legacyExplodeDefaults,
                 maxSpecBytes: $maxSpecBytes ?? $this->maxSpecSizeBytes ?? YamlParser::DEFAULT_MAX_SPEC_BYTES,
                 maxSpecDepth: $maxSpecDepth,
             ),
             'json' => new JsonParser(
                 deprecationLogger: $deprecationLogger,
+                legacyExplodeDefaults: $this->legacyExplodeDefaults,
                 maxSpecDepth: $maxSpecDepth,
                 maxSpecBytes: $maxSpecBytes ?? $this->maxSpecSizeBytes ?? JsonParser::DEFAULT_MAX_SPEC_BYTES,
             ),

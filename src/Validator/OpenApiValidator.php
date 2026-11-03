@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Validator;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
 use Duyler\OpenApi\Cache\SchemaCache;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Callback\CallbackContext;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Dto\ValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
@@ -95,9 +96,9 @@ final readonly class OpenApiValidator implements OpenApiValidatorInterface
     }
 
     #[Override]
-    public function validateCallback(ServerRequestInterface $request, string $callbackName): Operation
+    public function validateCallback(ServerRequestInterface $request, string $callbackName, ?CallbackContext $context = null): Operation
     {
-        return $this->dependencies->callbackValidation->validate($request, $callbackName);
+        return $this->dependencies->callbackValidation->validate($request, $callbackName, $context);
     }
 
     /**

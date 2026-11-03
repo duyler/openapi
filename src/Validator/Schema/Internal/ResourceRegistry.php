@@ -6,12 +6,23 @@ namespace Duyler\OpenApi\Validator\Schema\Internal;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Schema\Exception\DuplicateSchemaIdException;
+use Duyler\OpenApi\Validator\Schema\Exception\InvalidAnchorException;
+use Duyler\OpenApi\Validator\Schema\Exception\SchemaIdFragmentException;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use WeakMap;
+
+use function is_string;
+use function parse_url;
+use function preg_match;
+
+use const PHP_URL_FRAGMENT;
 
 /** @internal */
 final class ResourceRegistry
 {
+    private const string ANCHOR_NAME_PATTERN = '^[A-Za-z_][-A-Za-z0-9._]*\\z';
+
     /** @var WeakMap<OpenApiDocument, ResourceRegistry>|null */
     private static ?WeakMap $registries = null;
 
@@ -130,17 +141,36 @@ final class ResourceRegistry
         $visited[$schema] = true;
 
         if (null !== $schema->id) {
+            $fragment = parse_url($schema->id, PHP_URL_FRAGMENT);
+
+            if (is_string($fragment) && '' !== $fragment) {
+                throw new SchemaIdFragmentException($schema->id);
+            }
+
             $absoluteUri = null === $baseUri ? $schema->id : $refResolver->combineUris($baseUri, $schema->id);
+
+            if (isset($this->byUri[$absoluteUri]) && $this->byUri[$absoluteUri] !== $schema) {
+                throw new DuplicateSchemaIdException($absoluteUri);
+            }
+
             $this->byUri[$absoluteUri] ??= $schema;
             $baseUri = $absoluteUri;
         }
 
         if (null !== $schema->anchor) {
+            if (1 !== preg_match('/' . self::ANCHOR_NAME_PATTERN . '/', $schema->anchor)) {
+                throw new InvalidAnchorException('$anchor', $schema->anchor);
+            }
+
             $this->byAnchor[$schema->anchor] ??= $schema;
             $this->byAnchorInResource[$baseUri ?? ''][$schema->anchor] ??= $schema;
         }
 
         if (null !== $schema->dynamicAnchor) {
+            if (1 !== preg_match('/' . self::ANCHOR_NAME_PATTERN . '/', $schema->dynamicAnchor)) {
+                throw new InvalidAnchorException('$dynamicAnchor', $schema->dynamicAnchor);
+            }
+
             $this->byDynamicAnchor[$schema->dynamicAnchor] ??= $schema;
             $this->byDynamicAnchorInResource[$baseUri ?? ''][$schema->dynamicAnchor] ??= $schema;
         }

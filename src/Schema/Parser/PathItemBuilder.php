@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
 use Duyler\OpenApi\Schema\Model\Callbacks;
 use Duyler\OpenApi\Schema\Model\Operation;
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Schema\Model\ParameterStyles;
 use Duyler\OpenApi\Schema\Model\Parameters;
 use Duyler\OpenApi\Schema\Model\PathItem;
 use Duyler\OpenApi\Schema\Model\Paths;
@@ -17,6 +18,7 @@ use Duyler\OpenApi\Schema\Model\Servers;
 use Duyler\OpenApi\Schema\Model\Webhooks;
 use Duyler\OpenApi\Schema\Parser\Internal\InlineExampleResolver;
 
+use function array_key_exists;
 use function array_map;
 use function array_values;
 use function is_array;
@@ -125,6 +127,13 @@ final readonly class PathItemBuilder
             throw new InvalidSchemaException('Parameter must have name and in fields');
         }
 
+        $hasContent = isset($data['content']);
+        $hasSchema = isset($data['schema']);
+
+        if ($hasContent && $hasSchema) {
+            throw new InvalidSchemaException('Parameter must not have both "schema" and "content"');
+        }
+
         if (OpenApiBuildContext::shouldWarnDeprecation($this->context->documentVersion) && isset($data['allowEmptyValue']) && $data['allowEmptyValue']) {
             $this->context->deprecationLogger->warn(
                 'allowEmptyValue',
@@ -136,15 +145,23 @@ final readonly class PathItemBuilder
         $componentsBuilder = $this->context->componentsBuilder;
         $schemaBuilder = $this->context->schemaBuilder;
 
+        $in = TypeHelper::asString($data['in']);
+        $style = TypeHelper::asStringOrNull($data['style'] ?? null);
+        $effectiveStyle = $style ?? ParameterStyles::defaultFor($in);
+        $legacyExplodeDefaults = $this->context->legacyExplodeDefaults;
+        $explode = array_key_exists('explode', $data)
+            ? (bool) $data['explode']
+            : ('form' === $effectiveStyle && true !== $legacyExplodeDefaults);
+
         return new Parameter(
             name: TypeHelper::asString($data['name']),
-            in: TypeHelper::asString($data['in']),
+            in: $in,
             description: TypeHelper::asStringOrNull($data['description'] ?? null),
             required: (bool) ($data['required'] ?? false),
             deprecated: (bool) ($data['deprecated'] ?? false),
             allowEmptyValue: (bool) ($data['allowEmptyValue'] ?? false),
-            style: TypeHelper::asStringOrNull($data['style'] ?? null),
-            explode: (bool) ($data['explode'] ?? false),
+            style: $style,
+            explode: $explode,
             allowReserved: (bool) ($data['allowReserved'] ?? false),
             schema: isset($data['schema']) && (is_array($data['schema']) || is_bool($data['schema']))
                 ? $schemaBuilder->buildSchema($data['schema'])
