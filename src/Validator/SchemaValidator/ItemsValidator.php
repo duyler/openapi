@@ -11,15 +11,14 @@ use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Schema\JsonShape;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Duyler\OpenApi\Validator\SchemaValidator\Internal\BooleanItemsValidator;
 use Duyler\OpenApi\Validator\SchemaValidator\Internal\ItemValidationExceptionTrait;
 use Duyler\OpenApi\Validator\SchemaValidator\Internal\ItemValidationState;
 use Override;
 
-use function array_is_list;
 use function count;
-use function is_array;
 use function is_bool;
 
 final readonly class ItemsValidator extends AbstractSchemaValidator implements KeywordApplicable
@@ -41,19 +40,21 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
             return;
         }
 
-        if (false === is_array($data) || false === array_is_list($data)) {
+        $values = JsonShape::arrayValues($data);
+
+        if (null === $values) {
             return;
         }
 
         if (is_bool($schema->items)) {
-            BooleanItemsValidator::validate($data, $schema, $context);
+            BooleanItemsValidator::validate($values, $schema, $context);
 
             return;
         }
 
         /** @var Schema $itemsSchema */
         $itemsSchema = $schema->items;
-        $this->validateSchemaItems($data, $itemsSchema, $schema->prefixItems, $context);
+        $this->validateSchemaItems($values, $itemsSchema, $schema->prefixItems, $context);
     }
 
     /**
@@ -64,7 +65,7 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
     {
         $prefixCount = null !== $prefixItems ? count($prefixItems) : 0;
         $nullableAsType = $context?->nullableAsType ?? true;
-        $allowNull = SchemaValueNormalizer::allowsNull($itemsSchema, $nullableAsType);
+        $allowNull = SchemaValueNormalizer::allowsNull($itemsSchema, $nullableAsType, $context?->dialectProfile);
 
         $state = new ItemValidationState(
             itemsSchema: $itemsSchema,
@@ -97,10 +98,11 @@ final readonly class ItemsValidator extends AbstractSchemaValidator implements K
 
             try {
                 $state->validator->validate($normalizedItem, $state->itemsSchema, $state->context);
-                $state->context->markItemEvaluated($index);
             } finally {
                 $state->context->leaveBreadcrumb();
             }
+
+            $state->context->markItemEvaluated($index);
         } catch (InvalidDataTypeException|InvalidFormatException|AbstractValidationError|ValidationException $e) {
             $this->wrapItemValidationException(
                 $e,

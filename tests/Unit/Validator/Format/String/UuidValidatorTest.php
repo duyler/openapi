@@ -107,22 +107,6 @@ final class UuidValidatorTest extends TestCase
     }
 
     #[Test]
-    public function throw_error_for_invalid_version(): void
-    {
-        $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Invalid UUID format');
-        $this->validator->validate('123e4567-e89b-92d3-a456-426614174000');
-    }
-
-    #[Test]
-    public function throw_error_for_invalid_variant(): void
-    {
-        $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Invalid UUID format');
-        $this->validator->validate('123e4567-e89b-12d3-c456-426614174000');
-    }
-
-    #[Test]
     public function throw_error_for_non_string(): void
     {
         $this->expectException(InvalidFormatException::class);
@@ -183,25 +167,19 @@ final class UuidValidatorTest extends TestCase
     }
 
     #[Test]
-    public function uuid_version_zero_is_rejected(): void
+    public function uuid_version_zero_is_accepted_per_rfc_4122_abnf(): void
     {
-        $uuid = '550e8400-e29b-01d4-a716-446655440000';
+        $this->expectNotToPerformAssertions();
 
-        $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Invalid UUID format');
-
-        $this->validator->validate($uuid);
+        $this->validator->validate('550e8400-e29b-01d4-a716-446655440000');
     }
 
     #[Test]
-    public function uuid_with_invalid_variant_c_is_rejected(): void
+    public function uuid_with_variant_c_is_accepted_per_rfc_4122_abnf(): void
     {
-        $uuid = '550e8400-e29b-91d4-c716-446655440000';
+        $this->expectNotToPerformAssertions();
 
-        $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Invalid UUID format');
-
-        $this->validator->validate($uuid);
+        $this->validator->validate('550e8400-e29b-91d4-c716-446655440000');
     }
 
     #[Test]
@@ -229,14 +207,23 @@ final class UuidValidatorTest extends TestCase
             'v6 UUID is valid per RFC 9562 (version nibble = 6)' => ['123e4567-e89b-62d3-a456-426614174000', true],
             'v7 UUID is valid per RFC 9562 (version nibble = 7)' => ['017f22e2-79b0-7cc3-98c4-dcc0c0200c53', true],
             'v8 UUID is valid per RFC 9562 (version nibble = 8)' => ['123e4567-e89b-82d3-a456-426614174000', true],
+            'version nibble 0 is valid per RFC 4122 ABNF' => ['123e4567-e89b-02d3-a456-426614174000', true],
+            'hypothetical version 9 is valid per RFC 4122 ABNF' => ['123e4567-e89b-92d3-a456-426614174000', true],
+            'hypothetical version 15 is valid per RFC 4122 ABNF' => ['99c17cbb-656f-f64a-940f-1a4568f03487', true],
+            'variant nibble 0 is valid per RFC 4122 ABNF' => ['2eb8aa08-aa98-11ea-04aa-73b441d16380', true],
+            'variant nibble c is valid per RFC 4122 ABNF' => ['123e4567-e89b-12d3-c456-426614174000', true],
+            'variant nibble f is valid per RFC 4122 ABNF' => ['2eb8aa08-aa98-11ea-f4aa-73b441d16380', true],
             'nil UUID is valid per RFC 4122 §4.1.7' => ['00000000-0000-0000-0000-000000000000', true],
             'max UUID is valid per RFC 9562 §5.4' => ['ffffffff-ffff-ffff-ffff-ffffffffffff', true],
             'non-UUID string is rejected' => ['not-a-uuid', false],
             'UUID with invalid hex character is rejected' => ['123e4567-e89b-12d3-g456-426614174000', false],
-            'UUID with version 0 is rejected' => ['123e4567-e89b-02d3-a456-426614174000', false],
-            'UUID with version 9 is rejected (only 1-8 per RFC 9562)' => ['123e4567-e89b-92d3-a456-426614174000', false],
-            'UUID with invalid variant c is rejected' => ['123e4567-e89b-12d3-c456-426614174000', false],
+            'URN prefixed UUID is rejected' => ['urn:uuid:2eb8aa08-aa98-11ea-b4aa-73b441d16380', false],
+            'UUID wrapped in braces is rejected' => ['{2eb8aa08-aa98-11ea-b4aa-73b441d16380}', false],
+            'trailing hyphen is rejected' => ['2eb8aa08-aa98-11ea-b4aa-73b441d16380-', false],
+            'non-ascii digit is rejected' => ["২eb8aa08-aa98-11ea-b4aa-73b441d16380", false],
+            'underscore instead of hex digit is rejected' => ['2eb8aa08-aa98-11ea-b4aa-73b441d1_380', false],
             'too-short UUID is rejected' => ['550e8400-e29b-41d4-a716-44665544000', false],
+            'trailing newline is rejected' => ["2eb8aa08-aa98-11ea-b4aa-73b441d16380\n", false],
         ];
     }
 

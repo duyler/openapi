@@ -69,6 +69,10 @@ final readonly class SchemaToArrayConverter
             }
         }
 
+        if (null !== $schema->extras && [] !== $schema->extras) {
+            $data = [...$data, ...$schema->extras];
+        }
+
         return $data;
     }
 
@@ -102,6 +106,10 @@ final readonly class SchemaToArrayConverter
             }
 
             $data['has' . ucfirst($field->name)] = null !== $this->scalarSerializer->extractSentinel($schema, $field);
+        }
+
+        if (null !== $schema->extras && [] !== $schema->extras) {
+            $data['extras'] = $schema->extras;
         }
 
         return $data;

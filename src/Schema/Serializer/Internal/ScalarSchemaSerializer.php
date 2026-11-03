@@ -39,6 +39,12 @@ final readonly class ScalarSchemaSerializer
             'jsonSchemaDialect' => $schema->jsonSchemaDialect,
             'discriminator' => $schema->discriminator,
             'xml' => $schema->xml,
+            'id' => $schema->id,
+            'anchor' => $schema->anchor,
+            'dynamicAnchor' => $schema->dynamicAnchor,
+            'dynamicRef' => $schema->dynamicRef,
+            'comment' => $schema->comment,
+            'vocabulary' => $schema->vocabulary,
             default => null,
         };
     }

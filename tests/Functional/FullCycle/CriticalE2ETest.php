@@ -7,6 +7,7 @@ namespace Duyler\OpenApi\Test\Functional\FullCycle;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Test\Support\FixtureLocator;
+use Duyler\OpenApi\Test\Support\TestEventBuilders;
 use Duyler\OpenApi\Validator\Exception\MissingRequestBodyException;
 use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -216,8 +217,13 @@ YAML;
     #[Test]
     public function wrong_response_content_type_skips_body_validation(): void
     {
+        $warnings = [];
+        $dispatcher = TestEventBuilders::unsupportedMediaTypeWarningCollector($warnings);
+
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::PETSTORE_SPEC)
+            ->withEventDispatcher($dispatcher)
+            ->withLenientResponses()
             ->build();
 
         $request = $this->psrFactory->createServerRequest('POST', '/pets')
@@ -234,11 +240,12 @@ YAML;
 
         $validator->validateResponse($response, $operation);
 
-        $this->expectNotToPerformAssertions();
+        self::assertCount(1, $warnings);
+        self::assertSame('text/xml', $warnings[0]->mediaType);
     }
 
     #[Test]
-    public function multipart_form_data_request_parses_and_validates(): void
+    public function multipart_form_data_parts_populate_object_properties_and_validate(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlFile(FixtureLocator::path('request-validation-specs/multipart-data.yaml'))
@@ -264,16 +271,9 @@ YAML;
             ->withHeader('Content-Type', 'multipart/form-data; boundary=----TestBoundary12345')
             ->withBody($this->psrFactory->createStream($multipartBody));
 
-        $exceptionCaught = false;
-        $exceptionMessage = '';
-        try {
-            $validator->validateRequest($request);
-        } catch (ValidationException $e) {
-            $exceptionCaught = true;
-            $exceptionMessage = $e->getMessage();
-        }
+        $operation = $validator->validateRequest($request);
 
-        $this->assertTrue($exceptionCaught, 'Multipart data parsed as array triggers schema validation');
-        $this->assertStringContainsString('file', $exceptionMessage);
+        self::assertSame('POST', $operation->method);
+        self::assertSame('/upload', $operation->path);
     }
 }

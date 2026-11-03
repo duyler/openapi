@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Response;
 
+use Duyler\OpenApi\Event\UnsupportedResponseMediaTypeWarningEvent;
 use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\MediaType;
 use Duyler\OpenApi\Schema\Model\Schema;
@@ -11,8 +12,10 @@ use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Dto\CoercionContext;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
+use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
 use Duyler\OpenApi\Validator\Example\ExampleValidator;
 use Duyler\OpenApi\Validator\Example\ValidatesExamplesTrait;
+use Duyler\OpenApi\Validator\ExternalMediaType;
 use Duyler\OpenApi\Validator\Request\ContentTypeNegotiator;
 use Duyler\OpenApi\Validator\Request\MediaTypeMatcher;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
@@ -33,7 +36,7 @@ final readonly class ResponseBodyValidatorWithContext
     private readonly ExampleValidator $exampleValidator;
 
     public function __construct(
-        private readonly OpenApiDocument $document,
+        OpenApiDocument $document,
         private readonly SchemaValidatorDependencies $dependencies,
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
     ) {
@@ -47,7 +50,7 @@ final readonly class ResponseBodyValidatorWithContext
         $this->exampleValidator = new ExampleValidator();
 
         $this->contextSchemaValidator = $this->dependencies->rootSchemaValidator(
-            $this->document,
+            $document,
             $this->configuration,
         );
     }
@@ -63,19 +66,28 @@ final readonly class ResponseBodyValidatorWithContext
 
         $mediaType = $this->negotiator->getMediaType($contentType);
         $mediaTypeKey = MediaTypeMatcher::findMatch($mediaType, array_keys($content->mediaTypes));
-        $mediaTypeSchema = null === $mediaTypeKey ? null : $content->mediaTypes[$mediaTypeKey];
 
-        if (null === $mediaTypeSchema) {
+        if (null === $mediaTypeKey) {
+            if (false === $this->configuration->lenientResponses) {
+                throw new UnsupportedMediaTypeException($contentType, array_keys($content->mediaTypes));
+            }
+
+            $this->dependencies->eventDispatcher?->dispatch(
+                UnsupportedResponseMediaTypeWarningEvent::forType($contentType),
+            );
+
             return;
         }
+
+        $mediaTypeSchema = $content->mediaTypes[$mediaTypeKey];
 
         if (StreamingMediaTypeDetector::isStreaming($contentType)) {
-            $this->validateStreamingContent($body, $mediaTypeSchema, $contentType);
+            $this->validateStreamingContent($body, $mediaTypeSchema, $contentType, $mediaTypeKey);
 
             return;
         }
 
-        $this->validateRegularContent($body, $mediaTypeSchema, $mediaType, $contentType);
+        $this->validateRegularContent($body, $mediaTypeSchema, $mediaType, $contentType, $mediaTypeKey);
     }
 
     public function validateStream(
@@ -89,11 +101,20 @@ final readonly class ResponseBodyValidatorWithContext
 
         $mediaType = $this->negotiator->getMediaType($contentType);
         $mediaTypeKey = MediaTypeMatcher::findMatch($mediaType, array_keys($content->mediaTypes));
-        $mediaTypeSchema = null === $mediaTypeKey ? null : $content->mediaTypes[$mediaTypeKey];
 
-        if (null === $mediaTypeSchema) {
+        if (null === $mediaTypeKey) {
+            if (false === $this->configuration->lenientResponses) {
+                throw new UnsupportedMediaTypeException($contentType, array_keys($content->mediaTypes));
+            }
+
+            $this->dependencies->eventDispatcher?->dispatch(
+                UnsupportedResponseMediaTypeWarningEvent::forType($contentType),
+            );
+
             return;
         }
+
+        $mediaTypeSchema = $content->mediaTypes[$mediaTypeKey];
 
         $schema = $mediaTypeSchema->itemSchema ?? $mediaTypeSchema->schema;
 
@@ -101,15 +122,19 @@ final readonly class ResponseBodyValidatorWithContext
             return;
         }
 
-        $effectiveContentType = $mediaTypeSchema->itemEncoding->contentType ?? $contentType;
-        $items = $this->streamingParser->parseStream($stream, $effectiveContentType);
+        $itemContentType = $mediaTypeSchema->itemEncoding?->contentType;
+        $skipContentMediaType = ExternalMediaType::isDefined($itemContentType, $mediaTypeKey);
+        $items = $this->streamingParser->parseStream(
+            $stream,
+            ExternalMediaType::primary($itemContentType, $contentType),
+        );
 
         foreach ($items as $item) {
             if (null === $item) {
                 continue;
             }
 
-            $this->validateAgainstSchema($item, $schema);
+            $this->validateAgainstSchema($item, $schema, $skipContentMediaType);
         }
     }
 
@@ -118,6 +143,7 @@ final readonly class ResponseBodyValidatorWithContext
         MediaType $mediaTypeSchema,
         string $mediaType,
         string $contentType,
+        string $mediaTypeKey,
     ): void {
         /** @var array|int|string|float|bool|null $parsedBody */
         $parsedBody = $this->dependencies->bodyParser->parse($body, $mediaType, $contentType);
@@ -133,7 +159,11 @@ final readonly class ResponseBodyValidatorWithContext
         }
 
         if (null !== $mediaTypeSchema->schema) {
-            $this->validateAgainstSchema($parsedBody, $mediaTypeSchema->schema);
+            $this->validateAgainstSchema(
+                $parsedBody,
+                $mediaTypeSchema->schema,
+                ExternalMediaType::isDefined(null, $mediaTypeKey),
+            );
         }
 
         $this->dispatchExampleWarnings(
@@ -148,6 +178,7 @@ final readonly class ResponseBodyValidatorWithContext
         string $body,
         MediaType $mediaType,
         string $contentType,
+        string $mediaTypeKey,
     ): void {
         $schema = $mediaType->itemSchema ?? $mediaType->schema;
 
@@ -155,23 +186,32 @@ final readonly class ResponseBodyValidatorWithContext
             return;
         }
 
-        $effectiveContentType = $mediaType->itemEncoding->contentType ?? $contentType;
-        $items = $this->streamingParser->parse($body, $effectiveContentType);
+        $itemContentType = $mediaType->itemEncoding?->contentType;
+        $skipContentMediaType = ExternalMediaType::isDefined($itemContentType, $mediaTypeKey);
+        $items = $this->streamingParser->parse(
+            $body,
+            ExternalMediaType::primary($itemContentType, $contentType),
+        );
 
         foreach ($items as $item) {
             if (null === $item) {
                 continue;
             }
 
-            $this->validateAgainstSchema($item, $schema);
+            $this->validateAgainstSchema($item, $schema, $skipContentMediaType);
         }
     }
 
     /**
      * @param array<int|string, mixed>|int|string|float|bool|null $data
      */
-    private function validateAgainstSchema(mixed $data, Schema $schema): void
+    private function validateAgainstSchema(mixed $data, Schema $schema, bool $skipContentMediaType): void
     {
-        $this->contextSchemaValidator->validate($data, $schema, ValidatorMode::Response);
+        $this->contextSchemaValidator->validate(
+            $data,
+            $schema,
+            ValidatorMode::Response,
+            skipContentMediaType: $skipContentMediaType,
+        );
     }
 }

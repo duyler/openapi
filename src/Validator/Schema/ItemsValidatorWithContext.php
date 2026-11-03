@@ -30,24 +30,30 @@ final readonly class ItemsValidatorWithContext
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
     ) {}
 
-    public function validateWithContext(array $data, Schema $schema, ValidationContext $context): void
+    public function validateWithContext(mixed $data, Schema $schema, ValidationContext $context): void
     {
         $this->validate($data, $schema, $context, true);
     }
 
-    public function validateWithContextIgnoringDiscriminator(array $data, Schema $schema, ValidationContext $context): void
+    public function validateWithContextIgnoringDiscriminator(mixed $data, Schema $schema, ValidationContext $context): void
     {
         $this->validate($data, $schema, $context, false);
     }
 
-    private function validate(array $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
+    private function validate(mixed $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
     {
         if (null === $schema->items) {
             return;
         }
 
+        $values = JsonShape::arrayValues($data);
+
+        if (null === $values) {
+            return;
+        }
+
         if (is_bool($schema->items)) {
-            BooleanItemsValidator::validate($data, $schema, $context);
+            BooleanItemsValidator::validate($values, $schema, $context);
 
             return;
         }
@@ -55,29 +61,32 @@ final readonly class ItemsValidatorWithContext
         $errors = [];
         $itemSchema = $schema->items;
         $prefixCount = null !== $schema->prefixItems ? count($schema->prefixItems) : 0;
-        $allowNull = SchemaValueNormalizer::allowsNull($itemSchema, $context->nullableAsType);
+        $allowNull = SchemaValueNormalizer::allowsNull($itemSchema, $context->nullableAsType, $context->dialectProfile);
         $rootValidator = $this->dependencies->rootSchemaValidator($this->document, $this->configuration);
 
-        foreach ($data as $index => $arrayItem) {
+        foreach ($values as $index => $arrayItem) {
             /** @var int $index */
             if ($index < $prefixCount) {
                 continue;
             }
 
             try {
+                $childContext = $context->forkForBranch();
                 $context->enterBreadcrumbIndex($index);
 
                 try {
                     $normalizedItem = SchemaValueNormalizer::normalize($arrayItem, $allowNull);
                     if ($useDiscriminator) {
-                        $rootValidator->validateWithContext($normalizedItem, $itemSchema, $context);
+                        $rootValidator->validateWithContext($normalizedItem, $itemSchema, $childContext);
                     } else {
-                        $rootValidator->validateWithContextIgnoringDiscriminator($normalizedItem, $itemSchema, $context);
+                        $rootValidator->validateWithContextIgnoringDiscriminator($normalizedItem, $itemSchema, $childContext);
                     }
-                    $context->markItemEvaluated($index);
                 } finally {
                     $context->leaveBreadcrumb();
                 }
+
+                $context->markItemEvaluated($index);
+                $context->mergeChildAnnotations($childContext);
             } catch (DiscriminatorMismatchException|
                 InvalidDiscriminatorValueException|
                 InvalidFormatException|

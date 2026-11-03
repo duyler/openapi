@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Dto;
 
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
+use Duyler\OpenApi\Validator\FormatAssertionMode;
 use Duyler\OpenApi\Validator\PregExecutor;
 
 final readonly class ValidatorConfiguration
@@ -30,5 +31,9 @@ final readonly class ValidatorConfiguration
         public readonly int $maxRegexBacktracks = self::DEFAULT_MAX_REGEX_BACKTRACKS,
         public readonly int $maxStreamingRecords = self::DEFAULT_MAX_STREAMING_RECORDS,
         public readonly bool $strictCoercion = true,
+        public readonly ?DialectProfile $dialectProfile = null,
+        public readonly bool $contentAssertionsEnabled = false,
+        public readonly FormatAssertionMode $formatAssertionMode = FormatAssertionMode::Assertion,
+        public readonly bool $lenientResponses = false,
     ) {}
 }

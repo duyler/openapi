@@ -36,8 +36,12 @@ final class HostnameValidatorTest extends TestCase
             'single letter domain' => ['a.com'],
             'numeric tld' => ['example.123'],
             'max length hostname' => [str_repeat('a', 63) . '.' . str_repeat('b', 63) . '.' . str_repeat('c', 63) . '.com'],
-            'IDN german umlaut' => ['münchen.de'],
-            'IDN punycode pass-through' => ['xn--mnchen-3ya.de'],
+            'IDN punycode label' => ['xn--mnchen-3ya.de'],
+            'punycode pair' => ['xn--9n2bp8q.xn--9t4b11yi5a'],
+            'pvalid exception punycode' => ['xn--zca29lwxobi7a'],
+            'middle dot between l in punycode' => ['xn--ll-0ea'],
+            'consecutive inner hyphens' => ['a--b.com'],
+            'uppercase punycode body' => ['xn--NXASMQ6B'],
         ];
     }
 
@@ -63,6 +67,31 @@ final class HostnameValidatorTest extends TestCase
             'double dot' => ['example..com'],
             'spaces' => ['exam ple.com'],
             'special characters' => ['exam!ple.com'],
+            'non-ascii umlaut' => ['münchen.de'],
+            'idn label separator' => ['example．com'],
+            'kelvin sign' => ["\u{212A}elvin.example.com"],
+            'trailing newline' => ["example.com\n"],
+            'invalid punycode' => ['xn--X'],
+            'non-canonical punycode' => ['xn---9uc'],
+            'punycode decoding to disallowed code point' => ['xn--7a'],
+            'punycode decoding to all-ascii label' => ['xn--example-'],
+            'punycode with hangul tone mark' => ['xn--07jt112bpxg.xn--9t4b11yi5a'],
+            'punycode disallowed right-to-left exception' => ['xn--chb89f'],
+            'punycode disallowed left-to-right exception' => ['xn--07jceefgh4c'],
+            'punycode leading spacing mark' => ['xn--hello-txk'],
+            'punycode leading nonspacing mark' => ['xn--hello-zed'],
+            'punycode leading enclosing mark' => ['xn--hello-6bf'],
+            'punycode middle dot without preceding l' => ['xn--al-0ea'],
+            'punycode middle dot with nothing preceding' => ['xn--l-fda'],
+            'punycode middle dot without following l' => ['xn--la-0ea'],
+            'punycode middle dot with nothing following' => ['xn--l-gda'],
+            'punycode greek keraia without greek follower' => ['xn--S-jib3p'],
+            'punycode greek keraia without follower' => ['xn--wva3j'],
+            'punycode hebrew geresh without hebrew' => ['xn--A-2hc5h'],
+            'punycode katakana middle dot without han' => ['xn--defabc-k64e'],
+            'punycode katakana middle dot alone' => ['xn--vek'],
+            'punycode bidi rule violation' => ['xn--0ca24w'],
+            'punycode double hyphen at third and fourth position' => ['XN--aa---o47jg78q'],
         ];
     }
 
@@ -76,21 +105,17 @@ final class HostnameValidatorTest extends TestCase
     }
 
     #[Test]
-    public function idn_hostname_passes_via_punycode_conversion(): void
+    public function non_ascii_value_is_rejected_per_rfc_1034(): void
     {
-        $idnHostname = 'münchen.de';
-
         $exception = null;
 
         try {
-            $this->validator->validate($idnHostname);
+            $this->validator->validate('münchen.de');
         } catch (InvalidFormatException $exception) {
         }
 
-        $this->assertNull(
-            $exception,
-            'IDN hostname "münchen.de" must be accepted via idn_to_ascii punycode conversion per RFC 5891.',
-        );
+        $this->assertNotNull($exception);
+        $this->assertSame('hostname', $exception->format);
     }
 
     #[Test]
@@ -134,7 +159,7 @@ final class HostnameValidatorTest extends TestCase
 
         $this->assertNotNull($exception);
         $this->assertSame('hostname', $exception->format);
-        $this->assertStringContainsString('253', $exception->getMessage());
+        $this->assertStringContainsString('Invalid hostname format', $exception->getMessage());
     }
 
     #[Test]

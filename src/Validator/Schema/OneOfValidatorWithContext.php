@@ -11,16 +11,20 @@ use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\DiscriminatorDataError;
+use Duyler\OpenApi\Validator\Exception\DiscriminatorMismatchException;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
+use Duyler\OpenApi\Validator\Exception\InvalidDiscriminatorValueException;
+use Duyler\OpenApi\Validator\Exception\MissingDiscriminatorPropertyException;
 use Duyler\OpenApi\Validator\Exception\NestedValidationError;
 use Duyler\OpenApi\Validator\Exception\OneOfError;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\TypeFormatter;
 
 use function implode;
-use function is_array;
 use function sprintf;
+use function is_array;
 
 final readonly class OneOfValidatorWithContext
 {
@@ -52,7 +56,7 @@ final readonly class OneOfValidatorWithContext
             return;
         }
 
-        if (null === $data && SchemaValueNormalizer::isNullableSchema($schema, $context->nullableAsType)) {
+        if (null === $data && SchemaValueNormalizer::isNullableSchema($schema, $context->nullableAsType, $context->dialectProfile)) {
             return;
         }
 
@@ -69,13 +73,15 @@ final readonly class OneOfValidatorWithContext
         if (
             null === $data
             && null !== $schema->oneOf
-            && $this->hasNullableSchema($schema->oneOf)
+            && $this->hasNullableSchema($schema->oneOf, $context)
             && $context->nullableAsType
         ) {
             return;
         }
 
-        if (false === is_array($data)) {
+        $values = JsonShape::objectValues($data);
+
+        if (null === $values) {
             throw new ValidationException(
                 'Discriminator validation failed: data must be an object',
                 errors: [
@@ -89,7 +95,22 @@ final readonly class OneOfValidatorWithContext
 
         $dataPath = $context->breadcrumbs->currentPath();
 
-        $this->discriminatorValidator->validate($data, $schema, $this->document, $dataPath, $context);
+        if ($context->dialectProfile->discriminatorIsHint) {
+            try {
+                $this->discriminatorValidator->validate($values, $schema, $this->document, $dataPath, $context);
+            } catch (
+                UnknownDiscriminatorValueException
+                |MissingDiscriminatorPropertyException
+                |InvalidDiscriminatorValueException
+                |DiscriminatorMismatchException
+            ) {
+                $this->validateWithoutDiscriminator($data, $schema->oneOf ?? [], $context);
+            }
+
+            return;
+        }
+
+        $this->discriminatorValidator->validate($values, $schema, $this->document, $dataPath, $context);
     }
 
     /**
@@ -104,10 +125,10 @@ final readonly class OneOfValidatorWithContext
         };
     }
 
-    private function hasNullableSchema(array $oneOf): bool
+    private function hasNullableSchema(array $oneOf, ValidationContext $context): bool
     {
-        return array_any($oneOf, fn(Schema $subSchema): bool => $subSchema->nullable
-            || SchemaValueNormalizer::doesTypeIncludeNull($subSchema->type));
+        return array_any($oneOf, fn(Schema $subSchema): bool => SchemaValueNormalizer::doesTypeIncludeNull($subSchema->type)
+            || SchemaValueNormalizer::isNullableSchema($subSchema, $context->nullableAsType, $context->dialectProfile));
     }
 
     private function validateWithoutDiscriminator(mixed $data, array $oneOf, ValidationContext $context): void
@@ -126,7 +147,7 @@ final readonly class OneOfValidatorWithContext
             $schemaPath = sprintf('/oneOf/%d', $index);
 
             try {
-                $allowNull = SchemaValueNormalizer::allowsNull($subSchema, $context->nullableAsType);
+                $allowNull = SchemaValueNormalizer::allowsNull($subSchema, $context->nullableAsType, $context->dialectProfile);
                 $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
                 $rootValidator->validateWithContext($normalizedData, $subSchema, $childContext);
                 ++$validCount;

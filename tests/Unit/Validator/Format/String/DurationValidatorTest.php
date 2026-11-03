@@ -38,6 +38,9 @@ final class DurationValidatorTest extends TestCase
             'large values' => ['P100Y'],
             'months only' => ['P6M'],
             'hours only' => ['PT24H'],
+            'year month day composition' => ['P1Y1M1D'],
+            'months and days composition' => ['P1M1D'],
+            'year and month composition' => ['P1Y1M'],
         ];
     }
 
@@ -63,6 +66,11 @@ final class DurationValidatorTest extends TestCase
             'negative value' => ['-P1Y'],
             'decimal value' => ['P1.5Y'],
             'random string' => ['xyz'],
+            'T with no time elements' => ['P1YT'],
+            'days without months after years' => ['P1Y2D'],
+            'seconds without minutes after hours' => ['PT1H2S'],
+            'trailing newline' => ["P1D\n"],
+            'weeks combined with date components' => ['P1W2D'],
         ];
     }
 

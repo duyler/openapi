@@ -20,7 +20,6 @@ use Duyler\OpenApi\Validator\TypeFormatter;
 use function array_key_exists;
 use function end;
 use function explode;
-use function is_array;
 use function is_string;
 
 final readonly class DiscriminatorValidator
@@ -30,11 +29,8 @@ final readonly class DiscriminatorValidator
         private readonly ValidatorConfiguration $configuration = new ValidatorConfiguration(),
     ) {}
 
-    /**
-     * @param array<array-key, mixed>|int|string|float|bool $data
-     */
     public function validate(
-        array|int|string|float|bool $data,
+        mixed $data,
         Schema $schema,
         OpenApiDocument $document,
         string $dataPath = '/',
@@ -51,6 +47,7 @@ final readonly class DiscriminatorValidator
             errorFormatter: $this->dependencies->errorFormatter,
             nullableAsType: $this->configuration->nullableAsType,
             emptyArrayStrategy: $this->configuration->emptyArrayStrategy,
+            dialectProfile: $this->configuration->dialectProfile,
         ));
 
         if (null === $discriminator->propertyName) {
@@ -66,7 +63,7 @@ final readonly class DiscriminatorValidator
     }
 
     private function validateWithoutPropertyName(
-        array|int|string|float|bool $data,
+        mixed $data,
         Discriminator $discriminator,
         OpenApiDocument $document,
         ValidationContext $context,
@@ -90,7 +87,9 @@ final readonly class DiscriminatorValidator
 
     private function extractValue(mixed $data, string $propertyName, string $dataPath): string
     {
-        if (false === is_array($data)) {
+        $values = JsonShape::objectValues($data);
+
+        if (null === $values) {
             throw new DiscriminatorMismatchException(
                 expectedType: 'object',
                 actualType: TypeFormatter::format($data),
@@ -99,14 +98,14 @@ final readonly class DiscriminatorValidator
             );
         }
 
-        if (false === array_key_exists($propertyName, $data)) {
+        if (false === array_key_exists($propertyName, $values)) {
             throw new MissingDiscriminatorPropertyException(
                 propertyName: $propertyName,
                 dataPath: $dataPath,
             );
         }
 
-        $value = $data[$propertyName];
+        $value = $values[$propertyName];
 
         if (false === is_string($value)) {
             throw new InvalidDiscriminatorValueException(

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Parser\Internal;
 
+use Duyler\OpenApi\Schema\Exception\InvalidContentTypeException;
 use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\Encoding;
 use Duyler\OpenApi\Schema\Model\Example;
@@ -19,6 +20,7 @@ use Closure;
 
 use function is_array;
 use function is_bool;
+use function is_string;
 use function strtolower;
 
 /** @internal */
@@ -81,7 +83,7 @@ final readonly class ComponentTreeBuilder
     public function buildEncoding(array $data): Encoding
     {
         return new Encoding(
-            contentType: TypeHelper::asStringOrNull($data['contentType'] ?? null),
+            contentType: $this->parseContentType($data['contentType'] ?? null),
             headers: $this->nullable($data, 'headers', $this->buildHeaders(...)),
             style: TypeHelper::asStringOrNull($data['style'] ?? null),
             explode: TypeHelper::asBoolOrNull($data['explode'] ?? null),
@@ -150,6 +152,7 @@ final readonly class ComponentTreeBuilder
         }
 
         return new Header(
+            ref: TypeHelper::asStringOrNull($data['$ref'] ?? null),
             description: TypeHelper::asStringOrNull($data['description'] ?? null),
             required: (bool) ($data['required'] ?? false),
             deprecated: (bool) ($data['deprecated'] ?? false),
@@ -202,6 +205,36 @@ final readonly class ComponentTreeBuilder
         return isset($data[$key]) && is_array($data[$key])
             ? $builder(TypeHelper::asArray($data[$key]))
             : null;
+    }
+
+    /**
+     * @return string|list<string>|null
+     */
+    private function parseContentType(mixed $raw): string|array|null
+    {
+        if (null === $raw || is_string($raw)) {
+            return $raw;
+        }
+
+        if (false === is_array($raw)) {
+            throw InvalidContentTypeException::forEncoding();
+        }
+
+        $contentType = [];
+
+        foreach ($raw as $item) {
+            if (false === is_string($item)) {
+                throw InvalidContentTypeException::forEncoding();
+            }
+
+            $contentType[] = $item;
+        }
+
+        if ([] === $contentType) {
+            throw InvalidContentTypeException::forEncoding();
+        }
+
+        return $contentType;
     }
 
     /** @param array<string, mixed> $data */

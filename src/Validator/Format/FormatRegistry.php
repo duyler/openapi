@@ -34,6 +34,22 @@ final readonly class FormatRegistry
         return isset($this->validators[$type][$format]);
     }
 
+    /**
+     * @return list<string>
+     */
+    public function types(string $format): array
+    {
+        $types = [];
+
+        foreach ($this->validators as $type => $formats) {
+            if (isset($formats[$format])) {
+                $types[] = $type;
+            }
+        }
+
+        return $types;
+    }
+
     public function withBase(self $base): self
     {
         $merged = $base->validators;

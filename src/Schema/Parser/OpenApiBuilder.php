@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Schema\Parser;
 
+use Duyler\OpenApi\Schema\Exception\InvalidContentTypeException;
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
+use Duyler\OpenApi\Schema\Exception\TypeArrayNotSupportedException;
 use Duyler\OpenApi\Schema\Model\Servers;
 use Duyler\OpenApi\Schema\Model\SecurityRequirement;
 use Duyler\OpenApi\Schema\Model\Tags;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Schema\SchemaParserInterface;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\Exception\InvalidUtf8Exception;
 use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
 use Duyler\OpenApi\Validator\TypeFormatter;
@@ -30,8 +33,10 @@ abstract class OpenApiBuilder implements SchemaParserInterface
 
     public function __construct(
         ?DeprecationLogger $deprecationLogger = null,
+        ?bool $legacyExplodeDefaults = null,
     ) {
         $this->context = new OpenApiBuildContext($deprecationLogger ?? new DeprecationLogger());
+        $this->context->legacyExplodeDefaults = $legacyExplodeDefaults;
     }
 
     #[Override]
@@ -51,7 +56,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
             }
 
             return $this->buildDocument($data);
-        } catch (InvalidSchemaException|InvalidUtf8Exception|SpecTooLargeException $e) {
+        } catch (InvalidSchemaException|InvalidUtf8Exception|SpecTooLargeException|TypeArrayNotSupportedException|InvalidContentTypeException $e) {
             throw $e;
         } catch (Throwable $e) {
             throw new InvalidSchemaException(
@@ -70,6 +75,7 @@ abstract class OpenApiBuilder implements SchemaParserInterface
     {
         $this->validateVersion($data);
         $this->context->documentVersion = (string) $data['openapi'];
+        $this->context->dialectProfile = DialectProfile::fromOpenApiVersion($this->context->documentVersion);
 
         $self = TypeHelper::asStringOrNull($data['$self'] ?? null);
         $this->validateSelfUri($self);

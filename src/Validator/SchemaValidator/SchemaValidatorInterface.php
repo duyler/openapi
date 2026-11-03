@@ -10,5 +10,5 @@ use Duyler\OpenApi\Validator\Error\ValidationContext;
 /** @internal */
 interface SchemaValidatorInterface
 {
-    public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void;
+    public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void;
 }

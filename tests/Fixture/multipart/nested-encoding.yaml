@@ -1,0 +1,31 @@
+openapi: 3.2.0
+info:
+  title: Nested multipart/mixed Encoding
+  version: 1.0.0
+paths:
+  /upload:
+    post:
+      operationId: uploadNested
+      requestBody:
+        required: true
+        content:
+          multipart/mixed:
+            schema:
+              type: array
+              prefixItems:
+              - type: array
+              - type: array
+                prefixItems:
+                - type: object
+                - type: string
+                - {}
+            prefixEncoding:
+            - {}
+            - contentType: multipart/mixed
+              prefixEncoding:
+              - contentType: application/xml
+              - {}
+              - contentType: image/png
+      responses:
+        '200':
+          description: Uploaded

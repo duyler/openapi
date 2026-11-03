@@ -10,9 +10,6 @@ use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\PregExecutor;
-use Duyler\OpenApi\Validator\Security\Internal\ApiKeyValidator;
-use Duyler\OpenApi\Validator\Security\Internal\BearerAuthValidator;
-use Duyler\OpenApi\Validator\Security\Internal\SchemeCredentialReporter;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -24,15 +21,16 @@ final readonly class SecurityValidator
 {
     private readonly LoggerInterface $logger;
 
-    private readonly BearerAuthValidator $bearerValidator;
+    private readonly SecuritySchemeHandlerRegistry $handlerRegistry;
 
     public function __construct(
         ?LoggerInterface $logger = null,
-        private readonly PregExecutor $pregExecutor = new PregExecutor(),
-        private readonly ApiKeyValidator $apiKeyValidator = new ApiKeyValidator(),
+        PregExecutor $pregExecutor = new PregExecutor(),
+        ?SecuritySchemeHandlerRegistry $handlerRegistry = null,
     ) {
         $this->logger = $logger ?? new NullLogger();
-        $this->bearerValidator = new BearerAuthValidator($this->pregExecutor);
+        $this->handlerRegistry = $handlerRegistry
+            ?? SecuritySchemeHandlerRegistry::buildIn($pregExecutor, $this->logger);
     }
 
     public function validate(SecurityValidationContext $context): void
@@ -121,15 +119,16 @@ final readonly class SecurityValidator
         SecurityScheme $scheme,
     ): ?MissingSecurityCredentialsError {
         $reporter = new SchemeCredentialReporter($schemeName, $this->logger);
+        $handler = $this->handlerRegistry->findSupporting($scheme);
 
-        return match ($scheme->type) {
-            'http' => $this->bearerValidator->validate($request, $scheme, $reporter),
-            'apiKey' => $this->apiKeyValidator->validate($request, $scheme, $reporter),
-            default => throw new UnsupportedSecuritySchemeException(
+        if (null === $handler) {
+            throw new UnsupportedSecuritySchemeException(
                 schemeName: $schemeName,
                 schemeType: $scheme->type,
-            ),
-        };
+            );
+        }
+
+        return $handler->validate($request, $scheme, $reporter);
     }
 
     private function reportMissing(string $schemeName, string $schemeType, string $location): MissingSecurityCredentialsError

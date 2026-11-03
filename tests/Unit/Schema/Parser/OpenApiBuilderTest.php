@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Schema\Parser;
 
+use Duyler\OpenApi\Schema\Exception\InvalidContentTypeException;
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
 use Duyler\OpenApi\Schema\Model\Callbacks;
 use Duyler\OpenApi\Schema\Model\Components;
@@ -362,7 +363,6 @@ final class OpenApiBuilderTest extends TestCase
                                 'style' => 'form',
                                 'explode' => true,
                                 'allowReserved' => true,
-                                'schema' => ['type' => 'string'],
                                 'examples' => ['example1' => ['value' => 'test']],
                                 'content' => [
                                     'application/json' => [
@@ -389,7 +389,7 @@ final class OpenApiBuilderTest extends TestCase
         $this->assertSame('form', $param->style);
         $this->assertTrue($param->explode);
         $this->assertTrue($param->allowReserved);
-        $this->assertInstanceOf(Schema::class, $param->schema);
+        $this->assertNull($param->schema);
         $this->assertInstanceOf(Content::class, $param->content);
     }
 
@@ -650,7 +650,7 @@ final class OpenApiBuilderTest extends TestCase
                                 'refreshUrl' => 'https://example.com/refresh',
                                 'scopes' => ['read' => 'Read access', 'write' => 'Write access'],
                             ],
-                            'deviceCode' => [
+                            'deviceAuthorization' => [
                                 'tokenUrl' => 'https://example.com/token',
                                 'deviceAuthorizationUrl' => 'https://example.com/device/code',
                                 'scopes' => ['read' => 'Read access'],
@@ -677,11 +677,11 @@ final class OpenApiBuilderTest extends TestCase
         $this->assertSame('https://example.com/refresh', $scheme->flows->authorizationCode->refreshUrl);
         $this->assertSame(['read' => 'Read access', 'write' => 'Write access'], $scheme->flows->authorizationCode->scopes);
 
-        $this->assertNotNull($scheme->flows->deviceCode);
-        $this->assertSame('https://example.com/token', $scheme->flows->deviceCode->tokenUrl);
-        $this->assertSame('https://example.com/device/code', $scheme->flows->deviceCode->deviceAuthorizationUrl);
-        $this->assertSame(['read' => 'Read access'], $scheme->flows->deviceCode->scopes);
-        $this->assertFalse($scheme->flows->deviceCode->deprecated);
+        $this->assertNotNull($scheme->flows->deviceAuthorization);
+        $this->assertSame('https://example.com/token', $scheme->flows->deviceAuthorization->tokenUrl);
+        $this->assertSame('https://example.com/device/code', $scheme->flows->deviceAuthorization->deviceAuthorizationUrl);
+        $this->assertSame(['read' => 'Read access'], $scheme->flows->deviceAuthorization->scopes);
+        $this->assertFalse($scheme->flows->deviceAuthorization->deprecated);
     }
 
     #[Test]
@@ -2230,6 +2230,34 @@ final class OpenApiBuilderTest extends TestCase
 
         $this->expectException(InvalidSchemaException::class);
         $this->expectExceptionMessage('Invalid $self URI: not-a-valid-uri');
+        $this->parser->parse($json);
+    }
+
+    #[Test]
+    public function build_document_with_empty_encoding_content_type_list_refuses(): void
+    {
+        $json = json_encode([
+            'openapi' => '3.2.0',
+            'info' => ['title' => 'Test', 'version' => '1.0.0'],
+            'paths' => [
+                '/profile' => [
+                    'put' => [
+                        'requestBody' => [
+                            'content' => [
+                                'multipart/form-data' => [
+                                    'schema' => ['type' => 'object'],
+                                    'encoding' => ['avatar' => ['contentType' => []]],
+                                ],
+                            ],
+                        ],
+                        'responses' => ['200' => ['description' => 'ok']],
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->expectException(InvalidContentTypeException::class);
+        $this->expectExceptionMessage('Encoding contentType must be a string or a non-empty list of strings');
         $this->parser->parse($json);
     }
 

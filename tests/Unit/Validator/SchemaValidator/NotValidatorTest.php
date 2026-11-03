@@ -6,8 +6,11 @@ namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\SchemaValidator\NotValidator;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
@@ -270,6 +273,51 @@ class NotValidatorTest extends TestCase
         }
 
         self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function empty_not_schema_rejects_null_instance(): void
+    {
+        $schema = new Schema(not: new Schema());
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Data must NOT match the "not" schema');
+
+        $this->validator->validate(null, $schema);
+    }
+
+    #[Test]
+    public function empty_not_schema_rejects_null_instance_with_30_profile(): void
+    {
+        $schema = new Schema(not: new Schema());
+        $context = ValidationContext::fromInit(new ValidationContextInit(
+            pool: $this->pool,
+            dialectProfile: DialectProfile::forOpenApi30(),
+        ));
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate(null, $schema, $context);
+    }
+
+    #[Test]
+    public function null_typed_not_schema_rejects_null_instance(): void
+    {
+        $schema = new Schema(not: new Schema(type: 'null'));
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate(null, $schema);
+    }
+
+    #[Test]
+    public function string_typed_not_schema_allows_null_instance(): void
+    {
+        $schema = new Schema(not: new Schema(type: 'string'));
+
+        $this->validator->validate(null, $schema);
+
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]

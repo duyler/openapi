@@ -155,6 +155,58 @@ class PregExecutorTest extends TestCase
     }
 
     #[Test]
+    public function split_returns_array_of_segments(): void
+    {
+        $executor = new PregExecutor();
+
+        $result = $executor->split('/[\x{002E}]/u', 'a.b.c');
+
+        self::assertSame(['a', 'b', 'c'], $result);
+    }
+
+    #[Test]
+    public function split_returns_false_when_pattern_does_not_split(): void
+    {
+        $executor = new PregExecutor();
+
+        $result = $executor->split('/,/', 'abc');
+
+        self::assertSame(['abc'], $result);
+    }
+
+    #[Test]
+    public function split_throws_on_compile_error(): void
+    {
+        $executor = new PregExecutor();
+
+        $this->expectException(PregRuntimeException::class);
+        $this->expectExceptionMessage('PCRE error ');
+
+        $executor->split('/[unclosed/', 'abc');
+    }
+
+    #[Test]
+    public function split_restores_recursion_limit_on_success(): void
+    {
+        ini_set('pcre.recursion_limit', '444444');
+        $executor = new PregExecutor(maxRecursionLimit: 100);
+
+        $executor->split('/,/', 'a,b');
+
+        self::assertSame('444444', ini_get('pcre.recursion_limit'));
+    }
+
+    #[Test]
+    public function split_respects_limit_argument(): void
+    {
+        $executor = new PregExecutor();
+
+        $result = $executor->split('/,/', 'a,b,c', limit: 2);
+
+        self::assertSame(['a', 'b,c'], $result);
+    }
+
+    #[Test]
     public function restores_previous_backtrack_limit_on_success(): void
     {
         ini_set('pcre.backtrack_limit', '999999');
@@ -295,6 +347,50 @@ class PregExecutorTest extends TestCase
         $captured = $this->captureRecursionLimitDuringMatch(matchAll: true, maxRecursionLimit: 333);
 
         self::assertSame('333', $captured);
+    }
+
+    #[Test]
+    public function replace_callback_with_named_groups_succeeds(): void
+    {
+        $executor = new PregExecutor();
+
+        $result = $executor->replaceCallback(
+            '/{(?<name>\w+)}/',
+            static fn(array $matches): string => strtoupper($matches['name']),
+            'Hello {user}, meet {admin}',
+        );
+
+        self::assertSame('Hello USER, meet ADMIN', $result);
+    }
+
+    #[Test]
+    public function replace_callback_throws_on_compile_error(): void
+    {
+        $executor = new PregExecutor();
+
+        $this->expectException(PregRuntimeException::class);
+        $this->expectExceptionMessage('PCRE error ');
+
+        $executor->replaceCallback('/[unclosed/', static fn(array $matches): string => '', 'abc');
+    }
+
+    #[Test]
+    public function replace_callback_restores_recursion_limit_on_callback_exception(): void
+    {
+        ini_set('pcre.recursion_limit', '777777');
+        $executor = new PregExecutor(maxRecursionLimit: 100);
+
+        try {
+            $executor->replaceCallback(
+                '/{(?<name>\w+)}/',
+                static fn(array $matches): string => throw new RuntimeException('probe'),
+                '{first}',
+            );
+            self::fail('Expected RuntimeException from the replacement callback');
+        } catch (RuntimeException) {
+        }
+
+        self::assertSame('777777', ini_get('pcre.recursion_limit'));
     }
 
     private function captureRecursionLimitDuringMatch(bool $matchAll, int $maxRecursionLimit): string

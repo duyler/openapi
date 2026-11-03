@@ -6,11 +6,13 @@ namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
+use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\SchemaValidator\UnevaluatedItemsValidator;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Override;
@@ -474,5 +476,78 @@ class UnevaluatedItemsValidatorTest extends TestCase
         }
 
         self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function items_annotated_by_composition_branch_satisfy_parent_unevaluated_items_false(): void
+    {
+        $schema = new Schema(
+            allOf: [new Schema(unevaluatedItems: new Schema(type: 'integer'))],
+            unevaluatedItems: false,
+        );
+
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
+
+        $succeeded = false;
+
+        try {
+            $this->rootValidator()->validate([1, 2], $schema, $context);
+            $succeeded = true;
+        } catch (ValidationException|RuntimeException $e) {
+            self::fail(sprintf('Parent unevaluatedItems:false must accept items annotated by the allOf branch on the parent instance path, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function unevaluated_items_false_without_annotating_branch_still_rejects_items(): void
+    {
+        $schema = new Schema(unevaluatedItems: false);
+
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
+
+        $caught = null;
+
+        try {
+            $this->rootValidator()->validate([1, 2], $schema, $context);
+        } catch (ValidationException|RuntimeException $e) {
+            $caught = $e;
+        }
+
+        self::assertNotNull($caught, 'Without an annotating branch, unevaluatedItems:false must reject every item');
+    }
+
+    #[Test]
+    public function annotations_from_failed_composition_branch_do_not_reach_parent(): void
+    {
+        $schema = new Schema(
+            allOf: [new Schema(unevaluatedItems: new Schema(type: 'string'))],
+            unevaluatedItems: false,
+        );
+
+        $context = ValidationContext::fromInit(new ValidationContextInit($this->pool, nullableAsType: true));
+
+        $caught = null;
+
+        try {
+            $this->rootValidator()->validate([1, 2], $schema, $context);
+        } catch (ValidationException|RuntimeException $e) {
+            $caught = $e;
+        }
+
+        self::assertNotNull($caught, 'The failed branch (string vs integers) must not annotate items for the parent unevaluatedItems:false');
+    }
+
+    private function rootValidator(): SchemaValidatorInterface
+    {
+        $dependencies = new SchemaValidatorDependencies(
+            refResolver: new RefResolver(),
+            statelessValidators: new StatelessValidatorRegistry($this->pool, BuiltinFormats::create()),
+            pool: $this->pool,
+            formatRegistry: BuiltinFormats::create(),
+        );
+
+        return $dependencies->rootStatelessValidator();
     }
 }

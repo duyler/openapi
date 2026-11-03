@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Builder;
 
 use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Callback\CallbackContext;
 use Duyler\OpenApi\Validator\Exception\BodyTooLargeException;
 use Duyler\OpenApi\Validator\Exception\OperationNotFoundException;
 use Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException;
@@ -87,11 +88,14 @@ interface OpenApiValidatorInterface
      *
      * @param ServerRequestInterface $request PSR-7 HTTP request
      * @param string $callbackName Callback name from OpenAPI specification
+     * @param CallbackContext|null $context Triggering-request data for callback runtime
+     *                                      expression evaluation; without it, runtime
+     *                                      expressions follow strict/lax fallback rules.
      * @return Operation Matched operation from OpenAPI specification
      * @throws ValidationException If validation fails
      * @throws InvalidArgumentException If callback name not found in specification
      */
-    public function validateCallback(ServerRequestInterface $request, string $callbackName): Operation;
+    public function validateCallback(ServerRequestInterface $request, string $callbackName, ?CallbackContext $context = null): Operation;
 
     /**
      * Resolve link parameters from response data.

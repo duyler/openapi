@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Request;
 
 use Duyler\OpenApi\Schema\Model\Parameter;
+use Duyler\OpenApi\Schema\Model\ParameterStyles;
 use Duyler\OpenApi\Validator\Exception\InvalidParameterException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 
@@ -28,7 +29,7 @@ final readonly class ParameterDeserializer
 
         assert(null !== $param->in && null !== $param->name, 'Parameter in and name must not be null when deserialize is called');
 
-        $style = $param->style ?? $this->getDefaultStyle($param->in);
+        $style = $param->style ?? ParameterStyles::defaultFor($param->in);
 
         if (is_array($normalized)) {
             return 'form' === $style
@@ -47,17 +48,6 @@ final readonly class ParameterDeserializer
             'cookie' => $this->deserializeCookie($normalized, $param),
             'deepObject' => $this->deserializeDeepObject($normalized),
             default => $normalized,
-        };
-    }
-
-    private function getDefaultStyle(string $in): string
-    {
-        return match ($in) {
-            'path' => 'simple',
-            'query' => 'form',
-            'header' => 'simple',
-            'cookie' => 'form',
-            default => 'form',
         };
     }
 

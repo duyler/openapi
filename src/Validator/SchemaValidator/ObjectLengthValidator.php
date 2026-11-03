@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\MaxPropertiesError;
 use Duyler\OpenApi\Validator\Exception\MinPropertiesError;
+use Duyler\OpenApi\Validator\Schema\JsonContainer;
 use Duyler\OpenApi\Validator\SchemaValidator\Trait\LengthValidationTrait;
 use Override;
 
@@ -29,22 +30,34 @@ final readonly class ObjectLengthValidator extends AbstractSchemaValidator imple
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
-        if (false === is_array($data)) {
-            return;
-        }
-
-        if ([] === $data) {
-            $strategy = $context?->emptyArrayStrategy ?? EmptyArrayStrategy::AllowBoth;
-
-            if (EmptyArrayStrategy::PreferArray === $strategy) {
+        if ($data instanceof JsonContainer) {
+            if (false === $data->isObject()) {
                 return;
             }
-        } elseif (array_is_list($data)) {
-            return;
+
+            $values = $data->values;
+        } else {
+            if (false === is_array($data)) {
+                return;
+            }
+
+            if ([] === $data) {
+                $strategy = $context?->emptyArrayStrategy ?? EmptyArrayStrategy::AllowBoth;
+
+                if (EmptyArrayStrategy::PreferArray === $strategy) {
+                    return;
+                }
+
+                $values = $data;
+            } elseif (array_is_list($data)) {
+                return;
+            } else {
+                $values = $data;
+            }
         }
 
         $dataPath = $this->getDataPath($context);
-        $count = count($data);
+        $count = count($values);
 
         $this->validateLength(
             actual: $count,

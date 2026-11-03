@@ -33,6 +33,24 @@ final class ScalarSiblingMergerTest extends TestCase
     }
 
     #[Test]
+    public function merge_conflicting_scalar_siblings_normalize_to_null_or_intersection(): void
+    {
+        $merger = new ScalarSiblingMerger();
+
+        self::assertNull($merger->mergeFormat('json', 'date-time'));
+        self::assertSame('json', $merger->mergeFormat('json', null));
+        self::assertSame(['a'], $merger->mergeEnum(null, ['a']));
+        self::assertSame('b', $merger->mergeType(['a', 'b'], ['b', 'c']));
+        self::assertSame(['b', 'c'], $merger->mergeType(['a', 'b', 'c'], ['b', 'c', 'd']));
+        self::assertNull($merger->mergeType(['a'], ['b']));
+        self::assertSame(['y'], $merger->mergeEnum(['x', 'y'], ['y', 'z']));
+        self::assertNull($merger->mergeNullableIdentical(2.0, 3.0));
+        self::assertNull($merger->mergeNullableIdentical('^a', '^b'));
+        self::assertSame(['x' => 1], $merger->mergeMixedMap(['x' => 1], null));
+        self::assertSame(['x' => 1], $merger->mergeMixedMap(null, ['x' => 1]));
+    }
+
+    #[Test]
     public function merge_nullable_keeps_resolved_nullable_when_sibling_omits_it(): void
     {
         $resolved = new Schema(type: 'string', nullable: true);
@@ -207,16 +225,6 @@ final class ScalarSiblingMergerTest extends TestCase
     }
 
     #[Test]
-    public function merge_string_list_dedupes_and_unions(): void
-    {
-        $merger = new ScalarSiblingMerger();
-
-        $result = $merger->mergeStringList(['a', 'b'], ['b', 'c']);
-
-        self::assertSame(['a', 'b', 'c'], $result);
-    }
-
-    #[Test]
     public function merge_mixed_map_unions_with_sibling_overriding_duplicates(): void
     {
         $merger = new ScalarSiblingMerger();
@@ -224,5 +232,41 @@ final class ScalarSiblingMergerTest extends TestCase
         $result = $merger->mergeMixedMap(['x' => 1, 'y' => 2], ['y' => 3, 'z' => 4]);
 
         self::assertSame(['x' => 1, 'y' => 3, 'z' => 4], $result);
+    }
+
+    #[Test]
+    public function merge_examples_unions_with_sibling_overriding_duplicates(): void
+    {
+        $merger = new ScalarSiblingMerger();
+
+        $result = $merger->mergeExamples(['x' => 1, 'y' => 2], ['y' => 3, 'z' => 4]);
+
+        self::assertSame(['x' => 1, 'y' => 3, 'z' => 4], $result);
+    }
+
+    #[Test]
+    public function merge_examples_returns_resolved_when_sibling_is_null(): void
+    {
+        $merger = new ScalarSiblingMerger();
+
+        self::assertSame(['x' => 1], $merger->mergeExamples(['x' => 1], null));
+    }
+
+    #[Test]
+    public function merge_examples_returns_sibling_when_resolved_is_null(): void
+    {
+        $merger = new ScalarSiblingMerger();
+
+        self::assertSame(['y' => 2], $merger->mergeExamples(null, ['y' => 2]));
+    }
+
+    #[Test]
+    public function merge_examples_reindexes_numeric_keys_as_list_concatenation(): void
+    {
+        $merger = new ScalarSiblingMerger();
+
+        $result = $merger->mergeExamples([5 => 'a', 6 => 'b'], [0 => 'c']);
+
+        self::assertSame(['a', 'b', 'c'], $result);
     }
 }

@@ -83,6 +83,28 @@ paths:
                     type: integer
                 required:
                   - name
+  /spec-events:
+    get:
+      operationId: getSpecEvents
+      responses:
+        '200':
+          description: Server-Sent Events stream with the canonical SSE schema
+          content:
+            text/event-stream:
+              itemSchema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: string
+                  event:
+                    type: string
+                  id:
+                    type: string
+                  retry:
+                    type: integer
+                    minimum: 0
   /stream-with-schema:
     get:
       operationId: getStreamWithSchema

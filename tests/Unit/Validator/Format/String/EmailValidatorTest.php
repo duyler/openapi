@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Unit\Validator\Format\String;
 
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
+use Duyler\OpenApi\Validator\Format\String\IdnEmailValidator;
 use Duyler\OpenApi\Validator\Format\String\EmailValidator;
+use Duyler\OpenApi\Validator\PregExecutor;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -141,17 +143,78 @@ final class EmailValidatorTest extends TestCase
     }
 
     #[Test]
-    public function email_validator_accepts_smtputf8(): void
+    public function email_validator_rejects_quoted_local_failures(): void
+    {
+        $cases = [
+            'dangling backslash at end of quoted string' => '"test' . '\\',
+            'non-ascii character in a quoted pair' => "\"test\\\u{A9}\"@iana.org",
+            'control character inside quoted string' => "\"test\u{7F}\"@iana.org",
+            'quoted local without domain separator' => '"test"',
+            'local part longer than 64 octets' => str_repeat('a', 65) . '@example.com',
+        ];
+
+        foreach ($cases as $label => $value) {
+            $exception = null;
+
+            try {
+                $this->validator->validate($value);
+            } catch (InvalidFormatException $exception) {
+            }
+
+            $this->assertNotNull($exception, sprintf('%s must be rejected', $label));
+            $this->assertSame('email', $exception->format);
+        }
+    }
+
+    #[Test]
+    public function email_validator_rejects_address_literal_failures(): void
+    {
+        $cases = [
+            'unclosed address literal' => 'test@[1.2.3.4',
+            'empty brackets after the at sign' => 'a@[]',
+            'three octets in address literal' => 'a@[1.2.3]',
+            'five octets in address literal' => 'a@[1.2.3.4.5]',
+            'octet above 255 in address literal' => 'joe.bloggs@[127.0.0.300]',
+            'bracketed content that is not an address' => 'test@[RFC-5322-domain-literal]',
+            'ipv6 tag with invalid address' => 'a@[IPv6:gggg::1]',
+        ];
+
+        foreach ($cases as $label => $value) {
+            $exception = null;
+
+            try {
+                $this->validator->validate($value);
+            } catch (InvalidFormatException $exception) {
+            }
+
+            $this->assertNotNull($exception, sprintf('%s must be rejected', $label));
+            $this->assertSame('email', $exception->format);
+        }
+    }
+
+    #[Test]
+    public function email_validator_rejects_smtputf8_per_rfc_5321(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid email format');
+
+        $this->validator->validate('用户@例子.广告');
+    }
+
+    #[Test]
+    public function idn_email_validator_accepts_smtputf8_per_rfc_6531(): void
     {
         if (!extension_loaded('intl')) {
             self::markTestSkipped('ext-intl required for SMTPUTF8 (RFC 6531) validation');
         }
 
         $this->expectNotToPerformAssertions();
-        $this->validator->validate('用户@例子.广告');
-        $this->validator->validate('test@münchen.de');
-        $this->validator->validate('test@北京.cn');
-        $this->validator->validate('用户@例子.广告');
+
+        $idnEmailValidator = new IdnEmailValidator();
+
+        $idnEmailValidator->validate('用户@例子.广告');
+        $idnEmailValidator->validate('test@münchen.de');
+        $idnEmailValidator->validate('test@北京.cn');
     }
 
     #[Test]
@@ -162,6 +225,66 @@ final class EmailValidatorTest extends TestCase
         $this->validator->validate('John.Doe@sub.example.co.uk');
         $this->validator->validate('a@b.co');
         $this->validator->validate('test@xn--mnchen-3ya.de');
+    }
+
+    #[Test]
+    public function email_validator_accepts_single_label_domain_per_rfc_5321(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('test@io');
+        $this->validator->validate('test@com');
+        $this->validator->validate('test@example');
+    }
+
+    #[Test]
+    public function email_validator_accepts_domain_label_at_63_octets(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validate('user@' . str_repeat('a', 63) . '.com');
+    }
+
+    #[Test]
+    public function email_validator_rejects_domain_label_longer_than_63_octets(): void
+    {
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid email format');
+
+        $this->validator->validate('user@' . str_repeat('a', 64) . '.com');
+    }
+
+    #[Test]
+    public function email_validator_fails_closed_on_pcre_runtime_failure(): void
+    {
+        $validator = new EmailValidator(new PregExecutor(maxBacktracks: 1));
+
+        $this->expectException(InvalidFormatException::class);
+        $this->expectExceptionMessage('Invalid email format');
+
+        $validator->validate('user@' . str_repeat('a', 100) . 'b');
+    }
+
+    #[Test]
+    public function email_validator_rejects_non_ascii_local_and_domain(): void
+    {
+        $exception = null;
+
+        try {
+            $this->validator->validate('aé@iana.org');
+        } catch (InvalidFormatException $exception) {
+        }
+
+        $this->assertNotNull($exception, 'email format is RFC 5321 ASCII-only; non-ASCII local must be rejected');
+
+        $exception = null;
+
+        try {
+            $this->validator->validate('a@é.org');
+        } catch (InvalidFormatException $exception) {
+        }
+
+        $this->assertNotNull($exception, 'email format is RFC 5321 ASCII-only; non-ASCII domain must be rejected');
     }
 
     #[Test]
@@ -176,24 +299,6 @@ final class EmailValidatorTest extends TestCase
     {
         $this->expectException(InvalidFormatException::class);
         $this->validator->validate('test@');
-    }
-
-    #[Test]
-    public function throw_error_for_email_without_tld(): void
-    {
-        $email = 'test@example';
-
-        $this->expectException(InvalidFormatException::class);
-        $this->expectExceptionMessage('Invalid email format');
-
-        $this->validator->validate($email);
-    }
-
-    #[Test]
-    public function throw_error_for_tld_only_domain(): void
-    {
-        $this->expectException(InvalidFormatException::class);
-        $this->validator->validate('test@com');
     }
 
     #[Test]
@@ -260,12 +365,10 @@ final class EmailValidatorTest extends TestCase
         return [
             'empty string is rejected' => ['', false],
             'whitespace-only is rejected' => ['   ', false],
-            'no-TLD "test@example" is rejected (regex requires TLD >= 2 letters)' => ['test@example', false],
-            'TLD-only "test@com" is rejected (no dot in domain)' => ['test@com', false],
             'empty domain label "user@.com" is rejected' => ['user@.com', false],
-            'IDN email "test@münchen.de" is valid (SMTPUTF8 RFC 6531)' => ['test@münchen.de', true],
-            'IDN email "test@北京.cn" is valid (SMTPUTF8 RFC 6531)' => ['test@北京.cn', true],
-            'SMTPUTF8 email "用户@例子.广告" is valid' => ["\u{7528}\u{6237}@\u{4f8b}\u{5b50}.\u{5e7f}\u{544a}", true],
+            'IDN email "test@münchen.de" is rejected (RFC 6531 belongs to idn-email)' => ["test@m\u{FC}nchen.de", false],
+            'IDN email "test@北京.cn" is rejected (RFC 6531 belongs to idn-email)' => ["test@北京.cn", false],
+            'SMTPUTF8 email "用户@例子.广告" is rejected (RFC 6531 belongs to idn-email)' => ["\u{7528}\u{6237}@\u{4f8b}\u{5b50}.\u{5e7f}\u{544a}", false],
             'punycode domain "test@xn--mnchen-3ya.de" is valid' => ['test@xn--mnchen-3ya.de', true],
             'simple email "test@example.com" is valid' => ['test@example.com', true],
             'minimal email "a@b.co" is valid' => ['a@b.co', true],
@@ -274,6 +377,10 @@ final class EmailValidatorTest extends TestCase
             'email with dots is valid' => ['first.last@example.com', true],
             'email missing @ is rejected' => ['invalid-email', false],
             'email with empty domain "test@" is rejected' => ['test@', false],
+            'single-label domain "test@com" is valid per RFC 5321' => ['test@com', true],
+            'single-label domain "test@example" is valid per RFC 5321' => ['test@example', true],
+            'non-ascii local is rejected per RFC 5321' => ["a\u{E9}@iana.org", false],
+            'non-ascii domain is rejected per RFC 5321' => ["a@\u{E9}.org", false],
         ];
     }
 

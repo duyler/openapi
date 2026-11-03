@@ -41,11 +41,12 @@ final class YamlParser extends OpenApiBuilder
 
     public function __construct(
         ?DeprecationLogger $deprecationLogger = null,
+        ?bool $legacyExplodeDefaults = null,
         int $maxSpecBytes = self::DEFAULT_MAX_SPEC_BYTES,
         int $maxSpecDepth = self::DEFAULT_MAX_SPEC_DEPTH,
         ?PregExecutor $pregExecutor = null,
     ) {
-        parent::__construct($deprecationLogger);
+        parent::__construct($deprecationLogger, $legacyExplodeDefaults);
         $this->pregExecutor = $pregExecutor ?? new PregExecutor();
         $this->specSizeGuard = new SpecSizeGuard($maxSpecBytes, $maxSpecDepth);
     }

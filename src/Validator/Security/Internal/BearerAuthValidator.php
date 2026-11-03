@@ -6,8 +6,10 @@ namespace Duyler\OpenApi\Validator\Security\Internal;
 
 use Duyler\OpenApi\Schema\Model\SecurityScheme;
 use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
+use Duyler\OpenApi\Validator\Exception\PregRuntimeException;
 use Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException;
 use Duyler\OpenApi\Validator\PregExecutor;
+use Duyler\OpenApi\Validator\Security\SchemeCredentialReporter;
 use Psr\Http\Message\ServerRequestInterface;
 
 use function strtolower;
@@ -15,7 +17,7 @@ use function strtolower;
 /** @internal */
 final readonly class BearerAuthValidator
 {
-    private const string BEARER_AUTH_PATTERN = '/^bearer\s+\S+\s*$/i';
+    public const string BEARER_AUTH_PATTERN = '/^bearer\s+\S+\s*$/i';
 
     public function __construct(
         private readonly PregExecutor $pregExecutor,
@@ -35,10 +37,16 @@ final readonly class BearerAuthValidator
 
         $authorization = $request->getHeaderLine('Authorization');
 
-        if ('' !== $authorization && 1 === $this->pregExecutor->match(self::BEARER_AUTH_PATTERN, $authorization)) {
-            return null;
+        try {
+            $matched = '' === $authorization ? 0 : $this->pregExecutor->match(self::BEARER_AUTH_PATTERN, $authorization);
+        } catch (PregRuntimeException) {
+            $matched = 0;
         }
 
-        return $reporter->reportMissing('http/bearer', 'Authorization header');
+        if (1 !== $matched) {
+            return $reporter->reportMissing('http/bearer', 'Authorization header');
+        }
+
+        return null;
     }
 }

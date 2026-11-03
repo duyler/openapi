@@ -9,6 +9,7 @@ use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Schema\JsonShape;
 use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
@@ -16,8 +17,8 @@ use function array_diff_key;
 use function array_flip;
 use function array_values;
 use function count;
-use function is_array;
 use function is_bool;
+use function is_int;
 
 final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator implements KeywordApplicable
 {
@@ -34,29 +35,33 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
             return;
         }
 
-        if (false === is_array($data)) {
+        $values = JsonShape::arrayValues($data);
+
+        if (null === $values) {
             return;
         }
 
         if (is_bool($schema->unevaluatedItems) && $schema->unevaluatedItems) {
+            $this->markAllItemsEvaluated($values, $context);
+
             return;
         }
 
-        $evaluatedIndices = $this->getEvaluatedItemIndices($schema, $data, $context);
+        $evaluatedIndices = $this->getEvaluatedItemIndices($schema, $values, $context);
         /** @var list<int> $dataIndices */
-        $dataIndices = array_keys($data);
+        $dataIndices = array_keys($values);
         $unevaluatedIndices = array_values(array_diff_key(
             $dataIndices,
             array_flip($evaluatedIndices),
         ));
 
         if (false === $schema->unevaluatedItems) {
-            $this->rejectUnevaluatedItems($data, $unevaluatedIndices, $this->getDataPath($context));
+            $this->rejectUnevaluatedItems($values, $unevaluatedIndices, $this->getDataPath($context));
 
             return;
         }
 
-        $this->validateUnevaluatedItems($data, $schema->unevaluatedItems, $unevaluatedIndices, $context);
+        $this->validateUnevaluatedItems($values, $schema->unevaluatedItems, $unevaluatedIndices, $context);
     }
 
     /**
@@ -113,6 +118,22 @@ final readonly class UnevaluatedItemsValidator extends AbstractSchemaValidator i
             } finally {
                 $context->leaveBreadcrumb();
             }
+
+            $context->markItemEvaluated($index);
+        }
+    }
+
+    /**
+     * @param array<array-key, mixed> $data
+     */
+    private function markAllItemsEvaluated(array $data, ?ValidationContext $context): void
+    {
+        foreach (array_keys($data) as $index) {
+            if (false === is_int($index)) {
+                continue;
+            }
+
+            $context?->markItemEvaluated($index);
         }
     }
 

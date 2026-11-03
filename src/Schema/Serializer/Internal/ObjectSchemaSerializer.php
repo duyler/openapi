@@ -19,7 +19,7 @@ final readonly class ObjectSchemaSerializer
         'contentSchema',
     ];
 
-    private const array SCHEMA_MAP_FIELDS = ['properties', 'patternProperties', 'dependentSchemas'];
+    private const array SCHEMA_MAP_FIELDS = ['properties', 'patternProperties', 'dependentSchemas', 'defs'];
 
     public function extractSnapshot(
         Schema $schema,
@@ -54,8 +54,10 @@ final readonly class ObjectSchemaSerializer
             'unevaluatedProperties' => $schema->unevaluatedProperties,
             'patternProperties' => $schema->patternProperties,
             'propertyNames' => $schema->propertyNames,
+            'dependentRequired' => $schema->dependentRequired,
             'dependentSchemas' => $schema->dependentSchemas,
             'contentSchema' => $schema->contentSchema,
+            'defs' => $schema->defs,
             default => null,
         };
     }
@@ -78,6 +80,7 @@ final readonly class ObjectSchemaSerializer
             'properties' => $schema->properties,
             'patternProperties' => $schema->patternProperties,
             'dependentSchemas' => $schema->dependentSchemas,
+            'defs' => $schema->defs,
             default => null,
         };
     }

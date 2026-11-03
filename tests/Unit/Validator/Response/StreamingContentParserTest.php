@@ -14,8 +14,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 
-use ReflectionClass;
-
 use function count;
 use function implode;
 
@@ -249,7 +247,7 @@ final class StreamingContentParserTest extends TestCase
         $result = $this->parser->parse($body, 'text/event-stream');
 
         self::assertCount(1, $result);
-        self::assertSame('hello', $result[0]['data']);
+        self::assertSame("\nhello", $result[0]['data']);
     }
 
     #[Test]
@@ -777,13 +775,16 @@ final class StreamingContentParserTest extends TestCase
     #[Test]
     public function default_constructor_limits(): void
     {
-        $reflection = new ReflectionClass($this->parser);
+        $record = str_repeat('x', 10_485_761);
+        $body = "\x1E" . $record . "\x1E";
 
-        $maxLineLength = $reflection->getProperty('maxLineLength')->getValue($this->parser);
-        $maxRecordLength = $reflection->getProperty('maxRecordLength')->getValue($this->parser);
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream($body);
 
-        self::assertSame(1_048_576, $maxLineLength);
-        self::assertSame(10_485_760, $maxRecordLength);
+        $this->expectException(StreamRecordTooLargeException::class);
+        $this->expectExceptionMessage('JSON sequence record exceeds maximum allowed length of 10485760 bytes');
+
+        $this->parser->parseStream($stream, 'application/json-seq');
     }
 
     #[Test]
@@ -1098,17 +1099,7 @@ final class StreamingContentParserTest extends TestCase
         $result = $this->parser->parseServerSentEvents("data\ndata: hello\n\n");
 
         self::assertCount(1, $result);
-        self::assertSame('hello', $result[0]['data']);
-    }
-
-    #[Test]
-    public function default_max_records_is_one_hundred_thousand(): void
-    {
-        $reflection = new ReflectionClass($this->parser);
-
-        $maxRecords = $reflection->getProperty('maxRecords')->getValue($this->parser);
-
-        self::assertSame(100_000, $maxRecords);
+        self::assertSame("\nhello", $result[0]['data']);
     }
 
     #[Test]

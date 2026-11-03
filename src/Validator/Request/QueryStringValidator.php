@@ -35,6 +35,7 @@ final readonly class QueryStringValidator
             pool: $this->pool,
             nullableAsType: $this->config->nullableAsType,
             emptyArrayStrategy: $this->config->emptyArrayStrategy,
+            dialectProfile: $this->config->dialectProfile,
         ));
 
         foreach ($parameterSchemas as $param) {

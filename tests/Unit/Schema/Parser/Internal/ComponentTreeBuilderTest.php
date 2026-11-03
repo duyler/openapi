@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Schema\Parser\Internal;
 
+use Duyler\OpenApi\Schema\Exception\InvalidContentTypeException;
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
 use Duyler\OpenApi\Schema\Model\Content;
 use Duyler\OpenApi\Schema\Model\Encoding;
@@ -166,6 +167,69 @@ final class ComponentTreeBuilderTest extends TestCase
         self::assertSame('application/json', $encoding->contentType);
         self::assertArrayHasKey('nested', $encoding->encoding ?? []);
         self::assertInstanceOf(Encoding::class, $encoding->encoding['nested']);
+    }
+
+    #[Test]
+    public function build_encoding_keeps_string_content_type(): void
+    {
+        $encoding = $this->builder->buildEncoding([
+            'contentType' => 'text/html',
+        ]);
+
+        self::assertIsString($encoding->contentType);
+        self::assertSame('text/html', $encoding->contentType);
+    }
+
+    #[Test]
+    public function build_encoding_preserves_content_type_list(): void
+    {
+        $encoding = $this->builder->buildEncoding([
+            'contentType' => ['text/css', 'image/*'],
+        ]);
+
+        self::assertIsArray($encoding->contentType);
+        self::assertSame(['text/css', 'image/*'], $encoding->contentType);
+    }
+
+    #[Test]
+    public function build_encoding_map_delegates_content_type_list_parsing(): void
+    {
+        $encodings = $this->builder->buildEncodingMap([
+            'stylesheet' => ['contentType' => ['text/css', 'image/*']],
+        ]);
+
+        self::assertSame(['text/css', 'image/*'], $encodings['stylesheet']->contentType);
+    }
+
+    #[Test]
+    public function build_encoding_with_empty_content_type_list_throws(): void
+    {
+        $this->expectException(InvalidContentTypeException::class);
+        $this->expectExceptionMessage('Encoding contentType must be a string or a non-empty list of strings');
+
+        $this->builder->buildEncoding([
+            'contentType' => [],
+        ]);
+    }
+
+    #[Test]
+    public function build_encoding_with_non_string_content_type_list_throws(): void
+    {
+        $this->expectException(InvalidContentTypeException::class);
+
+        $this->builder->buildEncoding([
+            'contentType' => ['text/css', 42],
+        ]);
+    }
+
+    #[Test]
+    public function build_encoding_with_scalar_content_type_throws(): void
+    {
+        $this->expectException(InvalidContentTypeException::class);
+
+        $this->builder->buildEncoding([
+            'contentType' => 42,
+        ]);
     }
 
     #[Test]

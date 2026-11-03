@@ -8,12 +8,11 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Schema\JsonShape;
 use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
 
-use function array_is_list;
 use function array_keys;
-use function is_array;
 use function is_bool;
 
 final readonly class PropertyNamesValidator extends AbstractSchemaValidator implements KeywordApplicable
@@ -31,11 +30,9 @@ final readonly class PropertyNamesValidator extends AbstractSchemaValidator impl
             return;
         }
 
-        if (false === is_array($data)) {
-            return;
-        }
+        $values = JsonShape::objectValues($data);
 
-        if (array_is_list($data)) {
+        if (null === $values) {
             return;
         }
 
@@ -46,14 +43,14 @@ final readonly class PropertyNamesValidator extends AbstractSchemaValidator impl
         $dataPath = $this->getDataPath($context);
 
         if (false === $schema->propertyNames) {
-            $this->rejectAllPropertyNames($data, $dataPath);
+            $this->rejectAllPropertyNames($values, $dataPath);
 
             return;
         }
 
         /** @var Schema $propertyNamesSchema */
         $propertyNamesSchema = $schema->propertyNames;
-        $this->validateEachPropertyName($data, $propertyNamesSchema, $context);
+        $this->validateEachPropertyName($values, $propertyNamesSchema, $context);
     }
 
     /**

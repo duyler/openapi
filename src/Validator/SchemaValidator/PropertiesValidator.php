@@ -11,11 +11,11 @@ use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Schema\JsonShape;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Override;
 
 use function array_key_exists;
-use function is_array;
 use function sprintf;
 
 final readonly class PropertiesValidator extends AbstractSchemaValidator implements KeywordApplicable
@@ -33,7 +33,9 @@ final readonly class PropertiesValidator extends AbstractSchemaValidator impleme
             return;
         }
 
-        if (false === is_array($data)) {
+        $values = JsonShape::objectValues($data);
+
+        if (null === $values) {
             return;
         }
 
@@ -42,28 +44,29 @@ final readonly class PropertiesValidator extends AbstractSchemaValidator impleme
         $context ??= ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool(), nullableAsType: $nullableAsType));
 
         foreach ($schema->properties as $name => $propertySchema) {
-            if (false === array_key_exists($name, $data)) {
+            if (false === array_key_exists($name, $values)) {
                 continue;
             }
 
-            $this->validateProperty($data[$name], $name, $propertySchema, $validator, $context);
+            $this->validateProperty($values[$name], $name, $propertySchema, $validator, $context);
         }
     }
 
     private function validateProperty(mixed $value, string $name, Schema $propertySchema, SchemaValidatorInterface $validator, ValidationContext $context): void
     {
         try {
-            $allowNull = SchemaValueNormalizer::allowsNull($propertySchema, $context->nullableAsType);
+            $allowNull = SchemaValueNormalizer::allowsNull($propertySchema, $context->nullableAsType, $context->dialectProfile);
             $normalized = SchemaValueNormalizer::normalize($value, $allowNull);
 
             $context->enterBreadcrumb($name);
 
             try {
                 $validator->validate($normalized, $propertySchema, $context);
-                $context->markPropertyEvaluated($name);
             } finally {
                 $context->leaveBreadcrumb();
             }
+
+            $context->markPropertyEvaluated($name);
         } catch (InvalidDataTypeException $e) {
             throw new ValidationException(
                 sprintf('Property "%s" has invalid data type: %s', $name, $e->getMessage()),

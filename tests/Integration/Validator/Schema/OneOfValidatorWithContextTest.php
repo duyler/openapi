@@ -4,20 +4,22 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Integration\Validator\Schema;
 
-use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
-use Duyler\OpenApi\Validator\Format\BuiltinFormats;
-use Duyler\OpenApi\Validator\Schema\RefResolver;
-use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
-use Duyler\OpenApi\Validator\Schema\OneOfValidatorWithContext;
-use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Schema\Model\Components;
 use Duyler\OpenApi\Schema\Model\Discriminator;
 use Duyler\OpenApi\Schema\Model\InfoObject;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
+use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Exception\UnknownDiscriminatorValueException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Duyler\OpenApi\Validator\Schema\OneOfValidatorWithContext;
+use Duyler\OpenApi\Validator\Schema\RefResolver;
+use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
+use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -460,9 +462,33 @@ final class OneOfValidatorWithContextTest extends TestCase
      */
     public static function rejectedNullBranchProvider(): iterable
     {
-        yield 'untyped branch' => [new Schema(required: ['a']), 'object'];
         yield 'scalar type' => [new Schema(type: 'string'), 'string'];
         yield 'type array' => [new Schema(type: ['string', 'integer']), 'string|integer'];
+    }
+
+    /**
+     * @return iterable<string, array{Schema, mixed}>
+     */
+    public static function acceptingNullBranchProvider(): iterable
+    {
+        yield 'untyped branch' => [new Schema(required: ['a']), null];
+    }
+
+    #[Test]
+    #[DataProvider('acceptingNullBranchProvider')]
+    public function validate_accepts_null_when_branch_has_no_type(Schema $branch, mixed $data): void
+    {
+        $schema = new Schema(oneOf: [$branch]);
+
+        $succeeded = false;
+        try {
+            $this->validator->validateWithContext($data, $schema, $this->context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Expected validation to pass, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
     }
 
     #[Test]
@@ -1669,5 +1695,137 @@ final class OneOfValidatorWithContextTest extends TestCase
         $this->expectException(RuntimeException::class);
 
         $this->validator->validateWithContext(['data' => 'test'], $schema, $this->context);
+    }
+
+    #[Test]
+    public function hint_32_unknown_discriminator_value_falls_back_to_one_of_validation(): void
+    {
+        $context = $this->contextWithProfile(DialectProfile::forOpenApi32());
+        $validator = new OneOfValidatorWithContext(document: $this->petDocument(), dependencies: $this->petDependencies());
+
+        $data = ['kind' => 'unknown', 'sound' => 'meow'];
+
+        $succeeded = false;
+        try {
+            $validator->validateWithContext($data, $this->petSchema(), $context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('3.2 hint: unknown discriminator must not reject payload, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function hint_32_unknown_discriminator_with_no_matching_branch_is_invalid(): void
+    {
+        $context = $this->contextWithProfile(DialectProfile::forOpenApi32());
+        $validator = new OneOfValidatorWithContext(document: $this->petDocument(), dependencies: $this->petDependencies());
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('none did');
+
+        $validator->validateWithContext(['kind' => 'unknown'], $this->petSchema(), $context);
+    }
+
+    #[Test]
+    public function hint_32_known_discriminator_validates_by_chosen_schema(): void
+    {
+        $context = $this->contextWithProfile(DialectProfile::forOpenApi32());
+        $validator = new OneOfValidatorWithContext(document: $this->petDocument(), dependencies: $this->petDependencies());
+
+        $succeeded = false;
+        try {
+            $validator->validateWithContext(['kind' => 'cat', 'sound' => 'meow'], $this->petSchema(), $context);
+            $succeeded = true;
+        } catch (ValidationException $e) {
+            self::fail(sprintf('Known discriminator value must validate via the chosen schema, got: %s', $e->getMessage()));
+        }
+
+        self::assertSame(true, $succeeded);
+    }
+
+    #[Test]
+    public function hint_32_known_discriminator_with_mismatching_payload_is_invalid(): void
+    {
+        $context = $this->contextWithProfile(DialectProfile::forOpenApi32());
+        $validator = new OneOfValidatorWithContext(document: $this->petDocument(), dependencies: $this->petDependencies());
+
+        $this->expectException(ValidationException::class);
+
+        $validator->validateWithContext(['kind' => 'cat'], $this->petSchema(), $context);
+    }
+
+    #[Test]
+    public function non_hint_31_unknown_discriminator_value_remains_decisive(): void
+    {
+        $context = $this->contextWithProfile(DialectProfile::forOpenApi31());
+        $validator = new OneOfValidatorWithContext(document: $this->petDocument(), dependencies: $this->petDependencies());
+
+        $this->expectException(UnknownDiscriminatorValueException::class);
+
+        $validator->validateWithContext(['kind' => 'unknown', 'sound' => 'meow'], $this->petSchema(), $context);
+    }
+
+    private function petDocument(): OpenApiDocument
+    {
+        return new OpenApiDocument(
+            '3.1.0',
+            new InfoObject('Pet API', '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'Cat' => new Schema(
+                        type: 'object',
+                        required: ['kind', 'sound'],
+                        properties: [
+                            'kind' => new Schema(type: 'string'),
+                            'sound' => new Schema(type: 'string'),
+                        ],
+                    ),
+                    'Dog' => new Schema(
+                        type: 'object',
+                        required: ['kind', 'bark'],
+                        properties: [
+                            'kind' => new Schema(type: 'string'),
+                            'bark' => new Schema(type: 'string'),
+                        ],
+                    ),
+                ],
+            ),
+        );
+    }
+
+    private function petSchema(): Schema
+    {
+        return new Schema(
+            discriminator: new Discriminator(
+                propertyName: 'kind',
+                mapping: [
+                    'cat' => '#/components/schemas/Cat',
+                    'dog' => '#/components/schemas/Dog',
+                ],
+            ),
+            oneOf: [
+                new Schema(ref: '#/components/schemas/Cat'),
+                new Schema(ref: '#/components/schemas/Dog'),
+            ],
+        );
+    }
+
+    private function petDependencies(): SchemaValidatorDependencies
+    {
+        return new SchemaValidatorDependencies(
+            pool: $this->pool,
+            refResolver: $this->refResolver,
+            statelessValidators: $this->statelessValidators,
+        );
+    }
+
+    private function contextWithProfile(DialectProfile $profile): ValidationContext
+    {
+        return ValidationContext::fromInit(new ValidationContextInit(
+            pool: $this->pool,
+            dialectProfile: $profile,
+        ));
     }
 }

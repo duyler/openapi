@@ -209,17 +209,19 @@ final class ConstraintGroupsTest extends TestCase
         self::assertNull($fields->additionalProperties);
         self::assertNull($fields->unevaluatedProperties);
         self::assertNull($fields->patternProperties);
+        self::assertNull($fields->dependentRequired);
         self::assertNull($fields->dependentSchemas);
         self::assertNull($fields->propertyNames);
     }
 
     #[Test]
-    public function object_fields_accepts_all_9_fields(): void
+    public function object_fields_accepts_all_10_fields(): void
     {
         $properties = ['name' => new Schema(type: 'string')];
         $additional = new Schema(type: 'string');
         $unevaluated = new Schema(type: 'object');
         $patternProps = ['^[a-z]+$' => new Schema(type: 'string')];
+        $dependentRequired = ['creditCard' => ['billingAddress']];
         $dependent = ['foo' => new Schema(type: 'object')];
         $propertyNames = new Schema(pattern: '^[a-z]+$');
 
@@ -231,6 +233,7 @@ final class ConstraintGroupsTest extends TestCase
             additionalProperties: $additional,
             unevaluatedProperties: $unevaluated,
             patternProperties: $patternProps,
+            dependentRequired: $dependentRequired,
             dependentSchemas: $dependent,
             propertyNames: $propertyNames,
         );
@@ -242,6 +245,7 @@ final class ConstraintGroupsTest extends TestCase
         self::assertSame($additional, $fields->additionalProperties);
         self::assertSame($unevaluated, $fields->unevaluatedProperties);
         self::assertSame($patternProps, $fields->patternProperties);
+        self::assertSame($dependentRequired, $fields->dependentRequired);
         self::assertSame($dependent, $fields->dependentSchemas);
         self::assertSame($propertyNames, $fields->propertyNames);
     }

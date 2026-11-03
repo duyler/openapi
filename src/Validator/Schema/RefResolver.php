@@ -9,15 +9,19 @@ use Duyler\OpenApi\Schema\Model\RequestBody;
 use Duyler\OpenApi\Schema\Model\Response;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
+use Duyler\OpenApi\Schema\Parser\DocumentRepository;
 use Duyler\OpenApi\Validator\Exception\RefResolutionException;
 use Duyler\OpenApi\Validator\Schema\Exception\UnresolvableRefException;
+use Duyler\OpenApi\Validator\Schema\Internal\ChainResources;
 use Duyler\OpenApi\Validator\Schema\Internal\DiscriminatorDetector;
 use Duyler\OpenApi\Validator\Schema\Internal\DocumentNavigator;
+use Duyler\OpenApi\Validator\Schema\Internal\ResourceRegistry;
 use Duyler\OpenApi\Validator\Schema\Internal\UriResolver;
 use Override;
 use WeakMap;
 
-use function parse_url;
+use function array_values;
 
 final class RefResolver implements RefResolverInterface
 {
@@ -30,21 +34,32 @@ final class RefResolver implements RefResolverInterface
     /** @var WeakMap<Schema, bool> */
     private WeakMap $hasRefCache;
 
-    private readonly FileExternalRefResolver $builtinFileResolver;
     private readonly DocumentNavigator $navigator;
+    private readonly DialectProfile $dialectProfile;
 
     public function __construct(
-        private readonly ?ExternalRefResolverInterface $externalRefResolver = null,
+        ?ExternalRefResolverInterface $externalRefResolver = null,
         ?FileExternalRefResolver $builtinFileResolver = null,
         private readonly UriResolver $uriResolver = new UriResolver(),
         private readonly DiscriminatorDetector $discriminatorDetector = new DiscriminatorDetector(),
+        private readonly ?DocumentRepository $documentRepository = null,
+        ?DialectProfile $dialectProfile = null,
     ) {
         $this->clear();
-        $this->builtinFileResolver = $builtinFileResolver ?? new FileExternalRefResolver();
+        $this->dialectProfile = $dialectProfile ?? DialectProfile::forOpenApi31();
+        $builtin = $builtinFileResolver ?? new FileExternalRefResolver();
         $this->navigator = new DocumentNavigator(
-            builtinFileResolver: $this->builtinFileResolver,
-            externalRefResolver: $this->externalRefResolver,
+            builtinFileResolver: $builtin,
+            externalRefResolver: $externalRefResolver,
+            registryProvider: $this->resourceRegistry(...),
+            documentRepository: $this->documentRepository,
+            dialectProfile: $this->dialectProfile,
         );
+    }
+
+    public function dialectProfile(): DialectProfile
+    {
+        return $this->dialectProfile;
     }
 
     #[Override]
@@ -84,31 +99,33 @@ final class RefResolver implements RefResolverInterface
     #[Override]
     public function combineUris(string $baseUri, string $relativeRef): string
     {
-        if ('' === $relativeRef) {
-            return $baseUri;
-        }
+        return $this->uriResolver->combine($baseUri, $relativeRef);
+    }
 
-        $relative = parse_url($relativeRef);
-        if (false === $relative) {
-            return $relativeRef;
-        }
-
-        if (isset($relative['scheme'])) {
-            return $relativeRef;
-        }
-
-        $base = parse_url($baseUri);
-        if (false === $base) {
-            return $baseUri;
-        }
-
-        return $this->uriResolver->resolveRelativeAgainstBase($base, $relative, $baseUri);
+    public function resourceRegistry(OpenApiDocument $document): ResourceRegistry
+    {
+        return ResourceRegistry::forDocument($document, $this);
     }
 
     #[Override]
     public function resolve(string $ref, OpenApiDocument $document, int $depth = 0): Schema
     {
-        [$result,] = $this->navigator->resolveRef($ref, $document, [], $this->cache, $depth);
+        return $this->resolveSchemaRef($ref, $document, $document->self, $depth);
+    }
+
+    #[Override]
+    public function resolveSchemaEntry(string $ref, OpenApiDocument $document): Schema
+    {
+        [$result,] = $this->navigator->resolveRef(
+            $ref,
+            $document,
+            [],
+            $this->cache,
+            0,
+            $document->self,
+            followChain: false,
+        );
+
         if (false === $result instanceof Schema) {
             throw new UnresolvableRefException($ref, 'Expected Schema but got ' . $result::class);
         }
@@ -119,7 +136,7 @@ final class RefResolver implements RefResolverInterface
     #[Override]
     public function resolveParameter(string $ref, OpenApiDocument $document, int $depth = 0): Parameter
     {
-        [$result,] = $this->navigator->resolveRef($ref, $document, [], $this->cache, $depth);
+        [$result,] = $this->navigator->resolveRef($ref, $document, [], $this->cache, $depth, $document->self);
         if (false === $result instanceof Parameter) {
             throw new UnresolvableRefException($ref, 'Expected Parameter but got ' . $result::class);
         }
@@ -130,7 +147,7 @@ final class RefResolver implements RefResolverInterface
     #[Override]
     public function resolveRequestBody(string $ref, OpenApiDocument $document, int $depth = 0): RequestBody
     {
-        [$result,] = $this->navigator->resolveRef($ref, $document, [], $this->cache, $depth);
+        [$result,] = $this->navigator->resolveRef($ref, $document, [], $this->cache, $depth, $document->self);
         if (false === $result instanceof RequestBody) {
             throw new UnresolvableRefException($ref, 'Expected RequestBody but got ' . $result::class);
         }
@@ -141,7 +158,7 @@ final class RefResolver implements RefResolverInterface
     #[Override]
     public function resolveResponse(string $ref, OpenApiDocument $document, int $depth = 0): Response
     {
-        [$result,] = $this->navigator->resolveRef($ref, $document, [], $this->cache, $depth);
+        [$result,] = $this->navigator->resolveRef($ref, $document, [], $this->cache, $depth, $document->self);
         if (false === $result instanceof Response) {
             throw new UnresolvableRefException($ref, 'Expected Response but got ' . $result::class);
         }
@@ -199,13 +216,114 @@ final class RefResolver implements RefResolverInterface
     }
 
     #[Override]
-    public function resolveSchemaWithOverride(Schema $schema, OpenApiDocument $document): Schema
+    public function resolveSchemaWithOverride(Schema $schema, OpenApiDocument $document, ?string $baseUri = null): Schema
     {
         if (null === $schema->ref) {
             return $schema;
         }
 
-        return $this->resolve($schema->ref, $document)->withSibling($schema);
+        $resolved = $this->resolveSchemaRef($schema->ref, $document, $this->enclosingBaseUri($schema, $document, $baseUri));
+
+        if (false === $this->dialectProfile->refSiblingsApply) {
+            return $resolved;
+        }
+
+        return $resolved->withSibling($schema);
+    }
+
+    #[Override]
+    public function resolveSchemaWithOverrideAndChain(
+        Schema $schema,
+        OpenApiDocument $document,
+        ?string $baseUri = null,
+    ): array {
+        $chainResources = new ChainResources();
+        $this->navigator->collectChainResources($chainResources);
+
+        try {
+            return [$this->resolveSchemaWithOverride($schema, $document, $baseUri), $chainResources->resources()];
+        } finally {
+            $this->navigator->stopChainResourcesCollection();
+        }
+    }
+
+    #[Override]
+    public function resolveSchemaWithCompanionAndChain(
+        Schema $schema,
+        OpenApiDocument $document,
+        ?string $baseUri = null,
+    ): array {
+        $chainResources = new ChainResources();
+        $this->navigator->collectChainResources($chainResources);
+
+        try {
+            if (null === $schema->ref) {
+                return [$schema, null, $chainResources->resources()];
+            }
+
+            $resolved = $this->resolveSchemaWithOverride($schema, $document, $baseUri);
+
+            $companion = $this->dialectProfile->refSiblingsApply
+                ? $schema->withoutReference()
+                : null;
+
+            return [$resolved, $companion, $chainResources->resources()];
+        } finally {
+            $this->navigator->stopChainResourcesCollection();
+        }
+    }
+
+    #[Override]
+    public function scopeBaseUri(array $frames, OpenApiDocument $document): ?string
+    {
+        $baseUri = $document->self;
+
+        foreach ($frames as $frame) {
+            if (null !== $frame->id) {
+                $baseUri = $this->combineBase($baseUri, $frame->id);
+            }
+        }
+
+        return $baseUri;
+    }
+
+    #[Override]
+    public function findDynamicAnchorInScope(array $frames, string $name, OpenApiDocument $document): ?Schema
+    {
+        $registries = $this->scopeRegistries($document);
+        $baseUri = $document->self;
+
+        foreach ($frames as $frame) {
+            if ($name === $frame->dynamicAnchor) {
+                return $frame;
+            }
+
+            if (null !== $frame->id) {
+                $baseUri = $this->combineBase($baseUri, $frame->id);
+            }
+
+            if (null === $baseUri) {
+                continue;
+            }
+
+            foreach ($registries as $registry) {
+                $anchor = $registry->findDynamicAnchorIn($baseUri, $name);
+
+                if (null !== $anchor) {
+                    return $anchor;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    #[Override]
+    public function registeredDocuments(): array
+    {
+        return null === $this->documentRepository
+            ? []
+            : array_values($this->documentRepository->documents());
     }
 
     #[Override]
@@ -278,5 +396,41 @@ final class RefResolver implements RefResolverInterface
             content: $resolved->content,
             links: $resolved->links,
         );
+    }
+
+    private function combineBase(?string $baseUri, string $id): string
+    {
+        return null === $baseUri ? $id : $this->uriResolver->combine($baseUri, $id);
+    }
+
+    private function enclosingBaseUri(Schema $schema, OpenApiDocument $document, ?string $enclosingBaseUri): ?string
+    {
+        if (null === $schema->id) {
+            return $enclosingBaseUri ?? $document->self;
+        }
+
+        return $this->combineBase($enclosingBaseUri, $schema->id);
+    }
+
+    /** @return list<ResourceRegistry> */
+    private function scopeRegistries(OpenApiDocument $document): array
+    {
+        $registries = [];
+
+        foreach ([$document, ...$this->registeredDocuments()] as $candidate) {
+            $registries[] = $this->resourceRegistry($candidate);
+        }
+
+        return $registries;
+    }
+
+    private function resolveSchemaRef(string $ref, OpenApiDocument $document, ?string $baseUri, int $depth = 0): Schema
+    {
+        [$result,] = $this->navigator->resolveRef($ref, $document, [], $this->cache, $depth, $baseUri);
+        if (false === $result instanceof Schema) {
+            throw new UnresolvableRefException($ref, 'Expected Schema but got ' . $result::class);
+        }
+
+        return $result;
     }
 }

@@ -6,14 +6,11 @@ namespace Duyler\OpenApi\Builder\Internal;
 
 use Duyler\OpenApi\Builder\Dto\BuilderConfig;
 use Duyler\OpenApi\Builder\Exception\BuilderException;
+use Duyler\OpenApi\Schema\Exception\TypeArrayNotSupportedException;
 use Duyler\OpenApi\Schema\OpenApiDocument;
-use Duyler\OpenApi\Schema\Parser\DeprecationLogger;
-use Duyler\OpenApi\Schema\Parser\JsonParser;
-use Duyler\OpenApi\Schema\Parser\YamlParser;
 use Duyler\OpenApi\Validator\Exception\InvalidUtf8Exception;
 use Duyler\OpenApi\Validator\Exception\SpecTooLargeException;
 use Exception;
-use Psr\Log\NullLogger;
 
 use function file_get_contents;
 use function is_file;
@@ -108,29 +105,16 @@ final readonly class SpecLoader
     private function parseSpec(string $content): OpenApiDocument
     {
         try {
-            $deprecationLogger = new DeprecationLogger(
-                $this->config->logger ?? new NullLogger(),
-                $this->config->reportDeprecated ?? true,
+            $parser = new SpecParserFactory(
+                logger: $this->config->logger,
+                reportDeprecated: $this->config->reportDeprecated,
+                maxSpecSizeBytes: $this->config->maxSpecSizeBytes,
+                maxSpecDepth: $this->config->maxSpecDepth,
+                legacyExplodeDefaults: $this->config->legacyExplodeDefaults,
             );
 
-            $parser = match ($this->config->specType) {
-                'yaml' => new YamlParser(
-                    deprecationLogger: $deprecationLogger,
-                    maxSpecBytes: $this->config->maxSpecSizeBytes ?? YamlParser::DEFAULT_MAX_SPEC_BYTES,
-                    maxSpecDepth: $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
-                ),
-                'json' => new JsonParser(
-                    deprecationLogger: $deprecationLogger,
-                    maxSpecDepth: $this->config->maxSpecDepth ?? YamlParser::DEFAULT_MAX_SPEC_DEPTH,
-                    maxSpecBytes: $this->config->maxSpecSizeBytes ?? JsonParser::DEFAULT_MAX_SPEC_BYTES,
-                ),
-                default => throw new BuilderException(
-                    sprintf('Unsupported spec type: %s', $this->config->specType ?? 'none'),
-                ),
-            };
-
-            return $parser->parse($content);
-        } catch (InvalidUtf8Exception|SpecTooLargeException $e) {
+            return $parser->forSpecType($this->config->specType)->parse($content);
+        } catch (InvalidUtf8Exception|SpecTooLargeException|TypeArrayNotSupportedException $e) {
             throw $e;
         } catch (Exception $e) {
             throw new BuilderException(

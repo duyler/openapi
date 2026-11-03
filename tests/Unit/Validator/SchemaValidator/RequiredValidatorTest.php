@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\SchemaValidator;
 
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
+use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
+use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\SchemaValidator\RequiredValidator;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
@@ -11,8 +14,10 @@ use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
+use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -23,6 +28,7 @@ class RequiredValidatorTest extends TestCase
     private ValidatorPool $pool;
     private RequiredValidator $validator;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->pool = new ValidatorPool();
@@ -37,6 +43,96 @@ class RequiredValidatorTest extends TestCase
         $this->validator->validate(['name' => 'John', 'age' => 30], $schema);
 
         $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function missing_read_only_property_is_skipped_in_request_mode_with_relaxed_profile(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            required: ['id'],
+            properties: ['id' => new Schema(type: 'integer', readOnly: true)],
+        );
+        $context = ValidationContext::fromInit(new ValidationContextInit(
+            pool: $this->pool,
+            mode: ValidatorMode::Request,
+            dialectProfile: DialectProfile::forOpenApi30(),
+        ));
+
+        $this->validator->validate([], $schema, $context);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function missing_read_only_property_still_fails_without_relaxed_profile(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            required: ['id'],
+            properties: ['id' => new Schema(type: 'integer', readOnly: true)],
+        );
+        $context = ValidationContext::fromInit(new ValidationContextInit(
+            pool: $this->pool,
+            mode: ValidatorMode::Request,
+            dialectProfile: DialectProfile::forOpenApi31(),
+        ));
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate([], $schema, $context);
+    }
+
+    #[Test]
+    public function missing_read_only_property_still_fails_in_response_mode(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            required: ['id'],
+            properties: ['id' => new Schema(type: 'integer', readOnly: true)],
+        );
+        $context = ValidationContext::fromInit(new ValidationContextInit(
+            pool: $this->pool,
+            mode: ValidatorMode::Response,
+            dialectProfile: DialectProfile::forOpenApi30(),
+        ));
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate([], $schema, $context);
+    }
+
+    #[Test]
+    public function missing_read_only_property_still_fails_without_context(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            required: ['id'],
+            properties: ['id' => new Schema(type: 'integer', readOnly: true)],
+        );
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate([], $schema, null);
+    }
+
+    #[Test]
+    public function missing_non_read_only_property_fails_in_request_mode_with_relaxed_profile(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            required: ['id'],
+            properties: ['id' => new Schema(type: 'integer')],
+        );
+        $context = ValidationContext::fromInit(new ValidationContextInit(
+            pool: $this->pool,
+            mode: ValidatorMode::Request,
+            dialectProfile: DialectProfile::forOpenApi30(),
+        ));
+
+        $this->expectException(ValidationException::class);
+
+        $this->validator->validate([], $schema, $context);
     }
 
     #[Test]

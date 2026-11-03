@@ -137,7 +137,7 @@ YAML;
             $this->validator->validateSchema(['age' => 30], '#/components/schemas/User');
             $this->fail('Expected ValidationException');
         } catch (ValidationException $e) {
-            $formatted = (new SimpleFormatter())->formatException($e);
+            $formatted = new SimpleFormatter()->formatException($e);
 
             self::assertIsString($formatted);
             self::assertNotEmpty($formatted);

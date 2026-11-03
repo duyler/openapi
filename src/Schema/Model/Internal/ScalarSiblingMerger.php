@@ -9,7 +9,6 @@ use Duyler\OpenApi\Validator\Schema\JsonEquals;
 
 use function array_intersect;
 use function array_merge;
-use function array_unique;
 use function array_uintersect;
 use function array_values;
 use function count;
@@ -130,11 +129,11 @@ final readonly class ScalarSiblingMerger implements SiblingMergerStrategy
     }
 
     /**
-     * @param ?list<string> $resolved
-     * @param ?list<string> $sibling
-     * @return ?list<string>
+     * @param array<string, mixed>|null $resolved
+     * @param array<string, mixed>|null $sibling
+     * @return array<string, mixed>|null
      */
-    public function mergeStringList(?array $resolved, ?array $sibling): ?array
+    public function mergeMixedMap(?array $resolved, ?array $sibling): ?array
     {
         if (null === $sibling) {
             return $resolved;
@@ -144,15 +143,15 @@ final readonly class ScalarSiblingMerger implements SiblingMergerStrategy
             return $sibling;
         }
 
-        return array_values(array_unique(array_merge($resolved, $sibling)));
+        return array_merge($resolved, $sibling);
     }
 
     /**
-     * @param ?array<string, mixed> $resolved
-     * @param ?array<string, mixed> $sibling
-     * @return ?array<string, mixed>
+     * @param array<int|string, mixed>|null $resolved
+     * @param array<int|string, mixed>|null $sibling
+     * @return array<int|string, mixed>|null
      */
-    public function mergeMixedMap(?array $resolved, ?array $sibling): ?array
+    public function mergeExamples(?array $resolved, ?array $sibling): ?array
     {
         if (null === $sibling) {
             return $resolved;

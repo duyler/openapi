@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Validator\Security\Internal;
 
 use Duyler\OpenApi\Schema\Model\SecurityScheme;
 use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
+use Duyler\OpenApi\Validator\Security\SchemeCredentialReporter;
 use Psr\Http\Message\ServerRequestInterface;
 
 use function is_string;

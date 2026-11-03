@@ -12,6 +12,7 @@ final readonly class ObjectConstraints
      * @param Schema|bool|null $additionalProperties
      * @param Schema|bool|null $unevaluatedProperties
      * @param array<string, Schema>|null $patternProperties
+     * @param array<string, list<string>>|null $dependentRequired
      * @param array<string, Schema>|null $dependentSchemas
      * @param Schema|bool|null $propertyNames
      */
@@ -23,6 +24,7 @@ final readonly class ObjectConstraints
         public Schema|bool|null $additionalProperties = null,
         public Schema|bool|null $unevaluatedProperties = null,
         public ?array $patternProperties = null,
+        public ?array $dependentRequired = null,
         public ?array $dependentSchemas = null,
         public Schema|bool|null $propertyNames = null,
     ) {}
@@ -36,6 +38,7 @@ final readonly class ObjectConstraints
             && null === $this->additionalProperties
             && null === $this->unevaluatedProperties
             && null === $this->patternProperties
+            && null === $this->dependentRequired
             && null === $this->dependentSchemas
             && null === $this->propertyNames;
     }

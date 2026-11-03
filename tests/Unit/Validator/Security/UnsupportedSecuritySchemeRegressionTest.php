@@ -7,7 +7,9 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Security;
 use Duyler\OpenApi\Schema\Model\SecurityRequirement;
 use Duyler\OpenApi\Schema\Model\SecurityScheme;
 use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
+use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException;
+use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
@@ -27,7 +29,7 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
     }
 
     #[Test]
-    public function oauth2_scheme_throws_unsupported_exception(): void
+    public function oauth2_scheme_validates_bearer_presence_without_unsupported_exception(): void
     {
         $validator = new SecurityValidator();
         $request = $this->factory->createServerRequest('GET', '/users')
@@ -41,24 +43,19 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
             ),
         ];
 
-        try {
-            $validator->validate(new SecurityValidationContext(
-                request: $request,
-                path: '/users',
-                method: 'GET',
-                securityRequirements: $securityRequirements,
-                securitySchemes: $securitySchemes,
-            ));
-            $this->fail('Expected UnsupportedSecuritySchemeException was not thrown');
-        } catch (UnsupportedSecuritySchemeException $e) {
-            $this->assertSame('OAuth2', $e->schemeName);
-            $this->assertSame('oauth2', $e->schemeType);
-            $this->assertNull($e->httpScheme);
-        }
+        $validator->validate(new SecurityValidationContext(
+            request: $request,
+            path: '/users',
+            method: 'GET',
+            securityRequirements: $securityRequirements,
+            securitySchemes: $securitySchemes,
+        ));
+
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
-    public function open_id_connect_scheme_throws_unsupported_exception(): void
+    public function open_id_connect_scheme_validates_bearer_presence_without_unsupported_exception(): void
     {
         $validator = new SecurityValidator();
         $request = $this->factory->createServerRequest('GET', '/users')
@@ -73,24 +70,19 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
             ),
         ];
 
-        try {
-            $validator->validate(new SecurityValidationContext(
-                request: $request,
-                path: '/users',
-                method: 'GET',
-                securityRequirements: $securityRequirements,
-                securitySchemes: $securitySchemes,
-            ));
-            $this->fail('Expected UnsupportedSecuritySchemeException was not thrown');
-        } catch (UnsupportedSecuritySchemeException $e) {
-            $this->assertSame('OpenIDConnect', $e->schemeName);
-            $this->assertSame('openIdConnect', $e->schemeType);
-            $this->assertNull($e->httpScheme);
-        }
+        $validator->validate(new SecurityValidationContext(
+            request: $request,
+            path: '/users',
+            method: 'GET',
+            securityRequirements: $securityRequirements,
+            securitySchemes: $securitySchemes,
+        ));
+
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
-    public function http_digest_scheme_throws_unsupported_exception_with_http_scheme_descriptor(): void
+    public function http_digest_without_header_reports_missing_credentials_error(): void
     {
         $validator = new SecurityValidator();
         $request = $this->factory->createServerRequest('GET', '/users');
@@ -112,16 +104,78 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
                 securityRequirements: $securityRequirements,
                 securitySchemes: $securitySchemes,
             ));
-            $this->fail('Expected UnsupportedSecuritySchemeException was not thrown');
-        } catch (UnsupportedSecuritySchemeException $e) {
-            $this->assertSame('digestAuth', $e->schemeName);
-            $this->assertSame('http', $e->schemeType);
-            $this->assertSame('digest', $e->httpScheme);
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('digestAuth', $error->schemeName(reveal: true));
+            $this->assertSame('http/digest', $error->schemeType(reveal: true));
+            $this->assertSame('Authorization header', $error->location(reveal: true));
         }
     }
 
     #[Test]
-    public function mutual_tls_scheme_throws_unsupported_exception(): void
+    public function directly_built_uppercase_basic_scheme_falls_back_to_bearer_and_throws_unsupported(): void
+    {
+        $validator = new SecurityValidator();
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('Authorization', 'Basic dXNlcjpwYXNz');
+        $securityRequirements = new SecurityRequirement([
+            ['basicAuth' => []],
+        ]);
+        $securitySchemes = [
+            'basicAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'Basic',
+            ),
+        ];
+
+        try {
+            $validator->validate(new SecurityValidationContext(
+                request: $request,
+                path: '/users',
+                method: 'GET',
+                securityRequirements: $securityRequirements,
+                securitySchemes: $securitySchemes,
+            ));
+            $this->fail('Expected UnsupportedSecuritySchemeException was not thrown');
+        } catch (UnsupportedSecuritySchemeException $e) {
+            $this->assertSame('basicAuth', $e->schemeName);
+            $this->assertSame('http', $e->schemeType);
+            $this->assertSame('basic', $e->httpScheme);
+        }
+    }
+
+    #[Test]
+    public function mutual_tls_scheme_with_certificate_header_passes_without_unsupported_exception(): void
+    {
+        $validator = new SecurityValidator();
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('X-SSL-CERT', '-----BEGIN CERTIFICATE-----');
+        $securityRequirements = new SecurityRequirement([
+            ['mutualTLS' => []],
+        ]);
+        $securitySchemes = [
+            'mutualTLS' => new SecurityScheme(
+                type: 'mutualTLS',
+            ),
+        ];
+
+        $validator->validate(new SecurityValidationContext(
+            request: $request,
+            path: '/users',
+            method: 'GET',
+            securityRequirements: $securityRequirements,
+            securitySchemes: $securitySchemes,
+        ));
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function mutual_tls_scheme_without_certificate_headers_reports_missing_credentials(): void
     {
         $validator = new SecurityValidator();
         $request = $this->factory->createServerRequest('GET', '/users');
@@ -134,15 +188,23 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
             ),
         ];
 
-        $this->expectException(UnsupportedSecuritySchemeException::class);
-
-        $validator->validate(new SecurityValidationContext(
-            request: $request,
-            path: '/users',
-            method: 'GET',
-            securityRequirements: $securityRequirements,
-            securitySchemes: $securitySchemes,
-        ));
+        try {
+            $validator->validate(new SecurityValidationContext(
+                request: $request,
+                path: '/users',
+                method: 'GET',
+                securityRequirements: $securityRequirements,
+                securitySchemes: $securitySchemes,
+            ));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('mutualTLS', $error->schemeName(reveal: true));
+            $this->assertSame('mutualTLS', $error->schemeType(reveal: true));
+        }
     }
 
     #[Test]
@@ -153,12 +215,12 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
             ->withHeader('Authorization', 'Bearer valid-token');
         $securityRequirements = new SecurityRequirement([
             [
-                'OAuth2' => ['read'],
+                'unknownAuth' => ['read'],
                 'bearerAuth' => [],
             ],
         ]);
         $securitySchemes = [
-            'OAuth2' => new SecurityScheme(type: 'oauth2'),
+            'unknownAuth' => new SecurityScheme(type: 'unknownSchemeType'),
             'bearerAuth' => new SecurityScheme(type: 'http', scheme: 'bearer'),
         ];
 
@@ -172,8 +234,8 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
             ));
             $this->fail('Expected UnsupportedSecuritySchemeException for AND list with unsupported scheme');
         } catch (UnsupportedSecuritySchemeException $e) {
-            $this->assertSame('OAuth2', $e->schemeName);
-            $this->assertSame('oauth2', $e->schemeType);
+            $this->assertSame('unknownAuth', $e->schemeName);
+            $this->assertSame('unknownSchemeType', $e->schemeType);
         }
     }
 
@@ -184,11 +246,11 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
         $request = $this->factory->createServerRequest('GET', '/users')
             ->withHeader('Authorization', 'Bearer valid-token');
         $securityRequirements = new SecurityRequirement([
-            ['OAuth2' => ['read']],
+            ['unknownAuth' => ['read']],
             ['bearerAuth' => []],
         ]);
         $securitySchemes = [
-            'OAuth2' => new SecurityScheme(type: 'oauth2'),
+            'unknownAuth' => new SecurityScheme(type: 'unknownSchemeType'),
             'bearerAuth' => new SecurityScheme(type: 'http', scheme: 'bearer'),
         ];
 
@@ -209,11 +271,11 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
         $validator = new SecurityValidator();
         $request = $this->factory->createServerRequest('GET', '/users');
         $securityRequirements = new SecurityRequirement([
-            ['OAuth2' => ['read']],
+            ['unknownAuth' => ['read']],
             ['bearerAuth' => []],
         ]);
         $securitySchemes = [
-            'OAuth2' => new SecurityScheme(type: 'oauth2'),
+            'unknownAuth' => new SecurityScheme(type: 'unknownSchemeType'),
             'bearerAuth' => new SecurityScheme(type: 'http', scheme: 'bearer'),
         ];
 
@@ -227,46 +289,46 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
             ));
             $this->fail('Expected UnsupportedSecuritySchemeException when no OR alternative succeeds');
         } catch (UnsupportedSecuritySchemeException $e) {
-            $this->assertSame('OAuth2', $e->schemeName);
-            $this->assertSame('oauth2', $e->schemeType);
+            $this->assertSame('unknownAuth', $e->schemeName);
+            $this->assertSame('unknownSchemeType', $e->schemeType);
         }
     }
 
     #[Test]
-    public function oauth2_scopes_are_logged_at_debug_level_for_diagnostic_purposes(): void
+    public function oauth2_declared_scopes_are_logged_at_debug_level_on_successful_validation(): void
     {
         $spy = new ScopeSpyLogger();
         $validator = new SecurityValidator($spy);
         $request = $this->factory->createServerRequest('GET', '/users')
-            ->withHeader('Authorization', 'Bearer irrelevant');
+            ->withHeader('Authorization', 'Bearer valid-token');
         $securityRequirements = new SecurityRequirement([
             ['OAuth2' => ['read', 'write']],
         ]);
         $securitySchemes = [
-            'OAuth2' => new SecurityScheme(type: 'oauth2'),
+            'OAuth2' => new SecurityScheme(
+                type: 'oauth2',
+                scopes: ['legacyScope' => 'flat scopes map'],
+            ),
         ];
 
-        try {
-            $validator->validate(new SecurityValidationContext(
-                request: $request,
-                path: '/users',
-                method: 'GET',
-                securityRequirements: $securityRequirements,
-                securitySchemes: $securitySchemes,
-            ));
-            $this->fail('Expected UnsupportedSecuritySchemeException was not thrown');
-        } catch (UnsupportedSecuritySchemeException) {
-            $scopeRecords = array_values(array_filter(
-                $spy->records,
-                static fn(array $record): bool => 'Security requirement scopes' === $record['message'],
-            ));
+        $validator->validate(new SecurityValidationContext(
+            request: $request,
+            path: '/users',
+            method: 'GET',
+            securityRequirements: $securityRequirements,
+            securitySchemes: $securitySchemes,
+        ));
 
-            $this->assertCount(1, $scopeRecords, 'scopes must be logged even when scheme is unsupported');
-            $context = $scopeRecords[0]['context'];
-            $this->assertSame('OAuth2', $context['schemeName']);
-            $this->assertSame('oauth2', $context['schemeType']);
-            $this->assertSame(['read', 'write'], $context['scopes']);
-        }
+        $scopeRecords = array_values(array_filter(
+            $spy->records,
+            static fn(array $record): bool => 'Security scheme declared scopes' === $record['message'],
+        ));
+
+        $this->assertCount(1, $scopeRecords, 'declared scopes must be logged when the scheme validates');
+        $context = $scopeRecords[0]['context'];
+        $this->assertSame('OAuth2', $context['schemeName']);
+        $this->assertSame('oauth2', $context['schemeType']);
+        $this->assertSame(['legacyScope' => 'flat scopes map'], $context['scopes']);
     }
 
     #[Test]
@@ -304,10 +366,10 @@ final class UnsupportedSecuritySchemeRegressionTest extends TestCase
         $validator = new SecurityValidator();
         $request = $this->factory->createServerRequest('GET', '/users');
         $securityRequirements = new SecurityRequirement([
-            ['OAuth2' => []],
+            ['unknownAuth' => []],
         ]);
         $securitySchemes = [
-            'OAuth2' => new SecurityScheme(type: 'oauth2'),
+            'unknownAuth' => new SecurityScheme(type: 'unknownSchemeType'),
         ];
 
         try {

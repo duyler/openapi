@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Test\Integration\Validator;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
-use Duyler\OpenApi\Validator\Exception\PregRuntimeException;
+use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
@@ -37,7 +37,7 @@ components:
 YAML;
 
     #[Test]
-    public function builder_backtrack_limit_governs_authorization_validation(): void
+    public function builder_backtrack_exhaustion_fails_closed_on_authorization_validation(): void
     {
         $validator = OpenApiValidatorBuilder::create()
             ->fromYamlString(self::BEARER_SPEC)
@@ -50,10 +50,16 @@ YAML;
             ->createServerRequest('GET', '/users')
             ->withHeader('Authorization', $authorization);
 
-        $this->expectException(PregRuntimeException::class);
-        $this->expectExceptionMessage('Backtrack limit exhausted');
-
-        $validator->validateRequest($request);
+        try {
+            $validator->validateRequest($request);
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('http/bearer', $error->schemeType(reveal: true));
+        }
     }
 
     #[Test]

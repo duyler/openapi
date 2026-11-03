@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Schema\Model;
 
 use Duyler\OpenApi\Schema\Serializer\Internal\ModelWireSerializer;
+use Duyler\OpenApi\Schema\Serializer\Internal\RefSerializer;
 use JsonSerializable;
 use Override;
 
@@ -14,6 +15,7 @@ final readonly class Header implements JsonSerializable
      * @param array<string, mixed> $examples
      */
     public function __construct(
+        public ?string $ref = null,
         public ?string $description = null,
         public bool $required = false,
         public bool $deprecated = false,
@@ -44,6 +46,12 @@ final readonly class Header implements JsonSerializable
     #[Override]
     public function jsonSerialize(): array
     {
+        $refData = new RefSerializer()->toWireForm($this->ref, null, null);
+
+        if (null !== $refData) {
+            return $refData;
+        }
+
         return ModelWireSerializer::toArray($this, self::wireFields());
     }
 }

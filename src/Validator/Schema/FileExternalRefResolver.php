@@ -113,6 +113,11 @@ final readonly class FileExternalRefResolver implements ExternalRefResolverInter
         return $this->schemaBuilder->buildSchemaFromData($target);
     }
 
+    public function allowedRoot(): ?string
+    {
+        return $this->allowedRoot;
+    }
+
     private function readFileWithLimit(string $absolutePath): string
     {
         set_error_handler(static fn(int $errno) => E_WARNING === $errno);

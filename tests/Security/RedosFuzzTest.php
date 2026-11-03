@@ -22,6 +22,7 @@ use Duyler\OpenApi\Validator\Format\FormatRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -85,10 +86,11 @@ final class RedosFuzzTest extends TestCase
     }
 
     #[Test]
+    #[Group('content-assertions')]
     public function redos_content_type_validator_aborts_on_pathological_urlencoded(): void
     {
         $pregExecutor = new PregExecutor(maxBacktracks: 10_000);
-        $validator = new ContentMediaTypeValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), new FormatRegistry()), pool: new ValidatorPool(), formatRegistry: new FormatRegistry(), pregExecutor: $pregExecutor));
+        $validator = new ContentMediaTypeValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), new FormatRegistry()), pool: new ValidatorPool(), formatRegistry: new FormatRegistry(), pregExecutor: $pregExecutor, contentAssertionsEnabled: true));
 
         $schema = new Schema(contentMediaType: 'application/x-www-form-urlencoded');
         $payload = str_repeat('a=1&', 50_000) . 'broken';
@@ -121,7 +123,7 @@ final class RedosFuzzTest extends TestCase
     #[Test]
     public function uri_validation_still_works(): void
     {
-        $validator = new UriValidator(new PregExecutor());
+        $validator = new UriValidator();
 
         $succeeded = false;
         try {
@@ -152,9 +154,10 @@ final class RedosFuzzTest extends TestCase
     }
 
     #[Test]
+    #[Group('content-assertions')]
     public function urlencoded_validator_accepts_well_formed_payload(): void
     {
-        $validator = new ContentMediaTypeValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), new FormatRegistry()), pool: new ValidatorPool(), formatRegistry: new FormatRegistry(), pregExecutor: new PregExecutor()));
+        $validator = new ContentMediaTypeValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), new FormatRegistry()), pool: new ValidatorPool(), formatRegistry: new FormatRegistry(), pregExecutor: new PregExecutor(), contentAssertionsEnabled: true));
         $schema = new Schema(contentMediaType: 'application/x-www-form-urlencoded');
 
         $succeeded = false;
@@ -168,9 +171,10 @@ final class RedosFuzzTest extends TestCase
     }
 
     #[Test]
+    #[Group('content-assertions')]
     public function urlencoded_validator_rejects_payload_with_too_many_pairs(): void
     {
-        $validator = new ContentMediaTypeValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), new FormatRegistry()), pool: new ValidatorPool(), formatRegistry: new FormatRegistry(), pregExecutor: new PregExecutor()));
+        $validator = new ContentMediaTypeValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), new FormatRegistry()), pool: new ValidatorPool(), formatRegistry: new FormatRegistry(), pregExecutor: new PregExecutor(), contentAssertionsEnabled: true));
         $schema = new Schema(contentMediaType: 'application/x-www-form-urlencoded');
 
         $payload = str_repeat('a=1&', 1_500);

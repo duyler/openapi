@@ -130,12 +130,8 @@ final readonly class NumericRangeValidator extends AbstractSchemaValidator imple
             return 0 === ($data % (int) $multipleOf);
         }
 
-        if (is_int($data) && extension_loaded('bcmath')) {
-            $quotient = bcdiv((string) $data, (string) $multipleOf, self::BCMATH_SCALE);
-            $floored = bcfloor($quotient);
-            assert(is_numeric($floored));
-
-            return 0 === bccomp($quotient, $floored, self::BCMATH_SCALE);
+        if (extension_loaded('bcmath')) {
+            return $this->isDecimalMultipleOf($data, $multipleOf);
         }
 
         if (is_int($data)) {
@@ -147,6 +143,70 @@ final readonly class NumericRangeValidator extends AbstractSchemaValidator imple
         $epsilon = self::RELATIVE_EPSILON_FACTOR * max(1.0, abs($quotient));
 
         return abs($quotient - $rounded) < $epsilon;
+    }
+
+    private function isDecimalMultipleOf(int|float $data, float $multipleOf): bool
+    {
+        $quotient = bcdiv($this->decimalString($data), $this->decimalString($multipleOf), self::BCMATH_SCALE);
+        $floored = bcfloor($quotient);
+        assert(is_numeric($floored));
+
+        return 0 === bccomp($quotient, $floored, self::BCMATH_SCALE);
+    }
+
+    /**
+     * @return numeric-string
+     */
+    private function decimalString(int|float $value): string
+    {
+        $string = (string) $value;
+
+        if (false === str_contains($string, 'E') && false === str_contains($string, 'e')) {
+            assert(is_numeric($string));
+
+            return $string;
+        }
+
+        $expanded = $this->expandScientificNotation($string);
+
+        assert(is_numeric($expanded));
+
+        return $expanded;
+    }
+
+    private function expandScientificNotation(string $string): string
+    {
+        [$mantissa, $exponent] = str_contains($string, 'E')
+            ? explode('E', $string)
+            : explode('e', $string);
+
+        $isNegative = str_starts_with($mantissa, '-');
+        $unsignedMantissa = ltrim($mantissa, '-+');
+        $parts = explode('.', $unsignedMantissa);
+
+        $integerPart = $parts[0];
+        $fractionPart = $parts[1] ?? '';
+
+        $digits = $integerPart . $fractionPart;
+        $pointPosition = strlen($integerPart) + (int) $exponent;
+
+        if ($pointPosition <= 0) {
+            $result = '0.' . str_repeat('0', -$pointPosition) . $digits;
+        } elseif (strlen($digits) <= $pointPosition) {
+            $result = $digits . str_repeat('0', $pointPosition - strlen($digits));
+        } else {
+            $result = substr($digits, 0, $pointPosition) . '.' . substr($digits, $pointPosition);
+        }
+
+        if (str_contains($result, '.')) {
+            $result = rtrim(rtrim($result, '0'), '.');
+        }
+
+        if ('' === $result || str_starts_with($result, '.')) {
+            $result = '0' . $result;
+        }
+
+        return ($isNegative ? '-' : '') . $result;
     }
 
     private function isBigIntMultipleOfString(int $data, float $multipleOf): bool

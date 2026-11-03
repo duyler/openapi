@@ -134,4 +134,69 @@ final class MediaTypeMatcherTest extends TestCase
 
         $this->assertNull($matched);
     }
+
+    #[Test]
+    public function parameterized_spec_media_type_matches_bare_request_media_type(): void
+    {
+        $matched = MediaTypeMatcher::findMatch('multipart/related', ['multipart/related; type=text/html']);
+
+        $this->assertSame('multipart/related; type=text/html', $matched);
+    }
+
+    #[Test]
+    public function text_html_request_does_not_match_parameterized_multipart_related_spec(): void
+    {
+        $matched = MediaTypeMatcher::findMatch('text/html', ['multipart/related; type=text/html']);
+
+        $this->assertNull($matched);
+    }
+
+    #[Test]
+    public function exact_match_wins_over_parameterized_spec_media_type(): void
+    {
+        $matched = MediaTypeMatcher::findMatch(
+            'multipart/related',
+            ['multipart/related; type=text/html', 'multipart/related'],
+        );
+
+        $this->assertSame('multipart/related', $matched);
+    }
+
+    #[Test]
+    public function parameterized_spec_media_type_wins_over_subtype_wildcard(): void
+    {
+        $matched = MediaTypeMatcher::findMatch(
+            'multipart/related',
+            ['multipart/*', 'multipart/related; type=text/html'],
+        );
+
+        $this->assertSame('multipart/related; type=text/html', $matched);
+    }
+
+    #[Test]
+    public function parameterized_spec_media_type_wins_over_universal_wildcard(): void
+    {
+        $matched = MediaTypeMatcher::findMatch(
+            'multipart/related',
+            ['*/*', 'multipart/related; type=text/html'],
+        );
+
+        $this->assertSame('multipart/related; type=text/html', $matched);
+    }
+
+    #[Test]
+    public function part_content_type_is_accepted_by_wildcard_within_encoding_content_type_list(): void
+    {
+        $matched = MediaTypeMatcher::findMatch('image/png', ['text/css', 'image/*']);
+
+        $this->assertSame('image/*', $matched);
+    }
+
+    #[Test]
+    public function part_content_type_is_accepted_by_exact_entry_within_encoding_content_type_list(): void
+    {
+        $matched = MediaTypeMatcher::findMatch('text/css', ['text/css', 'image/*']);
+
+        $this->assertSame('text/css', $matched);
+    }
 }

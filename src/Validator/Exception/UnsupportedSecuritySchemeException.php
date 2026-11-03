@@ -20,8 +20,8 @@ final class UnsupportedSecuritySchemeException extends RuntimeException
         $descriptor = null === $httpScheme ? $schemeType : sprintf('%s/%s', $schemeType, $httpScheme);
 
         parent::__construct(sprintf(
-            'Security scheme "%s" uses unsupported type "%s". duyler/openapi validates apiKey and http/bearer only; '
-            . 'oauth2, openIdConnect, http/basic, http/digest, and mutualTLS require an external token validator.',
+            'Security scheme "%s" uses unsupported type "%s": no built-in handler for the scheme type/subscheme; '
+            . 'register a custom handler via OpenApiValidatorBuilder::withSecuritySchemeHandler() to validate it.',
             $schemeName,
             $descriptor,
         ));

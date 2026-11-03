@@ -72,18 +72,18 @@ final class OAuthFlowsTest extends TestCase
     }
 
     #[Test]
-    public function can_create_oauth_flows_with_device_code(): void
+    public function can_create_oauth_flows_with_device_authorization(): void
     {
-        $deviceCode = new OAuthFlow(
+        $deviceAuthorization = new OAuthFlow(
             tokenUrl: 'https://auth.example.com/token',
             deviceAuthorizationUrl: 'https://auth.example.com/device/code',
             scopes: ['read' => 'Read access'],
         );
 
-        $flows = new OAuthFlows(deviceCode: $deviceCode);
+        $flows = new OAuthFlows(deviceAuthorization: $deviceAuthorization);
 
-        self::assertNotNull($flows->deviceCode);
-        self::assertSame('https://auth.example.com/device/code', $flows->deviceCode->deviceAuthorizationUrl);
+        self::assertNotNull($flows->deviceAuthorization);
+        self::assertSame('https://auth.example.com/device/code', $flows->deviceAuthorization->deviceAuthorizationUrl);
     }
 
     #[Test]
@@ -154,21 +154,21 @@ final class OAuthFlowsTest extends TestCase
     }
 
     #[Test]
-    public function json_serialize_includes_device_code(): void
+    public function json_serialize_includes_device_authorization(): void
     {
-        $deviceCode = new OAuthFlow(
+        $deviceAuthorization = new OAuthFlow(
             tokenUrl: 'https://auth.example.com/token',
             deviceAuthorizationUrl: 'https://auth.example.com/device/code',
             scopes: ['read' => 'Read access'],
         );
 
-        $flows = new OAuthFlows(deviceCode: $deviceCode);
+        $flows = new OAuthFlows(deviceAuthorization: $deviceAuthorization);
 
         $serialized = $flows->jsonSerialize();
 
         self::assertIsArray($serialized);
-        self::assertArrayHasKey('deviceCode', $serialized);
-        self::assertArrayHasKey('deviceAuthorizationUrl', $serialized['deviceCode']);
+        self::assertArrayHasKey('deviceAuthorization', $serialized);
+        self::assertArrayHasKey('deviceAuthorizationUrl', $serialized['deviceAuthorization']);
     }
 
     #[Test]
@@ -183,7 +183,7 @@ final class OAuthFlowsTest extends TestCase
         self::assertArrayNotHasKey('password', $serialized);
         self::assertArrayNotHasKey('clientCredentials', $serialized);
         self::assertArrayNotHasKey('authorizationCode', $serialized);
-        self::assertArrayNotHasKey('deviceCode', $serialized);
+        self::assertArrayNotHasKey('deviceAuthorization', $serialized);
     }
 
     #[Test]
@@ -206,7 +206,7 @@ final class OAuthFlowsTest extends TestCase
             tokenUrl: 'https://example.com/oauth/token',
             scopes: ['read' => 'Read access'],
         );
-        $deviceCode = new OAuthFlow(
+        $deviceAuthorization = new OAuthFlow(
             tokenUrl: 'https://auth.example.com/token',
             deviceAuthorizationUrl: 'https://auth.example.com/device/code',
             scopes: ['read' => 'Read access'],
@@ -217,7 +217,7 @@ final class OAuthFlowsTest extends TestCase
             password: $password,
             clientCredentials: $clientCredentials,
             authorizationCode: $authorizationCode,
-            deviceCode: $deviceCode,
+            deviceAuthorization: $deviceAuthorization,
         );
 
         $serialized = $flows->jsonSerialize();
@@ -227,7 +227,7 @@ final class OAuthFlowsTest extends TestCase
         self::assertArrayHasKey('password', $serialized);
         self::assertArrayHasKey('clientCredentials', $serialized);
         self::assertArrayHasKey('authorizationCode', $serialized);
-        self::assertArrayHasKey('deviceCode', $serialized);
+        self::assertArrayHasKey('deviceAuthorization', $serialized);
     }
 
     #[Test]
@@ -240,14 +240,14 @@ final class OAuthFlowsTest extends TestCase
             authorizationUrl: 'https://example.com/authorize',
             tokenUrl: 'https://example.com/token',
         );
-        $deviceCode = new OAuthFlow(deviceAuthorizationUrl: 'https://example.com/device');
+        $deviceAuthorization = new OAuthFlow(deviceAuthorizationUrl: 'https://example.com/device');
 
         $flows = new OAuthFlows(
             implicit: $implicit,
             password: $password,
             clientCredentials: $clientCredentials,
             authorizationCode: $authorizationCode,
-            deviceCode: $deviceCode,
+            deviceAuthorization: $deviceAuthorization,
         );
 
         $serialized = $flows->jsonSerialize();
@@ -257,7 +257,7 @@ final class OAuthFlowsTest extends TestCase
             'password' => $password->jsonSerialize(),
             'clientCredentials' => $clientCredentials->jsonSerialize(),
             'authorizationCode' => $authorizationCode->jsonSerialize(),
-            'deviceCode' => $deviceCode->jsonSerialize(),
+            'deviceAuthorization' => $deviceAuthorization->jsonSerialize(),
         ], $serialized);
     }
 }

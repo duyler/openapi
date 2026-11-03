@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Validation;
 
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\Dto\ParameterValidationConfig;
 use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\FormatAssertionMode;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\BodyParser\BodyParser;
 use Duyler\OpenApi\Validator\Request\BodyParser\FormBodyParser;
@@ -31,11 +33,13 @@ use Duyler\OpenApi\Validator\Request\RequestBodyValidatorWithContext;
 use Duyler\OpenApi\Validator\Request\RequestValidator;
 use Duyler\OpenApi\Validator\Request\TypeCoercer;
 use Duyler\OpenApi\Validator\Response\ResponseValidatorWithContext;
+use Duyler\OpenApi\Validator\Schema\KeywordValidatorRegistry;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
 use Duyler\OpenApi\Validator\Schema\SchemaValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorDispatcher;
 use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
+use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerRegistry;
 use Duyler\OpenApi\Validator\Validation\Internal\ValidationGroup;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -47,7 +51,6 @@ final readonly class ValidationStack
     public readonly RequestValidator $requestValidator;
     public readonly ResponseValidatorWithContext $responseValidator;
     public readonly SchemaValidatorWithContext $schemaValidatorWithContext;
-    private readonly StatelessValidatorRegistry $statelessValidators;
     private readonly SchemaValidatorDependencies $schemaValidatorDependencies;
     private readonly ValidatorConfiguration $validatorConfiguration;
 
@@ -80,6 +83,12 @@ final readonly class ValidationStack
         public readonly PregExecutor $pregExecutor = new PregExecutor(),
         public readonly ?LoggerInterface $securityVerboseLogger = null,
         public readonly bool $strictCoercion = true,
+        public readonly ?DialectProfile $dialectProfile = null,
+        public readonly bool $contentAssertionsEnabled = false,
+        public readonly KeywordValidatorRegistry $keywordValidators = new KeywordValidatorRegistry(),
+        public readonly FormatAssertionMode $formatAssertionMode = FormatAssertionMode::Assertion,
+        public readonly bool $lenientResponses = false,
+        public readonly ?SecuritySchemeHandlerRegistry $securitySchemeHandlers = null,
     ) {
         $this->validatorConfiguration = new ValidatorConfiguration(
             coercion: $this->coercion,
@@ -93,9 +102,13 @@ final readonly class ValidationStack
             maxRegexBacktracks: $this->maxRegexBacktracks,
             maxStreamingRecords: $this->maxStreamingRecords,
             strictCoercion: $this->strictCoercion,
+            dialectProfile: $this->dialectProfile,
+            contentAssertionsEnabled: $this->contentAssertionsEnabled,
+            formatAssertionMode: $this->formatAssertionMode,
+            lenientResponses: $this->lenientResponses,
         );
 
-        $this->statelessValidators = new StatelessValidatorRegistry(
+        $statelessValidators = new StatelessValidatorRegistry(
             $this->pool,
             $this->formatRegistry,
             $this->strictFormats,
@@ -104,12 +117,15 @@ final readonly class ValidationStack
             $this->eventDispatcher,
             $this->document,
             $this->refResolver,
+            $this->contentAssertionsEnabled,
+            customKeywordValidators: $this->keywordValidators,
+            formatAssertionMode: $this->formatAssertionMode,
         );
 
         $this->schemaValidatorDependencies = new SchemaValidatorDependencies(
             pool: $this->pool,
             refResolver: $this->refResolver,
-            statelessValidators: $this->statelessValidators,
+            statelessValidators: $statelessValidators,
             logger: $this->logger,
             eventDispatcher: $this->eventDispatcher,
             errorFormatter: $this->errorFormatter,
@@ -119,13 +135,17 @@ final readonly class ValidationStack
                 formParser: new FormBodyParser(new QueryParser()),
                 multipartParser: new MultipartBodyParser(),
                 textParser: new TextBodyParser(),
-                xmlParser: new XmlBodyParser(logger: $this->logger),
+                xmlParser: new XmlBodyParser(logger: $this->logger, eventDispatcher: $this->eventDispatcher),
             ),
             strictFormats: $this->strictFormats,
             reportDeprecated: $this->reportDeprecated,
             regexValidator: $this->regexValidator,
             pregExecutor: $this->pregExecutor,
             document: $this->document,
+            contentAssertionsEnabled: $this->contentAssertionsEnabled,
+            maxDecodedContentBytes: $this->maxJsonBodyBytes,
+            customKeywordValidators: $this->keywordValidators,
+            formatAssertionMode: $this->formatAssertionMode,
         );
 
         $this->schemaValidatorWithContext = $this->schemaValidatorDependencies->rootSchemaValidator(
@@ -169,6 +189,12 @@ final readonly class ValidationStack
             maxStreamingRecords: $options->maxStreamingRecords,
             securityVerboseLogger: $options->securityVerboseLogger,
             strictCoercion: $options->strictCoercion,
+            dialectProfile: $options->dialectProfile,
+            contentAssertionsEnabled: $options->contentAssertionsEnabled,
+            keywordValidators: $root->keywordValidators,
+            formatAssertionMode: $options->formatAssertionMode,
+            lenientResponses: $options->lenientResponses,
+            securitySchemeHandlers: $options->securitySchemeHandlers,
         );
     }
 
@@ -222,6 +248,7 @@ final readonly class ValidationStack
                 config: $parameterConfig,
             ),
             bodyValidator: $this->buildRequestBodyValidator(),
+            configuration: $this->validatorConfiguration,
         );
     }
 
@@ -239,6 +266,7 @@ final readonly class ValidationStack
             nullableAsType: $this->nullableAsType,
             emptyArrayStrategy: $this->emptyArrayStrategy,
             strictCoercion: $this->strictCoercion,
+            dialectProfile: $this->dialectProfile,
         );
     }
 

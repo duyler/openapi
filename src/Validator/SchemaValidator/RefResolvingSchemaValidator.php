@@ -7,25 +7,42 @@ namespace Duyler\OpenApi\Validator\SchemaValidator;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Schema\OpenApiDocument;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
+use Duyler\OpenApi\Validator\Schema\Internal\DynamicScopeResolver;
 use Duyler\OpenApi\Validator\Schema\RefResolverInterface;
 use Override;
 
 /** @internal */
 final readonly class RefResolvingSchemaValidator implements SchemaValidatorInterface
 {
+    private readonly DynamicScopeResolver $scopeResolver;
+
     public function __construct(
         private SchemaValidatorInterface $inner,
-        private RefResolverInterface $refResolver,
-        private OpenApiDocument $document,
-    ) {}
+        RefResolverInterface $refResolver,
+        OpenApiDocument $document,
+    ) {
+        $this->scopeResolver = new DynamicScopeResolver($refResolver, $document);
+    }
 
     #[Override]
-    public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
+    public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
-        if (null !== $schema->ref) {
-            $schema = $this->refResolver->resolveSchemaWithOverride($schema, $this->document);
+        $frame = $this->scopeResolver->enter($schema, $context);
+
+        try {
+            $this->inner->validate($data, $frame->schema, $context);
+            $this->validateCompanion($frame->companion, $data, $context);
+        } finally {
+            $this->scopeResolver->leave($frame, $context);
+        }
+    }
+
+    private function validateCompanion(?Schema $companion, mixed $data, ?ValidationContext $context): void
+    {
+        if (null === $companion || null === $context) {
+            return;
         }
 
-        $this->inner->validate($data, $schema, $context);
+        $this->inner->validate($data, $companion, $context);
     }
 }

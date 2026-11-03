@@ -148,7 +148,7 @@ final class CompositionBranchErrorsTest extends TestCase
         foreach ($cases as [$schema, $data]) {
             $exception = $this->assertRejects($schema, $data);
 
-            $this->assertNotSame('', (new SimpleFormatter())->formatException($exception), $schema);
+            $this->assertNotSame('', new SimpleFormatter()->formatException($exception), $schema);
             $this->assertNoDuplicates($exception, $schema);
         }
     }

@@ -6,9 +6,13 @@ namespace Duyler\OpenApi\Test\Unit\Builder\Internal;
 
 use Duyler\OpenApi\Builder\Dto\BuilderConfig;
 use Duyler\OpenApi\Builder\Internal\CacheKeyBuilder;
+use Duyler\OpenApi\PackageInfo;
+use Duyler\OpenApi\Schema\Parser\DocumentRepository;
+use Duyler\OpenApi\Schema\Parser\JsonParser;
 use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
 use function file_put_contents;
 use function glob;
@@ -37,7 +41,8 @@ info:
 paths: {}
 YAML;
 
-    private const string DEFAULT_FINGERPRINT = 'maxSpecDepth=100|maxSpecSizeBytes=1048576|externalRefAllowedRoot=|externalRefMaxBytes=10485760';
+    private const string DEFAULT_FINGERPRINT
+        = 'packageVersion=0.11.0|maxSpecDepth=100|maxSpecSizeBytes=1048576|externalRefAllowedRoot=|externalRefMaxBytes=10485760|documentRepository=';
 
     #[Test]
     public function for_string_returns_content_prefix_with_sha256_hash(): void
@@ -226,9 +231,71 @@ YAML;
     }
 
     #[Test]
-    public function build_fingerprint_includes_all_four_config_components(): void
+    public function package_info_version_is_pinned_to_current_release_in_root_namespace(): void
     {
-        $fingerprint = 'maxSpecDepth=100|maxSpecSizeBytes=1048576|externalRefAllowedRoot=|externalRefMaxBytes=10485760';
+        self::assertSame('0.11.0', PackageInfo::VERSION);
+        self::assertSame('Duyler\OpenApi', new ReflectionClass(PackageInfo::class)->getNamespaceName());
+    }
+
+    #[Test]
+    public function different_package_version_produces_distinct_string_keys(): void
+    {
+        $keyForCurrentVersion = $this->builderWith(packageVersion: '0.11.0')->forString(self::MINIMAL_YAML);
+        $keyForPreviousVersion = $this->builderWith(packageVersion: '0.10.0')->forString(self::MINIMAL_YAML);
+
+        self::assertNotSame(
+            $keyForPreviousVersion,
+            $keyForCurrentVersion,
+            'A package version change must invalidate string-spec cache keys (stale-document defence).',
+        );
+    }
+
+    #[Test]
+    public function different_package_version_produces_distinct_file_keys(): void
+    {
+        $path = $this->writeTempSpec(self::MINIMAL_YAML);
+
+        try {
+            $keyForCurrentVersion = $this->builderWith(packageVersion: '0.11.0')->forFile($path, self::MINIMAL_YAML);
+            $keyForPreviousVersion = $this->builderWith(packageVersion: '0.10.0')->forFile($path, self::MINIMAL_YAML);
+
+            self::assertNotSame(
+                $keyForPreviousVersion,
+                $keyForCurrentVersion,
+                'A package version change must invalidate file-spec cache keys (stale-document defence).',
+            );
+        } finally {
+            $this->safeUnlink($path);
+        }
+    }
+
+    #[Test]
+    public function identical_package_version_and_config_produce_identical_keys(): void
+    {
+        $key1 = $this->builderWith(packageVersion: '0.11.0')->forString(self::MINIMAL_YAML);
+        $key2 = $this->builderWith(packageVersion: '0.11.0')->forString(self::MINIMAL_YAML);
+
+        self::assertSame($key1, $key2);
+    }
+
+    #[Test]
+    public function builder_without_version_argument_hashes_package_info_default_version(): void
+    {
+        $keyFromDefault = $this->defaultBuilder()->forString(self::MINIMAL_YAML);
+        $keyFromExplicit = $this->builderWith(packageVersion: PackageInfo::VERSION)->forString(self::MINIMAL_YAML);
+
+        self::assertSame(
+            $keyFromExplicit,
+            $keyFromDefault,
+            'One-argument construction must fall back to PackageInfo::VERSION (backward-compatible wiring).',
+        );
+    }
+
+    #[Test]
+    public function build_fingerprint_includes_package_version_and_all_five_config_components(): void
+    {
+        $fingerprint
+            = 'packageVersion=0.11.0|maxSpecDepth=100|maxSpecSizeBytes=1048576|externalRefAllowedRoot=|externalRefMaxBytes=10485760|documentRepository=';
 
         $key = $this->defaultBuilder()->forString(self::MINIMAL_YAML);
         $expected = CacheKeyBuilder::CONTENT_PREFIX
@@ -242,6 +309,35 @@ YAML;
         );
     }
 
+    #[Test]
+    public function document_repository_change_produces_distinct_keys(): void
+    {
+        $keyWithoutRepository = $this->defaultBuilder()->forString(self::MINIMAL_YAML);
+
+        $withRepository = new CacheKeyBuilder(new BuilderConfig(
+            documentRepository: DocumentRepository::empty()->withDocument(
+                'https://api.example.com/v1.json',
+                $this->minimalJsonDocument(),
+                new JsonParser(),
+            ),
+        ));
+
+        self::assertNotSame(
+            $keyWithoutRepository,
+            $withRepository->forString(self::MINIMAL_YAML),
+            'Registered documents must scope the cache key (confinement verdicts must not leak across builds with and without a repository).',
+        );
+        self::assertSame(
+            $withRepository->forString(self::MINIMAL_YAML),
+            $withRepository->forString(self::MINIMAL_YAML),
+        );
+    }
+
+    private function minimalJsonDocument(): string
+    {
+        return '{"openapi":"3.1.0","info":{"title":"d","version":"1"}}';
+    }
+
     private function defaultBuilder(): CacheKeyBuilder
     {
         return new CacheKeyBuilder(new BuilderConfig());
@@ -252,13 +348,18 @@ YAML;
         ?int $maxSpecSizeBytes = null,
         ?string $externalRefAllowedRoot = null,
         ?int $externalRefMaxBytes = null,
+        ?string $packageVersion = null,
     ): CacheKeyBuilder {
-        return new CacheKeyBuilder(new BuilderConfig(
+        $config = new BuilderConfig(
             maxSpecDepth: $maxSpecDepth,
             maxSpecSizeBytes: $maxSpecSizeBytes,
             externalRefAllowedRoot: $externalRefAllowedRoot,
             externalRefMaxBytes: $externalRefMaxBytes,
-        ));
+        );
+
+        return null === $packageVersion
+            ? new CacheKeyBuilder($config)
+            : new CacheKeyBuilder($config, $packageVersion);
     }
 
     private function writeTempSpec(string $content, ?string $path = null): string

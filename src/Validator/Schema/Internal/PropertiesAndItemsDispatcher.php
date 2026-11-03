@@ -12,10 +12,9 @@ use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Schema\ItemsValidatorWithContext;
 use Duyler\OpenApi\Validator\Schema\PropertiesValidatorWithContext;
+use Duyler\OpenApi\Validator\Schema\JsonShape;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use WeakMap;
-
-use function is_array;
 
 /** @internal */
 final class PropertiesAndItemsDispatcher
@@ -29,12 +28,12 @@ final class PropertiesAndItemsDispatcher
     ) {}
 
     public function dispatchPropertiesAndItems(
-        array|int|string|float|bool|null $data,
+        mixed $data,
         Schema $schema,
         ValidationContext $context,
         bool $useDiscriminator,
     ): void {
-        if (null !== $schema->properties && [] !== $schema->properties && is_array($data)) {
+        if (null !== $schema->properties && [] !== $schema->properties && JsonShape::isObjectInstance($data)) {
             if ($useDiscriminator) {
                 $this->propertiesValidator->validateWithContext($data, $schema, $context);
             } else {
@@ -42,7 +41,7 @@ final class PropertiesAndItemsDispatcher
             }
         }
 
-        if (null !== $schema->items && is_array($data)) {
+        if (null !== $schema->items && JsonShape::isArrayInstance($data)) {
             if ($useDiscriminator) {
                 $this->itemsValidator->validateWithContext($data, $schema, $context);
             } else {
@@ -51,7 +50,7 @@ final class PropertiesAndItemsDispatcher
         }
     }
 
-    public function validateInternal(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context): void
+    public function validateInternal(mixed $data, Schema $schema, ValidationContext $context): void
     {
         $errors = [];
 

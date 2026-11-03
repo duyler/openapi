@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Error;
 
+use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Dto\ContentValidationResult;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
+use Duyler\OpenApi\Validator\Dto\ValidationAnnotations;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
@@ -11,16 +15,32 @@ use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Exception\SchemaDepthExceededException;
 use Duyler\OpenApi\Validator\ValidatorMode;
 use Duyler\OpenApi\Validator\ValidatorPool;
+use WeakMap;
+
+use function array_pop;
+use function count;
 
 final class ValidationContext
 {
     public const int MAX_DEPTH = 64;
 
-    /** @var array<string, true> */
+    public readonly DialectProfile $dialectProfile;
+
+    /** @var array<string, array<string, true>> */
     private array $evaluatedPropertyNames = [];
 
-    /** @var array<int, true> */
+    /** @var array<string, array<int, true>> */
     private array $evaluatedItemIndices = [];
+
+    private ValidationAnnotations $annotations;
+
+    private ?ContentValidationResult $contentResult = null;
+
+    /** @var array<string, ContentValidationResult> */
+    private array $contentResults = [];
+
+    /** @var WeakMap<Schema, string> */
+    private WeakMap $dynamicRefTargets;
 
     private function __construct(
         public readonly BreadcrumbManager $breadcrumbs,
@@ -30,7 +50,17 @@ final class ValidationContext
         public readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         private int $depth = 0,
         public readonly ?ValidatorMode $mode = null,
-    ) {}
+        /** @var list<Schema> */
+        private array $dynamicScope = [],
+        ?DialectProfile $dialectProfile = null,
+        public readonly bool $skipContentMediaType = false,
+    ) {
+        $this->dialectProfile = $dialectProfile ?? DialectProfile::forOpenApi31();
+        $this->annotations = new ValidationAnnotations();
+        /** @var WeakMap<Schema, string> $dynamicRefTargets */
+        $dynamicRefTargets = new WeakMap();
+        $this->dynamicRefTargets = $dynamicRefTargets;
+    }
 
     public static function fromInit(ValidationContextInit $init): self
     {
@@ -41,6 +71,8 @@ final class ValidationContext
             nullableAsType: $init->nullableAsType,
             emptyArrayStrategy: $init->emptyArrayStrategy,
             mode: $init->mode,
+            dialectProfile: $init->dialectProfile,
+            skipContentMediaType: $init->skipContentMediaType,
         );
     }
 
@@ -80,40 +112,162 @@ final class ValidationContext
 
     public function markPropertyEvaluated(string $name): void
     {
-        $this->evaluatedPropertyNames[$name] = true;
+        $this->evaluatedPropertyNames[$this->breadcrumbs->currentPath()][$name] = true;
     }
 
     public function markItemEvaluated(int $index): void
     {
-        $this->evaluatedItemIndices[$index] = true;
+        $this->evaluatedItemIndices[$this->breadcrumbs->currentPath()][$index] = true;
     }
 
     /** @return list<string> */
     public function evaluatedPropertyNames(): array
     {
-        return array_keys($this->evaluatedPropertyNames);
+        return array_keys($this->evaluatedPropertyNames[$this->breadcrumbs->currentPath()] ?? []);
     }
 
     /** @return list<int> */
     public function evaluatedItemIndices(): array
     {
-        return array_keys($this->evaluatedItemIndices);
+        return array_keys($this->evaluatedItemIndices[$this->breadcrumbs->currentPath()] ?? []);
     }
 
     public function hasPropertyBeenEvaluated(string $name): bool
     {
-        return isset($this->evaluatedPropertyNames[$name]);
+        return isset($this->evaluatedPropertyNames[$this->breadcrumbs->currentPath()][$name]);
     }
 
     public function hasItemBeenEvaluated(int $index): bool
     {
-        return isset($this->evaluatedItemIndices[$index]);
+        return isset($this->evaluatedItemIndices[$this->breadcrumbs->currentPath()][$index]);
+    }
+
+    public function path(): string
+    {
+        return $this->breadcrumbs->currentPath();
+    }
+
+    public function annotate(string $keyword, mixed $value, string $path): void
+    {
+        $this->annotations = $this->annotations->with($keyword, $path, $value);
+    }
+
+    public function attachContentResult(ContentValidationResult $result): void
+    {
+        $path = $this->breadcrumbs->currentPath();
+        $this->contentResult ??= $result;
+        $this->contentResults[$path] ??= $result;
+    }
+
+    public function contentResult(): ?ContentValidationResult
+    {
+        return $this->contentResult;
+    }
+
+    /**
+     * Every content pipeline result of the run keyed by the data path of its
+     * string instance, in attach/merge order. When several results reach the
+     * same data path (for example matching oneOf/anyOf branches), the result
+     * of the first attach in traversal/merge order is kept. The first-wins
+     * slot stays available through contentResult().
+     *
+     * @return array<string, ContentValidationResult>
+     */
+    public function contentResults(): array
+    {
+        return $this->contentResults;
+    }
+
+    /**
+     * The content pipeline result of the instance validated at the given data
+     * path, or null when no content-keyword instance was validated there.
+     */
+    public function contentResultAtPath(string $path): ?ContentValidationResult
+    {
+        return $this->contentResults[$path] ?? null;
+    }
+
+    /**
+     * @return array<string, list<array{path: string, value: mixed}>>
+     */
+    public function annotations(): array
+    {
+        return $this->annotations->toArray();
+    }
+
+    public function annotateSchemaExtras(Schema $schema): void
+    {
+        /** @var mixed $value */
+        foreach ($schema->extras ?? [] as $keyword => $value) {
+            $this->annotate($keyword, $value, $this->path());
+        }
     }
 
     public function mergeChildAnnotations(self $child): void
     {
-        $this->evaluatedPropertyNames += $child->evaluatedPropertyNames;
-        $this->evaluatedItemIndices += $child->evaluatedItemIndices;
+        foreach ($child->evaluatedPropertyNames as $path => $names) {
+            $this->evaluatedPropertyNames[$path] = ($this->evaluatedPropertyNames[$path] ?? []) + $names;
+        }
+
+        foreach ($child->evaluatedItemIndices as $path => $indices) {
+            $this->evaluatedItemIndices[$path] = ($this->evaluatedItemIndices[$path] ?? []) + $indices;
+        }
+
+        $this->annotations = $this->annotations->merge($child->annotations);
+        $this->contentResult ??= $child->contentResult;
+        $this->contentResults += $child->contentResults;
+    }
+
+    public function enterDynamicScope(Schema $resource): void
+    {
+        if ([] !== $this->dynamicScope && $this->dynamicScope[count($this->dynamicScope) - 1] === $resource) {
+            return;
+        }
+
+        $this->dynamicScope[] = $resource;
+    }
+
+    public function leaveDynamicScope(): void
+    {
+        array_pop($this->dynamicScope);
+    }
+
+    public function hasEmptyDynamicScope(): bool
+    {
+        return [] === $this->dynamicScope;
+    }
+
+    /** @return list<Schema> */
+    public function dynamicScope(): array
+    {
+        return $this->dynamicScope;
+    }
+
+    public function resolveDynamicAnchor(string $name): ?Schema
+    {
+        foreach ($this->dynamicScope as $resource) {
+            if ($name === $resource->dynamicAnchor) {
+                return $resource;
+            }
+        }
+
+        return null;
+    }
+
+    public function enterDynamicRefTarget(Schema $target, string $path): bool
+    {
+        if (isset($this->dynamicRefTargets[$target]) && $this->dynamicRefTargets[$target] === $path) {
+            return false;
+        }
+
+        $this->dynamicRefTargets[$target] = $path;
+
+        return true;
+    }
+
+    public function leaveDynamicRefTarget(Schema $target): void
+    {
+        unset($this->dynamicRefTargets[$target]);
     }
 
     public function forkForBranch(): self
@@ -126,6 +280,9 @@ final class ValidationContext
             emptyArrayStrategy: $this->emptyArrayStrategy,
             depth: $this->depth,
             mode: $this->mode,
+            dynamicScope: $this->dynamicScope,
+            dialectProfile: $this->dialectProfile,
+            skipContentMediaType: $this->skipContentMediaType,
         );
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Error\Internal;
 
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\ValidatorMode;
@@ -20,5 +21,7 @@ final readonly class ValidationContextInit
         public readonly bool $nullableAsType = true,
         public readonly EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         public readonly ?ValidatorMode $mode = null,
+        public readonly ?DialectProfile $dialectProfile = null,
+        public readonly bool $skipContentMediaType = false,
     ) {}
 }

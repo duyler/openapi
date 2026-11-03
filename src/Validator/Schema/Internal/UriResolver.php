@@ -6,8 +6,10 @@ namespace Duyler\OpenApi\Validator\Schema\Internal;
 
 use function array_pop;
 use function implode;
+use function is_array;
 use function is_int;
 use function is_string;
+use function parse_url;
 use function str_contains;
 use function str_starts_with;
 use function strlen;
@@ -21,6 +23,29 @@ use function substr;
  */
 final readonly class UriResolver
 {
+    public function combine(string $baseUri, string $relativeRef): string
+    {
+        if ('' === $relativeRef) {
+            return $baseUri;
+        }
+
+        $relative = parse_url($relativeRef);
+        if (false === is_array($relative)) {
+            return $relativeRef;
+        }
+
+        if (isset($relative['scheme'])) {
+            return $relativeRef;
+        }
+
+        $base = parse_url($baseUri);
+        if (false === is_array($base)) {
+            return $baseUri;
+        }
+
+        return $this->resolveRelativeAgainstBase($base, $relative, $baseUri);
+    }
+
     /**
      * @param UriParts $base
      * @param UriParts $relative

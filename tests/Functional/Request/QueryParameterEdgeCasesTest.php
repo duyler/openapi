@@ -884,7 +884,7 @@ YAML;
     }
 
     #[Test]
-    public function duplicate_scalar_keys_collapse_to_form_imploded_string(): void
+    public function duplicate_scalar_keys_against_string_schema_throw_type_mismatch(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -900,7 +900,6 @@ paths:
           required: true
           schema:
             type: string
-            const: '1,2'
       responses:
         '200':
           description: OK
@@ -909,16 +908,25 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $operation = $validator->validateRequest(
-            $this->psrFactory->createServerRequest('GET', '/search?a=1&a=2'),
-        );
+        $caught = null;
 
-        $this->assertSame('/search', $operation->path);
-        $this->assertSame('GET', $operation->method);
+        try {
+            $validator->validateRequest(
+                $this->psrFactory->createServerRequest('GET', '/search?a=1&a=2'),
+            );
+            self::fail('Expected TypeMismatchError for duplicate scalar keys against string schema');
+        } catch (TypeMismatchError $error) {
+            $caught = $error;
+        }
+
+        self::assertInstanceOf(TypeMismatchError::class, $caught);
+        self::assertSame('type', $caught->keyword());
+        self::assertSame('string', $caught->params()['expected']);
+        self::assertSame('array', $caught->params()['actual']);
     }
 
     #[Test]
-    public function duplicate_scalar_keys_do_not_use_last_value_semantics(): void
+    public function duplicate_scalar_keys_are_not_collapsed_to_last_value(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -949,19 +957,19 @@ YAML;
             $validator->validateRequest(
                 $this->psrFactory->createServerRequest('GET', '/search?a=1&a=2'),
             );
-            self::fail('Expected ConstError for last-value semantics on duplicate query keys');
+            self::fail('Expected ConstError for collected duplicate keys instead of last-value semantics');
         } catch (ConstError $error) {
             $caught = $error;
         }
 
         self::assertInstanceOf(ConstError::class, $caught);
         self::assertSame('const', $caught->keyword());
-        self::assertSame('1,2', $caught->params()['actual']);
+        self::assertSame(['1', '2'], $caught->params()['actual']);
         self::assertSame('2', $caught->params()['expected']);
     }
 
     #[Test]
-    public function duplicate_scalar_keys_with_array_schema_throws_type_mismatch(): void
+    public function duplicate_scalar_keys_with_array_schema_validate_as_exploded_form(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -987,25 +995,16 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $caught = null;
+        $operation = $validator->validateRequest(
+            $this->psrFactory->createServerRequest('GET', '/search?a=1&a=2'),
+        );
 
-        try {
-            $validator->validateRequest(
-                $this->psrFactory->createServerRequest('GET', '/search?a=1&a=2'),
-            );
-            self::fail('Expected TypeMismatchError for duplicate scalar keys against array schema');
-        } catch (TypeMismatchError $error) {
-            $caught = $error;
-        }
-
-        self::assertInstanceOf(TypeMismatchError::class, $caught);
-        self::assertSame('type', $caught->keyword());
-        self::assertSame('array', $caught->params()['expected']);
-        self::assertSame('string', $caught->params()['actual']);
+        $this->assertSame('/search', $operation->path);
+        $this->assertSame('GET', $operation->method);
     }
 
     #[Test]
-    public function form_style_comma_separated_value_splits_to_array(): void
+    public function explicit_explode_false_splits_comma_separated_form_value_to_array(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -1019,6 +1018,7 @@ paths:
         - name: color
           in: query
           style: form
+          explode: false
           required: true
           schema:
             type: array
@@ -1056,6 +1056,7 @@ paths:
         - name: color
           in: query
           style: form
+          explode: false
           required: true
           schema:
             type: array
@@ -1130,7 +1131,7 @@ YAML;
         self::assertInstanceOf(TypeMismatchError::class, $caught);
         self::assertSame('type', $caught->keyword());
         self::assertSame('object', $caught->params()['expected']);
-        self::assertSame('array', $caught->params()['actual']);
+        self::assertSame('string', $caught->params()['actual']);
     }
 
     /**
@@ -1231,7 +1232,7 @@ YAML;
     }
 
     #[Test]
-    public function bracket_key_without_deep_object_collapses_to_string(): void
+    public function bracket_key_against_string_schema_throws_type_mismatch(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -1247,7 +1248,6 @@ paths:
           required: true
           schema:
             type: string
-            const: 'a'
       responses:
         '200':
           description: OK
@@ -1256,16 +1256,25 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $operation = $validator->validateRequest(
-            $this->psrFactory->createServerRequest('GET', '/search?arr[0]=a'),
-        );
+        $caught = null;
 
-        $this->assertSame('/search', $operation->path);
-        $this->assertSame('GET', $operation->method);
+        try {
+            $validator->validateRequest(
+                $this->psrFactory->createServerRequest('GET', '/search?arr[0]=a'),
+            );
+            self::fail('Expected TypeMismatchError for bracket key against string schema');
+        } catch (TypeMismatchError $error) {
+            $caught = $error;
+        }
+
+        self::assertInstanceOf(TypeMismatchError::class, $caught);
+        self::assertSame('type', $caught->keyword());
+        self::assertSame('string', $caught->params()['expected']);
+        self::assertSame('array', $caught->params()['actual']);
     }
 
     #[Test]
-    public function multiple_bracket_keys_collapse_to_form_imploded_string(): void
+    public function multiple_bracket_keys_against_string_schema_throw_type_mismatch(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -1281,7 +1290,6 @@ paths:
           required: true
           schema:
             type: string
-            const: 'a,b'
       responses:
         '200':
           description: OK
@@ -1290,15 +1298,25 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $operation = $validator->validateRequest(
-            $this->psrFactory->createServerRequest('GET', '/search?arr[0]=a&arr[1]=b'),
-        );
+        $caught = null;
 
-        $this->assertSame('/search', $operation->path);
+        try {
+            $validator->validateRequest(
+                $this->psrFactory->createServerRequest('GET', '/search?arr[0]=a&arr[1]=b'),
+            );
+            self::fail('Expected TypeMismatchError for multiple bracket keys against string schema');
+        } catch (TypeMismatchError $error) {
+            $caught = $error;
+        }
+
+        self::assertInstanceOf(TypeMismatchError::class, $caught);
+        self::assertSame('type', $caught->keyword());
+        self::assertSame('string', $caught->params()['expected']);
+        self::assertSame('array', $caught->params()['actual']);
     }
 
     #[Test]
-    public function bracket_keys_with_array_schema_throws_type_mismatch(): void
+    public function bracket_keys_with_array_schema_validate_as_exploded_form(): void
     {
         $yaml = <<<YAML
 openapi: 3.2.0
@@ -1324,21 +1342,12 @@ YAML;
             ->fromYamlString($yaml)
             ->build();
 
-        $caught = null;
+        $operation = $validator->validateRequest(
+            $this->psrFactory->createServerRequest('GET', '/search?arr[0]=a'),
+        );
 
-        try {
-            $validator->validateRequest(
-                $this->psrFactory->createServerRequest('GET', '/search?arr[0]=a'),
-            );
-            self::fail('Expected TypeMismatchError for bracket key against array schema without deepObject');
-        } catch (TypeMismatchError $error) {
-            $caught = $error;
-        }
-
-        self::assertInstanceOf(TypeMismatchError::class, $caught);
-        self::assertSame('type', $caught->keyword());
-        self::assertSame('array', $caught->params()['expected']);
-        self::assertSame('string', $caught->params()['actual']);
+        $this->assertSame('/search', $operation->path);
+        $this->assertSame('GET', $operation->method);
     }
 
     #[Test]

@@ -109,7 +109,16 @@ final class SseParserTest extends TestCase
     {
         $result = $this->parser->parseString("data:\ndata: hello\n\n");
 
-        self::assertSame('hello', $result[0]['data']);
+        self::assertSame("\nhello", $result[0]['data']);
+    }
+
+    #[Test]
+    public function parse_string_builds_spec_fixture_record_from_multiline_data_retry_and_comment(): void
+    {
+        $result = $this->parser->parseString("event: x\ndata: line1\ndata: line2\nretry: 10\n\n: comment\n");
+
+        self::assertCount(1, $result);
+        self::assertSame(['event' => 'x', 'data' => "line1\nline2", 'retry' => 10], $result[0]);
     }
 
     #[Test]

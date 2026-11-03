@@ -11,14 +11,13 @@ use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\InvalidFormatException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Schema\JsonShape;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Duyler\OpenApi\Validator\SchemaValidator\Internal\ItemValidationExceptionTrait;
 use Duyler\OpenApi\Validator\SchemaValidator\Internal\ItemValidationState;
 use Override;
 
-use function array_is_list;
 use function count;
-use function is_array;
 use function min;
 
 final readonly class PrefixItemsValidator extends AbstractSchemaValidator implements KeywordApplicable
@@ -38,7 +37,9 @@ final readonly class PrefixItemsValidator extends AbstractSchemaValidator implem
             return;
         }
 
-        if (false === is_array($data) || false === array_is_list($data)) {
+        $values = JsonShape::arrayValues($data);
+
+        if (null === $values) {
             return;
         }
 
@@ -50,10 +51,10 @@ final readonly class PrefixItemsValidator extends AbstractSchemaValidator implem
             context: $context,
         );
 
-        $count = min(count($data), count($schema->prefixItems));
+        $count = min(count($values), count($schema->prefixItems));
 
         for ($i = 0; $i < $count; ++$i) {
-            $this->validatePrefixItemAt($data[$i], $i, $state);
+            $this->validatePrefixItemAt($values[$i], $i, $state);
         }
     }
 
@@ -66,7 +67,7 @@ final readonly class PrefixItemsValidator extends AbstractSchemaValidator implem
         }
 
         try {
-            $allowNull = SchemaValueNormalizer::allowsNull($subSchema, $state->nullableAsType);
+            $allowNull = SchemaValueNormalizer::allowsNull($subSchema, $state->nullableAsType, $state->context?->dialectProfile);
             $value = SchemaValueNormalizer::normalize($item, $allowNull);
 
             if (null === $state->context) {
@@ -77,10 +78,11 @@ final readonly class PrefixItemsValidator extends AbstractSchemaValidator implem
 
             try {
                 $state->validator->validate($value, $subSchema, $state->context);
-                $state->context->markItemEvaluated($index);
             } finally {
                 $state->context->leaveBreadcrumb();
             }
+
+            $state->context->markItemEvaluated($index);
         } catch (InvalidDataTypeException|InvalidFormatException|AbstractValidationError|ValidationException $e) {
             $this->wrapItemValidationException(
                 $e,

@@ -14,6 +14,7 @@ use Duyler\OpenApi\Validator\Schema\StatelessValidatorRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Override;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -32,6 +33,7 @@ use const LIBXML_NONET;
 use const LIBXML_NOWARNING;
 
 #[CoversClass(ContentMediaTypeValidator::class)]
+#[Group('content-assertions')]
 class ContentMediaTypeValidatorTest extends TestCase
 {
     private ContentMediaTypeValidator $validator;
@@ -39,7 +41,7 @@ class ContentMediaTypeValidatorTest extends TestCase
     #[Override]
     protected function setUp(): void
     {
-        $this->validator = new ContentMediaTypeValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), new FormatRegistry()), pool: new ValidatorPool(), formatRegistry: new FormatRegistry()));
+        $this->validator = new ContentMediaTypeValidator(new SchemaValidatorDependencies(refResolver: new RefResolver(), statelessValidators: new StatelessValidatorRegistry(new ValidatorPool(), new FormatRegistry()), pool: new ValidatorPool(), formatRegistry: new FormatRegistry(), contentAssertionsEnabled: true));
     }
 
     #[Test]

@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\UnevaluatedPropertyError;
+use Duyler\OpenApi\Validator\Schema\JsonShape;
 use Override;
 
 use function array_diff;
@@ -16,7 +17,6 @@ use function array_keys;
 use function array_unique;
 use function array_values;
 use function assert;
-use function is_array;
 use function is_string;
 use function is_bool;
 
@@ -35,22 +35,26 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
             return;
         }
 
-        if (false === is_array($data)) {
+        $values = JsonShape::objectValues($data);
+
+        if (null === $values) {
             return;
         }
 
-        $evaluatedProperties = $this->getEvaluatedProperties($schema, $data, $context);
-        $unevaluatedProperties = array_diff(array_keys($data), $evaluatedProperties);
+        if (is_bool($schema->unevaluatedProperties) && $schema->unevaluatedProperties) {
+            $this->markAllPropertiesEvaluated($values, $context);
+
+            return;
+        }
+
+        $evaluatedProperties = $this->getEvaluatedProperties($schema, $values, $context);
+        $unevaluatedProperties = array_diff(array_keys($values), $evaluatedProperties);
         /** @var array<array-key, string> $stringUnevaluatedProperties */
         $stringUnevaluatedProperties = array_filter($unevaluatedProperties, is_string(...));
 
         if ($schema->unevaluatedProperties instanceof Schema) {
-            $this->validateUnevaluatedProperties($data, $schema->unevaluatedProperties, $stringUnevaluatedProperties, $context);
+            $this->validateUnevaluatedProperties($values, $schema->unevaluatedProperties, $stringUnevaluatedProperties, $context);
 
-            return;
-        }
-
-        if ($schema->unevaluatedProperties) {
             return;
         }
 
@@ -61,6 +65,20 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
                 schemaPath: '/unevaluatedProperties',
                 propertyName: $propertyName,
             );
+        }
+    }
+
+    /**
+     * @param array<array-key, mixed> $data
+     */
+    private function markAllPropertiesEvaluated(array $data, ?ValidationContext $context): void
+    {
+        foreach (array_keys($data) as $propertyName) {
+            if (false === is_string($propertyName)) {
+                continue;
+            }
+
+            $context?->markPropertyEvaluated($propertyName);
         }
     }
 
@@ -88,6 +106,8 @@ final readonly class UnevaluatedPropertiesValidator extends AbstractSchemaValida
             } finally {
                 $context->leaveBreadcrumb();
             }
+
+            $context->markPropertyEvaluated($propertyName);
         }
     }
 

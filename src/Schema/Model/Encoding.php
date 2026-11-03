@@ -11,11 +11,12 @@ use Override;
 final readonly class Encoding implements JsonSerializable
 {
     /**
+     * @param string|list<string>|null $contentType
      * @param array<string, Encoding>|null $encoding
      * @param array<int, Encoding>|null $prefixEncoding
      */
     public function __construct(
-        public ?string $contentType = null,
+        public string|array|null $contentType = null,
         public ?Headers $headers = null,
         public ?string $style = null,
         public ?bool $explode = null,

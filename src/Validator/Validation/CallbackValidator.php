@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Validator\Validation;
 
+use Duyler\OpenApi\Validator\Callback\CallbackContext;
 use Duyler\OpenApi\Validator\Callback\CallbackValidator as InnerCallbackValidator;
 use Duyler\OpenApi\Validator\EventDispatchingTrait;
 use Duyler\OpenApi\Validator\Internal\ValidationEventPayload;
@@ -30,21 +31,25 @@ final readonly class CallbackValidator
     public function __construct(
         private readonly ValidationStack $context,
         private readonly bool $securityValidation = false,
-        private readonly bool $strictCallbackRuntimeTemplate = true,
+        bool $strictCallbackRuntimeTemplate = true,
     ) {
         $this->eventDispatcher = $context->eventDispatcher;
         $this->logger = $context->logger;
         $this->callbackValidator = new InnerCallbackValidator(
             $context->requestValidator,
             $context->pathRegexCache,
-            $this->strictCallbackRuntimeTemplate,
+            $strictCallbackRuntimeTemplate,
             $context->pregExecutor,
             $this->logger,
         );
-        $this->securityValidator = new SecurityValidator($context->securityVerboseLogger, $context->pregExecutor);
+        $this->securityValidator = new SecurityValidator(
+            $context->securityVerboseLogger,
+            $context->pregExecutor,
+            $context->securitySchemeHandlers,
+        );
     }
 
-    public function validate(ServerRequestInterface $request, string $callbackName): Operation
+    public function validate(ServerRequestInterface $request, string $callbackName, ?CallbackContext $context = null): Operation
     {
         $method = $request->getMethod();
 
@@ -55,11 +60,12 @@ final readonly class CallbackValidator
                 path: $callbackName,
                 method: $method,
             ),
-            callback: function () use ($request, $callbackName, $method): Operation {
+            callback: function () use ($request, $callbackName, $method, $context): Operation {
                 $schemaOperation = $this->callbackValidator->validate(
                     $request,
                     $callbackName,
                     $this->context->document,
+                    $context,
                 );
 
                 if ($this->securityValidation) {

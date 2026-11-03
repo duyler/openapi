@@ -10,6 +10,7 @@ use Duyler\OpenApi\Validator\Exception\AbstractValidationError;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
+use Duyler\OpenApi\Validator\Schema\JsonContainer;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
@@ -42,11 +43,10 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
             return;
         }
 
-        $nullableAsType = $context?->nullableAsType ?? true;
         $validator = $this->createSchemaValidator();
-        $ifValid = $this->validateIfBranch($validator, $data, $schema->if, $context, $nullableAsType);
+        $ifValid = $this->validateIfBranch($validator, $data, $schema->if, $context);
 
-        $this->routeThenOrElse(schema: $schema, data: $data, context: $context, ifValid: $ifValid, validator: $validator, nullableAsType: $nullableAsType);
+        $this->routeThenOrElse(schema: $schema, data: $data, context: $context, ifValid: $ifValid, validator: $validator);
     }
 
     private function routeThenOrElse(
@@ -55,25 +55,24 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
         ?ValidationContext $context,
         bool $ifValid,
         ?SchemaValidatorInterface $validator = null,
-        bool $nullableAsType = true,
     ): void {
         if ($ifValid) {
-            $this->applyBranch($schema->then, $data, $context, $validator, $nullableAsType, 'then');
+            $this->applyBranch($schema->then, $data, $context, $validator, 'then');
 
             return;
         }
 
-        $this->applyBranch($schema->else, $data, $context, $validator, $nullableAsType, 'else');
+        $this->applyBranch($schema->else, $data, $context, $validator, 'else');
     }
 
-    private function applyBranch(Schema|bool|null $branch, mixed $data, ?ValidationContext $context, ?SchemaValidatorInterface $validator, bool $nullableAsType, string $keyword): void
+    private function applyBranch(Schema|bool|null $branch, mixed $data, ?ValidationContext $context, ?SchemaValidatorInterface $validator, string $keyword): void
     {
         if (null === $branch) {
             return;
         }
 
         if ($branch instanceof Schema) {
-            $this->validateThenOrElse($validator ?? $this->createSchemaValidator(), $data, $branch, $context, $nullableAsType);
+            $this->validateThenOrElse($validator ?? $this->createSchemaValidator(), $data, $branch, $context);
 
             return;
         }
@@ -109,11 +108,10 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
         mixed $data,
         Schema $subSchema,
         ?ValidationContext $context,
-        bool $nullableAsType,
     ): bool {
         if (null === $context) {
             try {
-                $normalized = $this->normalizeFor($data, $subSchema, $nullableAsType);
+                $normalized = $this->normalizeFor($data, $subSchema, $context);
                 $validator->validate($normalized, $subSchema, null);
 
                 return true;
@@ -125,7 +123,7 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
         $childContext = $context->forkForBranch();
 
         try {
-            $normalized = $this->normalizeFor($data, $subSchema, $nullableAsType);
+            $normalized = $this->normalizeFor($data, $subSchema, $context);
             $validator->validate($normalized, $subSchema, $childContext);
         } catch (InvalidDataTypeException|ValidationException|AbstractValidationError) {
             return false;
@@ -141,9 +139,8 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
         mixed $data,
         Schema $subSchema,
         ?ValidationContext $context,
-        bool $nullableAsType,
     ): void {
-        $normalized = $this->normalizeFor($data, $subSchema, $nullableAsType);
+        $normalized = $this->normalizeFor($data, $subSchema, $context);
 
         if (null === $context) {
             $validator->validate($normalized, $subSchema, null);
@@ -156,12 +153,13 @@ final readonly class IfThenElseValidator extends AbstractSchemaValidator impleme
         $context->mergeChildAnnotations($childContext);
     }
 
-    /**
-     * @return array<array-key, mixed>|int|string|float|bool|null
-     */
-    private function normalizeFor(mixed $data, Schema $subSchema, bool $nullableAsType): array|int|string|float|bool|null
+    private function normalizeFor(mixed $data, Schema $subSchema, ?ValidationContext $context): JsonContainer|array|int|string|float|bool|null
     {
-        $allowNull = SchemaValueNormalizer::allowsNull($subSchema, $nullableAsType);
+        $allowNull = SchemaValueNormalizer::allowsNull(
+            $subSchema,
+            $context?->nullableAsType ?? true,
+            $context?->dialectProfile,
+        );
 
         return SchemaValueNormalizer::normalize($data, $allowNull);
     }

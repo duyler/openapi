@@ -66,13 +66,13 @@ class EnumValidatorTest extends TestCase
     }
 
     #[Test]
-    public function skip_when_enum_is_empty(): void
+    public function throw_error_when_enum_is_empty(): void
     {
         $schema = new Schema(type: 'string', enum: []);
 
-        $this->validator->validate('any value', $schema);
+        $this->expectException(EnumError::class);
 
-        $this->expectNotToPerformAssertions();
+        $this->validator->validate('any value', $schema);
     }
 
     #[Test]

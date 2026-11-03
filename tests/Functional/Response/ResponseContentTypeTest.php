@@ -6,7 +6,10 @@ namespace Duyler\OpenApi\Test\Functional\Response;
 
 use Duyler\OpenApi\Builder\OpenApiValidatorBuilder;
 use Duyler\OpenApi\Builder\OpenApiValidatorInterface;
+use Duyler\OpenApi\Event\ArrayDispatcher;
+use Duyler\OpenApi\Test\Support\TestEventBuilders;
 use Duyler\OpenApi\Validator\Exception\RequiredError;
+use Duyler\OpenApi\Validator\Exception\UnsupportedMediaTypeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Operation;
 use JsonException;
@@ -107,21 +110,33 @@ YAML;
     #[Test]
     public function response_with_wrong_content_type_skips_body_validation_for_valid_json(): void
     {
-        [$validator, $operation] = $this->buildJsonValidatorWithOperation();
+        $warnings = [];
+        [$validator, $operation] = $this->buildJsonValidatorWithOperation(
+            TestEventBuilders::unsupportedMediaTypeWarningCollector($warnings),
+            lenientResponses: true,
+        );
 
         $response = $this->createResponse('text/plain', '{"name":"John Doe"}');
 
         $this->assertValidationPasses($validator, $response, $operation);
+        self::assertCount(1, $warnings);
+        self::assertSame('text/plain', $warnings[0]->mediaType);
     }
 
     #[Test]
     public function response_with_wrong_content_type_skips_body_validation_for_invalid_json(): void
     {
-        [$validator, $operation] = $this->buildJsonValidatorWithOperation();
+        $warnings = [];
+        [$validator, $operation] = $this->buildJsonValidatorWithOperation(
+            TestEventBuilders::unsupportedMediaTypeWarningCollector($warnings),
+            lenientResponses: true,
+        );
 
         $response = $this->createResponse('text/plain', '{"name":}');
 
         $this->assertValidationPasses($validator, $response, $operation);
+        self::assertCount(1, $warnings);
+        self::assertSame('text/plain', $warnings[0]->mediaType);
     }
 
     #[Test]
@@ -138,11 +153,17 @@ YAML;
     #[Test]
     public function response_with_unknown_vendor_content_type_skips_body_validation(): void
     {
-        [$validator, $operation] = $this->buildJsonValidatorWithOperation();
+        $warnings = [];
+        [$validator, $operation] = $this->buildJsonValidatorWithOperation(
+            TestEventBuilders::unsupportedMediaTypeWarningCollector($warnings),
+            lenientResponses: true,
+        );
 
         $response = $this->createResponse('application/vnd.api+json', '{"unknownField":"payload"}');
 
         $this->assertValidationPasses($validator, $response, $operation);
+        self::assertCount(1, $warnings);
+        self::assertSame('application/vnd.api+json', $warnings[0]->mediaType);
     }
 
     #[Test]
@@ -216,47 +237,106 @@ YAML;
     #[Test]
     public function multiple_content_types_response_skips_validation_for_unknown_content_type(): void
     {
-        [$validator, $operation] = $this->buildMultipleContentTypesValidatorWithOperation();
+        $warnings = [];
+        [$validator, $operation] = $this->buildMultipleContentTypesValidatorWithOperation(
+            TestEventBuilders::unsupportedMediaTypeWarningCollector($warnings),
+            lenientResponses: true,
+        );
 
         $response = $this->createResponse('text/csv', 'jsonField,value');
 
         $this->assertValidationPasses($validator, $response, $operation);
+        self::assertCount(1, $warnings);
+        self::assertSame('text/csv', $warnings[0]->mediaType);
     }
 
     #[Test]
-    public function multiple_content_types_response_with_vendor_type_skips_validation_silently(): void
+    public function multiple_content_types_response_with_vendor_type_skips_validation_and_dispatches_warning(): void
     {
-        [$validator, $operation] = $this->buildMultipleContentTypesValidatorWithOperation();
+        $warnings = [];
+        [$validator, $operation] = $this->buildMultipleContentTypesValidatorWithOperation(
+            TestEventBuilders::unsupportedMediaTypeWarningCollector($warnings),
+            lenientResponses: true,
+        );
 
         $response = $this->createResponse('application/vnd.api+json', '{"totally":"unrelated"}');
 
         $this->assertValidationPasses($validator, $response, $operation);
+        self::assertCount(1, $warnings);
+        self::assertSame('application/vnd.api+json', $warnings[0]->mediaType);
+    }
+
+    #[Test]
+    public function response_with_unknown_content_type_throws_unsupported_media_type_exception(): void
+    {
+        [$validator, $operation] = $this->buildJsonValidatorWithOperation();
+
+        $response = $this->createResponse('application/x-unknown', '{"name":"John Doe"}');
+
+        try {
+            $validator->validateResponse($response, $operation);
+            self::fail('Expected UnsupportedMediaTypeException');
+        } catch (UnsupportedMediaTypeException $exception) {
+            self::assertSame('application/x-unknown', $exception->mediaType);
+            self::assertStringNotContainsString('application/x-unknown', $exception->getMessage());
+        }
+    }
+
+    #[Test]
+    public function streaming_response_with_unknown_content_type_throws_unsupported_media_type_exception(): void
+    {
+        [$validator, $operation] = $this->buildJsonValidatorWithOperation();
+
+        $response = $this->createResponse('application/jsonl', '{"name":"John Doe"}' . "\n");
+
+        try {
+            $validator->validateResponse($response, $operation);
+            self::fail('Expected UnsupportedMediaTypeException');
+        } catch (UnsupportedMediaTypeException $exception) {
+            self::assertSame('application/jsonl', $exception->mediaType);
+            self::assertStringNotContainsString('application/jsonl', $exception->getMessage());
+        }
     }
 
     /**
      * @return array{0: OpenApiValidatorInterface, 1: Operation}
      */
-    private function buildJsonValidatorWithOperation(): array
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::JSON_RESPONSE_SPEC)
-            ->build();
-
-        $operation = $validator->validateRequest(
-            $this->factory->createServerRequest('GET', '/data'),
-        );
-
-        return [$validator, $operation];
+    private function buildJsonValidatorWithOperation(
+        ?ArrayDispatcher $eventDispatcher = null,
+        bool $lenientResponses = false,
+    ): array {
+        return $this->buildValidatorWithOperation(self::JSON_RESPONSE_SPEC, $eventDispatcher, $lenientResponses);
     }
 
     /**
      * @return array{0: OpenApiValidatorInterface, 1: Operation}
      */
-    private function buildMultipleContentTypesValidatorWithOperation(): array
-    {
-        $validator = OpenApiValidatorBuilder::create()
-            ->fromYamlString(self::MULTIPLE_CONTENT_TYPES_SPEC)
-            ->build();
+    private function buildMultipleContentTypesValidatorWithOperation(
+        ?ArrayDispatcher $eventDispatcher = null,
+        bool $lenientResponses = false,
+    ): array {
+        return $this->buildValidatorWithOperation(self::MULTIPLE_CONTENT_TYPES_SPEC, $eventDispatcher, $lenientResponses);
+    }
+
+    /**
+     * @return array{0: OpenApiValidatorInterface, 1: Operation}
+     */
+    private function buildValidatorWithOperation(
+        string $yaml,
+        ?ArrayDispatcher $eventDispatcher = null,
+        bool $lenientResponses = false,
+    ): array {
+        $builder = OpenApiValidatorBuilder::create()->fromYamlString($yaml);
+
+        if (null !== $eventDispatcher) {
+            $builder = $builder->withEventDispatcher($eventDispatcher);
+        }
+
+        if ($lenientResponses) {
+            $builder = $builder->withLenientResponses();
+        }
+
+        $validator = $builder->build();
 
         $operation = $validator->validateRequest(
             $this->factory->createServerRequest('GET', '/data'),

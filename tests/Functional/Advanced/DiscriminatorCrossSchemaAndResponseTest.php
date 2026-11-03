@@ -164,12 +164,12 @@ YAML;
     }
 
     #[Test]
-    public function unknown_pet_type_throws_unknown_discriminator_value(): void
+    public function unknown_pet_type_falls_back_to_one_of_validation_in_32(): void
     {
         $validator = $this->buildPetValidator();
 
-        $this->expectException(UnknownDiscriminatorValueException::class);
-        $this->expectExceptionMessage('Unknown discriminator value "bird"');
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Exactly one of schemas must match, but none did');
 
         $validator->validateSchema(['petType' => 'bird'], '#/components/schemas/Pet');
     }
@@ -223,14 +223,14 @@ YAML;
     }
 
     #[Test]
-    public function response_with_unknown_pet_type_throws_unknown_discriminator_value(): void
+    public function response_with_unknown_pet_type_falls_back_to_one_of_validation_in_32(): void
     {
         [$validator, $operation] = $this->buildPetValidatorWithOperation();
 
         $response = $this->createJsonResponse('{"petType":"bird"}');
 
-        $this->expectException(UnknownDiscriminatorValueException::class);
-        $this->expectExceptionMessage('Unknown discriminator value "bird"');
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Exactly one of schemas must match, but none did');
 
         $validator->validateResponse($response, $operation);
     }

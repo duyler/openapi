@@ -53,6 +53,7 @@ final readonly class SchemaFieldMetadata
             new FieldMetadata('maxContains', 'maxContains', FieldMetadata::CATEGORY_ARRAY),
             new FieldMetadata('patternProperties', 'patternProperties', FieldMetadata::CATEGORY_OBJECT),
             new FieldMetadata('propertyNames', 'propertyNames', FieldMetadata::CATEGORY_OBJECT),
+            new FieldMetadata('dependentRequired', 'dependentRequired', FieldMetadata::CATEGORY_OBJECT),
             new FieldMetadata('dependentSchemas', 'dependentSchemas', FieldMetadata::CATEGORY_OBJECT),
             new FieldMetadata('if', 'if', FieldMetadata::CATEGORY_COMPOSITION),
             new FieldMetadata('then', 'then', FieldMetadata::CATEGORY_COMPOSITION),
@@ -67,6 +68,13 @@ final readonly class SchemaFieldMetadata
             new FieldMetadata('contentSchema', 'contentSchema', FieldMetadata::CATEGORY_OBJECT),
             new FieldMetadata('jsonSchemaDialect', '$schema', FieldMetadata::CATEGORY_FLAT),
             new FieldMetadata('xml', 'xml', FieldMetadata::CATEGORY_FLAT),
+            new FieldMetadata('id', '$id', FieldMetadata::CATEGORY_FLAT),
+            new FieldMetadata('anchor', '$anchor', FieldMetadata::CATEGORY_FLAT),
+            new FieldMetadata('dynamicAnchor', '$dynamicAnchor', FieldMetadata::CATEGORY_FLAT),
+            new FieldMetadata('dynamicRef', '$dynamicRef', FieldMetadata::CATEGORY_FLAT),
+            new FieldMetadata('comment', '$comment', FieldMetadata::CATEGORY_FLAT),
+            new FieldMetadata('vocabulary', '$vocabulary', FieldMetadata::CATEGORY_FLAT),
+            new FieldMetadata('defs', '$defs', FieldMetadata::CATEGORY_OBJECT),
         ];
     }
 }

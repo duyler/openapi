@@ -24,13 +24,13 @@ final readonly class EnumValidator extends AbstractSchemaValidator implements Ke
     #[Override]
     public function isApplicable(Schema $schema): bool
     {
-        return null !== $schema->enum && [] !== $schema->enum;
+        return null !== $schema->enum;
     }
 
     #[Override]
     public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
-        if (null === $schema->enum || [] === $schema->enum) {
+        if (null === $schema->enum) {
             return;
         }
 

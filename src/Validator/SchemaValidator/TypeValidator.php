@@ -8,6 +8,7 @@ use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Exception\TypeMismatchError;
+use Duyler\OpenApi\Validator\Schema\JsonContainer;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use Duyler\OpenApi\Validator\TypeFormatter;
 use Override;
@@ -44,7 +45,7 @@ final readonly class TypeValidator extends AbstractSchemaValidator implements Ke
 
         $nullableAsType = $context?->nullableAsType ?? true;
 
-        if (null === $data && SchemaValueNormalizer::isNullableSchema($schema, $nullableAsType)) {
+        if (null === $data && SchemaValueNormalizer::isNullableSchema($schema, $nullableAsType, $context?->dialectProfile)) {
             return;
         }
 
@@ -110,6 +111,10 @@ final readonly class TypeValidator extends AbstractSchemaValidator implements Ke
 
     private function isArray(mixed $data, EmptyArrayStrategy $strategy): bool
     {
+        if ($data instanceof JsonContainer) {
+            return $data->isArray();
+        }
+
         if (false === is_array($data)) {
             return false;
         }
@@ -128,6 +133,10 @@ final readonly class TypeValidator extends AbstractSchemaValidator implements Ke
 
     private function isObject(mixed $data, EmptyArrayStrategy $strategy): bool
     {
+        if ($data instanceof JsonContainer) {
+            return $data->isObject();
+        }
+
         if (false === is_array($data)) {
             return false;
         }

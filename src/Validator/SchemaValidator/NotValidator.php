@@ -45,13 +45,11 @@ final readonly class NotValidator extends AbstractSchemaValidator implements Key
 
     private function matchesNotSchema(mixed $data, Schema $notSchema, ?ValidationContext $context): bool
     {
-        $nullableAsType = $context?->nullableAsType ?? true;
         $validator = $this->createSchemaValidator();
         $childContext = null !== $context ? $context->forkForBranch() : null;
 
         try {
-            $allowNull = SchemaValueNormalizer::allowsNull($notSchema, $nullableAsType);
-            $normalizedData = SchemaValueNormalizer::normalize($data, $allowNull);
+            $normalizedData = SchemaValueNormalizer::normalize($data, true);
             $validator->validate($normalizedData, $notSchema, $childContext);
         } catch (InvalidDataTypeException|ValidationException|AbstractValidationError) {
             return false;

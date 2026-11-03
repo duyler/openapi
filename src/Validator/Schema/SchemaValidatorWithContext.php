@@ -11,6 +11,7 @@ use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Error\Internal\ValidationContextInit;
 use Duyler\OpenApi\Validator\Error\ValidationContext;
 use Duyler\OpenApi\Validator\Schema\Internal\CompositionResolver;
+use Duyler\OpenApi\Validator\Schema\Internal\DynamicScopeResolver;
 use Duyler\OpenApi\Validator\Schema\Internal\PropertiesAndItemsDispatcher;
 use Duyler\OpenApi\Validator\SchemaValidator\SchemaValidatorInterface;
 use Duyler\OpenApi\Validator\ValidatorMode;
@@ -20,16 +21,9 @@ final readonly class SchemaValidatorWithContext
 {
     private OneOfValidatorWithContext $oneOfValidator;
     private DiscriminatorValidator $discriminatorValidator;
-    private PropertiesValidatorWithContext $propertiesValidator;
-    private ItemsValidatorWithContext $itemsValidator;
     private CompositionResolver $compositionResolver;
     private PropertiesAndItemsDispatcher $dispatcher;
-
-    /** @var WeakMap<Schema, Schema> */
-    private WeakMap $resolvedCache;
-
-    /** @var WeakMap<Schema, list<SchemaValidatorInterface>> */
-    private WeakMap $applicableStatelessValidators;
+    private DynamicScopeResolver $scopeResolver;
 
     public function __construct(
         private OpenApiDocument $document,
@@ -38,38 +32,43 @@ final readonly class SchemaValidatorWithContext
     ) {
         $this->oneOfValidator = new OneOfValidatorWithContext($this->document, $this->dependencies, $this->configuration);
         $this->discriminatorValidator = new DiscriminatorValidator($this->dependencies, $this->configuration);
-        $this->propertiesValidator = new PropertiesValidatorWithContext($this->document, $this->dependencies, $this->configuration);
-        $this->itemsValidator = new ItemsValidatorWithContext($this->document, $this->dependencies, $this->configuration);
+        $propertiesValidator = new PropertiesValidatorWithContext($this->document, $this->dependencies, $this->configuration);
+        $itemsValidator = new ItemsValidatorWithContext($this->document, $this->dependencies, $this->configuration);
         /** @var WeakMap<Schema, Schema> $resolvedCache */
         $resolvedCache = new WeakMap();
-        $this->resolvedCache = $resolvedCache;
         /** @var WeakMap<Schema, list<SchemaValidatorInterface>> $applicableStatelessValidators */
         $applicableStatelessValidators = new WeakMap();
-        $this->applicableStatelessValidators = $applicableStatelessValidators;
 
-        $this->compositionResolver = new CompositionResolver($this->document, $this->dependencies, $this->resolvedCache);
+        $this->compositionResolver = new CompositionResolver($this->document, $this->dependencies, $resolvedCache);
+        $this->scopeResolver = new DynamicScopeResolver($this->dependencies->refResolver, $this->document);
         $this->dispatcher = new PropertiesAndItemsDispatcher(
             $this->dependencies,
-            $this->propertiesValidator,
-            $this->itemsValidator,
-            $this->applicableStatelessValidators,
+            $propertiesValidator,
+            $itemsValidator,
+            $applicableStatelessValidators,
         );
     }
 
-    public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidatorMode $mode = null): void
-    {
+    public function validate(
+        mixed $data,
+        Schema $schema,
+        ?ValidatorMode $mode = null,
+        bool $skipContentMediaType = false,
+    ): void {
         $context = ValidationContext::fromInit(new ValidationContextInit(
             pool: $this->dependencies->pool,
             errorFormatter: $this->dependencies->errorFormatter,
             nullableAsType: $this->configuration->nullableAsType,
             emptyArrayStrategy: $this->configuration->emptyArrayStrategy,
             mode: $mode,
+            dialectProfile: $this->configuration->dialectProfile,
+            skipContentMediaType: $skipContentMediaType,
         ));
 
         $this->doValidate($data, $schema, $context, true);
     }
 
-    public function validateWithContext(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context): void
+    public function validateWithContext(mixed $data, Schema $schema, ValidationContext $context): void
     {
         $context->incrementDepth();
 
@@ -80,7 +79,7 @@ final readonly class SchemaValidatorWithContext
         }
     }
 
-    public function validateWithContextIgnoringDiscriminator(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context): void
+    public function validateWithContextIgnoringDiscriminator(mixed $data, Schema $schema, ValidationContext $context): void
     {
         $context->incrementDepth();
 
@@ -91,41 +90,70 @@ final readonly class SchemaValidatorWithContext
         }
     }
 
-    private function doValidate(array|int|string|float|bool|null $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
+    private function doValidate(mixed $data, Schema $schema, ValidationContext $context, bool $useDiscriminator): void
     {
-        $schema = $this->resolveRef($schema);
-        /** @var WeakMap<Schema, true> $visited */
-        $visited = new WeakMap();
-        $schema = $this->compositionResolver->resolveCompositionRefs($schema, $visited);
+        $entersResolvedScope = false;
+        $frame = $this->scopeResolver->enter($schema, $context);
+        $schema = $frame->schema;
 
-        if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
-            $this->oneOfValidator->validateWithContext($data, $schema, $context);
+        try {
+            /** @var WeakMap<Schema, true> $visited */
+            $visited = new WeakMap();
+            $compositionBaseUri = $this->dependencies->refResolver->scopeBaseUri($context->dynamicScope(), $this->document);
+            $schema = $this->compositionResolver->resolveCompositionRefs($schema, $visited, $compositionBaseUri);
 
-            return;
-        }
+            $entersResolvedScope = null !== $schema->id || $context->hasEmptyDynamicScope();
 
-        if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
+            if ($entersResolvedScope) {
+                $context->enterDynamicScope($schema);
+            }
+
+            $context->annotateSchemaExtras($schema);
+
+            if ($useDiscriminator && null !== $schema->discriminator && null !== $schema->oneOf) {
+                $this->oneOfValidator->validateWithContext($data, $schema, $context);
+                $this->validateCompanion($frame->companion, $data, $context, $useDiscriminator);
+
+                return;
+            }
+
+            if ($useDiscriminator && null !== $schema->discriminator && null !== $data) {
+                $this->dispatcher->validateInternal($data, $schema, $context);
+                $this->discriminatorValidator->validate($data, $schema, $this->document, '/', $context);
+                $this->dispatcher->dispatchPropertiesAndItems($data, $schema, $context, $useDiscriminator);
+                $this->validateCompanion($frame->companion, $data, $context, $useDiscriminator);
+
+                return;
+            }
+
+            if (null === $schema->discriminator && null !== $schema->oneOf) {
+                $this->oneOfValidator->validateWithContextIgnoringDiscriminator($data, $schema, $context);
+            }
+
             $this->dispatcher->validateInternal($data, $schema, $context);
-            $this->discriminatorValidator->validate($data, $schema, $this->document, '/', $context);
             $this->dispatcher->dispatchPropertiesAndItems($data, $schema, $context, $useDiscriminator);
 
+            $this->validateCompanion($frame->companion, $data, $context, $useDiscriminator);
+        } finally {
+            if ($entersResolvedScope) {
+                $context->leaveDynamicScope();
+            }
+
+            $this->scopeResolver->leave($frame, $context);
+        }
+    }
+
+    private function validateCompanion(
+        ?Schema $companion,
+        mixed $data,
+        ValidationContext $context,
+        bool $useDiscriminator,
+    ): void {
+        if (null === $companion) {
             return;
         }
 
-        if (null === $schema->discriminator && null !== $schema->oneOf) {
-            $this->oneOfValidator->validateWithContextIgnoringDiscriminator($data, $schema, $context);
-        }
-
-        $this->dispatcher->validateInternal($data, $schema, $context);
-        $this->dispatcher->dispatchPropertiesAndItems($data, $schema, $context, $useDiscriminator);
-    }
-
-    private function resolveRef(Schema $schema): Schema
-    {
-        if (null === $schema->ref) {
-            return $schema;
-        }
-
-        return $this->dependencies->refResolver->resolveSchemaWithOverride($schema, $this->document);
+        $this->dispatcher->validateInternal($data, $companion, $context);
+        $this->dispatcher->dispatchPropertiesAndItems($data, $companion, $context, $useDiscriminator);
     }
 }

@@ -127,7 +127,7 @@ final readonly class SseParser implements StreamingFormatParser
      */
     private function applyField(array $currentEvent, string $field, string $value): array
     {
-        if ('data' === $field && isset($currentEvent['data']) && '' !== $currentEvent['data']) {
+        if ('data' === $field && isset($currentEvent['data'])) {
             $currentEvent['data'] .= "\n" . $value;
 
             return $currentEvent;

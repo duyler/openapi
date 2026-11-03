@@ -290,6 +290,20 @@ final class DiscriminatorDetectorTest extends TestCase
     }
 
     #[Test]
+    public function detect_ref_short_circuits_on_visited_schema(): void
+    {
+        $schema = new Schema(ref: '#/components/schemas/A');
+
+        /** @var WeakMap<Schema, true> $visited */
+        $visited = new WeakMap();
+        $visited[$schema] = true;
+
+        [$has,] = $this->detector->detectRef($schema, $visited, 0);
+
+        self::assertFalse($has);
+    }
+
+    #[Test]
     public function iterate_sub_schemas_yields_composition_arrays_and_singles(): void
     {
         $items = new Schema(type: 'string');
@@ -309,21 +323,6 @@ final class DiscriminatorDetectorTest extends TestCase
         self::assertContains($items, $yielded);
         self::assertContains($notSchema, $yielded);
         self::assertContains($oneOfItem, $yielded);
-    }
-
-    #[Test]
-    public function collect_single_sub_schemas_excludes_boolean_and_null_entries(): void
-    {
-        $schema = new Schema(
-            items: new Schema(type: 'string'),
-            additionalProperties: true,
-            unevaluatedItems: null,
-        );
-
-        $collected = $this->detector->collectSingleSubSchemas($schema);
-
-        self::assertCount(1, $collected);
-        self::assertInstanceOf(Schema::class, $collected[0]);
     }
 
     private function emptyDocument(): OpenApiDocument

@@ -31,7 +31,7 @@ final class StatelessValidatorDispatcher implements SchemaValidatorInterface
     }
 
     #[Override]
-    public function validate(array|int|string|float|bool|null $data, Schema $schema, ?ValidationContext $context = null): void
+    public function validate(mixed $data, Schema $schema, ?ValidationContext $context = null): void
     {
         if (null === $context) {
             $context = ValidationContext::fromInit(new ValidationContextInit(pool: $this->pool));
@@ -39,11 +39,23 @@ final class StatelessValidatorDispatcher implements SchemaValidatorInterface
 
         $context->incrementDepth();
 
+        $entersDynamicScope = null !== $schema->id || $context->hasEmptyDynamicScope();
+
+        if ($entersDynamicScope) {
+            $context->enterDynamicScope($schema);
+        }
+
         try {
+            $context->annotateSchemaExtras($schema);
+
             foreach ($this->applicableValidators($schema) as $validator) {
                 $validator->validate($data, $schema, $context);
             }
         } finally {
+            if ($entersDynamicScope) {
+                $context->leaveDynamicScope();
+            }
+
             $context->decrementDepth();
         }
     }

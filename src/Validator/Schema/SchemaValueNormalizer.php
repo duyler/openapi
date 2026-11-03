@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Validator\Schema;
 
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use stdClass;
 
@@ -15,15 +16,17 @@ use function is_object;
 use function is_resource;
 use function is_scalar;
 use function sprintf;
+use function is_string;
 
 final readonly class SchemaValueNormalizer
 {
-    /**
-     * @return array<int|string, mixed>|int|string|float|bool|null
-     */
-    public static function normalize(mixed $value, bool $allowNull = false): array|int|string|float|bool|null
+    public static function normalize(mixed $value, bool $allowNull = false): JsonContainer|array|int|string|float|bool|null
     {
         if (null === $value && $allowNull) {
+            return $value;
+        }
+
+        if ($value instanceof JsonContainer) {
             return $value;
         }
 
@@ -49,23 +52,38 @@ final readonly class SchemaValueNormalizer
         ));
     }
 
-    public static function isNullableSchema(Schema $schema, bool $nullableAsType): bool
-    {
-        return $nullableAsType && $schema->nullable;
-    }
-
-    public static function allowsNull(Schema $schema, bool $nullableAsType = true): bool
+    public static function isNullableSchema(Schema $schema, bool $nullableAsType, ?DialectProfile $profile = null): bool
     {
         if (false === $nullableAsType) {
             return false;
         }
 
-        return $schema->nullable
-            || self::doesTypeIncludeNull($schema->type)
-            || null !== $schema->ref
-            || null !== $schema->allOf
-            || null !== $schema->anyOf
-            || null !== $schema->oneOf;
+        if (null === $schema->type && true === ($profile?->nullableRequiresType ?? false)) {
+            return false;
+        }
+
+        return $schema->nullable;
+    }
+
+    public static function allowsNull(Schema $schema, bool $nullableAsType = true, ?DialectProfile $profile = null): bool
+    {
+        if (false === $nullableAsType) {
+            return false;
+        }
+
+        if (self::doesTypeIncludeNull($schema->type)) {
+            return true;
+        }
+
+        if (null !== $schema->ref || null !== $schema->allOf || null !== $schema->anyOf || null !== $schema->oneOf) {
+            return true;
+        }
+
+        if (null === $schema->type) {
+            return false === ($profile?->nullableRequiresType ?? false);
+        }
+
+        return $schema->nullable;
     }
 
     /**
@@ -73,6 +91,10 @@ final readonly class SchemaValueNormalizer
      */
     public static function doesTypeIncludeNull(string|array|null $type): bool
     {
+        if (is_string($type)) {
+            return 'null' === $type;
+        }
+
         if (false === is_array($type)) {
             return false;
         }

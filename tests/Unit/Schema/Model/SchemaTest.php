@@ -10,6 +10,10 @@ use Duyler\OpenApi\Schema\Model\Xml;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
+
+use function sprintf;
+use function str_starts_with;
 
 #[CoversClass(Schema::class)]
 final class SchemaTest extends TestCase
@@ -626,6 +630,22 @@ final class SchemaTest extends TestCase
 
         self::assertIsArray($serialized);
         self::assertArrayHasKey('dependentSchemas', $serialized);
+    }
+
+    #[Test]
+    public function json_serialize_includes_dependent_required(): void
+    {
+        $schema = new Schema(
+            type: 'object',
+            dependentRequired: [
+                'creditCard' => ['billingAddress'],
+            ],
+        );
+
+        $serialized = $schema->jsonSerialize();
+
+        self::assertIsArray($serialized);
+        self::assertSame(['billingAddress'], $serialized['dependentRequired']['creditCard']);
     }
 
     #[Test]
@@ -1386,5 +1406,98 @@ final class SchemaTest extends TestCase
         self::assertIsArray($serialized);
         self::assertArrayHasKey('contains', $serialized);
         self::assertTrue($serialized['contains']);
+    }
+
+    #[Test]
+    public function without_reference_preserves_every_field_except_reference_fields(): void
+    {
+        $schema = new Schema(
+            ref: '#/components/schemas/User',
+            refSummary: 'User schema',
+            refDescription: 'A user object',
+            format: 'email',
+            title: 'User',
+            description: 'A user object',
+            default: 'anonymous',
+            hasDefault: true,
+            deprecated: true,
+            readOnly: true,
+            writeOnly: true,
+            type: 'object',
+            nullable: true,
+            const: 'fixed',
+            hasConst: true,
+            multipleOf: 2.0,
+            maximum: 10.0,
+            exclusiveMaximum: 11.0,
+            minimum: 1.0,
+            exclusiveMinimum: 0.0,
+            maxLength: 100,
+            minLength: 1,
+            pattern: '^[a-z]+$',
+            maxItems: 10,
+            minItems: 1,
+            uniqueItems: true,
+            maxProperties: 20,
+            minProperties: 1,
+            required: ['name'],
+            allOf: [new Schema(type: 'string')],
+            anyOf: [new Schema(type: 'integer')],
+            oneOf: [new Schema(type: 'boolean')],
+            not: new Schema(type: 'string'),
+            discriminator: new Discriminator(propertyName: 'type'),
+            properties: ['name' => new Schema(type: 'string')],
+            additionalProperties: false,
+            unevaluatedProperties: true,
+            items: new Schema(type: 'number'),
+            prefixItems: [new Schema(type: 'string')],
+            contains: new Schema(type: 'number'),
+            minContains: 1,
+            maxContains: 5,
+            patternProperties: ['^S_' => new Schema(type: 'string')],
+            propertyNames: new Schema(type: 'string'),
+            dependentRequired: ['creditCard' => ['billingAddress']],
+            dependentSchemas: ['foo' => new Schema(type: 'string')],
+            if: new Schema(required: ['level']),
+            then: new Schema(properties: ['level' => new Schema(type: 'string')]),
+            else: new Schema(required: ['other']),
+            unevaluatedItems: false,
+            example: 'example',
+            examples: ['one', 'two'],
+            enum: ['a', 'b'],
+            contentEncoding: 'base64',
+            contentMediaType: 'application/json',
+            contentSchema: new Schema(type: 'object'),
+            jsonSchemaDialect: 'https://json-schema.org/draft/2020-12/schema',
+            xml: new Xml(name: 'user', wrapped: true),
+            id: 'https://example.com/user',
+            anchor: 'userAnchor',
+            dynamicAnchor: 'userDynamicAnchor',
+            dynamicRef: '#userDynamicAnchor',
+            comment: 'a comment',
+            vocabulary: ['https://json-schema.org/draft/2020-12/vocab/core' => true],
+            defs: ['UserCode' => new Schema(type: 'string')],
+            extras: ['x-custom' => 'value'],
+        );
+
+        $stripped = $schema->withoutReference();
+
+        self::assertNull($stripped->ref);
+        self::assertNull($stripped->refSummary);
+        self::assertNull($stripped->refDescription);
+
+        $properties = new ReflectionClass(Schema::class)->getProperties();
+
+        foreach ($properties as $property) {
+            if (str_starts_with($property->getName(), 'ref')) {
+                continue;
+            }
+
+            self::assertSame(
+                $property->getValue($schema),
+                $property->getValue($stripped),
+                sprintf('Field "%s" must survive withoutReference()', $property->getName()),
+            );
+        }
     }
 }

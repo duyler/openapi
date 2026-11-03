@@ -12,5 +12,6 @@ final readonly class ParameterValidationConfig
         public bool $nullableAsType = true,
         public EmptyArrayStrategy $emptyArrayStrategy = EmptyArrayStrategy::AllowBoth,
         public bool $strictCoercion = true,
+        public ?DialectProfile $dialectProfile = null,
     ) {}
 }

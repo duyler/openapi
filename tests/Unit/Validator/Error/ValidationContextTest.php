@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Duyler\OpenApi\Test\Unit\Validator\Error;
 
+use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Dto\ContentValidationResult;
 use Duyler\OpenApi\Validator\Error\Formatter\DetailedFormatter;
 use Duyler\OpenApi\Validator\Error\Formatter\JsonFormatter;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
@@ -280,5 +282,394 @@ class ValidationContextTest extends TestCase
 
         $this->assertSame(['child_only'], $child->evaluatedPropertyNames());
         $this->assertSame(['parent_only', 'child_only'], $parent->evaluatedPropertyNames());
+    }
+
+    #[Test]
+    public function path_returns_current_breadcrumb_path(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+
+        $this->assertSame('/', $context->path());
+
+        $context->enterBreadcrumb('users');
+        $context->enterBreadcrumbIndex(0);
+
+        $this->assertSame('/users/0', $context->path());
+    }
+
+    #[Test]
+    public function annotations_are_empty_by_default(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+
+        $this->assertSame([], $context->annotations());
+    }
+
+    #[Test]
+    public function annotate_accumulates_records_per_keyword(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+
+        $context->annotate('x-a', 1, '/');
+        $context->annotate('x-a', 2, '/users');
+        $context->annotate('x-b', 'v', '/users/0');
+
+        $this->assertSame([
+            'x-a' => [
+                ['path' => '/', 'value' => 1],
+                ['path' => '/users', 'value' => 2],
+            ],
+            'x-b' => [
+                ['path' => '/users/0', 'value' => 'v'],
+            ],
+        ], $context->annotations());
+    }
+
+    #[Test]
+    public function annotate_schema_extras_records_each_keyword_with_current_path(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $schema = new Schema(extras: ['x-meta' => ['a' => 1], 'x-vendor' => true]);
+
+        $context->enterBreadcrumb('users');
+        $context->annotateSchemaExtras($schema);
+
+        $this->assertSame([
+            'x-meta' => [
+                ['path' => '/users', 'value' => ['a' => 1]],
+            ],
+            'x-vendor' => [
+                ['path' => '/users', 'value' => true],
+            ],
+        ], $context->annotations());
+    }
+
+    #[Test]
+    public function annotate_schema_extras_ignores_schema_without_extras(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+
+        $context->annotateSchemaExtras(new Schema(type: 'string'));
+
+        $this->assertSame([], $context->annotations());
+    }
+
+    #[Test]
+    public function fork_for_branch_starts_with_empty_annotations(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $parent->annotate('x-parent', 'v', '/');
+
+        $child = $parent->forkForBranch();
+
+        $this->assertSame([], $child->annotations());
+    }
+
+    #[Test]
+    public function merge_child_annotations_appends_child_records_per_keyword(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $parent->annotate('x-meta', 'parent', '/');
+
+        $child = $parent->forkForBranch();
+        $child->annotate('x-meta', 'child', '/users');
+        $child->annotate('x-ok', 'branch', '/users');
+
+        $parent->mergeChildAnnotations($child);
+
+        $this->assertSame([
+            'x-meta' => [
+                ['path' => '/', 'value' => 'parent'],
+                ['path' => '/users', 'value' => 'child'],
+            ],
+            'x-ok' => [
+                ['path' => '/users', 'value' => 'branch'],
+            ],
+        ], $parent->annotations());
+    }
+
+    #[Test]
+    public function merge_child_annotations_does_not_mutate_child_annotations(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $parent->annotate('x-parent', 'v', '/');
+
+        $child = $parent->forkForBranch();
+        $child->annotate('x-child', 'v', '/users');
+
+        $parent->mergeChildAnnotations($child);
+
+        $this->assertSame([
+            'x-child' => [
+                ['path' => '/users', 'value' => 'v'],
+            ],
+        ], $child->annotations());
+    }
+
+    #[Test]
+    public function dynamic_scope_is_empty_by_default(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+
+        $this->assertTrue($context->hasEmptyDynamicScope());
+        $this->assertSame([], $context->dynamicScope());
+    }
+
+    #[Test]
+    public function enter_and_leave_dynamic_scope_push_and_pop_resource(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $resource = new Schema(id: 'https://example.com/a');
+
+        $context->enterDynamicScope($resource);
+
+        $this->assertFalse($context->hasEmptyDynamicScope());
+        $this->assertSame([$resource], $context->dynamicScope());
+
+        $context->leaveDynamicScope();
+
+        $this->assertTrue($context->hasEmptyDynamicScope());
+        $this->assertSame([], $context->dynamicScope());
+    }
+
+    #[Test]
+    public function enter_dynamic_scope_deduplicates_consecutive_identical_resource(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $resource = new Schema(id: 'https://example.com/a');
+
+        $context->enterDynamicScope($resource);
+        $context->enterDynamicScope($resource);
+
+        $this->assertSame([$resource], $context->dynamicScope());
+    }
+
+    #[Test]
+    public function enter_dynamic_scope_keeps_repeated_resource_after_intermediate_frame(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $first = new Schema(id: 'https://example.com/a');
+        $second = new Schema(id: 'https://example.com/b');
+
+        $context->enterDynamicScope($first);
+        $context->enterDynamicScope($second);
+        $context->enterDynamicScope($first);
+
+        $this->assertSame([$first, $second, $first], $context->dynamicScope());
+    }
+
+    #[Test]
+    public function leave_dynamic_scope_on_empty_scope_is_no_op(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+
+        $context->leaveDynamicScope();
+
+        $this->assertTrue($context->hasEmptyDynamicScope());
+        $this->assertSame([], $context->dynamicScope());
+    }
+
+    #[Test]
+    public function resolve_dynamic_anchor_returns_outermost_resource_with_matching_anchor(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $outer = new Schema(id: 'https://example.com/strict-tree', dynamicAnchor: 'node');
+        $inner = new Schema(id: 'https://example.com/tree', dynamicAnchor: 'node');
+
+        $context->enterDynamicScope($outer);
+        $context->enterDynamicScope($inner);
+
+        $this->assertSame($outer, $context->resolveDynamicAnchor('node'));
+    }
+
+    #[Test]
+    public function resolve_dynamic_anchor_returns_null_when_anchor_absent(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $context->enterDynamicScope(new Schema(id: 'https://example.com/a', dynamicAnchor: 'other'));
+
+        $this->assertNull($context->resolveDynamicAnchor('node'));
+    }
+
+    #[Test]
+    public function resolve_dynamic_anchor_on_empty_scope_returns_null(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+
+        $this->assertNull($context->resolveDynamicAnchor('node'));
+    }
+
+    #[Test]
+    public function fork_for_branch_copies_dynamic_scope_from_parent(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $root = new Schema(id: 'https://example.com/root');
+        $parent->enterDynamicScope($root);
+
+        $child = $parent->forkForBranch();
+
+        $this->assertSame([$root], $child->dynamicScope());
+    }
+
+    #[Test]
+    public function fork_for_branch_isolates_child_scope_changes_from_parent(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $root = new Schema(id: 'https://example.com/root');
+        $branch = new Schema(id: 'https://example.com/branch');
+        $parent->enterDynamicScope($root);
+
+        $child = $parent->forkForBranch();
+        $child->enterDynamicScope($branch);
+
+        $this->assertSame([$root, $branch], $child->dynamicScope());
+        $this->assertSame([$root], $parent->dynamicScope());
+
+        $child->leaveDynamicScope();
+
+        $this->assertSame([$root], $child->dynamicScope());
+        $this->assertSame([$root], $parent->dynamicScope());
+    }
+
+    #[Test]
+    public function content_result_from_merged_branch_is_readable_from_parent(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $child = $parent->forkForBranch();
+        $result = ContentValidationResult::eager(['a' => 1], true, []);
+
+        $child->attachContentResult($result);
+        $this->assertNull($parent->contentResult());
+
+        $parent->mergeChildAnnotations($child);
+
+        $this->assertSame($result, $parent->contentResult());
+    }
+
+    #[Test]
+    public function content_result_of_unmerged_branch_stays_hidden_and_first_attachment_wins(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $failedBranch = $parent->forkForBranch();
+        $failedBranch->attachContentResult(ContentValidationResult::eager('failed', true, []));
+
+        $this->assertNull($parent->contentResult());
+
+        $first = ContentValidationResult::eager('first', true, []);
+        $parent->attachContentResult($first);
+
+        $secondBranch = $parent->forkForBranch();
+        $secondBranch->attachContentResult(ContentValidationResult::eager('second', true, []));
+
+        $parent->mergeChildAnnotations($secondBranch);
+
+        $this->assertSame($first, $parent->contentResult());
+    }
+
+    #[Test]
+    public function content_results_accumulate_per_path_in_traversal_order(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $root = ContentValidationResult::eager('root', true, []);
+        $first = ContentValidationResult::eager('first', true, []);
+        $second = ContentValidationResult::eager('second', true, []);
+
+        $context->attachContentResult($root);
+        $context->enterBreadcrumbIndex(0);
+        $context->attachContentResult($first);
+        $context->leaveBreadcrumb();
+        $context->enterBreadcrumbIndex(1);
+        $context->attachContentResult($second);
+        $context->leaveBreadcrumb();
+
+        $this->assertSame($root, $context->contentResult());
+        $this->assertSame(['/' => $root, '/0' => $first, '/1' => $second], $context->contentResults());
+        $this->assertSame($first, $context->contentResultAtPath('/0'));
+        $this->assertSame($second, $context->contentResultAtPath('/1'));
+        $this->assertNull($context->contentResultAtPath('/2'));
+    }
+
+    #[Test]
+    public function repeated_attachment_on_the_same_path_keeps_the_first_result(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $first = ContentValidationResult::eager('first', true, []);
+        $second = ContentValidationResult::eager('second', true, []);
+
+        $context->attachContentResult($first);
+        $context->attachContentResult($second);
+
+        $this->assertSame(['/' => $first], $context->contentResults());
+        $this->assertSame($first, $context->contentResultAtPath('/'));
+    }
+
+    #[Test]
+    public function merged_branch_content_results_extend_the_list_without_overwriting_existing_paths(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $kept = ContentValidationResult::eager('kept', true, []);
+        $parent->enterBreadcrumbIndex(0);
+        $parent->attachContentResult($kept);
+        $parent->leaveBreadcrumb();
+
+        $child = $parent->forkForBranch();
+        $overwritten = ContentValidationResult::eager('overwritten', true, []);
+        $appended = ContentValidationResult::eager('appended', true, []);
+        $child->enterBreadcrumbIndex(0);
+        $child->attachContentResult($overwritten);
+        $child->leaveBreadcrumb();
+        $child->enterBreadcrumbIndex(1);
+        $child->attachContentResult($appended);
+        $child->leaveBreadcrumb();
+
+        $parent->mergeChildAnnotations($child);
+
+        $this->assertSame(['/0' => $kept, '/1' => $appended], $parent->contentResults());
+        $this->assertSame($kept, $parent->contentResultAtPath('/0'));
+        $this->assertSame($appended, $parent->contentResultAtPath('/1'));
+    }
+
+    #[Test]
+    public function branch_fork_starts_without_content_results(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+        $parent->attachContentResult(ContentValidationResult::eager('parent', true, []));
+
+        $child = $parent->forkForBranch();
+
+        $this->assertSame([], $child->contentResults());
+        $this->assertNull($child->contentResultAtPath('/'));
+    }
+
+    #[Test]
+    public function skip_content_media_type_is_false_by_default(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(pool: new ValidatorPool()));
+
+        $this->assertFalse($context->skipContentMediaType);
+    }
+
+    #[Test]
+    public function skip_content_media_type_is_taken_from_init(): void
+    {
+        $context = ValidationContext::fromInit(new ValidationContextInit(
+            pool: new ValidatorPool(),
+            skipContentMediaType: true,
+        ));
+
+        $this->assertTrue($context->skipContentMediaType);
+    }
+
+    #[Test]
+    public function fork_for_branch_preserves_skip_content_media_type(): void
+    {
+        $parent = ValidationContext::fromInit(new ValidationContextInit(
+            pool: new ValidatorPool(),
+            skipContentMediaType: true,
+        ));
+
+        $child = $parent->forkForBranch();
+
+        $this->assertTrue($child->skipContentMediaType);
     }
 }

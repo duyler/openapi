@@ -6,6 +6,7 @@ namespace Duyler\OpenApi\Test\Unit\Validator\Schema;
 
 use DateTime;
 use Duyler\OpenApi\Schema\Model\Schema;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\Exception\InvalidDataTypeException;
 use Duyler\OpenApi\Validator\Schema\SchemaValueNormalizer;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -264,7 +265,7 @@ final class SchemaHelperTest extends TestCase
         yield 'allOf' => [new Schema(allOf: [new Schema(type: 'string')]), true];
         yield 'anyOf' => [new Schema(anyOf: [new Schema(type: 'string')]), true];
         yield 'oneOf' => [new Schema(oneOf: [new Schema(type: 'string')]), true];
-        yield 'not is not a deferral' => [new Schema(not: new Schema(type: 'string')), false];
+        yield 'untyped schema with not still allows null' => [new Schema(not: new Schema(type: 'string')), true];
     }
 
     #[Test]
@@ -273,6 +274,67 @@ final class SchemaHelperTest extends TestCase
         $schema = new Schema(allOf: [new Schema(type: 'string', nullable: true)]);
 
         $result = SchemaValueNormalizer::allowsNull($schema, nullableAsType: false);
+
+        self::assertFalse($result);
+    }
+
+    #[Test]
+    #[DataProvider('dialectAllowsNullProvider')]
+    public function allows_null_follows_dialect_profile(Schema $schema, ?DialectProfile $profile, bool $expected): void
+    {
+        $result = SchemaValueNormalizer::allowsNull($schema, profile: $profile);
+
+        self::assertSame($expected, $result);
+    }
+
+    /**
+     * @return iterable<string, array{Schema, ?DialectProfile, bool}>
+     */
+    public static function dialectAllowsNullProvider(): iterable
+    {
+        $openApi30 = DialectProfile::forOpenApi30();
+        $openApi31 = DialectProfile::forOpenApi31();
+
+        yield '3.0 nullable without type does not allow null' => [new Schema(nullable: true), $openApi30, false];
+        yield '3.0 nullable string allows null' => [new Schema(type: 'string', nullable: true), $openApi30, true];
+        yield '3.0 plain string does not allow null' => [new Schema(type: 'string'), $openApi30, false];
+        yield '3.0 ref defers regardless of profile' => [new Schema(ref: '#/components/schemas/A'), $openApi30, true];
+        yield '3.0 allOf defers regardless of profile' => [new Schema(allOf: [new Schema()]), $openApi30, true];
+        yield '3.0 anyOf defers regardless of profile' => [new Schema(anyOf: [new Schema()]), $openApi30, true];
+        yield '3.0 oneOf defers regardless of profile' => [new Schema(oneOf: [new Schema()]), $openApi30, true];
+        yield '3.0 type null string allows null' => [new Schema(type: 'null'), $openApi30, true];
+        yield '3.1 nullable without type allows null' => [new Schema(nullable: true), $openApi31, true];
+        yield '3.1 nullable string allows null' => [new Schema(type: 'string', nullable: true), $openApi31, true];
+        yield '3.1 type array with null allows null' => [new Schema(type: ['string', 'null']), $openApi31, true];
+        yield 'missing profile keeps nullable without type permissive' => [new Schema(nullable: true), null, true];
+    }
+
+    #[Test]
+    #[DataProvider('dialectIsNullableSchemaProvider')]
+    public function is_nullable_schema_follows_dialect_profile(Schema $schema, ?DialectProfile $profile, bool $expected): void
+    {
+        $result = SchemaValueNormalizer::isNullableSchema($schema, true, $profile);
+
+        self::assertSame($expected, $result);
+    }
+
+    /**
+     * @return iterable<string, array{Schema, ?DialectProfile, bool}>
+     */
+    public static function dialectIsNullableSchemaProvider(): iterable
+    {
+        yield '3.0 nullable without type is not nullable schema' => [new Schema(nullable: true), DialectProfile::forOpenApi30(), false];
+        yield '3.0 nullable string is nullable schema' => [new Schema(type: 'string', nullable: true), DialectProfile::forOpenApi30(), true];
+        yield '3.1 nullable without type is nullable schema' => [new Schema(nullable: true), DialectProfile::forOpenApi31(), true];
+        yield 'missing profile keeps nullable without type nullable' => [new Schema(nullable: true), null, true];
+    }
+
+    #[Test]
+    public function is_nullable_schema_still_requires_nullable_as_type(): void
+    {
+        $schema = new Schema(type: 'string', nullable: true);
+
+        $result = SchemaValueNormalizer::isNullableSchema($schema, false, DialectProfile::forOpenApi31());
 
         self::assertFalse($result);
     }

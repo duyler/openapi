@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Schema\Parser\Internal;
 
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
+use Duyler\OpenApi\Schema\Exception\TypeArrayNotSupportedException;
 use Duyler\OpenApi\Schema\Parser\DeprecationLogger;
 use Duyler\OpenApi\Schema\Parser\OpenApiBuildContext;
 use Duyler\OpenApi\Schema\Parser\TypeHelper;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 
 use function array_key_exists;
 use function in_array;
@@ -22,10 +24,20 @@ final readonly class ScalarSchemaKeywordParser
 {
     private const string DEPRECATION_VERSION_3_1 = '3.1.0';
 
+    private DialectProfile $dialectProfile;
+
     public function __construct(
         private string $documentVersion = '',
         private DeprecationLogger $deprecationLogger = new DeprecationLogger(),
-    ) {}
+        ?DialectProfile $dialectProfile = null,
+    ) {
+        $this->dialectProfile = $dialectProfile ?? DialectProfile::forOpenApi31();
+    }
+
+    public function dialectProfile(): DialectProfile
+    {
+        return $this->dialectProfile;
+    }
 
     /**
      * @param array<array-key, mixed> $data
@@ -54,8 +66,14 @@ final readonly class ScalarSchemaKeywordParser
      *     contentMediaType: ?string,
      *     jsonSchemaDialect: ?string,
      *     example: mixed|null,
-     *     examples: array<string, mixed>|null,
+     *     examples: array<int|string, mixed>|null,
      *     enum: list<mixed>|null,
+     *     id: ?string,
+     *     anchor: ?string,
+     *     dynamicAnchor: ?string,
+     *     dynamicRef: ?string,
+     *     comment: ?string,
+     *     vocabulary: array<string, bool>|null,
      * }
      */
     public function build(array $data): array
@@ -97,16 +115,29 @@ final readonly class ScalarSchemaKeywordParser
             'jsonSchemaDialect' => TypeHelper::asStringOrNull($data['$schema'] ?? null),
             'example' => $data['example'] ?? null,
             'examples' => isset($data['examples']) && is_array($data['examples'])
-                ? TypeHelper::asStringMixedMapOrNull($data['examples'])
+                ? TypeHelper::asStringOrIntKeyMixedMapOrNull($data['examples'])
                 : null,
             'enum' => TypeHelper::asEnumListOrNull($data['enum'] ?? null),
+            'id' => TypeHelper::asStringOrNull($data['$id'] ?? null),
+            'anchor' => TypeHelper::asStringOrNull($data['$anchor'] ?? null),
+            'dynamicAnchor' => TypeHelper::asStringOrNull($data['$dynamicAnchor'] ?? null),
+            'dynamicRef' => TypeHelper::asStringOrNull($data['$dynamicRef'] ?? null),
+            'comment' => TypeHelper::asStringOrNull($data['$comment'] ?? null),
+            'vocabulary' => TypeHelper::asBoolMapOrNull($data['$vocabulary'] ?? null),
         ];
     }
 
-    /** @param array<array-key, mixed> $data */
+    /**
+     * @param array<array-key, mixed> $data
+     * @return string|array<int, string|null>|null
+     */
     private function resolveType(array $data): string|array|null
     {
         $type = TypeHelper::asTypeOrNull($data['type'] ?? null);
+
+        if (false === $this->dialectProfile->allowTypeArray && is_array($type) && [] !== $type) {
+            throw TypeArrayNotSupportedException::forOpenApi30();
+        }
 
         if (false === $this->isVersion30() && isset($data['nullable']) && is_bool($data['nullable']) && $data['nullable']) {
             $baseType = match (true) {

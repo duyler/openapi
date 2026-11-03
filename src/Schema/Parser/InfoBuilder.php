@@ -17,8 +17,6 @@ use function is_array;
 
 final readonly class InfoBuilder
 {
-    public function __construct(private OpenApiBuildContext $context) {}
-
     public function buildInfo(array $data): InfoObject
     {
         if (false === isset($data['title']) || false === isset($data['version'])) {

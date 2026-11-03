@@ -68,6 +68,14 @@ final class NullableCompositionTest extends TestCase
                           allOf:
                             - $ref: '#/components/schemas/FormIdentifier'
                           nullable: true
+                typedForm:
+                  type: object
+                  properties:
+                    data:
+                      type: object
+                      allOf:
+                        - $ref: '#/components/schemas/FormIdentifier'
+                      nullable: true
         YAML;
 
     private Psr17Factory $psrFactory;
@@ -78,10 +86,20 @@ final class NullableCompositionTest extends TestCase
     }
 
     #[Test]
-    public function null_relationship_is_accepted_through_nested_properties(): void
+    public function null_relationship_is_rejected_for_untyped_nullable_all_of(): void
     {
+        $this->expectException(ValidationException::class);
+
         $this->validateResponseBody(
             '{"data":{"type":"actions","id":"1","relationships":{"form":{"data":null}}}}',
+        );
+    }
+
+    #[Test]
+    public function null_relationship_is_accepted_through_typed_nullable_all_of(): void
+    {
+        $this->validateResponseBody(
+            '{"data":{"type":"actions","id":"1","typedForm":{"data":null}}}',
         );
 
         $this->expectNotToPerformAssertions();

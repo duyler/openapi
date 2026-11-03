@@ -491,6 +491,60 @@ final class SchemaSiblingMergerTest extends TestCase
     }
 
     #[Test]
+    public function merge_dependent_required_unions_lists_per_key(): void
+    {
+        $resolved = new Schema(type: 'object', dependentRequired: [
+            'creditCard' => ['billingAddress'],
+            'shippingAddress' => ['name'],
+        ]);
+        $sibling = new Schema(dependentRequired: [
+            'creditCard' => ['cvv'],
+        ]);
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame([
+            'creditCard' => ['billingAddress', 'cvv'],
+            'shippingAddress' => ['name'],
+        ], $merged->dependentRequired);
+    }
+
+    #[Test]
+    public function merge_dependent_required_deduplicates_union_entries(): void
+    {
+        $resolved = new Schema(dependentRequired: ['creditCard' => ['billingAddress']]);
+        $sibling = new Schema(dependentRequired: ['creditCard' => ['billingAddress', 'cvv']]);
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame(['creditCard' => ['billingAddress', 'cvv']], $merged->dependentRequired);
+    }
+
+    #[Test]
+    public function merge_dependent_required_inherits_resolved_when_sibling_null(): void
+    {
+        $dependentRequired = ['creditCard' => ['billingAddress']];
+        $resolved = new Schema(dependentRequired: $dependentRequired);
+        $sibling = new Schema();
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame($dependentRequired, $merged->dependentRequired);
+    }
+
+    #[Test]
+    public function merge_dependent_required_inherits_sibling_when_resolved_null(): void
+    {
+        $dependentRequired = ['creditCard' => ['billingAddress']];
+        $resolved = new Schema(type: 'object');
+        $sibling = new Schema(dependentRequired: $dependentRequired);
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame($dependentRequired, $merged->dependentRequired);
+    }
+
+    #[Test]
     public function merge_enum_intersects_via_json_equals_int_float_equivalence(): void
     {
         $resolved = new Schema(enum: [1, 2, 3]);
@@ -889,5 +943,188 @@ final class SchemaSiblingMergerTest extends TestCase
         self::assertSame($siblingAllOf, $merged->allOf[1]);
         self::assertSame(2.0, $merged->allOf[2]->multipleOf);
         self::assertSame(3.0, $merged->allOf[3]->multipleOf);
+    }
+
+    #[Test]
+    public function merge_defs_inherit_from_resolved_target_for_bare_ref_sibling(): void
+    {
+        $defs = ['User' => new Schema(type: 'object')];
+        $resolved = new Schema(type: 'object', defs: $defs);
+        $sibling = new Schema(ref: '#/components/schemas/User');
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame($defs, $merged->defs);
+    }
+
+    #[Test]
+    public function merge_resource_identity_inherits_resolved_target_and_ignores_sibling(): void
+    {
+        $vocabulary = ['https://example.com/meta/vocab/core' => true];
+        $defs = ['User' => new Schema(type: 'object')];
+        $resolved = new Schema(
+            id: 'https://example.com/user.json',
+            anchor: '#user-anchor',
+            dynamicAnchor: 'userSelector',
+            comment: 'resource comment',
+            vocabulary: $vocabulary,
+            defs: $defs,
+        );
+        $sibling = new Schema(
+            ref: '#/components/schemas/User',
+            id: 'https://wrong.example.com/wrong.json',
+            anchor: '#wrong-anchor',
+            dynamicAnchor: 'wrongSelector',
+            comment: 'wrong comment',
+            vocabulary: ['https://wrong.example.com/vocab/other' => true],
+            defs: ['Wrong' => new Schema(type: 'string')],
+        );
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame('https://example.com/user.json', $merged->id);
+        self::assertSame('#user-anchor', $merged->anchor);
+        self::assertSame('userSelector', $merged->dynamicAnchor);
+        self::assertSame('resource comment', $merged->comment);
+        self::assertSame($vocabulary, $merged->vocabulary);
+        self::assertSame($defs, $merged->defs);
+    }
+
+    #[Test]
+    public function merge_extras_union_with_sibling_priority_on_key_collision(): void
+    {
+        $resolved = new Schema(type: 'object', extras: ['x-b' => 99, 'x-c' => 3]);
+        $sibling = new Schema(ref: '#/components/schemas/User', extras: ['x-a' => 1, 'x-b' => 2]);
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame(['x-b' => 2, 'x-c' => 3, 'x-a' => 1], $merged->extras);
+    }
+
+    #[Test]
+    public function merge_extras_inherit_from_resolved_when_sibling_has_none(): void
+    {
+        $resolved = new Schema(type: 'object', extras: ['x-vendor' => true]);
+        $sibling = new Schema(ref: '#/components/schemas/User');
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame(['x-vendor' => true], $merged->extras);
+    }
+
+    #[Test]
+    public function merge_extras_inherit_from_sibling_when_resolved_has_none(): void
+    {
+        $resolved = new Schema(type: 'object');
+        $sibling = new Schema(ref: '#/components/schemas/User', extras: ['x-vendor' => true]);
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame(['x-vendor' => true], $merged->extras);
+    }
+
+    #[Test]
+    public function merge_extras_stay_null_when_both_sides_have_none(): void
+    {
+        $resolved = new Schema(type: 'object');
+        $sibling = new Schema(ref: '#/components/schemas/User');
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertNull($merged->extras);
+    }
+
+    #[Test]
+    public function merge_dynamic_ref_sibling_wins_over_resolved(): void
+    {
+        $resolved = new Schema(dynamicRef: '#targetMeta');
+        $sibling = new Schema(ref: '#/components/schemas/User', dynamicRef: '#siblingMeta');
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame('#siblingMeta', $merged->dynamicRef);
+    }
+
+    #[Test]
+    public function merge_dynamic_ref_inherits_resolved_when_sibling_omits(): void
+    {
+        $resolved = new Schema(dynamicRef: '#targetMeta');
+        $sibling = new Schema(ref: '#/components/schemas/User');
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame('#targetMeta', $merged->dynamicRef);
+    }
+
+    #[Test]
+    public function merge_identity_and_extras_propagate_through_recursive_nested_merge(): void
+    {
+        $defs = ['Node' => new Schema(type: 'object')];
+        $resolvedAdditional = new Schema(
+            type: 'object',
+            id: 'https://example.com/tree.json',
+            defs: $defs,
+            extras: ['x-root' => 1],
+        );
+        $siblingAdditional = new Schema(
+            type: 'object',
+            extras: ['x-branch' => 2],
+        );
+        $resolved = new Schema(type: 'object', additionalProperties: $resolvedAdditional);
+        $sibling = new Schema(ref: '#/components/schemas/Tree', additionalProperties: $siblingAdditional);
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertInstanceOf(Schema::class, $merged->additionalProperties);
+        self::assertSame($defs, $merged->additionalProperties->defs);
+        self::assertSame('https://example.com/tree.json', $merged->additionalProperties->id);
+        self::assertSame(['x-root' => 1, 'x-branch' => 2], $merged->additionalProperties->extras);
+    }
+
+    #[Test]
+    public function merge_required_inherits_sibling_when_resolved_null(): void
+    {
+        $resolved = new Schema(type: 'object');
+        $sibling = new Schema(required: ['id']);
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame(['id'], $merged->required);
+    }
+
+    #[Test]
+    public function merge_examples_union_with_sibling_priority_on_key_collision(): void
+    {
+        $resolved = new Schema(type: 'object', examples: ['first' => 'resolved', 'second' => 'resolved']);
+        $sibling = new Schema(ref: '#/components/schemas/User', examples: ['first' => 'sibling', 'third' => 'sibling']);
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame(
+            ['first' => 'sibling', 'second' => 'resolved', 'third' => 'sibling'],
+            $merged->examples,
+        );
+    }
+
+    #[Test]
+    public function merge_examples_inherit_resolved_when_sibling_has_none(): void
+    {
+        $resolved = new Schema(type: 'object', examples: ['first' => 'resolved']);
+        $sibling = new Schema(ref: '#/components/schemas/User');
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame(['first' => 'resolved'], $merged->examples);
+    }
+
+    #[Test]
+    public function merge_examples_inherit_sibling_when_resolved_has_none(): void
+    {
+        $resolved = new Schema(type: 'object');
+        $sibling = new Schema(ref: '#/components/schemas/User', examples: ['first' => 'sibling']);
+
+        $merged = new SchemaSiblingMerger()->merge($resolved, $sibling);
+
+        self::assertSame(['first' => 'sibling'], $merged->examples);
     }
 }

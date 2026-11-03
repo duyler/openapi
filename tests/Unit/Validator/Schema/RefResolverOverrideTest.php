@@ -258,7 +258,7 @@ final class RefResolverOverrideTest extends TestCase
     }
 
     #[Test]
-    public function resolve_schema_with_override_merges_sibling_properties(): void
+    public function resolve_schema_with_override_defers_sibling_properties_to_companion(): void
     {
         $resolvedRoleSchema = new Schema(type: 'integer');
         $document = $this->buildDocumentWithSchema(new Schema(
@@ -277,7 +277,13 @@ final class RefResolverOverrideTest extends TestCase
 
         self::assertNotNull($result->properties);
         self::assertArrayHasKey('role', $result->properties);
-        self::assertSame($siblingRoleSchema, $result->properties['role']);
+        self::assertSame($resolvedRoleSchema, $result->properties['role']);
+
+        [, $companion] = $this->resolver->resolveSchemaWithCompanionAndChain($schema, $document);
+
+        self::assertNotNull($companion);
+        self::assertNotNull($companion->properties);
+        self::assertSame($siblingRoleSchema, $companion->properties['role']);
     }
 
     #[Test]
@@ -424,6 +430,73 @@ final class RefResolverOverrideTest extends TestCase
         } catch (EnumError|ValidationException) {
             self::addToAssertionCount(1);
         }
+    }
+
+    #[Test]
+    public function resolve_schema_with_companion_and_chain_throws_for_unresolvable_ref(): void
+    {
+        $document = $this->buildDocumentWithSchema(new Schema(title: 'Base'));
+
+        $schema = new Schema(ref: '#/components/schemas/Missing');
+
+        $this->expectException(UnresolvableRefException::class);
+
+        $this->resolver->resolveSchemaWithCompanionAndChain($schema, $document);
+    }
+
+    #[Test]
+    public function resolve_schema_with_companion_and_chain_without_ref_returns_null_companion(): void
+    {
+        $resolved = new Schema(title: 'Base');
+        $document = $this->buildDocumentWithSchema($resolved);
+
+        [$result, $companion, $chain] = $this->resolver->resolveSchemaWithCompanionAndChain(
+            $resolved,
+            $document,
+        );
+
+        self::assertSame($resolved, $result);
+        self::assertNull($companion);
+        self::assertSame([], $chain);
+    }
+
+    #[Test]
+    public function resolve_schema_with_override_and_chain_returns_resolved_schema_and_chain_resources(): void
+    {
+        $userResource = new Schema(
+            id: 'https://example.com/schemas/user.json',
+            ref: '#/components/schemas/Profile',
+        );
+        $document = new OpenApiDocument(
+            openapi: '3.2.0',
+            info: new InfoObject(title: 'Test', version: '1.0.0'),
+            components: new Components(
+                schemas: [
+                    'User' => $userResource,
+                    'Profile' => new Schema(type: 'object'),
+                ],
+            ),
+        );
+
+        $schema = new Schema(ref: '#/components/schemas/User');
+
+        [$result, $chain] = $this->resolver->resolveSchemaWithOverrideAndChain($schema, $document);
+
+        self::assertNull($result->ref);
+        self::assertSame('object', $result->type);
+        self::assertSame([$userResource], $chain);
+    }
+
+    #[Test]
+    public function resolve_schema_with_override_and_chain_without_ref_returns_empty_chain(): void
+    {
+        $resolved = new Schema(title: 'Base');
+        $document = $this->buildDocumentWithSchema($resolved);
+
+        [$result, $chain] = $this->resolver->resolveSchemaWithOverrideAndChain($resolved, $document);
+
+        self::assertSame($resolved, $result);
+        self::assertSame([], $chain);
     }
 
     private function buildDocumentWithSchema(Schema $resolved): OpenApiDocument

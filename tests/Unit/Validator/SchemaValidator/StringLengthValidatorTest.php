@@ -12,7 +12,6 @@ use Duyler\OpenApi\Validator\Dto\SchemaValidatorDependencies;
 use Duyler\OpenApi\Schema\Model\Schema;
 use Duyler\OpenApi\Validator\Exception\MaxLengthError;
 use Duyler\OpenApi\Validator\Exception\MinLengthError;
-use Duyler\OpenApi\Validator\Util\Utf16;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -140,8 +139,8 @@ class StringLengthValidatorTest extends TestCase
     public static function provideMultiByteStrings(): array
     {
         return [
-            'emoji_family_zwj' => ["\xF0\x9F\x91\xA8\xE2\x80\x8D\xF0\x9F\x91\xA9\xE2\x80\x8D\xF0\x9F\x91\xA7\xE2\x80\x8D\xF0\x9F\x91\xA6", 11],
-            'cjk_4_byte_utf8' => ["\xF0\xA0\xAE\xB7", 2],
+            'emoji_family_zwj' => ["\xF0\x9F\x91\xA8\xE2\x80\x8D\xF0\x9F\x91\xA9\xE2\x80\x8D\xF0\x9F\x91\xA7\xE2\x80\x8D\xF0\x9F\x91\xA6", 7],
+            'cjk_4_byte_utf8' => ["\xF0\xA0\xAE\xB7", 1],
             'russian_cyrillic' => ['Привет', 6],
             'ascii_single' => ['a', 1],
         ];
@@ -149,11 +148,9 @@ class StringLengthValidatorTest extends TestCase
 
     #[Test]
     #[DataProvider('provideMultiByteStrings')]
-    public function multi_byte_string_passes_min_length_one(string $value, int $expectedUtf16Units): void
+    public function multi_byte_string_passes_min_length_at_exact_code_point_count(string $value, int $expectedCodePoints): void
     {
-        self::assertSame($expectedUtf16Units, Utf16::length($value));
-
-        $schema = new Schema(type: 'string', minLength: 1);
+        $schema = new Schema(type: 'string', minLength: $expectedCodePoints);
 
         $succeeded = false;
 
@@ -161,7 +158,7 @@ class StringLengthValidatorTest extends TestCase
             $this->validator->validate($value, $schema);
             $succeeded = true;
         } catch (MinLengthError|MaxLengthError $e) {
-            self::fail(sprintf('Expected multi-byte string to pass minLength:1, got: %s', $e->getMessage()));
+            self::fail(sprintf('Expected multi-byte string to pass minLength:%d, got: %s', $expectedCodePoints, $e->getMessage()));
         }
 
         self::assertSame(true, $succeeded);
@@ -169,9 +166,9 @@ class StringLengthValidatorTest extends TestCase
 
     #[Test]
     #[DataProvider('provideMultiByteStrings')]
-    public function multi_byte_string_passes_max_length_equal_to_utf16_units(string $value, int $expectedUtf16Units): void
+    public function multi_byte_string_passes_max_length_equal_to_code_points(string $value, int $expectedCodePoints): void
     {
-        $schema = new Schema(type: 'string', maxLength: $expectedUtf16Units);
+        $schema = new Schema(type: 'string', maxLength: $expectedCodePoints);
 
         $succeeded = false;
 
@@ -179,14 +176,14 @@ class StringLengthValidatorTest extends TestCase
             $this->validator->validate($value, $schema);
             $succeeded = true;
         } catch (MaxLengthError $e) {
-            self::fail(sprintf('Expected multi-byte string to pass maxLength:%d, got: %s', $expectedUtf16Units, $e->getMessage()));
+            self::fail(sprintf('Expected multi-byte string to pass maxLength:%d, got: %s', $expectedCodePoints, $e->getMessage()));
         }
 
         self::assertSame(true, $succeeded);
     }
 
     #[Test]
-    public function emoji_family_at_max_length_one_rejected_by_utf16_unit_count(): void
+    public function emoji_family_at_max_length_one_rejected_by_code_point_count(): void
     {
         $emoji = "\xF0\x9F\x91\xA8\xE2\x80\x8D\xF0\x9F\x91\xA9\xE2\x80\x8D\xF0\x9F\x91\xA7\xE2\x80\x8D\xF0\x9F\x91\xA6";
         $schema = new Schema(type: 'string', maxLength: 1);
@@ -203,25 +200,18 @@ class StringLengthValidatorTest extends TestCase
         self::assertSame('maxLength', $caught->keyword());
         self::assertSame('/maxLength', $caught->schemaPath());
         self::assertSame(1, $caught->params()['maxLength']);
-        self::assertSame(11, $caught->params()['actual']);
+        self::assertSame(7, $caught->params()['actual']);
     }
 
     #[Test]
-    public function supplementary_cjk_at_max_length_one_rejected_by_utf16_unit_count(): void
+    public function supplementary_cjk_passes_max_length_one_as_single_code_point(): void
     {
         $cjk = "\xF0\xA0\xAE\xB7";
         $schema = new Schema(type: 'string', maxLength: 1);
 
-        $caught = null;
+        $this->validator->validate($cjk, $schema);
 
-        try {
-            $this->validator->validate($cjk, $schema);
-        } catch (MaxLengthError $e) {
-            $caught = $e;
-        }
-
-        self::assertNotNull($caught);
-        self::assertSame(2, $caught->params()['actual']);
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
@@ -260,7 +250,7 @@ class StringLengthValidatorTest extends TestCase
                 $succeeded = true;
             } catch (MaxLengthError $e) {
                 self::fail(sprintf(
-                    'Expected "é" (1 UTF-16 unit) to pass maxLength:1 even under ASCII internal encoding, got: %s',
+                    'Expected "é" (1 code point) to pass maxLength:1 even under ASCII internal encoding, got: %s',
                     $e->getMessage(),
                 ));
             }
@@ -272,13 +262,13 @@ class StringLengthValidatorTest extends TestCase
     }
 
     #[Test]
-    public function counts_emoji_as_two_utf16_units_under_ascii_internal_encoding(): void
+    public function counts_emoji_as_single_code_point_under_ascii_internal_encoding(): void
     {
         $previousEncoding = mb_internal_encoding();
         mb_internal_encoding('ASCII');
 
         try {
-            $schema = new Schema(type: 'string', maxLength: 2);
+            $schema = new Schema(type: 'string', maxLength: 1);
 
             $this->validator->validate('👍', $schema);
 
@@ -289,7 +279,7 @@ class StringLengthValidatorTest extends TestCase
     }
 
     #[Test]
-    public function rejects_emoji_at_max_length_one_under_ascii_internal_encoding(): void
+    public function rejects_two_code_point_emoji_at_max_length_one_under_ascii_internal_encoding(): void
     {
         $previousEncoding = mb_internal_encoding();
         mb_internal_encoding('ASCII');
@@ -297,38 +287,42 @@ class StringLengthValidatorTest extends TestCase
         try {
             $schema = new Schema(type: 'string', maxLength: 1);
 
-            $this->expectException(MaxLengthError::class);
+            $caught = null;
 
-            $this->validator->validate('👍', $schema);
+            try {
+                $this->validator->validate('👍👍', $schema);
+            } catch (MaxLengthError $e) {
+                $caught = $e;
+            }
+
+            self::assertNotNull($caught);
+            self::assertSame(2, $caught->params()['actual']);
         } finally {
             mb_internal_encoding($previousEncoding);
         }
     }
 
     #[Test]
-    public function supplementary_emoji_passes_min_length_two(): void
+    public function supplementary_emoji_fails_min_length_two(): void
     {
         $schema = new Schema(type: 'string', minLength: 2);
 
-        $this->validator->validate('😀', $schema);
+        $caught = null;
 
-        $this->expectNotToPerformAssertions();
-    }
+        try {
+            $this->validator->validate('😀', $schema);
+        } catch (MinLengthError $e) {
+            $caught = $e;
+        }
 
-    #[Test]
-    public function supplementary_emoji_fails_min_length_three(): void
-    {
-        $schema = new Schema(type: 'string', minLength: 3);
-
-        $this->expectException(MinLengthError::class);
-
-        $this->validator->validate('😀', $schema);
+        self::assertNotNull($caught);
+        self::assertSame(1, $caught->params()['actual']);
     }
 
     #[Test]
     public function supplementary_pair_at_max_length_boundary(): void
     {
-        $schema = new Schema(type: 'string', maxLength: 4);
+        $schema = new Schema(type: 'string', maxLength: 2);
 
         $this->validator->validate('😀😀', $schema);
 

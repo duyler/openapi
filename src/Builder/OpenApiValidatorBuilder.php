@@ -9,8 +9,13 @@ use Duyler\OpenApi\Builder\Exception\BuilderException;
 use Duyler\OpenApi\Builder\Internal\CacheKeyBuilder;
 use Duyler\OpenApi\Builder\Internal\ExternalRefDetector;
 use Duyler\OpenApi\Builder\Internal\SpecLoader;
+use Duyler\OpenApi\Builder\Internal\SpecParserFactory;
 use Duyler\OpenApi\Cache\SchemaCache;
 use Duyler\OpenApi\Schema\OpenApiDocument;
+use Duyler\OpenApi\Schema\Parser\DocumentRepository;
+use Duyler\OpenApi\Schema\Parser\Internal\UnknownKeywordGuard;
+use Duyler\OpenApi\Schema\Parser\Internal\VocabularyGuard;
+use Duyler\OpenApi\Validator\Dto\DialectProfile;
 use Duyler\OpenApi\Validator\Dto\ValidatorConfiguration;
 use Duyler\OpenApi\Validator\Dto\ValidatorDependencies;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
@@ -23,15 +28,21 @@ use Duyler\OpenApi\Validator\Validation\Internal\ValidatorOptions;
 use Duyler\OpenApi\Validator\Error\Formatter\SimpleFormatter;
 use Duyler\OpenApi\Validator\Format\BuiltinFormats;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\FormatAssertionMode;
 use Duyler\OpenApi\Validator\Format\FormatValidatorInterface;
 use Duyler\OpenApi\Validator\Link\LinkResolver;
 use Duyler\OpenApi\Validator\OpenApiValidator;
 use Duyler\OpenApi\Validator\PathFinder;
 use Duyler\OpenApi\Validator\PregExecutor;
 use Duyler\OpenApi\Validator\Request\PathRegexCache;
+use Duyler\OpenApi\Validator\Schema\ExternalRefResolverInterface;
 use Duyler\OpenApi\Validator\Schema\FileExternalRefResolver;
+use Duyler\OpenApi\Validator\Schema\KeywordValidatorInterface;
+use Duyler\OpenApi\Validator\Schema\KeywordValidatorRegistry;
 use Duyler\OpenApi\Validator\Schema\RefResolver;
 use Duyler\OpenApi\Validator\Schema\RegexValidator;
+use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerInterface;
+use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerRegistry;
 use Duyler\OpenApi\Validator\Validation\CallbackValidator;
 use Duyler\OpenApi\Validator\Validation\RequestValidationHandler;
 use Duyler\OpenApi\Validator\Validation\ResponseValidationHandler;
@@ -44,6 +55,8 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
+use function array_unique;
+use function array_values;
 use function dirname;
 use function realpath;
 use function sprintf;
@@ -134,6 +147,54 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(formatRegistry: $registry));
     }
 
+    public function withKeywordValidator(string $keyword, KeywordValidatorInterface $validator): self
+    {
+        $userRegistry = $this->keywordValidators();
+
+        return $this->with(new BuilderConfig(keywordValidators: $userRegistry->with($keyword, $validator)));
+    }
+
+    public function withSecuritySchemeHandler(SecuritySchemeHandlerInterface $handler): self
+    {
+        $userRegistry = $this->config->securitySchemeHandlers ?? new SecuritySchemeHandlerRegistry();
+
+        return $this->with(new BuilderConfig(securitySchemeHandlers: $userRegistry->with($handler)));
+    }
+
+    public function disableStrictKeywords(): self
+    {
+        return $this->with(new BuilderConfig(strictKeywords: false));
+    }
+
+    public function withLegacyExplodeDefaults(): self
+    {
+        return $this->with(new BuilderConfig(legacyExplodeDefaults: true));
+    }
+
+    public function enforceRequiredForReadOnly(): self
+    {
+        return $this->with(new BuilderConfig(enforceRequiredForReadOnly: true));
+    }
+
+    public function withDecisiveDiscriminator(): self
+    {
+        return $this->with(new BuilderConfig(decisiveDiscriminator: true));
+    }
+
+    public function withAllowedUnknownKeywords(string ...$keywords): self
+    {
+        if ([] === $keywords) {
+            return $this;
+        }
+
+        return $this->with(new BuilderConfig(
+            allowedUnknownKeywords: array_values(array_unique([
+                ...($this->config->allowedUnknownKeywords ?? []),
+                ...$keywords,
+            ])),
+        ));
+    }
+
     public function enableCoercion(): self
     {
         return $this->with(new BuilderConfig(coercion: true));
@@ -174,6 +235,25 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(externalRefAllowedRoot: $realPath));
     }
 
+    public function withExternalRefResolver(ExternalRefResolverInterface $resolver): self
+    {
+        return $this->with(new BuilderConfig(externalRefResolver: $resolver));
+    }
+
+    public function withDocument(string $retrievalUri, string $content): self
+    {
+        return $this->with(new BuilderConfig(
+            documentRepository: $this->documents()->withDocument(
+                retrievalUri: $retrievalUri,
+                content: $content,
+                parser: $this->specParserFactory()->forRegisteredDocument(
+                    $retrievalUri,
+                    $this->externalRefMaxBytes(),
+                ),
+            ),
+        ));
+    }
+
     public function enableSecurityValidation(): self
     {
         return $this->with(new BuilderConfig(securityValidation: true));
@@ -189,9 +269,24 @@ final readonly class OpenApiValidatorBuilder
         return $this->with(new BuilderConfig(strictFormats: true));
     }
 
+    public function withFormatAssertionMode(FormatAssertionMode $mode): self
+    {
+        return $this->with(new BuilderConfig(formatAssertionMode: $mode));
+    }
+
+    public function withLenientResponses(): self
+    {
+        return $this->with(new BuilderConfig(lenientResponses: true));
+    }
+
     public function enableReportDeprecated(): self
     {
         return $this->with(new BuilderConfig(reportDeprecated: true));
+    }
+
+    public function enableContentAssertions(): self
+    {
+        return $this->with(new BuilderConfig(contentAssertionsEnabled: true));
     }
 
     public function withMaxJsonBodySize(int $maxBytes): self
@@ -268,14 +363,96 @@ final readonly class OpenApiValidatorBuilder
     {
         $document = $this->specLoader()->load();
 
+        $this->assertRegisteredDocumentsWithinLimit();
         $this->externalRefDetector()->assertConfinement();
+        $this->assertSupportedVocabularies($document);
 
-        return $this->assembleValidator($document);
+        $configuration = $this->validatorConfiguration($document);
+        $this->assertKnownSchemaKeywords($document);
+
+        return $this->assembleValidator($document, $configuration);
+    }
+
+    private function assertKnownSchemaKeywords(OpenApiDocument $document): void
+    {
+        new UnknownKeywordGuard(
+            registry: $this->keywordValidators(),
+            allowedUnknownKeywords: $this->config->allowedUnknownKeywords ?? [],
+            strictKeywords: $this->config->strictKeywords ?? true,
+        )->guard($document);
+    }
+
+    private function keywordValidators(): KeywordValidatorRegistry
+    {
+        return $this->config->keywordValidators ?? new KeywordValidatorRegistry();
+    }
+
+    private function validatorConfiguration(OpenApiDocument $document): ValidatorConfiguration
+    {
+        $dialectProfile = DialectProfile::fromOpenApiVersion($document->openapi);
+
+        if (true === $this->config->enforceRequiredForReadOnly) {
+            $dialectProfile = $dialectProfile->withReadOnlyRequiredRelaxation(false);
+        }
+
+        if (true === $this->config->decisiveDiscriminator) {
+            $dialectProfile = $dialectProfile->withDiscriminatorIsHint(false);
+        }
+
+        return new ValidatorConfiguration(
+            coercion: $this->config->coercion ?? false,
+            nullableAsType: $this->config->nullableAsType ?? true,
+            emptyArrayStrategy: $this->config->emptyArrayStrategy ?? EmptyArrayStrategy::AllowBoth,
+            securityValidation: $this->config->securityValidation ?? false,
+            strictFormats: $this->config->strictFormats ?? false,
+            reportDeprecated: $this->config->reportDeprecated ?? true,
+            maxJsonBodyBytes: $this->config->maxJsonBodyBytes ?? ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES,
+            maxMultipartBodyBytes: $this->config->maxMultipartBodyBytes ?? ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES,
+            strictStreaming: $this->config->strictStreaming ?? false,
+            maxRegexBacktracks: $this->config->maxRegexBacktracks ?? ValidatorConfiguration::DEFAULT_MAX_REGEX_BACKTRACKS,
+            maxStreamingRecords: $this->config->maxStreamingRecords ?? ValidatorConfiguration::DEFAULT_MAX_STREAMING_RECORDS,
+            strictCoercion: $this->config->strictCoercion ?? true,
+            dialectProfile: $dialectProfile,
+            contentAssertionsEnabled: $this->config->contentAssertionsEnabled ?? false,
+            formatAssertionMode: $this->config->formatAssertionMode ?? FormatAssertionMode::Assertion,
+            lenientResponses: $this->config->lenientResponses ?? false,
+        );
+    }
+
+    private function assertSupportedVocabularies(OpenApiDocument $document): void
+    {
+        new VocabularyGuard()->guard($document, $this->config->eventDispatcher);
     }
 
     private function with(BuilderConfig $overrides): self
     {
         return new self($this->config->merge($overrides));
+    }
+
+    private function documents(): DocumentRepository
+    {
+        return ($this->config->documentRepository ?? DocumentRepository::empty($this->externalRefMaxBytes()))
+            ->withMaxBytes($this->externalRefMaxBytes());
+    }
+
+    private function assertRegisteredDocumentsWithinLimit(): void
+    {
+        $this->config->documentRepository?->assertWithinLimit($this->externalRefMaxBytes());
+    }
+
+    private function externalRefMaxBytes(): int
+    {
+        return $this->config->externalRefMaxBytes ?? FileExternalRefResolver::DEFAULT_MAX_REF_BYTES;
+    }
+
+    private function specParserFactory(): SpecParserFactory
+    {
+        return new SpecParserFactory(
+            logger: $this->config->logger,
+            reportDeprecated: $this->config->reportDeprecated,
+            maxSpecSizeBytes: $this->config->maxSpecSizeBytes,
+            maxSpecDepth: $this->config->maxSpecDepth,
+        );
     }
 
     private function resolveSpecPath(string $path): string
@@ -305,9 +482,12 @@ final readonly class OpenApiValidatorBuilder
         return new ExternalRefDetector($this->config);
     }
 
-    private function assembleValidator(OpenApiDocument $document): OpenApiValidatorInterface
-    {
-        $maxRegexBacktracks = $this->config->maxRegexBacktracks ?? ValidatorConfiguration::DEFAULT_MAX_REGEX_BACKTRACKS;
+    private function assembleValidator(
+        OpenApiDocument $document,
+        ValidatorConfiguration $configuration,
+    ): OpenApiValidatorInterface {
+        $dialectProfile = $configuration->dialectProfile;
+        $maxRegexBacktracks = $configuration->maxRegexBacktracks;
         $pregExecutor = new PregExecutor($maxRegexBacktracks);
         $pool = $this->config->pool ?? new ValidatorPool();
         $userRegistry = $this->config->formatRegistry;
@@ -320,25 +500,40 @@ final readonly class OpenApiValidatorBuilder
         $pathFinder = new PathFinder($document, $pathRegexCache, $pregExecutor);
         $logger = $this->config->logger ?? new NullLogger();
         $securityVerboseLogger = $this->config->securityVerboseLogger ?? new NullLogger();
+        $userSecurityRegistry = $this->config->securitySchemeHandlers;
+        $securitySchemeHandlers = null === $userSecurityRegistry
+            ? null
+            : $userSecurityRegistry->withBase(
+                SecuritySchemeHandlerRegistry::buildIn($pregExecutor, $securityVerboseLogger),
+            );
         $fileResolver = new FileExternalRefResolver(
             allowedRoot: $this->config->externalRefAllowedRoot,
-            maxBytes: $this->config->externalRefMaxBytes ?? FileExternalRefResolver::DEFAULT_MAX_REF_BYTES,
+            maxBytes: $this->externalRefMaxBytes(),
             logger: $securityVerboseLogger,
         );
-        $refResolver = new RefResolver(builtinFileResolver: $fileResolver);
+        $refResolver = new RefResolver(
+            externalRefResolver: $this->config->externalRefResolver,
+            builtinFileResolver: $fileResolver,
+            documentRepository: $this->config->documentRepository,
+            dialectProfile: $dialectProfile,
+        );
+        $refResolver->resourceRegistry($document);
 
-        $coercion = $this->config->coercion ?? false;
-        $nullableAsType = $this->config->nullableAsType ?? true;
-        $emptyArrayStrategy = $this->config->emptyArrayStrategy ?? EmptyArrayStrategy::AllowBoth;
-        $securityValidation = $this->config->securityValidation ?? false;
-        $strictFormats = $this->config->strictFormats ?? false;
-        $reportDeprecated = $this->config->reportDeprecated ?? true;
-        $maxJsonBodyBytes = $this->config->maxJsonBodyBytes ?? ValidatorConfiguration::DEFAULT_MAX_JSON_BODY_BYTES;
-        $maxMultipartBodyBytes = $this->config->maxMultipartBodyBytes ?? ValidatorConfiguration::DEFAULT_MAX_MULTIPART_BODY_BYTES;
-        $maxStreamingRecords = $this->config->maxStreamingRecords ?? ValidatorConfiguration::DEFAULT_MAX_STREAMING_RECORDS;
-        $strictStreaming = $this->config->strictStreaming ?? false;
+        $coercion = $configuration->coercion;
+        $nullableAsType = $configuration->nullableAsType;
+        $emptyArrayStrategy = $configuration->emptyArrayStrategy;
+        $securityValidation = $configuration->securityValidation;
+        $strictFormats = $configuration->strictFormats;
+        $reportDeprecated = $configuration->reportDeprecated;
+        $maxJsonBodyBytes = $configuration->maxJsonBodyBytes;
+        $maxMultipartBodyBytes = $configuration->maxMultipartBodyBytes;
+        $maxStreamingRecords = $configuration->maxStreamingRecords;
+        $strictStreaming = $configuration->strictStreaming;
         $strictCallbackRuntimeTemplate = $this->config->strictCallbackRuntimeTemplate ?? true;
-        $strictCoercion = $this->config->strictCoercion ?? true;
+        $strictCoercion = $configuration->strictCoercion;
+        $contentAssertionsEnabled = $configuration->contentAssertionsEnabled;
+        $formatAssertionMode = $configuration->formatAssertionMode;
+        $lenientResponses = $configuration->lenientResponses;
 
         $context = ValidationStack::fromGroup(
             new ValidationGroup(
@@ -351,6 +546,7 @@ final readonly class OpenApiValidatorBuilder
                     pathRegexCache: $pathRegexCache,
                     regexValidator: $regexValidator,
                     pregExecutor: $pregExecutor,
+                    keywordValidators: $this->keywordValidators(),
                 ),
                 options: new ValidatorOptions(
                     coercion: $coercion,
@@ -364,6 +560,11 @@ final readonly class OpenApiValidatorBuilder
                     maxStreamingRecords: $maxStreamingRecords,
                     strictCoercion: $strictCoercion,
                     securityVerboseLogger: $securityVerboseLogger,
+                    dialectProfile: $dialectProfile,
+                    contentAssertionsEnabled: $contentAssertionsEnabled,
+                    formatAssertionMode: $formatAssertionMode,
+                    lenientResponses: $lenientResponses,
+                    securitySchemeHandlers: $securitySchemeHandlers,
                 ),
                 bodyLimits: new BodyLimits(
                     maxJsonBodyBytes: $maxJsonBodyBytes,
@@ -375,20 +576,7 @@ final readonly class OpenApiValidatorBuilder
 
         return new OpenApiValidator(
             document: $document,
-            configuration: new ValidatorConfiguration(
-                coercion: $coercion,
-                nullableAsType: $nullableAsType,
-                emptyArrayStrategy: $emptyArrayStrategy,
-                securityValidation: $securityValidation,
-                strictFormats: $strictFormats,
-                reportDeprecated: $reportDeprecated,
-                maxJsonBodyBytes: $maxJsonBodyBytes,
-                maxMultipartBodyBytes: $maxMultipartBodyBytes,
-                strictStreaming: $strictStreaming,
-                maxRegexBacktracks: $maxRegexBacktracks,
-                maxStreamingRecords: $maxStreamingRecords,
-                strictCoercion: $strictCoercion,
-            ),
+            configuration: $configuration,
             dependencies: new ValidatorDependencies(
                 pool: $pool,
                 formatRegistry: $formatRegistry,

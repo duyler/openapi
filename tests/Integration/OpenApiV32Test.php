@@ -236,7 +236,7 @@ final class OpenApiV32Test extends TestCase
     }
 
     #[Test]
-    public function parses_oauth2_device_code_flow(): void
+    public function parses_oauth2_device_authorization_flow(): void
     {
         $parser = new YamlParser();
         $content = file_get_contents(FixtureLocator::path('v3.2/full-spec.yaml'));
@@ -249,10 +249,10 @@ final class OpenApiV32Test extends TestCase
         self::assertNotNull($oauth2Scheme);
         self::assertSame('https://auth.example.com/.well-known/oauth-authorization-server', $oauth2Scheme->oauth2MetadataUrl);
 
-        $deviceCodeFlow = $oauth2Scheme->flows?->deviceCode;
-        self::assertNotNull($deviceCodeFlow);
-        self::assertSame('https://auth.example.com/token', $deviceCodeFlow->tokenUrl);
-        self::assertSame('https://auth.example.com/device/code', $deviceCodeFlow->deviceAuthorizationUrl);
+        $deviceAuthorizationFlow = $oauth2Scheme->flows?->deviceAuthorization;
+        self::assertNotNull($deviceAuthorizationFlow);
+        self::assertSame('https://auth.example.com/token', $deviceAuthorizationFlow->tokenUrl);
+        self::assertSame('https://auth.example.com/device/code', $deviceAuthorizationFlow->deviceAuthorizationUrl);
     }
 
     #[Test]

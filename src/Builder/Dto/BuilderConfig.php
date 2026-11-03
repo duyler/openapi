@@ -5,15 +5,23 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Builder\Dto;
 
 use Duyler\OpenApi\Cache\SchemaCache;
+use Duyler\OpenApi\Schema\Parser\DocumentRepository;
 use Duyler\OpenApi\Validator\EmptyArrayStrategy;
 use Duyler\OpenApi\Validator\Error\Formatter\ErrorFormatterInterface;
 use Duyler\OpenApi\Validator\Format\FormatRegistry;
+use Duyler\OpenApi\Validator\FormatAssertionMode;
+use Duyler\OpenApi\Validator\Schema\ExternalRefResolverInterface;
+use Duyler\OpenApi\Validator\Schema\KeywordValidatorRegistry;
+use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerRegistry;
 use Duyler\OpenApi\Validator\ValidatorPool;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 
 final readonly class BuilderConfig
 {
+    /**
+     * @param list<string>|null $allowedUnknownKeywords
+     */
     public function __construct(
         public readonly ?string $specPath = null,
         public readonly ?string $specContent = null,
@@ -43,6 +51,18 @@ final readonly class BuilderConfig
         public readonly ?bool $strictCoercion = null,
         public readonly ?int $maxSpecSizeBytes = null,
         public readonly ?int $maxSpecDepth = null,
+        public readonly ?DocumentRepository $documentRepository = null,
+        public readonly ?ExternalRefResolverInterface $externalRefResolver = null,
+        public readonly ?bool $contentAssertionsEnabled = null,
+        public readonly ?KeywordValidatorRegistry $keywordValidators = null,
+        public readonly ?bool $strictKeywords = null,
+        public readonly ?array $allowedUnknownKeywords = null,
+        public readonly ?FormatAssertionMode $formatAssertionMode = null,
+        public readonly ?bool $lenientResponses = null,
+        public readonly ?SecuritySchemeHandlerRegistry $securitySchemeHandlers = null,
+        public readonly ?bool $legacyExplodeDefaults = null,
+        public readonly ?bool $enforceRequiredForReadOnly = null,
+        public readonly ?bool $decisiveDiscriminator = null,
     ) {}
 
     public function merge(self $overrides): self
@@ -76,6 +96,18 @@ final readonly class BuilderConfig
             strictCoercion: $overrides->strictCoercion ?? $this->strictCoercion,
             maxSpecSizeBytes: $overrides->maxSpecSizeBytes ?? $this->maxSpecSizeBytes,
             maxSpecDepth: $overrides->maxSpecDepth ?? $this->maxSpecDepth,
+            documentRepository: $overrides->documentRepository ?? $this->documentRepository,
+            externalRefResolver: $overrides->externalRefResolver ?? $this->externalRefResolver,
+            contentAssertionsEnabled: $overrides->contentAssertionsEnabled ?? $this->contentAssertionsEnabled,
+            keywordValidators: $overrides->keywordValidators ?? $this->keywordValidators,
+            strictKeywords: $overrides->strictKeywords ?? $this->strictKeywords,
+            allowedUnknownKeywords: $overrides->allowedUnknownKeywords ?? $this->allowedUnknownKeywords,
+            formatAssertionMode: $overrides->formatAssertionMode ?? $this->formatAssertionMode,
+            lenientResponses: $overrides->lenientResponses ?? $this->lenientResponses,
+            securitySchemeHandlers: $overrides->securitySchemeHandlers ?? $this->securitySchemeHandlers,
+            legacyExplodeDefaults: $overrides->legacyExplodeDefaults ?? $this->legacyExplodeDefaults,
+            enforceRequiredForReadOnly: $overrides->enforceRequiredForReadOnly ?? $this->enforceRequiredForReadOnly,
+            decisiveDiscriminator: $overrides->decisiveDiscriminator ?? $this->decisiveDiscriminator,
         );
     }
 }

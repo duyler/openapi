@@ -10,11 +10,18 @@ use Duyler\OpenApi\Validator\Exception\MissingSecurityCredentialsError;
 use Duyler\OpenApi\Validator\Exception\UnsupportedSecuritySchemeException;
 use Duyler\OpenApi\Validator\Exception\ValidationException;
 use Duyler\OpenApi\Validator\Dto\SecurityValidationContext;
+use Duyler\OpenApi\Validator\Security\SchemeCredentialReporter;
+use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerInterface;
+use Duyler\OpenApi\Validator\Security\SecuritySchemeHandlerRegistry;
 use Duyler\OpenApi\Validator\Security\SecurityValidator;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
+
+use function str_repeat;
 
 /** @internal */
 final class SecurityValidatorTest extends TestCase
@@ -336,7 +343,36 @@ final class SecurityValidatorTest extends TestCase
     }
 
     #[Test]
-    public function http_basic_returns_unsupported_scheme_error(): void
+    public function http_bearer_whitespace_padded_token_converted_to_missing_credentials_error(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users')
+            ->withHeader('Authorization', 'Bearer tok' . str_repeat(' ', 20000) . '!');
+        $securityRequirements = new SecurityRequirement([
+            ['bearerAuth' => []],
+        ]);
+        $securitySchemes = [
+            'bearerAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'bearer',
+            ),
+        ];
+
+        try {
+            $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('bearerAuth', $error->schemeName(reveal: true));
+            $this->assertSame('http/bearer', $error->schemeType(reveal: true));
+            $this->assertSame('Authorization header', $error->location(reveal: true));
+        }
+    }
+
+    #[Test]
+    public function http_basic_with_valid_credentials_passes(): void
     {
         $request = $this->factory->createServerRequest('GET', '/users')
             ->withHeader('Authorization', 'Basic dXNlcjpwYXNz');
@@ -350,16 +386,35 @@ final class SecurityValidatorTest extends TestCase
             ),
         ];
 
-        $this->expectException(UnsupportedSecuritySchemeException::class);
-
         $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
-    public function http_basic_throws_unsupported_scheme_exception_with_descriptor(): void
+    public function http_digest_with_valid_credentials_passes(): void
     {
         $request = $this->factory->createServerRequest('GET', '/users')
-            ->withHeader('Authorization', 'Basic dXNlcjpwYXNz');
+            ->withHeader('Authorization', 'Digest username="Mufasa", realm="testrealm@host.com", nonce="abc123", qop=auth');
+        $securityRequirements = new SecurityRequirement([
+            ['digestAuth' => []],
+        ]);
+        $securitySchemes = [
+            'digestAuth' => new SecurityScheme(
+                type: 'http',
+                scheme: 'digest',
+            ),
+        ];
+
+        $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function http_basic_without_header_reports_missing_credentials_error(): void
+    {
+        $request = $this->factory->createServerRequest('GET', '/users');
         $securityRequirements = new SecurityRequirement([
             ['basicAuth' => []],
         ]);
@@ -372,14 +427,15 @@ final class SecurityValidatorTest extends TestCase
 
         try {
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
-            $this->fail('Expected UnsupportedSecuritySchemeException was not thrown');
-        } catch (UnsupportedSecuritySchemeException $e) {
-            $this->assertSame('basicAuth', $e->schemeName);
-            $this->assertSame('http', $e->schemeType);
-            $this->assertSame('basic', $e->httpScheme);
-            $this->assertStringContainsString('http/basic', $e->getMessage());
-            $this->assertStringContainsString('basicAuth', $e->getMessage());
-            $this->assertSame($e->getMessage(), (string) $e);
+            $this->fail('Expected ValidationException was not thrown');
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $this->assertCount(1, $errors);
+            $error = $errors[0];
+            $this->assertInstanceOf(MissingSecurityCredentialsError::class, $error);
+            $this->assertSame('basicAuth', $error->schemeName(reveal: true));
+            $this->assertSame('http/basic', $error->schemeType(reveal: true));
+            $this->assertSame('Authorization header', $error->location(reveal: true));
         }
     }
 
@@ -679,11 +735,11 @@ final class SecurityValidatorTest extends TestCase
     {
         $request = $this->factory->createServerRequest('GET', '/users');
         $securityRequirements = new SecurityRequirement([
-            ['oauth2Auth' => []],
+            ['unknownAuth' => []],
         ]);
         $securitySchemes = [
-            'oauth2Auth' => new SecurityScheme(
-                type: 'oauth2',
+            'unknownAuth' => new SecurityScheme(
+                type: 'unknownSchemeType',
             ),
         ];
 
@@ -691,13 +747,35 @@ final class SecurityValidatorTest extends TestCase
             $this->validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
             $this->fail('Expected UnsupportedSecuritySchemeException was not thrown');
         } catch (UnsupportedSecuritySchemeException $e) {
-            $this->assertSame('oauth2Auth', $e->schemeName);
-            $this->assertSame('oauth2', $e->schemeType);
+            $this->assertSame('unknownAuth', $e->schemeName);
+            $this->assertSame('unknownSchemeType', $e->schemeType);
             $this->assertNull($e->httpScheme);
-            $this->assertStringContainsString('oauth2', $e->getMessage());
-            $this->assertStringContainsString('oauth2Auth', $e->getMessage());
+            $this->assertStringContainsString('unknownSchemeType', $e->getMessage());
+            $this->assertStringContainsString('unknownAuth', $e->getMessage());
+            $this->assertStringContainsString('no built-in handler', $e->getMessage());
+            $this->assertStringContainsString('withSecuritySchemeHandler()', $e->getMessage());
             $this->assertSame($e->getMessage(), (string) $e);
         }
+    }
+
+    #[Test]
+    public function custom_handler_registry_replaces_builtin_dispatch(): void
+    {
+        $handler = new UnknownSchemeTypeHandler();
+        $validator = new SecurityValidator(handlerRegistry: new SecuritySchemeHandlerRegistry([$handler]));
+        $request = $this->factory->createServerRequest('GET', '/users');
+        $securityRequirements = new SecurityRequirement([
+            ['unknownAuth' => []],
+        ]);
+        $securitySchemes = [
+            'unknownAuth' => new SecurityScheme(
+                type: 'unknownSchemeType',
+            ),
+        ];
+
+        $validator->validate(new SecurityValidationContext(request: $request, path: '/users', method: 'GET', securityRequirements: $securityRequirements, securitySchemes: $securitySchemes));
+
+        $this->assertSame(['unknownAuth'], $handler->validatedSchemeNames);
     }
 
     #[Test]
@@ -964,5 +1042,30 @@ final class SpyLogger implements LoggerInterface
     public function log($level, $message, array $context = []): void
     {
         $this->records[] = ['level' => (string) $level, 'message' => $message, 'context' => $context];
+    }
+}
+
+final class UnknownSchemeTypeHandler implements SecuritySchemeHandlerInterface
+{
+    /**
+     * @var list<string>
+     */
+    public array $validatedSchemeNames = [];
+
+    #[Override]
+    public function supports(SecurityScheme $scheme): bool
+    {
+        return 'unknownSchemeType' === $scheme->type;
+    }
+
+    #[Override]
+    public function validate(
+        ServerRequestInterface $request,
+        SecurityScheme $scheme,
+        SchemeCredentialReporter $reporter,
+    ): ?MissingSecurityCredentialsError {
+        $this->validatedSchemeNames[] = $reporter->schemeName;
+
+        return null;
     }
 }

@@ -96,7 +96,7 @@ YAML;
             $validator->validateResponse($response, $operation);
             $this->fail('Expected ValidationException to be thrown');
         } catch (ValidationException $e) {
-            $formatted = (new SimpleFormatter())->formatException($e);
+            $formatted = new SimpleFormatter()->formatException($e);
             $this->assertIsString($formatted);
             $this->assertNotEmpty($formatted);
         }

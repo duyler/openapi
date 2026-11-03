@@ -25,6 +25,7 @@ final readonly class Schema implements JsonSerializable
      * @param Schema|bool|null $items
      * @param list<Schema>|null $prefixItems
      * @param array<string, Schema>|null $patternProperties
+     * @param array<string, list<string>>|null $dependentRequired
      * @param array<string, Schema>|null $dependentSchemas
      * @param Schema|bool|null $additionalProperties
      * @param Schema|bool|null $unevaluatedProperties
@@ -36,8 +37,11 @@ final readonly class Schema implements JsonSerializable
      * @param Schema|bool|null $else
      * @param Schema|bool|null $unevaluatedItems
      * @param list<mixed>|null $enum
-     * @param array<string, mixed>|null $examples
+     * @param array<int|string, mixed>|null $examples
      * @param Xml|null $xml
+     * @param array<string, bool>|null $vocabulary
+     * @param array<string, Schema>|null $defs
+     * @param array<string, mixed>|null $extras
      */
     public function __construct(
         public ?string $ref = null,
@@ -84,6 +88,7 @@ final readonly class Schema implements JsonSerializable
         public ?int $maxContains = null,
         public ?array $patternProperties = null,
         public Schema|bool|null $propertyNames = null,
+        public ?array $dependentRequired = null,
         public ?array $dependentSchemas = null,
         public Schema|bool|null $if = null,
         public Schema|bool|null $then = null,
@@ -97,6 +102,14 @@ final readonly class Schema implements JsonSerializable
         public Schema|bool|null $contentSchema = null,
         public ?string $jsonSchemaDialect = null,
         public ?Xml $xml = null,
+        public ?string $id = null,
+        public ?string $anchor = null,
+        public ?string $dynamicAnchor = null,
+        public ?string $dynamicRef = null,
+        public ?string $comment = null,
+        public ?array $vocabulary = null,
+        public ?array $defs = null,
+        public ?array $extras = null,
     ) {}
 
     /**
@@ -154,6 +167,7 @@ final readonly class Schema implements JsonSerializable
             maxContains: $array->maxContains,
             patternProperties: $object->patternProperties,
             propertyNames: $object->propertyNames,
+            dependentRequired: $object->dependentRequired,
             dependentSchemas: $object->dependentSchemas,
             if: $composition->if,
             then: $composition->then,
@@ -222,6 +236,7 @@ final readonly class Schema implements JsonSerializable
             maxContains: $array->maxContains ?? $this->maxContains,
             patternProperties: $object->patternProperties ?? $this->patternProperties,
             propertyNames: $object->propertyNames ?? $this->propertyNames,
+            dependentRequired: $object->dependentRequired ?? $this->dependentRequired,
             dependentSchemas: $object->dependentSchemas ?? $this->dependentSchemas,
             if: $composition->if ?? $this->if,
             then: $composition->then ?? $this->then,
@@ -235,12 +250,89 @@ final readonly class Schema implements JsonSerializable
             contentSchema: $scalar->contentSchema ?? $this->contentSchema,
             jsonSchemaDialect: $scalar->jsonSchemaDialect ?? $this->jsonSchemaDialect,
             xml: $scalar->xml ?? $this->xml,
+            id: $this->id,
+            anchor: $this->anchor,
+            dynamicAnchor: $this->dynamicAnchor,
+            dynamicRef: $this->dynamicRef,
+            comment: $this->comment,
+            vocabulary: $this->vocabulary,
+            defs: $this->defs,
+            extras: $this->extras,
         );
     }
 
     public function withSibling(Schema $sibling): self
     {
-        return new SchemaSiblingMerger()->merge($this, $sibling);
+        return new SchemaSiblingMerger()->mergeTargetSide($this, $sibling);
+    }
+
+    public function withoutReference(): self
+    {
+        return new self(
+            format: $this->format,
+            title: $this->title,
+            description: $this->description,
+            default: $this->default,
+            hasDefault: $this->hasDefault,
+            deprecated: $this->deprecated,
+            readOnly: $this->readOnly,
+            writeOnly: $this->writeOnly,
+            type: $this->type,
+            nullable: $this->nullable,
+            const: $this->const,
+            hasConst: $this->hasConst,
+            multipleOf: $this->multipleOf,
+            maximum: $this->maximum,
+            exclusiveMaximum: $this->exclusiveMaximum,
+            minimum: $this->minimum,
+            exclusiveMinimum: $this->exclusiveMinimum,
+            maxLength: $this->maxLength,
+            minLength: $this->minLength,
+            pattern: $this->pattern,
+            maxItems: $this->maxItems,
+            minItems: $this->minItems,
+            uniqueItems: $this->uniqueItems,
+            maxProperties: $this->maxProperties,
+            minProperties: $this->minProperties,
+            required: $this->required,
+            allOf: $this->allOf,
+            anyOf: $this->anyOf,
+            oneOf: $this->oneOf,
+            not: $this->not,
+            discriminator: $this->discriminator,
+            properties: $this->properties,
+            additionalProperties: $this->additionalProperties,
+            unevaluatedProperties: $this->unevaluatedProperties,
+            items: $this->items,
+            prefixItems: $this->prefixItems,
+            contains: $this->contains,
+            minContains: $this->minContains,
+            maxContains: $this->maxContains,
+            patternProperties: $this->patternProperties,
+            propertyNames: $this->propertyNames,
+            dependentRequired: $this->dependentRequired,
+            dependentSchemas: $this->dependentSchemas,
+            if: $this->if,
+            then: $this->then,
+            else: $this->else,
+            unevaluatedItems: $this->unevaluatedItems,
+            example: $this->example,
+            examples: $this->examples,
+            enum: $this->enum,
+            contentEncoding: $this->contentEncoding,
+            contentMediaType: $this->contentMediaType,
+            contentSchema: $this->contentSchema,
+            jsonSchemaDialect: $this->jsonSchemaDialect,
+            xml: $this->xml,
+            id: $this->id,
+            anchor: $this->anchor,
+            dynamicAnchor: $this->dynamicAnchor,
+            dynamicRef: $this->dynamicRef,
+            comment: $this->comment,
+            vocabulary: $this->vocabulary,
+            defs: $this->defs,
+            extras: $this->extras,
+        );
     }
 
     public function stringConstraints(): ?StringConstraints
@@ -316,6 +408,7 @@ final readonly class Schema implements JsonSerializable
             && null === $this->additionalProperties
             && null === $this->unevaluatedProperties
             && null === $this->patternProperties
+            && null === $this->dependentRequired
             && null === $this->dependentSchemas
             && null === $this->propertyNames
         ) {
@@ -330,6 +423,7 @@ final readonly class Schema implements JsonSerializable
             additionalProperties: $this->additionalProperties,
             unevaluatedProperties: $this->unevaluatedProperties,
             patternProperties: $this->patternProperties,
+            dependentRequired: $this->dependentRequired,
             dependentSchemas: $this->dependentSchemas,
             propertyNames: $this->propertyNames,
         );

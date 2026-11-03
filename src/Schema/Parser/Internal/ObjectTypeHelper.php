@@ -9,6 +9,7 @@ use TypeError;
 
 use function is_array;
 use function is_string;
+use function is_bool;
 
 /** @internal */
 final readonly class ObjectTypeHelper
@@ -39,6 +40,32 @@ final readonly class ObjectTypeHelper
         return null === $value ? null : self::asStringMap($value);
     }
 
+    /** @return array<string, bool> */
+    public static function asBoolMap(mixed $value): array
+    {
+        if (false === is_array($value)) {
+            throw new TypeError('Expected bool map, got ' . TypeFormatter::format($value));
+        }
+
+        foreach ($value as $key => $val) {
+            if (false === is_string($key)) {
+                throw new TypeError('Expected string key in map, got ' . TypeFormatter::format($key));
+            }
+            if (false === is_bool($val)) {
+                throw new TypeError('Expected bool value in map, got ' . TypeFormatter::format($val));
+            }
+        }
+
+        /** @var array<string, bool> $value */
+        return $value;
+    }
+
+    /** @return array<string, bool>|null */
+    public static function asBoolMapOrNull(mixed $value): ?array
+    {
+        return null === $value ? null : self::asBoolMap($value);
+    }
+
     /** @return array<string, mixed>|null */
     public static function asStringMixedMapOrNull(mixed $value): ?array
     {
@@ -57,6 +84,21 @@ final readonly class ObjectTypeHelper
         }
 
         /** @var array<string, mixed> $value */
+        return $value;
+    }
+
+    /** @return array<int|string, mixed>|null */
+    public static function asStringOrIntKeyMixedMapOrNull(mixed $value): ?array
+    {
+        if (null === $value) {
+            return null;
+        }
+
+        if (false === is_array($value)) {
+            throw new TypeError('Expected string or integer keyed mixed map, got ' . TypeFormatter::format($value));
+        }
+
+        /** @var array<int|string, mixed> $value */
         return $value;
     }
 }

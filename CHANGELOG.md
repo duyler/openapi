@@ -5,7 +5,780 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0]
+
+Canonical-correctness release: audit findings B1, M1-M6, m2, m3, m4 and m8.
+
+### Breaking Changes
+
+1. Parameter `explode` now defaults to `true` for the effective style `form` (query and cookie
+   parameters without an explicit `style`); an explicit `explode` in the spec always wins. Serialized
+   documents may emit `explode: true` where they previously omitted it. Opt out with
+   `OpenApiValidatorBuilder::withLegacyExplodeDefaults()`.
+2. A Parameter Object declaring both `content` and `schema` fails the build with
+   `InvalidSchemaException` (every location and `components/parameters`); exactly one of the two
+   forms must be used.
+3. In OpenAPI 3.0 documents the `required` check no longer applies to `readOnly` properties during
+   request validation (OAS 3.0.3: "required will take effect on the response only"). Sending a
+   `readOnly` property in a request body is still rejected. Opt out with
+   `OpenApiValidatorBuilder::enforceRequiredForReadOnly()`.
+4. In OpenAPI 3.2 documents the discriminator is a hint: an unknown or invalid discriminator value
+   falls back to plain `oneOf` validation instead of rejecting the payload, so the outcome follows
+   the regular `oneOf` logic. OpenAPI 3.0/3.1 documents keep the decisive semantics. Opt out with
+   `OpenApiValidatorBuilder::withDecisiveDiscriminator()`.
+5. Canonical `$id`/anchor diagnostics run at build time: a duplicate `$id` (different schema
+   instances behind one URI), an `$id` containing a fragment, and an `$anchor`/`$dynamicAnchor`
+   value that does not match `^[A-Za-z_][-A-Za-z0-9._]*$` fail the build with
+   `DuplicateSchemaIdException`, `SchemaIdFragmentException` or `InvalidAnchorException`
+   (previously the registry silently kept the first occurrence and ignored anchor spellings).
+
+### Added
+
+- `OpenApiValidatorBuilder::withLegacyExplodeDefaults()`, `enforceRequiredForReadOnly()` and
+  `withDecisiveDiscriminator()` opt-outs (see Breaking Changes 1, 3 and 4).
+- `validateCallback(ServerRequestInterface $request, string $callbackName, ?CallbackContext $context = null)`
+  and the `Validator\Callback\CallbackContext` DTO: callback runtime expressions —
+  `{$request.body#/{pointer}}`, `{$method}`, `{$url}`, `{$request.path.{name}}`,
+  `{$request.query.{name}}`, `{$request.header.{name}}` — are evaluated against the triggering
+  request when the context is supplied, and the resolved path is compared with the request path.
+  Without the context the previous strict fail-closed/lax fallback rules apply unchanged; with the
+  context an unresolvable expression raises `UnresolvableCallbackPathException` instead of
+  wildcarding, and `$response.*`/`$statusCode` expressions are unresolvable by definition for a
+  callback.
+- Content parameters are validated for every location (`query`, `header`, `path`, `cookie`): the
+  value is parsed by the first declared media type — JSON media types (`application/json`,
+  `+json` suffixes) are decoded, malformed JSON raises `InvalidParameterException` — and validated
+  against the media type schema. Non-JSON media types keep the raw string value.
+- `int32`/`int64` formats are additionally registered under `type: number` (the `type: integer`
+  registrations are preserved), so `type: number` + `format: int64` asserts the 64-bit range.
+- Three build-time schema diagnostics (see Breaking Changes 5) plus forced resource-registry
+  construction: the registry is built during `build()` instead of lazily on the first `$ref`
+  resolution, so the diagnostics surface there.
+- `PackageInfo::VERSION` exposes the package release.
+
+### Changed
+
+- The parsed-document cache fingerprint includes the package version (`PackageInfo::VERSION`):
+  after upgrading, every cached document is regenerated automatically — a one-time cache warm-up
+  with no user action; stale entries expire by TTL.
+
+### Fixed
+
+- `unevaluatedItems` / `unevaluatedProperties` annotations are now written on the parent instance
+  path: an `allOf` branch carrying `unevaluated*` keywords marks the items/properties it evaluated
+  for the parent `unevaluated*` check, so `{allOf: [{unevaluatedItems: {type: integer}}],
+  unevaluatedItems: false}` validates `[1, 2]` instead of rejecting it.
+- Numeric formats follow the OAS data type format rules: `int32`/`int64` validate integer-valued
+  floats (`3e9` raises an int32 range error, `2.0` passes, `1e19` raises an int64 range error by
+  comparing beyond `PHP_INT_MAX` as a float, and `1.5` raises "requires an integer value");
+  `float`/`double` accept integer values when the schema declares `type: number` (integer `5` is a
+  number); `int32`/`int64` are asserted under `type: number` as well.
+
+### Documented
+
+- `uniqueItems`, `const` and `enum` compare numbers through the internal scalar key codec: integers
+  above the IEEE-754 double safe-integer boundary (2^53) and their mathematically equal float
+  spellings are **not** considered equal — see the note in the README's Array Validation section.
+
+## [0.10.0]
+
+Consolidated release of the full OpenAPI 3.2 / JSON Schema 2020-12 implementation program.
+The detailed per-change entries for every feature below follow in the [0.9.0] section.
+
+### Breaking Changes
+
+1. `contentEncoding` / `contentMediaType` / `contentSchema` are annotation-only by default (validation
+   §8.1): string contents are no longer decoded, parsed or validated unless
+   `OpenApiValidatorBuilder::enableContentAssertions()` is called.
+2. An unknown `contentMediaType` no longer throws `InvalidContentMediaTypeException`: it is collected as
+   an annotation and emits a `ValidationWarningEvent`; in assertion mode it warns and skips instead of failing.
+3. `contentEncoding` assertions (opt-in) cover the full RFC 4648 family plus quoted-printable, and
+   `7bit`/`8bit`/`binary` are identity encodings; previously only `base64` was asserted and other
+   encodings were skipped silently.
+4. `contentSchema` is now applied by the assertion pipeline (decode, media check, sub-schema validation)
+   instead of being parsed and ignored.
+5. Response body validation is fail-closed by default: an unmatched response media type raises
+   `UnsupportedMediaTypeException` instead of skipping validation. `withLenientResponses()` restores the
+   previous behavior and dispatches `UnsupportedResponseMediaTypeWarningEvent` per skipped body.
+6. Unknown schema keywords are rejected at build time by default (strict keywords) instead of being
+   silently dropped. Opt out with `disableStrictKeywords()`, legalize individual keywords with
+   `withAllowedUnknownKeywords()`, or register a handler with `withKeywordValidator()`; keyword values
+   stay preserved in `extras` in every mode.
+7. `$dynamicRef` / `$dynamicAnchor` are fully implemented (dynamic scope, outermost anchor,
+   per-encounter resolution) instead of being silently ignored, so results can differ on schemas using them.
+8. `$id`, `$anchor`, `$defs`, `$vocabulary` and `$comment` are parsed and honoured instead of dropped;
+   `$vocabulary: true` for an unsupported vocabulary refuses the build with
+   `VocabularyNotSupportedException`.
+9. OpenAPI 3.0 documents validate by the 3.0 dialect: array `type` is refused
+   (`TypeArrayNotSupportedException`), keywords beside `$ref` are ignored, and `nullable: true` without an
+   explicit `type` no longer makes `null` acceptable.
+10. Security validation dispatches through a handler registry with built-in presence/format handlers for
+    `http/basic`, `http/bearer`, `http/digest`, `apiKey`, `mutualTLS`, `oauth2` and `openIdConnect`
+    instead of throwing `UnsupportedSecuritySchemeException` for everything but bearer/apiKey. The
+    exception remains for scheme types without any handler; register custom handlers with
+    `withSecuritySchemeHandler()`.
+11. OAuth Flows serialize the device flow under the `deviceAuthorization` wire key (the pre-release
+    `deviceCode` key is no longer accepted), `SecurityScheme` gains `deprecated`, `scheme` is normalized
+    to lowercase, and `oauth2MetadataUrl` is validated as an absolute URI at parse time.
+12. Custom schema keyword validation is public API: `KeywordValidatorInterface` +
+    `withKeywordValidator()` replace the hardcoded validator list.
+13. External `$ref` resolution is pluggable: `withExternalRefResolver()` injects a custom
+    `ExternalRefResolverInterface`, and `withDocument()` registers companion documents by retrieval URI;
+    previously the builder only created the builtin `file://` resolver and documents could not be supplied.
+14. Unchanged by design: format keywords stay asserted by default (the package's HTTP-validator profile).
+    Explicit handle: `withFormatAssertionMode(FormatAssertionMode::Annotation)` switches to the JSON
+    Schema 2020-12 annotation default.
+15. Unchanged by design: `http`/`https` external `$ref` targets stay denied by the builtin resolver
+    (SSRF). Explicit handle: supply the documents with `withDocument()`, or inject a network resolver
+    with `withExternalRefResolver()`.
+
+### Added
+
+- Epoch A — Reference and Resource Model: schema resource identification fields, `extras` round-trip
+  for unknown keywords, the per-document resource registry, full `$dynamicRef` dynamic-scope
+  semantics, the `$vocabulary` guard with refuse semantics, legacy `$recursiveRef`/`$recursiveAnchor`
+  warning events, and multi-document support (`withDocument()`, `withExternalRefResolver()`).
+- Epoch B — Schema Semantics: the `DialectProfile` 3.0/3.1 branching, `dependentRequired` (plus the
+  legacy draft-07 `dependencies` translation), the annotation-only `content*` default with the full
+  opt-in assertion pipeline (`ContentValidationResult`, `contentResults()`/`contentResultAtPath()`),
+  the public keyword-validator registry, strict unknown keywords by default, and the complete format
+  vocabulary with the `withFormatAssertionMode()` switch.
+- Epoch C — HTTP Surface: fail-closed response content negotiation with the lenient opt-out,
+  media-type kind classification (complete vs streaming vs sequential vs binary), the multipart 3.2
+  surface (nested encoding, ordered unnamed parts, byte ranges, nested `multipart/mixed`, streaming
+  part-by-part validation, `contentType` list form), and XML Object projection for XML request bodies.
+- Epoch D — Security: the full 3.2 Security Scheme model, the `SecuritySchemeHandlerInterface`
+  registry with seven built-in presence/format handlers, `withSecuritySchemeHandler()`, and the
+  promotion of `SchemeCredentialReporter` to the public `Validator\Security` namespace.
+
+### Changed
+
+- Domain exceptions of the spec parse phase surface raw from the builder instead of being wrapped
+  into `BuilderException`: `TypeArrayNotSupportedException` (OpenAPI 3.0 array `type`),
+  `InvalidUtf8Exception` and `SpecTooLargeException` pass through uncaught, so callers can catch
+  the domain type directly; every other parse failure keeps the `BuilderException` wrapper with
+  the original exception as `previous`.
+
+### Removed
+
+- `LinkContext::fromGroups()` and the internal `Link\Internal\RequestScope`/`ResponseScope` DTOs
+  (unused static factory over internal types; the `LinkContext` constructor remains the single
+  supported instantiation path).
+
+### Fixed
+
+- `withMaxJsonBodySize()` is now enforced on buffered request bodies (previously the cap was
+  silently ignored on that path and only the decoded-content pipeline honoured it).
+- The discriminated `oneOf` null short-circuit honours the 3.0 dialect profile: an inline
+  untyped `nullable: true` member no longer makes `null` acceptable in OpenAPI 3.0 documents
+  (3.1 semantics are unchanged), completing the `nullableRequiresType` rule of change 9.
+
 ## [0.9.0]
+
+> [!NOTE]
+> Entries in this section include the full-spec-implementation work continued after the 0.9.0
+> release cut (at commit 14be707); see [0.10.0] for the consolidated release notes of that effort.
+
+### Added
+
+- Vendored the canonical draft 2020-12 metaschema (`https://json-schema.org/draft/2020-12/schema`
+  and its seven `meta/*` documents) byte-for-byte under `tests/Fixture/JsonSchemaTestSuite/metaschema/`
+  with source commit pin, per-file SHA-256 checksums and the upstream license notice. The JSON Schema
+  Test Suite runner registers these documents by their canonical retrieval URIs, so suite cases that
+  reference the metaschema (for example `ref.json` "remote ref, containing refs itself") now validate
+  against the real 2020-12 metaschema instead of failing scheme allowlisting; product file-resolution
+  allowlisting is unchanged.
+
+- Streaming multipart request validation (3.2 §4.15.4.8): a `multipart/*` request is now
+  processed part by part straight from the PSR-7 stream instead of being read into a single
+  buffer. `RequestValidator` routes multipart requests through the new
+  `RequestBodyValidatorInterface::validateStream()` entry point (implementors of the
+  interface must add the method); the internal `StreamingMultipartDetector` decides the
+  routing by media type (case-insensitive, matching content-type negotiation), and requests
+  whose matched Media Type Object does not declare `prefixEncoding`/`itemEncoding` fall back
+  to the previous buffered pipeline after a limit-checked read, so `multipart/form-data` and
+  named-part validation keep their exact former behavior. Ordered multipart bodies are split
+  incrementally by the CRLF-anchored boundary framing of RFC 2046: a delimiter candidate must
+  sit at a line start and be followed by `--` (close) or transport padding plus CRLF per
+  RFC 2046 §5.1.1 — a close candidate followed by any other byte (for example a fake
+  `--boundary--garbage` sequence inside binary part content) is treated as part content, not
+  as the end of the body; a bare close delimiter without the trailing CRLF is still accepted
+  at the true end of the stream, and boundary-token prefixes inside part content no longer
+  create phantom parts. Each completed part is encoded-asserted, coerced (when coercion is
+  enabled, per part via `RequestBodyCoercer` + `TypeGuarantor`) and validated against
+  `prefixItems[i] ?? itemSchema ?? schema.items` — the same schema also drives the part value
+  shaping and part-level example warnings — item-level results are available as parts arrive,
+  while whole-array keywords (for example `minItems`) are not validated on the streaming
+  ordered multipart path. Existing limits are reused: more than 1000 parts raise
+  `Validator\Exception\MultipartBodyTooLargeException`, a single part larger than
+  `withMaxMultipartBodySize()` raises `Validator\Exception\BodyTooLargeException`, and the
+  nested-multipart recursion applies the same `MultipartNestingDepthException` depth cap
+  configured for the buffered resolver and applier. Known limitation: on the streaming
+  ordered multipart path a whitespace-only body against `required: true` is not rejected
+  (`MissingRequestBodyException` stays a buffered-path behavior), because rejecting it would
+  require buffering; an empty (zero-byte) stream is still rejected.
+- Byte-range parts (3.2 §4.15.4.9, RFC 9110 §14.5/§14.6): a part `Content-Range` header
+  declared in `encoding.headers` is parsed strictly into the `ByteRange` value object
+  (`first`/`last`/`complete`, nullable for `*`) by `ByteRangePartParser`. The parser accepts
+  exactly `bytes <first>-<last>/<complete>`, `bytes <first>-<last>/*` and `bytes */<complete>`;
+  a missing `/complete` part, a missing `bytes ` prefix, trailing garbage or a trailing line
+  break, and a range whose last byte position precedes the first are rejected with
+  `Validator\Exception\InvalidContentRangeException` (keyword `format`).
+- XML Object semantics for XML request bodies (3.2 §4.26): an XML body validated against a schema
+  is now mapped through the XML Object model instead of generic name-based parsing. Element and
+  attribute nodes are matched by the XML Object `name`/`namespace`/`prefix` fields (namespace URI
+  identity, per §4.26.4), `nodeType` (`element`/`attribute`/`text`/`cdata`/`none`) is honored
+  together with the deprecated `attribute`/`wrapped` boolean fields, `nodeType: none` schemas
+  inline their subschemas under the parent node, arrays map as unwrapped item sequences or
+  `wrapped`/`nodeType: element` wrappers, and named `prefixItems` map positionally by node name.
+  §4.26.5 null handling: an element carrying `xsi:nil="true"` (detected namespace-awarely against
+  `http://www.w3.org/2001/XMLSchema-instance`) maps to `null`; an omitted attribute maps to `null`
+  when the property schema allows `null` (type includes `"null"`) and the property is omitted
+  otherwise; an absent element node always means an absent property (`null` is never inferred from
+  a missing node). The mapping is schema-driven projection only — it is not XML Schema validation
+  (ADR, Epoch C boundary). Schemas whose shape cannot determine a mapping (free-form objects,
+  unnamed array items) keep the generic pass-through shape; a schema carrying `$ref`/`$dynamicRef`
+  defaults to `nodeType: none` (§4.26.1), so a property whose `$ref` stays unresolved contributes
+  no property to the mapped value. A declared wrapper that does not match the document is reported
+  as a `ValidationWarningEvent` (carrying `propertyName` and `propertyPath`) and the node passes
+  through unmodified instead of failing. The mapping applies to `application/xml`/
+  `text/xml` request bodies (the media type schema is now passed into `BodyParser::parse()` and
+  `XmlBodyParser::parse()` as an optional parameter — existing signatures stay source-compatible)
+  and to multipart XML leaves (`MultipartInstanceResolver` feeds the part schema in). All
+  simplexml operations keep running inside `LibxmlSecuredContext`, and the 1 MiB XML byte cap
+  (`DEFAULT_MAX_XML_BYTES`) plus `BodyTooLargeException` apply unchanged, including multipart
+  leaves.
+- Built-in security scheme handlers for HTTP Basic and HTTP Digest authentication
+  (RFC 7617/7616): `http/basic` and `http/digest` schemes are now dispatched to dedicated
+  built-in handlers in the `Validator\Security` registry instead of raising
+  `UnsupportedSecuritySchemeException`. Both handlers stay at the presence-and-format depth of
+  the bearer handler: the `Authorization` header must carry the `Basic`/`Digest` prefix
+  (case-insensitive) followed by a well-formed token (`Basic`, exactly one space and a
+  base64/base64url token per RFC 7617) or a well-formed `key=value` parameter list (`Digest`,
+  comma-separated with optional whitespace, values as RFC 7230 tokens or quoted strings with
+  backslash escapes per RFC 7616). Credential values are never decoded, compared or reported:
+  failures raise the generic missing-credentials error with scheme type `http/basic` or
+  `http/digest` and location `Authorization header`, and the verbose log entry keeps the exact
+  bearer handler shape (debug level, scheme name, scheme type and location only). The built-in
+  registry order is basic, digest, bearer, api key, so a custom handler registered through
+  `with()` still wins over every built-in one; `http/bearer` dispatch is unchanged.
+- Built-in security scheme handlers for mutual TLS, OAuth2 and OpenID Connect security schemes
+  (3.2 §4.27.5, §4.27.2, §4.27.3): `mutualTLS`, `oauth2` and `openIdConnect` schemes are now
+  dispatched to dedicated built-in handlers in the `Validator\Security` registry instead of
+  raising `UnsupportedSecuritySchemeException`. The mTLS handler is a presence heuristic over
+  request headers only (`SSL_CLIENT_CERT`, `X-SSL-CERT`, `X-Client-Cert`, case-insensitive):
+  any of them present means success plus a `warning`-level log entry on every triggering
+  validation (client-supplied `X-SSL-*` headers are spoofable when a reverse proxy does not
+  rewrite them — presence is trusted proxy configuration, never proof of authentication;
+  `getServerParams()` is intentionally not consulted), and no candidate header means the
+  generic missing-credentials error. The oauth2 and openIdConnect handlers are Bearer presence
+  checks (case-insensitive `Authorization: Bearer <token>` pattern shared with the
+  `http/bearer` validator): a missing or malformed header raises the generic
+  missing-credentials error with scheme type `oauth2`/`openIdConnect`, and a valid one succeeds
+  plus a debug log entry carrying the scheme's declared scopes — the union of the `scopes` maps
+  of all five OAuth flows (`implicit`, `password`, `clientCredentials`, `authorizationCode`,
+  `deviceAuthorization`, first flow wins on key collisions) merged with the flat scheme-level
+  `scopes` map when present. No token introspection, no network calls, and no token or
+  certificate values in logs — the depth stays at presence and format. The oauth2 handler
+  format-checks `oauth2MetadataUrl` when present and the openIdConnect handler format-checks
+  `openIdConnectUrl` when present (invalid absolute URI raises the generic
+  missing-credentials error at request time; the URI predicate and message are shared with the
+  parse-time validation in `SecuritySchemeBuilder`, which keeps raising
+  `InvalidSchemaException` while parsing the document). The built-in registry order is basic,
+  digest, bearer, api key, mutual TLS, oauth2, open ID connect, so a custom handler registered
+  through `with()` still wins over every built-in one; the `http/bearer` fallback (bearer
+  pattern applied to every `http` scheme without its own handler) remains the dispatch path
+  for future `http` subschemes.
+- `OpenApiValidatorBuilder::withSecuritySchemeHandler(SecuritySchemeHandlerInterface $handler): self`
+  (fluent, repeatable): registers a custom security scheme handler through the public builder
+  surface, closing breaking#10 — user-defined security schemes (for example an introspection
+  stub for `http/bearer` or a custom apiKey location) are now implementable without touching
+  package internals. The handler is prepended ahead of the current handler list in
+  `Validator\Security\SecuritySchemeHandlerRegistry`, and the first handler whose `supports()`
+  returns true wins the scheme lookup, so a user handler overrides every built-in one for the
+  schemes it claims (basic, digest, bearer, api key, mutual TLS, oauth2, openIdConnect);
+  registering two competing handlers makes the last `with()` call win (LIFO order). The merged
+  registry (user handlers first, built-in set behind them) is shared by request, webhook and
+  callback security validation; the OR/AND security requirement semantics are unchanged.
+- `SchemeCredentialReporter` is promoted from `Validator\Security\Internal` to the public
+  `Validator\Security` namespace: the reporter type appears in the public
+  `SecuritySchemeHandlerInterface::validate()` signature, so external handler implementations
+  must be able to name it. The class keeps its shape (public `schemeName`,
+  `reportMissing(schemeType, location)`), its caller-safe `MissingSecurityCredentialsError`
+  output and the sanitized verbose logging; the `@internal` marker is removed.
+
+### Changed
+
+- Built-in string format validators now conform to the official draft 2020-12 format
+  test suite: all twenty vendored `optional/format/*` sections except `ecmascript-regex`
+  (PCRE/ECMA-262 engine boundary) are active and green; the fourteen sections activated
+  by the conformance repair contribute 646 cases.
+  Format validation becomes stricter and more correct — schemas asserting the formats
+  below now reject inputs they previously accepted and accept inputs they previously
+  rejected:
+  - `hostname` is ASCII-only per RFC 1034/1123 (non-ASCII input — full-width label
+    separators, the Kelvin sign, IDN separators — is no longer silently mapped through
+    IDNA and is rejected); `xn--` A-labels are verified (Punycode decode, RFC 5892
+    code-point validity, canonical re-encode round-trip), so invalid, non-canonical or
+    disallowed-content Punycode labels are rejected.
+  - `idn-hostname` performs full IDNA2008 validation: UTS#46 mapping and validity
+    through ext-intl plus the rules ICU does not implement — RFC 5892 Appendix A
+    CONTEXTO rules (MIDDLE DOT, GREEK KERAIA, HEBREW GERESH/GERSHAYIM, KATAKANA
+    MIDDLE DOT, Arabic-Indic digit mixing), the RFC 5892 §2.6 DISALLOWED exceptions
+    (Arabic tatweel, Nko lajanyalan, Hangul tone marks, vertical kana repeat marks,
+    vertical ideographic iteration mark), and RFC 5891 §4.4 A-label verification
+    (decode to a U-label, RFC 5892 code-point classes, canonical round-trip) with
+    Bidi and join-control checks. When the ext-intl extension is absent the validator
+    fails closed: non-ASCII input and A-labels are rejected instead of passing through
+    unchecked. Installing ext-intl in production is recommended whenever schemas declare
+    `idn-hostname` (or `hostname` with `xn--` A-labels) so full IDNA2008 validation is
+    performed rather than the fail-closed fallback.
+  - `uri`, `uri-reference`, `iri` and `iri-reference` validate the full RFC 3986/3987
+    grammar per component: scheme, userinfo (at most one `@`), host (bracketed IP
+    literals validated as addresses, including embedded IPv4 octets; unbracketed hosts
+    must not contain colons), path/query/fragment character classes and
+    percent-encoding triplets. One deliberate deviation from the RFC 3986 grammar
+    (`port = *DIGIT`, which sets no range): a numeric port part must not exceed 65535 —
+    this cap is a validator semantic bound, not part of the RFC grammar. Characters
+    forbidden by the RFCs — space, `"`, `<`, `>`, `\`, `^`, `` ` ``, `{`, `|`, `}`,
+    `]` outside brackets, control characters and (for `uri`/`uri-reference`) any
+    non-ASCII byte — are rejected. `iri`/`iri-reference` accept UCSCHAR and (in
+    queries) IPRIVATE per RFC 3987.
+  - `uri-template` validates the RFC 6570 grammar: literal character classes,
+    expression structure (optional operator, non-empty var-list, no empty varspecs,
+    no trailing commas), `varname` composition (dots only between varchars,
+    pct-encoded varchars allowed), the prefix modifier (one to four digits, positive,
+    no leading zero), the explode modifier, and their non-combinability. An apostrophe
+    in a literal is accepted per RFC 6570 §2.1 (RFC 3986 reserved characters).
+  - `email` validates pure RFC 5321 §4.1.2/§4.1.3 mailboxes and is ASCII-only:
+    SMTPUTF8 input is no longer accepted (it belongs to `idn-email`, RFC 6531).
+    Domains no longer require a dotted TLD — single-label domains and all-numeric
+    labels are valid per RFC 5321 — while quoted local parts keep supporting spaces,
+    `@` and quoted pairs. Address literals validate strictly: four IPv4 octets ≤ 255
+    and case-insensitive `IPv6:` tags with real IPv6 addresses.
+  - `idn-email` implements RFC 6531/6532 SMTPUTF8 instead of forwarding to the ASCII
+    validator: UTF-8 local parts (dot-atom and quoted forms) without an NFC
+    requirement — C1 controls and noncharacters included — and UTF-8 domain labels
+    with Ldh constraints (no leading/trailing hyphen, no empty labels, no leading or
+    trailing dot).
+  - `time` and `date-time` accept the full RFC 3339 numeric offset range
+    (`±00:00`–`±23:59`; previously only `±00:00`–`±14:00` was accepted) and a leap
+    second (`:60`) is valid whenever the local time normalized by its offset equals
+    `23:59:60` UTC — for example `15:59:60-08:00` — instead of only literal `Z`/
+    `±00:00` offsets at `23:59:60`. Offsets of `±24:00` and beyond remain invalid,
+    and trailing line breaks are rejected.
+  - `duration` enforces RFC 3339 duration composition: `Y`/`M`/`D` and `H`/`M`/`S`
+    components must appear in order (`P1Y2D`, `PT1H2S` and `P1YT` are rejected;
+    `P1Y1M1DT1H1M1S` is valid) and weeks are standalone (`P1W2D` is rejected).
+  - `uuid` validates the RFC 4122 syntactic pattern (8-4-4-4-12 hex digits): version
+    and variant nibbles are no longer restricted, so hypothetical future versions
+    (for example version nibble `f`) and non-RFC-4122 variant nibbles are accepted.
+  - `relative-json-pointer` fixes the JSON Pointer part grammar (RFC 6901): pointer
+    parts with multiple reference tokens (`0/foo/bar`, `120/foo/bar`) validate again,
+    and trailing line breaks after the integer prefix are rejected.
+- Suite runner: the fourteen `optional/format/*` sections join the active sections
+  (646 cases); the `FS-40` pending residue drops from 1094 to 448 cases (skipped
+  suite cases drop from 1180 to 534).
+
+- Core instance semantics for schema validation (draft 2020-12 conformance; JSON Schema Test Suite
+  sections `items`, `ref`, `optional/refOfUnknownKeyword`, `unevaluatedItems`, `unevaluatedProperties`
+  — 318 cases — are now active and green):
+  - JSON Pointer fragments now percent-decode before `~0`/`~1` unescaping per RFC 3986/RFC 6901
+    (`%25` → `%`, `%22` → `"`), so definitions like `percent%field` referenced as
+    `#/$defs/percent%25field` resolve; `$ref: "#"` inside a subschema resolves to the root of the
+    enclosing schema resource.
+  - Local pointer references (`#/...`) that miss the OpenAPI envelope now resolve against the root of
+    the enclosing schema resource (`#/properties/foo`, `#/prefixItems/0`) and against unknown-keyword
+    values kept verbatim in schema extras (`#/unknown-keyword`, `#/properties/foo/unknown-keyword`)
+    and against list entries of the 2020-12 `examples` keyword (`#/examples/0`); references into
+    documents registered via `withDocument()` resolve their local pointers against that document's
+    resource. Envelope-rooted pointers (`#/components/...`) keep their previous fast path and do not
+    touch the resource registry.
+  - `items`/`prefixItems` apply to JSON arrays only: JSON objects (including JavaScript-style
+    pseudo-arrays such as `{"0": ..., "length": 1}`) no longer feed their keys into item indexes, and
+    `null` items validate against subschemas that do not restrict `type` (2020-12 semantics; OAS 3.0
+    `nullableRequiresType` profiles keep their behavior).
+  - The 2020-12 `examples` keyword accepts the JSON Schema list form alongside the OAS map form
+    (parser, sibling merge, serializer round-trip and example collection).
+  - `unevaluatedProperties`/`unevaluatedItems` now track evaluated names and indexes per instance
+    location: an inner property or item does not satisfy an `unevaluated` keyword at another
+    location; `unevaluatedProperties: true` / `unevaluatedItems: true` evaluate everything they
+    cover so nested `allOf`-scoped guards compose; a schema-typed `unevaluated*` target marks the
+    properties/items it applies to as evaluated; and sibling applicator keywords of a `$ref` schema
+    (its `properties`) are applied as a separate sibling application whose annotations are invisible
+    inside the `$ref` target (a `$ref` creates a new evaluation scope), while non-evaluation sibling
+    keywords (`nullable`, bounds, `required`) keep merging into the resolved target as before.
+- Suite runner: the five sections above are activated (1180 suite cases skipped overall, 1094 of
+  them held by `FS-40` per the pool decomposition attribution).
+
+- `UnsupportedSecuritySchemeException` message wording: with the full built-in handler set
+  (apiKey, http/basic, http/bearer, http/digest, mutualTLS, oauth2, openIdConnect) the message
+  no longer claims that the package "validates apiKey and http/bearer only" — it now states the
+  fact that no built-in handler exists for the scheme type/subscheme and points to the public
+  registration entry point: a custom handler must be registered via
+  `OpenApiValidatorBuilder::withSecuritySchemeHandler()` to validate it. The exception is now
+  raised only for types or `http` subschemes without a built-in handler (for example
+  `http/negotiate` or an entirely unknown type); scheme name, scheme type and `httpScheme`
+  properties are unchanged.
+- XML empty-element parse semantics (3.2 §4.26.5): an empty element without `xsi:nil` — root
+  (`<empty/>`), child (`<nickname/>`) or repeated (`<item/><item/>`) — now maps to an empty string
+  `''` instead of `null` in generic XML parsing; `null` is now reserved for `xsi:nil="true"`
+  elements only (detected against the XML Schema-instance namespace URI regardless of the bound
+  prefix, in both generic and schema-driven paths). In the schema-driven mapping an empty element
+  is typed by its schema: when the element type allows `object` or `array` it maps to an empty
+  object/list (`[]`; for a union the composite branch wins over scalar branches), and to `''` for
+  scalar types — the §4.26.6.8 `productNoNulls` fixture
+  (`<product count="42"><description>Thing</description><related></related></product>` →
+  `related: {}`) now validates without errors. Whitespace-only leaf text stays untrimmed
+  (`<root>  </root>` → `'  '`), matching child leaf values, while `text`/`cdata` node mapping and
+  mixed-content `#text` stay trimmed. Root arrays without named items now collect children across
+  all namespaces, not only the default one. This is a deliberate breaking change of the previously
+  pinned `empty element → null` behavior: per §4.26.5/§4.26.6.8 an empty element is a value
+  (`''`/`{}`), not `null` — and only `<related xsi:nil="true"/>` denotes `null`.
+- Multi-document OpenAPI descriptions (3.2 §4.1.2): `OpenApiValidatorBuilder::withDocument(string $retrievalUri,
+  string $content)` registers user-supplied documents by intended retrieval URI. Content is size-capped with the
+  same limit as `FileExternalRefResolver` (`withExternalRefMaxBytes()` and `DEFAULT_MAX_REF_BYTES` apply, re-checked
+  against the final limit at `build()`) and is parsed in full at registration time; parse failures raise
+  `DocumentParseException` carrying the retrieval URI without exposing document content. External `$ref` resolution
+  order is now: document repository (exact match, then base-URI combination against the current document `$self`)
+  → `file://` jail resolver → `UnresolvableRefException`. External `$ref` values inside the main spec and inside
+  registered documents must either be satisfied by the repository or require `externalRefAllowedRoot`; the
+  confinement verdict cache key includes the repository fingerprint.
+- `OpenApiValidatorBuilder::withExternalRefResolver(ExternalRefResolverInterface $resolver): self` injects a custom
+  external `$ref` resolver ahead of the builtin `file://` jail resolver, closing the gap where the interface existed
+  but the builder never accepted one. The injected resolver serves every scheme (for example `https://` documents),
+  while the builtin scheme allowlist, path jail and size caps stay in force whenever no custom resolver is
+  registered; the `UnresolvableRefException` confinement message now points at this entry point.
+- Schema resource identification fields (`$id`, `$anchor`, `$dynamicAnchor`, `$dynamicRef`, `$comment`,
+  `$vocabulary`, `$defs`) and unknown schema keywords are preserved through parse/serialize round-trip; they
+  were previously silently dropped on load. Unknown keywords keep their values verbatim (vendor extensions,
+  typos, `$recursiveRef` included), so re-serializing a schema reproduces the source document.
+- `DialectProfile` DTO (additive public API): the OpenAPI 3.0/3.1 dialect profile is derived once per document
+  from the `openapi` version (`DialectProfile::fromOpenApiVersion()`, with `forOpenApi30()`/`forOpenApi31()`
+  factories) and carried through ref resolution, validation context (including branch forks) and the schema
+  parser build path (`RefResolver::dialectProfile()` exposes it). Behavior is unchanged in this release: no
+  code path consumes the profile flags yet, and the stateless validation path keeps the 3.1 default.
+- `dependentRequired` keyword with full cascade support and the legacy draft-07
+  `dependencies` keyword translated at parse time (list form to dependentRequired,
+  schema/boolean form to dependentSchemas, empty list as vacuum), registered in the known
+  keyword set.
+- Custom schema keyword validation (public part of the keyword-validator registry):
+  `OpenApiValidatorBuilder::withKeywordValidator(string $keyword, KeywordValidatorInterface $validator)`
+  registers a validator for a user-defined schema keyword (calls accumulate; re-registering
+  a keyword replaces its validator while keeping its dispatch slot — fully for
+  stateless-dispatched keywords only, since built-in `items`/`properties`/`oneOf`
+  are additionally dispatched by the context path and cannot be fully replaced).
+  Keyword values are read
+  from the schema `extras` produced by the parser — custom keywords are never added to the
+  schema model. Registered keywords dispatch after the whole built-in set (including
+  `unevaluatedItems`/`unevaluatedProperties`), so applicator-style custom keywords cannot
+  place themselves ahead of them; a keyword without a registration stays an extras
+  annotation and does not affect the validation outcome.
+- Format assertion mode switch: `OpenApiValidatorBuilder::withFormatAssertionMode(FormatAssertionMode $mode)`
+  selects between `FormatAssertionMode::Assertion` (the default; format keywords are
+  asserted, behavior unchanged) and `FormatAssertionMode::Annotation` (format keywords are
+  only collected as validation annotations and never asserted, matching the JSON Schema
+  2020-12 annotation default). In both modes the applied `format` keyword is recorded in
+  the run annotations. `strictFormats` keeps its semantics: an unknown format token raises
+  `InvalidFormatException` in assertion mode when strict formats are enabled; annotation
+  mode never raises.
+- Nested encoding application for multipart request bodies (3.2 §4.15.2): Encoding Objects
+  reached through the Media Type Object's `prefixEncoding`/`itemEncoding`/`encoding` fields
+  are now applied one level deep to nested parts. A nested part's resolved Encoding Object
+  checks the part's `Content-Type` against `contentType` (string or list form, `type/*`
+  wildcards included, parameters and case ignored), enforces required `headers` on the part
+  (`Content-Type` inside `encoding.headers` is ignored per §4.15.1.1), and, when the part is
+  itself a multipart body, wire-splits it once by its own boundary to apply the nested
+  fields to the inner parts. Mismatches raise `Validator\Exception\PartContentTypeMismatchError`
+  (keyword `prefixEncoding`, `itemEncoding` or `encoding`) and a missing required part header
+  raises `Validator\Exception\MissingPartHeaderError`. Parts without a `Content-Type` header
+  are not content-type asserted, deeper than one level of nesting is passed through untouched,
+  and schema-level recursion into nested multipart values stays out of scope; the wire parser
+  remains a boundary splitter with no knowledge of the Encoding model.
+- Ordered (unnamed) multipart request bodies (3.2 §4.15.4.6, §4.15.4.7): a `multipart/*` Media
+  Type Object carrying `prefixEncoding`/`itemEncoding` together with an array schema (or
+  `itemSchema`) is validated positionally — parts map to `prefixItems`/`items` and to
+  `prefixEncoding`/`itemEncoding` by index, `Content-Disposition` names do not participate,
+  an instance shorter than `prefixEncoding` ignores the surplus Encoding Objects, and part
+  values enter the JSON data model (JSON-decoded when the part's effective content type is
+  JSON, raw text otherwise) so the schema validator applies per-position assertions.
+  `encoding` combined with `prefixEncoding`/`itemEncoding` raises
+  `Validator\Exception\InvalidEncodingConfigurationException`, as does positional encoding
+  without an array schema or `itemSchema` (§4.14.1, §4.14.5.2). Part `headers` declared in
+  Encoding Objects now carry full Header Object semantics: a referenced header
+  (`$ref` into `#/components/headers/...`) is resolved from the document's components, a
+  required header missing on its part raises `MissingPartHeaderError`, and a present header
+  value is validated against the header's `schema` with the same coercion rules used for
+  response headers. Media type keys with parameters (for example
+  `multipart/related; type=text/html`) now match requests by media type proper. The
+  effective content type of a part follows the §4.15.1.1 default table (header, then
+  `encoding.contentType`, then the schema-type default) and is exposed for reuse by nested
+  multipart handling.
+- Nested `multipart/mixed` request bodies (3.2 §4.15.4.10): a part whose effective content
+  type is `multipart/*` is now parsed recursively into a typed part tree, so nested parts
+  enter the JSON data model one level deeper (nested array schemas map `prefixItems`/`items`
+  by position, nested object schemas map `Content-Disposition` names to properties, and the
+  §4.15.1.1 default content-type table applies to nested leaves the same way, including
+  JSON decoding of JSON-typed leaves and XML parsing of `application/xml`/`text/xml`
+  leaves). A declared `contentType` wildcard (`type/*`, `*/*`) on a part without a
+  `Content-Type` header JSON-decodes the part only when its schema position expects an
+  object or array. Recursion is capped (one nested level below the outer body); a payload
+  that nests deeper raises `Validator\Exception\MultipartNestingDepthException` instead of
+  recursing unbounded. Schema-less bodies keep the previous pass-through behavior and the
+  wire parser remains a boundary splitter with no knowledge of the Encoding model.
+
+### Changed
+
+- Part headers declared in Encoding Objects with a content-based Header Object
+  (`content.<media type>.schema`) are now value-validated with the same coercion rules used
+  for `schema`-based headers; previously such headers were checked for presence only. As a
+  consequence, a value that fails the media type's schema (for example a `format: uri`
+  violation on `Content-Location`) is rejected, and a declared part `Content-Range` header
+  is additionally parsed strictly per RFC 9110 (see Added).
+- `multipart/form-data` requests are wire-parsed once per validation: the encoding applier
+  now receives the already-split parts instead of re-splitting the raw body, removing the
+  duplicate multipart parse from the named-part pipeline.
+- Every `multipart/*` request now enters validation through the streaming entry point;
+  requests without positional encodings behave exactly as before (the body is read within
+  the existing body-size limits and validated by the unchanged buffered pipeline), while
+  positional (ordered) multipart bodies are validated part by part without buffering the
+  whole payload.
+
+- `multipart/form-data` request bodies with an object schema declaring `properties` now
+  populate the object from the parts' `Content-Disposition` names (3.2 §4.15.4.5, RFC7578
+  §4.3): a part named like a property fills that property, several parts sharing one name
+  are collected into the property's array (a single part of an array-typed property
+  becomes a one-item array), and duplicate names against a scalar property produce a list
+  that fails the property's type check instead of silently dropping parts. Requests that
+  previously failed validation with a `required` error while sending a matching named part
+  now validate. Object schemas without `properties` keep the previous raw part-list
+  behavior, and non-form-data multipart subtypes are unaffected.
+- `Encoding` Object `contentType` now accepts the OAS 3.2 §4.15.4.1 list form:
+  the wire value may be a single media type string or an array of media type
+  strings (for example `["text/css", "image/*"]`), `Schema\Model\Encoding::$contentType`
+  carries the union `string|list<string>|null`, and serialization emits back the
+  original wire shape, so round-tripping preserves string form and list form
+  verbatim. An empty array, an array containing non-string members, or a
+  non-string non-array value raises `Schema\Exception\InvalidContentTypeException`
+  at parse time. Streaming consumers read the item parser media type from the
+  first list element (`ExternalMediaType::primary()`) and use the full list only
+  for media type matching, and `ExternalMediaType::isDefined()` applies any-of
+  semantics to the list. Code that type-assumes `string` on
+  `Encoding::$contentType` must handle the list form.
+- Unknown schema keywords are rejected at build time by default (strict
+  keywords): a keyword outside the legal set (the known JSON Schema 2020-12 and
+  OAS base-vocabulary keywords, vendor `x-` extensions, the legacy
+  `$recursiveRef`/`$recursiveAnchor` keys, keywords registered through
+  `withKeywordValidator()`, and the explicit allow-list) raises
+  `InvalidSchemaException` naming the keyword while the document is parsed, so
+  typos such as `requird` fail fast instead of silently degrading to unused
+  extras. `disableStrictKeywords()` restores the previous annotation mode
+  (unknown keywords stay extras and produce annotations), and
+  `withAllowedUnknownKeywords(string ...$keywords)` legalizes individual
+  keywords point-wise; both compose with the rest of the builder. The check is
+  a single traversal of the already-parsed document, applied to the main spec
+  only (documents registered via `withDocument()` are not guarded).
+- Response bodies are now validated fail-closed against the declared
+  Content-Type: a response media type matching none of the operation's
+  declared response media types (exact, `type/*` or `*/*`) raises
+  `UnsupportedMediaTypeException` on both the buffered and the streaming
+  validation path instead of silently skipping body validation. The
+  exception message lists only the declared media types and never echoes
+  the offending Content-Type, matching the request-path contract.
+  `OpenApiValidatorBuilder::withLenientResponses()` restores the previous
+  permissive behavior and makes every skip observable: each skipped
+  response body dispatches an `UnsupportedResponseMediaTypeWarningEvent` event
+  (PSR-14) carrying the unmatched media type.
+- `$dynamicRef` is now evaluated with the full JSON Schema 2020-12 dynamic
+  reference semantics (core §8.2.3.2, Appendix C) instead of being ignored.
+  Resolution happens at every encounter during validation, never at load time:
+  a plain-name fragment bookended by a matching `$dynamicAnchor` in the same
+  schema resource is replaced by the outermost matching `$dynamicAnchor` in the
+  dynamic scope; otherwise the keyword behaves like `$ref` (with `$anchor`
+  fallback). Schemas with `$dynamicRef` therefore validate by the recursive
+  semantics, so results can differ from the previous silently-ignoring build.
+  The dynamic scope tracks every `$id`-identified schema resource crossed by
+  validation, including `$ref` chain resources, and cyclic dynamic references
+  terminate instead of overflowing the stack: re-entering the same dynamic
+  reference target at the same data path within one run is skipped as already
+  evaluated, while depth-growing recursion (including branch forks that reset
+  the per-branch frame, e.g. not/oneOf/if-then-else) is stopped by the depth
+  limit (SchemaDepthExceededException, MAX_DEPTH=64). Verdicts on
+  spec-undefined infinitely recursive schemas are implementation-defined and
+  pinned by unit tests. `#` resolves to the root resource of its document,
+  and a bare-URI reference to a registered document whose root carries a
+  different `$id` resolves to that registered root.
+- `$ref` chains now apply the sibling keywords of every intermediate chain resource at each hop instead of dropping
+  them; entry resolution returns the entry schema with its `$ref` intact and the chain is followed at validation time.
+- `RefResolverInterface` gained `resolveSchemaEntry()`,
+  `resolveSchemaWithOverrideAndChain()`, `scopeBaseUri()`,
+  `findDynamicAnchorInScope()`, `registeredDocuments()` and an optional
+  `$baseUri` parameter on `resolveSchemaWithOverride()`. External
+  implementations of the interface must add these members to stay compatible.
+- `$ref` fragments are resolved by their JSON Schema 2020-12 kind. A fragment
+  starting with `/` is treated as a JSON Pointer (RFC 6901 `~0`/`~1` decoding
+  stays localized to pointer segments); any other fragment is a plain-name
+  fragment resolved through the `$anchor`/`$dynamicAnchor` indexes only, with
+  NCName validation and without tilde decoding. Pointer fragments rooted at
+  `$defs`, URI references whose resource matches an in-document `$id`, and
+  bare plain-name fragments resolve through the document resource registry
+  first and fall back to raw document navigation afterwards;
+  `UnresolvableRefException` is raised only after both are exhausted. Specs
+  containing bare-fragment `$ref` values (for example `#myAnchor`) no longer
+  require `externalRefAllowedRoot`, because a bare fragment never leaves the
+  document. Relative URI references resolve against the `$id` of the schema
+  carrying them, then against the document `$self`.
+- `Validator\Error\ValidationContext` and `Validator\Validation\ValidationStack`
+  are now named-constructor-only services: their constructors are private and
+  the only creation entry points are `ValidationContext::fromInit()` and
+  `ValidationStack::fromGroup()`. Schema model classes keep public
+  constructors.
+- Documents declaring `$vocabulary` (core §8.1.2) are now checked once per
+  document at build time. A vocabulary URI outside the supported set
+  (2020-12 `core`, `applicator`, `unevaluated`, `validation`, `meta-data`,
+  `format-annotation`, `format-assertion`, `content`, and the OAS 3.1 base
+  vocabulary) with the value `true` refuses the build with
+  `Schema\Exception\VocabularyNotSupportedException` carrying the
+  unsupported URI (the same document previously assembled without a
+  diagnostic). The same URI with the value `false` builds and dispatches an
+  `Event\VocabularyDisabledWarningEvent`; schemas keeping legacy
+  `$recursiveRef`/`$recursiveAnchor` keywords in extras build and dispatch an
+  `Event\LegacyKeywordWarningEvent` pointing at the `$dynamicRef`/
+  `$dynamicAnchor` replacements. URI comparison is byte-wise, so differently
+  cased or normalized URIs are treated as unsupported. Registered
+  `withDocument()` resources stay outside the guard: cross-draft resources may
+  legitimately declare another dialect's vocabularies.
+- OpenAPI 3.0 documents now refuse schemas whose `type` keyword is an array
+  (OAS 3.0.3 §4.7.24.1 requires a string): `build()` raises
+  `Schema\Exception\TypeArrayNotSupportedException` where the same document
+  previously assembled with 3.1 union semantics. The message carries no
+  document content. OpenAPI 3.1+ documents keep accepting `type` arrays,
+  including the `'null'` member, and `nullable` folding is unchanged.
+- OpenAPI 3.0 documents now ignore schema keywords sitting next to `$ref`
+  (JSON Reference draft-03 §3: any members other than `$ref` SHALL be
+  ignored), at the referenced-property entry point and on every intermediate
+  `$ref` chain carrier alike: the resolved target is validated as-is instead
+  of being merged with the stub. A 3.0 `nullable: true` sibling of `$ref`
+  therefore no longer widens the target, so `null` values for such
+  properties are rejected where they previously passed. OpenAPI 3.1+
+  documents keep applying `$ref` siblings per JSON Schema 2020-12
+  §8.2.3.1, including per-hop merging along `$ref` chains.
+- OpenAPI 3.0 documents now treat `nullable: true` as an extension of an
+  explicit `type` in the same Schema Object (OAS 3.0.3 §4.7.24.2): a
+  `nullable` Schema Object without a `type` no longer makes `null`
+  acceptable, so `null` values for such properties are rejected where they
+  previously passed. `nullable: true` beside an explicit `type` keeps
+  accepting `null`, deferred decisions (`$ref`, `allOf`, `anyOf`, `oneOf`
+  branches) keep deferring, and a `not` sub-schema is now matched against a
+  `null` instance by the sub-schema's own keywords instead of rejecting the
+  match up front — so `not: {}` (the boolean `false` schema model) rejects
+  `null` as the suite requires. OpenAPI 3.1+ documents are unchanged,
+  including `type` unions with the `'null'` member and parser-side
+  `nullable` folding. The dialect decision is carried by the document's
+  `DialectProfile`, and the root-schema validator cache entry created while
+  resolving `$dynamicRef` without a validation context now derives the
+  profile from the document version instead of silently defaulting to 3.1.
+- `contentEncoding` and `contentMediaType` are annotation-only by default, matching JSON
+  Schema validation §8.1: string instance contents are no longer decoded, parsed or
+  validated, the keyword values are collected into validation annotations
+  (`contentEncoding`/`contentMediaType` keys) instead, and an unrecognized
+  `contentMediaType` emits a PSR-14 `ValidationWarningEvent` plus a log warning instead of
+  throwing. Previously an invalid `base64` value or an unrecognized media type failed
+  validation. Call `OpenApiValidatorBuilder::enableContentAssertions()` to restore the
+  previous assertion behavior (strict base64 round-trip check and media type syntax
+  validation) as a transitional mode until the full content assertion pipeline ships.
+- With `enableContentAssertions()`, `contentEncoding` assertions now cover the full
+  RFC 4648 family — `base16`, `base32`, `base32hex`, `base64`, `base64url` (padding
+  optional, canonical pad counts enforced, mixed padding rejected) — plus RFC 2045 §6.7
+  `quoted-printable` syntax validation (uppercase `=HH` escapes, `=CRLF` soft breaks,
+  tolerated trailing whitespace, CRLF-only line breaks). `7bit`, `8bit` and `binary`
+  remain identity encodings without data checks, and an unrecognized encoding token now
+  emits a PSR-14 `ValidationWarningEvent` plus a log warning instead of being ignored
+  silently. The strict canonical `base64` round-trip assertion is unchanged.
+- With `enableContentAssertions()`, content assertions now run the full pipeline: the string instance is decoded
+  according to `contentEncoding` (`base64` and `base64url`), the decoded content is checked against
+  `contentMediaType` (`application/json` is parsed, the other recognized media types keep their syntax checks), and
+  a declared `contentSchema` validates the decoded value through the regular schema validator, so sub-schema
+  violations reject the main validation. Previously `contentSchema` was ignored and only encoding/media syntax was
+  asserted. Decoded content exceeding the configured `maxJsonBodyBytes` cap raises
+  `DecodedContentTooLargeException` before parsing — the cap applies to every media type, not only JSON — and
+  unknown media types keep emitting the warning event. The pipeline outcome is exposed as a
+  `ContentValidationResult` (decoded value, media type validity, collected
+  sub-schema errors) through `ValidationContext::contentResult()`, and the pipeline accepts a skip-media flag for
+  callers that learn the media type from the message (content map/Encoding Object) instead of the schema.
+  Sub-schema validation runs only when `contentMediaType` is declared: per JSON Schema 2020-12 the `contentSchema`
+  keyword is bound to `contentMediaType`, so `contentSchema` without a media type stays an annotation in
+  assertions mode as well.
+- Every content instance of a validation run is now addressable instead of first-wins-only:
+  `ValidationContext::contentResults()` returns all content pipeline results of the run keyed
+  by the data path of their string instance (`/0`, `/props/payload`, …) in attach/merge order,
+  `ValidationContext::contentResultAtPath()` reads a single instance result by path, and
+  `contentResult()` keeps returning the first instance in traversal order. Results merged from
+  successful compositional branches (oneOf/anyOf/if-then-else/discriminator) join the list in
+  attach/merge order, results of failed branches never enter it, and when several results reach
+  the same data path the result of the first attach is kept. Deferred results still compute
+  lazily on the first read after the run and stay memoized.
+- Without content assertions (annotation mode) the pipeline never runs during validation: `contentEncoding` and
+  `contentMediaType` remain annotations, the outcome is untouched, and the same `ContentValidationResult` is
+  attached to the validation context lazily — it computes on the first consumer read, so undecoded payloads stay
+  untouched unless the result is inspected.
+- The official JSON Schema test suite section `content.json` is re-bound to the active
+  sections: it was previously parked pending the content assertion pipeline work; all 18
+  cases assert annotation-only content semantics and pass on the current validator,
+  following the rebind precedent of the earlier suite triage.
+- Formats on schemas without an explicit `type` are no longer ignored: the format is
+  resolved against the instance domain (string/number/integer) and asserted for matching
+  instances in assertion mode.
+- The format sections of the official JSON Schema test suite are re-classified after the
+  format assertion mode work: the format-assertion, date, ipv4, ipv6, json-pointer, regex
+  and unknown-format sections (242 cases) join the active sections and pass in the default
+  assertion profile; `optional/format/ecmascript-regex.json` joins the excluded sections
+  (PCRE is not ECMA-262); `format.json` and the remaining `optional/format/*` sections stay
+  pending on the suite residue backlog until the builtin format validators reach full suite
+  conformance and the runner gains per-section validator profiles. `format.json` declares
+  the annotation-default profile and is fully green under
+  `withFormatAssertionMode(Annotation)` — a dedicated replay test pins all 133 cases. The
+  suite runner now also treats the raw `InvalidFormatException` (the package's fail-fast
+  format error convention) as an invalid verdict.
+- Security Scheme Objects now model the OAS 3.2 security surface (§4.27–4.29).
+  **BC break for direct integrators.** The OAuth Flows Object wire key
+  `deviceCode` is renamed to `deviceAuthorization` (§4.28.1), so the device flow
+  no longer disappears when a 3.2 document is parsed; documents still using the
+  pre-release `deviceCode` spelling build with the flow silently absent — the old
+  key is not accepted (no deprecation cycle applies). `SecurityScheme` gains the
+  `deprecated` boolean field (§4.27): it is parsed and serialized, so a
+  `deprecated: true` scheme survives round-trip instead of being dropped, and the
+  flow-level `deprecated` field of OAuth Flow Objects keeps its separate meaning.
+  The `scheme` field is normalized to lowercase at parse time (RFC 9110 §11.1
+  case-insensitivity): `Basic` and `basic` produce identical models, and
+  serialization emits the normalized value. `oauth2MetadataUrl` is now validated
+  as an absolute URI at parse time; a malformed value raises
+  `Schema\Exception\InvalidSchemaException` without echoing the offending value.
+- Security scheme dispatch is now extensible through a handler registry instead
+  of the hardcoded `http`/`apiKey` match chain inside `SecurityValidator`.
+  **BC break for direct integrators.** The `SecurityValidator` constructor drops
+  its unused `ApiKeyValidator` parameter; handlers are resolved through the new
+  `Validator\Security\SecuritySchemeHandlerRegistry` (built with the built-in
+  bearer and api key handlers in one place), and custom scheme support is
+  declared by implementing the new `Validator\Security\SecuritySchemeHandlerInterface`
+  (`supports()` + `validate()`), with the registry picking the first handler
+  whose `supports()` returns true. `with()` prepends a handler ahead of the
+  built-in set so a user handler overrides a built-in one. Request-visible
+  behavior is unchanged: the OR/AND requirement semantics, the
+  `UnsupportedSecuritySchemeException` for scheme types without a handler, and
+  the `httpScheme` parameter reported for non-bearer `http` subschemes all stay
+  exactly as before; `oauth2`, `openIdConnect` and `mutualTLS` keep raising the
+  unsupported-scheme error until dedicated built-in handlers land (`http/basic` and
+  `http/digest` gain theirs in this release, see Added above).
+
+### Fixed
+
+- Server-Sent Events records now concatenate a value-only `data` field onto a
+  preceding empty `data` line per the WHATWG event-stream algorithm: an event
+  stream of `data:` followed by `data: hello` yields the event data `"\nhello"`
+  (leading newline preserved) instead of replacing the accumulated buffer with
+  `"hello"`. Concatenation of non-empty `data` lines and the empty-string result
+  of a lone `data:` line are unchanged.
 
 ### Removed
 
@@ -47,14 +820,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is removed. `multipleOf` checks fall back to pure-PHP decimal string
   modulus when the BCMath extension is unavailable, so the exception is never
   thrown; `forNonPositiveValue()` remains.
-
-### Changed
-
-- `Validator\Error\ValidationContext` and `Validator\Validation\ValidationStack`
-  are now named-constructor-only services: their constructors are private and
-  the only creation entry points are `ValidationContext::fromInit()` and
-  `ValidationStack::fromGroup()`. Schema model classes keep public
-  constructors.
 
 ## [0.8.0]
 
@@ -346,7 +1111,7 @@ internal-only unless explicitly marked as public API.
   the 56-parameter `withOverrides()` constructor. The legacy constructor
   is retained (PHPDoc-only `@deprecated`, no runtime attribute) so the 5
   internal callers do not trigger an `E_DEPRECATED` cascade; it will be
-  removed in 2.0. See `.ai/reports/adr-schema-constructor.md`.
+  removed in 2.0 (per the internal schema-constructor ADR).
 - Post-refactor behavioral snapshot tests for 3 risk zones
   (`tests/Integration/PostRefactorBehavioralSnapshotTest.php`) covering
   discriminator annotation propagation, streaming-content parser edge
@@ -380,8 +1145,7 @@ internal-only unless explicitly marked as public API.
   refactored; validator constructor signatures and DTO grouping aligned
   with `SchemaValidatorDependencies` as the canonical DTO.
 - **Codebase-wide code-style cleanup** (386 violations from the
-  `.ai/research/code-style-violations.md` audit, closed across 22
-  partitioned tasks):
+  internal code-style audit, closed across 22 partitioned tasks):
   - §3 Yoda canonical form applied across 28 sites in 17 files.
   - §5 magic values extracted into named constants.
   - §7 redundancy: `&$` reference accumulators, duplicated code,
@@ -657,7 +1421,7 @@ Older SPEC/SEC series:
   composition keywords with §8.2.3 ALL OF semantics (SPEC-02B).
 - `ArrayLengthValidator::encodeArrayKey()` canonicalizes array keys before
   `json_encode` for `uniqueItems` per §4.2.2 (SPEC-03B).
-- Documentation: `.ai/guides/process-violations-review-work.md` forbids
+- Documentation: the internal review-work process guide forbids
   working-tree mutation during review-work (RACE-CONDITION-PROCESS).
 
 ### Security

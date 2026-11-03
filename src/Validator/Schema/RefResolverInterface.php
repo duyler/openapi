@@ -23,6 +23,17 @@ interface RefResolverInterface
     public function resolve(string $ref, OpenApiDocument $document, int $depth = 0): Schema;
 
     /**
+     * Resolve the schema referenced by $ref without following the target's own
+     * `$ref` chain; `$ref` sibling keywords of the resolved target stay intact
+     * and are applied by the validation-time ref resolution with sibling merge
+     *
+     * @param string $ref JSON Pointer reference (e.g., '#/components/schemas/User')
+     * @throws Exception\UnresolvableRefException
+     * @throws SchemaDepthExceededException
+     */
+    public function resolveSchemaEntry(string $ref, OpenApiDocument $document): Schema;
+
+    /**
      * @param string $ref JSON Pointer reference (e.g., '#/components/parameters/LimitParam')
      * @param int $depth Current recursion depth
      * @throws Exception\UnresolvableRefException
@@ -108,12 +119,70 @@ interface RefResolverInterface
      * Resolve schema reference with summary/description override
      *
      * @param Schema $schema Schema with potential $ref and override values
+     * @param string|null $baseUri Absolute base URI of the resource enclosing the schema;
+     *     null keeps the schema's own `$id` (or the document `$self`) as the base
      * @throws Exception\UnresolvableRefException
      */
     public function resolveSchemaWithOverride(
         Schema $schema,
         OpenApiDocument $document,
+        ?string $baseUri = null,
     ): Schema;
+
+    /**
+     * Same resolution as resolveSchemaWithOverride, additionally returning every
+     * `$id`-identified resource schema crossed by the `$ref` chain (outermost
+     * first) so that callers can push them onto the dynamic scope
+     *
+     * @param string|null $baseUri Absolute base URI of the resource enclosing the schema
+     * @return array{Schema, list<Schema>}
+     * @throws Exception\UnresolvableRefException
+     */
+    public function resolveSchemaWithOverrideAndChain(
+        Schema $schema,
+        OpenApiDocument $document,
+        ?string $baseUri = null,
+    ): array;
+
+    /**
+     * Resolve the `$ref` target without merging sibling keywords into it, returning the
+     * sibling schema (with the `$ref` field dropped) as a separate companion application
+     * whenever the dialect applies reference siblings
+     *
+     * @param string|null $baseUri Absolute base URI of the resource enclosing the schema
+     * @return array{Schema, Schema|null, list<Schema>} Resolved target, companion sibling, chain resources
+     * @throws Exception\UnresolvableRefException
+     */
+    public function resolveSchemaWithCompanionAndChain(
+        Schema $schema,
+        OpenApiDocument $document,
+        ?string $baseUri = null,
+    ): array;
+
+    /**
+     * Fold the dynamic scope frames (outermost first) into the absolute base URI
+     * of the innermost frame resource, anchored at the document `$self`
+     *
+     * @param list<Schema> $frames
+     */
+    public function scopeBaseUri(array $frames, OpenApiDocument $document): ?string;
+
+    /**
+     * Find the outermost `$dynamicAnchor` with the given name across the dynamic
+     * scope frames: each frame is matched by its root anchor first, then by any
+     * `$dynamicAnchor` nested inside the frame resource (per-resource lookup)
+     *
+     * @param list<Schema> $frames
+     * @throws Exception\UnresolvableRefException
+     */
+    public function findDynamicAnchorInScope(array $frames, string $name, OpenApiDocument $document): ?Schema;
+
+    /**
+     * All documents registered for cross-document resolution, in registration order
+     *
+     * @return list<OpenApiDocument>
+     */
+    public function registeredDocuments(): array;
 
     /**
      * Resolve parameter reference with summary/description override

@@ -43,6 +43,7 @@ final readonly class ResponseValidatorWithContext
             config: new ParameterValidationConfig(
                 nullableAsType: $this->configuration->nullableAsType,
                 emptyArrayStrategy: $this->configuration->emptyArrayStrategy,
+                dialectProfile: $this->configuration->dialectProfile,
             ),
         );
         $this->bodyValidator = new ResponseBodyValidatorWithContext(

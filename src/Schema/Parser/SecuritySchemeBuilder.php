@@ -5,34 +5,41 @@ declare(strict_types=1);
 namespace Duyler\OpenApi\Schema\Parser;
 
 use Duyler\OpenApi\Schema\Exception\InvalidSchemaException;
+use Duyler\OpenApi\Schema\Internal\MetadataUri;
 use Duyler\OpenApi\Schema\Model\OAuthFlow;
 use Duyler\OpenApi\Schema\Model\OAuthFlows;
 use Duyler\OpenApi\Schema\Model\SecurityScheme;
 
 use function is_array;
+use function strtolower;
 
 final readonly class SecuritySchemeBuilder
 {
-    public function __construct(private OpenApiBuildContext $context) {}
-
     public function buildSecurityScheme(array $data): SecurityScheme
     {
         if (false === isset($data['type'])) {
             throw new InvalidSchemaException('Security scheme must have type');
         }
 
+        $rawScheme = TypeHelper::asStringOrNull($data['scheme'] ?? null);
+        $schemeName = null === $rawScheme ? null : strtolower($rawScheme);
+        $oauth2MetadataUrl = TypeHelper::asStringOrNull($data['oauth2MetadataUrl'] ?? null);
+
+        $this->validateOauth2MetadataUrl($oauth2MetadataUrl);
+
         return new SecurityScheme(
             type: TypeHelper::asString($data['type']),
             description: TypeHelper::asStringOrNull($data['description'] ?? null),
             name: TypeHelper::asStringOrNull($data['name'] ?? null),
             in: TypeHelper::asStringOrNull($data['in'] ?? null),
-            scheme: TypeHelper::asStringOrNull($data['scheme'] ?? null),
+            scheme: $schemeName,
             bearerFormat: TypeHelper::asStringOrNull($data['bearerFormat'] ?? null),
             flows: isset($data['flows']) && is_array($data['flows'])
                 ? $this->buildOAuthFlows(TypeHelper::asArray($data['flows']))
                 : null,
             openIdConnectUrl: TypeHelper::asStringOrNull($data['openIdConnectUrl'] ?? null),
-            oauth2MetadataUrl: TypeHelper::asStringOrNull($data['oauth2MetadataUrl'] ?? null),
+            oauth2MetadataUrl: $oauth2MetadataUrl,
+            deprecated: TypeHelper::asBoolOrNull($data['deprecated'] ?? null),
             authorizationUrl: TypeHelper::asStringOrNull($data['authorizationUrl'] ?? null),
             tokenUrl: TypeHelper::asStringOrNull($data['tokenUrl'] ?? null),
             refreshUrl: TypeHelper::asStringOrNull($data['refreshUrl'] ?? null),
@@ -57,8 +64,8 @@ final readonly class SecuritySchemeBuilder
             authorizationCode: isset($data['authorizationCode']) && is_array($data['authorizationCode'])
                 ? $this->buildOAuthFlow(TypeHelper::asArray($data['authorizationCode']))
                 : null,
-            deviceCode: isset($data['deviceCode']) && is_array($data['deviceCode'])
-                ? $this->buildOAuthFlow(TypeHelper::asArray($data['deviceCode']))
+            deviceAuthorization: isset($data['deviceAuthorization']) && is_array($data['deviceAuthorization'])
+                ? $this->buildOAuthFlow(TypeHelper::asArray($data['deviceAuthorization']))
                 : null,
         );
     }
@@ -75,5 +82,12 @@ final readonly class SecuritySchemeBuilder
             deviceAuthorizationUrl: TypeHelper::asStringOrNull($data['deviceAuthorizationUrl'] ?? null),
             deprecated: TypeHelper::asBoolOrNull($data['deprecated'] ?? null),
         );
+    }
+
+    private function validateOauth2MetadataUrl(?string $oauth2MetadataUrl): void
+    {
+        if (false === MetadataUri::isValid($oauth2MetadataUrl)) {
+            throw new InvalidSchemaException(MetadataUri::invalidMessage('oauth2MetadataUrl'));
+        }
     }
 }
